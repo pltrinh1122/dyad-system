@@ -12,6 +12,7 @@ defines what each value means.
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | plan-and-execute | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
+| batch-disposition-mode | on-ignore | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -33,3 +34,10 @@ defines what each value means.
   line; the dyad's own commands go through one entrypoint, `dyad/bin/dyad`, as `<noun> <verb>`
   (`dyad check`, `dyad dwork new`, `dyad runbook git-server status`). `explicit-python`: commands
   are written as `python3.12 dyad/scripts/<script>.py …`, no entrypoint (ledger #152).
+- `batch-disposition-mode`
+  - `off` — every plan and completion counter-prompt is asked and disposed singly.
+  - `on-ignore` — singly, until the Operator leaves one counter-prompt outstanding (the next
+    message is a prompt, not its bare disposal, Rule-3 Scope): the engagement signal itself,
+    nothing else needed. The Agent then holds a pending queue and asks the batch forms
+    (Rule-3, Batch disposition), lapsing back to singly once the queue drains.
+  - `always` — never singly: the first pending item already opens the queue.
