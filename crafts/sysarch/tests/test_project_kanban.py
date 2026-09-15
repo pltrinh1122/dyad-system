@@ -87,7 +87,7 @@ class LiveTests(unittest.TestCase):
         out = pk.render(groups)
         self.assertIn("<html>", out)
         total = sum(len(v) for v in groups.values())
-        self.assertGreater(total, 100)   # this instance has well over a hundred rows
+        self.assertEqual(total, len(dyadlib.read_rows(root)))   # every row of this instance is on the board, however many (dyad-system #1)
 
 if __name__ == "__main__":
     unittest.main()

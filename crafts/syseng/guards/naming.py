@@ -193,9 +193,24 @@ def env_names(paths: list[str], root: Path) -> dict[str, list[str]]:
                 found.setdefault(name, []).append(p)
     return found
 
-def check_env(found: dict[str, list[str]], listed: list[str]) -> list[str]:
-    msgs = [f"{', '.join(sorted(set(ws)))}: reads {n}, not in the naming table (`DYAD_<NAME>` row / `env:` line)" for n, ws in sorted(found.items()) if n not in listed]
-    msgs += [f"naming_rules.txt: env {n} is listed but no package code reads it (stale)" for n in listed if n not in found]
+def env_scope(listed: list[str], installed: set[str] | None = None) -> tuple[list[str], list[str]]:
+    """Split `env:` tokens into (checked, deferred). A token `NAME@<craft>` is read by that craft's code
+    and is checked only when the craft is installed (#1 of dyad-system: the core's data names sysadmin's
+    `DYAD_OPS`; a system without sysadmin must not call it stale). `installed=None` checks everything."""
+    checked, deferred = [], []
+    for tok in listed:
+        name, _, craft = tok.partition("@")
+        if craft and installed is not None and craft not in installed:
+            deferred.append(name)
+        else:
+            checked.append(name)
+    return checked, deferred
+
+def check_env(found: dict[str, list[str]], listed: list[str], installed: set[str] | None = None) -> list[str]:
+    names, deferred = env_scope(listed, installed)
+    msgs = [f"{', '.join(sorted(set(ws)))}: reads {n}, not in the naming table (`DYAD_<NAME>` row / `env:` line)" for n, ws in sorted(found.items()) if n not in names and n not in deferred]
+    msgs += [f"naming_rules.txt: env {n} is listed but no package code reads it (stale)" for n in names if n not in found]
+    msgs += [f"warning: naming_rules.txt: env {n} is read by a craft not installed here; not checked" for n in deferred]
     return msgs
 
 def check_allow(allow: list[tuple[str, str]], paths: set[str], used: set[str]) -> list[str]:
@@ -223,7 +238,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path 
     pats = table_patterns(table)
     msgs += m + check_table(r["kind"], pats) + check_table(r["mode"], pats, "mode") + check_symbols(paths, r["symbol"], root)
     msgs += check_modes(paths, r["mode"], root, inst)
-    msgs += check_env(env_names(paths, root), r["env"]) + check_allow(r["allow"], set(paths), used)
+    msgs += check_env(env_names(paths, root), r["env"], {d.name for d in dyadlib.craft_dirs(pkg)}) + check_allow(r["allow"], set(paths), used)
     return msgs
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:

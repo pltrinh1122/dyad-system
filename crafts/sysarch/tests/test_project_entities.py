@@ -10,8 +10,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts")
 import project_entities as pe
 import dyadlib, livetest
 G = {py.stem: dyadlib.load_guard_file(py) for py in dyadlib.guard_files()}
-vocabulary, infrastructure, containment, rule_integrity, ops_scripts, refint, runbook = (
-    G["vocabulary"], G["manifest"], G["containment"], G["rules"], G["ops_scripts"], G["references"], G["runbooks"])
+vocabulary, infrastructure, containment, rule_integrity, refint = G["vocabulary"], G["manifest"], G["containment"], G["rules"], G["references"]
+# Tended crafts other than sysarch/syseng may be absent (a core-only-plus-sysarch system, dyad-system #1): their
+# entities and guards are asserted only when installed; the sets below are derived from what is here, never literal.
+INSTALLED = {d.name for d in dyadlib.craft_dirs()}
+SYSADMIN, LANGIT = "sysadmin" in INSTALLED, "lan-git" in INSTALLED
+ops_scripts, runbook = G.get("ops_scripts"), G.get("runbooks")
+needs_sysadmin = unittest.skipUnless(SYSADMIN, "the sysadmin craft is not installed here; its entities are not on the surface")
 
 RULE = """# Rule-{n}: {title}
 
@@ -127,7 +132,8 @@ class Balanced(HTMLParser):
 
 def check_html(tc, text, n_entities):
     tc.assertEqual(text.count('<article class="card"'), n_entities)
-    tc.assertNotIn("http://", text); tc.assertNotIn("https://", text)
+    for load in (" src=", "<link", 'href="http', "url("):   # self-contained = nothing loaded (projection.md p3): an attribute, not a data-src token; text may name a URL
+        tc.assertNotIn(load, text)
     tc.assertNotIn("src=", text); tc.assertNotIn("<link", text); tc.assertNotIn("@import", text)
     for m in __import__("re").findall(r'href="([^"]*)"', text):
         tc.assertTrue(m.startswith("#e-"), m)   # only in-page anchors
@@ -141,8 +147,9 @@ def parser_names(pkg):
         names |= set(g.FIELDS)
     return names
 
-ENTITIES = {"changelog", "command", "component", "craft", "event", "frame", "image", "ops", "plan", "pr", "preference", "projector", "provenance", "record", "reference", "row", "rule", "term", "zone",
-            "name", "invariant", "test", "presence"}   # presence: dyad/guards/agent/sessions.py (#185); projector: crafts/sysarch/guards/registry.py (#160); name, invariant, test: crafts/syseng/guards/ (#162); image: crafts/lan-git/guards/ (#181)
+ENTITIES = ({"component", "craft", "frame", "plan", "pr", "preference", "projector", "provenance", "record", "reference", "row", "rule", "term", "zone",
+             "presence", "name", "invariant", "test"}   # core + sysarch (projector, #160) + syseng (name, invariant, test, #162) + presence (#185)
+            | ({"changelog", "command", "event", "ops"} if SYSADMIN else set()) | ({"image"} if LANGIT else set()))
 
 class FixtureTests(unittest.TestCase):
     def setUp(self):
@@ -163,8 +170,9 @@ class FixtureTests(unittest.TestCase):
             self.assertRegex(e.guard, r"^(guards/(agent|preferences|infra|craft)|crafts/[\w-]+/guards)/\w+\.py$")
             if e.guard.startswith("guards/"): self.assertEqual(e.corpus, e.guard.split("/")[1])
             else: self.assertEqual(e.corpus, {"sysadmin": "workstation", "sysarch": "craft", "syseng": "craft", "lan-git": "craft"}[e.guard.split("/")[1]])   # a craft guard's corpus is its store's zone (#155; sysarch checks crafts/*, #160; syseng #162; lan-git #181)
-        self.assertEqual({e.guard for e in self.ents if e.guard.startswith("crafts/")}, {f"crafts/sysadmin/guards/{n}.py" for n in ("changelog", "events", "ops_scripts", "runbooks")}
-                         | {"crafts/sysarch/guards/registry.py"} | {f"crafts/syseng/guards/{n}.py" for n in ("naming", "invariants", "tests")} | {"crafts/lan-git/guards/image.py"})
+        self.assertEqual({e.guard for e in self.ents if e.guard.startswith("crafts/")},
+                         ({f"crafts/sysadmin/guards/{n}.py" for n in ("changelog", "events", "ops_scripts", "runbooks")} if SYSADMIN else set())
+                         | {"crafts/sysarch/guards/registry.py"} | {f"crafts/syseng/guards/{n}.py" for n in ("naming", "invariants", "tests")} | ({"crafts/lan-git/guards/image.py"} if LANGIT else set()))
         self.assertNotIn("incident", self.by); self.assertNotIn("registry", self.by)   # no guard, no card (sysarch guards.md): reported in plan #151
     def test_every_field_name_comes_from_a_parser(self):
         names = parser_names(self.pkg)
@@ -172,6 +180,7 @@ class FixtureTests(unittest.TestCase):
             for f in e.fields:
                 self.assertIn(f.name, names, f"{e.key}.{f.name} is not a parser constant")
                 self.assertTrue(f.source, f"{e.key}.{f.name} names no source")
+    @needs_sysadmin
     def test_field_lists_equal_the_constants(self):
         for e in self.ents:
             g = next(g for g in G.values() if g.ENTITY == e.key)
@@ -190,6 +199,7 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([f.name for f in self.by["record"].fields], ["#", "Attack", "Result", "Survivor"])
         self.assertEqual([f.name for f in self.by["reference"].fields], list(G["references"].FIELDS)); self.assertEqual([f.name for f in self.by["frame"].fields], ["@rules/", "@"])
         self.assertEqual([f.name for f in self.by["pr"].fields], ["body"])
+    @needs_sysadmin
     def test_allowed_values_come_from_constants(self):
         state = next(f for f in self.by["row"].fields if f.name == "state")
         for s in dyadlib.STATES: self.assertIn(s, state.allowed)
@@ -209,6 +219,7 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(cmd["class"], " | ".join(runbook.CLASSES) + " (Rule-8)"); self.assertEqual(cmd["role"], " | ".join(runbook.ROLES))
         ev = {f.name: f.allowed for f in self.by["event"].fields}
         self.assertEqual(ev["postcondition"], " | ".join(G["events"].POSTCONDITION_RESULTS)); self.assertEqual(ev["role"], " | ".join(G["events"].RUN_ROLES))
+    @needs_sysadmin
     def test_examples_and_counts_from_the_instance(self):
         row = {f.name: f.example for f in self.by["row"].fields}
         self.assertEqual(row, {"id": "7", "title": "r7 <b>&", "opened": "2026-09-13", "state": "planned", "disposed": "2026-09-13 Y plan", "refs": "#1"})  # highest id
@@ -234,6 +245,7 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([f.example for f in self.by["zone"].fields], [containment.ZONES[0][0], containment.ZONES[0][1]])
         self.assertEqual([f.example for f in self.by["command"].fields], ["start", "reversible", "any", "stop", "true", "s"]); self.assertEqual(self.by["command"].observed, 1)
         self.assertEqual([f.example for f in self.by["event"].fields][:5], ["x-20260914T120000Z-start", "2026-09-14T12:00:00Z", "agent", "x", "start"]); self.assertEqual(self.by["event"].observed, 1)
+    @needs_sysadmin
     def test_relations_are_the_rule_20_register(self):
         # Rule-20 property 5: every drawn edge is a REFERENCES entry anchored on a field or store token
         # of an entity on the surface, and every such entry is drawn; the projector has no table of its own.
@@ -271,7 +283,8 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("r7 &lt;b&gt;&amp;", a); self.assertNotIn("r7 <b>&", a)
         self.assertEqual(a.count('<span class="tag">example</span>'), 2 + sum(1 for e in self.ents for f in e.fields if f.example))
         self.assertIn("none observed", a)   # confirm() has no example
-        self.assertIn(f"{len(ENTITIES)} entities, ", a); self.assertIn("agent · guards/agent/rows.py", a); self.assertIn("workstation · crafts/sysadmin/guards/events.py", a)
+        self.assertIn(f"{len(ENTITIES)} entities, ", a); self.assertIn("agent · guards/agent/rows.py", a)
+        if SYSADMIN: self.assertIn("workstation · crafts/sysadmin/guards/events.py", a)
         for e in self.ents:
             self.assertIn(f'id="e-{e.key}"', a)
 
