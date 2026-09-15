@@ -76,10 +76,11 @@ class PackageTests(livetest.LiveCase):
         self.assertIn(["agent", "rows", "dyad/guards/agent/rows.py", "yes", "core"], [l.split() for l in lines])
         self.assertIn(["infra", "manifest", "dyad/guards/infra/manifest.py", "no", "core"], [l.split() for l in lines])
         self.assertEqual(len(lines) - 1, len(load_package().registry()))
-        if "sysadmin" not in CRAFTS:   # a core-only install lists the core root only (#171)
-            self.assertEqual([l for l in lines[1:] if l.split()[4] == "craft"], [])
-            return
-        self.assertIn(["sysadmin", "events", "crafts/sysadmin/guards/events.py", "yes", "craft"], [l.split() for l in lines])   # the second root (#155)
+        # the craft root lists exactly the installed crafts' guards — none on a core-only install (#171), whichever crafts are here (dyad-system #1)
+        craft_rows = {(l.split()[0], l.split()[1]) for l in lines[1:] if l.split()[4] == "craft"}
+        self.assertEqual(craft_rows, {(c, g) for c in CRAFTS for g in KNOWN_CRAFTS.get(c, [])})
+        if "sysadmin" in CRAFTS:
+            self.assertIn(["sysadmin", "events", "crafts/sysadmin/guards/events.py", "yes", "craft"], [l.split() for l in lines])   # the second root (#155)
     def test_broken_guard_fails_the_run(self):
         """A module under guards/ lacking check_package is a failing check, not a silent skip (plan #151, attack 6)."""
         import os, shutil
@@ -119,7 +120,7 @@ class PackageTests(livetest.LiveCase):
         r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "runbook", "new", "x"], capture_output=True, text=True, env=env(DYAD_RUNBOOKS=str(d)))
         self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
         # both refusals are documented: no craft to seed from (core-only install), else the existing file (#171)
-        self.assertIn("no craft provides a run-book template" if not CRAFTS else "exists; not overwritten", r.stderr)
+        self.assertIn("exists; not overwritten" if dyadlib.craft_glob("templates/runbook.md") else "no craft provides a run-book template", r.stderr)   # keyed on the template, not on any craft being present (dyad-system #1)
         self.assertEqual((d / "x.md").read_text(), "# x\n")
         shutil.rmtree(d, ignore_errors=True)
     def test_usage(self):

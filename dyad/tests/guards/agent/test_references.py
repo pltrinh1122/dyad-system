@@ -88,6 +88,12 @@ def fail_kinds(msgs):
     return {m[5:].split(":")[0] for m in msgs if m.startswith("FAIL ")}
 
 RESOLVABLE = {k for k, *_ , r in refint.REFERENCES if callable(r)}
+# Kinds whose parser is a sysadmin-craft guard run only where that craft is installed (Rule-20 property 2 skips them
+# elsewhere with one line each). The expected "ran" count and the sysadmin-kind tests derive from that (dyad-system #1).
+SYSADMIN = all(m is not None for _, m in refint.GUARD_KINDS.values())
+ABSENT_KINDS = {k for k, (_, m) in refint.GUARD_KINDS.items() if m is None}
+RUNNABLE = RESOLVABLE - ABSENT_KINDS
+needs_sysadmin = unittest.skipUnless(SYSADMIN, "the sysadmin craft's guards are not installed here; their kinds skip by design")
 
 class Fixtured(unittest.TestCase):
     """A scratch corpus per test, with the `DYAD_*` locations off; holds no test of its own."""
@@ -108,8 +114,8 @@ class FixtureTests(Fixtured):
     def test_every_kind_resolves(self):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs)
-        self.assertEqual(k, len(RESOLVABLE), "every resolvable kind ran (nothing skipped)")
-        self.assertFalse([m for m in msgs if m.startswith("skip ")], msgs)
+        self.assertEqual(k, len(RUNNABLE), "every resolvable kind ran (nothing skipped but an absent craft guard's)")
+        self.assertEqual({m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}, ABSENT_KINDS, msgs)
         self.assertGreaterEqual(n, 40)
         world = [m for m in msgs if m.startswith("warn ")]
         self.assertEqual({m[5:].split(":")[0] for m in world}, {k for k, *_, r in refint.REFERENCES if r == "world"})
@@ -191,7 +197,8 @@ class FixtureTests(Fixtured):
         shutil.rmtree(self.root / "crafts")
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs); self.assertTrue(any(m.startswith("skip rule.text->path: `crafts/…` tokens") for m in msgs))
-        self.assertEqual(k, len(RESOLVABLE), "the kind still ran for its dyad/ tokens")
+        self.assertEqual(k, len(RUNNABLE), "the kind still ran for its dyad/ tokens")
+    @needs_sysadmin
     def test_absent_craft_guard_skips_its_kinds(self):
         # #155 attack 6: a kind whose parser is a craft guard no installed craft provides skips with a line, never fails
         saved = dict(refint.GUARD_KINDS)
@@ -223,6 +230,7 @@ class FixtureTests(Fixtured):
         self.broken(lambda: self.rewrite(self.root / "preferences-corpus" / "PREFERENCES.md", "Rule-2 |", "Rule-5 |"), "preference.read_by->rule")
     def test_changelog_dwork(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "| 2026-09-14 | #7 |", "| 2026-09-14 | #8 |"), "changelog.dwork->row")
+    @needs_sysadmin
     def test_changelog_action_ops(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "ops/7-h1-x.sh` | as v1", "ops/7-h2-x.sh` | as v1"), "changelog.action->ops")
     def test_incident_dwork_range(self):
@@ -231,8 +239,10 @@ class FixtureTests(Fixtured):
         self.assertEqual(refint.hash_ids("#1–#3 (pre-ledger)"), [])
         self.assertEqual(refint.hash_ids("#2–#4, #9; PR #1 #5; was #6"), ["2", "3", "4", "9", "6"])
         self.assertEqual(refint.hash_ids("PRs #61 #62"), [])
+    @needs_sysadmin
     def test_ops_dwork(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "ops" / "7-h1-x.sh", "# d-work: #7", "# d-work: #77"), "ops.dwork->row")
+    @needs_sysadmin
     def test_ops_changelog_key(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "ops" / "7-h1-x.sh", '"#7 H1"', '"#7 H3"'), "ops.changelog->changelog")
     def test_ops_changelog_key_matches_first_row_of_a_rerun(self):
@@ -241,10 +251,13 @@ class FixtureTests(Fixtured):
         self.assertEqual(fail_kinds(self.check()[2]), set())
     def test_record_ledger(self):
         self.broken(lambda: self.rewrite(self.inst / "falsification" / "gap.md", "Disposition: see ledger #7", "Disposition: see ledger #71"), "record.ledger->row")
+    @needs_sysadmin
     def test_event_command(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "runbooks" / "events" / "x.jsonl", '"name": "start"', '"name": "launch"'), "event.command->command")
+    @needs_sysadmin
     def test_event_command_needs_the_instance_runbook(self):
         self.broken(lambda: (self.root / "workstation-corpus" / "runbooks" / "x.md").rename(self.root / "workstation-corpus" / "runbooks" / "y.md"), "event.command->command")
+    @needs_sysadmin
     def test_changelog_event(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "event: x-20260914T120000Z-start", "event: x-20260914T120001Z-start"), "changelog.event->event")
     def test_changelog_event_token_forms(self):
@@ -301,8 +314,8 @@ class CraftPresenceTests(Fixtured):
         self.cite("crafts/syseng/rules/a.md", "crafts/syseng/rules/b.md", "crafts/sysadmin/rules/x.md")
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs)
-        self.assertEqual(self.lines("skip", msgs), ["skip rule.text->path: craft syseng absent (Rule-20 property 4); 2 token(s) unresolved here"])
-        self.assertEqual(k, len(RESOLVABLE), "the kind still ran for every other token")
+        self.assertEqual([m for m in self.lines("skip", msgs) if "craft guard" not in m and "absent (no installed craft" not in m], ["skip rule.text->path: craft syseng absent (Rule-20 property 4); 2 token(s) unresolved here"])
+        self.assertEqual(k, len(RUNNABLE), "the kind still ran for every other token")
 
     def test_one_line_per_craft_not_per_token(self):
         self.cite("crafts/syseng/rules/a.md", "crafts/sysdoc/rules/b.md", "crafts/syseng/rules/c.md")
@@ -373,7 +386,7 @@ class ScratchInstallTests(unittest.TestCase):
                     if v is not None: os.environ[kk] = v
             self.assertEqual(fail_kinds(msgs), set(), msgs)
             skipped = {m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}
-            self.assertEqual(skipped, {kind for kind, *_, tgt, r in refint.REFERENCES if callable(r) and tgt in ("row", "changelog", "command", "event")})
+            self.assertEqual(skipped, {kind for kind, *_, tgt, r in refint.REFERENCES if callable(r) and tgt in ("row", "changelog", "command", "event")} | ABSENT_KINDS)
             self.assertTrue(any("row store is empty or absent" in m for m in msgs))
             self.assertEqual(k, len(RESOLVABLE) - len(skipped))
         finally:

@@ -116,9 +116,12 @@ class PackageRulesTests(unittest.TestCase):
         root = Path(tempfile.mkdtemp()); (root / "agent-corpus").mkdir()
         with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "agent-corpus"}):
             self.assertEqual(dyadlib.package_rules(dyadlib.PKG, root), dyadlib.package_rules(dyadlib.PKG, None))
-    def test_this_instance_still_refuses_its_host(self):
-        r = dyadlib.package_rules(dyadlib.PKG, dyadlib.repo_root())
-        self.assertIn(self.HOST, r["string"])
+    def test_this_instance_refuses_its_host_when_it_declares_one(self):
+        root = dyadlib.repo_root(); local = dyadlib.instance(root) / dyadlib.RULES_LOCAL
+        if not local.is_file():
+            self.skipTest("this instance has no package_rules.local.txt (a host with nothing to refuse; dyad-system #1)")
+        r = dyadlib.package_rules(dyadlib.PKG, root)
+        self.assertTrue(any(s not in dyadlib.package_rules(dyadlib.PKG, None)["string"] for s in r["string"]), "the local file adds at least one row")
 
 class RepoRootHookEnv(unittest.TestCase):
     """#142: repo_root ignores GIT_DIR set by hooks and returns the work tree, not the package dir."""
