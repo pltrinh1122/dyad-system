@@ -1,0 +1,15 @@
+# Craft guard data (beside its guard, guards/craft/crafts.py; crafts/sysarch/rules/guards.md). One entry per line; blank lines and # comments ignored.
+# name: <basename | glob | dir/>  — instance state that must not sit inside a craft tree (in addition to
+#                                    package_rules.txt `name:` entries; templates/ exempt as in the core)
+# agent-token: <text>              — an Agent-process token in a Tended craft's rules/*.md (README exempt):
+#                                    a hit WARNS (Rule-4 classifies by inference; plan #156 attack A12)
+name: REGISTRY.md
+name: events/
+name: rows/
+name: *.jsonl
+agent-token: the Agent
+agent-token: counter-prompt
+agent-token: Y/N:
+agent-token: ratif
+agent-token: plan-Y
+agent-token: Done-Y

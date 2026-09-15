@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Rule-1: a commit may touch exactly one zone. Enable with:
+#   git config core.hooksPath dyad/hooks
+exec "$(git rev-parse --show-toplevel)/dyad/guards/infra/containment.py" staged

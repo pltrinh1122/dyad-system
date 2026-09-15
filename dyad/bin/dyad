@@ -1,0 +1,3 @@
+#!/bin/sh
+# dyad entrypoint (Rule-11 property 2; preference cli-pattern, ledger #152): `dyad <noun> <verb>`.
+exec python3 "$(dirname "$0")/../scripts/package.py" "$@"

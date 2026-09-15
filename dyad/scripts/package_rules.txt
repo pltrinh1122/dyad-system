@@ -1,0 +1,25 @@
+# Rule-11 check data (A7). One entry per line; blank lines and # comments ignored.
+# string: <text>   — host-specific text that must never appear in a package file. Generic here;
+#                   this host's own strings (hostname, home path) live in <instance>/package_rules.local.txt (#192)
+# name: <basename> — an instance artifact by file name (templates/ exempt)
+# header: <text>   — an instance artifact by first line
+# generated: <pattern> — a generated file (property 6): fnmatch against every tracked path
+#                   in the repo (whole path, each component, each suffix); a match is refused
+string: /home/
+string: 192.168.
+string: .claude/projects
+name: LEDGER.md
+name: INCIDENTS.md
+name: CHANGELOG.md
+name: PREFERENCES.md
+name: MEMORY.md
+name: .jsonl
+header: # d-work ledger
+header: # Incidents
+header: # Host change log
+header: # Operator preferences
+generated: *.pyc
+generated: __pycache__/*
+generated: LEDGER.md
+generated: projections/*
+generated: ops/*.log
