@@ -2,6 +2,12 @@ name: rule-11 release
 on:
   push:
     tags: ["v*", "*-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "an existing release tag to publish (vX.Y.Z or <craft>-vX.Y.Z) with the workflow on main"
+        required: true
+        type: string
 permissions:
   contents: write
 jobs:
@@ -10,20 +16,22 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag || github.ref }}", fetch-depth: 0 }   # plans cite base commits; guards read history
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: tag equals its VERSION (Rule-11 property 4)
         # core: vX.Y.Z = v + dyad/VERSION; Tended craft: <craft>-vX.Y.Z = <craft>-v + crafts/<craft>/VERSION
+        env: { TAG: "${{ inputs.tag || github.ref_name }}" }
         run: |
-          craft="${GITHUB_REF_NAME%-v*}"; [ "${craft}" = "${GITHUB_REF_NAME}" ] && craft=""
+          craft="${TAG%-v*}"; [ "${craft}" = "${TAG}" ] && craft=""
           if [ -z "${craft}" ]; then want="v$(cat dyad/VERSION)"; else want="${craft}-v$(cat "crafts/${craft}/VERSION")"; fi
-          [ "${GITHUB_REF_NAME}" = "${want}" ] || { echo "tag ${GITHUB_REF_NAME} != ${want}"; exit 1; }
-          echo "craft=${craft}" >> "$GITHUB_ENV"
+          [ "${TAG}" = "${want}" ] || { echo "tag ${TAG} != ${want}"; exit 1; }
+          echo "craft=${craft}" >> "$GITHUB_ENV"; echo "TAG=${TAG}" >> "$GITHUB_ENV"
       - name: check and build (one distribution code path, Rule-11 property 5)
         run: |
           python3 dyad/scripts/package.py check
           if [ -z "${craft}" ]; then python3 dyad/scripts/package.py build
           else python3 dyad/scripts/craft.py export "${craft}"; fi
       - name: GitHub Release with the archive (library adapter, Rule-14)
-        run: gh release create "${GITHUB_REF_NAME}" *.tar.gz --title "${GITHUB_REF_NAME}" --notes "dyad ${craft:-package} ${GITHUB_REF_NAME}"
+        run: gh release create "${TAG}" *.tar.gz --target "$(git rev-parse HEAD)" --title "${TAG}" --notes "dyad ${craft:-package} ${TAG}"
         env: { GH_TOKEN: "${{ github.token }}" }
