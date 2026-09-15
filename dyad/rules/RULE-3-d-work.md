@@ -8,6 +8,8 @@
 - Which zone a change belongs to — Rule-1.
 - Bare `Y`/`N` disposals: they answer a counter-prompt and open nothing.
 - What the Agent may do on the live host — Rule-8 (a plan names host actions; Rule-8 classes them).
+- Release and destructive-action counter-prompts: always one-per-question, batched or not —
+  Rule-11, Rule-8.
 
 ## Conditions (triggers)
 - The operator sends a prompt (text, including text accompanying a disposal).
@@ -15,6 +17,9 @@
 - The agent believes a d-work is done (completion counter-prompt).
 - A session starts (ledger report).
 - A PR is opened or edited (`prs.py`); a commit is pushed to `main` (`rows.py`, the main fence).
+- The Operator's reply to a counter-prompt is a new prompt rather than its bare disposal: under
+  `batch-disposition-mode: on-ignore` (`preferences-corpus/PREFERENCES.md`), the engagement
+  signal for a batch (Batch disposition, below).
 
 A `d-work` starts with an Operator prompt and terminates only when the Operator
 disposes `Y` to the Agent's counter-prompt of completion (`Y/N: Done with {d-work}?`).
@@ -36,7 +41,8 @@ Any other response leaves it incomplete, to be resumed later.
 
 ## Plan (mutation authorization)
 - The Agent's first substantive reply to a prompt is a plan, stored first as a plan file
-  (Rule-15): the intent as read, the mutation proposed (falsified first, Rule-9; framed per Rule-10), and the last line `Y/N: proceed with #<id> as planned?`.
+  (Rule-15): the intent as read, the mutation proposed (falsified first, Rule-9; framed per Rule-10), and the last line `Y/N: proceed with #<id> as planned?` — or the batch form
+  (Batch disposition, below) under `batch-disposition-mode`.
 - `Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs
   from the plan is a new plan and needs a new `Y`. Any other response leaves the d-work
   open with no mutation authorized; the Agent revises the plan.
@@ -105,10 +111,43 @@ does not own it.
   breach); anything in the plan not delivered; any departure from the plan; and anything the
   Agent could not verify, stated before the counter-prompt. An omission is a breach of this
   Rule, not a style choice.
-- Form: `Y/N: Done with #<ledger id> <title>?` — one d-work per counter-prompt.
+- Form: `Y/N: Done with #<ledger id> <title>?` — one d-work per counter-prompt, or the batch
+  form (Batch disposition, below) under `batch-disposition-mode`.
 - When `merge-disposition` is `with-done` (`preferences-corpus/PREFERENCES.md`), the form
   names the d-work's unmerged PR(s): `Y/N: Done with #<id> <title> (merges PR #a, #b)?`.
   The `Y` ratifies those merges too (Rule-2, binding of approval).
+
+## Batch disposition
+Preference `batch-disposition-mode` (`preferences-corpus/PREFERENCES.md`). `off` — every plan
+and completion counter-prompt above is asked and disposed singly. `on-ignore` — singly, until
+the Operator leaves one outstanding (Conditions, above: the next message is a prompt, not its
+bare disposal) — the engagement signal itself, nothing else needed. `always` — never singly:
+the first pending item already opens the queue.
+
+Once engaged, the Agent holds a **pending queue**: every plan-ready d-work (its plan file
+written, Rule-15, counter-prompt not yet asked as part of a batch) and, separately, every
+done-ready d-work (its completion evidence gathered, Done question not yet asked as part of a
+batch). Both counts are reported at the end of every reply while either is non-empty, so an
+unintended engagement is visible within one turn. The queue is conversational, derived from the
+ledger and the stored plan files — not a corpus file, nothing here is mechanically checked.
+
+The batch forms replace the single forms above, one kind at a time — a plan batch and a done
+batch are never the same question:
+- `Y/N: proceed with #a, #b, #c as planned?` — authorizes the mutation of every named d-work;
+  each already has its own stored plan file. A `Y` authorizes exactly the named set (Rule-2,
+  Binding); `N`, or any other response, authorizes none of them (as the single form).
+- `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x, #y)?` — the reply carries full
+  completion evidence for every named d-work before this line; `merges` lists the union of
+  their unmerged PRs (`merge-disposition: with-done`). A `Y` verifies and ratifies the named set
+  together; a d-work not yet done-ready waits for a later batch.
+
+The queue drains as its items are named in a batch question and disposed. Under `on-ignore`,
+engagement lapses back to singly-asking once both queues are empty; under `always` it never
+lapses. Each disposed row's ledger entry names the full set it was batched with —
+`<date> Y plan (batch #a,#b,#c)` / `<date> Y done (batch #a,#b, merges PR #w,#x,#y)` — so the
+chain is reconstructible from any one row alone (D4, Ledger above). Provenance (Rule-7) is
+unaffected: the Operator's one `Y` is written as the same entry into every named d-work's own
+record.
 
 ## Incidents
 - An incident is any action taken or outcome reached that the plan did not name, or a plan
@@ -126,6 +165,9 @@ does not own it.
   `merge-disposition: with-done` it also ratifies the named merges). Rule-2 applies by reference.
 
 ## Provenance
-Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`.
+Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
+disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
+by an ignored counter-prompt or the `always` preference; see
+`../falsification/rules/rules-2-3-batch-disposition.md`.
 
 Set: System Requirements.

@@ -12,6 +12,7 @@ defines what each value means.
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | none | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
+| batch-disposition-mode | off | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -37,3 +38,9 @@ defines what each value means.
   are written as `python3.12 dyad/scripts/<script>.py …`, no entrypoint (ledger #152). Seeded
   `industry-standard`: `dyad/bin/dyad` ships executable as part of the core craft's own tree, so
   a fresh install has a working entrypoint immediately.
+- `batch-disposition-mode` — `off`: every plan and completion counter-prompt is asked and
+  disposed singly. `on-ignore`: singly, until the Operator leaves one outstanding — the
+  engagement signal itself — after which the Agent holds a pending queue and asks the batch
+  forms (Rule-3, Batch disposition), lapsing back to singly once the queue drains. `always`:
+  never singly. Seeded `off`: the existing single-question behavior, until the Operator has
+  engaged it once.
