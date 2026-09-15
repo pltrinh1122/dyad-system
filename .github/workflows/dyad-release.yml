@@ -1,0 +1,21 @@
+name: rule-11 release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: tag equals v + dyad/VERSION
+        run: '[ "${GITHUB_REF_NAME}" = "v$(cat dyad/VERSION)" ] || { echo "tag ${GITHUB_REF_NAME} != v$(cat dyad/VERSION)"; exit 1; }'
+      - name: check and build
+        run: python3 dyad/scripts/package.py check && python3 dyad/scripts/package.py build
+      - name: GitHub Release with the archive (library adapter, Rule-14)
+        run: gh release create "${GITHUB_REF_NAME}" dyad-*.tar.gz --title "${GITHUB_REF_NAME}" --notes "dyad package ${GITHUB_REF_NAME}"
+        env: { GH_TOKEN: "${{ github.token }}" }

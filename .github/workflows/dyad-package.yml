@@ -1,0 +1,35 @@
+name: rule-11 package
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['agent-corpus/d-work/**']
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: check (Rule-11 runner)
+        run: python3 dyad/scripts/package.py check
+      - name: build
+        run: python3 dyad/scripts/package.py build /tmp/dyad-package.tar.gz
+      - name: install core, then export and install the sysadmin craft, into a scratch repo; run the guards there; install both again (idempotent)
+        # the scratch's own python runs here (`"$T"/dyad/bin/dyad craft install`); without this it writes
+        # bytecode into "$T", `git add -A` tracks it, and the scratch's `check` fails Rule-11 property 6 (#171)
+        env: { PYTHONDONTWRITEBYTECODE: "1" }
+        run: |
+          set -e
+          T=$(mktemp -d); git -C "$T" init -q
+          python3 dyad/scripts/package.py install "$T"
+          python3 dyad/scripts/package.py craft export sysadmin /tmp/sysadmin.tar.gz
+          "$T"/dyad/bin/dyad craft install /tmp/sysadmin.tar.gz --dwork 156
+          cd "$T"; git add -A; git -c user.email=ci@dyad -c user.name=ci commit -qm scratch
+          python3 dyad/guards/agent/rules.py; python3 dyad/guards/agent/vocabulary.py; python3 dyad/guards/infra/containment.py tree
+          python3 dyad/scripts/package.py check
+          python3 dyad/scripts/package.py check --guards
+          python3 dyad/scripts/package.py craft install /tmp/sysadmin.tar.gz | grep -q ' 0 changes'
+          cd -; python3 dyad/scripts/package.py install "$T" | grep -q ' 0 changes'

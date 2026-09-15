@@ -1,0 +1,18 @@
+name: rule-3 d-work
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['agent-corpus/d-work/**']
+  workflow_dispatch:
+jobs:
+  main-fence:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Direct commits to main touch only the d-work ledger (Rule-2 exception fence)
+        run: python3 dyad/guards/agent/rows.py "${{ github.event.before }}" "${{ github.sha }}"
+  # d-work-link: the plan gate runs before every push on the kernel-only path (Rule-3 Mechanisms, #168);
+  # no PR-triggered wrapper remains.

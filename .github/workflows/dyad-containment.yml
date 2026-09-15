@@ -1,0 +1,18 @@
+name: rule-1 containment
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['agent-corpus/d-work/**']
+  workflow_dispatch:
+jobs:
+  containment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Push — each new commit stays in one zone
+        if: github.event_name == 'push'
+        run: python3 dyad/guards/infra/containment.py range "${{ github.event.before }}" "${{ github.sha }}"
+      - name: Tree — every tracked file is classified
+        run: python3 dyad/guards/infra/containment.py tree

@@ -1,0 +1,14 @@
+name: rule-6 vocabulary
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['agent-corpus/d-work/**']
+  workflow_dispatch:
+jobs:
+  vocabulary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: vocabulary table well-formed, owners and used-by resolve, no orphans
+        run: python3 dyad/guards/agent/vocabulary.py

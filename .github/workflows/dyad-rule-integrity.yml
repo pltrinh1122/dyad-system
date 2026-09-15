@@ -1,0 +1,14 @@
+name: rule-4 integrity
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['agent-corpus/d-work/**']
+  workflow_dispatch:
+jobs:
+  rule-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: every Rule carries a conforming integrity block
+        run: python3 dyad/guards/agent/rules.py
