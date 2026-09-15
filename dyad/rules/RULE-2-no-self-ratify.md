@@ -57,6 +57,9 @@ not edited when they are added (G5).
   completion reply record it (#138).
 - A new PR, including one created to recover from an error, needs a fresh Y.
 - The agent may *execute* a merge the operator has ratified; execution is clerical, not disposal.
+- A batch counter-prompt (Rule-3, Batch disposition) names several d-works, PRs, or both in one
+  question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked
+  against its own evidence and its own heads-unchanged condition.
 
 ## Enforcement
 Inference-only, with one mechanical fence: `dyad/guards/agent/rows.py` (the main fence, owned by
@@ -68,6 +71,7 @@ workflow wrapper in the infra zone — a dependency on Rule-1, not an overlap (A
 
 ## Provenance
 Craft invariant `bond:no-self-ratify` (dyad-bond). Falsified 2026-09-12; see
-`../falsification/rules/rule-2-no-self-ratify.md`.
+`../falsification/rules/rule-2-no-self-ratify.md`. Binding gains one sentence on the batch
+counter-prompt (Rule-3) 2026-09-15 (d-work #17); see `../falsification/rules/rules-2-3-batch-disposition.md`.
 
 Set: System Requirements.
