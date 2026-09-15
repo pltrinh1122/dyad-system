@@ -31,7 +31,10 @@ class ScanTests(unittest.TestCase):
         files = {"crafts/c/server/r.py": "GUARDS = ('x',)\n"}
         self.assertEqual(self.scan(files, [("crafts/*/server/*.py", "container code")]), [])
         self.assertEqual(self.scan(files, [("crafts/*/server/*.py", "")]), ["invariants_rules.txt: exempt crafts/*/server/*.py has no reason"])
-        self.assertEqual(self.scan({"dyad/scripts/a.py": "x = 1\n"}, [("crafts/*/server/*.py", "r")]), ["invariants_rules.txt: exempt crafts/*/server/*.py matches no module that needs it (stale)"])
+        # a crafts/ glob matching no file at all belongs to a craft not installed here: a warning (dyad-system #1); one that matches files none of which needs it is stale
+        self.assertEqual(self.scan({"dyad/scripts/a.py": "x = 1\n"}, [("crafts/*/server/*.py", "r")]), ["warning: invariants_rules.txt: exempt crafts/*/server/*.py matches no file here (a craft not installed); not checked"])
+        self.assertEqual(self.scan({"crafts/c/server/plain.py": "x = 1\n"}, [("crafts/*/server/*.py", "r")]), ["invariants_rules.txt: exempt crafts/*/server/*.py matches no module that needs it (stale)"])
+        self.assertEqual(self.scan({"dyad/scripts/a.py": "x = 1\n"}, [("dyad/scripts/gone.py", "r")]), ["invariants_rules.txt: exempt dyad/scripts/gone.py matches no module that needs it (stale)"])
     def test_syntax_error_reported(self):
         self.assertTrue(self.scan({"dyad/scripts/a.py": "def (\n"})[0].startswith("dyad/scripts/a.py: does not parse"))
     def test_model_constants_and_declares(self):
@@ -59,7 +62,7 @@ class EntryTests(unittest.TestCase):
 class LiveTests(unittest.TestCase):
     def test_live_repo_passes(self):
         msgs = inv.check_package(dyadlib.repo_root())
-        self.assertEqual(msgs, [])
+        self.assertEqual([m for m in msgs if not m.startswith("warning:")], [])   # an absent craft's exempt line warns (dyad-system #1)
         self.assertRegex(inv.summary(), r"^\d+ invariants in \d+ modules, 0 asserts outside tests$")
         es = inv.entries(); self.assertGreaterEqual(len(es), 100); self.assertTrue(all(h for _, _, h in es), [e for e in es if not e[2]])
         self.assertEqual(sorted(inv.exemptions()), [("crafts/*/server/*.py", inv.exemptions()[0][1])])

@@ -113,7 +113,8 @@ def check_html(tc, text, n_layers=5):
     tc.assertEqual(text.count("<section "), n_layers)
     for name in ps.LAYERS:
         tc.assertIn(f'<section data-layer="{name}">', text)
-    tc.assertNotIn("http://", text.replace('xmlns="http://www.w3.org/2000/svg"', "")); tc.assertNotIn("https://", text)
+    for load in (" src=", "<link", 'href="http', "url("):   # self-contained = nothing loaded (projection.md p3): an attribute, not a data-src token; text may name a URL
+        tc.assertNotIn(load, text)
     tc.assertNotIn("src=", text.replace("data-src=", "")); tc.assertNotIn("href=", text)
     p = Balanced(); p.feed(text); p.close()
     tc.assertEqual(p.errors, []); tc.assertEqual(p.stack, [], p.stack)

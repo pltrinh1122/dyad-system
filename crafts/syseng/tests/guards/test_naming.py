@@ -146,12 +146,26 @@ class LiveTests(unittest.TestCase):
         for pattern, _g, _r in r["kind"] + r["mode"]: self.assertIn(pattern, pats)
         self.assertTrue(r["mode"])   # the executables a host runs by name are checked at all (#141)
         self.assertGreaterEqual(len(naming.rows()), 20); self.assertEqual(r["bad"], [])
-        self.assertEqual(sorted(r["env"]), ["DYAD_INSTANCE", "DYAD_NO_NESTED_TESTS", "DYAD_OPS", "DYAD_ROLE", "DYAD_RUNBOOKS", "DYAD_SESSION"])
+        self.assertEqual(sorted(r["env"]), ["DYAD_INSTANCE", "DYAD_NO_NESTED_TESTS", "DYAD_OPS@sysadmin", "DYAD_ROLE", "DYAD_RUNBOOKS", "DYAD_SESSION"])   # @craft: checked only where that craft is installed (dyad-system #1)
         self.assertRegex(naming.summary(), r"^\d+ patterns, \d+ kinds, \d+ mode rules, \d+ symbol rules, \d+ allowed$")
     def test_contract_card_and_invariants(self):
         self.assertEqual((naming.ENTITY, naming.CORPUS, naming.TRANSACTION), ("name", "craft", False))
         d = naming.describe(dyadlib.repo_root()); self.assertEqual([f[0] for f in d["fields"]], list(naming.FIELDS)); self.assertGreater(d["observed"], 0)
         self.assertEqual(dyadlib.check_invariants(naming, dyadlib.contract_invariants(naming, "craft", "syseng", {"craft"})), len(naming.INVARIANTS) + 4)
+
+
+
+class EnvScopeTests(unittest.TestCase):
+    def test_qualified_token_checked_only_when_its_craft_is_installed(self):
+        found = {"DYAD_A": ["dyad/scripts/a.py"]}
+        self.assertEqual(naming.check_env(found, ["DYAD_A", "DYAD_B@sysadmin"], {"sysarch"}),
+                         ["warning: naming_rules.txt: env DYAD_B is read by a craft not installed here; not checked"])
+        self.assertEqual(naming.check_env(found, ["DYAD_A", "DYAD_B@sysadmin"], {"sysadmin"}),
+                         ["naming_rules.txt: env DYAD_B is listed but no package code reads it (stale)"])
+        self.assertEqual(naming.check_env({"DYAD_A": ["a.py"], "DYAD_B": ["crafts/sysadmin/guards/o.py"]}, ["DYAD_A", "DYAD_B@sysadmin"], {"sysadmin"}), [])
+    def test_unqualified_tokens_unchanged(self):
+        self.assertEqual(naming.check_env({}, ["DYAD_A"], None), ["naming_rules.txt: env DYAD_A is listed but no package code reads it (stale)"])
+        self.assertEqual(naming.check_env({"DYAD_Z": ["z.py"]}, [], None), ["z.py: reads DYAD_Z, not in the naming table (`DYAD_<NAME>` row / `env:` line)"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,7 +48,7 @@ symbol: dyad/guards/*/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package desc
 symbol: crafts/*/guards/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package describe INVARIANTS
 symbol: crafts/*/projectors/*.py : main INVARIANTS
 
-env: DYAD_INSTANCE DYAD_OPS DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TESTS DYAD_SESSION
+env: DYAD_INSTANCE DYAD_OPS@sysadmin DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TESTS DYAD_SESSION
 
 allow: .github/workflows/lan-git.yml # the lan-git craft's own CI (instance workflow, run by the hosting on the craft's server tree), not a package wrapper; unprefixed by design (#150; server.yml before it, #181)
 allow: .github/workflows/lan-git-image.yml # publishes the lan-git craft's image to GHCR (corroboration, kernel-only is the real path, #181); same reason, unprefixed by design

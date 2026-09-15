@@ -82,7 +82,7 @@ def declares_invariants(tree: ast.Module) -> bool:
 
 def scan(root: Path, pkg: Path = dyadlib.PKG, exempt: list[tuple[str, str]] | None = None) -> tuple[list[str], set[str]]:
     """(messages of checks (i) and (ii), exempt globs that matched a file). Paths are repo-relative."""
-    import fnmatch
+    import fnmatch, re
     exempt = exemptions() if exempt is None else exempt
     msgs, used = [], set()
     for glob, reason in exempt:
@@ -105,9 +105,13 @@ def scan(root: Path, pkg: Path = dyadlib.PKG, exempt: list[tuple[str, str]] | No
                 used.add(hit)
             else:
                 msgs.append(f"{rel}: defines {', '.join(consts)} but no INVARIANTS (invariants.md p1)")
+    tree = [str(q.relative_to(root)) for q in root.rglob("*") if q.is_file() and ".git" not in q.parts]
     for glob, _ in exempt:
         if glob not in used:
-            msgs.append(f"invariants_rules.txt: exempt {glob} matches no module that needs it (stale)")
+            if glob.startswith("crafts/") and not any(fnmatch.fnmatch(f, glob) for f in tree):
+                msgs.append(f"warning: invariants_rules.txt: exempt {glob} matches no file here (a craft not installed); not checked")   # dyad-system #1
+            else:
+                msgs.append(f"invariants_rules.txt: exempt {glob} matches no module that needs it (stale)")
     return msgs, used
 
 # ---- (iii): the entries of every module in the runner's pass

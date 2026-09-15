@@ -129,8 +129,8 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("r1 &lt;b&gt;&amp;", a); self.assertNotIn("<b>&", a)
         for k in self.kinds():
             self.assertIn(f'<section data-kind="{k}">', a)
-        self.assertNotIn("http://", a.replace('xmlns="http://www.w3.org/2000/svg"', ""))
-        self.assertNotIn("https://", a)
+        for load in (" src=", "<link", 'href="http', "url("):   # self-contained = nothing loaded (projection.md p3): an attribute, not a data-src token; text may name a URL
+            self.assertNotIn(load, a)
     def test_render_balanced(self):
         p = Balanced(); p.feed(pe.render(self.g)); p.close()
         self.assertEqual(p.errors, []); self.assertEqual(p.stack, [], p.stack)
