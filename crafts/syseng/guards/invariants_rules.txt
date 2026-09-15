@@ -1,0 +1,5 @@
+# Invariants guard data (beside its guard, guards/invariants.py; crafts/syseng/rules/invariants.md). One entry per line;
+# blank lines and # comments ignored.
+#   exempt: <path glob> # <reason>  — a module that defines a data-model constant but is not a model the runner loads;
+#                                      no reason fails; a glob matching no such module is stale and fails
+exempt: crafts/*/server/*.py # a reference deployment's own code (the Gitea image's receiver and init), run by the container, never loaded by the runner's pass; its tests are `server/tests/`

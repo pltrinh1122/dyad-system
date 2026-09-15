@@ -1,0 +1,55 @@
+# Naming guard data (beside its guard, guards/naming.py; the table is rules/naming.md). One entry per line; blank lines
+# and # comments ignored. The guard fails on a `kind:` whose pattern is not a row of the table.
+#   kind: <pattern> = <path glob> = <regex>   — `*` one segment, `**` any; the regex spans the whole path; `<instance>` is the
+#                                                instance root (DYAD_INSTANCE); group `id` unique within the kind; group `beside`
+#                                                names <dir>/<beside>.py that must exist
+#   mode: <pattern> = <path glob> = <mode>     — every selected path is tracked at that index mode (git ls-files -s, never the disk
+#                                                bit: core.fileMode=false hides a 100644 behind a 755, #135/#141); untracked warns
+#                                                and falls back to the disk bit. Ops scripts are NOT here: their mode is part of the
+#                                                Rule-18 form, checked by crafts/sysadmin/guards/ops_scripts.py (one owner)
+#   symbol: <module glob> : <name|regex> …    — each selected module defines each plain name at top level; a regex needs one match
+#   env: NAME …                                — every DYAD_<NAME> package code reads, no more, no less
+#   allow: <path> # <reason>                   — a path a kind claims but that does not match; reasoned; stale fails for a package path
+#                                                (dyad/, crafts/) and warns for an instance path (this file travels to other installs); unneeded warns
+
+kind: dyad/rules/RULE-<n>-<slug>.md = dyad/rules/* = dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md
+kind: crafts/<craft>/rules/<slug>.md = crafts/*/rules/* = crafts/[a-z][a-z0-9-]*/rules/([a-z0-9-]+|README)\.md
+kind: crafts/<craft>/ = crafts/*/** = crafts/[a-z][a-z0-9-]*/(VERSION|README\.md|MANIFEST\.md|(rules|vocabulary|templates|guards|tests|falsification|docs|projectors|scripts|server)/.+)
+kind: <instance>/d-work/rows/<id>.md = <instance>/d-work/rows/* = <instance>/d-work/rows/((?P<id>\d+)|README)\.md
+kind: <instance>/d-work/plans/<id>.md = <instance>/d-work/plans/* = <instance>/d-work/plans/(?P<id>\d+)\.md
+kind: <instance>/d-work/sessions/<id>.md = <instance>/d-work/sessions/* = <instance>/d-work/sessions/[A-Za-z0-9._-]+\.md
+kind: <instance>/falsification/<slug>.md = <instance>/falsification/* = <instance>/falsification/[a-z0-9-]+\.md
+kind: dyad/falsification/rules/rule-<n>-<slug>.md = dyad/falsification/rules/* = dyad/falsification/rules/rules?(-\d+)+-[a-z0-9-]+\.md
+kind: crafts/<craft>/falsification/rules/<slug>.md = crafts/*/falsification/** = crafts/[a-z][a-z0-9-]*/falsification/(rules/)?([a-z0-9-]+|README)\.md
+kind: <instance>/audits/<YYYY-MM-DD>-<slug>.md = <instance>/audits/* = <instance>/audits/(\d{4}-\d{2}-\d{2}-[a-z0-9-]+|INCIDENTS)\.md
+kind: dyad/guards/<corpus>/<entity>.py = dyad/guards/*/*.py = dyad/guards/(agent|workstation|preferences|infra|craft)/_?[a-z][a-z0-9_]*\.py
+kind: crafts/<craft>/guards/<entity>.py = crafts/*/guards/*.py = crafts/[a-z][a-z0-9-]*/guards/_?[a-z][a-z0-9_]*\.py
+kind: <entity>_rules.txt = dyad/guards/*/*.txt = dyad/guards/[a-z]+/(?P<beside>[a-z][a-z0-9_]*)_rules\.txt
+kind: <entity>_rules.txt = crafts/*/guards/*.txt = crafts/[a-z][a-z0-9-]*/guards/(?P<beside>[a-z][a-z0-9_]*)_rules\.txt
+kind: dyad/tests/test_<name>.py = dyad/tests/*.py = dyad/tests/(test_[a-z0-9_]+|__init__)\.py
+kind: dyad/tests/guards/<corpus>/test_<entity>.py = dyad/tests/guards/**.py = dyad/tests/guards(/[a-z]+)?/(test_[a-z0-9_]+|__init__)\.py
+kind: crafts/<craft>/tests/guards/test_<entity>.py = crafts/*/tests/**.py = crafts/[a-z][a-z0-9-]*/tests(/guards)?/(test_[a-z0-9_]+|__init__)\.py
+kind: crafts/<craft>/projectors/project_<surface>.py = crafts/*/projectors/* = crafts/[a-z][a-z0-9-]*/projectors/project_[a-z]+\.py
+kind: .github/workflows/dyad-<slug>.yml = .github/workflows/* = \.github/workflows/dyad-[a-z0-9-]+\.yml
+kind: <ops>/<d-work>-<hN>-<slug>.sh = workstation-corpus/ops/* = workstation-corpus/ops/(\d+-h\d+-[a-z0-9-]+(-undo)?\.sh|README\.md)
+kind: <runbooks>/<instance>.md = workstation-corpus/runbooks/* = workstation-corpus/runbooks/([a-z][a-z0-9-]*|README)\.md
+kind: <runbooks>/events/<instance>.jsonl = workstation-corpus/runbooks/events/* = workstation-corpus/runbooks/events/([a-z][a-z0-9-]*\.jsonl|README\.md)
+kind: dyad/templates/<Name> = dyad/templates/* = dyad/templates/(VERSION|[A-Za-z-]+\.md)
+
+# files the host executes by name: the entrypoint, the hooks an install points core.hooksPath at, and the shell files a craft ships
+mode: dyad/bin/<name> = dyad/bin/* = 100755
+mode: dyad/hooks/<hook> = dyad/hooks/* = 100755
+mode: crafts/<craft>/templates/*.sh = crafts/*/templates/*.sh = 100755
+mode: crafts/<craft>/server/*.sh = crafts/*/server/*.sh = 100755
+
+symbol: dyad/scripts/package.py : check_rule_\d+ PROJECTORS CHECKS INVARIANTS
+symbol: dyad/scripts/dyadlib.py : INVARIANTS check_invariants InvariantError CONTRACT
+symbol: dyad/guards/*/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package describe INVARIANTS
+symbol: crafts/*/guards/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package describe INVARIANTS
+symbol: crafts/*/projectors/*.py : main INVARIANTS
+
+env: DYAD_INSTANCE DYAD_OPS DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TESTS DYAD_SESSION
+
+allow: .github/workflows/lan-git.yml # the lan-git craft's own CI (instance workflow, run by the hosting on the craft's server tree), not a package wrapper; unprefixed by design (#150; server.yml before it, #181)
+allow: .github/workflows/lan-git-image.yml # publishes the lan-git craft's image to GHCR (corroboration, kernel-only is the real path, #181); same reason, unprefixed by design
+allow: dyad/falsification/rules/rule-sets.md # the record of the two Rule sets (frame, #71), not of one Rule; predates the rule-<n>- pattern
