@@ -34,4 +34,4 @@ jobs:
           else python3 dyad/scripts/craft.py export "${craft}"; fi
       - name: GitHub Release with the archive (library adapter, Rule-14)
         run: gh release create "${TAG}" *.tar.gz --target "$(git rev-parse HEAD)" --title "${TAG}" --notes "dyad ${craft:-package} ${TAG}"
-        env: { GH_TOKEN: "${{ github.token }}" }
+        env: { GH_TOKEN: "${{ secrets.RELEASE_TOKEN }}" }   # d-work #18: the automatic token 403s on release creation
