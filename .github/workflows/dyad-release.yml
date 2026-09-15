@@ -1,7 +1,7 @@
 name: rule-11 release
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*", "*-v*"]
 permissions:
   contents: write
 jobs:
@@ -12,10 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: tag equals v + dyad/VERSION
-        run: '[ "${GITHUB_REF_NAME}" = "v$(cat dyad/VERSION)" ] || { echo "tag ${GITHUB_REF_NAME} != v$(cat dyad/VERSION)"; exit 1; }'
-      - name: check and build
-        run: python3 dyad/scripts/package.py check && python3 dyad/scripts/package.py build
+      - name: tag equals its VERSION (Rule-11 property 4)
+        # core: vX.Y.Z = v + dyad/VERSION; Tended craft: <craft>-vX.Y.Z = <craft>-v + crafts/<craft>/VERSION
+        run: |
+          craft="${GITHUB_REF_NAME%-v*}"; [ "${craft}" = "${GITHUB_REF_NAME}" ] && craft=""
+          if [ -z "${craft}" ]; then want="v$(cat dyad/VERSION)"; else want="${craft}-v$(cat "crafts/${craft}/VERSION")"; fi
+          [ "${GITHUB_REF_NAME}" = "${want}" ] || { echo "tag ${GITHUB_REF_NAME} != ${want}"; exit 1; }
+          echo "craft=${craft}" >> "$GITHUB_ENV"
+      - name: check and build (one distribution code path, Rule-11 property 5)
+        run: |
+          python3 dyad/scripts/package.py check
+          if [ -z "${craft}" ]; then python3 dyad/scripts/package.py build
+          else python3 dyad/scripts/craft.py export "${craft}"; fi
       - name: GitHub Release with the archive (library adapter, Rule-14)
-        run: gh release create "${GITHUB_REF_NAME}" dyad-*.tar.gz --title "${GITHUB_REF_NAME}" --notes "dyad package ${GITHUB_REF_NAME}"
+        run: gh release create "${GITHUB_REF_NAME}" *.tar.gz --title "${GITHUB_REF_NAME}" --notes "dyad ${craft:-package} ${GITHUB_REF_NAME}"
         env: { GH_TOKEN: "${{ github.token }}" }
