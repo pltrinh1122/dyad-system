@@ -148,7 +148,7 @@ def parser_names(pkg):
     return names
 
 ENTITIES = ({"component", "craft", "frame", "plan", "pr", "preference", "projector", "provenance", "record", "reference", "row", "rule", "term", "zone",
-             "presence", "name", "invariant", "test"}   # core + sysarch (projector, #160) + syseng (name, invariant, test, #162) + presence (#185)
+             "presence", "name", "invariant", "test", "bundle"}   # core + sysarch (projector, #160) + syseng (name, invariant, test, #162) + presence (#185) + bundle (Rule-11 p7, #196)
             | ({"changelog", "command", "event", "ops"} if SYSADMIN else set()) | ({"image"} if LANGIT else set()))
 
 class FixtureTests(unittest.TestCase):
