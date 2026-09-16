@@ -14,5 +14,5 @@ version: 0.5.1
 | component | version |
 |-----------|---------|
 | dyad-operator | 0.5.1 |
-| sysarch | 0.1.2 |
+| sysarch | 0.1.3 |
 | syseng | 0.1.2 |
