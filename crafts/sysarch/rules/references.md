@@ -38,13 +38,15 @@ Python callables, and a data file naming them by string would add a lookup table
 
 ## Leaves
 Entities that are neither a source nor a target of any register row, by design: `zone` (the
-zone table is read by paths, not by references), `craft` (a craft is named by its directory; its
-`requires:` is checked at install, `distribution.md`), `reference` (the register itself),
+zone table is read by paths, not by references), `reference` (the register itself),
 `presence` (Rule-16, d-work #185: a session's own claim of what it is working; its rows field
 names ids by design without a resolver — a row gone stale in another session's file is expected,
 never an error, so it is read, not mechanically checked against the ledger). The
 craft guard (`registry.py`) checks that every core guard's `ENTITY` occurs in the register as a
-source or target or is listed in this section as a leaf in backticks.
+source or target or is listed in this section as a leaf in backticks. The craft entity left this
+list 2026-09-16 (#196): a new reference kind (`bundle.component->craft`, Rule-11 property 7) makes
+it a real target — a craft is still named by its directory and its own `requires:` still checked
+at install (`distribution.md`), but it is now also referenced, so the register is where it belongs.
 
 ## When
 - A new reference kind appears in a store, a template or a Rule: the same d-work adds its register
