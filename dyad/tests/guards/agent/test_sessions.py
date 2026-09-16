@@ -78,6 +78,88 @@ class TouchTests(unittest.TestCase):
         finally:
             del os.environ["DYAD_SESSION"]
 
+class WriterCollisionTests(unittest.TestCase):
+    """F1 (d-work #32): two processes configured with the same DYAD_SESSION collide on one file
+    despite the "only that session writes it" promise; `touch()` now detects a different, still-
+    live `writer` already in the file and warns instead of silently unioning."""
+    def test_different_live_writer_warns_and_does_not_union(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "shared-name"
+        try:
+            (root / "agent-corpus" / "d-work" / "sessions" / "shared-name.md").write_text(
+                f"session: shared-name\nseen: {_now()}\nroot: /tmp/x\nrows: 9\nfiles: other.py\n"
+                f"writer: deadbeef0000\n")
+            import io, contextlib
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                p = sv.touch(root, ["1"], ["mine.py"])
+            fields = sv.parse(p.read_text())
+            self.assertEqual(fields["rows"], "1")     # not unioned with the other writer's "9"
+            self.assertEqual(fields["files"], "mine.py")
+            self.assertEqual(fields["writer"], sv._WRITER)
+            self.assertIn("different, still-live process", stderr.getvalue())
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_same_writer_reunites_silently(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "shared-name-2"
+        try:
+            import io, contextlib
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                sv.touch(root, ["1"], ["a.py"])
+                p = sv.touch(root, ["2"], ["b.py"])   # same process: same _WRITER, must not warn
+            fields = sv.parse(p.read_text())
+            self.assertEqual(fields["rows"], "1 2")
+            self.assertEqual(fields["files"], "a.py b.py")
+            self.assertEqual(stderr.getvalue(), "")
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_stale_other_writer_is_unioned_not_warned(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "shared-name-3"
+        try:
+            (root / "agent-corpus" / "d-work" / "sessions" / "shared-name-3.md").write_text(
+                "session: shared-name-3\nseen: 2020-01-01T00:00:00+00:00\nroot: /tmp/x\n"
+                "rows: 9\nfiles: other.py\nwriter: deadbeef0000\n")
+            import io, contextlib
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                p = sv.touch(root, ["1"], ["mine.py"])
+            fields = sv.parse(p.read_text())
+            self.assertEqual(fields["rows"], "1 9")   # a stale writer is not "still-live": unioned as before
+            self.assertEqual(stderr.getvalue(), "")
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_writer_field_is_this_processs_id(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "writer-field-test"
+        try:
+            p = sv.touch(root, [], [])
+            self.assertEqual(sv.parse(p.read_text())["writer"], sv._WRITER)
+        finally:
+            del os.environ["DYAD_SESSION"]
+
+class SelfExclusionCLITests(unittest.TestCase):
+    def test_touch_cli_never_warns_about_its_own_file(self):
+        """F4 (d-work #32): `main()`'s touch handler passed a *fresh* `session_id()` call as
+        `same_root`'s `exclude`, which — with DYAD_SESSION unset — almost never matched the id
+        the file was actually written under, so a session's very first `dyad session touch`
+        warned about itself. Runs `main()` itself (not `touch()` directly), with `repo_root`
+        mocked to a scratch tree so the CLI's own code path is exercised without touching the
+        real corpus."""
+        import io, contextlib
+        root = repo()
+        os.environ.pop("DYAD_SESSION", None)
+        with mock.patch.object(sv.dyadlib, "repo_root", return_value=root):
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                rc = sv.main(["touch", "-r", "1"])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("same working tree", stdout.getvalue() + stderr.getvalue())
+        files = list((root / "agent-corpus" / "d-work" / "sessions").glob("*.md"))
+        self.assertEqual(len(files), 1, files)   # the CLI's own file, correctly excluded from its own check
+
 class StaleTests(unittest.TestCase):
     def test_fresh_is_not_stale(self):
         import datetime

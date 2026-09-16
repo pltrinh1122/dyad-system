@@ -109,6 +109,43 @@ class ContractTests(unittest.TestCase):
         self.assertIn(out.stdout.strip() or "main fence", ("main fence OK", "main fence FAILED", "main fence"))
 
 
+class BranchIdCollisionTests(unittest.TestCase):
+    """F2 (d-work #32): on a branch, `check_transaction` now runs `check_id_collisions` — nothing
+    else caught two sessions racing the allocator to the same id before it reached a PR or merge."""
+    def setUp(self):
+        self.r = Repo()
+        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one"))
+        self.base = self.r.commit("root")
+        sh("git", "checkout", "-q", "-b", "feature", cwd=self.r.d)
+        os.environ.pop("DYAD_INSTANCE", None)
+    def test_same_id_different_title_fails(self):
+        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one but renamed on this branch"))
+        h = self.r.commit("collide")
+        out = m.check_id_collisions(self.r.d, self.base, h)
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("id 1 already names", out[0]); self.assertIn("'one'", out[0])
+    def test_same_id_same_title_passes(self):
+        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one", "planned", "Y plan"))
+        h = self.r.commit("state change only")
+        self.assertEqual(m.check_id_collisions(self.r.d, self.base, h), [])
+    def test_new_id_passes(self):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two"))
+        h = self.r.commit("new row")
+        self.assertEqual(m.check_id_collisions(self.r.d, self.base, h), [])
+    def test_unrelated_change_passes(self):
+        self.r.write("dyad/x.md", "x")
+        h = self.r.commit("touch package")
+        self.assertEqual(m.check_id_collisions(self.r.d, self.base, h), [])
+    def test_malformed_head_row_is_skipped_not_crashed(self):
+        self.r.write("agent-corpus/d-work/rows/1.md", "not: a valid row file at all\n")
+        h = self.r.commit("garbage")
+        self.assertEqual(m.check_id_collisions(self.r.d, self.base, h), [])
+    def test_check_transaction_runs_it_on_a_branch(self):
+        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one but renamed on this branch"))
+        h = self.r.commit("collide")
+        out = m.check_transaction(self.r.d, self.base, h)
+        self.assertEqual(len(out), 1, out); self.assertIn("id 1 already names", out[0])
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):

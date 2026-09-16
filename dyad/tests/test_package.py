@@ -368,6 +368,29 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("state: backlog\n", text); self.assertIn("refs: #2\n", text)
         self.assertIn("opened as backlog on #2 Done", text)
         self.assertIn("backlog", dyadlib.NEW_STATES)
+    # F3, d-work #32: cmd_dwork's fetch of origin/main used to fail silently; it now warns loudly
+    # and states that allocation fell back to local ids, before still allocating from what it has.
+    def test_dwork_new_warns_loudly_when_origin_main_is_unreadable(self):
+        import io, contextlib
+        from unittest import mock
+        d, rows = self.dwork_repo()
+        pkg = load_package()
+        real_read_rows = dyadlib.read_rows
+        def fake(root, at=None):
+            if at == "origin/main":
+                raise RuntimeError("simulated: origin unreachable")
+            return real_read_rows(root, at=at)
+        env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))
+        with mock.patch.dict(os.environ, env), mock.patch.object(dyadlib, "read_rows", side_effect=fake):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                rc = pkg.cmd_dwork(["new", "three", "#1"])
+        self.assertEqual(rc, 0)
+        self.assertIn("warning: could not read origin/main's rows", stderr.getvalue())
+        self.assertIn("local ids only", stderr.getvalue())
+        self.assertIn("d-work #32", stderr.getvalue())
+        text = rows.joinpath("3.md").read_text()   # allocation still proceeds, from what it has locally
+        self.assertIn("id: 3\n", text); self.assertIn("state: open\n", text)
     def test_dwork_state_refuses_done_to_open(self):
         d, rows = self.dwork_repo(); before = rows.joinpath("2.md").read_text()
         r = self.dwork_state(d, "2", "open")

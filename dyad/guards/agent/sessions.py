@@ -15,7 +15,11 @@ never can, even with identical `files`. `seen` is an ISO-8601 UTC timestamp; the
 validates shape (well-formed lines, a parseable timestamp) and never fails on overlap, same-root,
 or staleness — a session that ended without a clean shutdown leaves a file nothing here punishes; a
 reader judges freshness from `seen` and may cross-check the harness's own session directory for
-whether the name is still live.
+whether the name is still live. An optional `writer` field (outside FIELDS, checked only when
+present) is this process's own id, written by `touch()`: two *processes* configured with the same
+`DYAD_SESSION` collide on one file despite the "only that session writes it" promise above (F1,
+d-work #32) — `touch()` detects a different, still-live `writer` already in the file and warns
+loudly instead of silently unioning the other process's rows and files into its own.
   sessions.py [repo-root]              check every presence file
   sessions.py touch [-r <row>]... [-f <file>]...   write/refresh this session's file
   sessions.py list                     print every file, flag one older than the stale window
@@ -33,15 +37,23 @@ NAME, OWNER = "session presence file", "Rule-16"
 FIELDS = ("session", "seen", "root", "rows", "files")
 STALE_AFTER = datetime.timedelta(hours=6)   # advisory only (#185 falsification attack 3)
 _SESSION_ID = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
+_WRITER = uuid.uuid4().hex[:12]   # this process's own id (F1, d-work #32): computed once at import,
+                                  # so it is stable for the process's life — a session re-touching
+                                  # its own file always matches its own writer and stays silent.
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
-              ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0)]   # crafts/syseng/rules/invariants.md
+              ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
+              ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
     return dyadlib.instance(root) / "d-work" / "sessions"
 
 def session_id() -> str:
-    """`DYAD_SESSION` when set and shaped like a path segment; else a fresh id per process, so an
-    unconfigured caller writes its own file and never overwrites another session's (#185)."""
+    """`DYAD_SESSION` when set and shaped like a path segment; else a fresh id *each call*, so an
+    unconfigured caller never overwrites another session's file merely by chance of naming — it
+    simply gets whichever fresh id the caller resolved once (#185). Not memoized: a caller needing
+    one stable value per logical operation resolves it once and threads it through (`touch()`
+    does); per-*process* identity, for detecting two processes sharing one configured session
+    name, is `_WRITER` instead (F1, d-work #32), computed once at import."""
     v = os.environ.get("DYAD_SESSION", "")
     return v if _SESSION_ID.match(v) else f"unnamed-{uuid.uuid4().hex[:12]}"
 
@@ -80,15 +92,27 @@ def files_touched(plan_text: str) -> list[str]:
 def touch(root: Path, rows: list[str], files: list[str]) -> Path:
     root = root or dyadlib.repo_root()
     d = sessions_dir(root); d.mkdir(parents=True, exist_ok=True)
-    p = d / f"{session_id()}.md"
+    sid = session_id()   # resolved once (F4, d-work #32): the path and the body must agree
+    p = d / f"{sid}.md"
     prev = parse(p.read_text()) if p.exists() else {}
-    row_set = sorted(set(prev.get("rows", "").split()) | {r.lstrip("#") for r in rows})
-    file_set = sorted(set(prev.get("files", "").split()) | set(files))
-    p.write_text(f"session: {session_id()}\n"
+    prev_writer = prev.get("writer")
+    if prev_writer and prev_writer != _WRITER and not is_stale(prev.get("seen", "")):
+        print(f"warning: {p.name} was last written by a different, still-live process "
+              f"(writer {prev_writer}) under this same session id {sid!r} — two sessions "
+              f"configured with the same DYAD_SESSION silently merge their presence otherwise "
+              f"(F1, d-work #32); recording only this process's rows and files, not unioning "
+              f"the other's", file=sys.stderr)
+        row_set = sorted({r.lstrip("#") for r in rows})
+        file_set = sorted(set(files))
+    else:
+        row_set = sorted(set(prev.get("rows", "").split()) | {r.lstrip("#") for r in rows})
+        file_set = sorted(set(prev.get("files", "").split()) | set(files))
+    p.write_text(f"session: {sid}\n"
                  f"seen: {datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds')}\n"
                  f"root: {Path(root).resolve()}\n"
                  f"rows: {' '.join(row_set)}\n"
-                 f"files: {' '.join(file_set)}\n")
+                 f"files: {' '.join(file_set)}\n"
+                 f"writer: {_WRITER}\n")
     return p
 
 def touch_from_open_rows(root: Path | None = None) -> Path:
@@ -192,7 +216,7 @@ def main(a: list[str]) -> int:
             else: i += 1
         p = touch(root, rows, files) if (rows or files) else touch_from_open_rows(root)
         print(f"touched {p.relative_to(root)}")
-        same = same_root(root, exclude=session_id())
+        same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call
         if same:
             print(f"warning: same working tree as: {', '.join(same)} — a raw git command from either "
                   f"can clobber the other's uncommitted state; work through a worktree, not this checkout, "

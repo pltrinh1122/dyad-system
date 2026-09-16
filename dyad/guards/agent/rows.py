@@ -10,8 +10,11 @@ pushed directly to main (non-merge, first-parent) may touch only <instance>/d-wo
 files, may only add a file or change state/disposed/refs: never delete a row file or change its id
 or title (C3). A state change must be a transition in dyadlib.TRANSITIONS (Rule-16: state never
 regresses; d-work #112) and a new row file must start in dyadlib.NEW_STATES. The rendered
-LEDGER.md is untracked (d-work #111) and is not diffed. The fence applies on `main` only; on a
-branch the transaction guard is `prs.py`. The append-only rule of the run-book event store
+LEDGER.md is untracked (d-work #111) and is not diffed. This full fence applies on `main` only;
+on a branch `check_transaction` instead runs `check_id_collisions` (d-work #32 F2): a row id this
+range adds or modifies must not already exist at the base under a *different* title — the
+signature of two sessions racing the allocator — leaving the append-only rules themselves to this
+same fence once the branch reaches `main`, and the plan gate to `prs.py`. The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
   rows.py <before> <after>          the main fence over a pushed range (rows and events)
@@ -30,7 +33,7 @@ FIELDS = dyadlib.FIELDS
 INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]   # crafts/syseng/rules/invariants.md
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
-def git(*a, cwd): return subprocess.check_output(["git", *a], cwd=cwd, text=True)
+def git(*a, cwd, stderr=None): return subprocess.check_output(["git", *a], cwd=cwd, text=True, stderr=stderr)
 
 def parent(sha, cwd):
     p = git("rev-list", "--parents", "-n", "1", sha, cwd=cwd).split()
@@ -106,10 +109,46 @@ def check_range(before: str, after: str, cwd=None) -> list[str]:
     return fails
 
 def check_transaction(root: Path, base: str, head: str) -> list[str]:
-    """The fence judges direct commits to `main`; on any other branch it has nothing to say."""
+    """The fence judges direct commits to `main`; on any other branch it checks only that a new
+    or modified row id does not collide with a different title already at `base` — two sessions
+    independently allocating the same id for different work (d-work #32) — leaving everything
+    else (the append-only rules) to this same fence once the branch reaches `main`."""
     if branch(root) != "main":
-        return []
+        return check_id_collisions(root, base, head)
     return check_range(base, head, cwd=root)
+
+def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
+    """On a branch: a row file this range adds or modifies must not name an id that already
+    exists at `base` under a *different* title — the signature of two sessions racing the
+    allocator (d-work #32 F2). Silent otherwise: this is not the append-only fence, which only
+    ever runs on `main`; a malformed row file is reported separately by `check_package`, so a
+    parse failure here is skipped rather than crashing this guard."""
+    instance = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+    prefix = f"{instance}/d-work/rows/"
+    try:
+        paths = git("diff", "--name-only", f"{base}..{head}", "--", prefix, cwd=root).split()
+    except subprocess.CalledProcessError:
+        return []
+    fails = []
+    for path in paths:
+        stem = Path(path).stem
+        if not stem.isdigit():
+            continue
+        try:
+            head_row = dyadlib.parse_row_file(git("show", f"{head}:{path}", cwd=root, stderr=subprocess.DEVNULL))
+        except (subprocess.CalledProcessError, ValueError):
+            continue
+        try:
+            # a brand-new row at head legitimately has no base:path — git's own "not in <sha>"
+            # is expected here, not an error worth printing
+            base_row = dyadlib.parse_row_file(git("show", f"{base}:{path}", cwd=root, stderr=subprocess.DEVNULL))
+        except (subprocess.CalledProcessError, ValueError):
+            continue
+        if base_row.id == head_row.id and base_row.title != head_row.title:
+            fails.append(f"FAIL [row-id]: {path} id {base_row.id} already names {base_row.title!r} "
+                         f"at the base — a concurrent session likely allocated the same id "
+                         f"for different work ({head_row.title!r})")
+    return fails
 
 # ---- entity card (the entities projector reads it; crafts/sysarch/templates/entity-card.md)
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:

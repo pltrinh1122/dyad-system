@@ -436,7 +436,9 @@ def cmd_dwork(a):
         try:
             subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=REPO, check=False, timeout=30)
             remote = {r.id for r in dyadlib.read_rows(REPO, at="origin/main")}
-        except Exception:
+        except Exception as e:
+            print(f"warning: could not read origin/main's rows ({e}); allocating from local ids "
+                  f"only — a concurrent session's unpushed id may collide (d-work #32 F3)", file=sys.stderr)
             remote = set()
         rid = max(set(rows) | remote, default=0) + 1
         state = "backlog" if "--backlog" in a else "open"          # d-work #140: dyadlib.NEW_STATES
