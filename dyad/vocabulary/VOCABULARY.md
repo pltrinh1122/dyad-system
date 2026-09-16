@@ -87,7 +87,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | The Dyad System | the Operator, the Agent, the core craft, the Tended crafts and the instance | 14 | 14 |
 | The World | everything that is not The Dyad System: the OS, hosting, services, packages, network | 14 | 14 |
 | System Infrastructure | the surface between The Dyad System and The World; the container for every integration dependency; partitioned into kernel and library | 14 | 14 |
-| kernel | the minimal pinned part of the System Infrastructure: a CLI inferencing agent, Python at a pinned version, Git as a local repository | 14 | 14 |
+| kernel | the minimal pinned part of the System Infrastructure: a CLI inferencing agent, Python at a pinned version, Git as a local repository, and pydantic at a pinned version | 14 | 14 |
 | manifest | the one file listing every System Infrastructure dependency: component, partition, version, purpose, license, replacement | 14 | 14 |
 | evidence block | the output of `package.py check --evidence` on an exact head: head sha, tree hash, dirty flag, every check and guard line, and a sha256 of those lines; pasted verbatim in the completion reply as the merge evidence, re-runnable by the Operator | 14 | 2 14 |
 | recurring task | an operation the Agent has performed by inference before and will perform again; Rule-13's trigger | 13 | 13 |
