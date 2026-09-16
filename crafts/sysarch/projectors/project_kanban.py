@@ -21,13 +21,17 @@ import dyadlib
 COLUMNS = ("open", "planned", "blocked", "backlog", "done")   # dyadlib.STATES, board order
 INVARIANTS = [("columns-are-states", lambda: set(COLUMNS) == dyadlib.STATES and len(COLUMNS) == len(dyadlib.STATES))]   # crafts/syseng/rules/invariants.md
 
-def collect(root: Path, pkg: Path = dyadlib.PKG) -> dict[str, list[dyadlib.Row]]:
+def collect(root: Path, pkg: Path = dyadlib.PKG, craft: str | None = None) -> dict[str, list[dyadlib.Row]]:
     """Every row, grouped by state and sorted by id within the group. A state `dyadlib.read_rows`
     returns that is not in COLUMNS (should never happen; STATES and COLUMNS are the same set,
     enforced by INVARIANTS) is dropped rather than raising — a corrupt row file is a fence
-    problem (Rule-16), not this projector's to diagnose."""
+    problem (Rule-16), not this projector's to diagnose. `craft`: keep only rows whose `refs`
+    carries this bare token (row.refs->craft, Rule-20; d-work #22) — the same routing tag
+    `dyad dwork list --craft` reads, so the text and board surfaces agree on one row's set."""
     out: dict[str, list[dyadlib.Row]] = {c: [] for c in COLUMNS}
     for r in dyadlib.read_rows(root):
+        if craft is not None and craft not in r.refs.split():
+            continue
         if r.state in out:
             out[r.state].append(r)
     for c in out:
@@ -56,8 +60,11 @@ def _card(r: dyadlib.Row) -> str:
             f'<div class="card-head"><span class="id">#{r.id}</span>{badge}</div>'
             f'<div class="title" title="{title}">{cut}</div>{refs_html}</div>')
 
-def render(groups: dict[str, list[dyadlib.Row]]) -> str:
+def render(groups: dict[str, list[dyadlib.Row]], craft: str | None = None) -> str:
     total = sum(len(v) for v in groups.values())
+    heading = f"d-work kanban — {html.escape(craft)}" if craft else "d-work kanban"
+    sub = (f"{total} row{'s' if total != 1 else ''} tagged `{html.escape(craft)}`, generated from the row store"
+           if craft else f"{total} rows, generated from the row store") + " — Rule-17 (never hand-edited; re-run to refresh)"
     cols = []
     for c in COLUMNS:
         rows = groups[c]
@@ -71,7 +78,7 @@ def render(groups: dict[str, list[dyadlib.Row]]) -> str:
         cols.append(col)
     board = "\n".join(cols)
     return f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>d-work kanban</title>
+<html><head><meta charset="utf-8"><title>{heading}</title>
 <style>
 :root {{ --bg:#f6f5f2; --card:#ffffff; --ink:#1f2320; --muted:#6b7269; --line:#dcd8cf; --accent:#5b7c6a;
   --open:#5b7c6a; --planned:#7a8b5e; --blocked:#b0523f; --backlog:#8b8577; --done:#9aa39b; }}
@@ -106,23 +113,29 @@ h1 {{ font-size:18px; margin:0 0 4px; }}
 .empty {{ color:var(--muted); font-size:12px; font-style:italic; }}
 details summary {{ cursor:pointer; color:var(--muted); font-size:12px; margin-bottom:6px; }}
 </style></head><body>
-<h1>d-work kanban</h1>
-<p class="sub">{total} rows, generated from the row store — Rule-17 (never hand-edited; re-run to refresh)</p>
+<h1>{heading}</h1>
+<p class="sub">{sub}</p>
 <div class="board">
 {board}
 </div>
 </body></html>
 """
 
+def _flag(name: str, argv: list[str]) -> str | None:
+    return argv[argv.index(name) + 1] if name in argv else None
+
 def main() -> int:
+    craft = _flag("--craft", sys.argv[1:])          # `dyad project kanban --craft <name>` (d-work #22)
     root = dyadlib.repo_root()
-    out = dyadlib.instance(root) / "projections" / "kanban.html"
+    slug = f"kanban-{craft}.html" if craft else "kanban.html"   # a separate file: the full board stays byte-identical (determinism.md)
+    out = dyadlib.instance(root) / "projections" / slug
     out.parent.mkdir(parents=True, exist_ok=True)
-    groups = collect(root, dyadlib.PKG)
-    text = render(groups)
+    groups = collect(root, dyadlib.PKG, craft)
+    text = render(groups, craft)
     out.write_text(text)
     counts = " ".join(f"{c}={len(groups[c])}" for c in COLUMNS)
-    print(f"ok   [project] kanban: {counts} -> {out} ({len(text.encode())} bytes)")
+    label = f"kanban --craft {craft}" if craft else "kanban"
+    print(f"ok   [project] {label}: {counts} -> {out} ({len(text.encode())} bytes)")
     return 0
 
 if __name__ == "__main__":

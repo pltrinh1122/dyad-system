@@ -35,6 +35,39 @@ class CollectTests(unittest.TestCase):
         groups = pk.collect(fixture({}))
         self.assertEqual(set(groups.keys()), set(pk.COLUMNS))
 
+class CraftFilterTests(unittest.TestCase):
+    """`--craft` (d-work #22): the same `refs` routing tag `dyad dwork list --craft` reads."""
+    def test_collect_keeps_only_tagged_rows(self):
+        root = fixture({"1": {"title": "a", "state": "backlog", "refs": "workstation-149 sysarch"},
+                         "2": {"title": "b", "state": "backlog", "refs": "workstation-184 1 syseng"},
+                         "3": {"title": "c", "state": "open"}})
+        groups = pk.collect(root, craft="sysarch")
+        self.assertEqual([r.id for r in groups["backlog"]], [1])
+        self.assertEqual(sum(len(v) for v in groups.values()), 1)
+    def test_no_craft_keeps_every_row(self):
+        root = fixture({"1": {"title": "a", "state": "backlog", "refs": "sysarch"},
+                         "2": {"title": "b", "state": "open"}})
+        self.assertEqual(sum(len(v) for v in pk.collect(root).values()), 2)
+    def test_unmatched_craft_yields_empty_board(self):
+        root = fixture({"1": {"title": "a", "state": "backlog", "refs": "sysarch"}})
+        groups = pk.collect(root, craft="syseng")
+        self.assertEqual(sum(len(v) for v in groups.values()), 0)
+    def test_render_heading_and_subtitle_name_the_craft(self):
+        root = fixture({"1": {"title": "a", "state": "backlog", "refs": "sysarch"}})
+        out = pk.render(pk.collect(root, craft="sysarch"), craft="sysarch")
+        self.assertIn("d-work kanban — sysarch", out)
+        self.assertIn("1 row tagged `sysarch`", out)
+    def test_render_unfiltered_keeps_original_heading(self):
+        out = pk.render(pk.collect(fixture({})))
+        self.assertIn("<h1>d-work kanban</h1>", out)
+        self.assertNotIn("tagged", out)
+    def test_deterministic_with_craft(self):
+        root = fixture({"1": {"title": "a", "state": "backlog", "refs": "sysarch"},
+                         "2": {"title": "b", "state": "open", "refs": "sysarch"}})
+        groups = pk.collect(root, craft="sysarch")
+        self.assertEqual(pk.render(groups, "sysarch"), pk.render(groups, "sysarch"))
+
+
 class RenderTests(unittest.TestCase):
     def test_card_shows_id_title_and_refs(self):
         groups = pk.collect(fixture({"7": {"title": "fix the thing", "state": "open", "refs": "#3"}}))
