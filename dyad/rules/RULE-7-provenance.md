@@ -48,7 +48,10 @@ built on.
    of the event it records (Rule-3: the store is under `<instance>/d-work/`, so the fence already
    admits it). No session is required to reach its own end, because nothing waits for the end.
 4. **The Operator's words only.** A provenance record holds what the Operator wrote. The Agent's
-   text lives in the plan, the row, the record and the incident log, each already owned.
+   text lives in the plan, the row, the record and the incident log, each already owned. An
+   Operator prompt relayed by another agent (Rule-3, Intake) is still an Operator's words: entered
+   verbatim as the message carried it, the entry note `relayed via <session>`; the relaying agent's
+   own words are never entered — a defect's observation stays in the plan file (#34).
 5. **Checked against the row.** The `disposition` entries of a record correspond one-to-one, in
    order, with the entries of its row's `disposed` column; a mismatch is a failing check, so a
    dropped or invented disposition is visible without reading the chat.
@@ -71,6 +74,7 @@ count is its mechanical fence, and the Operator's own copy of the chat is the ot
 
 ## Provenance
 Operator gap, ledger #54 (2026-09-12, deferred) and #55; prompted again and planned as #164
-(2026-09-14). Falsified; see `../falsification/rules/rule-7-provenance.md`.
+(2026-09-14). Falsified; see `../falsification/rules/rule-7-provenance.md`. Property 4 gains the
+relayed-prompt sentence 2026-09-16 (d-work #34, Rule-3 Intake).
 
 Set: System Requirements.
