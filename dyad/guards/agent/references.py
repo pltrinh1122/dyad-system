@@ -16,8 +16,9 @@ authoring instance, never a receiving instance's to resolve, #177), distinct fro
 record's own citations (`agent-corpus/`), which stay a real, resolved reference; a target store
 that is absent or empty (a fresh install) skips its
 kinds with a printed line, never a failure (property 4) — and so does a kind whose parser is a
-Tended craft's guard that no installed craft provides (`sysadmin/ops_scripts`, `sysadmin/runbooks`,
-`sysadmin/events`; `dyadlib.find_guard`, #155). A `crafts/<name>/…` path resolves against the *craft*,
+Tended craft's guard that no installed craft provides (`sysadmin/ops_scripts`, `sysadmin/events`;
+`dyadlib.find_guard`, #155) — never a run-book's own commands, which the core runner resolves
+without any craft (#213 d-work #46). A `crafts/<name>/…` path resolves against the *craft*,
 not the tree (#167): present, the path must exist; absent, one line per craft — `skip` where no
 `crafts/REGISTRY.md` exists to judge the name, `warn … unknown craft` where the registry has no such
 row, and a failure where it has one (installed, then deleted). The entities projector (crafts/sysarch/rules/projection.md)
@@ -34,11 +35,11 @@ import dyadlib
 vocabulary = dyadlib.load_guard("agent", "vocabulary")
 craft_cli = dyadlib.load_module(dyadlib.PKG / "scripts" / "craft.py", "dyad_craft_cli")   # the craft registry's format is craft.py's (Rule-13 p2): read through it, never re-authored
 ops_scripts = dyadlib.find_guard("workstation", "ops_scripts")   # the sysadmin craft's guards: None when no craft provides them
-runbooks = dyadlib.find_guard("workstation", "runbooks")
+runbook_core = dyadlib.load_module(dyadlib.PKG / "scripts" / "runbook.py", "dyad_references_runbook")   # core: always present, core + instance run-books (#213)
 events = dyadlib.find_guard("workstation", "events")
 GUARD_KINDS = {"changelog.action->ops": ("ops_scripts", ops_scripts), "ops.dwork->row": ("ops_scripts", ops_scripts),
-               "ops.changelog->changelog": ("ops_scripts", ops_scripts), "event.command->command": ("runbooks", runbooks),
-               "changelog.event->event": ("events", events)}          # kind -> (craft guard entity, module or None)
+               "ops.changelog->changelog": ("ops_scripts", ops_scripts),
+               "changelog.event->event": ("events", events)}          # kind -> (craft guard entity, module or None); event.command->command needs no craft (#213)
 provenance = dyadlib.load_guard("agent", "provenance")   # core guard: always present
 
 ENTITY, CORPUS, TRANSACTION = "reference", "agent", False
@@ -138,7 +139,7 @@ class Corpus:
         recs += dyadlib.craft_glob("falsification/rules/*.md", pkg)   # a Tended craft's own Rule records: package-shipped too (#177)
         self.records = {p: p.read_text(errors="ignore") for p in recs}
         self.craft_rules = {p: p.read_text(errors="ignore") for p in dyadlib.craft_glob("rules/*.md", pkg)}   # a Tended craft's own rule text (#177); never `workstation-corpus/rules/` (the host's, genuinely instance-side)
-        self.runbooks = {n: runbooks.parse(p) for n, p in runbooks.runbooks(root).items()} if runbooks else {}   # {instance: [Command]}
+        self.runbooks = {n: runbook_core.parse(p) for n, p in runbook_core.all_runbooks(root).items()}   # {instance: [Command]}: core run-books (#165) + instance ones, no craft needed (#213 d-work #46)
         self.events = events.all_events(root) if events else {}                                              # {instance: [event dict]}
         pk = pkg / "scripts" / "package.py"
         self.registry = dict(getattr(load_module(pk, f"dyad_registry_{abs(hash(str(pk)))}"), "PROJECTORS", {})) if pk.exists() else {}
@@ -352,7 +353,11 @@ def registry_modules(c: Corpus):
     return [(f"{c.rel(c.pkg / 'scripts' / 'package.py')} PROJECTORS[{s!r}]", m) for s, m in sorted(c.registry.items())]   # m: a repo-relative `crafts/<craft>/projectors/…` path (#160)
 
 def event_commands(c: Corpus):
-    """Every event's `name`, keyed by its instance: `<instance>/<name>` names a command of that run-book."""
+    """Every event's `name`, keyed by its instance: `<instance>/<name>` names a command of that run-book.
+    Empty (never an error) when no craft provides the events store — `c.events` is already {} then; the
+    display path alone needs the craft module, so it is never touched in that case (#213 d-work #46)."""
+    if events is None or not c.events:
+        return []
     d = events.events_dir(c.root)
     return [(f"{c.rel(d / f'{inst}.jsonl')} line {i} name", f"{inst}/{e.get('name', '')}")
             for inst, evs in sorted(c.events.items()) for i, e in enumerate(evs, 1)]
