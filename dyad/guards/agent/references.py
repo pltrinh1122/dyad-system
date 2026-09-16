@@ -423,6 +423,7 @@ REFERENCES = [
     ("changelog.event->event",    "changelog",  "outcome",       changelog_events,  "event",      event_exists),
     ("record.ledger->provenance", "record",     "ledger #",      record_ledger_world, "row",      "world"),
     ("craft_rule.text->provenance","craft_rule", "text",          craft_rule_ledger, "row",        "world"),
+    ("bundle.component->craft",   "bundle",     "component",     None,              "craft",      "guard:infra/bundle.py"),
 ]
 
 # crafts/syseng/rules/invariants.md: the register's facts, over its rows and the guard registry (package data, not the instance)
