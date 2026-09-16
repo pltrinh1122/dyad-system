@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "an existing release tag to publish (vX.Y.Z or <craft>-vX.Y.Z) with the workflow on main"
+        description: "an existing release tag to publish (vX.Y.Z bundle, dyad-operator-vX.Y.Z core, or <craft>-vX.Y.Z) with the workflow on main"
         required: true
         type: string
 permissions:
@@ -19,19 +19,33 @@ jobs:
         with: { ref: "${{ inputs.tag || github.ref }}", fetch-depth: 0 }   # plans cite base commits; guards read history
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: tag equals its VERSION (Rule-11 property 4)
-        # core: vX.Y.Z = v + dyad/VERSION; Tended craft: <craft>-vX.Y.Z = <craft>-v + crafts/<craft>/VERSION
+      - name: tag equals its VERSION (Rule-11 properties 4, 7)
+        # bundle: vX.Y.Z = v + BUNDLE.md's version; core: dyad-operator-vX.Y.Z = dyad-operator-v + dyad/VERSION;
+        # Tended craft: <craft>-vX.Y.Z = <craft>-v + crafts/<craft>/VERSION
         env: { TAG: "${{ inputs.tag || github.ref_name }}" }
         run: |
           craft="${TAG%-v*}"; [ "${craft}" = "${TAG}" ] && craft=""
-          if [ -z "${craft}" ]; then want="v$(cat dyad/VERSION)"; else want="${craft}-v$(cat "crafts/${craft}/VERSION")"; fi
+          if [ "${craft}" = "dyad-operator" ]; then
+            kind=core; want="dyad-operator-v$(cat dyad/VERSION)"
+          elif [ -z "${craft}" ]; then
+            kind=bundle; craft=""; want="v$(grep '^version:' BUNDLE.md | cut -d: -f2 | tr -d ' ')"
+          else
+            kind=craft; want="${craft}-v$(cat "crafts/${craft}/VERSION")"
+          fi
           [ "${TAG}" = "${want}" ] || { echo "tag ${TAG} != ${want}"; exit 1; }
-          echo "craft=${craft}" >> "$GITHUB_ENV"; echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "kind=${kind}" >> "$GITHUB_ENV"; echo "craft=${craft}" >> "$GITHUB_ENV"; echo "TAG=${TAG}" >> "$GITHUB_ENV"
       - name: check and build (one distribution code path, Rule-11 property 5)
         run: |
           python3 dyad/scripts/package.py check
-          if [ -z "${craft}" ]; then python3 dyad/scripts/package.py build
+          if [ "${kind}" = "bundle" ]; then python3 dyad/scripts/package.py bundle build
+          elif [ "${kind}" = "core" ]; then python3 dyad/scripts/package.py build
           else python3 dyad/scripts/craft.py export "${craft}"; fi
-      - name: GitHub Release with the archive (library adapter, Rule-14)
-        run: gh release create "${TAG}" *.tar.gz --target "$(git rev-parse HEAD)" --title "${TAG}" --notes "dyad ${craft:-package} ${TAG}"
+      - name: GitHub Release with the archive(s) (library adapter, Rule-14)
+        run: |
+          target="$(git rev-parse HEAD)"
+          if [ -f BUNDLE.sha256 ]; then
+            gh release create "${TAG}" *.tar.gz BUNDLE.sha256 --target "${target}" --title "${TAG}" --notes "dyad ${kind} ${TAG}"
+          else
+            gh release create "${TAG}" *.tar.gz --target "${target}" --title "${TAG}" --notes "dyad ${kind} ${TAG}"
+          fi
         env: { GH_TOKEN: "${{ github.token }}" }
