@@ -110,6 +110,27 @@ class Fixtured(unittest.TestCase):
         p.write_text(p.read_text().replace(old, new))
 
 
+class CoreRunbookTests(Fixtured):
+    """#213 d-work #46: a core run-book's own commands resolve without any craft — the bug was
+    enumerating instance run-books only (`runbooks.runbooks`, a craft guard), missing `dyad/runbooks/*.md`."""
+    def test_core_runbook_command_resolves_without_sysadmin(self):
+        rb = self.pkg / "runbooks"; rb.mkdir()
+        (rb / "craft.md").write_text(
+            "# craft\n\n## Step\n```dyad-cmd\nname: new\nclass: reversible\nrole: any\n"
+            "undo: none\npostcondition: true\nscope: s\n\necho new\n```\n")
+        c = refint.Corpus(self.root, self.pkg)
+        self.assertIn("craft", c.runbooks)
+        self.assertTrue(any(cmd.name == "new" for cmd in c.runbooks["craft"]))
+        self.assertTrue(refint.command_exists(c, "craft/new"))
+        self.assertFalse(c.store_empty("command"))   # a core run-book alone is enough; no craft, no instance run-book needed
+    def test_no_core_or_instance_runbooks_is_empty(self):
+        # the base fixture seeds one instance run-book (workstation-corpus/runbooks/x.md); remove it
+        # to test the genuinely empty case — no core run-book either (#213 d-work #46)
+        (self.root / "workstation-corpus" / "runbooks" / "x.md").unlink()
+        c = refint.Corpus(self.root, self.pkg)
+        self.assertEqual(c.runbooks, {}); self.assertTrue(c.store_empty("command"))
+
+
 class FixtureTests(Fixtured):
     def test_every_kind_resolves(self):
         n, k, msgs = self.check()

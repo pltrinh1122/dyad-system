@@ -5,7 +5,15 @@ sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
 CORE = ["agent/frame", "agent/plans", "agent/provenance", "agent/prs", "agent/records", "agent/references", "agent/rows", "agent/rules", "agent/sessions", "agent/vocabulary",
         "craft/crafts", "infra/bundle", "infra/containment", "infra/manifest", "preferences/preferences"]   # craft/crafts: the craft guard (#156); infra/bundle: Rule-11 p7 (#196)
 KNOWN_CRAFTS = {"sysadmin": ["changelog", "events", "ops_scripts", "runbooks"], "sysarch": ["registry"], "syseng": ["invariants", "naming", "tests"], "lan-git": ["image"]}   # #155, #160, #162, #181
-CRAFT = [f"{c.name}/{e}" for c in dyadlib.craft_dirs() for e in KNOWN_CRAFTS[c.name]]   # the crafts present, in registry order (a craft the sequence has not yet added is absent)
+def craft_guards(name: str, pkg: Path = PKG) -> list[str]:
+    """The documented entities for a known craft (so one silently dropping a guard still fails this
+    test), else derived from crafts/<name>/guards/*.py — never a KeyError for a craft this literal
+    dict has not caught up to yet (#213 d-work #46)."""
+    if name in KNOWN_CRAFTS:
+        return KNOWN_CRAFTS[name]
+    d = pkg.parent / "crafts" / name / "guards"
+    return sorted(p.stem for p in d.glob("*.py") if not p.name.startswith("_")) if d.is_dir() else []
+CRAFT = [f"{c.name}/{e}" for c in dyadlib.craft_dirs() for e in craft_guards(c.name)]   # the crafts present, in registry order (a craft the sequence has not yet added is absent)
 CRAFTS = livetest.crafts_installed()   # #171: a core-only install has none; the cases that need one skip with a stated reason
 
 def env(**kw):
@@ -78,7 +86,7 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(len(lines) - 1, len(load_package().registry()))
         # the craft root lists exactly the installed crafts' guards — none on a core-only install (#171), whichever crafts are here (dyad-system #1)
         craft_rows = {(l.split()[0], l.split()[1]) for l in lines[1:] if l.split()[4] == "craft"}
-        self.assertEqual(craft_rows, {(c, g) for c in CRAFTS for g in KNOWN_CRAFTS.get(c, [])})
+        self.assertEqual(craft_rows, {(c, g) for c in CRAFTS for g in craft_guards(c)})
         if "sysadmin" in CRAFTS:
             self.assertIn(["sysadmin", "events", "crafts/sysadmin/guards/events.py", "yes", "craft"], [l.split() for l in lines])   # the second root (#155)
     def test_broken_guard_fails_the_run(self):
@@ -240,7 +248,7 @@ class PackageTests(livetest.LiveCase):
         r = subprocess.run(py + ["check", "--guards"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("skip changelog.action->ops: guard sysadmin/ops_scripts absent", r.stdout)   # references.py: absent-safe, never a failure
-        self.assertIn("skip event.command->command: guard sysadmin/runbooks absent", r.stdout)
+        self.assertNotIn("skip event.command->command", r.stdout)   # no craft needed: the core run-book (dyad/runbooks/craft.md) resolves alone; nothing prints with no events store to check against it (#213 d-work #46)
         self.assertIn("skip rule.text->path: `crafts/…` tokens; no crafts/ tree is installed", r.stdout)   # Rules 1, 11 name crafts/ paths
         self.assertFalse((d / "workstation-corpus" / "CHANGELOG.md").exists())   # no core seed since #155; the craft's install seeds it (#156)
         r = subprocess.run(py + ["runbook", "check"], capture_output=True, text=True, env=env())
