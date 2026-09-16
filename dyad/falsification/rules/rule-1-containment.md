@@ -59,3 +59,26 @@ which gains a subcommand and no check semantics (S4); Rule-12: the new code ente
 No other Rule's concern moves. Coherent, orthogonal.
 
 Disposition: see ledger #166.
+
+## Amendment — d-work #23 (2026-09-16, an outside fence, and a hook that cannot run)
+Two additions, both from #22's execution: a session-level branch restriction collided with the
+ledger-only push to `main` that Rule-2 and Rule-3 prescribe, and the pre-commit hook on `main`
+could not execute at all (`dyad/guards/infra/containment.py` at mode 100644 since #6, while the
+hook execs it by path).
+| # | attack | result | survivor |
+|---|---|---|---|
+| 19 | There was a conflict between Rules to resolve. | Refuted | None: Rule-2 permits the ledger-only push, Rule-3 prescribes it, and `prs.py` reads cited rows *at the base* while returning `[]` on `main` — so the direct push is what makes the plan gate satisfiable at all. Observed both ways on one branch: `#22 not in ledger` before the ledger commit landed, clean after. The collision was with a fence outside the corpus, which no Rule but Rule-8 (host actions) had named. |
+| 20 | The bullet imports a harness concept into the corpus, which Rule-11 keeps out. | Refuted | It names a *class* of Operator-side fence, never a harness or its wording, and mirrors a sentence Rule-8 already carries. A receiving system with no such fence reads a bullet that never fires. |
+| 21 | The bullet decides nothing, so it earns no text. | Survives, scoped | It does not decide; it tells the Agent which layer it is in, which is what was missing. The decision procedure that follows — escalate where the costs are asymmetric — is conduct, deliberately unencoded. |
+| 22 | The vacuous-hook sentence blesses `--no-verify`, which INCIDENTS treats as serious. | Survives, scoped | The #3 incident was a `--no-verify` *push* withdrawn with no compensating check. This permits it only where the hook physically cannot run, only with the same guard run by hand and its output in the commit message, only as a reported incident; a hook that runs and fails is still absolute. |
+| 23 | The Agent should have chmod'ed the file instead. | Refuted | That edits a file of another d-work's diff from inside an unrelated one, silently reversing #6's intent, and `core.fileMode` is `true` here so it would have been staged. The repair is its own row. |
+
+Pairwise: Rule-1 keeps its concern — which paths a transaction may touch. Rule-8 keeps the
+harness permission mode per command; this is the same shape over repo transactions, so the pair
+is parallel, not shared: neither owns the other's target. Rule-2 and Rule-3 are cited as the
+prescription the fence can collide with; their ownership of the ledger-only push is untouched.
+Rule-3 keeps incidents (the report this sentence requires is Rule-3's form). Rule-11 owns the
+runner, Rule-12 the check a guard carries, Rule-14 the kernel-only path — none moves. No new term
+(Rule-6). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #23.
