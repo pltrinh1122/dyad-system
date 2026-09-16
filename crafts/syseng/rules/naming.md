@@ -28,6 +28,7 @@ guard fails on a `kind:` whose pattern is not in this table, so the two cannot d
 | `dyad/guards/<corpus>/<entity>.py` | a core guard module | Rule-11 property 1 (the sysarch `guards.md`) | `guards/agent/rows.py` | yes (snake; `<corpus>` a zone; `_`-prefixed is not a guard) |
 | `crafts/<craft>/guards/<entity>.py` | a craft guard module | the sysarch `guards.md` | `crafts/syseng/guards/naming.py` | yes |
 | `<entity>_rules.txt` beside its guard | a guard's data file | the sysarch `guards.md` | `manifest_rules.txt` | yes (`<entity>.py` exists beside it) |
+| `crafts/<craft>/guards/<receiver>_contrib.txt` | a craft's own contribution to a syseng guard's data | this craft, Craft contribution below | `crafts/sysadmin/guards/naming_contrib.txt` | yes (`<receiver>` one of `naming`, `invariants`) |
 | `dyad/bin/<name>`, `dyad/hooks/<hook>` tracked `100755` | a package file the host executes by name: the CLI entrypoint, the hooks an install points `core.hooksPath` at | Rule-11 p5 (the hook ships at `dyad/hooks/pre-commit`) | `dyad/hooks/pre-commit` | yes (`mode:` line; the **tracked** mode, never the bit on disk) |
 | `crafts/<craft>/templates/*.sh`, `crafts/<craft>/server/*.sh` tracked `100755` | a shell file a craft ships to be run: an ops-script skeleton, a container entrypoint | the sysadmin `ops-scripts.md`; the sysadmin `server-instances.md` | `crafts/sysadmin/server/entrypoint.sh` | yes (`mode:` line) |
 | `dyad/tests/test_<name>.py` ↔ `dyad/scripts/<name>.py`; `dyad/tests/guards/<corpus>/test_<entity>.py` ↔ the core guard; `crafts/<craft>/tests/guards/test_<entity>.py` ↔ the craft guard; `crafts/<craft>/tests/test_<name>.py` ↔ a craft projector or script | a test module and its mapping | this craft, `verifiable-code.md` (from Rule-12) | `test_dyadlib.py` | shape yes; the mapping by `tests.py`, not `naming.py` |
@@ -70,6 +71,33 @@ glob selects must match its regex or be allowed. An `allow: <path> # <reason>` l
 reason fails, a stale one (the path is gone) fails when the path is package (`dyad/`, `crafts/`)
 and warns when it is instance (the data travels to installs whose instance differs), one the path no
 longer needs warns — the list only shrinks, and its count is printed in the summary. No pattern is grandfathered by date.
+
+## Craft contribution
+A pattern whose paths exist only when another craft does — sysadmin's ops scripts and run-books,
+lan-git's workflow files — cannot live as a native row here without either failing this table's
+own guard the moment that craft is absent, or asking every system to author rows for crafts it may
+never install. Two kinds of row are foreign in exactly this sense and both retire by the same
+mechanism (d-work #15):
+- **A native row whose `owner` names another craft's rule but whose *paths* are this table's own
+  business only while that craft is installed** — an interim, never contributed: `env: NAME@craft`
+  (`env_scope`) defers the unlisted/stale check until the craft is present; an `exempt:` glob under
+  `crafts/<craft>/` in `invariants_rules.txt` warns rather than fails when no such craft exists.
+  Both stay exactly as they are; contribution does not remove them.
+- **A row a craft can ship for itself**, once its own guard exists to receive it:
+  `crafts/<craft>/guards/naming_contrib.txt` (read by `naming.contrib_rules`, same `kind:` /
+  `mode:` / `symbol:` / `env:` / `allow:` line format as `naming_rules.txt`) and
+  `crafts/<craft>/guards/invariants_contrib.txt` (read by `invariants.contrib_exemptions`, `exempt:`
+  lines, same format as `invariants_rules.txt`). Both are discovered from every *installed* craft
+  (`dyadlib.craft_dirs`) and merged into the checks that run over the tree, so a contributed `kind:`
+  or `mode:` row is enforced exactly like a native one. Two differences, both by design: a
+  contributed `kind:`/`mode:` pattern is **not** required to be a row of *this* table — it is
+  documented in the contributing craft's own rule, which owns it — and a malformed or stale
+  contributed line is reported naming the contributing craft's own file, never `naming_rules.txt` or
+  `invariants_rules.txt`. Removing a craft simply removes its rows from every check; nothing here
+  goes stale because a craft left, the opposite of a native row's fate. A row that fits this second
+  kind retires from the `@craft`/`exempt:`-under-`crafts/` interim only once the owning craft ships
+  its own contributed file — moving it is that craft's own d-work, not syseng's, since the rows to
+  delete live in this repo's crafts and syseng cannot know their new home until it exists.
 
 ## Inference, stated
 Whether a name is *apt* is inference. The rows marked *no* are checked elsewhere or not at all,

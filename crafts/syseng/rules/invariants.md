@@ -49,3 +49,13 @@ module that defines a data-model constant exposes `INVARIANTS`, unless an `exemp
 every entry of every module the runner's pass covers (`package.invariant_modules`) is a
 `(str, callable)` pair with a unique kebab-case name. Whether the invariants *hold* is the runner's
 pass, not the guard's; whether a fact is *architectural* is inference.
+
+## Craft contribution
+An `exempt:` line for a module a craft not installed here would ship (`crafts/*/server/*.py`, a
+reference deployment's own code) already warns rather than fails under `crafts/` (dyad-system #1);
+that stays. A craft that *is* installed may also ship its own exemptions directly:
+`crafts/<craft>/guards/invariants_contrib.txt`, the same `exempt: <glob> # <reason>` line format as
+`invariants_rules.txt`, discovered from every installed craft (`invariants.contrib_exemptions`) and
+merged into the scan. A malformed or stale contributed line is reported naming that craft's own
+file, never `invariants_rules.txt` — the same protocol `naming.md`'s Craft contribution section
+states for the naming guard, and this rule's own first worked instance of it (d-work #15).

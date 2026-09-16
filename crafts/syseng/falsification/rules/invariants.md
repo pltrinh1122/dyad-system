@@ -12,4 +12,19 @@
 
 Cut from: #161's five properties (new text); the protocol from plan #162 (b).
 
+## Amendment — d-work #15 (craft-contributed data)
+**Claim:** an installed craft may contribute its own `exempt:` rows directly
+(`crafts/<craft>/guards/invariants_contrib.txt`, attack 4's mechanism, one craft at a time), so a
+craft's own reference code stops depending on a native `crafts/*/…` wildcard glob written by
+syseng in its absence.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 15.1 | Attack 4's own `exempt: crafts/*/server/*.py` already covers every craft's server code; nothing needs contributing. | Refuted, scoped | It covers *lan-git's* shape today by a wildcard glob no craft asked for; a craft that ships its own `invariants_contrib.txt` states its own exemption instead of relying on a syseng-authored guess at its layout. No live row moves — this repo has no lan-git craft to migrate (`naming.md`'s amendment, attack 15.1). |
+| 15.2 | `scan()`'s two hardcoded `invariants_rules.txt:` message prefixes can just stay; a contributed exempt is close enough to native that misattributing it costs nothing. | Refuted | The whole point of `#15` is that a malformed or stale row names its own author; leaving the prefix hardcoded would blame syseng for a craft's own stale glob, undoing the naming guard's own parallel design in the same d-work. |
+| 15.3 | Adding `labels` to `scan()`'s signature changes its contract for every existing caller. | Refuted, tested | `labels: dict[str, str] | None = None` defaults every glob to `"invariants_rules.txt"`, byte-for-byte the prior behaviour; all nine pre-existing `ScanTests`/`LiveTests` cases pass unmodified. |
+| 15.4 | Testing this needed only two independent scratch trees — one for the fake craft's `pkg`, one for the files it exempts — the way `naming.md`'s tests already do. | **Confirmed**, then fixed before merge | `invariants.python_files(root, pkg)` derives its *entire* scan tree from `pkg`'s own parent (`crafts_dir(pkg) = pkg.parent / "crafts"`), ignoring `root` outright — unlike `naming.tree_paths`, which scans `root` via `git ls-files` and uses `pkg` only for auxiliary lookups. A `pkg` and a `root` built as two separate temp dirs silently scan an *empty* crafts tree: the first draft of every test here passed by construction, checking nothing. Caught by asserting a specific stale message and getting an unrelated one back. Fixed: one `craft_root` helper builds `pkg` and every scanned file under one shared root. |
+
+Disposition: see ledger #15.
+
 Disposition: see ledger #162.
