@@ -27,7 +27,7 @@ Tended craft's tree (a craft corpus), one zone so a craft changes by craft PRs a
 instance PRs — what makes it exportable, #153). A commit touches exactly one.
 A PR touches exactly one. The zone→path table is defined **only** in
 `dyad/guards/infra/containment.py` (`ZONES`; the zone guard, placed per Rule-11 property 1); print it with
-`dyad/guards/infra/containment.py zones`.
+`python3 dyad/guards/infra/containment.py zones`.
 
 Unclassified paths are forbidden. Cross-zone work = separate branches, separate PRs;
 change the referent before the referrer.

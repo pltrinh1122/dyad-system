@@ -82,3 +82,23 @@ runner, Rule-12 the check a guard carries, Rule-14 the kernel-only path — none
 (Rule-6). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #23.
+
+## Amendment — d-work #24 (2026-09-16, the exec bit was never the Agent's to restore)
+#23 left Rule-1's enforcement vacuous and its repair to this row. Reproduced first: staging a file
+and running `dyad/hooks/pre-commit` gives `Permission denied`, exit 126.
+| # | attack | result | survivor |
+|---|---|---|---|
+| 24 | Restore `+x` on `dyad/guards/infra/containment.py`; the hook is fine. | Refuted | `crafts/syseng/guards/naming_rules.txt` grants 100755 to four path classes only — `dyad/bin/*`, `dyad/hooks/*`, craft `templates/*.sh` and `server/*.sh` — and every tracked `.py` in the tree is 644 by that rule. #6 swept the modes to match it and was right. Restoring the bit carves a one-file exception into an Operator-tended rule and leaves every other guard module the same trap; with `core.fileMode` true it also stages itself from any checkout that carries the bit. |
+| 25 | Then the hook is the bug — but which form? | Refuted (the question answers itself) | `dyad/hooks/pre-push` already calls its module through the interpreter. `pre-commit` gains the same form, and then depends on no file mode at all: the failure mode is removed, not detected. |
+| 26 | Rule-1's own prose is a documentation nit, out of scope. | Refuted | Line 30 is an imperative a reader follows — "print it with `…containment.py zones`" — and it fails identically. Same gap, same d-work, one word. |
+| 27 | Add a guard so no hook can ever exec a 644 path. | Survives, scoped — deferred | Real, but it can only catch a *future third hook*: after this fix no existing hook depends on a mode. It is syseng-craft code in a second zone and a second PR; proposed as a backlog row rather than bolted to a one-line repair (Rule-12: never widen the plan). |
+| 28 | A `.py` in this flow should gain a run-time invariant (Operator, #25). | **Confirmed, and not here** | This d-work touches no `.py` at all, so nothing is skipped; and the fact it turns on — a hook not invoking a path the mode rules keep at 644 — is about tracked files and index modes, which `crafts/syseng/rules/invariants.md` p1 puts out of bounds ("never over the instance corpus"). But the flow *does* expose an invariant-shaped gap one level down, which #25 plans: the verb the hook passes, `staged`, lives in a dict literal inside `containment.main()`, so no constant names it and no invariant covers it, while its sibling `MODES` is covered by `modes-declared-and-distinct`. |
+
+Pairwise: Rule-1 keeps its concern and gains no new one — the Enforcement sentence #23 added is
+unchanged and now describes a state this repo is no longer in. The mode rules stay the syseng
+craft's (`naming_rules.txt`), read here and never restated; Rule-11 keeps the hook's ship path and
+the install that sets `core.hooksPath`; Rule-12 keeps the check a module carries, and #25 carries the
+invariant this flow argues for. Rule-3's incident form is untouched. No new term (Rule-6). Others
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #24.
