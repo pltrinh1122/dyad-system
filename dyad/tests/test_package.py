@@ -470,9 +470,9 @@ class InvariantPassTests(unittest.TestCase):
         d = scratch_install(with_craft=False)
         self.addCleanup(shutil.rmtree, d, ignore_errors=True)
         lib = d / "dyad" / "scripts" / "dyadlib.py"
-        lib.write_text(lib.read_text().replace('"done": frozenset(),', '"done": frozenset({"open"}),'))   # done is no longer terminal
+        lib.write_text(lib.read_text().replace('"archived": frozenset(),', '"archived": frozenset({"open"}),'))   # archived is no longer terminal
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "dwork", "new", "t"], capture_output=True, text=True, env=env(), cwd=d)
-        self.assertNotEqual(r.returncode, 0); self.assertIn("refused: dyadlib: invariant(s) failed: done-is-terminal", r.stderr)
+        self.assertNotEqual(r.returncode, 0); self.assertIn("refused: dyadlib: invariant(s) failed: archived-is-terminal", r.stderr)
         self.assertEqual(list((d / "agent-corpus" / "d-work" / "rows").glob("[0-9]*.md")), [])
 
 if __name__ == "__main__":

@@ -54,3 +54,8 @@ the presence file; `same_root()` flags a live session sharing it, reported by `t
 Never a guard FAIL — same discipline as file overlap: the mechanism surfaces the finding, the
 Agent (or Operator) decides to move the work into a worktree. Pairwise unchanged: still Rule-16's
 own store; no other Rule's concern moves. Disposition: see ledger #185.
+
+## Amendment — d-work #37 (2026-09-16, `archived`)
+Transition table gains `done → archived; archived → none`; the store sentence names `archived` as
+`done`'s one further step, itself terminal. Attacks and pairwise: Rule-3's record, amendment #37
+(attacks 1, 3, 5). Disposition: see ledger #37.

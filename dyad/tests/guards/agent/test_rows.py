@@ -72,7 +72,7 @@ class FenceTests(unittest.TestCase):
         self.assertEqual(set(dyadlib.TRANSITIONS), set(dyadlib.STATES))
         for a, targets in dyadlib.TRANSITIONS.items():
             self.assertTrue(targets <= dyadlib.STATES, a); self.assertNotIn(a, targets, a)
-        self.assertEqual(dyadlib.TRANSITIONS["done"], frozenset())
+        self.assertEqual(dyadlib.TRANSITIONS["done"], frozenset({"archived"})); self.assertEqual(dyadlib.TRANSITIONS["archived"], frozenset())
     def test_merge_commit_skipped(self):
         sh("git", "checkout", "-q", "-b", "feat", cwd=self.r.d); self.r.write("dyad/f.md", "f"); self.r.commit("feat")
         sh("git", "checkout", "-q", "main", cwd=self.r.d); sh("git", "merge", "-q", "--no-ff", "-m", "merge", "feat", cwd=self.r.d)
