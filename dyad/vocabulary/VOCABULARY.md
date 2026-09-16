@@ -33,6 +33,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan-Y | the Operator's `Y` to a plan; authorizes the mutation and binds every PR of the d-work to the plan | 3 | 3 |
 | Done-Y | the Operator's `Y` to a completion counter-prompt; verifies the output against intent and, under `with-done`, ratifies the named merges | 3 | 2 3 |
 | counter-prompt | a one-line `Y/N:` question the Agent asks; the Operator's answer is a disposition | 3 | 2 3 |
+| intake | a candidate d-work carried by another agent's message — a defect as an observation with evidence, or an enhancement with its Operator's verbatim prompt behind it; opens nothing until the Operator disposes | 3 | 3 7 |
 | batch counter-prompt | a plan or completion counter-prompt (Rule-3) naming several d-works in one question, under `batch-disposition-mode` | 3 | 2 3 |
 | pending queue | the conversational set of plan-ready and done-ready d-works not yet named in a batch counter-prompt; reported each reply while non-empty, never a corpus file | 3 | 3 |
 | disposition | an Operator answer to a counter-prompt (`Y` or `N`, optionally with text) | 3 | 2 3 7 |
@@ -87,7 +88,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | The Dyad System | the Operator, the Agent, the core craft, the Tended crafts and the instance | 14 | 14 |
 | The World | everything that is not The Dyad System: the OS, hosting, services, packages, network | 14 | 14 |
 | System Infrastructure | the surface between The Dyad System and The World; the container for every integration dependency; partitioned into kernel and library | 14 | 14 |
-| kernel | the minimal pinned part of the System Infrastructure: a CLI inferencing agent, Python at a pinned version, Git as a local repository | 14 | 14 |
+| kernel | the minimal pinned part of the System Infrastructure: a CLI inferencing agent, Python at a pinned version, Git as a local repository, and pydantic at a pinned version | 14 | 14 |
 | manifest | the one file listing every System Infrastructure dependency: component, partition, version, purpose, license, replacement | 14 | 14 |
 | evidence block | the output of `package.py check --evidence` on an exact head: head sha, tree hash, dirty flag, every check and guard line, and a sha256 of those lines; pasted verbatim in the completion reply as the merge evidence, re-runnable by the Operator | 14 | 2 14 |
 | recurring task | an operation the Agent has performed by inference before and will perform again; Rule-13's trigger | 13 | 13 |

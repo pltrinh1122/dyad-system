@@ -74,3 +74,30 @@ moved to `crafts/syseng/rules/imports.md` property 4; Enforcement keeps that the
 warns; Boundaries name the craft rule. `import` leaves the Agent vocabulary for the craft's. Pairwise: 14–11, 14–12
 unchanged; 14–13: Rule-13 keeps the process clauses, the craft the selection and the scan — no shared concern.
 Coherent, orthogonal. Disposition: see ledger #162.
+
+## Amendment — d-work #31 (2026-09-16, pydantic admitted to the kernel)
+d-work #30 evaluated a schema-definition flow for the syseng craft and found pydantic the fitter
+library on every ground except one: `pydantic-core` is a compiled wheel, and putting it on the
+kernel-only path (property 3) would break `check --evidence`'s reproducibility on a bare kernel.
+Its reconciliation named the fork explicitly and left it to the Operator. The Operator disposed it:
+pydantic joins the kernel by name.
+| # | attack | result | survivor |
+|---|---|---|---|
+| 13 | Kernel is explicitly "minimal" (three items); a fourth, third-party package changes it from zero-install to "run one `pip install` first," eroding property 3's basis. | Survives, scoped | Python itself already requires an install step matched to a pinned version — kernel was never "nothing to set up," only "nothing beyond {agent, Python, git}, pinned and observed." Extending that discipline to one named, pinned package is a difference of degree, not kind, and is scoped to pydantic by name — not a standing invitation for the next library to self-nominate. |
+| 14 | `pydantic-core` is a compiled Rust wheel; a compiled dependency has no place in a kernel meant to run "on the kernel alone." | Refuted | Both existing non-Python kernel members are themselves compiled binaries (the CPython interpreter, git). "No compiled code" was never the real constraint; property 3's actual constraint is reproducibility without a library/hosting adapter — installable, pinned, offline-capable once installed, exactly as Python's own interpreter is. |
+| 15 | This reverses d-work #30's own recommended path (a stdlib emitter) without amending that record. | Confirmed | #30's reconciliation named this precise fork as the Operator's to decide. That record is not rewritten — it stands as the reasoning that led here — and gains one pointer line to this amendment so it is not read as still-current advice against pydantic. |
+| 16 | Nothing in the corpus imports pydantic yet; naming it kernel before any code uses it is premature. | Survives, scoped | Classification and adoption are separate acts — Rule-12 still chooses the implementation path when code is actually written. This d-work only clears the kernel-membership question; the manifest row pins a real, current release (2.13.5, checked via `pip index versions pydantic` the same day) rather than a placeholder. |
+
+Pairwise: 14–13: Rule-13's criteria (`import-licenses`, `import-support`) already clear pydantic as
+an import; this amendment only reclassifies its Rule-14 partition, not Rule-13's selection process.
+14–12: Rule-12 still chooses the implementation path when code is written; this removes one
+objection to that future choice and decides nothing about it. 14–11: no package-layout change, the
+manifest stays at the package root. 14–1: no zone or path change. 14–6: the vocabulary's `kernel`
+row is edited in the same d-work to keep pace (Rule-6 master record: on divergence the vocabulary
+wins and the Rule is a bug). No other concern moves. Coherent, orthogonal.
+
+*Residue, not fixed here:* `crafts/sysarch/rules/manifest.md`'s own header paraphrases the kernel
+list and is now stale by the same margin; craft zone, its own PR (Rule-1: change the referent,
+Rule-14, before the referrer, the craft rule).
+
+Disposition: see ledger #31.

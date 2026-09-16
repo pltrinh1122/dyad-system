@@ -29,8 +29,9 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    root (`dyad/infrastructure/INFRASTRUCTURE.md`); its form — component, partition, version,
    purpose, license, replacement — is `crafts/sysarch/rules/manifest.md`.
 2. **Kernel.** Claude Code (or another CLI inferencing agent), Python at a pinned version, Git
-   as a local repository. Minimal; versions recorded as observed, with the minimum the package
-   was last verified on. A hosted git service is never kernel.
+   as a local repository, and pydantic at a pinned version — the one third-party package the
+   kernel-only path may import directly. Minimal; versions recorded as observed, with the
+   minimum the package was last verified on. A hosted git service is never kernel.
 3. **Kernel-only path.** Every guard runs on the kernel alone: `package.py check --guards`,
    called by `dyad/hooks/pre-push` before every push (I2). CI, hosting
    and any runner are library adapters; the package must not depend on them to enforce a Rule.
