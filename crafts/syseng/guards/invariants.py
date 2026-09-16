@@ -44,6 +44,19 @@ def exemptions(path: Path = DATA) -> list[tuple[str, str]]:
             out.append((glob.strip(), reason.strip()))
     return out
 
+def contrib_exemptions(pkg: Path = dyadlib.PKG) -> list[tuple[str, str, str]]:
+    """[(glob, reason, source label)] from every installed craft's own `invariants_contrib.txt`, if
+    it ships one (d-work #15): the craft-contributed half of `exemptions()`, kept separate by
+    source so a malformed or stale row is reported naming that craft, never syseng. Same line
+    format as the native file — `exemptions()` parses it unchanged."""
+    out = []
+    for d in dyadlib.craft_dirs(pkg):
+        p = d / "guards" / "invariants_contrib.txt"
+        if p.exists():
+            label = f"crafts/{d.name}/guards/invariants_contrib.txt"
+            out += [(glob, reason, label) for glob, reason in exemptions(p)]
+    return out
+
 # ---- scanning (ast)
 def python_files(root: Path, pkg: Path = dyadlib.PKG) -> list[Path]:
     """Every .py under the core craft and every Tended craft, sorted; `__pycache__` skipped."""
@@ -80,14 +93,21 @@ def declares_invariants(tree: ast.Module) -> bool:
             return True
     return False
 
-def scan(root: Path, pkg: Path = dyadlib.PKG, exempt: list[tuple[str, str]] | None = None) -> tuple[list[str], set[str]]:
-    """(messages of checks (i) and (ii), exempt globs that matched a file). Paths are repo-relative."""
+def scan(root: Path, pkg: Path = dyadlib.PKG, exempt: list[tuple[str, str]] | None = None,
+         labels: dict[str, str] | None = None) -> tuple[list[str], set[str]]:
+    """(messages of checks (i) and (ii), exempt globs that matched a file). Paths are repo-relative.
+    `labels`, when given, maps a glob to the file it came from (d-work #15: a craft's own
+    `invariants_contrib.txt`) so a malformed or stale entry names that craft; a glob absent from
+    `labels` reports `invariants_rules.txt`, today's only source and the default when `labels` is
+    omitted entirely."""
     import fnmatch, re
     exempt = exemptions() if exempt is None else exempt
+    labels = labels or {}
+    label = lambda glob: labels.get(glob, "invariants_rules.txt")
     msgs, used = [], set()
     for glob, reason in exempt:
         if not reason:
-            msgs.append(f"invariants_rules.txt: exempt {glob} has no reason")
+            msgs.append(f"{label(glob)}: exempt {glob} has no reason")
     for py in python_files(root, pkg):
         rel = str(py.relative_to(root)) if py.is_relative_to(root) else str(py)
         try:
@@ -109,9 +129,9 @@ def scan(root: Path, pkg: Path = dyadlib.PKG, exempt: list[tuple[str, str]] | No
     for glob, _ in exempt:
         if glob not in used:
             if glob.startswith("crafts/") and not any(fnmatch.fnmatch(f, glob) for f in tree):
-                msgs.append(f"warning: invariants_rules.txt: exempt {glob} matches no file here (a craft not installed); not checked")   # dyad-system #1
+                msgs.append(f"warning: {label(glob)}: exempt {glob} matches no file here (a craft not installed); not checked")   # dyad-system #1
             else:
-                msgs.append(f"invariants_rules.txt: exempt {glob} matches no module that needs it (stale)")
+                msgs.append(f"{label(glob)}: exempt {glob} matches no module that needs it (stale)")
     return msgs, used
 
 # ---- (iii): the entries of every module in the runner's pass
@@ -153,7 +173,10 @@ def check_entries(pkg: Path = dyadlib.PKG) -> list[str]:
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = Path(root or dyadlib.repo_root())
-    msgs, _ = scan(root, pkg)
+    contrib = contrib_exemptions(pkg)   # d-work #15: every installed craft's own invariants_contrib.txt, if it ships one
+    exempt = exemptions() + [(g, r) for g, r, _l in contrib]
+    labels = {g: l for g, _r, l in contrib}
+    msgs, _ = scan(root, pkg, exempt, labels)
     return msgs + check_entries(pkg)
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:

@@ -106,6 +106,60 @@ class CheckTests(unittest.TestCase):
         self.data.write_text(RULES + "kind: broken\n")
         self.assertIn("naming_rules.txt: malformed line 'kind: broken'", self.check(GOOD))
 
+class ContribTests(unittest.TestCase):
+    """d-work #15: an installed craft's own naming_contrib.txt is discovered and merged — a
+    contributed kind/mode/env/allow row is enforced like a native one, but need not be a row of
+    this table (F3, plan #15), and a malformed or stale contributed line names its own craft,
+    never naming_rules.txt."""
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, ignore_errors=True)
+        self.data = self.d / "naming_rules.txt"; self.data.write_text(RULES)
+        self.table = self.d / "naming.md"; self.table.write_text(TABLE)
+    def craft_pkg(self, name: str, contrib_files: dict[str, str]) -> Path:
+        root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        pkg = root / "dyad"; (pkg / "scripts").mkdir(parents=True)
+        (pkg / "scripts" / "package_rules.txt").write_text("")   # tree_paths reads this regardless of pkg
+        cdir = root / "crafts" / name / "guards"; cdir.mkdir(parents=True)
+        (root / "crafts" / name / "VERSION").write_text("0.1.0\n")
+        for rel, text in contrib_files.items():
+            (cdir / rel).write_text(text)
+        return pkg
+    def check(self, files, pkg, track=True):
+        root = repo(files, track); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        return naming.check_package(root, pkg=pkg, data=self.data, table=self.table)
+    def test_contributed_kind_is_honoured_without_a_table_row(self):
+        pkg = self.craft_pkg("fake", {"naming_contrib.txt": "kind: <fake>/<id>.md = fake/* = fake/(?P<id>\\d+)\\.md\n"})
+        self.assertEqual(self.check({**GOOD, "fake/1.md": "x\n"}, pkg), [])   # not a row of `self.table`; still enforced
+        msgs = self.check({**GOOD, "fake/bad.md": "x\n"}, pkg)
+        self.assertIn("fake/bad.md: does not match `<fake>/<id>.md`", msgs[0])
+    def test_craft_absent_means_its_rows_are_simply_gone(self):
+        # the same tree, no contributing craft installed: `fake/1.md` matches no kind at all — never
+        # checked, never stale, the opposite of a native row's fate when its craft leaves
+        root = repo({**GOOD, "fake/1.md": "x\n"}); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        self.assertEqual(naming.check_package(root, data=self.data, table=self.table), [])
+    def test_malformed_contributed_line_names_its_craft(self):
+        pkg = self.craft_pkg("fake", {"naming_contrib.txt": "kind: broken\n"})
+        self.assertIn("crafts/fake/guards/naming_contrib.txt: malformed line 'kind: broken'", self.check(GOOD, pkg))
+    def test_contributed_env_recognized_and_stale_names_its_craft(self):
+        pkg = self.craft_pkg("fake", {"naming_contrib.txt": "env: DYAD_FAKE\n"})
+        reads = {**GOOD, "dyad/scripts/extra.py": 'import os\ndef f(): return os.environ["DYAD_FAKE"]\n'}
+        self.assertEqual(self.check(reads, pkg), [])   # read and listed (by the contribution): no unlisted, no stale
+        self.assertEqual(self.check(GOOD, pkg), ["crafts/fake/guards/naming_contrib.txt: env DYAD_FAKE is listed but no package code reads it (stale)"])
+    def test_contributed_allow_pairs_with_its_own_kind(self):
+        pkg = self.craft_pkg("fake", {"naming_contrib.txt": "kind: <fake>/<id>.md = fake/* = fake/(?P<id>\\d+)\\.md\nallow: fake/special.md # an exception\n"})
+        self.assertEqual(self.check({**GOOD, "fake/special.md": "x\n"}, pkg), [])
+    def test_contributed_allow_without_reason_names_its_craft(self):
+        pkg = self.craft_pkg("fake", {"naming_contrib.txt": "allow: fake/x.md\n"})
+        self.assertIn("crafts/fake/guards/naming_contrib.txt: allow fake/x.md has no reason", self.check(GOOD, pkg))
+    def test_contrib_file_name_pattern_over_the_live_table(self):
+        """The kind this d-work added to the real naming_rules.txt (crafts/<craft>/guards/naming_rules.txt
+        item 3, plan #15): `<receiver>` is one of the two syseng guards that support contribution."""
+        r = naming.load_rules()   # the real, live naming_rules.txt
+        paths = ["crafts/sysadmin/guards/naming_contrib.txt", "crafts/sysadmin/guards/invariants_contrib.txt", "crafts/sysadmin/guards/bogus_contrib.txt"]
+        msgs, _used = naming.check_kinds(paths, r["kind"], {}, "agent-corpus", dyadlib.repo_root())
+        self.assertFalse(any("naming_contrib.txt" in m or "invariants_contrib.txt" in m for m in msgs), msgs)
+        self.assertTrue(any("bogus_contrib.txt" in m for m in msgs), msgs)
+
 class ModeTests(unittest.TestCase):
     """#141: `mode:` judges the mode git records, not the bit on disk (`core.fileMode=false` shows 755 for a
     file tracked 100644 — how an entrypoint that could not exec reached an image, #135)."""

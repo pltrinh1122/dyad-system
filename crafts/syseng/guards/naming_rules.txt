@@ -11,6 +11,11 @@
 #   env: NAME …                                — every DYAD_<NAME> package code reads, no more, no less
 #   allow: <path> # <reason>                   — a path a kind claims but that does not match; reasoned; stale fails for a package path
 #                                                (dyad/, crafts/) and warns for an instance path (this file travels to other installs); unneeded warns
+#
+# An installed craft may contribute its own kind/mode/symbol/env/allow rows directly:
+# crafts/<craft>/guards/naming_contrib.txt, same line format as this file, discovered by
+# naming.contrib_rules (rules/naming.md, Craft contribution; d-work #15). Not checked against
+# this file's own table: a contributed pattern is documented in the contributing craft's own rule.
 
 kind: dyad/rules/RULE-<n>-<slug>.md = dyad/rules/* = dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md
 kind: crafts/<craft>/rules/<slug>.md = crafts/*/rules/* = crafts/[a-z][a-z0-9-]*/rules/([a-z0-9-]+|README)\.md
@@ -25,7 +30,8 @@ kind: <instance>/audits/<YYYY-MM-DD>-<slug>.md = <instance>/audits/* = <instance
 kind: dyad/guards/<corpus>/<entity>.py = dyad/guards/*/*.py = dyad/guards/(agent|workstation|preferences|infra|craft)/_?[a-z][a-z0-9_]*\.py
 kind: crafts/<craft>/guards/<entity>.py = crafts/*/guards/*.py = crafts/[a-z][a-z0-9-]*/guards/_?[a-z][a-z0-9_]*\.py
 kind: <entity>_rules.txt = dyad/guards/*/*.txt = dyad/guards/[a-z]+/(?P<beside>[a-z][a-z0-9_]*)_rules\.txt
-kind: <entity>_rules.txt = crafts/*/guards/*.txt = crafts/[a-z][a-z0-9-]*/guards/(?P<beside>[a-z][a-z0-9_]*)_rules\.txt
+kind: <entity>_rules.txt = crafts/*/guards/*_rules.txt = crafts/[a-z][a-z0-9-]*/guards/(?P<beside>[a-z][a-z0-9_]*)_rules\.txt
+kind: crafts/<craft>/guards/<receiver>_contrib.txt = crafts/*/guards/*_contrib.txt = crafts/[a-z][a-z0-9-]*/guards/(?P<receiver>naming|invariants)_contrib\.txt
 kind: dyad/tests/test_<name>.py = dyad/tests/*.py = dyad/tests/(test_[a-z0-9_]+|__init__)\.py
 kind: dyad/tests/guards/<corpus>/test_<entity>.py = dyad/tests/guards/**.py = dyad/tests/guards(/[a-z]+)?/(test_[a-z0-9_]+|__init__)\.py
 kind: crafts/<craft>/tests/guards/test_<entity>.py = crafts/*/tests/**.py = crafts/[a-z][a-z0-9-]*/tests(/guards)?/(test_[a-z0-9_]+|__init__)\.py

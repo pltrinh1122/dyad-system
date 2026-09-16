@@ -74,6 +74,19 @@ def parse_rules(text: str) -> dict[str, list]:
 def load_rules(path: Path = DATA) -> dict[str, list]:
     return parse_rules(path.read_text())
 
+def contrib_rules(pkg: Path = dyadlib.PKG) -> list[tuple[str, dict]]:
+    """[(craft name, parsed naming_contrib.txt)] for every installed craft that ships one (d-work
+    #15): the craft-contributed half of the table, kept separate by source so a malformed or stale
+    row is reported naming that craft, never syseng — and never checked against syseng's own table
+    (`check_table`, native only): a contributed pattern is documented in the contributing craft's
+    own rule, not `rules/naming.md`."""
+    out = []
+    for d in dyadlib.craft_dirs(pkg):
+        p = d / "guards" / "naming_contrib.txt"
+        if p.exists():
+            out.append((d.name, load_rules(p)))
+    return out
+
 def table_patterns(table: Path = TABLE) -> set[str]:
     """Every backticked token of the table's first column (`rules/naming.md`)."""
     if not table.exists():
@@ -223,39 +236,67 @@ def env_scope(listed: list[str], installed: set[str] | None = None) -> tuple[lis
             checked.append(name)
     return checked, deferred
 
-def check_env(found: dict[str, list[str]], listed: list[str], installed: set[str] | None = None) -> list[str]:
+def check_env(found: dict[str, list[str]], listed: list[str], installed: set[str] | None = None,
+              label: str = "naming_rules.txt", all_listed: list[str] | None = None, check_unlisted: bool = True) -> list[str]:
+    """`all_listed`, when given, scopes the *unlisted* check (a var read but declared nowhere) to the
+    union of every source's tokens; `listed`/`label` always scope the stale and deferred-warn
+    messages to just this one source, so a contributed file's own stale entry names that craft,
+    never syseng (d-work #15). `check_unlisted=False` skips the first check entirely — for every
+    source after the first merged into one `check_package` call, so the same union is not reported
+    once per source. Both default to today's single-source behaviour, unchanged."""
     names, deferred = env_scope(listed, installed)
-    msgs = [f"{', '.join(sorted(set(ws)))}: reads {n}, not in the naming table (`DYAD_<NAME>` row / `env:` line)" for n, ws in sorted(found.items()) if n not in names and n not in deferred]
-    msgs += [f"naming_rules.txt: env {n} is listed but no package code reads it (stale)" for n in names if n not in found]
-    msgs += [f"warning: naming_rules.txt: env {n} is read by a craft not installed here; not checked" for n in deferred]
+    msgs = []
+    if check_unlisted:
+        unames, udeferred = env_scope(listed if all_listed is None else all_listed, installed)
+        msgs += [f"{', '.join(sorted(set(ws)))}: reads {n}, not in the naming table (`DYAD_<NAME>` row / `env:` line)" for n, ws in sorted(found.items()) if n not in unames and n not in udeferred]
+    msgs += [f"{label}: env {n} is listed but no package code reads it (stale)" for n in names if n not in found]
+    msgs += [f"warning: {label}: env {n} is read by a craft not installed here; not checked" for n in deferred]
     return msgs
 
-def check_allow(allow: list[tuple[str, str]], paths: set[str], used: set[str]) -> list[str]:
+def check_allow(allow: list[tuple[str, str]], paths: set[str], used: set[str], label: str = "naming_rules.txt") -> list[str]:
     msgs = []
     for path, reason in allow:
         if not reason:
-            msgs.append(f"naming_rules.txt: allow {path} has no reason")
+            msgs.append(f"{label}: allow {path} has no reason")
         if path not in paths:
             if path.startswith(PACKAGE_ROOTS):
-                msgs.append(f"naming_rules.txt: allow {path} is stale (no such path); remove the line")
+                msgs.append(f"{label}: allow {path} is stale (no such path); remove the line")
             else:   # an instance path differs per install; the craft's data travels, so absence warns here and fails only where the path is package
-                msgs.append(f"warning: naming_rules.txt: allow {path} names no path of this tree (an instance path; remove the line if it is gone for good)")
+                msgs.append(f"warning: {label}: allow {path} names no path of this tree (an instance path; remove the line if it is gone for good)")
         elif path not in used:
-            msgs.append(f"warning: naming_rules.txt: allow {path} is no longer needed (the path matches its pattern)")
+            msgs.append(f"warning: {label}: allow {path} is no longer needed (the path matches its pattern)")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path = DATA, table: Path = TABLE) -> list[str]:
     root = Path(root or dyadlib.repo_root())
     r = load_rules(data)
+    contrib = contrib_rules(pkg)   # d-work #15: every installed craft's own naming_contrib.txt, if it ships one
     msgs = [f"naming_rules.txt: malformed line {l!r}" for l in r["bad"]]
+    for craft, cr in contrib:
+        msgs += [f"crafts/{craft}/guards/naming_contrib.txt: malformed line {l!r}" for l in cr["bad"]]
     paths = tree_paths(root, pkg)
     allow = dict(r["allow"])
+    for _craft, cr in contrib:
+        allow |= dict(cr["allow"])
     inst = instance_rel(root)
-    m, used = check_kinds(paths, r["kind"], allow, inst, root)
+    all_kinds = r["kind"] + [k for _c, cr in contrib for k in cr["kind"]]
+    all_modes = r["mode"] + [k for _c, cr in contrib for k in cr["mode"]]
+    all_symbols = r["symbol"] + [s for _c, cr in contrib for s in cr["symbol"]]
+    m, used = check_kinds(paths, all_kinds, allow, inst, root)
     pats = table_patterns(table)
-    msgs += m + check_table(r["kind"], pats) + check_table(r["mode"], pats, "mode") + check_symbols(paths, r["symbol"], root)
-    msgs += check_modes(paths, r["mode"], root, inst)
-    msgs += check_env(env_names(paths, root), r["env"], {d.name for d in dyadlib.craft_dirs(pkg)}) + check_allow(r["allow"], set(paths), used)
+    # check_table stays native-only (F3, plan #15): a contributed pattern's table row lives in the
+    # contributing craft's own rule, not rules/naming.md
+    msgs += m + check_table(r["kind"], pats) + check_table(r["mode"], pats, "mode") + check_symbols(paths, all_symbols, root)
+    msgs += check_modes(paths, all_modes, root, inst)
+    installed = {d.name for d in dyadlib.craft_dirs(pkg)}
+    all_env = r["env"] + [e for _c, cr in contrib for e in cr["env"]]
+    found = env_names(paths, root)
+    msgs += check_env(found, r["env"], installed, all_listed=all_env)
+    msgs += check_allow(r["allow"], set(paths), used)
+    for craft, cr in contrib:
+        label = f"crafts/{craft}/guards/naming_contrib.txt"
+        msgs += check_env(found, cr["env"], installed, label=label, check_unlisted=False)   # the unlisted check already ran above; this call is stale/deferred only
+        msgs += check_allow(cr["allow"], set(paths), used, label=label)
     return msgs
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
