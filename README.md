@@ -17,6 +17,12 @@ import line in the host's `CLAUDE.md`, a `.gitignore` seed and the `dyad-*` work
 overwrites a host file (Rule-11). Installing twice changes nothing. `dyad/bin/dyad check` runs the
 guards on Python 3.12 and git alone.
 
+**Two ways to pin a release.** The unprefixed `vX.Y.Z` tag is a **bundle**: the core craft plus
+every Tended craft this repo authors, each at the version `BUNDLE.md` names — install all of them
+together from that one Release's assets. Pin only what you need instead by installing the core from
+its own `dyad-operator-vX.Y.Z` tag and a Tended craft from its own `<craft>-vX.Y.Z` tag
+(`dyad craft install <archive>`); each releases and installs independently (Rule-11 properties 4, 7).
+
 **Read** `dyad/CLAUDE.md` first (the operating frame), then `dyad/rules/` (Rules 1–20, each with its
 block and its falsification record under `dyad/falsification/rules/`), `dyad/vocabulary/VOCABULARY.md`
 and `dyad/README.md`.
