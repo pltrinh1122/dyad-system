@@ -6,13 +6,22 @@ roots=["crafts/<name>"], no hooks, prune) are thin callers. A library: no check 
 Kernel: Python 3.12+; stdlib only (Rule-14: no new row; `hostadapter` is package-internal).
 
 Deterministic build: entries sorted by path, arcname = repo-relative path, mtime 0, uid/gid 0, empty
-uname/gname, mode 0644 or 0755 (by the executable bit), gzip header mtime 0 and no name — so two builds
-of one tree are byte-identical and `archive_sha256` is a stable identity of a tree (the craft registry's
-`sha256`, Rule-11 p2). Install copies every file whose bytes differ, creates missing ones and, with
-`prune`, deletes files under `roots` the source lacks; a second run on an unchanged source is 0 changes.
-Every path this module resolves to canonical form goes through `hostadapter.resolve` (crafts/syseng/rules/host-facts.md,
-d-work #179), never `Path(...).resolve()` inline, so a host's own filesystem layout (a symlinked
-temp dir) is read in exactly one place."""
+uname/gname, mode 0644 or 0755, gzip header mtime 0 and no name — so two builds of one tree are
+byte-identical and `archive_sha256` is a stable identity of a tree (the craft registry's `sha256`,
+Rule-11 p2). Install copies every file whose bytes or mode differ, creates missing ones and, with
+`prune`, deletes files under `roots` the source lacks; a second run on an unchanged source is 0
+changes. Every path this module resolves to canonical form goes through `hostadapter.resolve`
+(crafts/syseng/rules/host-facts.md, d-work #179), never `Path(...).resolve()` inline, so a host's own
+filesystem layout (a symlinked temp dir) is read in exactly one place.
+
+Modes come from the git index (`git_modes`, a source work tree) or an archive's own tar members
+(`archive_modes`, a source built here) — never `os.access(p, os.X_OK)` beyond a last-resort fallback
+for a bare directory that is neither: on a `core.fileMode=false` checkout (an NTFS mount, `#135`/`#141`,
+`dyadlib.tracked_mode`'s own trap) the disk bit reads executable for every file, executable or not, so
+a build from one and an install into one both need the index, not the filesystem, as the source of
+truth (workstation#173, #196 d-work #6). `install()` writes a changed 755 file's bit to the
+destination's index too (`git update-index --chmod`) when the destination is a work tree — the one
+channel `core.fileMode=false` leaves for the bit to reach a later `git add`."""
 import filecmp, fnmatch, gzip, hashlib, io, os, shutil, subprocess, tarfile, tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,18 +32,54 @@ INVARIANTS = [("skip-dirs-are-generated-or-git", lambda: SKIP_DIRS <= {"__pycach
               ("skip-dirs-non-empty", lambda: bool(SKIP_DIRS))]
 
 
+def _git_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")}
+
+
+def _is_work_tree(repo: Path) -> bool:
+    """`repo` itself (not a subdirectory of one — an extracted archive under a repo walks instead, same
+    boundary `_git_files` already draws)."""
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=repo, capture_output=True, text=True, env=_git_env())
+    return top.returncode == 0 and hostadapter.resolve(top.stdout.strip()) == hostadapter.resolve(repo)
+
+
 def _git_files(repo: Path, roots) -> list[str] | None:
     """Tracked files under `roots` (directories or exact paths), repo-relative, sorted; None if `repo` is
     not a git work tree (then the caller walks the tree instead)."""
-    env = {k: v for k, v in os.environ.items() if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")}
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=repo, capture_output=True, text=True, env=env)
-    if top.returncode != 0 or hostadapter.resolve(top.stdout.strip()) != hostadapter.resolve(repo):
-        return None   # not a work tree, or a directory inside one (an extracted archive under a repo): walk instead
-    r = subprocess.run(["git", "ls-files", "-z", "--", *roots], cwd=repo, capture_output=True, env=env)
+    if not _is_work_tree(repo):
+        return None
+    r = subprocess.run(["git", "ls-files", "-z", "--", *roots], cwd=repo, capture_output=True, env=_git_env())
     if r.returncode != 0:
         return None
     out = sorted(p for p in r.stdout.decode().split("\0") if p and (repo / p).is_file())
     return out
+
+
+def git_modes(repo: Path, roots) -> dict[str, int]:
+    """{repo-relative path: 0o755 | 0o644} from the git index (`git ls-files -s`) under `roots`, one call —
+    never the disk bit, which `core.fileMode=false` (an NTFS checkout) decouples from what a build, a clone
+    or CI actually see (module docstring; #196 d-work #6). Empty when `repo` is not a work tree."""
+    if not _is_work_tree(repo):
+        return {}
+    r = subprocess.run(["git", "ls-files", "-s", "-z", "--", *roots], cwd=repo, capture_output=True, env=_git_env())
+    if r.returncode != 0:
+        return {}
+    out = {}
+    for line in r.stdout.decode().split("\0"):
+        if not line:
+            continue
+        meta, _, path = line.partition("\t")
+        out[path] = 0o755 if meta.split()[0] == "100755" else 0o644
+    return out
+
+
+def archive_modes(archive: Path) -> dict[str, int]:
+    """{archive-relative path: 0o755 | 0o644} straight from a tar.gz's own members, read before extraction
+    could lose them: on a `core.fileMode=false` mount `chmod` after `extract()` does not reliably stick
+    (the same disk-bit trap `git_modes` avoids on the build side), so an install *from an archive* must
+    read modes from the archive itself, never re-derive them from the extracted tree's disk bits."""
+    with tarfile.open(archive, "r:gz") as tar:
+        return {m.name: (0o755 if m.mode & 0o111 else 0o644) for m in tar.getmembers() if m.isreg()}
 
 
 def _walk_files(root: Path, roots) -> list[str]:
@@ -69,13 +114,14 @@ def _mode(p: Path) -> int:
 def archive_bytes(repo: Path, roots, extra=(), tracked: bool = True) -> bytes:
     """The deterministic tar.gz of `files(repo, roots, extra, tracked)`; see the module docstring."""
     repo = Path(repo)
+    modes = git_modes(repo, [*roots, *extra]) if tracked else {}   # {} when repo is not a work tree: _mode(p) falls back below
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="wb", mtime=0) as gz, tarfile.open(fileobj=gz, mode="w", format=tarfile.GNU_FORMAT) as tar:
         for rel in files(repo, roots, extra, tracked):
             p = repo / rel
             info = tarfile.TarInfo(rel)
             info.size = p.stat().st_size; info.mtime = 0; info.uid = info.gid = 0; info.uname = info.gname = ""
-            info.mode = _mode(p); info.type = tarfile.REGTYPE
+            info.mode = modes.get(rel, _mode(p)); info.type = tarfile.REGTYPE
             with p.open("rb") as fh:
                 tar.addfile(info, fh)
     return buf.getvalue()
@@ -135,17 +181,30 @@ def install(src: Path, dest: Path, roots, prune: bool = False, hooks: Hooks | No
     into `dest`. Returns the number of changes: files written (new or differing bytes or mode), files pruned,
     seeds and import lines added. Second call on an unchanged source: 0."""
     dest = hostadapter.resolve(dest)
-    tmp = tempfile.mkdtemp(prefix="dyad-install-") if not Path(src).is_dir() else None
+    src_path = Path(src)
+    is_archive = not src_path.is_dir()
+    tmp = tempfile.mkdtemp(prefix="dyad-install-") if is_archive else None
     try:
         root = source_tree(src, tmp)
         wanted = files(root, roots, extra)
+        # source modes: an archive's own members (extraction cannot be trusted to preserve them on a
+        # core.fileMode=false mount, module docstring); else the source work tree's index; else the disk
+        # bit, for a bare directory that is neither (e.g. a test fixture with no .git at all)
+        src_modes = archive_modes(src_path) if is_archive else git_modes(root, [*roots, *extra])
+        dest_is_repo = _is_work_tree(dest)
+        dest_modes = git_modes(dest, [*roots, *extra]) if dest_is_repo else {}
         changed = 0
         for rel in wanted:
             s, d = root / rel, dest / rel
-            if d.exists() and filecmp.cmp(s, d, shallow=False) and _mode(s) == _mode(d):
+            mode = src_modes.get(rel, _mode(s))
+            if d.exists() and filecmp.cmp(s, d, shallow=False) and dest_modes.get(rel, _mode(d)) == mode:
                 continue
             d.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(s, d); d.chmod(_mode(s)); changed += 1
+            shutil.copyfile(s, d); d.chmod(mode)
+            if dest_is_repo:   # the disk chmod above is not what `git add` later reads (fileMode=false); stage the bit itself
+                subprocess.run(["git", "update-index", "--add", "--chmod=" + ("+x" if mode == 0o755 else "-x"), "--", rel],
+                                cwd=dest, capture_output=True, env=_git_env())
+            changed += 1
         if prune:
             have = set(wanted)
             for rel in files(dest, roots, tracked=False):
