@@ -84,10 +84,12 @@ Any other response leaves it incomplete, to be resumed later.
   frame is absent the only permitted action is to say so and stop (E1). The Agent also touches
   its own presence file and reads every other session's (Rule-16); an overlap found there is
   reported when it bears on the prompt at hand, not narrated for its own sake.
-- PR bodies cite `d-work #<id>`; `dyad/guards/agent/prs.py` resolves each id against
+- PR bodies — and, on a branch, the commit messages `dyad/guards/agent/prs.py` reads as the body —
+  cite `d-work #<id>`; the guard resolves each id against
   the ledger on the base branch and requires it to be `open`, `planned` or `blocked` and to carry a
   `Y plan` disposition (the plan gate, E3). The phrase is a claim of work on that d-work,
-  not a mention — cross-reference other rows as plain `#<id>`.
+  not a mention, in a commit message exactly as in a PR body — cross-reference other rows as plain
+  `#<id>` (#23).
 
 ## Mechanisms
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They

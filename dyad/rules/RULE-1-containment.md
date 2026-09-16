@@ -7,6 +7,12 @@
 - Who may merge or push — Rule-2. When work opens or closes — Rule-3.
 - What a Rule must look like — Rule-4; how Rules relate — Rule-5.
 - Content of files: Rule-1 sees paths only. The live host — Rule-8.
+- A session-level restriction on which branches may be pushed (a harness's, a hosting's): an
+  Operator-side fence outside the corpus, per session, as Rule-8 says of the harness permission
+  mode per command; it neither replaces nor is replaced by this Rule. Where such a fence forbids
+  what a Rule prescribes — the ledger-only commit to `main` that Rule-2 and Rule-3 make clerical is
+  the case found (#23) — the Agent does the corpus-legal part it can, states the rest and asks; it
+  never reads permission out of the Rule alone.
 
 ## Conditions (triggers)
 - A commit is created (`dyad/hooks/pre-commit`, blocking).
@@ -39,7 +45,11 @@ Enforcement: `dyad/hooks/pre-commit` (local, blocking; `git config core.hooksPat
 (CI, detecting, range mode). All call `dyad/guards/infra/containment.py`. Before any commit in this repo,
 run `git config core.hooksPath dyad/hooks` if not already set. Until d-work #24 (internal
 LAN git server with required status checks) lands, these hooks are the only *blocking*
-enforcement of Rule-1; CI only detects.
+enforcement of Rule-1; CI only detects. A hook that cannot execute at all — an exec bit lost from
+the guard it runs by path, an interpreter below the kernel pin — leaves that enforcement vacuous,
+so the Agent runs the guard by hand, records its observed line and the bypass in the commit
+message, and reports an incident (Rule-3); it never repairs the hook inside an unrelated d-work,
+and never bypasses a hook that runs and fails (#23).
 
 
 ## Provenance

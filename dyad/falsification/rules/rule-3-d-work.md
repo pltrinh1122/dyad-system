@@ -36,3 +36,23 @@ Pairwise: Rule-3 gains one clause on *when* hosted CI runs; Rule-14 owns the ada
 |---|---|---|---|
 | A | The session-start report grows another mandatory step for no return most sessions. | Survives, scoped | The write is one file, the read is a directory listing of files already usually near-empty; the cost is a few milliseconds, the benefit is exactly the class of near-miss #185 records. |
 Pairwise: Rule-16 owns the store and its semantics; Rule-3 states only that the report includes it, same pattern as the ledger report it already carries. Coherent, orthogonal. Disposition: see ledger #185.
+
+## Amendment — d-work #23 (2026-09-16, the plan gate reads commit messages)
+The Ledger bullet said "PR bodies cite `d-work #<id>` … the phrase is a claim of work, not a
+mention". `prs.py check_transaction` reads, on a branch, "the commit messages of base..head" as the
+body. The Rule named one artifact and the guard binds another, so nothing told the Agent that the
+claim/mention distinction governs a commit message.
+| # | attack | result | survivor |
+|---|---|---|---|
+| A | A style nit; the Agent should infer it from the guard. | Refuted mechanically | It was not inferred. An incident sentence reading "since d-work #6" in a commit message failed the push with `agent/prs [d-work]: #6 is done, not open` (#22), costing a cycle. Rule-6's own standard applies by analogy: where text and mechanism diverge, the text is the bug. |
+| B | Fix the guard instead — scan only a real PR body. | Refuted | The guard has no PR body before the PR exists; reading the range's commit messages is what enforces the plan gate *before* a push, which Rule-3 Mechanisms requires and #168 left as the only pre-merge check. Narrowing it would delete the gate. |
+| C | The guard cannot tell a claim from a quotation, so the phrase cannot be discussed in a commit message at all. | **Confirmed; open, scoped** | Found writing this very amendment: a commit message explaining the rule, quoting the offending phrase as an example, failed the gate the same way. `prs.CITE` is one regex over the whole body with no quoting form. The clause is still right — it tells the Agent the distinction governs here — and the residue is that the phrase is unquotable in a commit message; write it broken (`<d-work> #N`) or name it in prose. A quoting form (a fenced block the scan skips, say) is a guard change, a later row, not this d-work's. |
+| D | The clause makes the bullet harder to read. | Survives, scoped | It is longer by one em-dash clause and one phrase; the alternative is a rule that is silently false of the artifact the Agent actually writes. |
+
+Pairwise: Rule-3 keeps the plan gate and its mechanism; only the Rule's description of what the
+guard reads is corrected to match `prs.py`. Rule-1 owns the commit as a transaction by path — this
+is its message text, a different concern. Rule-7 owns the Operator's words, not the Agent's commit
+messages. Rule-15's `planned` state at the gate is unaffected. No new term (Rule-6); no mechanism
+change, so Rule-12 and Rule-11 are untouched. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #23.
