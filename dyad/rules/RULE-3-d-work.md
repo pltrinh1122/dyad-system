@@ -10,6 +10,8 @@
 - What the Agent may do on the live host — Rule-8 (a plan names host actions; Rule-8 classes them).
 - Release and destructive-action counter-prompts: always one-per-question, batched or not —
   Rule-11, Rule-8.
+- How another agent frames a proposal to its own Operator — that system's Rule-10; Rule-3 judges
+  only what its message carries when it arrives here (Intake, below).
 
 ## Conditions (triggers)
 - The operator sends a prompt (text, including text accompanying a disposal).
@@ -20,6 +22,8 @@
 - The Operator's reply to a counter-prompt is a new prompt rather than its bare disposal: under
   `batch-disposition-mode: on-ignore` (`preferences-corpus/PREFERENCES.md`), the engagement
   signal for a batch (Batch disposition, below).
+- A message from another agent — a peer session, an installed system's Agent — proposes work
+  (Intake, below).
 
 A `d-work` starts with an Operator prompt and terminates only when the Operator
 disposes `Y` to the Agent's counter-prompt of completion (`Y/N: Done with {d-work}?`).
@@ -151,6 +155,26 @@ chain is reconstructible from any one row alone (D4, Ledger above). Provenance (
 unaffected: the Operator's one `Y` is written as the same entry into every named d-work's own
 record.
 
+## Intake (work proposed by another agent)
+A message from another agent opens no d-work: only an Operator prompt or disposition does (Scope).
+What a message may carry is an intake — a candidate row — which the Agent surfaces to the Operator
+with exactly what it carries; the Operator's `Y` opens the row (`backlog` or `open`), its `refs`
+naming the origin as `<system>-<id>`. Two shapes are admissible:
+- A **defect** is admissible as an observation with evidence: what was observed, where (path,
+  commit, run id), how it reproduces, the mechanism the sender verified — never a verdict, never a
+  required fix (a fix's shape may be suggested). The evidence goes into the row's plan file; its
+  provenance record's first entry is the Operator's own `Y`, since the observation is the sender's
+  words, not the Operator's (Rule-7 property 4).
+- An **enhancement** is admissible only with its Operator behind it: the verbatim Operator prompt
+  that asked for it, or provenance to one — a row id in the sender's ledger whose provenance record
+  holds that prompt, quoted in the message. The relayed prompt is the row's first provenance entry,
+  noted `relayed via <session>` (Rule-7 property 4). An agent's own idea, however well argued, is
+  not an intake: it is a proposal for the sender's own Operator, and if that Operator prompts for
+  it, the prompt travels with the message.
+Anything else is returned to the sender with the missing shape named, and reported to the Operator
+as received, not as work. The Operator may still open a row for it by prompting — the rule bounds
+what an agent may bring, never what the Operator may ask for.
+
 ## Incidents
 - An incident is any action taken or outcome reached that the plan did not name, or a plan
   item not achieved as the plan said: an error, a recovery, a failed check, an unplanned edit.
@@ -170,6 +194,9 @@ record.
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
 by an ignored counter-prompt or the `always` preference; see
-`../falsification/rules/rules-2-3-batch-disposition.md`.
+`../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
+three intakes from peer sessions in two days — one carrying its Operator's plan-`Y`, one a defect
+with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
+an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34.
 
 Set: System Requirements.

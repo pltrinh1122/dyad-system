@@ -33,6 +33,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan-Y | the Operator's `Y` to a plan; authorizes the mutation and binds every PR of the d-work to the plan | 3 | 3 |
 | Done-Y | the Operator's `Y` to a completion counter-prompt; verifies the output against intent and, under `with-done`, ratifies the named merges | 3 | 2 3 |
 | counter-prompt | a one-line `Y/N:` question the Agent asks; the Operator's answer is a disposition | 3 | 2 3 |
+| intake | a candidate d-work carried by another agent's message — a defect as an observation with evidence, or an enhancement with its Operator's verbatim prompt behind it; opens nothing until the Operator disposes | 3 | 3 7 |
 | batch counter-prompt | a plan or completion counter-prompt (Rule-3) naming several d-works in one question, under `batch-disposition-mode` | 3 | 2 3 |
 | pending queue | the conversational set of plan-ready and done-ready d-works not yet named in a batch counter-prompt; reported each reply while non-empty, never a corpus file | 3 | 3 |
 | disposition | an Operator answer to a counter-prompt (`Y` or `N`, optionally with text) | 3 | 2 3 7 |
