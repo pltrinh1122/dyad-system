@@ -170,7 +170,14 @@ class FixtureTests(Fixtured):
     def test_plan_id_row(self):
         self.broken(lambda: (self.inst / "d-work" / "plans" / "8.md").write_text("# Plan #8\n"), "plan.id->row")
     def test_plan_base_commit(self):
+        self.rewrite(self.row(7), "state: done", "state: open")   # active: Rule-15 phase 2 still needs it checked
         self.broken(lambda: self.rewrite(self.inst / "d-work" / "plans" / "7.md", "base commit: ", "base commit: deadbeef0"), "plan.base->commit")
+    def test_plan_base_commit_skipped_once_row_is_terminal(self):
+        # row 7 stays `done` (fixture default): Rule-15 phase 2 never re-plans a terminal row, so
+        # its base commit is frozen history, skipped silently rather than checked (Rule-20 property 2)
+        self.rewrite(self.inst / "d-work" / "plans" / "7.md", "base commit: ", "base commit: deadbeef0")
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), set(), msgs)
     def test_rule_text_rule(self):
         self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-1-x.md", "Rule-2 owns", "Rule-7 owns"), "rule.text->rule")
     def test_rule_text_row_is_world_never_fails(self):
