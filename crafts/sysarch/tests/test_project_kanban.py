@@ -1,5 +1,6 @@
 """kanban projector tests (crafts/sysarch/rules/projection.md; d-work #186): fixture rows across
-every state land in the right column, a blocked card shows its refs, the done column collapses,
+every state land in the right column, a blocked card shows its refs, the archived column collapses,
+the phase strip reads every life-cycle phase from the store and flags one out of order (#37),
 determinism (render twice, byte-equal), self-contained output, and a live run over the real
 instance."""
 import sys, tempfile, unittest
@@ -21,7 +22,7 @@ def fixture(rows: dict[str, dict]) -> Path:
 class ContractTests(unittest.TestCase):
     def test_columns_match_states(self):
         self.assertEqual(set(pk.COLUMNS), dyadlib.STATES)
-        self.assertEqual(len(pk.COLUMNS), 5)
+        self.assertEqual(len(pk.COLUMNS), 6); self.assertEqual(pk.COLUMNS[-1], "archived"); self.assertEqual(pk.COLLAPSED, "archived")
 
 class CollectTests(unittest.TestCase):
     def test_groups_by_state_sorted_by_id(self):
@@ -30,7 +31,7 @@ class CollectTests(unittest.TestCase):
         groups = pk.collect(root)
         self.assertEqual([r.id for r in groups["open"]], [1, 3])
         self.assertEqual([r.id for r in groups["done"]], [2])
-        self.assertEqual(groups["planned"], []); self.assertEqual(groups["blocked"], []); self.assertEqual(groups["backlog"], [])
+        self.assertEqual(groups["planned"], []); self.assertEqual(groups["blocked"], []); self.assertEqual(groups["backlog"], []); self.assertEqual(groups["archived"], [])
     def test_every_column_present_even_when_empty(self):
         groups = pk.collect(fixture({}))
         self.assertEqual(set(groups.keys()), set(pk.COLUMNS))
@@ -77,14 +78,14 @@ class RenderTests(unittest.TestCase):
         groups = pk.collect(fixture({"9": {"title": "waiting", "state": "blocked", "refs": "#5"}}))
         out = pk.render(groups)
         self.assertIn('id="d-9"', out); self.assertIn("refs: #5", out); self.assertIn("blocked", out)
-    def test_done_column_collapsed_when_nonempty(self):
-        groups = pk.collect(fixture({"1": {"title": "x", "state": "done"}}))
+    def test_archived_column_collapsed_when_nonempty(self):
+        groups = pk.collect(fixture({"1": {"title": "x", "state": "archived", "disposed": "2026-09-14 Y plan; 2026-09-15 Y done; 2026-09-16 Y archive"}}))
         out = pk.render(groups)
-        self.assertIn("<details>", out); self.assertIn("<summary>", out)
-    def test_done_column_not_collapsed_when_empty(self):
-        groups = pk.collect(fixture({"1": {"title": "x", "state": "open"}}))
+        self.assertIn("<details>", out); self.assertIn("show 1 archived row", out)
+    def test_done_column_stays_open(self):
+        groups = pk.collect(fixture({"1": {"title": "x", "state": "done", "disposed": "2026-09-14 Y plan; 2026-09-15 Y done"}}))
         out = pk.render(groups)
-        self.assertNotIn("<details>", out)
+        self.assertNotIn("<details>", out); self.assertIn("Done", out)
     def test_disposition_badge_counts_semicolon_entries(self):
         groups = pk.collect(fixture({"1": {"title": "x", "state": "planned", "disposed": "2026-09-14 Y plan; 2026-09-14 Y done"}}))
         out = pk.render(groups)
@@ -112,6 +113,55 @@ class RenderTests(unittest.TestCase):
     def test_deterministic(self):
         groups = pk.collect(fixture({"3": {"title": "c", "state": "open"}, "1": {"title": "a", "state": "backlog"}}))
         self.assertEqual(pk.render(groups), pk.render(groups))
+
+class PhaseTests(unittest.TestCase):
+    """The strip (#37): every phase from the store alone; out-of-order phases flagged, never hidden."""
+    def store(self, rows, plans=(), prov=None):
+        root = fixture(rows)
+        d = root / "agent-corpus" / "d-work"
+        (d / "plans").mkdir(); (d / "provenance").mkdir()
+        for rid in plans:
+            (d / "plans" / f"{rid}.md").write_text("# Plan\n")
+        for rid, text in (prov or {}).items():
+            (d / "provenance" / f"{rid}.md").write_text(text)
+        return root
+    def test_full_life_cycle_all_lit(self):
+        root = self.store({"1": {"title": "x", "state": "done", "disposed": "2026-09-14 Y plan; 2026-09-15 Y done (merges PR #6, #7)"}}, plans=("1",),
+                          prov={"1": "# Provenance #1\n\n## 1 prompt 2026-09-14\n\n```\np\n```\n\n## 2 disposition 2026-09-14 plan\n\n```\nY\n```\n\n## 3 disposition 2026-09-15 done\n\n```\nY\n```\n"})
+        r = pk.collect(root)["done"][0]
+        life = pk.lifecycle(r, root)
+        self.assertEqual(life["warn"], set())
+        self.assertTrue(all(life["phases"][n][0] for n in pk.PHASES if n != "archived"))
+        self.assertEqual(life["phases"]["PRs"][1], "#6, #7"); self.assertEqual(life["phases"]["plan-Y"][1], "2026-09-14")
+        self.assertEqual(life["phases"]["provenance"][1], "1 prompt, 2 disposition")
+        out = pk.render(pk.collect(root), root=root)
+        self.assertNotIn("ph warn", out); self.assertIn('title="PRs: #6, #7"', out)
+    def test_done_without_plan_y_is_flagged(self):
+        root = self.store({"1": {"title": "x", "state": "done", "disposed": "2026-09-16 Y done"}}, plans=("1",))
+        life = pk.lifecycle(pk.collect(root)["done"][0], root)
+        self.assertIn("Done-Y", life["warn"])
+        self.assertIn("ph warn", pk.render(pk.collect(root), root=root))
+    def test_planned_without_plan_y_and_backlog_with_plan_file_are_flagged(self):
+        root = self.store({"1": {"title": "x", "state": "planned"}, "2": {"title": "y", "state": "backlog"}}, plans=("2",))
+        g = pk.collect(root)
+        self.assertIn("plan-Y", pk.lifecycle(g["planned"][0], root)["warn"])
+        self.assertIn("plan", pk.lifecycle(g["backlog"][0], root)["warn"])
+    def test_provenance_count_mismatch_is_flagged(self):
+        root = self.store({"1": {"title": "x", "state": "planned", "disposed": "2026-09-14 Y plan"}}, plans=("1",),
+                          prov={"1": "# Provenance #1\n\n## 1 prompt 2026-09-14\n\n```\np\n```\n"})
+        self.assertIn("provenance", pk.lifecycle(pk.collect(root)["planned"][0], root)["warn"])
+    def test_no_root_reads_plan_and_provenance_as_unknown(self):
+        root = fixture({"1": {"title": "x", "state": "open"}})
+        life = pk.lifecycle(pk.collect(root)["open"][0])
+        self.assertIsNone(life["phases"]["plan"][0]); self.assertEqual(life["phases"]["provenance"][1], "unknown")
+        self.assertIn("ph unknown", pk.render(pk.collect(root)))
+    def test_archived_phase_lit_only_when_archived(self):
+        root = fixture({"1": {"title": "x", "state": "archived", "disposed": "2026-09-14 Y plan; 2026-09-15 Y done; 2026-09-16 Y archive"}})
+        self.assertTrue(pk.lifecycle(pk.collect(root)["archived"][0])["phases"]["archived"][0])
+    def test_strip_deterministic_and_escaped(self):
+        root = self.store({"1": {"title": "<b>", "state": "open", "disposed": '2026-09-14 Y plan "<x>"'}}, plans=("1",))
+        a, b = pk.render(pk.collect(root), root=root), pk.render(pk.collect(root), root=root)
+        self.assertEqual(a, b); self.assertNotIn('"<x>"', a)
 
 class LiveTests(unittest.TestCase):
     def test_live_run(self):
