@@ -125,7 +125,7 @@ class FixtureTests(Fixtured):
 
     def test_register_shape(self):
         kinds = [r[0] for r in refint.REFERENCES]
-        self.assertEqual(len(kinds), 30); self.assertEqual(len(set(kinds)), 30, "one entry per kind")
+        self.assertEqual(len(kinds), 31); self.assertEqual(len(set(kinds)), 31, "one entry per kind")
         self.assertEqual(kinds[-3:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft"])   # #177, #196 appended; order stable
         for kind, src, field, ext, tgt, res in refint.REFERENCES:
             self.assertRegex(kind, r"^[a-z_]+\.[a-z_#]+->[a-z]+$")
@@ -134,7 +134,7 @@ class FixtureTests(Fixtured):
                 self.assertTrue((dyadlib.PKG / "guards" / res[6:]).exists(), f"{kind}: {res} names no guard module")
             self.assertTrue(ext is None or callable(ext), kind)
             self.assertTrue(callable(ext) or not callable(res), f"{kind}: a resolvable kind needs an extractor")
-        self.assertEqual(len(RESOLVABLE), 18)   # rule.text->row and record.ledger->row moved to `world` by source (#177); provenance.id->row (#164) unaffected
+        self.assertEqual(len(RESOLVABLE), 19)   # rule.text->row and record.ledger->row moved to `world` by source (#177); provenance.id->row (#164) unaffected; row.refs->craft added (#22)
 
     # one broken reference per resolvable kind, failing under its own kind name only
     def broken(self, mutate, kind):
@@ -367,6 +367,50 @@ class CraftPresenceTests(Fixtured):
         msgs = self.check()[2]
         self.assertEqual(fail_kinds(msgs), set(), msgs)
         self.assertEqual(self.lines("skip", msgs), ["skip rule.text->path: `crafts/…` tokens; no crafts/ tree is installed (a core-only install)"])
+
+
+class CraftRefsTests(Fixtured):
+    """row.refs->craft (d-work #22): a craft-name routing tag in a row's `refs`, distinct from the
+    `crafts/…` path citations CraftPresenceTests covers — the token here carries no path prefix, so
+    it is recognized only against what this install already knows (installed or registered), never
+    by shape alone (Rule-3's own `refs: parent #N` / `children #2-#3` prose is bare lowercase words
+    too, and must stay unclaimed)."""
+    def row(self, r): return self.inst / "d-work" / "rows" / f"{r}.md"
+    def registry(self, *names):
+        (self.root / "crafts" / "REGISTRY.md").write_text(craft_registry(*names))
+
+    def test_installed_craft_tag_resolves(self):
+        self.rewrite(self.row(7), "Rule-2", "Rule-2 sysarch")
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), set(), msgs)
+        self.assertEqual([m for m in msgs if "row.refs->craft" in m], [], "an installed craft's tag resolves silently")
+
+    def test_ordinary_prose_word_is_never_extracted(self):
+        # the fixture's own rows already carry "children" (a real Rule-3 convention: `children #a-#b`);
+        # it must never be read as a craft candidate, unlike a token that is actually a craft's name
+        c = refint.Corpus(self.root, self.pkg)
+        self.assertEqual(refint.crafts_refs(c), [])
+        self.rewrite(self.row(7), "Rule-2", "Rule-2 sysarch")
+        self.assertEqual([t for _, t in refint.crafts_refs(refint.Corpus(self.root, self.pkg))], ["sysarch"])
+
+    def test_registered_then_deleted_tag_fails(self):
+        # the registry says the craft is here and its tree is gone — same FAIL shape as a `crafts/…` path (#167)
+        self.registry("sysadmin", "sysarch", "syseng")
+        self.rewrite(self.row(7), "Rule-2", "Rule-2 syseng")
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), {"row.refs->craft"})
+        self.assertEqual([m for m in msgs if m.startswith("FAIL ")],
+                         ["FAIL row.refs->craft: agent-corpus/d-work/rows/7.md refs -> syseng does not resolve "
+                          "(craft syseng is installed per crafts/REGISTRY.md and crafts/syseng/ is missing)"])
+
+    def test_core_only_install_has_no_craft_to_know(self):
+        # property 4's pattern: with neither an installed tree nor a registry, a craft-shaped tag in
+        # `refs` cannot be told from prose, so it stays unclaimed rather than guessed at — no message
+        self.rewrite(self.row(7), "Rule-2", "Rule-2 sysarch")
+        shutil.rmtree(self.root / "crafts")
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), set(), msgs)
+        self.assertEqual([m for m in msgs if "row.refs->craft" in m], [])
 
 
 class ScratchInstallTests(unittest.TestCase):
