@@ -28,6 +28,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
   dyad build [out.tar.gz] deterministic archive of the core craft (scripts/distribute.py, the one
                                 distribution code path every craft uses; #156)
   dyad install <repo>     idempotent install of the core craft into another repo (same code path)
+  dyad bundle check | build [dir]
+                                Rule-11 p7 (guards/infra/bundle.py): check BUNDLE.md against the tree's
+                                craft VERSIONs (both directions; a missing BUNDLE.md skips), or build every
+                                component it names — dyad build / craft.py export per row, one code path,
+                                no new mechanism — into [dir] (default .), plus a generated BUNDLE.sha256
   dyad craft new <name> | list | check [<craft>] | export <craft> [out.tar.gz] | install <src> [--force] [--dwork N]
                                 Tended crafts (scripts/craft.py, Rule-11 p5): scaffold one (#165), list every crafts/<craft>/
                                 with its version and origin, check one or all (guards/craft/crafts.py),
@@ -56,7 +61,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
 import sys
 if sys.version_info < (3, 12):
     sys.exit(f"package.py: Python 3.12+ required (kernel pin), found {sys.version.split()[0]}")
-import os, re, subprocess, functools, fnmatch
+import os, re, subprocess, functools, fnmatch, hashlib
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
 
@@ -366,6 +371,48 @@ def cmd_craft(a):
     """Rule-11 p5: the Tended-craft CLI lives in scripts/craft.py; this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "craft.py", "craft").main(a)
 
+def cmd_bundle(a):
+    """Rule-11 p7: `check` runs the bundle guard by hand; `build [dir]` sequences the one
+    distribution code path once per BUNDLE.md row (`cmd_build` for the core, `craft.cmd_export`
+    for a Tended craft — no second build mechanism, S4) and writes `BUNDLE.sha256` beside the
+    archives, a generated file (package_rules.txt), never tracked."""
+    if not a or a[0] not in ("check", "build"):
+        print(__doc__, file=sys.stderr); return 2
+    bundle = dyadlib.load_guard("infra", "bundle")
+    if a[0] == "check":
+        version, rows, msgs = bundle.check_bundle(REPO)
+        for m in msgs:
+            print(f"FAIL [bundle] {m}", file=sys.stderr)
+        if not rows and not version:
+            print("skip [bundle] no BUNDLE.md"); return 0
+        if not msgs:
+            print(f"ok   [bundle] {len(rows)} components, v{version}")
+        return 1 if msgs else 0
+    out_dir = Path(a[1]) if len(a) > 1 else Path(".")
+    version, rows, msgs = bundle.check_bundle(REPO)
+    if not rows:
+        print("refused: no BUNDLE.md", file=sys.stderr); return 2
+    if msgs:
+        for m in msgs:
+            print(f"FAIL [bundle] {m}", file=sys.stderr)
+        print("refused: bundle fails its check; not built", file=sys.stderr); return 1
+    out_dir.mkdir(parents=True, exist_ok=True)
+    craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
+    shas = []
+    for comp, ver in rows:
+        if comp == bundle.CORE_NAME:
+            out = out_dir / f"dyad-{ver}.tar.gz"
+            rc = cmd_build(str(out))
+        else:
+            out = out_dir / f"{comp}-{ver}.tar.gz"
+            rc = craft.cmd_export(REPO, [comp, str(out)])
+        if rc:
+            print(f"refused: {comp} did not export; bundle incomplete", file=sys.stderr); return 1
+        shas.append(f"{hashlib.sha256(out.read_bytes()).hexdigest()}  {out.name}")
+    (out_dir / "BUNDLE.sha256").write_text("\n".join(shas) + "\n")
+    print(f"bundled v{version}: {len(rows)} components -> {out_dir}")
+    return 0
+
 def cmd_ledger():
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     rows = dyadlib.read_rows(REPO)
@@ -460,6 +507,8 @@ if __name__ == "__main__":
         sys.exit(cmd_runbook(a[1:]))
     if a and a[0] == "craft":
         sys.exit(cmd_craft(a[1:]))
+    if a and a[0] == "bundle":
+        sys.exit(cmd_bundle(a[1:]))
     if a and a[0] == "session":
         sys.exit(cmd_session(a[1:]))
     if a and a[0] == "ledger":

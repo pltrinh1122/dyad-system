@@ -3,7 +3,7 @@ from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
 CORE = ["agent/frame", "agent/plans", "agent/provenance", "agent/prs", "agent/records", "agent/references", "agent/rows", "agent/rules", "agent/sessions", "agent/vocabulary",
-        "craft/crafts", "infra/containment", "infra/manifest", "preferences/preferences"]   # craft/crafts: the craft guard (#156)
+        "craft/crafts", "infra/bundle", "infra/containment", "infra/manifest", "preferences/preferences"]   # craft/crafts: the craft guard (#156); infra/bundle: Rule-11 p7 (#196)
 KNOWN_CRAFTS = {"sysadmin": ["changelog", "events", "ops_scripts", "runbooks"], "sysarch": ["registry"], "syseng": ["invariants", "naming", "tests"], "lan-git": ["image"]}   # #155, #160, #162, #181
 CRAFT = [f"{c.name}/{e}" for c in dyadlib.craft_dirs() for e in KNOWN_CRAFTS[c.name]]   # the crafts present, in registry order (a craft the sequence has not yet added is absent)
 CRAFTS = livetest.crafts_installed()   # #171: a core-only install has none; the cases that need one skip with a stated reason

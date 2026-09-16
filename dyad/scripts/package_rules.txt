@@ -23,3 +23,5 @@ generated: __pycache__/*
 generated: LEDGER.md
 generated: projections/*
 generated: ops/*.log
+generated: *.tar.gz
+generated: BUNDLE.sha256

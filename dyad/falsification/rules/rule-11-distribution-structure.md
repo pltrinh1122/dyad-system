@@ -147,4 +147,26 @@ keeps its own `dyad/tests/guards/craft/test_crafts.py`) all read as before. Cohe
 with every other Rule as before (compact form, per the #152 amendment above: a one-clause addition,
 not a reframe).
 
+## Amendment — d-work #21 (2026-09-16, ledger #196: bundle release, core tag reprefixed)
+**Claim (Operator, #196):** the unprefixed `vX.Y.Z` tag should name the whole distribution this
+repo authors (core + every Tended craft, pinned together) as one GitHub-convention release; anyone
+wanting only some components pins them individually by their own crafts' tags.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A24 | Rule-4's Target must be one noun phrase naming a single kind of thing; Rule-11's stays "a craft" while property 7 governs a manifest that is explicitly *not* a craft (vocabulary: a craft is "a contained tree with one root… VERSION…"; `BUNDLE.md` is one file at the repo root). | Survives, scoped | Not refuted — a real, named tension. Kept under "a craft" rather than widened or split into a new Rule because every property here already reads as "how a craft is released," and the bundle is that same release event applied to the set of crafts in the tree, not a new governed *kind*; it introduces no new store with its own lifecycle (Rule-3), zone (Rule-1 already classifies `BUNDLE.md` as infra) or ratification form (still `Y/N: release <tag>?`, Rule-11's own). If a second bundle-shaped concern arrives later, this pairing should be revisited, not silently re-stretched again. |
+| A25 | Reprefixing the core's tag (`vX.Y.Z` → `dyad-operator-vX.Y.Z`) could be read as *moving* `v0.3.1`/`v0.3.2`/`v0.4.0` under the new scheme. | Refuted | Property 4's text is prospective (what a release *is* from here); Provenance states the three existing tags predate this and are never retagged — tags do not move, stated as existing conduct (property 4's own sentence on cadence, unchanged). |
+| A26 | `BUNDLE.sha256`, written at bundle-build time, could be tracked by accident and then drift from the archives it describes (Rule-11 property 6). | Confirmed, as a risk if untreated | Added to `package_rules.txt`'s `generated:` list (`*.tar.gz`, `BUNDLE.sha256`) in the same PR; `package.py check` refuses either tracked, same as any other generated path. |
+| A27 | A craft added to `crafts/` without a bundle row (or a bundle row for a craft no longer in the tree) should be visible, not silently ignored. | Refuted (already handled) | `infra/bundle`'s check is bidirectional by construction (property 7's design): every craft needs a row, every row names a craft — the guard `check_bundle` in `dyad/guards/infra/bundle.py` fails both directions. |
+| A28 | The bundle guard's absence-handling (no `BUNDLE.md` → skip, never fail) could hide a bundle that *should* exist going stale after this repo starts using one. | Survives, scoped | Same discipline as every other absent-store guard here (property 4's pattern, Rule-20 property 2): a core-only or partial install has nothing to check against; once `BUNDLE.md` exists in *this* authoring repo it is never absent, so the risk is scoped to receiving installs, which never carry the authoring repo's release mechanics at all. |
+
+Pairwise (Rule-5): 11–1 `BUNDLE.md` added to `containment.ZONES` as `infra` (one more fixed-name
+row, same shape as `README.md`/`CLAUDE.md`); 11–20 one new reference kind, `bundle.component->craft`,
+delegated to `guard:infra/bundle.py` (owned there, not re-implemented in `references.py`, per
+Rule-20's own Boundaries); 11–6 one vocabulary term (`bundle`), `release`'s row reworded, both cite
+Rule-11; 11–4 the Target tension is A24, named and scoped, not silently absorbed. No other Rule's
+concern moves — Rule-2's release ratification form gains a third tag shape but no new event kind;
+Rule-3, 7, 8, 12–19 read as before. Coherent, orthogonal with the one named exception (A24).
+Disposition: see ledger #196.
+
 Disposition: see ledger #180.
