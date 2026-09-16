@@ -27,10 +27,10 @@ files and almost never merge.
   (id, title, opened, state, disposed, refs). `LEDGER.md` is a rendered view
   (`package.py ledger`), untracked. The pattern this instantiates: `crafts/sysarch/rules/stores.md`.
 - State never regresses. Transitions are exactly: open → planned, blocked, done;
-  planned → open, blocked, done; blocked → open; backlog → open; done → none
+  planned → open, blocked, done; blocked → open; backlog → open; done → archived; archived → none
   (`dyadlib.TRANSITIONS`; a new row starts `open` or `backlog`, `dyadlib.NEW_STATES`). The
   fence refuses any other transition on `main`, `package.py dwork state` locally; a done
-  d-work is never reopened — a new row refs it.
+  d-work is never reopened — a new row refs it; `archived` (Rule-3) is its one further step, itself terminal (#37).
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,

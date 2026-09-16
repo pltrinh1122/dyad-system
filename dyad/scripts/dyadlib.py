@@ -272,14 +272,15 @@ def ledger_rows(text: str) -> list[Row]:
 FIELDS = ("id", "title", "opened", "state", "disposed", "refs")
 
 # d-work states and the one transition table (Rule-16 Store cites this; Rule-3 defines the states).
-STATES = frozenset({"open", "planned", "blocked", "backlog", "done"})
+STATES = frozenset({"open", "planned", "blocked", "backlog", "done", "archived"})   # archived: retired from the board, terminal (d-work #37)
 NEW_STATES = frozenset({"open", "backlog"})          # states a row may be created in
 TRANSITIONS: dict[str, frozenset[str]] = {
     "open": frozenset({"planned", "blocked", "done"}),
     "planned": frozenset({"open", "blocked", "done"}),
     "blocked": frozenset({"open"}),
     "backlog": frozenset({"open"}),
-    "done": frozenset(),
+    "done": frozenset({"archived"}),   # done never reopens; archived is one further step the same way (#37)
+    "archived": frozenset(),
 }
 
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
@@ -396,7 +397,8 @@ INVARIANTS: list[Invariant] = [
     ("transitions-keys-are-states", lambda: set(TRANSITIONS) == STATES),
     ("transition-targets-are-states", lambda: all(t <= STATES for t in TRANSITIONS.values())),
     ("new-states-are-states", lambda: NEW_STATES <= STATES),
-    ("done-is-terminal", lambda: not TRANSITIONS["done"]),
+    ("archived-is-terminal", lambda: not TRANSITIONS["archived"]),
+    ("done-never-reopens", lambda: TRANSITIONS["done"] <= {"archived"}),
     ("row-fields-match-dataclass", lambda: FIELDS == tuple(f.name for f in fields(Row))),
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),

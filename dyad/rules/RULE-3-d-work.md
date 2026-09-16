@@ -62,7 +62,7 @@ Any other response leaves it incomplete, to be resumed later.
 ## Ledger
 - The ledger is the row-file store `agent-corpus/d-work/rows/` (Rule-16), rendered to
   `agent-corpus/d-work/LEDGER.md` on demand. One row per
-  d-work; `state` is `open`, `planned`, `done`, `blocked`, or `backlog` — defined in the vocabulary
+  d-work; `state` is `open`, `planned`, `done`, `blocked`, `backlog` or `archived` — defined in the vocabulary
   (Rule-6; transitions: Rule-16); the consequences of each state are:
   - `open` — started; the Agent is working it or it is suspended by a newer prompt.
   - `planned` — the plan file is authorized (plan-`Y`); execution may start in any session (Rule-15).
@@ -71,6 +71,11 @@ Any other response leaves it incomplete, to be resumed later.
   - `backlog` — opened by an Operator disposition rather than worked immediately; not
     started. Becomes `open` when the Operator prompts for it.
   - `done` — the Operator answered `Y` to the completion counter-prompt.
+  - `archived` — retired from the working board by an Operator disposition naming the row(s);
+    terminal like `done` (a new row refs it, never reopens it). Nothing moves: its row, plan and
+    provenance stay where they are (Rule-16 store; Rule-20 references). The Agent never archives on
+    its own judgment; `dyad dwork state <id> archived` is clerical execution of the naming
+    disposition, a ledger-only commit.
 - The Agent may decompose a d-work into child rows (`refs: parent #N`). The parent's
   counter-prompt is asked only when every child is `done` or `blocked`; the parent
   completes only on its own Done-`Y`.
@@ -197,6 +202,6 @@ by an ignored counter-prompt or the `always` preference; see
 `../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
 three intakes from peer sessions in two days — one carrying its Operator's plan-`Y`, one a defect
 with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
-an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34.
+an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37.
 
 Set: System Requirements.

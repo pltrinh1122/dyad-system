@@ -46,6 +46,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan file | `agent-corpus/d-work/plans/<id>.md`: the stored plan a plan-Y binds to — intent as read, mutation, files touched, base commit | 15 | 7 15 |
 | base commit | the `main` commit a plan file was written against; execution re-plans if `main` moved past a touched file | 15 | 15 |
 | done | ledger state: the Operator answered `Y` to the completion counter-prompt | 3 | 3 |
+| archived | ledger state: a done d-work retired from the working board by an Operator disposition naming it; terminal; its files stay where they are | 3 | 3 16 |
 | coherent | of Rules: no two instruct differently on the same trigger, and every cross-reference resolves to an existing Rule and heading | 5 | 5 6 |
 | orthogonal | of Rules: every concern has exactly one owning Rule; a Rule names a neighbour in its Boundaries only for what it does not own; ownership is never shared | 5 | 5 |
 | sweep | a pairwise coherence and orthogonality check of the Agent Rules, recorded in `agent-corpus/audits/` | 5 | 5 |

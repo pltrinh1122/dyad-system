@@ -78,3 +78,17 @@ Operator's; a peer never disposes. 3–20 the sender-ledger id is a `world` kind
 unchanged. Coherent, orthogonal. Rule-6: `intake` added (owner 3, used by 3 7).
 
 Disposition: see ledger #34.
+
+## Amendment — d-work #37 (2026-09-16, the `archived` state)
+**Claim (Operator, 2026-09-16):** the d-work life-cycle needs an archive stage; `done` is terminal
+and the finished set only grows.
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | A new state reopens the "done is terminal" promise (Rule-16). | Survives, scoped | `done` still never reaches `open`/`planned`; `archived` is one further step in the same direction and is itself terminal. `dyadlib` invariant renamed `archived-is-terminal` and a second, `done-never-reopens` (`TRANSITIONS["done"] <= {archived}`), keeps the old promise mechanical. |
+| 2 | Archive as a view (age, id cutoff) needs no state. | Refuted | Age needs a clock (a projection must be deterministic, syseng determinism.md); an id cutoff is arbitrary; "retired" is a fact about the row, and Rule-16 stores state explicitly. |
+| 3 | Archive by moving files out of the store. | Refuted | Row files are never deleted or moved (vocabulary `row file`); every `refs`, plan id and provenance id resolves by path (Rule-20). Nothing moves. |
+| 4 | The Agent will archive on its own to tidy the board. | Refuted | Stated: an Operator disposition names the row(s); the transition is clerical execution of it, never the Agent's judgment — the same shape as backlog intake. |
+| 5 | Every state-reading guard and test needs a change. | Refuted (checked) | The fence (`rows.py`), `prs.py`, sessions and the kanban invariant read `dyadlib.STATES`/`TRANSITIONS`; one test asserted `done → none` and is updated; the kanban `COLUMNS` tuple gains the column its invariant forces. |
+Pairwise (Rule-5): 3–16 the table gains one row, the store sentence one clause; 3–6 one term
+(`archived`, owner 3, used by 3 16); 3–20 unchanged (nothing moves). Others unchanged. Coherent,
+orthogonal. Disposition: see ledger #37.
