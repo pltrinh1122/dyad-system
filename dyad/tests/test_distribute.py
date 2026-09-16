@@ -92,6 +92,66 @@ class InstallTests(unittest.TestCase):
         distribute.install(self.src, self.dst, ["crafts/x"], hooks=None)
         self.assertFalse((self.dst / "CLAUDE.md").exists()); self.assertEqual([p.name for p in self.dst.iterdir()], ["crafts"])
 
+def index_mode(r: Path, rel: str) -> str | None:
+    out = subprocess.run(["git", "-C", str(r), "ls-files", "-s", "--", rel], capture_output=True, text=True).stdout.split()
+    return out[0] if out else None
+
+def force_index_mode(r: Path, rel: str, executable: bool) -> None:
+    """Set the index bit directly, decoupled from whatever the disk bit says — the shape of a
+    `core.fileMode=false` checkout (module docstring; #196 d-work #6), reproducible on any filesystem."""
+    subprocess.run(["git", "-C", str(r), "update-index", "--add", "--chmod=" + ("+x" if executable else "-x"), "--", rel], check=True, capture_output=True)
+
+class ModeTests(unittest.TestCase):
+    """The bug this d-work fixes (workstation#173): `_mode()` read the disk bit, which a
+    `core.fileMode=false` checkout (NTFS) decouples from the index — every file reads executable
+    there regardless of what git records. These force an index/disk disagreement directly, so the
+    fix is verified on any filesystem, not only a broken mount."""
+    def setUp(self):
+        self.r = repo(TREE, exe=("crafts/x/bin/run",))
+        subprocess.run(["git", "-C", str(self.r), "config", "core.fileMode", "false"], check=True)
+    def tearDown(self):
+        shutil.rmtree(self.r, ignore_errors=True)
+    def test_git_modes_reads_the_index_not_the_disk(self):
+        force_index_mode(self.r, "crafts/x/bin/run", executable=False)   # disk still 755 (repo() chmod'd it); index now says not
+        self.assertTrue(os.access(self.r / "crafts/x/bin/run", os.X_OK), "fixture sanity: disk bit still says executable")
+        modes = distribute.git_modes(self.r, ["crafts/x"])
+        self.assertEqual(modes["crafts/x/bin/run"], 0o644)   # the index wins
+        self.assertEqual(modes["crafts/x/VERSION"], 0o644)
+    def test_git_modes_not_a_work_tree_is_empty(self):
+        self.assertEqual(distribute.git_modes(Path(tempfile.mkdtemp()), ["x"]), {})
+    def test_archive_bytes_uses_index_mode_despite_disk(self):
+        force_index_mode(self.r, "crafts/x/bin/run", executable=False)
+        out = distribute.build(self.r, ["crafts/x"], self.r / "x.tar.gz")
+        with tarfile.open(out) as tar:
+            modes = {i.name: i.mode for i in tar.getmembers()}
+        self.assertEqual(modes["crafts/x/bin/run"], 0o644, "disk says executable; the index (not-executable) must win")
+    def test_archive_modes_reads_tar_members(self):
+        out = distribute.build(self.r, ["crafts/x"], self.r / "x.tar.gz")
+        modes = distribute.archive_modes(out)
+        self.assertEqual(modes["crafts/x/bin/run"], 0o755); self.assertEqual(modes["crafts/x/VERSION"], 0o644)
+    def test_install_from_archive_stages_the_dest_index_bit(self):
+        arc = distribute.build(self.r, ["crafts/x"], self.r / "x.tar.gz")
+        dst = repo({"README.md": "x\n"})   # a work tree (so install can stage the bit); needs one file for an initial commit
+        subprocess.run(["git", "-C", str(dst), "config", "core.fileMode", "false"], check=True)
+        try:
+            distribute.install(arc, dst, ["crafts/x"])
+            self.assertEqual(index_mode(dst, "crafts/x/bin/run"), "100755")
+            self.assertEqual(index_mode(dst, "crafts/x/VERSION"), "100644")
+            self.assertEqual(distribute.install(arc, dst, ["crafts/x"]), 0)   # idempotent: index already matches
+        finally:
+            shutil.rmtree(dst, ignore_errors=True)
+    def test_install_idempotent_reads_dest_index_not_dest_disk(self):
+        # dest already has the right content and index mode; only the disk bit lies (as fileMode=false lets it) —
+        # a second install must still report 0, not rewrite based on a disk-bit mismatch that means nothing here
+        dst = repo(TREE, exe=("crafts/x/bin/run",))
+        subprocess.run(["git", "-C", str(dst), "config", "core.fileMode", "false"], check=True)
+        try:
+            distribute.install(self.r, dst, ["crafts/x"])
+            (dst / "crafts/x/bin/run").chmod(0o644)   # corrupt the disk bit only; the index still says 755
+            self.assertEqual(distribute.install(self.r, dst, ["crafts/x"]), 0)
+        finally:
+            shutil.rmtree(dst, ignore_errors=True)
+
 class InstanceStateTests(unittest.TestCase):
     HOME = "/ho" + "me/pt"; MARK = "/ho" + "me/"   # assembled: the test file must not itself carry a package_rules.txt marker (Rule-11 p1)
     RULES = {"string": [HOME], "name": ["CHANGELOG.md", ".jsonl"], "header": ["# Host change log"], "generated": []}
