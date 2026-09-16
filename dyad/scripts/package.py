@@ -43,6 +43,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 allocate the next id, write its row file (state open, or
                                 backlog with --backlog; -d records the creating disposition)
   dyad dwork state <id> <state> [-d text] [-r refs]  change state / append disposition
+  dyad dwork list [--state <s>] [--craft <c>]
+                                rows from the row store (Rule-16), one `#<id> [<state>] <title>`
+                                line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
+                                carries the bare token `<c>` (row.refs->craft, Rule-20; d-work #22)
+                                — a routing tag, not a re-check of the guard's own resolution
   dyad session touch [-r <row>]... [-f <file>]... | list
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
@@ -453,6 +458,16 @@ def cmd_dwork(a):
         r = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs)
         (dyadlib.rows_dir(REPO) / f"{rid}.md").write_text(dyadlib.format_row_file(r))
         print(f"{rid}: {state}"); return 0
+    if a and a[0] == "list":
+        state = a[a.index("--state") + 1] if "--state" in a else None
+        craft = a[a.index("--craft") + 1] if "--craft" in a else None
+        if state is not None and state not in dyadlib.STATES:
+            sys.exit(f"no such state {state!r}; states: {' '.join(sorted(dyadlib.STATES))}")
+        out = [r for r in sorted(rows.values(), key=lambda r: r.id)
+               if (state is None or r.state == state) and (craft is None or craft in r.refs.split())]
+        for r in out:
+            print(f"#{r.id} [{r.state}] {r.title}")
+        return 0
     sys.exit(__doc__)
 
 # Projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over every

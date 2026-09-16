@@ -90,6 +90,10 @@ _PROVENANCE = re.compile(r"`(\.\./falsification/rules/[^`]+)`")
 PRE_LEDGER = "(pre-ledger)"
 _CL_KEY = re.compile(r'row "#(\d+) (H\d+)"')
 _EVENT = re.compile(r"\bevent:\s*`?([A-Za-z0-9][\w.-]*)`?")
+# A bare craft-name token in `refs` (d-work #22): the craft.py `_NAME` shape, minus digits — every
+# real craft name here is pure lower-case letters, and excluding digits is what keeps a
+# `workstation-NNN` cross-reference (same `_NAME` shape) from being read as a craft candidate.
+_CRAFT_NAME = re.compile(r"^[a-z][a-z]*$")
 
 def hash_ids(text: str) -> list[str]:
     """`#N` ids in a field: `#a–#b` / `#a-#b` ranges expand; a `;`-segment starting `PR` is skipped,
@@ -210,6 +214,20 @@ def rule_tokens(c: Corpus):
     out = []
     for r in sorted(c.rows):
         out += [(f"{c.rel(c.row_files[r])} refs", n) for n in _RULE.findall(dyadlib.parse_row_file(c.row_files[r].read_text()).refs)]
+    return out
+
+def crafts_refs(c: Corpus):
+    """A bare craft-name token in a row's `refs` (d-work #22): the routing tag a plan uses to mark a
+    backlog row as belonging to one craft's work, e.g. `refs: 4 sysarch`. `_CRAFT_NAME`'s shape alone
+    is not enough — Rule-3's own sanctioned prose (`refs: parent #5`, `children #2-#3`) is bare lower-
+    case words too — so a token counts only when it already names a craft this install knows, installed
+    or registered; anything else (a real tag on a core-only install with neither, a stray English word)
+    stays unclaimed prose, exactly as it was before this kind existed (never inferred, Rule-20 p1)."""
+    known = c.installed_crafts | (c.craft_registry or set())
+    out = []
+    for r in sorted(c.rows):
+        refs = dyadlib.parse_row_file(c.row_files[r].read_text()).refs
+        out += [(f"{c.rel(c.row_files[r])} refs", t) for t in refs.split() if t in known and _CRAFT_NAME.fullmatch(t)]
     return out
 
 def pr_tokens(c: Corpus):
@@ -354,6 +372,11 @@ def row_exists(c: Corpus, t: str) -> bool:
 def rule_exists(c: Corpus, t: str) -> bool:
     return t.isdigit() and int(t) in c.rules
 
+def craft_exists(c: Corpus, t: str) -> bool:
+    """The fallthrough case only (`craft_state` intercepts skip/warn/FAIL in `check()` before this
+    runs): `craft_state(t) is None` for a `craft`-target kind means `t` is genuinely installed."""
+    return t in c.installed_crafts
+
 def commit_exists(c: Corpus, t: str) -> bool:
     return c.commit_known(t)
 
@@ -396,6 +419,7 @@ def event_exists(c: Corpus, t: str) -> bool:
 REFERENCES = [
     ("row.refs->row",             "row",        "refs",          rows_refs,         "row",        row_exists),
     ("row.refs->rule",            "row",        "refs",          rule_tokens,       "rule",       rule_exists),
+    ("row.refs->craft",           "row",        "refs",          crafts_refs,       "craft",      craft_exists),
     ("row.disposed->pr",          "row",        "disposed",      pr_tokens,         "pr",         "world"),
     ("plan.id->row",              "plan",       "<id>",          plan_id,           "row",        row_exists),
     ("plan.base->commit",         "plan",       "base commit",   base_commit,       "commit",     commit_exists),
@@ -483,10 +507,12 @@ def check(root: Path, pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
         n_kinds += 1
         skipped_crafts, absent_crafts = False, {}          # one line per craft, never one per token (#167)
         for where, token in extract(c):
-            if target == "file" and token.startswith("crafts/"):
+            craft_path = target == "file" and token.startswith("crafts/")
+            if craft_path or target == "craft":             # a `crafts/…` path (#155) or a bare craft-name token (#22)
                 if c.crafts_absent:
                     if not skipped_crafts:
-                        msgs.append(f"skip {kind}: `crafts/…` tokens; no crafts/ tree is installed (a core-only install)"); skipped_crafts = True
+                        what = "`crafts/…` tokens" if craft_path else "craft-name tokens"
+                        msgs.append(f"skip {kind}: {what}; no crafts/ tree is installed (a core-only install)"); skipped_crafts = True
                     continue
                 state = c.craft_state(token)
                 if state and state[0] == "FAIL":           # installed-then-deleted: named per token, like any failure
