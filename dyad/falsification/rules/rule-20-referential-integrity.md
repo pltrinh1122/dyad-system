@@ -103,3 +103,30 @@ this exact regression is a red test, not just a green-until-the-first-d-work CI 
 statement changes (the register's shape — one row per kind, one resolver each — is unchanged;
 three rows changed or gained a `world` resolver, which #142's own design already provided for).
 Coherent, orthogonal. Disposition: see ledger #177.
+
+## Amendment — d-work #47 (2026-09-16, terminal-row base commits are frozen history)
+`plan.base->commit` checked every plan's base commit forever, regardless of its row's state.
+Plan #19's base commit (`49e9988`) was the tip of a branch closed without merging (superseded);
+once the branch was deleted the commit stopped resolving in any fresh clone, while this session's
+own long-lived clone — holding the object as a fossil from fetching the branch before deletion —
+kept passing. Rule-15 phase 2 is the field's only consumer, and it only ever fires for a row still
+`open`, `planned` or `blocked`: a `done` or `archived` row is never re-planned, so its base commit
+has nothing left to verify against.
+
+Attack: "downgrade to `world` (warn-always) instead of a per-row skip" — refuted; it would also
+stop catching a genuinely stale base commit on a still-*active* row, the one case Rule-15 phase 2
+exists for. Attack: "a done row's base commit could hide a real typo, now uncatchable" — survives,
+scoped, traded away openly: the same trade this record's own #177 amendment already made for
+package-side citations — existence-only checking never verified *content*, and the real defense
+for an active row was always Rule-15 phase 2 plus the Operator's Done-`Y` at closing.
+
+Mechanism: `Corpus.row_states` (id → state, from `dyadlib.read_rows`); `base_commit(c)` skips a
+plan whose row is `done` or `archived`, silently (no line — narrower than the existing per-kind
+skip, which prints one). Rule-20 property 2 gains one sentence naming it. No kind added or
+removed; `REFERENCES`' shape, count and order are unchanged. Tests:
+`dyad/tests/guards/agent/test_references.py` `test_plan_base_commit` (now asserts the still-active
+case fails, row 7 flipped to `open`), `test_plan_base_commit_skipped_once_row_is_terminal` (row 7
+left `done`, no FAIL). Pairwise: 20–15 unchanged (Rule-15 owns the field and its live purpose;
+Rule-20 owns only that a *live* reference resolves — this amendment narrows what counts as live,
+not who decides it); no other pairwise statement changes. Coherent, orthogonal. Disposition: see
+ledger #47.

@@ -117,6 +117,7 @@ class Corpus:
         self.root, self.pkg, self.inst = root, pkg, dyadlib.instance(root)
         self.rows = {r.id for r in dyadlib.read_rows(root)} if dyadlib.rows_dir(root).is_dir() else set()
         self.row_files = {r: dyadlib.rows_dir(root) / f"{r}.md" for r in self.rows}
+        self.row_states = {r.id: r.state for r in dyadlib.read_rows(root)} if dyadlib.rows_dir(root).is_dir() else {}
         self.rules = dyadlib.rule_files(pkg)
         self.rule_text = {n: p.read_text() for n, p in self.rules.items()}
         plans = self.inst / "d-work" / "plans"
@@ -246,8 +247,13 @@ def provenance_id(c: Corpus):
     return [(c.rel(p), p.stem) for p in c.provenance]
 
 def base_commit(c: Corpus):
+    """Rule-15 phase 2 re-plans a still-active row when `main` has moved past a touched file; once
+    a row is `done` or `archived` nothing ever re-plans against it again, so its base commit is
+    frozen history, not a live reference (Rule-20 property 2)."""
     out = []
     for p in c.plans:
+        if c.row_states.get(int(p.stem)) in ("done", "archived"):
+            continue
         m = _BASE.search(p.read_text())
         if m:
             out.append((f"{c.rel(p)} base commit", m.group(1)))

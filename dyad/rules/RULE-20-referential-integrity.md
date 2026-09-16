@@ -43,7 +43,10 @@ where a resolver exists.
 2. **Severity.** An unresolved reference fails. A `world` kind prints one `warn … inference` line.
    A target store that is absent or holds no instance (a fresh install, Rule-11 property 5), or a
    kind whose parser is a craft guard no installed craft provides, skips its kinds with a printed
-   line, never a failure.
+   line, never a failure. A per-instance exemption is narrower still and prints nothing: a plan's
+   base commit (`plan.base->commit`) is live only while its row is `open`, `planned` or `blocked`
+   (the source Rule's own drift check, Rule-15 phase 2, never fires again once the row is `done` or
+   `archived`), so a terminal row's base commit is skipped silently rather than checked or warned.
 
 ## Enforcement
 `dyad/guards/agent/references.py` (`check_package`; agent corpus, placed per Rule-11 property 1),
