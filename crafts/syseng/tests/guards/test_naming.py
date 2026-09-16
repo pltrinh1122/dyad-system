@@ -138,6 +138,30 @@ class ModeTests(unittest.TestCase):
         self.table.write_text(MODE_TABLE.replace("`dyad/bin/<name>`", "`something/else`"))
         self.assertIn("naming_rules.txt: mode `dyad/bin/<name>` is not a row of rules/naming.md", self.check(self.tree()))
 
+class GeneratedPathTests(unittest.TestCase):
+    """#213 d-work #46: an untracked path matching a `generated:` pattern (package_rules.txt,
+    Rule-11 property 6) is dropped before any kind checks it — an ops script's own output log
+    beside it, which a kind's glob would otherwise select and fail (the reported bug: `ops/*.log`
+    against `workstation-corpus/ops/(\\d+-h\\d+-…\\.sh|README\\.md)`)."""
+    def test_tree_paths_excludes_generated(self):
+        root = repo({"a.md": "x\n"}); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        (root / "b.pyc").write_text("x")   # untracked; *.pyc is a generated: entry
+        self.assertEqual(naming.tree_paths(root), ["a.md"])
+    def test_generated_matches_whole_path_component_and_suffix(self):
+        self.assertEqual(naming.generated_matches("workstation-corpus/ops/x.log", ["ops/*.log"]), "ops/*.log")
+        self.assertEqual(naming.generated_matches("__pycache__/x.pyc", ["__pycache__/*"]), "__pycache__/*")
+        self.assertIsNone(naming.generated_matches("workstation-corpus/ops/x.sh", ["ops/*.log"]))
+    def test_untracked_ops_log_is_not_checked_against_the_real_ops_kind(self):
+        root = repo({"workstation-corpus/ops/213-h1-x.sh": "#!/usr/bin/env bash\n"})
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        (root / "workstation-corpus" / "ops" / "213-h1-x.log").write_text("output\n")   # untracked; ops/*.log is generated
+        r = naming.load_rules()   # the real naming_rules.txt (module default DATA), the ops kind included
+        paths = naming.tree_paths(root)
+        self.assertNotIn("workstation-corpus/ops/213-h1-x.log", paths)
+        msgs, _used = naming.check_kinds(paths, r["kind"], dict(r["allow"]), naming.instance_rel(root), root)
+        self.assertEqual([m for m in msgs if "213-h1-x.log" in m], [], msgs)
+
+
 class LiveTests(unittest.TestCase):
     def test_live_repo_passes_and_every_kind_is_a_row(self):
         msgs = naming.check_package(dyadlib.repo_root())

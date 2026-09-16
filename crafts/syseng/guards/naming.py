@@ -2,7 +2,9 @@
 """Naming guard (entity `name`, corpus `craft`; the syseng craft's `rules/naming.md` owns the table; placed per
 crafts/sysarch/rules/guards.md under the craft's root; d-work #162). Kernel: Python 3.12+, git.
 Reads `naming_rules.txt` beside it: `kind: <pattern> = <path glob> = <regex>` — every path the tree holds
-(tracked or not yet committed, `git ls-files -co --exclude-standard`) that the glob selects (`*` one path
+(tracked or not yet committed, `git ls-files -co --exclude-standard`, less any path a `generated:`
+entry of `package_rules.txt` names — Rule-11 property 6; generated is generated whether or not it
+has been committed yet, #213 d-work #46) that the glob selects (`*` one path
 segment, `**` any) matches the regex over the whole path, a named group `id` is unique within the kind, a
 group `beside` names `<dir>/<beside>.py` that exists (fail); `mode: <pattern> = <path glob> = <tracked mode>` —
 every selected path is tracked at that mode in git's index (`dyadlib.tracked_mode`; the bit on disk is not evidence,
@@ -101,10 +103,25 @@ def glob_re(glob: str) -> re.Pattern:
             out += re.escape(c); i += 1
     return re.compile(f"^{out}$")
 
-def tree_paths(root: Path) -> list[str]:
-    """Every path the tree holds: tracked plus untracked-not-ignored (a guard sees a file before its commit)."""
+def generated_matches(rel: str, patterns: list[str]) -> str | None:
+    """The first `generated:` pattern (Rule-11 property 6, `package_rules.txt`) matching `rel` — the
+    whole path, any single component, or any suffix starting at a component; else None. The same
+    match shape `package.py`'s own generated-file check uses, reimplemented (a craft guard imports
+    dyadlib, never the core runner script)."""
+    parts = rel.split("/")
+    candidates = [rel] + parts + ["/".join(parts[i:]) for i in range(1, len(parts))]
+    for g in patterns:
+        if any(fnmatch.fnmatch(c, g) for c in candidates):
+            return g
+    return None
+
+def tree_paths(root: Path, pkg: Path = dyadlib.PKG) -> list[str]:
+    """Every path the tree holds: tracked plus untracked-not-ignored (a guard sees a file before its
+    commit) — less any path a `generated:` pattern names (an ops script's output log beside it, #213
+    d-work #46): generated is generated whether or not it has been committed yet."""
     out = subprocess.check_output(["git", "ls-files", "-co", "--exclude-standard"], cwd=root, text=True).split("\n")
-    return sorted({p for p in out if p})
+    patterns = dyadlib.package_rules(pkg, root)["generated"]
+    return sorted({p for p in out if p and not generated_matches(p, patterns)})
 
 def instance_rel(root: Path) -> str:
     inst = dyadlib.instance(root)
@@ -231,7 +248,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path 
     root = Path(root or dyadlib.repo_root())
     r = load_rules(data)
     msgs = [f"naming_rules.txt: malformed line {l!r}" for l in r["bad"]]
-    paths = tree_paths(root)
+    paths = tree_paths(root, pkg)
     allow = dict(r["allow"])
     inst = instance_rel(root)
     m, used = check_kinds(paths, r["kind"], allow, inst, root)
