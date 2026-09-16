@@ -56,3 +56,25 @@ messages. Rule-15's `planned` state at the gate is unaffected. No new term (Rule
 change, so Rule-12 and Rule-11 are untouched. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #23.
+
+## Amendment — d-work #34 (2026-09-16, Intake: work proposed by another agent)
+**Claim (Operator, 2026-09-16):** a d-work carried by another agent's message is admissible as a
+defect only as an observation with evidence, and as an enhancement only with the verbatim Operator
+prompt (or provenance to one) behind it.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | Scope already says "every Operator prompt opens a d-work" — a message is simply not one, so no clause is needed. | Refuted | Three messages in two days each carried work that ended in this ledger (#4–#15, an untracked defect, #26); without a clause the Agent decided admissibility by inference each time, differently each time. The clause names the two shapes and the return path. |
+| 2 | The rule keeps a good idea out while letting a defect in — asymmetric. | Survives, as designed | A defect is falsifiable on its evidence; an enhancement is a want, and only the Operator has wants here (Rule-2: proposer ≠ disposer applies across systems too — an agent may not be the originating disposer of another system's work). |
+| 3 | The Operator's own `Y` to a bare agent proposal launders it into an intake. | Survives, scoped | The rule bounds what an *agent* may bring; the Operator may open anything by prompting, which is what happened for #26. Stated in the clause's last sentence, so it is a permitted path, not a loophole. |
+| 4 | A relayed prompt breaks Rule-7 p4 / p2 (words not the Operator's; a harness file read). | Refuted | The words are an Operator's, quoted as the message carried them; the entry note names the relay; no harness file is read. Rule-7 p4 gains the sentence; p2 untouched. A defect's observation is the sender's words and therefore stays out of provenance — in the plan file. |
+| 5 | "Provenance to a prompt" is unverifiable from here (another system's ledger). | Survives, scoped | It is a `world` reference (Rule-20): the sender's row id and quoted prompt are recorded, inference stated; a sender that misquotes has breached its own Rule-7, which is that system's to catch. |
+| 6 | Returning a message "with the missing shape named" is a counter-prompt to a peer, which Rule-3 says subagents and peers never receive. | Refuted | It is not a disposition question; it names a form. Nothing here lets a peer dispose anything. |
+
+Pairwise (Rule-5): 3–7 Rule-7 stores the relayed words (one sentence), Rule-3 decides
+admissibility — one-way each. 3–10 the sender's framing is its own system's Rule-10, named in
+Boundaries. 3–16 `refs` already carries `<system>-<id>` (#4–#15). 3–2 the `Y` is still the
+Operator's; a peer never disposes. 3–20 the sender-ledger id is a `world` kind (attack 5). Others
+unchanged. Coherent, orthogonal. Rule-6: `intake` added (owner 3, used by 3 7).
+
+Disposition: see ledger #34.

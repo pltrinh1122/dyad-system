@@ -67,3 +67,10 @@ records hold the Agent's text, incidents hold departures, events hold command ru
 | 20 | This record cannot state attack 10 in full: naming the operator's home directory or the agent CLI's private project directory spells a literal that `package_rules.txt` forbids inside the core craft, and a Rule's record is core craft (Rule-11 A6). | Confirmed, found by the guard | `package.py check` failed this file on exactly those two `string:` entries on its first run. Attack 10 is stated without the literals. The fence is right and the record was wrong: a package file that must quote a host path has no way to do it, which is the point — the path does not belong in the package, and neither does Rule-7's mechanism depend on it. |
 
 Disposition: see ledger #164.
+
+## Amendment — d-work #34 (2026-09-16, a relayed Operator prompt)
+Property 4 gains one sentence: an Operator prompt relayed by another agent (Rule-3 Intake) is
+entered verbatim as the message carried it, entry note `relayed via <session>`; the relaying
+agent's words never; a defect's observation stays in the plan file. Attacks and pairwise: Rule-3's
+record, amendment #34 (attacks 4, 5). The guard is unchanged: the entry kind is still `prompt`,
+the note is free text the record form already admits. Disposition: see ledger #34.
