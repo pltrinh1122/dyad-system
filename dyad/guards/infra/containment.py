@@ -22,6 +22,7 @@ import sys
 if sys.version_info < (3, 12):
     sys.exit("containment.py: Python 3.12+ required")
 import fnmatch, subprocess
+from collections.abc import Callable
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -55,6 +56,10 @@ MODES = {"commits": "each non-merge commit of base..head (a push range; Rule-1 b
          "range": "each non-merge commit and the whole base...head diff (a PR)"}
 TRANSACTION_MODE, PR_MODE = "commits", "range"
 
+# The verb the shipped `dyad/hooks/pre-commit` passes: this module's whole contract with the hook,
+# named here so `hook-verb-is-a-verb` trips on a rename that forgets the table (#25).
+HOOK_VERB = "staged"
+
 def _disjoint() -> bool:
     pats = [p for _, p in ZONES]
     if len(set(pats)) != len(pats):
@@ -66,6 +71,9 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("every-zone-non-empty", lambda: {z for z, _ in ZONES} == set(ZONE_NAMES)),
     ("zone-names-known", lambda: {z for z, _ in ZONES} <= set(ZONE_NAMES) and len(set(ZONE_NAMES)) == len(ZONE_NAMES)),
     ("modes-declared-and-distinct", lambda: {TRANSACTION_MODE, PR_MODE} <= set(MODES) and TRANSACTION_MODE != PR_MODE),
+    ("modes-are-verbs", lambda: set(MODES) <= set(VERBS)),                 # every documented check mode dispatches
+    ("hook-verb-is-a-verb", lambda: HOOK_VERB in VERBS),                   # the pre-commit hook's verb still exists
+    ("verbs-in-usage", lambda: all(f"containment.py {v}" in (__doc__ or "") for v in VERBS)),   # a verb added without its usage line
 ]
 
 def classify(path: str) -> str:
@@ -114,6 +122,24 @@ def check_range(base, head, cwd=None):
 def check_tree(cwd=None):
     return [f"FAIL [tree]: unclassified path: {p}" for p in git("ls-files", cwd=cwd).split() if classify(p) == "unclassified"]
 
+def print_zones(args: list[str]) -> None:
+    """The `zones` verb: prints the table Rule-1 sends a reader to, and returns no fails list."""
+    print("zone         pattern")
+    for z, p in ZONES:
+        print(f"{z:<12} {p}")
+
+# Every CLI verb, declared (#25). A handler takes the argv tail and returns the fails list, or
+# `None` when it printed its own output and there is nothing to summarise (`zones`). Lifting this
+# out of `main` is what lets the three invariants above see it.
+VERBS: dict[str, Callable[[list[str]], list[str] | None]] = {
+    "staged":  lambda args: check_staged(),
+    "commit":  lambda args: check_commit(args[0]),
+    "commits": lambda args: check_commits(args[0], args[1]),
+    "range":   lambda args: check_range(args[0], args[1]),
+    "tree":    lambda args: check_tree(),
+    "zones":   print_zones,
+}
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     """Every tracked file of `root` is classified (the `tree` mode)."""
     return [f[5:] if f.startswith("FAIL ") else f for f in check_tree(cwd=root or dyadlib.repo_root())]
@@ -144,17 +170,12 @@ def main(argv):
     if not argv:
         sys.exit(__doc__)
     mode, args = argv[0], argv[1:]
-    if mode == "zones":
-        print("zone         pattern")
-        for z, p in ZONES:
-            print(f"{z:<12} {p}")
-        return 0
-    fn = {"staged": lambda: check_staged(), "commit": lambda: check_commit(args[0]),
-          "commits": lambda: check_commits(args[0], args[1]), "range": lambda: check_range(args[0], args[1]),
-          "tree": lambda: check_tree()}.get(mode)
+    fn = VERBS.get(mode)
     if fn is None:
         sys.exit(__doc__)
-    fails = fn()
+    fails = fn(args)
+    if fails is None:              # the verb printed its own output (`zones`)
+        return 0
     for f in fails:
         print(f, file=sys.stderr)
     print(f"containment {'OK' if not fails else 'FAILED'} [{mode}]")   # which mode ran (#166)

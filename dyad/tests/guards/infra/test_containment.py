@@ -1,4 +1,4 @@
-import subprocess, sys, tempfile, unittest
+import os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -93,6 +93,63 @@ class TransactionTests(unittest.TestCase):
         self.r.commit({"dyad/a.md": "x"})
         (self.r.d / "dyad" / "b.md").write_text("b"); sh("git", "add", "dyad/b.md", cwd=self.r.d)
         self.assertEqual(c.check_staged(cwd=self.r.d), [])
+
+
+class VerbTableTests(unittest.TestCase):
+    """#25: the CLI verb table is a declared constant, and the lift out of `main` is behaviour-preserving."""
+    def setUp(self): self.r = Repo()
+    def run_cli(self, *a, cwd=None):
+        return subprocess.run([sys.executable, str(Path(c.__file__)), *a], cwd=cwd or self.r.d, capture_output=True, text=True)
+
+    def test_every_verb_of_the_usage_block_is_in_the_table(self):
+        """The docstring is the user-facing contract; the table is the code's. They agree."""
+        usage = [l.split()[1] for l in (c.__doc__ or "").splitlines()
+                 if l.strip().startswith("containment.py ")]
+        self.assertEqual(sorted(usage), sorted(c.VERBS))
+        self.assertEqual(sorted(c.VERBS), ["commit", "commits", "range", "staged", "tree", "zones"])
+
+    def test_hook_verb_and_modes_are_verbs(self):
+        self.assertEqual(c.HOOK_VERB, "staged")
+        self.assertIn(c.HOOK_VERB, c.VERBS)
+        self.assertLessEqual(set(c.MODES), set(c.VERBS))
+
+    def test_hook_verb_is_what_the_shipped_hook_passes(self):
+        """The one surface this module cannot see: the bash hook. Read here so the constant is not a fiction."""
+        hook = Path(c.__file__).resolve().parents[2] / "hooks" / "pre-commit"
+        self.assertIn(f"containment.py\" {c.HOOK_VERB}", hook.read_text())
+
+    def test_each_verb_dispatches_as_before(self):
+        """The handlers take no cwd — as in `main`, they run against the process's own repo — so the
+        equivalence is checked from inside the temp repo, where a cross-zone head gives them something
+        to disagree about."""
+        base = self.r.commit({"README.md": "r"})
+        self.r.commit({"dyad/a.md": "x"}); head = self.r.commit({"CLAUDE.md": "y"})
+        cwd = os.getcwd()
+        try:
+            os.chdir(self.r.d)
+            self.assertEqual(c.VERBS["staged"]([]), c.check_staged())
+            self.assertEqual(c.VERBS["commit"]([head]), c.check_commit(head))
+            self.assertEqual(c.VERBS["commits"]([base, head]), c.check_commits(base, head))
+            self.assertEqual(c.VERBS["range"]([base, head]), c.check_range(base, head))
+            self.assertEqual(c.VERBS["tree"]([]), c.check_tree())
+            self.assertTrue(any("multiple zones" in f for f in c.VERBS["range"]([base, head])))
+        finally:
+            os.chdir(cwd)
+
+    def test_zones_prints_the_table_and_no_result_line(self):
+        out = self.run_cli("zones")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("zone         pattern", out.stdout)
+        for z in c.ZONE_NAMES:
+            self.assertIn(z, out.stdout)
+        self.assertNotIn("containment OK", out.stdout)      # `zones` reports no verdict, as before the lift
+        self.assertIsNone(c.VERBS["zones"]([]))
+
+    def test_unknown_verb_and_no_argv_both_exit_the_usage(self):
+        for argv in (["bogus"], []):
+            out = self.run_cli(*argv)
+            self.assertEqual(out.returncode, 1, out.stdout)
+            self.assertIn("containment.py staged", out.stderr)
 
 
 class InvariantTests(unittest.TestCase):
