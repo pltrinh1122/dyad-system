@@ -52,7 +52,21 @@ MANIFEST = """# manifest
 | Python | kernel | 3.12 | code | PSF | — |
 | `gh` | library | 2.45 | PRs | MIT | REST |
 """
-CHANGELOG_T = "# Host change log (Rule-8)\n\n| date | d-work | class | action | undo | outcome |\n|------|--------|-------|--------|------|---------|\n"
+# The changelog entity's schema is the sysadmin craft's own guard, discovered like any other
+# (dyadlib.guard_files(), same as G); when that craft is installed here, its live FIELDS may carry
+# more columns than this fixture's original six (#213: an "actor" column, workstation d-work #216).
+# describe() must report exactly G["changelog"].FIELDS or project_entities.collect() raises (p59) —
+# in setUp, before any single test runs — so the header and its one example row are built from the
+# real FIELDS whenever they differ, instead of a fixed six-column literal (#213 d-work #46).
+_CHANGELOG_BASE = ["date", "d-work", "class", "action", "undo", "outcome"]
+_CHANGELOG_EXAMPLE_BASE = ["2026-09-13", "#7", "reversible", "mkdir /x", "rmdir /x", "applied"]
+if "changelog" in G and list(G["changelog"].FIELDS) != _CHANGELOG_BASE:
+    CHANGELOG_FIELDS = list(G["changelog"].FIELDS)
+    CHANGELOG_EXAMPLE = [dict(zip(_CHANGELOG_BASE, _CHANGELOG_EXAMPLE_BASE)).get(f, f) for f in CHANGELOG_FIELDS]
+else:
+    CHANGELOG_FIELDS, CHANGELOG_EXAMPLE = _CHANGELOG_BASE, _CHANGELOG_EXAMPLE_BASE
+CHANGELOG_T = ("# Host change log (Rule-8)\n\n| " + " | ".join(CHANGELOG_FIELDS) + " |\n|"
+               + "|".join("-" * 6 for _ in CHANGELOG_FIELDS) + "|\n")
 INCIDENTS_T = "# Incidents (Rule-3)\n\n| date | d-work | what | cause | consequence |\n|------|--------|------|-------|-------------|\n"
 RECORD = """# Falsification record — x (ledger #{n})
 
@@ -102,7 +116,7 @@ def fixture(with_incidents_sep=True):
     (pkg / "falsification" / "rules").mkdir(parents=True); (pkg / "falsification" / "rules" / "rule-1-x.md").write_text(RECORD.format(n=1))
     (root / "preferences-corpus").mkdir(); (root / "preferences-corpus" / "PREFERENCES.md").write_text(PREFS)
     ws = root / "workstation-corpus"; (ws / "ops").mkdir(parents=True)
-    (ws / "CHANGELOG.md").write_text(CHANGELOG_T + "| 2026-09-13 | #7 | reversible | mkdir /x | rmdir /x | applied |\n")
+    (ws / "CHANGELOG.md").write_text(CHANGELOG_T + "| " + " | ".join(CHANGELOG_EXAMPLE) + " |\n")
     (ws / "ops" / "7-h1-x.sh").write_text(OPS)
     (ws / "runbooks" / "events").mkdir(parents=True); (ws / "runbooks" / "x.md").write_text(RUNBOOK); (ws / "runbooks" / "events" / "x.jsonl").write_text(EVENT)
     rows = inst / "d-work" / "rows"; rows.mkdir(parents=True)
@@ -150,6 +164,25 @@ def parser_names(pkg):
 ENTITIES = ({"component", "craft", "frame", "plan", "pr", "preference", "projector", "provenance", "record", "reference", "row", "rule", "term", "zone",
              "presence", "name", "invariant", "test", "bundle"}   # core + sysarch (projector, #160) + syseng (name, invariant, test, #162) + presence (#185) + bundle (Rule-11 p7, #196)
             | ({"changelog", "command", "event", "ops"} if SYSADMIN else set()) | ({"image"} if LANGIT else set()))
+
+class ChangelogFixtureTests(unittest.TestCase):
+    """#213 d-work #46: the synthetic changelog header/example track the real sysadmin changelog
+    guard's FIELDS when that craft is installed, instead of a fixed six columns — FixtureTests'
+    setUp calls project_entities.collect(), which raises on a field-count mismatch (p59), before
+    any single test in the class runs."""
+    def test_header_and_example_column_counts_agree(self):
+        header_line = CHANGELOG_T.splitlines()[2]
+        self.assertEqual(len(header_line.strip("|").split("|")), len(CHANGELOG_FIELDS))
+        self.assertEqual(len(CHANGELOG_EXAMPLE), len(CHANGELOG_FIELDS))
+    def test_unchanged_schema_or_no_sysadmin_keeps_the_original_six(self):
+        if not SYSADMIN or list(G["changelog"].FIELDS) == _CHANGELOG_BASE:
+            self.assertEqual(CHANGELOG_FIELDS, _CHANGELOG_BASE); self.assertEqual(CHANGELOG_EXAMPLE, _CHANGELOG_EXAMPLE_BASE)
+    def test_derivation_places_base_values_and_names_extra_fields(self):
+        # exercised directly (not through G, which reflects only what is actually installed here)
+        fields = _CHANGELOG_BASE + ["actor"]
+        example = [dict(zip(_CHANGELOG_BASE, _CHANGELOG_EXAMPLE_BASE)).get(f, f) for f in fields]
+        self.assertEqual(example, _CHANGELOG_EXAMPLE_BASE + ["actor"])
+
 
 class FixtureTests(unittest.TestCase):
     def setUp(self):
@@ -234,7 +267,7 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([f.example for f in self.by["term"].fields], ["Operator", "the human party", "frame", "2"])
         self.assertEqual([f.example for f in self.by["component"].fields][:2], ["Python", "kernel"])
         self.assertEqual([f.example for f in self.by["preference"].fields], ["merge-disposition", "with-done", "`separate` | `with-done`", "Rule-2 (binding), Rule-3 (form)"])
-        self.assertEqual([f.example for f in self.by["changelog"].fields], ["2026-09-13", "#7", "reversible", "mkdir /x", "rmdir /x", "applied"])
+        self.assertEqual([f.example for f in self.by["changelog"].fields], CHANGELOG_EXAMPLE)
         self.assertEqual([f.example for f in self.by["record"].fields], ["1", "a1 <b>", "**Refuted**", "s1"]); self.assertEqual(self.by["record"].observed, 2)
         ops = {f.name: f for f in self.by["ops"].fields}
         self.assertEqual(ops["shebang"].example, ops_scripts.SHEBANG); self.assertEqual(ops["strict mode"].example, ops_scripts.STRICT)
