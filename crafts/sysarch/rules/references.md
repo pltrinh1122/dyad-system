@@ -15,6 +15,10 @@ Python callables, and a data file naming them by string would add a lookup table
 1. **One register.** `references.REFERENCES` (data, in the reference guard) lists every reference
    kind: source entity and field, extractor, target entity, resolver. A kind absent from the
    register is checked by nobody, and the next audit that bridges it by inference names the gap.
+   A row's own `refs` field targets `craft` too since d-work #22 (`row.refs->craft`): a bare
+   craft-name token as the routing tag `dyad dwork list --craft` and the kanban projector's
+   `--craft` flag both key on, resolved by the same install-or-registry existence check as
+   `bundle.component->craft`.
 2. **One resolver per kind.** Each entry names exactly one resolver: a function of the reference
    guard, an existing guard of another Rule (`guard:<corpus>/<entity>.py`, listed and not re-run),
    or `world` (unresolvable). Two resolvers for one kind is a breach.
