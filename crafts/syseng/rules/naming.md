@@ -52,6 +52,7 @@ guard fails on a `kind:` whose pattern is not in this table, so the two cannot d
 | `dyad/templates/<Name>` (seeds; `package.TEMPLATES` maps them) | an instance seed | Rule-11 | `INCIDENTS.md` | yes (shape); every `TEMPLATES` key exists: the runner's `templates-exist` invariant |
 | `guard:<corpus>/<entity>.py`, `world`, `import:<module>` | a resolver token; a manifest token | Rule-20 / Rule-14 | `guard:agent/vocabulary.py` | no here (shape in the references and manifest guards; the register's `resolver-shape` invariant) |
 | `<YYYY-MM-DD>` dates in rows, change log, audits | a date | Rule-3 / Rule-8 | `2026-09-14` | no (the rows and changelog guards already) |
+| `# ceiling: <what is bounded>; #<row>` | a deliberate scope ceiling in code or rule text, and the backlog row tracking when to lift it | Rule-13 (a ceiling is a scoped decline of rung 1, `verifiable-code.md` p7) | `# ceiling: global lock, per-account locks if throughput matters; #<id>` | no (inference; #96 may wire it into the Rule-20 register) |
 
 ## The guard
 `naming.py` reads `naming_rules.txt`: a `kind:` line per checkable path row (`kind: <pattern> =

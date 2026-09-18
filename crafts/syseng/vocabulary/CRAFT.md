@@ -23,3 +23,5 @@ Checked by the craft guard (`dyad craft check syseng`: well-formed, namespaced, 
 | import | bringing existing code into a craft or the agent's workflow under the import criteria, declared and pinned in the manifest | imports |
 | author | writing code that could not be imported; permitted only when no candidate meets the criteria, the plan stating what was searched | imports |
 | host fact | a fact about the machine the package runs on — path resolution (symlinks), filesystem case-sensitivity, line endings — read through `dyad/scripts/hostadapter.py`, never inlined at a call site | host-facts |
+| ladder | the first-rung-that-holds order a mutation's implementation path is chosen from (need? reuse? stdlib? native? installed dependency? one line? then the minimum), bounded by the never-simplify floor | verifiable-code |
+| ceiling | a deliberate scope cut below what a ladder rung would otherwise reach, marked `# ceiling: <what>; #<row>` and tracked by the row named | verifiable-code |
