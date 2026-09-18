@@ -115,6 +115,10 @@ does not own it.
   delivered in alignment with the Operator's expectation of the output. It is asked on the
   output as it stands in the PR(s), before merge, so `main` never carries unverified output.
 - Always the last line of the Agent's reply that believes the d-work is done.
+- The reply that asks does not merge. The reply that receives the Done-`Y` merges, as clerical
+  execution, after recording the disposition (`dyad dwork state <id> done`) — so the ledger's own
+  record of the `Y` precedes every merge it ratifies. A merge before the `Y` is self-ratification
+  (Rule-2) and an incident whatever the outcome (#47, #58, #67).
 - The completion reply carries the evidence the verification needs (E8): every PR of the
   d-work by number and zone; each check's result as observed, never assumed, or "CI absent"
   with the local guard results (Rule-2, Binding); every host
@@ -202,6 +206,6 @@ by an ignored counter-prompt or the `always` preference; see
 `../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
 three intakes from peer sessions in two days — one carrying its Operator's plan-`Y`, one a defect
 with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
-an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37.
+an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68.
 
 Set: System Requirements.
