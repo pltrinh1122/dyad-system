@@ -40,9 +40,21 @@ Terms (`implementation path`, `mechanical check`, arriving from the core vocabul
    workstation's shape is a false failure in every install — the reason `dyad check` had never been
    green in a scratch install (d-work #171).
 
+7. **The path is the first rung that holds.** Run *after* the plan has read the code the change
+   touches, never instead of it: (1) does this need to exist? (2) already in this codebase — reuse
+   it (Rule-13's own trigger)? (3) stdlib? (4) a native platform feature? (5) an installed,
+   declared dependency (`imports.md` p1–2)? (6) one line? (7) only then, the minimum that works.
+   Never past the floor: input validation at a trust boundary, error handling that prevents data
+   loss, security, accessibility, or anything explicitly requested is never simplified away in
+   climbing it. Code without its check is unfinished — the smallest check that fails when the
+   logic breaks is enough *inside* the test property 4 already maps; the mapping itself is
+   unchanged (d-work #94, after `dietrichgebert/ponytail`; `agent-corpus/audits/
+   2026-09-18-ponytail.md`).
+
 ## Inference, stated
-Whether a test is *adequate* is inference at falsification time; the guard checks presence at the
-mapped path and the runner checks that the suites pass. Property 6 is inference too: `livetest` gives
+Property 7's rung is inference, as property 2's "chosen path" already is. Whether a test is
+*adequate* is inference at falsification time; the guard checks presence at the mapped path and
+the runner checks that the suites pass. Property 6 is inference too: `livetest` gives
 the statement one form and `test_livetest.py` checks that form, but whether a given live test needs a
 skip or can assert the empty case is read, not computed. The skip count in the runner's per-suite line
 is the standing evidence: a live suite that turned itself off cannot do so silently.
