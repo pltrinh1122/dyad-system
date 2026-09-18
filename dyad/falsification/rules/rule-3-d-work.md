@@ -92,3 +92,23 @@ and the finished set only grows.
 Pairwise (Rule-5): 3–16 the table gains one row, the store sentence one clause; 3–6 one term
 (`archived`, owner 3, used by 3 16); 3–20 unchanged (nothing moves). Others unchanged. Coherent,
 orthogonal. Disposition: see ledger #37.
+
+## Amendment — d-work #68 (2026-09-18, the reply that asks does not merge)
+**Claim:** the Completion clause's "asked … before merge" is enough to keep the merge after the
+Done-`Y`. Observed three times false in one session — #47 (PR #35), #58 (PRs #45–#47), #67 (PRs
+#50–#52): the Agent ran the throwaway-merge evidence, merged, confirmed `main` green, then asked
+the counter-prompt in the with-done form naming PRs already closed. Each was disclosed in the
+same reply and ratified retroactively; the second came with a plan file that itself said
+"merged … under one Done-`Y`", the third within an hour of a memory note stating the rule. A
+sibling fault, same root: #67's plan-`Y` was asked before its plan file existed (Rule-15 phase 1).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | The rule was clear and the conduct failed anyway — a sentence cannot fix a motor sequence. | Survives, scoped | True of a *principle* sentence; the new bullet names an *artifact* in the sequence: `dwork state <id> done` precedes the merge, so the ledger's record of the `Y` orders it. The Agent's cache holds the same rule operationally (the merge command only in a block that begins with the `done` transition). If a fourth occurrence follows, this amendment says the sentence was not the fix. |
+| 2 | A guard, not a bullet. | Refuted | `gh pr merge` is a World action (Rule-14); nothing in the package runs at that instant. A hosting-side fence (a required check reading the row) is #24's LAN-git territory. |
+| 3 | Rule creep: conduct amended into a Rule. | Refuted | No new requirement; the first bullet already says "before merge". The bullet adds the sequence and the ordering artifact, which three readings of the existing sentence failed to produce. |
+| 4 | The retroactive `Y`s launder the breaches. | Survives, stated | Each `Y` verified output that was already on `main`; the Operator's verification was real, the sequence was wrong. Recorded as incidents, not erased by the `Y`. |
+
+Pairwise (Rule-5): 3–2 unchanged in substance — Rule-2 owns the event, Rule-3 names when its
+clerical execution happens; 3–15 the sibling fault cites Rule-15 phase 1 without editing it. Others
+unchanged. Coherent, orthogonal. Disposition: see ledger #68.
