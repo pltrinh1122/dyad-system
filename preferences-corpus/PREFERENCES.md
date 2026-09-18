@@ -13,6 +13,7 @@ defines what each value means.
 | delegation | plan-and-execute | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | on-ignore | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
+| ledger-pr-merge | agent | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case, #23) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -41,3 +42,16 @@ defines what each value means.
     nothing else needed. The Agent then holds a pending queue and asks the batch forms
     (Rule-3, Batch disposition), lapsing back to singly once the queue drains.
   - `always` — never singly: the first pending item already opens the queue.
+- `ledger-pr-merge` — who executes the merge when a *ledger-only* change reaches `main` as a PR
+  rather than as the direct commit Rule-3 prescribes. Rule-2 already classes a ledger-only commit
+  (touching nothing outside `agent-corpus/d-work/`) as *not ratification* — it records a prompt
+  received or a disposition already given, never a decision. A session-level branch fence can
+  forbid the direct push and force the same content through a PR (Rule-1, the #23 case); this
+  preference says what happens then.
+  - `ask` — the Agent states the collision and asks, per instance, before that PR is merged.
+  - `agent` — the Agent merges it without a counter-prompt, provided its *entire* diff is
+    ledger-only. Scope is the path prefix, not the zone and not authorship: a PR carrying even one
+    path outside `agent-corpus/d-work/` — `agent-corpus/audits/INCIDENTS.md`, for instance — is
+    unaffected and follows `merge-disposition`. The Agent checks the whole diff mechanically
+    before each such merge, and the merge commit cites this preference and the file list, so
+    `git log` alone shows why no counter-prompt preceded it.
