@@ -62,7 +62,11 @@ dyad system without clashes or hand-editing.
    so a craft's tags never collide with another's or with the bundle's (property 7) in one repo —
    a craft released on its own cadence in the monorepo that authors it, its archive the `export` of
    that tag's tree, distributable to a separate repo without moving where the craft is authored.
-   Archive shape and version seed: `distribution.md`.
+   Archive shape and version seed: `distribution.md`. The converse holds too: once a craft's tag
+   exists, the tree under its root at HEAD is the tree that tag holds, or `VERSION` has moved —
+   `dyad/guards/infra/bundle.py` `check_drift` fails the push that differs from its own tag under
+   an unchanged `VERSION`, and skips with one line where the tag does not resolve locally (#91,
+   after four drifted releases in two days: #61, #67, #71, #90).
 5. **Built and installed by one code path, tested in CI.** A craft, core or Tended, is built and
    installed by `dyad/scripts/distribute.py` — `dyad build|install` for the core craft (with the
    core's hooks), `dyad craft export|install` for a Tended craft (`dyad/scripts/craft.py`, no
@@ -134,6 +138,7 @@ Property 7 added, property 4 reprefixed (#196, d-work #21): the core craft's tag
 `dyad-operator-` prefix it lacked, freeing the unprefixed `vX.Y.Z` for a new bundle release naming
 the whole distribution — `v0.3.1`, `v0.3.2`, `v0.4.0` predate this and stay core-only tags, cut
 under the superseded convention, never retagged (tags do not move). See
-`../falsification/rules/rule-11-distribution-structure.md`, amendment #196.
+`../falsification/rules/rule-11-distribution-structure.md`, amendment #196. Property 4 gains its
+converse and the drift guard 2026-09-18 (d-work #91); see the same record, amendment #91.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

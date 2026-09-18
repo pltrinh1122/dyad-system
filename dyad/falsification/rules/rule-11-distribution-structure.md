@@ -170,3 +170,30 @@ Rule-3, 7, 8, 12–19 read as before. Coherent, orthogonal with the one named ex
 Disposition: see ledger #196.
 
 Disposition: see ledger #180.
+
+## Amendment — d-work #91 (2026-09-18, property 4's converse: the drift guard)
+**Claim:** property 4 ("a release is a tag equal to `<name>-v` + `VERSION`") keeps a released
+version naming one tree. Falsified four times in two days: sysarch-v0.1.4's archive predated #50
+(#61, surfacer's report); `dyad/` and `crafts/sysarch/` diverged from their tags by two and three
+d-works (#67); `crafts/syseng/` by #15 (#71, workstation's report, after #67's by-hand sweep checked
+only the two crafts that had been named); `dyad/` again by #68, the session's own change an hour
+after #67 (#90, caught only by comparing a rebuilt sha to a published asset). Nothing checked the
+converse — that the tree under a craft's root at HEAD equals its own tag's while `VERSION` is
+unchanged.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | The craft guard (`craft/crafts`) owns a craft's shape; put it there. | Refuted | It runs per craft with no notion of a release; the bundle guard already owns "row version == live VERSION" and knows every component and the tag-name rule (`tag_name`, invariant `tag-name-is-prefix-v-version`). One module, discovered like every guard — no hand-listing. |
+| 2 | Local tags can be stale, so the check lies. | Survives, scoped | A tag never moves (this record, #196), so a fetched tag is *the* tag; the only staleness is a tag not yet fetched, which skips with one `warning: skip … tags not fetched` line — the kernel-only path never fetches (Rule-14 p3). CI's full-depth checkout has every tag and corroborates. |
+| 3 | Too strict: a typo fix in a craft's README forces a version bump. | Survives, stated | That *is* the property: a released version names a tree, a different tree is a different version. Only the first content commit after a release needs the bump; once bumped the new tag is absent and later commits skip until release. |
+| 4 | Check the working tree, so `dyad check` catches it before the commit. | Refuted | HEAD is what a push carries and what `pre-push` judges; the working tree's state is Rule-14's `dirty=` flag in the evidence block. |
+| 5 | The guard refuses its own introducing commit (bundle.py changed under an unbumped core). | Confirmed, by design | Demonstrated in #91's own execution: `FAIL 'dyad-operator': dyad/ differs from tag dyad-operator-v0.6.2 (2 file(s))` on the guard's first commit; the `VERSION` bump to 0.7.0 in the same PR makes the tag absent and the push pass. Every craft-content PR will meet the same gate. |
+
+Mechanism: `bundle.check_drift(root, pkg)` — per live component, `git rev-parse --verify
+<tag>^{commit}` then `git diff --name-only <tag> HEAD -- <root>`; run from `check_package` after the
+row check, so it is on the kernel-only path and in `check --guards`. Tests: `DriftTests` in
+`dyad/tests/guards/infra/test_bundle.py` (unchanged tree silent; a changed file fails naming the
+count; the core is a component; a bumped `VERSION` skips; no tags skips; no commit skips; the CLI
+prints `warn` for a skip and exits 0). Pairwise (Rule-5): 11–14 the guard shells to git only,
+the kernel; 11–20 the tag is not a Rule-20 reference (a World object resolved by git, not by the
+register). Others unchanged. Coherent, orthogonal. Disposition: see ledger #91.
