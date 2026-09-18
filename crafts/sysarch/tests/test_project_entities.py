@@ -287,7 +287,7 @@ class FixtureTests(unittest.TestCase):
             anchors = {f.name for f in e.fields} | set(__import__("re").findall(r"<[a-z]+>", e.store))
             expected = sorted({(a, t) for _, s, a, _, t, _ in refint.REFERENCES if s == e.key and a in anchors and t in self.by})
             self.assertEqual(e.relations, expected, e.key)
-        self.assertEqual(self.by["row"].relations, [("disposed", "pr"), ("refs", "row"), ("refs", "rule")])
+        self.assertEqual(self.by["row"].relations, [("disposed", "pr"), ("refs", "craft"), ("refs", "row"), ("refs", "rule")])
         self.assertEqual(self.by["plan"].relations, [("<id>", "row")])
         self.assertEqual(self.by["term"].relations, [("owner", "rule"), ("used by", "rule")])
         self.assertEqual(self.by["ops"].relations, [("change-log:", "changelog"), ("d-work:", "row")])
