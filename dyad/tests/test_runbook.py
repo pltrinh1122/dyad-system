@@ -126,7 +126,9 @@ class RunTests(livetest.LiveCase):
         r = subprocess.run(py + ["check"], cwd=self.root, env=env, capture_output=True, text=True)
         core = rb.core_runbooks(dyadlib.repo_root())                     # the package's own run-books count too (#165)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.strip(), f"ok   [rule-19] {1 + len(core)} run-book(s), {11 + sum(len(rb.parse(p)) for p in core.values())} commands")
+        self.assertEqual(r.stdout.strip(),
+            "warn [rule-19] x.md: cites no crafts/*/server*/ or workstation-corpus/server*/ directory (no server counterpart)\n"
+            f"ok   [rule-19] {1 + len(core)} run-book(s), {11 + sum(len(rb.parse(p)) for p in core.values())} commands")
         r = subprocess.run(py + ["list", "x"], cwd=self.root, env=env, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0); self.assertIn("rotate", r.stdout); self.assertIn("Credential rotation", r.stdout)
         r = subprocess.run(py + ["run", "x", "rotate"], cwd=self.root, env=env, capture_output=True, text=True)

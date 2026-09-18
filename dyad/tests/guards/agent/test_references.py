@@ -239,7 +239,7 @@ class FixtureTests(Fixtured):
             self.assertEqual(k, len(RESOLVABLE) - len(saved))
         finally:
             refint.GUARD_KINDS.update(saved)
-        self.assertEqual(set(refint.GUARD_KINDS), {"changelog.action->ops", "ops.dwork->row", "ops.changelog->changelog", "event.command->command", "changelog.event->event"})
+        self.assertEqual(set(refint.GUARD_KINDS), {"changelog.action->ops", "ops.dwork->row", "ops.changelog->changelog", "changelog.event->event"})   # event.command->command needs no craft (#213)
         self.assertTrue(all(m is not None for _, m in refint.GUARD_KINDS.values()), "the live repo has the sysadmin craft")
     def test_rule_text_glob_needs_a_match(self):
         self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "project_<surface>.py", "render_<surface>.py"), "rule.text->path")

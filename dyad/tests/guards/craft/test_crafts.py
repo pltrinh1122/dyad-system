@@ -131,7 +131,10 @@ class CraftGuardTests(unittest.TestCase):
         msgs = cg.check_craft(root, root / "crafts" / "sysadmin", PKG)
         self.assertEqual(fails(msgs), [], msgs)
         self.assertEqual(cg.seeds(root / "crafts" / "sysadmin"), [("CHANGELOG.md", "workstation-corpus/CHANGELOG.md")])
-        self.assertEqual(cg.seed_status(root, root / "crafts" / "sysadmin"), [])   # this instance already has it seeded
+        self.assertEqual(cg.seed_status(root, root / "crafts" / "sysadmin"), [
+            "warning: crafts/sysadmin: seed 'CHANGELOG.md' not copied to workstation-corpus/CHANGELOG.md — "
+            "copy it by hand: cp crafts/sysadmin/templates/CHANGELOG.md workstation-corpus/CHANGELOG.md"])
+        # this instance authors sysadmin but tends no host of its own (d-work #58): no workstation-corpus/, so never seeded here
     def test_cli_line(self):
         r = subprocess.run([sys.executable, str(PKG / "guards" / "craft" / "crafts.py")], capture_output=True, text=True, cwd=dyadlib.repo_root())
         self.assertEqual(r.returncode, 0, r.stderr); self.assertTrue(any(l.startswith("ok   [craft] crafts/") for l in r.stdout.splitlines()) or "crafts/" not in r.stdout)
