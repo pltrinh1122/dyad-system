@@ -7,8 +7,15 @@ the whole distribution this repo authors: one row per craft in the tree, the cor
 craft's live `VERSION`; every craft in the tree needs a row and every row names a craft in the tree
 — checked both directions. A missing `BUNDLE.md` skips (a core-only install, or this repo before
 its first bundle): zero messages, never a failure.
+
+Drift (#91, after #61/#67/#71/#90): property 4's converse. Once `<name>-v<VERSION>` exists, the
+tree under that craft's root at HEAD must be the tree the tag holds; `check_drift` fails a craft
+whose root differs from its own tag while `VERSION` is unchanged. A tag that does not resolve
+locally (never released, or tags not fetched — the kernel-only path never fetches) skips with one
+warning line. HEAD, not the working tree: the pre-push hook judges commits.
   bundle.py [repo-root]
 """
+import subprocess
 import sys
 if sys.version_info < (3, 12):
     sys.exit("bundle.py: Python 3.12+ required")
@@ -20,7 +27,40 @@ ENTITY, CORPUS, TRANSACTION = "bundle", "infra", False
 NAME, OWNER = "bundle row", "Rule-11"
 CORE_NAME = "dyad-operator"                        # crafts/craft.py's own CORE_NAME; a bundle row uses the same name
 FIELDS = ("component", "version")
-INVARIANTS = [("two-fields", lambda: len(FIELDS) == 2 and len(set(FIELDS)) == 2)]   # crafts/syseng/rules/invariants.md
+INVARIANTS = [("two-fields", lambda: len(FIELDS) == 2 and len(set(FIELDS)) == 2),   # crafts/syseng/rules/invariants.md
+              ("tag-name-is-prefix-v-version", lambda: tag_name("x", "1.2.3") == "x-v1.2.3")]
+
+def tag_name(component: str, version: str) -> str:
+    """Rule-11 property 4: `<name>-v<VERSION>` for every craft, the core included (`dyad-operator-v…`)."""
+    return f"{component}-v{version}"
+
+def component_roots(root: Path, pkg: Path = dyadlib.PKG) -> dict[str, Path]:
+    """{component: root-relative craft root}: the core craft's `dyad/` plus every Tended craft's."""
+    out = {CORE_NAME: pkg.resolve().relative_to(root.resolve())}
+    for d in dyadlib.craft_dirs(pkg):
+        out[d.name] = d.resolve().relative_to(root.resolve())
+    return out
+
+def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
+
+def check_drift(root: Path, pkg: Path = dyadlib.PKG) -> list[str]:
+    """Per component: tag absent -> `warning: skip …`; tree at HEAD == tag's -> nothing; differs -> FAIL."""
+    msgs: list[str] = []
+    if _git(root, "rev-parse", "--verify", "-q", "HEAD^{commit}").returncode != 0:
+        return [f"warning: skip drift: no HEAD commit here"]
+    roots = component_roots(root, pkg)
+    for comp, ver in live_components(pkg).items():
+        tag = tag_name(comp, ver)
+        if _git(root, "rev-parse", "--verify", "-q", f"{tag}^{{commit}}").returncode != 0:
+            msgs.append(f"warning: skip '{comp}': no tag {tag} here (not yet released, or tags not fetched)")
+            continue
+        rel = roots[comp].as_posix()
+        r = _git(root, "diff", "--name-only", tag, "HEAD", "--", rel)
+        changed = [l for l in r.stdout.splitlines() if l.strip()]
+        if changed:
+            msgs.append(f"'{comp}': {rel}/ differs from tag {tag} ({len(changed)} file(s)) while VERSION is still {ver} — bump VERSION")
+    return msgs
 
 def bundle_path(root: Path) -> Path:
     return root / "BUNDLE.md"
@@ -73,7 +113,8 @@ def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str
     return version, rows, check(version, rows, live_components(pkg))
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
-    return check_bundle(root, pkg)[2]
+    root = root or dyadlib.repo_root()
+    return check_bundle(root, pkg)[2] + check_drift(root, pkg)
 
 def summary(root: Path | None = None) -> str:
     version, rows, _ = check_bundle(root)
@@ -91,15 +132,21 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
 def main(argv=None) -> int:
     a = argv if argv is not None else sys.argv[1:]
     root = Path(a[0]).resolve() if a else dyadlib.repo_root()
+    pkg = (root / "dyad") if a else dyadlib.PKG        # an explicit root names its own core craft
     if not bundle_path(root).exists():
         print("skip [bundle] no BUNDLE.md")
         return 0
-    version, rows, msgs = check_bundle(root)
+    version, rows, msgs = check_bundle(root, pkg)
+    msgs += check_drift(root, pkg)
+    fails = [m for m in msgs if not m.startswith("warning:")]
     for m in msgs:
-        print(f"FAIL [bundle] {m}", file=sys.stderr)
-    if not msgs:
+        if m.startswith("warning:"):
+            print(f"warn [bundle] {m.removeprefix('warning:').strip()}")
+        else:
+            print(f"FAIL [bundle] {m}", file=sys.stderr)
+    if not fails:
         print(f"ok   [bundle] {len(rows)} components, v{version}")
-    return 1 if msgs else 0
+    return 1 if fails else 0
 
 if __name__ == "__main__":
     sys.exit(main())
