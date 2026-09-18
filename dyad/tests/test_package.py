@@ -420,10 +420,10 @@ class PackageTests(livetest.LiveCase):
         self.require_craft("sysadmin", "sysarch")   # the surfaces below are theirs; the core-only case is its own test
         r = self.run_py("project", "--list")
         self.assertEqual(r.returncode, 0, r.stderr)
-        for surface, craft in (("erd", "sysarch"), ("schema", "sysarch"), ("entities", "sysarch"), ("events", "sysadmin"), ("kanban", "sysarch")):
+        for surface, craft in (("erd", "sysarch"), ("schema", "sysarch"), ("entities", "sysarch"), ("events", "sysadmin"), ("kanban", "sysarch"), ("instances", "sysarch")):
             self.assertRegex(r.stdout, rf"(?m)^{surface}\s+{craft}\s+crafts/{craft}/projectors/project_{surface}\.py$")
         pkg = load_package(); reg, problems = pkg.projectors()
-        self.assertEqual(problems, []); self.assertEqual(set(reg), {"entities", "erd", "events", "schema", "kanban"})
+        self.assertEqual(problems, []); self.assertEqual(set(reg), {"entities", "erd", "events", "schema", "kanban", "instances"})
         self.assertEqual(pkg.PROJECTORS, {s: rel for s, (c, rel) in reg.items()})
         for craft, rel in reg.values():
             self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(rel.split("/")[1], craft)

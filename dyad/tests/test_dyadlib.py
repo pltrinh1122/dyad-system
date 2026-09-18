@@ -239,4 +239,4 @@ class InvariantTests(livetest.LiveCase):
             self.assertEqual(stems, [], "a core-only install has no projector")            # the documented absent-craft behaviour
             return
         self.require_craft("sysadmin", "sysarch")
-        self.assertEqual(stems, ["project_events", "project_entities", "project_erd", "project_kanban", "project_schema"])   # by craft, then surface
+        self.assertEqual(stems, ["project_events", "project_entities", "project_erd", "project_instances", "project_kanban", "project_schema"])   # by craft, then surface
