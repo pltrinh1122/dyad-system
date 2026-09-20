@@ -21,7 +21,7 @@ The guard composes the Rule-4 and Rule-6 scans by import (crafts/sysarch/rules/g
 import sys
 if sys.version_info < (3, 12):
     sys.exit("crafts.py: Python 3.12+ required")
-import io, re, subprocess, tarfile, tempfile
+import io, subprocess, tarfile, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, distribute
@@ -127,23 +127,77 @@ def _floor_pkg(repo: Path, tag: str) -> Path | None:
     pkg = tmp / "dyad"
     return pkg if (pkg / "scripts" / "dyadlib.py").is_file() else None
 
-def _load_floor_dyadlib(floor_pkg: Path, tag: str):
-    slug = re.sub(r"[^0-9A-Za-z]+", "_", tag)
-    return dyadlib.load_module(floor_pkg / "scripts" / "dyadlib.py", f"dyad_floor_dyadlib_{slug}")
+_FLOOR_SCRIPT = """\
+import importlib.util, sys
+from pathlib import Path
+sys.dont_write_bytecode = True
+scripts = Path({scripts!r})
+sys.path.insert(0, str(scripts))
 
-def _load_against_floor(path: Path, name: str, floor_mod):
-    """`path` loaded fresh under `name`, with its own `import dyadlib` bound to `floor_mod` instead
-    of the live one — so an `INVARIANTS` list's lambdas, closed over the module's own `dyadlib`
-    global, evaluate against the floor tag's actual code (D1, #100)."""
-    prev = sys.modules.get("dyadlib")
-    sys.modules["dyadlib"] = floor_mod
+def _load(stem, path):
+    if stem in sys.modules:
+        return sys.modules[stem]
+    spec = importlib.util.spec_from_file_location(stem, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[stem] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+# Pre-seed every core script the floor tag ships, dyadlib first, so a plain `import <name>`
+# anywhere below -- the target file, or anything it transitively imports -- finds the floor's own
+# module through the sys.modules cache and never falls through to sys.path, where the target's
+# own `sys.path.insert(0, .../dyad/scripts)` (its real, on-disk location -- crafts/ is never
+# archived here, only dyad/) would otherwise put the *live* tree first and silently defeat the
+# whole floor check (caught mechanically: a craft's own floor check kept passing at every version
+# tried, including one confirmed by direct inspection to lack a symbol the craft's own invariant
+# needs -- the check was always running against live code, never the floor's).
+_load("dyadlib", str(scripts / "dyadlib.py"))
+for _p in sorted(scripts.glob("*.py")):
+    if _p.stem != "dyadlib":
+        try:
+            _load(_p.stem, str(_p))
+        except Exception:
+            pass   # a script that cannot load stand-alone at this floor is not this check's target
+
+spec = importlib.util.spec_from_file_location("__floor_target__", {path!r})
+mod = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(mod)
+except Exception as e:
+    print("LOAD_ERROR", repr(e)); sys.exit(0)
+for n, pred in getattr(mod, "INVARIANTS", []):
     try:
-        return dyadlib.load_module(path, name)
-    finally:
-        if prev is not None:
-            sys.modules["dyadlib"] = prev
-        else:
-            sys.modules.pop("dyadlib", None)
+        ok = bool(pred())
+    except Exception:
+        ok = False
+    print("INV", n, ok)
+"""
+
+def _check_invariants_against_floor(py: Path, floor_pkg: Path) -> tuple[str | None, list[tuple[str, bool]]]:
+    """(load error or None, [(invariant name, holds)]) for `py`'s own `INVARIANTS`, run in a fresh
+    subprocess whose `sys.path` is rooted at the floor's own `dyad/scripts` — so every import `py`
+    makes, direct (`import dyadlib`) or transitive (a craft guard's own plain `import runbook`, the
+    core's run-book module), resolves against the floor tag's real code, never something already
+    cached in this process and bound to the live one. An in-process `sys.modules['dyadlib']` swap,
+    tried first, only protects the one name swapped: `crafts/sysadmin/guards/runbooks.py` does
+    `import runbook as _rb`, a second core module with its own `import dyadlib` — already cached
+    live from this process's own earlier, unrelated invariant pass (`package.py`'s own
+    `invariant_modules()` loads it before any craft check runs) — so the swap left `_rb.CLASSES`
+    bound to the live `dyadlib.HOST_CLASSES` while the freshly-loaded `runbooks.py` compared it
+    against the floor's, failing every floor check for that file regardless of whether the floor
+    actually held (caught mechanically, D1 catching its own bug, before this PR was opened)."""
+    script = _FLOOR_SCRIPT.format(scripts=str(floor_pkg / "scripts"), path=str(py))
+    r = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60)
+    error, results = None, []
+    for line in r.stdout.splitlines():
+        if line.startswith("LOAD_ERROR "):
+            error = line[len("LOAD_ERROR "):]
+        elif line.startswith("INV "):
+            _, inv_name, ok = line.split(" ", 2)
+            results.append((inv_name, ok == "True"))
+    if error is None and not results and r.returncode != 0:
+        error = (r.stderr.strip().splitlines()[-1] if r.stderr.strip() else f"exit {r.returncode}")
+    return error, results
 
 def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list[str]:
     """D1 (#100): for each `requires: dyad-operator>=X` whose tag `dyad-operator-vX` resolves
@@ -172,19 +226,12 @@ def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list
         if floor_pkg is None:
             msgs.append(f"warning: {name}: floor {req_name}>={ver}: {tag}:dyad/ not found")
             continue
-        floor_mod = _load_floor_dyadlib(floor_pkg, tag)
-        slug = re.sub(r"[^0-9A-Za-z]+", "_", tag)
         for py in files:
-            try:
-                mod = _load_against_floor(py, f"dyad_floor_{name}_{py.stem}_{slug}", floor_mod)
-            except Exception as e:
-                msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: does not load against floor {req_name}>={ver}: {e}")
+            error, results = _check_invariants_against_floor(py, floor_pkg)
+            if error is not None:
+                msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: does not load against floor {req_name}>={ver}: {error}")
                 continue
-            for inv_name, pred in dyadlib.invariants_of(mod):
-                try:
-                    ok = bool(pred())
-                except Exception:
-                    ok = False
+            for inv_name, ok in results:
                 if not ok:
                     msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: floor {req_name}>={ver}: {inv_name} is false against {ver} — raise the floor")
     return msgs

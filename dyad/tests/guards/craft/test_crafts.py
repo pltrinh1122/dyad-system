@@ -148,6 +148,19 @@ GUARD_W = ('ENTITY, CORPUS, TRANSACTION = "widget", "workstation", False\n'
            'import dyadlib\n'
            'INVARIANTS = [("widget-exists", lambda: getattr(dyadlib, "WIDGET", False))]\n')
 
+# The real craft-file pattern (every guard/projector in this repo): its own `sys.path.insert(0, ...)`
+# to its *real, on-disk* dyad/scripts -- here, this fixture's own live one, exactly the shape that
+# defeated an earlier version of the floor check (D3-style path games override a plain sys.path
+# insertion done first; only pre-seeding sys.modules survives it).
+GUARD_W_SELF_PATH = (
+    'import sys\nfrom pathlib import Path\n'
+    'sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts"))\n'
+    'import dyadlib\n'
+    'ENTITY, CORPUS, TRANSACTION = "widget3", "workstation", False\nFIELDS = ("a",)\n'
+    'def check_package(root): return []\n'
+    'INVARIANTS = [("widget-exists", lambda: getattr(dyadlib, "WIDGET", False))]\n'
+)
+
 
 class FloorTests(unittest.TestCase):
     """D1 (#100): a craft's own `INVARIANTS` re-run against the `requires:` floor tag's real code,
@@ -191,6 +204,54 @@ class FloorTests(unittest.TestCase):
         # to isolate floor_problems' own messages among check_craft's other fails
         f = fails(cg.check_craft(self.r, self.d))
         self.assertTrue(any("widget-exists is false against 0.1.0" in m for m in f), f)
+    def test_own_sys_path_insert_does_not_defeat_the_floor_check(self):
+        # caught live against crafts/sysarch/projectors/project_kanban.py: every declared floor
+        # "passed" because the file's own sys.path.insert(0, .../dyad/scripts) — its real, live
+        # location, since crafts/ is never archived by a core tag — ran after this check's own
+        # insert and won, so `import dyadlib` inside the target always resolved to the live module,
+        # never the floor's. Pre-seeding sys.modules for every core script before loading the
+        # target closes it: a plain `import dyadlib` finds the cache and never touches sys.path.
+        (self.d / "guards" / "w3.py").write_text(GUARD_W_SELF_PATH)
+        msgs = cg.floor_problems(self.r, self.d)
+        self.assertIn("crafts/fx/guards/w3.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor", msgs)
+    def test_transitive_plain_import_not_contaminated_by_an_earlier_live_load(self):
+        # crafts/sysadmin/guards/runbooks.py's own shape: a craft guard plain-imports a second core
+        # script (`import runbook as _rb`), which itself does `import dyadlib` -- if that second
+        # script is already cached in this process, live-bound, from an earlier unrelated load
+        # (exactly what package.py's own invariant pass does for `runbook` before any craft check
+        # runs), an in-process `sys.modules['dyadlib']` swap alone cannot fix its binding; only full
+        # subprocess isolation can. The floor and live commits here are identical on purpose: the
+        # floor genuinely holds, so any FAIL below is contamination, not a real floor problem.
+        scripts = self.r / "dyad" / "scripts"
+        (scripts / "dyadlib.py").write_text("PKG = None\nWIDGET = object()\n")   # a fresh object per execution, unlike `True`'s singleton identity
+        (scripts / "helper.py").write_text(
+            'import sys\nfrom pathlib import Path\n'
+            'sys.path.insert(0, str(Path(__file__).resolve().parent))\n'
+            'import dyadlib\nX = dyadlib.WIDGET\n')
+        subprocess.run(["git", "-C", str(self.r), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "commit", "-qm", "add helper, WIDGET is now a fresh object"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "-d", "dyad-operator-v0.1.0"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "dyad-operator-v0.1.0", "HEAD"], check=True)
+        (self.d / "guards" / "w2.py").write_text(
+            'import sys\nfrom pathlib import Path\n'
+            'sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts"))\n'
+            'import dyadlib\nimport helper as _h\n'
+            'ENTITY, CORPUS, TRANSACTION = "widget2", "workstation", False\nFIELDS = ("a",)\n'
+            'def check_package(root): return []\n'
+            'INVARIANTS = [("helper-x-is-dyadlib-widget", lambda: _h.X is dyadlib.WIDGET)]\n')
+        # simulate the contaminating earlier load, bound to a *different* dyadlib module object
+        # than any fresh floor-subprocess would create
+        live_dyadlib = dyadlib.load_module(scripts / "dyadlib.py", "dyad_test_live_dyadlib_for_fx")
+        prev = sys.modules.get("dyadlib")
+        sys.modules["dyadlib"] = live_dyadlib
+        try:
+            dyadlib.load_module(scripts / "helper.py", "helper")
+        finally:
+            if prev is not None: sys.modules["dyadlib"] = prev
+            else: sys.modules.pop("dyadlib", None)
+        self.assertIn("helper", sys.modules)   # contamination is genuinely present in this process
+        msgs = cg.floor_problems(self.r, self.d)
+        self.assertEqual(msgs, [], msgs)   # the floor genuinely holds; unaffected by the cache above
     def test_live_repo_no_local_stale_tag_skips_cleanly(self):
         # the live sysarch/syseng/sysadmin crafts still declare the stale requires: dyad-operator
         # >=0.2.0 (raised properly in a later, craft-zone d-work, #100 PR3-5); the tag is not fetched
