@@ -1,4 +1,4 @@
-import sys, tempfile, unittest
+import shutil, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -93,6 +93,76 @@ class ImportScanTests(unittest.TestCase):
         self.assertIn("import:", inf.RULES_FILE.read_text())
         n, m, msgs = inf.check_manifest()
         self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
+
+
+CRAFT_INFRA = """| component | partition | version | purpose | license | replacement |
+|-----------|-----------|---------|---------|---------|-------------|
+| Anthropic API | library | v1 | fetches research briefs | proprietary | — |
+"""
+
+def craft_root(files: dict[str, str] | None = None) -> Path:
+    """A scratch repo root: `pkg` at `root/dyad` (scripts/, tests/) with `crafts/` as its sibling —
+    the real layout `dyadlib.craft_dirs` assumes (`crafts_dir(pkg) = pkg.parent / "crafts"`); the
+    ImportScanTests `fixture()` above returns a bare tempdir with no such sibling, so it is not
+    reused here."""
+    import subprocess
+    root = Path(tempfile.mkdtemp(prefix="dyad-craft-"))
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    pkg = root / "dyad"
+    (pkg / "scripts").mkdir(parents=True); (pkg / "tests").mkdir()
+    for rel, text in (files or {}).items():
+        (pkg / rel).write_text(text)
+    return pkg
+
+def craft_fixture(pkg: Path, name="automaton", infra=CRAFT_INFRA) -> Path:
+    """A scratch craft tree beside `pkg` (`pkg.parent / "crafts" / name`) with a VERSION
+    (`dyadlib.craft_dirs` requires one) and, when given, an `infrastructure_contrib.md`."""
+    d = pkg.parent / "crafts" / name
+    (d / "guards").mkdir(parents=True)
+    (d / "VERSION").write_text("0.1.0\n")
+    if infra is not None:
+        (d / "infrastructure_contrib.md").write_text(infra)
+    return d
+
+
+class CraftContributionTests(unittest.TestCase):
+    """Rule-11 property 2's craft-shipped contribution (`agent-corpus/falsification/extensibility.md`
+    #101): a craft's own infrastructure_contrib.md rows join the core manifest; a colliding
+    component name fails, naming both sources; a craft's own guard/scripts/projectors imports and
+    invocations join the scan (ImportScanTests above already covers python_imports; this covers
+    the row-merge and collision-detection half)."""
+    def setUp(self):
+        self.pkg = craft_root({"scripts/a.py": "import os\n"})
+    def tearDown(self):
+        shutil.rmtree(self.pkg.parent, ignore_errors=True)
+    def test_no_craft_no_contribution(self):
+        self.assertEqual(inf.craft_infra_rows(self.pkg), [])
+    def test_craft_row_joins_the_manifest(self):
+        craft_fixture(self.pkg)
+        rows = inf.craft_infra_rows(self.pkg)
+        self.assertEqual(rows, [("automaton", ("Anthropic API", "library", "v1", "fetches research briefs", "proprietary", "—"))])
+    def test_check_manifest_includes_craft_rows(self):
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        craft_fixture(self.pkg)
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertEqual(n, 5)   # 4 core rows + 1 craft row
+        self.assertTrue(any(x.startswith("warning: 'Anthropic API' declared but no token maps to it") for x in msgs), msgs)
+    def test_colliding_component_name_fails_naming_both_sources(self):
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        craft_fixture(self.pkg, infra="| component | partition | version | purpose | license | replacement |\n"
+                      "|-----------|-----------|---------|---------|---------|-------------|\n"
+                      "| Python | library | 1.0 | craft's own | MIT | — |\n")
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertTrue(any("'Python' (crafts/automaton/infrastructure_contrib.md): already declared by the manifest" in x for x in msgs), msgs)
+    def test_second_craft_colliding_with_first_craft_is_named(self):
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        craft_fixture(self.pkg, name="automaton")
+        craft_fixture(self.pkg, name="researcher")
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertTrue(any("'Anthropic API' (crafts/researcher/infrastructure_contrib.md): already declared by crafts/automaton/infrastructure_contrib.md" in x for x in msgs), msgs)
 
 
 class InvariantTests(unittest.TestCase):
