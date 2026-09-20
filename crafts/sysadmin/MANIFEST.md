@@ -9,6 +9,12 @@ ships and the instance file it corresponds to; install never copies it (Rule-11 
 Tended craft install writes only its own root), `dyad craft check` warns and names the exact
 copy command when the destination is absent.
 
+D1 (#100): `0.2.0` was never checked mechanically against this craft's own code.
+`crafts.floor_problems` passes cleanly at `0.5.0`, `0.5.1`, `0.6.0`, `0.6.1`, `0.6.2` and `0.7.0` —
+every local tag available to check against; `0.2.0`-`0.4.0` are not fetched here, so their tags
+could not be mechanically confirmed or refuted. Raised to `0.5.0`, matching what could actually be
+verified, rather than left at a value never checked.
+
 name: sysadmin
-requires: dyad-operator>=0.2.0
+requires: dyad-operator>=0.5.0
 seeds: CHANGELOG.md->workstation-corpus/CHANGELOG.md

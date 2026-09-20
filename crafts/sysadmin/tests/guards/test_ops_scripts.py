@@ -143,6 +143,45 @@ class OpsScriptTests(unittest.TestCase):
         self.assertEqual((ops.ENTITY, ops.CORPUS, ops.TRANSACTION), ("ops", "workstation", False)); self.assertEqual(ops.FIELDS[0], "shebang")
 
 
+class FakeCorpus:
+    """The shape `REFERENCES_CONTRIB` extractors and resolvers need from `references.Corpus`,
+    without building the real thing: `ops`, `changelog`, `rows` and `rel()`."""
+    def __init__(self, root, ops=None, changelog=((), ()), rows=None):
+        self.root, self.pkg = Path(root), dyadlib.PKG
+        self.ops, self.changelog, self.rows = ops or {}, changelog, rows or set()
+    def rel(self, p):
+        p = Path(p)
+        return str(p.relative_to(self.root)) if p.is_relative_to(self.root) else str(p)
+
+
+class ReferencesContribTests(unittest.TestCase):
+    """Rule-11 property 2 (`agent-corpus/falsification/extensibility.md` #101, d-work #100 PR 5):
+    the two rows this craft now contributes, moved from the core register in PR 2."""
+    def test_shape(self):
+        self.assertEqual([r[0] for r in ops.REFERENCES_CONTRIB], ["ops.dwork->row", "ops.changelog->changelog"])
+        for kind, src, field, ext, tgt, res in ops.REFERENCES_CONTRIB:
+            self.assertTrue(callable(ext), kind); self.assertTrue(callable(res), kind)
+    def test_dwork_extracts_the_id(self):
+        p = Path("/x/126-h1-x.sh")
+        c = FakeCorpus(Path("/x"), ops={p: "#!/usr/bin/env bash\n# d-work: #126\n"})
+        self.assertEqual(ops.ops_dwork(c), [("126-h1-x.sh # d-work:", "126")])
+    def test_row_id_resolver(self):
+        c = FakeCorpus(Path("."), rows={1, 7})
+        self.assertTrue(ops._row_id_exists(c, "7")); self.assertFalse(ops._row_id_exists(c, "8")); self.assertFalse(ops._row_id_exists(c, "x"))
+    def test_changelog_key_extracts_the_row_and_key(self):
+        p = Path("/x/126-h1-x.sh")
+        c = FakeCorpus(Path("/x"), ops={p: '#!/usr/bin/env bash\n# change-log: workstation-corpus/CHANGELOG.md row "#7 H1"\n'})
+        self.assertEqual(ops.ops_changelog_key(c), [("126-h1-x.sh # change-log:", "#7 H1")])
+    def test_changelog_row_exists_resolver(self):
+        header = ["date", "d-work", "class", "action", "undo", "outcome"]
+        rows = [["2026-09-13", "#7", "reversible", "H1, Operator-run", "x", "ok"]]
+        c = FakeCorpus(Path("."), changelog=(header, rows))
+        self.assertTrue(ops._changelog_row_exists(c, "#7 H1")); self.assertFalse(ops._changelog_row_exists(c, "#7 H2")); self.assertFalse(ops._changelog_row_exists(c, "#8 H1"))
+    def test_changelog_row_exists_resolver_needs_the_columns(self):
+        c = FakeCorpus(Path("."), changelog=(["date"], [["x"]]))
+        self.assertFalse(ops._changelog_row_exists(c, "#7 H1"))
+
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):
