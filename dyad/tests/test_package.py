@@ -247,7 +247,11 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(labels, CORE)
         r = subprocess.run(py + ["check", "--guards"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("skip changelog.action->ops: guard sysadmin/ops_scripts absent", r.stdout)   # references.py: absent-safe, never a failure
+        # Rule-11 property 2's contribution mechanism (#101) retired these four core rows in favor
+        # of the sysadmin craft's own `REFERENCES_CONTRIB`: absent here, they print nothing at all,
+        # never a skip line — there is no core row left to skip.
+        for kind in ("changelog.action->ops", "ops.dwork->row", "ops.changelog->changelog", "changelog.event->event"):
+            self.assertNotIn(kind, r.stdout, kind)
         self.assertNotIn("skip event.command->command", r.stdout)   # no craft needed: the core run-book (dyad/runbooks/craft.md) resolves alone; nothing prints with no events store to check against it (#213 d-work #46)
         self.assertIn("skip rule.text->path: `crafts/…` tokens; no crafts/ tree is installed", r.stdout)   # Rules 1, 11 name crafts/ paths
         self.assertFalse((d / "workstation-corpus" / "CHANGELOG.md").exists())   # no core seed since #155; the craft's install seeds it (#156)
@@ -421,12 +425,12 @@ class PackageTests(livetest.LiveCase):
         r = self.run_py("project", "--list")
         self.assertEqual(r.returncode, 0, r.stderr)
         for surface, craft in (("erd", "sysarch"), ("schema", "sysarch"), ("entities", "sysarch"), ("events", "sysadmin"), ("kanban", "sysarch"), ("instances", "sysarch")):
-            self.assertRegex(r.stdout, rf"(?m)^{surface}\s+{craft}\s+crafts/{craft}/projectors/project_{surface}\.py$")
-        pkg = load_package(); reg, problems = pkg.projectors()
-        self.assertEqual(problems, []); self.assertEqual(set(reg), {"entities", "erd", "events", "schema", "kanban", "instances"})
-        self.assertEqual(pkg.PROJECTORS, {s: rel for s, (c, rel) in reg.items()})
-        for craft, rel in reg.values():
-            self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(rel.split("/")[1], craft)
+            self.assertRegex(r.stdout, rf"(?m)^{craft}/{surface}\s+crafts/{craft}/projectors/project_{surface}\.py$")
+        pkg = load_package(); reg = pkg.projectors()
+        self.assertEqual(set(reg), {f"{c}/{s}" for c, s in (("sysarch", "entities"), ("sysarch", "erd"), ("sysadmin", "events"), ("sysarch", "schema"), ("sysarch", "kanban"), ("sysarch", "instances"))})
+        self.assertEqual(pkg.PROJECTORS, {k: rel for k, (c, rel) in reg.items()})
+        for key, (craft, rel) in reg.items():
+            self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(rel.split("/")[1], craft); self.assertEqual(key, f"{craft}/{key.split('/', 1)[1]}")
     def test_project_unknown_surface_fails(self):
         self.require_craft("sysarch")   # with no projector the line names the install instead (test below)
         r = self.run_py("project", "nope")
@@ -440,14 +444,22 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(r.returncode, 2, r.stdout + r.stderr); self.assertIn("no projector for 'erd': no installed craft provides projectors (dyad craft install crafts/sysarch)", r.stderr)
         r = run("--list")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "no projector: no installed craft provides projectors (dyad craft install crafts/sysarch)")
-    def test_project_surface_in_two_crafts_fails(self):
+    def test_project_surface_in_two_crafts_disambiguates(self):
+        # D3 (#100, #99): two crafts naming the same surface now coexist in the registry — a bare
+        # name lists the qualified candidates and exits 2 rather than failing the registry itself
         self.require_craft("sysadmin")
         d = scratch_install(with_craft=True)
         self.addCleanup(shutil.rmtree, d)
         for c in ("a", "b"):
             (d / "crafts" / c / "projectors").mkdir(parents=True); (d / "crafts" / c / "projectors" / "project_x.py").write_text("def main(): return 0\n")
-        r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "project", "x"], capture_output=True, text=True, env=env(), cwd=d)
-        self.assertEqual(r.returncode, 1); self.assertIn("surface 'x' provided by crafts/a and crafts/b", r.stderr)
+        run = lambda *a: subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "project", *a], capture_output=True, text=True, env=env(), cwd=d)
+        r = run("x")
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+        self.assertIn("'x' is provided by more than one craft: a/x, b/x — name one", r.stderr)
+        r = run("a/x")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        r = run("--list")
+        self.assertIn("a/x", r.stdout); self.assertIn("b/x", r.stdout)
     def test_tracked_projection_refused(self):
         pkg = load_package()
         d = scratch_repo(["agent-corpus/projections/erd.html", "agent-corpus/d-work/rows/1.md"])
@@ -469,7 +481,7 @@ class InvariantPassTests(unittest.TestCase):
         pkg = load_package()
         labels = [l for l, _, _ in pkg.invariant_modules()]
         guards = [f"{dyadlib.guard_key(py)[1]}/{py.stem}" for py in dyadlib.guard_files()]
-        projectors = [f"project_{s}" for s in sorted(pkg.PROJECTORS)]
+        projectors = [f"project_{s.replace('/', '_')}" for s in sorted(pkg.PROJECTORS)]
         self.assertEqual(labels, ["dyadlib", "package"] + guards + projectors + ["runbook", "craft", "distribute"])
         self.assertEqual(len(set(labels)), len(labels))
         for label, mod, extra in pkg.invariant_modules():

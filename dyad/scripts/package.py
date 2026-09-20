@@ -116,14 +116,14 @@ def version():
 
 # crafts/syseng/rules/invariants.md: the runner's own facts (over its constants and the package files they name).
 INVARIANTS = [
-    ("projector-modules-exist-with-main", lambda: all((REPO / rel).is_file() and hasattr(dyadlib.load_module(REPO / rel, f"project_{s}"), "main") for s, rel in PROJECTORS.items())),
+    ("projector-modules-exist-with-main", lambda: all((REPO / rel).is_file() and hasattr(dyadlib.load_module(REPO / rel, f"project_{s.replace('/', '_')}"), "main") for s, rel in PROJECTORS.items())),
     ("templates-exist", lambda: all((PKG / "templates" / t).is_file() for t in TEMPLATES)),
     ("contract-names-distinct", lambda: len(set(CONTRACT)) == len(CONTRACT)),
 ]
 
 def check_rule_11():
     fails = []
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version()):
+    if not dyadlib.SEMVER.fullmatch(version()):   # one grammar, shared with a Tended craft's own VERSION check (D2, #100)
         fails.append(f"VERSION '{version()}' is not MAJOR.MINOR.PATCH")
     r = rules()
     # the same scan the craft guard runs over crafts/<craft>/ (distribute.instance_state; templates/ exempt, #156)
@@ -228,7 +228,8 @@ def invariant_modules():
             zones = zone_names()
         out.append((f"{group}/{entity}", mod, dyadlib.contract_invariants(mod, root, group, zones)))
     for s, rel in sorted(PROJECTORS.items()):
-        out.append((f"project_{s}", dyadlib.load_module(REPO / rel, f"project_{s}"), ()))
+        label = f"project_{s.replace('/', '_')}"   # `/`-free: distinct from a guard label's own `corpus/entity` shape below
+        out.append((label, dyadlib.load_module(REPO / rel, label), ()))
     for name in ("runbook", "craft", "distribute"):
         out.append((name, dyadlib.load_module(PKG / "scripts" / f"{name}.py", name), ()))
     return out
@@ -475,37 +476,43 @@ def cmd_dwork(a):
 # Projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over every
 # crafts/<craft>/projectors/project_<surface>.py, sorted by craft then surface, never hand-listed. The runner
 # loads the module and calls main() — every model and rendering decision is the projector's (S4).
+# D3 (#100, #99): keyed `craft/surface` — qualified by construction, so two crafts naming the same
+# surface coexist (the collision report #99 found, and the once-independent re-derivation
+# `crafts/sysarch/guards/registry.py` used to run against a bare-name registry); a bare surface
+# resolves through `cmd_project` when exactly one craft provides it, the convention `dyad check
+# --list`'s `<group>/<entity>` already uses — no new pattern.
 REGISTRY_FIELDS = ("surface", "craft", "module")
 NO_PROJECTOR = "no installed craft provides projectors (dyad craft install crafts/sysarch)"
 
-def projectors() -> tuple[dict[str, tuple[str, str]], list[str]]:
-    """({surface: (craft, repo-relative module path)}, problems): a surface two crafts provide is a failing
-    registry (listed once, under the first craft, with a problem line)."""
-    out, problems = {}, []
-    for py in dyadlib.projector_files(PKG):
-        surface, craft = py.stem.removeprefix("project_"), py.parents[1].name
-        if surface in out:
-            problems.append(f"surface {surface!r} provided by crafts/{out[surface][0]} and crafts/{craft}"); continue
-        out[surface] = (craft, str(py.relative_to(REPO)))
-    return out, problems
+def projectors() -> dict[str, tuple[str, str]]:
+    """{craft/surface: (craft, repo-relative module path)}: one entry per craft's own projector file."""
+    return {f"{py.parents[1].name}/{py.stem.removeprefix('project_')}": (py.parents[1].name, str(py.relative_to(REPO)))
+            for py in dyadlib.projector_files(PKG)}
 
-PROJECTORS = {s: rel for s, (c, rel) in projectors()[0].items()}   # surface -> module path (the reference guard reads it)
+PROJECTORS = {k: rel for k, (c, rel) in projectors().items()}   # craft/surface -> module path (the reference guard reads it)
+
+def _resolve_surface(reg: dict, token: str) -> tuple[str | None, list[str]]:
+    """`token` already qualified (`craft/surface`) resolves directly; a bare surface resolves when
+    exactly one craft provides it. Returns (key or None, the qualified candidates when ambiguous)."""
+    if token in reg:
+        return token, []
+    candidates = sorted(k for k in reg if k.split("/", 1)[-1] == token)
+    return (candidates[0], []) if len(candidates) == 1 else (None, candidates)
 
 def cmd_project(a):
-    reg, problems = projectors()
-    for m in problems:
-        print(f"FAIL [project] {m}", file=sys.stderr)
+    reg = projectors()
     if not a or a[0] == "--list":
-        for surface, (craft, rel) in sorted(reg.items()):
-            print(f"{surface:<12} {craft:<12} {rel}")
+        for key, (_craft, rel) in sorted(reg.items()):
+            print(f"{key:<20} {rel}")
         if not reg:
             print(f"no projector: {NO_PROJECTOR}")
-        return 1 if problems else 0
-    if problems:
-        return 1
-    if a[0] not in reg:
+        return 0
+    key, candidates = _resolve_surface(reg, a[0])
+    if key is None:
+        if candidates:
+            print(f"{a[0]!r} is provided by more than one craft: {', '.join(candidates)} — name one", file=sys.stderr); return 2
         print(f"no projector for {a[0]!r}: " + (f"registered: {' '.join(sorted(reg))}" if reg else NO_PROJECTOR), file=sys.stderr); return 2
-    return dyadlib.load_module(REPO / reg[a[0]][1], f"project_{a[0]}").main()
+    return dyadlib.load_module(REPO / reg[key][1], f"project_{key.replace('/', '_')}").main()
 
 def cmd_runbook(a):
     """Rule-19: the run-book CLI lives in scripts/runbook.py (core; the check it calls is the sysadmin

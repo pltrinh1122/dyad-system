@@ -37,9 +37,6 @@ craft_cli = dyadlib.load_module(dyadlib.PKG / "scripts" / "craft.py", "dyad_craf
 ops_scripts = dyadlib.find_guard("workstation", "ops_scripts")   # the sysadmin craft's guards: None when no craft provides them
 runbook_core = dyadlib.load_module(dyadlib.PKG / "scripts" / "runbook.py", "dyad_references_runbook")   # core: always present, core + instance run-books (#213)
 events = dyadlib.find_guard("workstation", "events")
-GUARD_KINDS = {"changelog.action->ops": ("ops_scripts", ops_scripts), "ops.dwork->row": ("ops_scripts", ops_scripts),
-               "ops.changelog->changelog": ("ops_scripts", ops_scripts),
-               "changelog.event->event": ("events", events)}          # kind -> (craft guard entity, module or None); event.command->command needs no craft (#213)
 provenance = dyadlib.load_guard("agent", "provenance")   # core guard: always present
 
 ENTITY, CORPUS, TRANSACTION = "reference", "agent", False
@@ -47,7 +44,13 @@ NAME, OWNER = "reference kind (register row)", "Rule-20"
 FIELDS = ("kind", "source", "field", "target", "resolver")     # one REFERENCES entry, minus its extractor
 NON_GUARD_SOURCES = {"rules", "registry", "cache", "pr", "incident", "craft_rule"}   # register sources that are not a guard's ENTITY: data files, the runner, The World, the incident log (no guard, plan #151), and a Tended craft's own rule text (#177)
 WORLD_TARGETS = {"file", "commit", "pr", "component"}           # targets that are not an entity of this surface
-CRAFT_ENTITIES = {"changelog", "ops", "command", "event"}        # entities the sysadmin craft's guards declare; absent on a core-only install, when the kinds naming them skip (#155)
+# Two surviving core rows (`changelog.dwork->row`, `event.command->command`) name an entity kind
+# only a craft's guard declares (sysadmin's `changelog`/`event`/`command`), by design — the kind
+# itself degrades to a runtime skip when that craft is absent (Rule-20 property 2), never a fail —
+# so the shape invariants below need this static allowance even on a core-only install, where no
+# guard supplies the name. Narrower than the retired `CRAFT_ENTITIES` (#155): "ops" dropped, it was
+# used only by the four rows Rule-11 property 2's contribution mechanism replaced (#101).
+CORE_ROWS_NAME_CRAFT_ENTITY = {"changelog", "event", "command"}
 table_rows, load_module = dyadlib.table_rows, dyadlib.load_module   # shared parsers (dyadlib owns them since #151)
 
 def generated_patterns(pkg: Path) -> list[str]:
@@ -89,8 +92,6 @@ _BASE = re.compile(r"(?i)base commit[^:\n]*:\s*([0-9a-f]{7,40})\b")
 _PKG_PATH = re.compile(r"`((?:dyad/|crafts/|\.github/workflows/dyad-)[^`]*)`")
 _PROVENANCE = re.compile(r"`(\.\./falsification/rules/[^`]+)`")
 PRE_LEDGER = "(pre-ledger)"
-_CL_KEY = re.compile(r'row "#(\d+) (H\d+)"')
-_EVENT = re.compile(r"\bevent:\s*`?([A-Za-z0-9][\w.-]*)`?")
 # A bare craft-name token in `refs` (d-work #22): the craft.py `_NAME` shape, minus digits — every
 # real craft name here is pure lower-case letters, and excluding digits is what keeps a
 # `workstation-NNN` cross-reference (same `_NAME` shape) from being read as a craft candidate.
@@ -313,22 +314,6 @@ def changelog_ids(c: Corpus):
 def incident_ids(c: Corpus):
     return _column_ids(c, c.incidents, c.rel(c.inst / "audits" / "INCIDENTS.md"), "d-work")
 
-def ops_paths(c: Corpus):
-    """Ops-script paths named in a change-log action (`<ops dir>/<name>.sh`, ops dir per `DYAD_OPS`)."""
-    header, rows = c.changelog
-    i = header.index("action") if "action" in header else None
-    if i is None:
-        return []
-    pat = re.compile(re.escape(c.rel(ops_scripts.ops_dir(c.root))) + r"/[\w.-]+\.sh")
-    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} action", m) for k, r in enumerate(rows) if len(r) > i for m in pat.findall(r[i])]
-
-def ops_dwork(c: Corpus):
-    return [(f"{c.rel(p)} # d-work:", t) for p, text in c.ops.items() for l in text.splitlines() if l.startswith("# d-work:") for t in hash_ids(l)]
-
-def changelog_key(c: Corpus):
-    return [(f"{c.rel(p)} # change-log:", f"#{m.group(1)} {m.group(2)}") for p, text in c.ops.items()
-            for l in text.splitlines() if l.startswith("# change-log:") for m in [_CL_KEY.search(l)] if m]
-
 def record_ledger(c: Corpus):
     """A falsification record's `ledger #N` citations, instance-authored only: flat, not under a
     `rules/` directory (vocabulary `falsification record`: "a Rule's record lives in `rules/` and
@@ -367,14 +352,6 @@ def event_commands(c: Corpus):
     d = events.events_dir(c.root)
     return [(f"{c.rel(d / f'{inst}.jsonl')} line {i} name", f"{inst}/{e.get('name', '')}")
             for inst, evs in sorted(c.events.items()) for i, e in enumerate(evs, 1)]
-
-def changelog_events(c: Corpus):
-    """`event: <id>` tokens in a change-log outcome cell (Rule-8 Conduct: the event is the row's evidence)."""
-    header, rows = c.changelog
-    i = header.index("outcome") if "outcome" in header else None
-    if i is None:
-        return []
-    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} outcome", m) for k, r in enumerate(rows) if len(r) > i for m in _EVENT.findall(r[i])]
 
 # ---- resolvers: (corpus, token) -> the target exists
 def row_exists(c: Corpus, t: str) -> bool:
@@ -445,21 +422,33 @@ REFERENCES = [
     ("frame.import->file",        "frame",      "@",             frame_files,       "file",       "guard:agent/frame.py"),
     ("preference.read_by->rule",  "preference", "read by",       preference_rules,  "rule",       rule_exists),
     ("changelog.dwork->row",      "changelog",  "d-work",        changelog_ids,     "row",        row_exists),
-    ("changelog.action->ops",     "changelog",  "action",        ops_paths,         "ops",        file_exists),
     ("incident.dwork->row",       "incident",   "d-work",        incident_ids,      "row",        row_exists),
-    ("ops.dwork->row",            "ops",        "d-work:",       ops_dwork,         "row",        row_exists),
-    ("ops.changelog->changelog",  "ops",        "change-log:",   changelog_key,     "changelog",  changelog_row_exists),
     ("record.ledger->row",        "record",     "ledger #",      record_ledger,     "row",        row_exists),
     ("rules.component->component","rules",      "component",     rules_components,  "component",  "guard:infra/manifest.py"),
     ("pr.body->row",              "pr",         "body",          None,              "row",        "guard:agent/prs.py"),
     ("registry.module->file",     "registry",   "module",        registry_modules,  "file",       file_exists),
     ("cache.source->path",        "cache",      "source:",       None,              "file",       "world"),
     ("event.command->command",    "event",      "name",          event_commands,    "command",    command_exists),
-    ("changelog.event->event",    "changelog",  "outcome",       changelog_events,  "event",      event_exists),
     ("record.ledger->provenance", "record",     "ledger #",      record_ledger_world, "row",      "world"),
     ("craft_rule.text->provenance","craft_rule", "text",          craft_rule_ledger, "row",        "world"),
     ("bundle.component->craft",   "bundle",     "component",     None,              "craft",      "guard:infra/bundle.py"),
 ]
+
+def craft_references_contrib(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple]]:
+    """[(craft, row)] — every installed craft's own `REFERENCES_CONTRIB` list (same 6-tuple shape
+    as a `REFERENCES` row), discovered via `dyadlib.guard_files()`'s craft half: a core-owned table
+    accepting a craft-shipped contribution, reported under the contributing craft's own name so the
+    row leaves when the craft does (Rule-11 property 2, `agent-corpus/falsification/extensibility.md`
+    #101). Unlike the retired `GUARD_KINDS` (#155), a contributed kind exists at all only when its
+    craft is installed, so there is nothing left to skip for an absent one."""
+    out = []
+    for py in dyadlib.guard_files(pkg):
+        if dyadlib.guard_key(py, pkg)[0] != "craft":
+            continue
+        craft = dyadlib.guard_key(py, pkg)[1]
+        mod = dyadlib.load_guard_file(py, pkg)
+        out += [(craft, row) for row in getattr(mod, "REFERENCES_CONTRIB", ())]
+    return out
 
 # crafts/syseng/rules/invariants.md: the register's facts, over its rows and the guard registry (package data, not the instance)
 def _entity_keys() -> set[str]:
@@ -485,9 +474,9 @@ INVARIANTS = [
     ("craft-set-is-craft-dirs", lambda: installed_crafts(dyadlib.PKG) == {p.name for p in dyadlib.craft_dirs(dyadlib.PKG)}),
     ("craft-names-not-literal", _no_craft_name_literal),
     ("kinds-unique", lambda: len({r[0] for r in REFERENCES}) == len(REFERENCES)),
-    ("sources-are-entity-keys", lambda: {r[1] for r in REFERENCES} <= _entity_keys() | NON_GUARD_SOURCES | CRAFT_ENTITIES),
-    ("targets-are-entity-keys-or-world-kinds", lambda: {r[4] for r in REFERENCES} <= _entity_keys() | WORLD_TARGETS | CRAFT_ENTITIES),
-    ("craft-entities-are-not-core", lambda: CRAFT_ENTITIES.isdisjoint(dyadlib.load_guard_file(py).ENTITY for py in dyadlib.guard_files() if dyadlib.guard_key(py)[0] == "core")),
+    ("sources-are-entity-keys", lambda: {r[1] for r in REFERENCES} <= _entity_keys() | NON_GUARD_SOURCES | CORE_ROWS_NAME_CRAFT_ENTITY),
+    ("targets-are-entity-keys-or-world-kinds", lambda: {r[4] for r in REFERENCES} <= _entity_keys() | WORLD_TARGETS | CORE_ROWS_NAME_CRAFT_ENTITY),
+    ("core-rows-craft-entity-not-core", lambda: CORE_ROWS_NAME_CRAFT_ENTITY.isdisjoint(dyadlib.load_guard_file(py).ENTITY for py in dyadlib.guard_files() if dyadlib.guard_key(py)[0] == "core")),
     ("resolver-shape", lambda: all(_resolver_ok(r[5]) for r in REFERENCES)),
     ("extractor-present-when-resolved-here", lambda: all(callable(r[3]) for r in REFERENCES if callable(r[5]))),
     # #177: a package/craft Rule's own ledger citations are historical provenance, not a reference
@@ -496,24 +485,37 @@ INVARIANTS = [
     ("package-ledger-kinds-stay-world", lambda: all(r[5] == "world" for r in REFERENCES
                                                      if r[0] in {"rule.text->row", "record.ledger->provenance", "craft_rule.text->provenance"})),
     ("instance-record-ledger-stays-checked", lambda: any(r[0] == "record.ledger->row" and callable(r[5]) for r in REFERENCES)),
+    # Rule-11 property 2's contribution mechanism, #101: a contributed row is shaped like a core one
+    # (resolvable, its own extractor) and never collides with a core kind name.
+    ("contrib-resolver-is-callable", lambda: all(callable(row[5]) for _craft, row in craft_references_contrib(dyadlib.PKG))),
+    ("contrib-kinds-disjoint-from-core", lambda: {row[0] for _craft, row in craft_references_contrib(dyadlib.PKG)}.isdisjoint({r[0] for r in REFERENCES})),
 ]
 
 def check(root: Path, pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
     """(references resolved, kinds resolved, messages). Messages start `FAIL `, `warn ` or `skip `;
-    a kind with a `guard:` resolver is listed only; `world` warns once; an empty target store skips."""
+    a kind with a `guard:` resolver is listed only; `world` warns once; an empty target store skips.
+    A craft-contributed kind (Rule-11 property 2, #101) joins the core register; one already
+    declared — by core or an earlier craft — fails, naming both sources, and its messages carry
+    its contributing craft's name."""
     c = Corpus(root, pkg)
     n_refs, n_kinds, msgs = 0, 0, []
-    for kind, _src, _field, extract, target, resolve in REFERENCES:
+    combined, kind_craft, kind_names = list(REFERENCES), {}, {r[0] for r in REFERENCES}
+    for craft, row in craft_references_contrib(pkg):
+        if row[0] in kind_names:
+            also = f"crafts/{kind_craft[row[0]]}" if row[0] in kind_craft else "core"
+            msgs.append(f"FAIL reference kind '{row[0]}' (crafts/{craft}): already declared by {also}")
+            continue
+        kind_names.add(row[0]); kind_craft[row[0]] = craft
+        combined.append(row)
+    for kind, _src, _field, extract, target, resolve in combined:
+        label = f"{kind} (crafts/{kind_craft[kind]})" if kind in kind_craft else kind
         if isinstance(resolve, str):
             if resolve == "world":
                 n = len(extract(c)) if extract else 0
-                msgs.append(f"warn {kind}: {n} reference(s) to {target}; unresolvable (The World), inference")
-            continue
-        if kind in GUARD_KINDS and GUARD_KINDS[kind][1] is None:
-            msgs.append(f"skip {kind}: guard sysadmin/{GUARD_KINDS[kind][0]} absent (no installed craft provides it)")
+                msgs.append(f"warn {label}: {n} reference(s) to {target}; unresolvable (The World), inference")
             continue
         if c.store_empty(target):
-            msgs.append(f"skip {kind}: {target} store is empty or absent")
+            msgs.append(f"skip {label}: {target} store is empty or absent")
             continue
         n_kinds += 1
         skipped_crafts, absent_crafts = False, {}          # one line per craft, never one per token (#167)
@@ -523,21 +525,21 @@ def check(root: Path, pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
                 if c.crafts_absent:
                     if not skipped_crafts:
                         what = "`crafts/…` tokens" if craft_path else "craft-name tokens"
-                        msgs.append(f"skip {kind}: {what}; no crafts/ tree is installed (a core-only install)"); skipped_crafts = True
+                        msgs.append(f"skip {label}: {what}; no crafts/ tree is installed (a core-only install)"); skipped_crafts = True
                     continue
                 state = c.craft_state(token)
                 if state and state[0] == "FAIL":           # installed-then-deleted: named per token, like any failure
                     n_refs += 1
-                    msgs.append(f"FAIL {kind}: {where} -> {token} does not resolve ({state[2]})")
+                    msgs.append(f"FAIL {label}: {where} -> {token} does not resolve ({state[2]})")
                     continue
                 if state:
                     entry = absent_crafts.setdefault(state[1], [state[0], state[2], 0]); entry[2] += 1
                     continue
             n_refs += 1
             if not resolve(c, token):
-                msgs.append(f"FAIL {kind}: {where} -> {token} does not resolve")
+                msgs.append(f"FAIL {label}: {where} -> {token} does not resolve")
         for severity, reason, n in absent_crafts.values():
-            msgs.append(f"{severity} {kind}: {reason}; {n} token(s) unresolved here")
+            msgs.append(f"{severity} {label}: {reason}; {n} token(s) unresolved here")
     return n_refs, n_kinds, msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:

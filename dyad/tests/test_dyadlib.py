@@ -32,6 +32,23 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dyadlib.ledger_rows("| 5 | too | short |\n")
 
+class SemverTests(unittest.TestCase):
+    """D2 (#100): one grammar, shared by the core and every Tended craft's VERSION check — strict
+    MAJOR.MINOR.PATCH, with an optional `+build` suffix a diverged, unreleased tree may carry."""
+    def test_plain_semver_matches(self):
+        self.assertTrue(dyadlib.SEMVER.fullmatch("1.2.3"))
+        self.assertTrue(dyadlib.SEMVER.fullmatch("0.0.1"))
+    def test_build_metadata_matches(self):
+        self.assertTrue(dyadlib.SEMVER.fullmatch("1.2.3+local.1"))
+        self.assertTrue(dyadlib.SEMVER.fullmatch("1.2.3+asg-1"))
+    def test_malformed_does_not_match(self):
+        for bad in ("1.2", "1.2.3.4", "v1.2.3", "1.2.3-rc1", ""):
+            self.assertFalse(dyadlib.SEMVER.fullmatch(bad), bad)
+    def test_semver_tuple_strips_build_suffix(self):
+        self.assertEqual(dyadlib.semver_tuple("1.2.3"), (1, 2, 3))
+        self.assertEqual(dyadlib.semver_tuple("1.2.3+local.1"), (1, 2, 3))
+        self.assertTrue(dyadlib.semver_tuple("1.2.3+z") == dyadlib.semver_tuple("1.2.3") < dyadlib.semver_tuple("1.3.0"))
+
 class PathTests(unittest.TestCase):
     def test_instance_default_and_override(self):
         root = Path("/r")

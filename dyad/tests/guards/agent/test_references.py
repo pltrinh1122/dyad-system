@@ -88,12 +88,16 @@ def fail_kinds(msgs):
     return {m[5:].split(":")[0] for m in msgs if m.startswith("FAIL ")}
 
 RESOLVABLE = {k for k, *_ , r in refint.REFERENCES if callable(r)}
-# Kinds whose parser is a sysadmin-craft guard run only where that craft is installed (Rule-20 property 2 skips them
-# elsewhere with one line each). The expected "ran" count and the sysadmin-kind tests derive from that (dyad-system #1).
-SYSADMIN = all(m is not None for _, m in refint.GUARD_KINDS.values())
-ABSENT_KINDS = {k for k, (_, m) in refint.GUARD_KINDS.items() if m is None}
-RUNNABLE = RESOLVABLE - ABSENT_KINDS
-needs_sysadmin = unittest.skipUnless(SYSADMIN, "the sysadmin craft's guards are not installed here; their kinds skip by design")
+# `event.command->command` (source `event`, kept core per #213 — it needs no craft) still reads
+# through `refint.events`, a module bound at import time to the *live* repo (`dyadlib.find_guard`'s
+# default pkg), not to a test fixture; its two tests need that module, whatever the fixture holds.
+needs_sysadmin = unittest.skipUnless(refint.events is not None, "the sysadmin craft's guards are not installed here")
+# Rule-11 property 2's contribution mechanism (#101) retired the four sysadmin-specific core rows
+# (`changelog.action->ops`, `ops.dwork->row`, `ops.changelog->changelog`, `changelog.event->event`)
+# in favor of the sysadmin craft declaring them itself via `REFERENCES_CONTRIB`; a contributed kind
+# exists at all only when its craft is installed (unlike the retired `GUARD_KINDS`, nothing is left
+# to skip for one that is not), so this fixture's own `RESOLVABLE` never needs an absent-craft carve-out.
+RUNNABLE = RESOLVABLE
 
 class Fixtured(unittest.TestCase):
     """A scratch corpus per test, with the `DYAD_*` locations off; holds no test of its own."""
@@ -135,8 +139,8 @@ class FixtureTests(Fixtured):
     def test_every_kind_resolves(self):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs)
-        self.assertEqual(k, len(RUNNABLE), "every resolvable kind ran (nothing skipped but an absent craft guard's)")
-        self.assertEqual({m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}, ABSENT_KINDS, msgs)
+        self.assertEqual(k, len(RUNNABLE), "every resolvable kind ran (this fixture installs no craft's REFERENCES_CONTRIB)")
+        self.assertEqual({m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}, set(), msgs)
         self.assertGreaterEqual(n, 40)
         world = [m for m in msgs if m.startswith("warn ")]
         self.assertEqual({m[5:].split(":")[0] for m in world}, {k for k, *_, r in refint.REFERENCES if r == "world"})
@@ -146,7 +150,7 @@ class FixtureTests(Fixtured):
 
     def test_register_shape(self):
         kinds = [r[0] for r in refint.REFERENCES]
-        self.assertEqual(len(kinds), 31); self.assertEqual(len(set(kinds)), 31, "one entry per kind")
+        self.assertEqual(len(kinds), 27); self.assertEqual(len(set(kinds)), 27, "one entry per kind")
         self.assertEqual(kinds[-3:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft"])   # #177, #196 appended; order stable
         for kind, src, field, ext, tgt, res in refint.REFERENCES:
             self.assertRegex(kind, r"^[a-z_]+\.[a-z_#]+->[a-z]+$")
@@ -155,7 +159,7 @@ class FixtureTests(Fixtured):
                 self.assertTrue((dyadlib.PKG / "guards" / res[6:]).exists(), f"{kind}: {res} names no guard module")
             self.assertTrue(ext is None or callable(ext), kind)
             self.assertTrue(callable(ext) or not callable(res), f"{kind}: a resolvable kind needs an extractor")
-        self.assertEqual(len(RESOLVABLE), 19)   # rule.text->row and record.ledger->row moved to `world` by source (#177); provenance.id->row (#164) unaffected; row.refs->craft added (#22)
+        self.assertEqual(len(RESOLVABLE), 15)   # rule.text->row and record.ledger->row moved to `world` by source (#177); provenance.id->row (#164) unaffected; row.refs->craft added (#22); 4 sysadmin-specific rows retired to REFERENCES_CONTRIB (#101, d-work #100)
 
     # one broken reference per resolvable kind, failing under its own kind name only
     def broken(self, mutate, kind):
@@ -226,21 +230,6 @@ class FixtureTests(Fixtured):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs); self.assertTrue(any(m.startswith("skip rule.text->path: `crafts/…` tokens") for m in msgs))
         self.assertEqual(k, len(RUNNABLE), "the kind still ran for its dyad/ tokens")
-    @needs_sysadmin
-    def test_absent_craft_guard_skips_its_kinds(self):
-        # #155 attack 6: a kind whose parser is a craft guard no installed craft provides skips with a line, never fails
-        saved = dict(refint.GUARD_KINDS)
-        try:
-            for kind, (ent, _) in saved.items(): refint.GUARD_KINDS[kind] = (ent, None)
-            n, k, msgs = self.check()
-            self.assertEqual(fail_kinds(msgs), set(), msgs)
-            skipped = {m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}
-            self.assertEqual(skipped, set(saved)); self.assertTrue(any("guard sysadmin/ops_scripts absent" in m for m in msgs))
-            self.assertEqual(k, len(RESOLVABLE) - len(saved))
-        finally:
-            refint.GUARD_KINDS.update(saved)
-        self.assertEqual(set(refint.GUARD_KINDS), {"changelog.action->ops", "ops.dwork->row", "ops.changelog->changelog", "changelog.event->event"})   # event.command->command needs no craft (#213)
-        self.assertTrue(all(m is not None for _, m in refint.GUARD_KINDS.values()), "the live repo has the sysadmin craft")
     def test_rule_text_glob_needs_a_match(self):
         self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "project_<surface>.py", "render_<surface>.py"), "rule.text->path")
     def test_rule_text_command_word_cut(self):
@@ -258,25 +247,12 @@ class FixtureTests(Fixtured):
         self.broken(lambda: self.rewrite(self.root / "preferences-corpus" / "PREFERENCES.md", "Rule-2 |", "Rule-5 |"), "preference.read_by->rule")
     def test_changelog_dwork(self):
         self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "| 2026-09-14 | #7 |", "| 2026-09-14 | #8 |"), "changelog.dwork->row")
-    @needs_sysadmin
-    def test_changelog_action_ops(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "ops/7-h1-x.sh` | as v1", "ops/7-h2-x.sh` | as v1"), "changelog.action->ops")
     def test_incident_dwork_range(self):
         self.broken(lambda: self.rewrite(self.inst / "audits" / "INCIDENTS.md", "#2-#3", "#2-#4"), "incident.dwork->row")
     def test_incident_pre_ledger_segment_is_not_a_reference(self):
         self.assertEqual(refint.hash_ids("#1–#3 (pre-ledger)"), [])
         self.assertEqual(refint.hash_ids("#2–#4, #9; PR #1 #5; was #6"), ["2", "3", "4", "9", "6"])
         self.assertEqual(refint.hash_ids("PRs #61 #62"), [])
-    @needs_sysadmin
-    def test_ops_dwork(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "ops" / "7-h1-x.sh", "# d-work: #7", "# d-work: #77"), "ops.dwork->row")
-    @needs_sysadmin
-    def test_ops_changelog_key(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "ops" / "7-h1-x.sh", '"#7 H1"', '"#7 H3"'), "ops.changelog->changelog")
-    def test_ops_changelog_key_matches_first_row_of_a_rerun(self):
-        # v1 and v2 rows share the key `#7 H1`; the key resolves while at least one remains
-        self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "| 2026-09-13 | #7 | reversible | H1, Operator-run", "| 2026-09-13 | #7 | reversible | H9, Operator-run")
-        self.assertEqual(fail_kinds(self.check()[2]), set())
     def test_record_ledger(self):
         self.broken(lambda: self.rewrite(self.inst / "falsification" / "gap.md", "Disposition: see ledger #7", "Disposition: see ledger #71"), "record.ledger->row")
     @needs_sysadmin
@@ -285,12 +261,6 @@ class FixtureTests(Fixtured):
     @needs_sysadmin
     def test_event_command_needs_the_instance_runbook(self):
         self.broken(lambda: (self.root / "workstation-corpus" / "runbooks" / "x.md").rename(self.root / "workstation-corpus" / "runbooks" / "y.md"), "event.command->command")
-    @needs_sysadmin
-    def test_changelog_event(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "event: x-20260914T120000Z-start", "event: x-20260914T120001Z-start"), "changelog.event->event")
-    def test_changelog_event_token_forms(self):
-        self.assertEqual(refint._EVENT.findall("ok; event: `x-1-a`, and event: y-2-b"), ["x-1-a", "y-2-b"])
-        self.assertEqual(refint._EVENT.findall("a ratification event: none"), ["none"])   # a word after `event:` is a token; the resolver decides
     def test_rules_components_read_beside_the_manifest_guard(self):
         (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text("Python: python3\n")
         self.assertEqual(refint.rules_components(refint.Corpus(self.root, self.pkg)), [("dyad/guards/infra/manifest_rules.txt", "Python")])
@@ -441,6 +411,55 @@ class CraftRefsTests(Fixtured):
         self.assertEqual([m for m in msgs if "row.refs->craft" in m], [])
 
 
+CONTRIB_GUARD = (
+    'ENTITY, CORPUS, TRANSACTION = "widget", "workstation", False\n'
+    'FIELDS = ("a",)\n'
+    'def check_package(root): return []\n'
+    'def widget_rows(c): return [("fixture", "ok")]\n'
+    'def widget_exists(c, t): return t == "ok"\n'
+    'REFERENCES_CONTRIB = [("widget.fixture->row", "widget", "fixture", widget_rows, "row", widget_exists)]\n'
+)
+
+
+class CraftReferencesContribTests(Fixtured):
+    """Rule-11 property 2's contribution mechanism (`agent-corpus/falsification/extensibility.md`
+    #101): a craft's own `REFERENCES_CONTRIB` (same 6-tuple shape as a core `REFERENCES` row) joins
+    the register, discovered via `dyadlib.guard_files()`'s craft half; a colliding kind name fails,
+    naming both sources; a contributed kind's messages carry its craft's name. This is the generic
+    mechanism the retired `GUARD_KINDS` special-case (#155) is replaced by — sysadmin's own move of
+    its four rows into `crafts/sysadmin/guards/*.py` is a separate, craft-zone d-work."""
+    def guard(self, craft, name, text):
+        d = self.root / "crafts" / craft / "guards"; d.mkdir(parents=True, exist_ok=True)
+        (d / f"{name}.py").write_text(text)
+
+    def test_no_guard_no_contribution(self):
+        self.assertEqual(refint.craft_references_contrib(self.pkg), [])
+
+    def test_contributed_kind_is_discovered_and_resolves(self):
+        self.guard("sysadmin", "widget", CONTRIB_GUARD)
+        rows = refint.craft_references_contrib(self.pkg)
+        self.assertEqual([(c, r[0]) for c, r in rows], [("sysadmin", "widget.fixture->row")])
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), set(), msgs)
+
+    def test_contributed_kind_failure_names_its_craft(self):
+        self.guard("sysadmin", "widget", CONTRIB_GUARD.replace('t == "ok"', 't == "nope"'))
+        n, k, msgs = self.check()
+        self.assertEqual([m for m in msgs if m.startswith("FAIL ")],
+                          ["FAIL widget.fixture->row (crafts/sysadmin): fixture -> ok does not resolve"])
+
+    def test_colliding_kind_name_fails_naming_both_sources(self):
+        self.guard("sysadmin", "widget", CONTRIB_GUARD.replace("widget.fixture->row", "row.refs->row"))
+        n, k, msgs = self.check()
+        self.assertIn("FAIL reference kind 'row.refs->row' (crafts/sysadmin): already declared by core", msgs)
+
+    def test_second_craft_colliding_with_first_craft_is_named(self):
+        self.guard("sysadmin", "a", CONTRIB_GUARD)
+        self.guard("sysarch", "b", CONTRIB_GUARD)
+        n, k, msgs = self.check()
+        self.assertTrue(any("already declared by crafts/sysadmin" in m for m in msgs), msgs)
+
+
 class ScratchInstallTests(unittest.TestCase):
     """Property 4: a package-only install (rows/ holding README only, no plans, empty templates)
     skips the row-target kinds with a line and fails nothing — the Rule-11 p5 CI path."""
@@ -458,7 +477,7 @@ class ScratchInstallTests(unittest.TestCase):
                     if v is not None: os.environ[kk] = v
             self.assertEqual(fail_kinds(msgs), set(), msgs)
             skipped = {m[5:].split(":")[0] for m in msgs if m.startswith("skip ")}
-            self.assertEqual(skipped, {kind for kind, *_, tgt, r in refint.REFERENCES if callable(r) and tgt in ("row", "changelog", "command", "event")} | ABSENT_KINDS)
+            self.assertEqual(skipped, {kind for kind, *_, tgt, r in refint.REFERENCES if callable(r) and tgt in ("row", "changelog", "command", "event")})
             self.assertTrue(any("row store is empty or absent" in m for m in msgs))
             self.assertEqual(k, len(RESOLVABLE) - len(skipped))
         finally:
@@ -469,8 +488,12 @@ class LiveTests(unittest.TestCase):
         root = dyadlib.repo_root()
         n, k, msgs = refint.check(root, dyadlib.PKG)
         self.assertEqual([m for m in msgs if m.startswith("FAIL ")], [])
+        # a craft's own REFERENCES_CONTRIB (Rule-11 property 2, #101) widens the resolvable set
+        # beyond the static core REFERENCES this file lists; robust whether or not one is installed.
+        contrib_resolvable = {row[0] for _craft, row in refint.craft_references_contrib(dyadlib.PKG) if callable(row[5])}
+        resolvable = RESOLVABLE | contrib_resolvable
         skipped = [m for m in msgs if m.startswith("skip ")]   # an empty event store (before the first run) skips its kinds
-        self.assertGreaterEqual(n, 300); self.assertEqual(k, len(RESOLVABLE) - len(skipped))
+        self.assertGreaterEqual(n, 300); self.assertEqual(k, len(resolvable) - len(skipped))
     def test_main_prints_ok_line(self):
         r = subprocess.run([sys.executable, str(Path(refint.__file__))], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)

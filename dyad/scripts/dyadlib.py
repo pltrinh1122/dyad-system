@@ -169,6 +169,17 @@ def craft_dirs(pkg: Path = PKG) -> list[Path]:
     d = crafts_dir(pkg)
     return sorted(p for p in d.iterdir() if p.is_dir() and (p / "VERSION").exists()) if d.is_dir() else []
 
+# One version grammar (Rule-11 property 4), shared by every craft, core included: strict
+# MAJOR.MINOR.PATCH, with an optional `+build` suffix for a locally-derived, unreleased tree — the
+# drift guard's own escape hatch (`dyad/guards/infra/bundle.py` check_drift): a craft whose tree has
+# diverged from its release tag under an unchanged VERSION says so honestly (`X.Y.Z+local`) rather
+# than colliding with whatever plain bump is later released under that number (D2, #100).
+SEMVER = re.compile(r"\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?")
+
+def semver_tuple(s: str) -> tuple[int, ...]:
+    """The comparable (major, minor, patch) of a SEMVER string, `+build` suffix stripped."""
+    return tuple(int(x) for x in s.strip().split("+", 1)[0].split("."))
+
 # Rule-8 host-action classes: the change-log row (Rule-8), a run-book command and its event (Rule-19)
 # each declare one; the three guards read this tuple.
 HOST_CLASSES = ("read-only", "reversible", "destructive")
@@ -404,4 +415,6 @@ INVARIANTS: list[Invariant] = [
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),
     ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS)),
+    ("semver-accepts-build-metadata", lambda: bool(SEMVER.fullmatch("1.2.3")) and bool(SEMVER.fullmatch("1.2.3+local.1")) and not SEMVER.fullmatch("1.2")),
+    ("semver-tuple-strips-build", lambda: semver_tuple("1.2.3+local.1") == (1, 2, 3)),
 ]

@@ -21,7 +21,7 @@ The guard composes the Rule-4 and Rule-6 scans by import (crafts/sysarch/rules/g
 import sys
 if sys.version_info < (3, 12):
     sys.exit("crafts.py: Python 3.12+ required")
-import re
+import io, re, subprocess, tarfile, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, distribute
@@ -31,8 +31,9 @@ NAME, OWNER = "craft", "Rule-11"
 DIRS = ("rules", "vocabulary", "templates", "guards", "docs", "falsification")
 FIELDS = ("name", "version", *DIRS, "requires", "seeds")
 INVARIANTS = [("dirs-distinct", lambda: len(set(DIRS)) == len(DIRS)),   # crafts/syseng/rules/invariants.md
-              ("fields-cover-dirs", lambda: set(DIRS) <= set(FIELDS) and FIELDS[:2] == ("name", "version"))]
-SEMVER = re.compile(r"\d+\.\d+\.\d+")
+              ("fields-cover-dirs", lambda: set(DIRS) <= set(FIELDS) and FIELDS[:2] == ("name", "version")),
+              ("semver-is-the-shared-grammar", lambda: SEMVER is dyadlib.SEMVER)]
+SEMVER = dyadlib.SEMVER   # one grammar, shared with the core's own VERSION check (D2, #100)
 CORE_NAME = "dyad-operator"                       # the name a `requires:` uses for the core craft
 DATA = Path(__file__).resolve().parent / "crafts_rules.txt"
 
@@ -48,8 +49,7 @@ def package_rules(pkg: Path, root: Path | None = None) -> dict[str, list[str]]:
     """Rule-11's own data plus the instance's local rows (dyadlib.package_rules, #192): the same markers the core scan uses."""
     return dyadlib.package_rules(pkg, root)
 
-def semver(s: str) -> tuple[int, ...]:
-    return tuple(int(x) for x in s.strip().split("."))
+semver = dyadlib.semver_tuple   # `+build` suffix stripped before comparing (D2, #100)
 
 def manifest(craft_dir: Path) -> dict[str, str]:
     f = Path(craft_dir) / "MANIFEST.md"
@@ -111,6 +111,84 @@ def unmet(repo: Path, craft_dir: Path) -> list[str]:
             out.append(f"requires {name}>={ver}: found {have}")
     return out
 
+def _floor_pkg(repo: Path, tag: str) -> Path | None:
+    """The whole `dyad/` tree as it stood at `tag`, extracted into a scratch root (`git archive`
+    piped through the stdlib `tarfile`, no new World dependency, Rule-14 property 2's kernel-only
+    path): a craft's guard and projector modules call their own `dyadlib.load_guard`/`load_module`
+    at import time to resolve sibling files, so a bare `dyadlib.py` alone made every one of them
+    fail to *load* against the floor rather than testing its invariants — noise, not signal. `None`
+    when the tag holds no `dyad/` (should not happen for a real release; named, not guessed at)."""
+    archive = subprocess.run(["git", "archive", tag, "--", "dyad"], cwd=repo, capture_output=True)
+    if archive.returncode != 0 or not archive.stdout:
+        return None
+    tmp = Path(tempfile.mkdtemp(prefix="dyad-floor-"))
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tf:
+        tf.extractall(tmp, filter="data")
+    pkg = tmp / "dyad"
+    return pkg if (pkg / "scripts" / "dyadlib.py").is_file() else None
+
+def _load_floor_dyadlib(floor_pkg: Path, tag: str):
+    slug = re.sub(r"[^0-9A-Za-z]+", "_", tag)
+    return dyadlib.load_module(floor_pkg / "scripts" / "dyadlib.py", f"dyad_floor_dyadlib_{slug}")
+
+def _load_against_floor(path: Path, name: str, floor_mod):
+    """`path` loaded fresh under `name`, with its own `import dyadlib` bound to `floor_mod` instead
+    of the live one — so an `INVARIANTS` list's lambdas, closed over the module's own `dyadlib`
+    global, evaluate against the floor tag's actual code (D1, #100)."""
+    prev = sys.modules.get("dyadlib")
+    sys.modules["dyadlib"] = floor_mod
+    try:
+        return dyadlib.load_module(path, name)
+    finally:
+        if prev is not None:
+            sys.modules["dyadlib"] = prev
+        else:
+            sys.modules.pop("dyadlib", None)
+
+def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list[str]:
+    """D1 (#100): for each `requires: dyad-operator>=X` whose tag `dyad-operator-vX` resolves
+    locally, re-run the craft's own guard and projector `INVARIANTS` against that tag's
+    `dyad/scripts/dyadlib.py` instead of the live one — the craft's own already-declared facts,
+    checked against the floor it actually claims. Refuted in the original report: deriving the
+    floor from a hand-maintained "feature added in version N" table just recreates the bug (a
+    second table to drift); this is the one check that can't drift from what the craft actually
+    needs. A false invariant fails; no local tag, or the blob absent there, is one skip line each —
+    the drift guard's own pattern (#91)."""
+    repo, d = Path(repo), Path(craft_dir); name = d.name; msgs = []
+    files = []
+    for sub in ("guards", "projectors"):
+        p = d / sub
+        if p.is_dir():
+            files += sorted(f for f in p.glob("*.py") if not f.name.startswith("_"))
+    for req_name, ver in requires(d):
+        if req_name != CORE_NAME:
+            continue
+        tag = f"{req_name}-v{ver}"
+        rp = subprocess.run(["git", "rev-parse", "-q", "--verify", f"{tag}^{{commit}}"], cwd=repo, capture_output=True, text=True)
+        if rp.returncode != 0:
+            msgs.append(f"warning: {name}: floor {req_name}>={ver}: no tag {tag} here (not yet released, or tags not fetched)")
+            continue
+        floor_pkg = _floor_pkg(repo, tag)
+        if floor_pkg is None:
+            msgs.append(f"warning: {name}: floor {req_name}>={ver}: {tag}:dyad/ not found")
+            continue
+        floor_mod = _load_floor_dyadlib(floor_pkg, tag)
+        slug = re.sub(r"[^0-9A-Za-z]+", "_", tag)
+        for py in files:
+            try:
+                mod = _load_against_floor(py, f"dyad_floor_{name}_{py.stem}_{slug}", floor_mod)
+            except Exception as e:
+                msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: does not load against floor {req_name}>={ver}: {e}")
+                continue
+            for inv_name, pred in dyadlib.invariants_of(mod):
+                try:
+                    ok = bool(pred())
+                except Exception:
+                    ok = False
+                if not ok:
+                    msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: floor {req_name}>={ver}: {inv_name} is false against {ver} — raise the floor")
+    return msgs
+
 def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=()) -> list[str]:
     """One craft: bare lines fail, `warning:` lines warn. `repo` is the tree the craft sits in (the repo, or a
     staged export); `others` are the other craft roots present (shared-word warning)."""
@@ -170,6 +248,7 @@ def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=())
     if (d / "rules").is_dir():
         msgs += dyadlib.load_guard("agent", "rules", pkg).check_tended(d / "rules", data()["agent-token"], rel_to=repo)
     msgs += [f"warning: {rel}: {u} (checked at install)" for u in unmet(repo, d)]
+    msgs += floor_problems(repo, d, pkg)
     return msgs
 
 def seed_status(repo: Path, craft_dir: Path) -> list[str]:

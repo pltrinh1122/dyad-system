@@ -145,10 +145,21 @@ def workflow_words(text: str) -> list[str]:
         i += 1
     return out
 
+def craft_python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
+    """Every installed craft's own guards/, tests/, scripts/ and projectors/ that exist — a
+    craft's Python files carry their own imports, discovered the same way the core's are
+    (Rule-11 property 2's craft-shipped contribution, `agent-corpus/falsification/extensibility.md` #101)."""
+    dirs = []
+    for c in dyadlib.craft_dirs(pkg):
+        dirs += [d for d in (c / "guards", c / "tests", c / "scripts", c / "projectors") if d.is_dir()]
+    return dirs
+
 def python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
-    """scripts/, every guards/<corpus>/, tests/ and every tests/guards/<corpus>/ that exists."""
+    """scripts/, every guards/<corpus>/, tests/ and every tests/guards/<corpus>/ that exists (core),
+    plus every installed craft's own (craft_python_dirs)."""
     dirs = [pkg / "scripts"] + sorted(d for d in (pkg / "guards").glob("*") if d.is_dir()) + [pkg / "tests"]
     dirs += sorted(d for d in (pkg / "tests" / "guards").glob("*") if d.is_dir()) + [pkg / "tests" / "guards"]
+    dirs += craft_python_dirs(pkg)
     return [d for d in dirs if d.is_dir()]
 
 def python_imports(pkg: Path = dyadlib.PKG) -> dict[str, list[str]]:
@@ -164,7 +175,7 @@ def python_imports(pkg: Path = dyadlib.PKG) -> dict[str, list[str]]:
     found: dict[str, list[str]] = {}
     for d in dirs:
         for p in sorted(d.glob("*.py")):
-            rel = str(p.relative_to(pkg))
+            rel = str(p.relative_to(pkg) if p.is_relative_to(pkg) else p.relative_to(pkg.parent))
             tree = ast.parse(p.read_text(errors="ignore"), filename=rel)
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
@@ -183,17 +194,26 @@ def python_imports(pkg: Path = dyadlib.PKG) -> dict[str, list[str]]:
     return found
 
 def scan(pkg: Path = dyadlib.PKG, workflows_dir: Path | None = None) -> dict[str, list[str]]:
-    """{token: [where, ...]} over scripts/, hooks/, *.sh and the dyad-* workflows."""
+    """{token: [where, ...]} over scripts/, hooks/, *.sh and the dyad-* workflows, plus every
+    installed craft's own guards/, scripts/ and *.sh (Rule-11 property 2's craft-shipped
+    contribution: a craft's own invocation tokens are discovered the same way the core's are)."""
     workflows_dir = workflows_dir if workflows_dir is not None else dyadlib.repo_root(pkg) / ".github" / "workflows"
     found: dict[str, list[str]] = {}
     def add(tok, where):
         if tok:
             found.setdefault(tok, []).append(where)
     files = sorted((pkg / "scripts").glob("*")) + sorted((pkg / "guards").glob("*/*")) + sorted((pkg / "hooks").glob("*")) + sorted(pkg.rglob("*.sh"))
+    for c in dyadlib.craft_dirs(pkg):
+        files += sorted((c / "guards").glob("*")) if (c / "guards").is_dir() else []
+        files += sorted((c / "scripts").glob("*")) if (c / "scripts").is_dir() else []
+        files += sorted((c / "projectors").glob("*")) if (c / "projectors").is_dir() else []
+        # templates/ is seed material for an instance file (Rule-11 property 2), never invoked by
+        # the craft itself, so it is excluded from this "what the package/craft invokes" scan.
+        files += [p for p in sorted(c.rglob("*.sh")) if not p.is_relative_to(c / "templates")]
     for p in files:
         if not p.is_file() or p.name.endswith((".txt", ".pyc")):
             continue
-        rel = str(p.relative_to(pkg)); text = p.read_text(errors="ignore")
+        rel = str(p.relative_to(pkg) if p.is_relative_to(pkg) else p.relative_to(pkg.parent)); text = p.read_text(errors="ignore")
         add(shebang(text), f"{rel}:1")
         if p.suffix == ".py":
             for t in python_calls(text):
@@ -243,12 +263,36 @@ def check(rows: list[tuple[str, ...]], rules: dict[str, list[str]], tokens: dict
             msgs.append(f"warning: '{comp}' declared but no token maps to it (add tokens or `-` in manifest_rules.txt)")
     return msgs
 
+def craft_infra_rows(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple[str, ...]]]:
+    """[(craft, row)] from every installed craft's own `infrastructure_contrib.md` (same six cells
+    as INFRASTRUCTURE.md, parsed by the same `parse_manifest`): a core-owned table accepting a
+    craft-shipped contribution, discovered like a guard (Rule-11 property 2,
+    `agent-corpus/falsification/extensibility.md` #101). Empty when a craft ships none."""
+    out = []
+    for c in dyadlib.craft_dirs(pkg):
+        f = c / "infrastructure_contrib.md"
+        if f.is_file():
+            out += [(c.name, row) for row in parse_manifest(f.read_text())]
+    return out
+
 def check_manifest(pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
-    """(components, tokens, messages) over the live package."""
-    rows = parse_manifest((pkg / "infrastructure" / "INFRASTRUCTURE.md").read_text())
+    """(components, tokens, messages) over the live package plus every installed craft's own
+    contributed rows. A contributed component already declared (by the core manifest or an
+    earlier craft) fails, naming both sources — a component leaves with its craft, so it is
+    never shared."""
+    core_rows = parse_manifest((pkg / "infrastructure" / "INFRASTRUCTURE.md").read_text())
     rules = load_rules(pkg / "guards" / "infra" / "manifest_rules.txt")
     tokens = scan(pkg)
-    return len(rows), len(tokens), check(rows, rules, tokens)
+    all_rows, msgs, seen = list(core_rows), [], {dyadlib.plain(r[0]): "the manifest" for r in core_rows}
+    for craft, row in craft_infra_rows(pkg):
+        comp = dyadlib.plain(row[0])
+        if comp in seen:
+            msgs.append(f"'{row[0]}' (crafts/{craft}/infrastructure_contrib.md): already declared by {seen[comp]}")
+            continue
+        seen[comp] = f"crafts/{craft}/infrastructure_contrib.md"
+        all_rows.append(row)
+    msgs += check(all_rows, rules, tokens)
+    return len(all_rows), len(tokens), msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     return check_manifest(pkg)[2]

@@ -142,6 +142,65 @@ class CraftGuardTests(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
 
 
+GUARD_W = ('ENTITY, CORPUS, TRANSACTION = "widget", "workstation", False\n'
+           'FIELDS = ("a",)\n'
+           'def check_package(root): return []\n'
+           'import dyadlib\n'
+           'INVARIANTS = [("widget-exists", lambda: getattr(dyadlib, "WIDGET", False))]\n')
+
+
+class FloorTests(unittest.TestCase):
+    """D1 (#100): a craft's own `INVARIANTS` re-run against the `requires:` floor tag's real code,
+    not a hand-maintained 'feature added in version N' table (refuted: that recreates the bug)."""
+    def setUp(self):
+        self.r = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init", "-q", str(self.r)], check=True)
+        subprocess.run(["git", "-C", str(self.r), "config", "user.email", "t@t"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "config", "user.name", "t"], check=True)
+        scripts = self.r / "dyad" / "scripts"; scripts.mkdir(parents=True)
+        (scripts / "dyadlib.py").write_text("PKG = None\n")   # v0.1.0: no WIDGET
+        subprocess.run(["git", "-C", str(self.r), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "commit", "-qm", "v0.1.0"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "dyad-operator-v0.1.0"], check=True)
+        (scripts / "dyadlib.py").write_text("PKG = None\nWIDGET = True\n")   # live: has WIDGET
+        subprocess.run(["git", "-C", str(self.r), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "commit", "-qm", "live"], check=True)
+        self.d = self.r / "crafts" / "fx"; (self.d / "guards").mkdir(parents=True)
+        (self.d / "VERSION").write_text("0.1.0\n")
+        (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=0.1.0\n")
+        (self.d / "guards" / "w.py").write_text(GUARD_W)
+    def tearDown(self):
+        shutil.rmtree(self.r, ignore_errors=True)
+    def test_floor_fails_when_invariant_is_false_at_the_tag(self):
+        msgs = cg.floor_problems(self.r, self.d)
+        self.assertEqual(msgs, ["crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor"])
+    def test_floor_holds_when_the_invariant_is_true_at_the_tag_too(self):
+        (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=0.1.0\n")
+        subprocess.run(["git", "-C", str(self.r), "tag", "-d", "dyad-operator-v0.1.0"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "dyad-operator-v0.1.0", "HEAD"], check=True)   # tag the commit that already has WIDGET
+        self.assertEqual(cg.floor_problems(self.r, self.d), [])
+    def test_no_local_tag_skips(self):
+        (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=9.9.9\n")
+        msgs = cg.floor_problems(self.r, self.d)
+        self.assertEqual(msgs, ["warning: fx: floor dyad-operator>=9.9.9: no tag dyad-operator-v9.9.9 here (not yet released, or tags not fetched)"])
+    def test_no_requires_is_silent(self):
+        (self.d / "MANIFEST.md").write_text("name: fx\n")
+        self.assertEqual(cg.floor_problems(self.r, self.d), [])
+    def test_hooked_into_check_craft(self):
+        # the fixture craft has no rules/, vocabulary/, templates/, docs/, falsification/ — enough
+        # to isolate floor_problems' own messages among check_craft's other fails
+        f = fails(cg.check_craft(self.r, self.d))
+        self.assertTrue(any("widget-exists is false against 0.1.0" in m for m in f), f)
+    def test_live_repo_no_local_stale_tag_skips_cleanly(self):
+        # the live sysarch/syseng/sysadmin crafts still declare the stale requires: dyad-operator
+        # >=0.2.0 (raised properly in a later, craft-zone d-work, #100 PR3-5); the tag is not fetched
+        # here, so this is a graceful skip, never a FAIL, on the repo as it stands today
+        root = dyadlib.repo_root()
+        if not (root / "crafts" / "sysarch").is_dir(): self.skipTest("no sysarch craft here")
+        msgs = cg.floor_problems(root, root / "crafts" / "sysarch")
+        self.assertTrue(all(m.startswith("warning:") for m in msgs), msgs)
+
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):
