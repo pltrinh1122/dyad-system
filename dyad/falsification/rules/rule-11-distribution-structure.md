@@ -197,3 +197,22 @@ count; the core is a component; a bumped `VERSION` skips; no tags skips; no comm
 prints `warn` for a skip and exits 0). Pairwise (Rule-5): 11–14 the guard shells to git only,
 the kernel; 11–20 the tag is not a Rule-20 reference (a World object resolved by git, not by the
 register). Others unchanged. Coherent, orthogonal. Disposition: see ledger #91.
+
+## Amendment — d-work #100 (2026-09-20, property 2's craft-contribution sentence)
+**Claim:** property 2's no-clash guarantee (an install writes only its own root) is enough; nothing
+about property 2 need say how a craft *contributes* to a table the core owns. Falsified by
+`agent-corpus/falsification/extensibility.md` (d-work #101): eight of ten craft-varying-data tables
+this repo owns have no craft-declared discovery path, and every one found in four days of
+downstream use (#51, #22/#196, #99/D3, D4, D2, D1, #46 vs #98) was answered by editing this repo's
+own tracked content instead. Disposed by the Operator's `Y` on #101's one-sentence proposal.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | This belongs in property 5 (the one code path) or property 1 (craft/instance split), not property 2. | Refuted | Property 2 already owns "what an install writes and does not overwrite" — the contribution sentence is the same shape one step further: what a craft may *add* to a table it does not own outright. Properties 5 and 1 are unaffected. |
+| 2 | The sentence is unfalsifiable prose with no guard behind it. | Refuted, by the plan it authorizes | d-work #100 (same reply this amendment lands in) builds three concrete instances — zone, World-dependency, and reference contribution — each discovered and merged, none hand-listing a craft. |
+| 3 | This reopens every core-owned table to craft data, including ones #101 found correctly closed. | Refuted | #101's own record scopes the sentence to categories (a)/(b) of its catalogue (8 of 10 rows) and names `STATES`/Agent-process Rules as excluded; #100's plan does not touch either. |
+
+Pairwise (Rule-5): 11–1 (craft/instance) unaffected — a contribution file is still the contributing
+craft's own tracked content, never instance; 11–5 (one code path) unaffected — contribution is
+discovery, the same primitive `dyadlib.craft_dirs` every existing mechanism already uses. Others
+unchanged. Coherent, orthogonal. Disposition: see ledger #100.

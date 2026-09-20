@@ -52,6 +52,9 @@ dyad system without clashes or hand-editing.
    templates corresponds to; `craft check`/`install` warn when the destination is absent —
    advisory only, never written by install (host-side hooks stay the core craft's only, above).
    The one command-line entrypoint is `dyad/bin/dyad`, invoked by path (its shape: `distribution.md`).
+   A core-owned table that holds craft-varying data accepts a craft-shipped contribution,
+   discovered like a guard and reported under the contributing craft's own name, so the data
+   leaves when the craft does (`agent-corpus/falsification/extensibility.md`, #101).
 3. **Craft-relative paths.** Craft files reference their own paths relative to the craft root, and
    instance paths through one instance location, `DYAD_INSTANCE` (default `agent-corpus`;
    `crafts/sysarch/rules/distribution.md`). Paths printed in Rule text are the defaults.
@@ -139,6 +142,8 @@ Property 7 added, property 4 reprefixed (#196, d-work #21): the core craft's tag
 the whole distribution — `v0.3.1`, `v0.3.2`, `v0.4.0` predate this and stay core-only tags, cut
 under the superseded convention, never retagged (tags do not move). See
 `../falsification/rules/rule-11-distribution-structure.md`, amendment #196. Property 4 gains its
-converse and the drift guard 2026-09-18 (d-work #91); see the same record, amendment #91.
+converse and the drift guard 2026-09-18 (d-work #91); see the same record, amendment #91. Property
+2 gains the craft-contribution sentence 2026-09-20 (d-work #100, per #101's survivor); see the same
+record, amendment #100.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
