@@ -34,9 +34,12 @@ a check.
    `dyad project surface` is a convenience that resolves when exactly one craft provides it, else
    lists the qualified candidates and exits 2 — the same convention `dyad check --list`'s
    `<group>/<entity>` already uses, no new pattern. `dyad project --list` prints `<craft/surface>
-   <path>`. Without any craft providing projectors the runner prints one line naming the install
-   (`dyad craft install crafts/sysarch`) and exits 2. Every data model and every rendering
-   decision lives in the projector (#71 S4).
+   <path>`. This line is a compatibility surface: tooling outside this repo may parse it (a
+   downstream craft's own CLI wrapper, #104), so a further change to its columns or separator is
+   falsified with that cost in view, not treated as a local formatting choice. Without any craft
+   providing projectors the runner prints one line naming the install (`dyad craft install
+   crafts/sysarch`) and exits 2. Every data model and every rendering decision lives in the
+   projector (#71 S4).
 5. *(Determinism: `crafts/syseng/rules/determinism.md` property 3; the twice-render test stays in
    every projector's test, property 2.)*
 

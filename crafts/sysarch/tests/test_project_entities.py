@@ -15,6 +15,7 @@ vocabulary, infrastructure, containment, rule_integrity, refint = G["vocabulary"
 # entities and guards are asserted only when installed; the sets below are derived from what is here, never literal.
 INSTALLED = {d.name for d in dyadlib.craft_dirs()}
 SYSADMIN, LANGIT = "sysadmin" in INSTALLED, "lan-git" in INSTALLED
+KNOWN_CRAFT_CORPUS = {"sysadmin": "workstation", "sysarch": "craft", "syseng": "craft", "lan-git": "craft"}   # #155, #160, #162, #181
 ops_scripts, runbook = G.get("ops_scripts"), G.get("runbooks")
 needs_sysadmin = unittest.skipUnless(SYSADMIN, "the sysadmin craft is not installed here; its entities are not on the surface")
 
@@ -202,7 +203,14 @@ class FixtureTests(unittest.TestCase):
             self.assertEqual(len({f.name for f in e.fields}), len(e.fields), f"{e.key}: duplicate field name")
             self.assertRegex(e.guard, r"^(guards/(agent|preferences|infra|craft)|crafts/[\w-]+/guards)/\w+\.py$")
             if e.guard.startswith("guards/"): self.assertEqual(e.corpus, e.guard.split("/")[1])
-            else: self.assertEqual(e.corpus, {"sysadmin": "workstation", "sysarch": "craft", "syseng": "craft", "lan-git": "craft"}[e.guard.split("/")[1]])   # a craft guard's corpus is its store's zone (#155; sysarch checks crafts/*, #160; syseng #162; lan-git #181)
+            else:
+                # a craft guard's corpus is its store's zone (#155; sysarch checks crafts/*, #160; syseng #162;
+                # lan-git #181): documented for the crafts here so a regression among them still fails, else any
+                # valid zone — never a KeyError for a craft this literal dict has not caught up to yet (#213
+                # d-work #46, #103; mirrors dyad/tests/test_package.py's KNOWN_CRAFTS/craft_guards() fallback)
+                craft = e.guard.split("/")[1]
+                if craft in KNOWN_CRAFT_CORPUS: self.assertEqual(e.corpus, KNOWN_CRAFT_CORPUS[craft])
+                else: self.assertIn(e.corpus, containment.ZONE_NAMES)
         self.assertEqual({e.guard for e in self.ents if e.guard.startswith("crafts/")},
                          ({f"crafts/sysadmin/guards/{n}.py" for n in ("changelog", "events", "ops_scripts", "runbooks")} if SYSADMIN else set())
                          | {"crafts/sysarch/guards/registry.py"} | {f"crafts/syseng/guards/{n}.py" for n in ("naming", "invariants", "tests")} | ({"crafts/lan-git/guards/image.py"} if LANGIT else set()))
