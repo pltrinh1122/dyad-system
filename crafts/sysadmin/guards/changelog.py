@@ -36,6 +36,43 @@ INVARIANTS = [("logged-classes-subset", lambda: set(LOGGED) <= set(CLASSES)),   
               ("optional-is-fields-suffix", lambda: FIELDS[len(FIELDS) - len(OPTIONAL):] == OPTIONAL)]
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DWORK = re.compile(r"^#\d+(\s*[,;]\s*#\d+)*$")
+_EVENT = re.compile(r"\bevent:\s*`?([A-Za-z0-9][\w.-]*)`?")
+
+# REFERENCES_CONTRIB (Rule-11 property 2's contribution mechanism, `agent-corpus/falsification/
+# extensibility.md` #101, d-work #100): rows the core register (`dyad/guards/agent/references.py`)
+# carried as `changelog.action->ops` and `changelog.event->event` until PR 2 of #100 retired them —
+# this craft declares its own now, discovered the same way a guard is. Each extractor takes the
+# same `Corpus` object the core register's own extractors do.
+def changelog_action_ops(c):
+    """`<ops dir>/<name>.sh` paths named in a change-log action cell."""
+    header, rows = c.changelog
+    i = header.index("action") if "action" in header else None
+    if i is None:
+        return []
+    ops = dyadlib.find_guard("workstation", "ops_scripts", c.pkg)
+    if ops is None:
+        return []
+    pat = re.compile(re.escape(c.rel(ops.ops_dir(c.root))) + r"/[\w.-]+\.sh")
+    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} action", m) for k, r in enumerate(rows) if len(r) > i for m in pat.findall(r[i])]
+
+def _ops_path_exists(c, t):
+    return (c.root / t).exists()
+
+def changelog_event_outcome(c):
+    """`event: <id>` tokens in a change-log outcome cell (Rule-8 Conduct: the event is the row's evidence)."""
+    header, rows = c.changelog
+    i = header.index("outcome") if "outcome" in header else None
+    if i is None:
+        return []
+    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} outcome", m) for k, r in enumerate(rows) if len(r) > i for m in _EVENT.findall(r[i])]
+
+def _event_id_exists(c, t):
+    return any(e.get("id") == t for evs in c.events.values() for e in evs)
+
+REFERENCES_CONTRIB = [
+    ("changelog.action->ops",  "changelog", "action",  changelog_action_ops,   "ops",   _ops_path_exists),
+    ("changelog.event->event", "changelog", "outcome", changelog_event_outcome, "event", _event_id_exists),
+]
 
 def changelog_path(root: Path) -> Path:
     return root / "workstation-corpus" / "CHANGELOG.md"

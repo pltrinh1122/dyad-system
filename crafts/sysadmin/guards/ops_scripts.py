@@ -42,6 +42,37 @@ INVARIANTS = [("headers-well-formed", lambda: all(h.startswith("# ") and h.endsw
               ("mins-positive", lambda: CONFIRM_MIN >= 1 and POSTCOND_MIN >= 1)]
 _FUNC_RE = re.compile(r"^\s*(?:function\s+)?postcondition\s*\(\s*\)\s*\{?|^\s*function\s+postcondition\b")
 _CONFIRM_RE = re.compile(r"^\s*(?:function\s+)?confirm\s*\(\s*\)\s*\{?|^\s*function\s+confirm\b")
+_DWORK_HASH = re.compile(r"#(\d+)\b")
+_CL_KEY = re.compile(r'row "#(\d+) (H\d+)"')
+
+# REFERENCES_CONTRIB (Rule-11 property 2's contribution mechanism, `agent-corpus/falsification/
+# extensibility.md` #101, d-work #100): rows the core register carried as `ops.dwork->row` and
+# `ops.changelog->changelog` until PR 2 of #100 retired them — this craft declares its own now.
+def ops_dwork(c):
+    """`# d-work: #N` header line of each ops script."""
+    return [(f"{c.rel(p)} # d-work:", t) for p, text in c.ops.items() for l in text.splitlines() if l.startswith("# d-work:") for t in _DWORK_HASH.findall(l)]
+
+def _row_id_exists(c, t):
+    return t.isdigit() and int(t) in c.rows
+
+def ops_changelog_key(c):
+    """`# change-log: ... row "#N Hk"` header line of each ops script."""
+    return [(f"{c.rel(p)} # change-log:", f"#{m.group(1)} {m.group(2)}") for p, text in c.ops.items()
+            for l in text.splitlines() if l.startswith("# change-log:") for m in [_CL_KEY.search(l)] if m]
+
+def _changelog_row_exists(c, t):
+    """`#N Hk`: at least one change-log row with d-work `#N` whose action starts `Hk` (re-runs share a key)."""
+    header, rows = c.changelog
+    if "d-work" not in header or "action" not in header:
+        return False
+    d, a = header.index("d-work"), header.index("action")
+    n, hk = t.split()
+    return any(len(r) > max(d, a) and r[d].strip() == n and re.match(rf"{hk}\b", r[a].strip()) for r in rows)
+
+REFERENCES_CONTRIB = [
+    ("ops.dwork->row",           "ops", "d-work:",     ops_dwork,        "row",       _row_id_exists),
+    ("ops.changelog->changelog", "ops", "change-log:", ops_changelog_key, "changelog", _changelog_row_exists),
+]
 
 def destructive_value(lines: list[str]) -> str | None:
     """Value of the `# destructive:` header, or None when absent."""
