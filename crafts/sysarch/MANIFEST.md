@@ -22,7 +22,11 @@ own code actually reads from `dyadlib`. `project_kanban.py`'s `columns-are-state
 (`set(COLUMNS) == dyadlib.STATES`) needs `archived`, which entered `dyadlib.STATES` at `0.6.0`
 (d-work #37) — a floor a craft can now hand nothing but its own already-declared `INVARIANTS`
 to verify, mechanically, against the tag's real code (`crafts.floor_problems`, no second
-hand-maintained "feature added in version N" table to drift from this one).
+hand-maintained "feature added in version N" table to drift from this one). D1 itself then caught
+a second, higher floor this same d-work introduces: `project_entities.py`'s `RELATIONS` now calls
+`references.craft_references_contrib`, which exists only from `dyad-operator` `0.8.0` on (this
+d-work's own core PR) — raised here rather than left for D1 to fail against once that release
+exists to check against.
 
 name: sysarch
-requires: dyad-operator>=0.6.0
+requires: dyad-operator>=0.8.0
