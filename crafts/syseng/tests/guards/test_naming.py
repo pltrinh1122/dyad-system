@@ -132,6 +132,25 @@ class ContribTests(unittest.TestCase):
         self.assertEqual(self.check({**GOOD, "fake/1.md": "x\n"}, pkg), [])   # not a row of `self.table`; still enforced
         msgs = self.check({**GOOD, "fake/bad.md": "x\n"}, pkg)
         self.assertIn("fake/bad.md: does not match `<fake>/<id>.md`", msgs[0])
+    def test_contributed_kind_rescues_a_path_a_native_kind_rejects(self):
+        # D4 (#100): the reported bug itself — a native kind selects and rejects a path; a
+        # contributed kind selecting the same path accepts it, rescuing it without a per-path
+        # `allow:` line. Distinct from the case above (a shape no native kind touches at all).
+        native = [("dyad/rules/RULE-<n>-<slug>.md", "dyad/rules/*", r"dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md")]
+        contrib = [("dyad/rules/<legacy>.md", "dyad/rules/*", r"dyad/rules/[a-z]+\.md")]
+        msgs, used = naming.check_kinds(["dyad/rules/legacy.md"], native, contrib, {}, "agent-corpus", Path("."))
+        self.assertEqual(msgs, [])
+    def test_native_conjunction_holds_absent_a_rescuing_contribution(self):
+        native = [("dyad/rules/RULE-<n>-<slug>.md", "dyad/rules/*", r"dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md")]
+        msgs, used = naming.check_kinds(["dyad/rules/legacy.md"], native, [], {}, "agent-corpus", Path("."))
+        self.assertTrue(any("does not match" in m for m in msgs), msgs)
+    def test_two_native_kinds_stay_conjunctive(self):
+        # attack found live: a broad native catch-all and a narrower native kind both selecting
+        # the same path must both accept it (disjunction must not leak between two native kinds)
+        broad = ("broad", "dyad/rules/*", r"dyad/rules/.+")
+        narrow = ("narrow", "dyad/rules/*", r"dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md")
+        msgs, used = naming.check_kinds(["dyad/rules/legacy.md"], [broad, narrow], [], {}, "agent-corpus", Path("."))
+        self.assertTrue(any("does not match" in m for m in msgs), msgs)
     def test_craft_absent_means_its_rows_are_simply_gone(self):
         # the same tree, no contributing craft installed: `fake/1.md` matches no kind at all — never
         # checked, never stale, the opposite of a native row's fate when its craft leaves
@@ -156,7 +175,7 @@ class ContribTests(unittest.TestCase):
         item 3, plan #15): `<receiver>` is one of the two syseng guards that support contribution."""
         r = naming.load_rules()   # the real, live naming_rules.txt
         paths = ["crafts/sysadmin/guards/naming_contrib.txt", "crafts/sysadmin/guards/invariants_contrib.txt", "crafts/sysadmin/guards/bogus_contrib.txt"]
-        msgs, _used = naming.check_kinds(paths, r["kind"], {}, "agent-corpus", dyadlib.repo_root())
+        msgs, _used = naming.check_kinds(paths, r["kind"], [], {}, "agent-corpus", dyadlib.repo_root())
         self.assertFalse(any("naming_contrib.txt" in m or "invariants_contrib.txt" in m for m in msgs), msgs)
         self.assertTrue(any("bogus_contrib.txt" in m for m in msgs), msgs)
 
@@ -212,7 +231,7 @@ class GeneratedPathTests(unittest.TestCase):
         r = naming.load_rules()   # the real naming_rules.txt (module default DATA), the ops kind included
         paths = naming.tree_paths(root)
         self.assertNotIn("workstation-corpus/ops/213-h1-x.log", paths)
-        msgs, _used = naming.check_kinds(paths, r["kind"], dict(r["allow"]), naming.instance_rel(root), root)
+        msgs, _used = naming.check_kinds(paths, r["kind"], [], dict(r["allow"]), naming.instance_rel(root), root)
         self.assertEqual([m for m in msgs if "213-h1-x.log" in m], [], msgs)
 
 

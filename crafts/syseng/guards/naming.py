@@ -153,25 +153,55 @@ def top_names(py: Path) -> set[str]:
     return names
 
 # ---- checks
-def check_kinds(paths: list[str], kinds, allow: dict[str, str], inst: str, root: Path) -> tuple[list[str], set[str]]:
-    """(messages, paths an allow line covered). Each selected path matches its kind's regex or is allowed."""
+def _compile_kinds(kinds, inst: str):
+    return [(pattern, regex, glob_re(glob.replace("<instance>", inst)), re.compile("^" + regex.replace("<instance>", re.escape(inst)) + "$"))
+            for pattern, glob, regex in kinds]
+
+def check_kinds(paths: list[str], native, contrib, allow: dict[str, str], inst: str, root: Path) -> tuple[list[str], set[str]]:
+    """(messages, paths an allow line covered). Native kinds stay conjunctive among themselves — a
+    narrow native pattern still sharpens a broader native one, unchanged (attack: an early
+    disjunctive-among-everyone draft let the repo's own broad `crafts/<craft>/` catch-all silently
+    validate anything a narrower native `<receiver>_contrib.txt` kind specifically rejected).
+    A contributed kind *rescues* a path only when the selecting native kinds do not all accept it —
+    a craft may widen a native shape without a per-path `allow:` line for every case (D4, #100: the
+    merge already read as "a path is valid if some kind accepts it"; the checking loop required
+    every matching kind, native and contributed alike, to agree, so a widening `kind:` contribution
+    parsed but was inert). A path only contributed kinds select (no native kind touches it) needs
+    every one of those to accept, mirroring how a native-only path is judged. id-uniqueness and a
+    `beside` group are checked only for the kinds that actually validated a given path. Fails only
+    when nothing validates the path and no allow line covers it, naming every pattern tried."""
+    native_c, contrib_c = _compile_kinds(native, inst), _compile_kinds(contrib, inst)
     msgs, used = [], set()
-    for pattern, glob, regex in kinds:
-        sel, rx = glob_re(glob.replace("<instance>", inst)), re.compile("^" + regex.replace("<instance>", re.escape(inst)) + "$")
-        ids: dict[str, str] = {}
-        for p in paths:
-            if not sel.match(p):
-                continue
-            m = rx.match(p)
+    ids: dict[str, dict[str, str]] = {}
+    for p in paths:
+        sel_native = [(pattern, regex, rx.match(p)) for pattern, regex, sel, rx in native_c if sel.match(p)]
+        sel_contrib = [(pattern, regex, rx.match(p)) for pattern, regex, sel, rx in contrib_c if sel.match(p)]
+        if not sel_native and not sel_contrib:
+            continue
+        if sel_native:
+            valid = all(m for _p, _r, m in sel_native)
+            accepted = sel_native if valid else sel_contrib
+            if not valid and any(m for _p, _r, m in sel_contrib):
+                valid = True
+        else:
+            valid = all(m for _p, _r, m in sel_contrib)
+            accepted = sel_contrib
+        if not valid:
+            if p in allow:
+                used.add(p)
+            else:
+                tried = ", ".join(f"`{pattern}` ({regex})" for pattern, regex, _m in sel_native + sel_contrib)
+                msgs.append(f"{p}: does not match {tried}")
+            continue
+        for pattern, _regex, m in accepted:
             if not m:
-                if p in allow:
-                    used.add(p); continue
-                msgs.append(f"{p}: does not match `{pattern}` ({regex})"); continue
+                continue
             gd = m.groupdict()
             if gd.get("id") is not None:
-                if gd["id"] in ids:
-                    msgs.append(f"{p}: id {gd['id']!r} already used by {ids[gd['id']]} (`{pattern}`)")
-                ids.setdefault(gd["id"], p)
+                d = ids.setdefault(pattern, {})
+                if gd["id"] in d:
+                    msgs.append(f"{p}: id {gd['id']!r} already used by {d[gd['id']]} (`{pattern}`)")
+                d.setdefault(gd["id"], p)
             if gd.get("beside") is not None and not (root / Path(p).parent / f"{gd['beside']}.py").exists():
                 msgs.append(f"{p}: no {Path(p).parent}/{gd['beside']}.py beside it (`{pattern}`)")
     return msgs, used
@@ -279,10 +309,10 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path 
     for _craft, cr in contrib:
         allow |= dict(cr["allow"])
     inst = instance_rel(root)
-    all_kinds = r["kind"] + [k for _c, cr in contrib for k in cr["kind"]]
+    contrib_kinds = [k for _c, cr in contrib for k in cr["kind"]]
     all_modes = r["mode"] + [k for _c, cr in contrib for k in cr["mode"]]
     all_symbols = r["symbol"] + [s for _c, cr in contrib for s in cr["symbol"]]
-    m, used = check_kinds(paths, all_kinds, allow, inst, root)
+    m, used = check_kinds(paths, r["kind"], contrib_kinds, allow, inst, root)
     pats = table_patterns(table)
     # check_table stays native-only (F3, plan #15): a contributed pattern's table row lives in the
     # contributing craft's own rule, not rules/naming.md
