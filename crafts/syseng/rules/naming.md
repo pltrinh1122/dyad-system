@@ -100,6 +100,18 @@ mechanism (d-work #15):
   its own contributed file — moving it is that craft's own d-work, not syseng's, since the rows to
   delete live in this repo's crafts and syseng cannot know their new home until it exists.
 
+**Contributed `kind:` widening (D4, #100).** A path is valid when every *selecting* native kind
+(one whose glob matches it) accepts it by regex — native kinds stay conjunctive among themselves,
+so a narrow native pattern still sharpens a broader native one (the repo's own
+`crafts/<craft>/guards/<receiver>_contrib.txt` kind narrows the broader `crafts/<craft>/`
+catch-all this way; disjunction must never leak between two native kinds). A contributed kind
+*rescues* a path only when the selecting native kinds do not all accept it: a craft may widen a
+native shape — one it needs but a native pattern alone rejects — without a per-path `allow:` line
+for every instance of that shape. A path only contributed kinds select (no native kind touches it
+at all) needs every one of those to accept, the same as a native-only path. Tightening a native
+pattern is not supported by this mechanism — no installed craft needs it, and `naming.md` stays
+the place to tighten a native pattern directly.
+
 ## Inference, stated
 Whether a name is *apt* is inference. The rows marked *no* are checked elsewhere or not at all,
 as the column says.

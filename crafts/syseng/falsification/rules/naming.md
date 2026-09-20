@@ -44,4 +44,22 @@ gaining a new checkable capability), and keeps one record per Rule rather than s
 
 Disposition: see ledger #15.
 
+## Amendment — d-work #100 (2026-09-20, D4: contributed `kind:` widening)
+**Claim:** a path is valid when at least one selecting kind accepts it, so a contributed `kind:`
+row can widen a native pattern instead of needing a per-path `allow:` line for every shape the
+native pattern alone rejects.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 100.1 | Applying disjunction to *every* selecting kind, native pairs included, is the simplest reading — try it first. | **Confirmed**, then fixed before merge | Live repo evidence: the native `crafts/<craft>/` catch-all (broad) and `crafts/<craft>/guards/<receiver>_contrib.txt` (narrow, rejects an unrecognized receiver like `bogus`) both select the same path; blanket disjunction let the broad kind silently validate what the narrow one specifically rejected — `test_contrib_file_name_pattern_over_the_live_table` caught it (`msgs` came back empty for `bogus_contrib.txt`) before this PR was opened. |
+| 100.2 | Restricting disjunction to native-vs-contributed pairs, keeping native kinds conjunctive among themselves, fixes attack 1 without losing the widening the report asked for. | Confirmed, tested | `check_kinds(paths, native, contrib, ...)`: every selecting native kind must accept (unchanged); a selecting contributed kind rescues only when that native conjunction fails. `test_two_native_kinds_stay_conjunctive`, `test_contributed_kind_rescues_a_path_a_native_kind_rejects`. |
+| 100.3 | A path only contributed kinds select (no native kind touches it at all) needs a third rule, not covered by attack 2's native-vs-contributed framing. | Confirmed | Treated the same as a native-only path: every selecting contributed kind must accept — `test_contributed_kind_is_honoured_without_a_table_row`'s own negative case already covered this; unchanged by this amendment. |
+| 100.4 | Disjunctive naming could hide a genuinely wrong path if two *kinds* both wrongly accept it. | Survives, scoped | True in principle for two kinds — native or contributed — that happen to agree wrongly; no installed craft's `naming_contrib.txt` demonstrates it, and the failure message still lists every pattern tried for a path nothing accepts. |
+
+Measured cost this amendment removes (the original report): expressing three shapes (a craft
+`schema/` directory, multi-word surface filenames, one env var) took 29 `allow:` lines across
+three crafts where 3 `kind:` rows would have said it once.
+
+Disposition: see ledger #100.
+
 Disposition: see ledger #162.
