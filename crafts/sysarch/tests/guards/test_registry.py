@@ -32,11 +32,14 @@ class Projectors(unittest.TestCase):
         root = fixture({**GOOD, "crafts/b/projectors/project_erd.py": "x = 1\n"})
         self.addCleanup(shutil.rmtree, root)
         self.assertEqual(registry.check_projectors(root, registry.projectors(root)), ["crafts/b/projectors/project_erd.py: defines no main() (projection.md p4)"])
-    def test_two_crafts_one_surface_fails(self):
+    def test_two_crafts_one_surface_coexist(self):
+        # D3 (#100, #99): craft/surface is collision-free by construction — two crafts naming the
+        # same surface both pass, distinguished only by their own module path
         root = fixture({**GOOD, "crafts/a/projectors/project_erd.py": "def main():\n    return 0\n", "crafts/a/tests/test_project_erd.py": "# t\n"})
         self.addCleanup(shutil.rmtree, root)
-        fails = registry.check_projectors(root, registry.projectors(root))
-        self.assertEqual(fails, ["surface 'erd' provided by crafts/a and crafts/b (projection.md p4: one craft per surface)"])
+        ps = registry.projectors(root)
+        self.assertEqual(sorted((p["craft"], p["surface"]) for p in ps), [("a", "erd"), ("a", "zed"), ("b", "erd")])
+        self.assertEqual(registry.check_projectors(root, ps), [])
 
 class Entities(unittest.TestCase):
     def test_leaves_parsed_from_the_rule(self):

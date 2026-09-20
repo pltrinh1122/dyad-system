@@ -26,12 +26,16 @@ LEAVES_RULE = Path(__file__).resolve().parents[1] / "rules" / "references.md"
 _MAIN = re.compile(r"^def main\(", re.M)
 _TICK = re.compile(r"`([a-z_]+)`")
 
-def projectors(root: Path) -> list[dict]:
-    """Every `crafts/<craft>/projectors/project_<surface>.py` of `root`, sorted by craft then surface (the
-    runner's discovery order, `projection.md` p4), as {surface, craft, module, test} with repo-relative paths."""
-    root = Path(root); out = []
-    crafts = root / "crafts"
-    for py in sorted(crafts.glob("*/projectors/project_*.py")) if crafts.is_dir() else []:
+def projectors(root: Path, pkg: Path | None = None) -> list[dict]:
+    """Every `crafts/<craft>/projectors/project_<surface>.py` under `root`, via `dyadlib.projector_files`
+    — the one shared, parameterized discovery primitive the core runner's own registry
+    (`package.projectors()`) also calls — as {surface, craft, module, test}. Craft/surface is
+    collision-free by construction (D3, #100/#99), so this craft's own duplicate "one craft per
+    surface" check (independently re-derived, the bug the report found) is retired: nothing left
+    to enforce twice. `pkg` defaults to `<root>/dyad`, the core craft's conventional location."""
+    root = Path(root); pkg = Path(pkg) if pkg is not None else root / "dyad"
+    out = []
+    for py in dyadlib.projector_files(pkg):
         craft, surface = py.parents[1].name, py.stem.removeprefix("project_")
         test = py.parents[1] / "tests" / f"test_{py.stem}.py"
         out.append({"surface": surface, "craft": craft, "module": str(py.relative_to(root)), "test": str(test.relative_to(root))})
@@ -46,15 +50,14 @@ def leaves(rule: Path = LEAVES_RULE) -> set[str]:
     return set(_TICK.findall(m.group(1))) if m else set()
 
 def check_projectors(root: Path, entries: list[dict]) -> list[str]:
-    root = Path(root); fails, seen = [], {}
+    """Test present, main defined. No collision check: craft/surface is collision-free by
+    construction (D3, #100/#99) — the core registry's own key, not re-derived here."""
+    root = Path(root); fails = []
     for e in entries:
         if not (root / e["test"]).exists():
             fails.append(f"{e['module']}: no {e['test']} (projection.md p2)")
         if not _MAIN.search((root / e["module"]).read_text(errors="ignore")):
             fails.append(f"{e['module']}: defines no main() (projection.md p4)")
-        if e["surface"] in seen:
-            fails.append(f"surface {e['surface']!r} provided by crafts/{seen[e['surface']]} and crafts/{e['craft']} (projection.md p4: one craft per surface)")
-        seen.setdefault(e["surface"], e["craft"])
     return fails
 
 def check_entities(entities: dict[str, str], referenced: set[str], leaf: set[str]) -> list[str]:
@@ -76,7 +79,7 @@ def referenced_keys(pkg: Path) -> set[str]:
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = Path(root or dyadlib.repo_root())
-    fails = check_projectors(root, projectors(root))
+    fails = check_projectors(root, projectors(root, pkg))
     try:
         fails += check_entities(core_entities(pkg), referenced_keys(pkg), leaves())
     except FileNotFoundError as e:   # no core guards / no reference guard under pkg: nothing to check
@@ -84,11 +87,11 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     return fails
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
-    ps = projectors(Path(root or dyadlib.repo_root()))
+    ps = projectors(Path(root or dyadlib.repo_root()), pkg)
     return f"{len(ps)} projectors in {len({p['craft'] for p in ps})} craft(s)"
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
-    ps = projectors(root); ex = ps[0] if ps else {}
+    ps = projectors(root, pkg); ex = ps[0] if ps else {}
     return {"store": "crafts/<craft>/projectors/project_<surface>.py", "parser": "`registry.projectors`", "observed": len(ps),
             "note": "one entry per projector file, discovered; test present, main defined, one craft per surface; core entities reachable on the entities surface or listed as leaves",
             "fields": [("surface", "text", "the name after `project_`; `dyad project <surface>`", True, ex.get("surface", ""), "registry.FIELDS"),
