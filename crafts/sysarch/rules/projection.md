@@ -27,12 +27,16 @@ a check.
    on the same corpus state — `crafts/syseng/rules/determinism.md` (properties 1–3; lifted from
    here by #162). The Operator views a projection by opening the file or through the harness's
    artifact surface.
-4. **A registry, discovered.** The core runner discovers `crafts/*/projectors/project_<surface>.py`
-   (sorted by craft, then surface); `dyad project <surface>` loads the module and calls its
-   `main`, `dyad project --list` prints `<surface> <craft> <path>`. A surface provided by two
-   crafts is a failing registry. Without any craft providing projectors the runner prints one line
-   naming the install (`dyad craft install crafts/sysarch`) and exits 2. Every data model and every
-   rendering decision lives in the projector (#71 S4).
+4. **A registry, discovered, keyed by craft.** The core runner discovers
+   `crafts/*/projectors/project_<surface>.py` (sorted by craft, then surface), keyed
+   `craft/surface` (D3, #100/#99): one craft per **qualified** surface, collision-free by
+   construction. `dyad project craft/surface` loads the module and calls its `main`; a bare
+   `dyad project surface` is a convenience that resolves when exactly one craft provides it, else
+   lists the qualified candidates and exits 2 — the same convention `dyad check --list`'s
+   `<group>/<entity>` already uses, no new pattern. `dyad project --list` prints `<craft/surface>
+   <path>`. Without any craft providing projectors the runner prints one line naming the install
+   (`dyad craft install crafts/sysarch`) and exits 2. Every data model and every rendering
+   decision lives in the projector (#71 S4).
 5. *(Determinism: `crafts/syseng/rules/determinism.md` property 3; the twice-render test stays in
    every projector's test, property 2.)*
 

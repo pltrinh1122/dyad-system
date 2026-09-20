@@ -47,11 +47,16 @@ class Entity:
 
 # Relations: (entity, anchor, target) — the entity an anchor's value names. An anchor is one of the
 # entity's parsed field names, or a `<token>` of its store path (`<id>`). The set is the Rule-20
-# register (`references.REFERENCES`, property 5): the projector holds no table of its own; a triple
-# whose anchor or target is not on this surface is dropped, so the edges drawn are the ones the
-# guard resolves. One anchor may name two targets (`row.refs` -> row and rule), hence triples.
-RELATIONS = {(src, anchor, tgt) for _kind, src, anchor, _ext, tgt, _res in references.REFERENCES}
-INVARIANTS = [("relations-from-register", lambda: bool(RELATIONS) and {(s, a, t) for s, a, t in RELATIONS} == {(r[1], r[2], r[4]) for r in references.REFERENCES})]   # crafts/syseng/rules/invariants.md
+# register: core `references.REFERENCES` plus every installed craft's own `REFERENCES_CONTRIB`
+# (Rule-11 property 2's contribution mechanism, #101, d-work #100) — the projector holds no table
+# of its own; a triple whose anchor or target is not on this surface is dropped, so the edges drawn
+# are the ones the guard resolves. One anchor may name two targets (`row.refs` -> row and rule),
+# hence triples.
+def _register_relations():
+    return ({(r[1], r[2], r[4]) for r in references.REFERENCES}
+            | {(row[1], row[2], row[4]) for _craft, row in references.craft_references_contrib(dyadlib.PKG)})
+RELATIONS = _register_relations()
+INVARIANTS = [("relations-from-register", lambda: bool(RELATIONS) and RELATIONS == _register_relations())]   # crafts/syseng/rules/invariants.md
 
 def collect(root: Path, pkg: Path = dyadlib.PKG, guards_pkg: Path = dyadlib.PKG) -> list[Entity]:
     """One entity per guard of `guards_pkg` (the registry, sysarch guards.md), described over the instance under

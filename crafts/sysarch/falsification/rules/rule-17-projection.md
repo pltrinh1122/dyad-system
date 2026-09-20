@@ -51,3 +51,23 @@ keeps the viewing sentence and cites the craft, p5 is a pointer. The projectors'
 now declares `INVARIANTS` (`project_erd.KINDS` distinct, `project_schema.LABELS`/`LAYERS` distinct, `project_entities.RELATIONS`
 equal to the register, `project_events.COLUMNS` ⊆ `EVENT_FIELDS`) and the entities surface shows an invariants column.
 Disposition: see ledger #162.
+
+## Amendment — d-work #100 (2026-09-20, D3: craft/surface, one collision check)
+
+**Finding (#99, then #100's downstream report):** a bare surface name is the only craft-owned
+namespace of this repo not qualified by craft (guards are `<craft>/<entity>`, craft vocabulary is
+`<craft>:term`), and the "one craft per surface" refusal it needs was implemented *twice*, from two
+independent sources: the core runner's own registry (`package.projectors()`) and this craft's guard
+(`registry.py`, re-globbing `crafts/*/projectors/`). Fixing one side's keying alone did not silence
+the other's failure — verified before attempting the narrower fix.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Qualifying the key (`craft/surface`) just moves the collision to the CLI: two crafts still fight over the bare `dyad project <surface>` invocation. | Confirmed, scoped | The registry itself is collision-free; the CLI's bare-name resolution degrades gracefully — unique, it resolves; ambiguous, it lists the qualified candidates and exits 2, never silently picking one. |
+| 2 | This is the same shape as `dyad check --list`'s `<group>/<entity>` keying — reusing it is not a new falsification, just an application. | Confirmed | No new pattern introduced; `check_projectors`'s own collision loop is deleted outright rather than re-justified. |
+| 3 | Two independent "one craft per surface" checks (core registry, `registry.py`) is itself the bug, not the keying — collapsing to one derivation matters more than qualifying the key. | Confirmed | `registry.py`'s `projectors()` now calls `dyadlib.projector_files` (the shared, parameterized discovery primitive `package.projectors()` also uses) instead of re-globbing the tree independently; its own collision check is deleted, not re-derived a second way. |
+
+p4 rewritten: a registry keyed `craft/surface`, collision-free by construction; `dyad project
+--list` prints `<craft/surface> <path>`.
+
+Disposition: see ledger #100.

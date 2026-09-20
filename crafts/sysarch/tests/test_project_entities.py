@@ -161,9 +161,9 @@ def parser_names(pkg):
         names |= set(g.FIELDS)
     return names
 
-ENTITIES = ({"component", "craft", "frame", "plan", "pr", "preference", "projector", "provenance", "record", "reference", "row", "rule", "term", "zone",
-             "presence", "name", "invariant", "test", "bundle"}   # core + sysarch (projector, #160) + syseng (name, invariant, test, #162) + presence (#185) + bundle (Rule-11 p7, #196)
-            | ({"changelog", "command", "event", "ops"} if SYSADMIN else set()) | ({"image"} if LANGIT else set()))
+# #98 (#100): derived from the guard registry itself (as #46 first fixed for KNOWN_CRAFTS) — never
+# a hand-enumerated set gated by which crafts happen to be installed, the same bug class twice.
+ENTITIES = {g.ENTITY for g in G.values()}
 
 class ChangelogFixtureTests(unittest.TestCase):
     """#213 d-work #46: the synthetic changelog header/example track the real sysadmin changelog
@@ -280,18 +280,20 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual([f.example for f in self.by["event"].fields][:5], ["x-20260914T120000Z-start", "2026-09-14T12:00:00Z", "agent", "x", "start"]); self.assertEqual(self.by["event"].observed, 1)
     @needs_sysadmin
     def test_relations_are_the_rule_20_register(self):
-        # Rule-20 property 5: every drawn edge is a REFERENCES entry anchored on a field or store token
-        # of an entity on the surface, and every such entry is drawn; the projector has no table of its own.
-        self.assertEqual(pe.RELATIONS, {(s, a, t) for _, s, a, _, t, _ in refint.REFERENCES})
+        # Rule-20 property 5: every drawn edge is a REFERENCES entry (core, or a craft's own
+        # REFERENCES_CONTRIB, Rule-11 property 2's contribution mechanism, #101/#100) anchored on a
+        # field or store token of an entity on the surface, and every such entry is drawn; the
+        # projector has no table of its own. Computed, not hand-typed, so it holds whether or not a
+        # craft's own contribution (e.g. sysadmin's changelog/ops/event rows, #100 PR 5) has landed.
+        register = {(s, a, t) for _, s, a, _, t, _ in refint.REFERENCES} | {(row[1], row[2], row[4]) for _craft, row in refint.craft_references_contrib(dyadlib.PKG)}
+        self.assertEqual(pe.RELATIONS, register)
         for e in self.ents:
             anchors = {f.name for f in e.fields} | set(__import__("re").findall(r"<[a-z]+>", e.store))
-            expected = sorted({(a, t) for _, s, a, _, t, _ in refint.REFERENCES if s == e.key and a in anchors and t in self.by})
+            expected = sorted({(a, t) for s, a, t in register if s == e.key and a in anchors and t in self.by})
             self.assertEqual(e.relations, expected, e.key)
         self.assertEqual(self.by["row"].relations, [("disposed", "pr"), ("refs", "craft"), ("refs", "row"), ("refs", "rule")])
         self.assertEqual(self.by["plan"].relations, [("<id>", "row")])
         self.assertEqual(self.by["term"].relations, [("owner", "rule"), ("used by", "rule")])
-        self.assertEqual(self.by["ops"].relations, [("change-log:", "changelog"), ("d-work:", "row")])
-        self.assertEqual(self.by["changelog"].relations, [("action", "ops"), ("d-work", "row"), ("outcome", "event")])
         self.assertEqual(self.by["event"].relations, [("name", "command")]); self.assertEqual(self.by["command"].relations, [])
         self.assertEqual(self.by["frame"].relations, [("@rules/", "rule")]); self.assertEqual(self.by["pr"].relations, [("body", "row")])
         self.assertEqual(self.by["preference"].relations, [("read by", "rule")])

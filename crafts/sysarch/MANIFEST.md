@@ -17,5 +17,12 @@ verified against it — `dyad/VERSION` was not bumped at #160 itself (it moved 0
 at #162), so `0.1.0` cannot distinguish core before #160 from core just after it; `0.2.0` is the
 first recorded version guaranteed to postdate #160 (#178, d-work #178's empirical replay).
 
+D1 (#100): `0.2.0` was the verb-availability floor above, never checked against what this craft's
+own code actually reads from `dyadlib`. `project_kanban.py`'s `columns-are-states` invariant
+(`set(COLUMNS) == dyadlib.STATES`) needs `archived`, which entered `dyadlib.STATES` at `0.6.0`
+(d-work #37) — a floor a craft can now hand nothing but its own already-declared `INVARIANTS`
+to verify, mechanically, against the tag's real code (`crafts.floor_problems`, no second
+hand-maintained "feature added in version N" table to drift from this one).
+
 name: sysarch
-requires: dyad-operator>=0.2.0
+requires: dyad-operator>=0.6.0
