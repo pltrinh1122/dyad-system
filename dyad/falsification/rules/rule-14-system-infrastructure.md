@@ -101,3 +101,37 @@ list and is now stale by the same margin; craft zone, its own PR (Rule-1: change
 Rule-14, before the referrer, the craft rule).
 
 Disposition: see ledger #31.
+
+## Amendment — d-work #105 (2026-09-21, craft-contributed token map)
+
+**Finding (workstation, intake):** `infrastructure_contrib.md` lets a craft contribute manifest
+*rows* (Rule-11 property 2, #101), but `manifest.py`'s token map (`manifest_rules.txt`) is
+core-only, with no equivalent. Three mechanisms verified against the live code: (1) `scan()`
+treated every non-`.py` file under a scanned craft directory as shell text, so a craft's own
+`guards/README.md` had its prose parsed for "invoked tokens"; (2) a craft's own script invoking a
+tool only that craft knows about failed even after the craft declared the component, because the
+token itself still resolved only against the core file; (3) `craft_python_dirs()` did not scan a
+craft's `server/` directory — already an anticipated craft-file location
+(`crafts/syseng/rules/invariants.md`'s own `exempt: crafts/*/server/*.py`) — so a sibling test's
+import of the craft's own server module was misread as an undeclared third-party import.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A craft's `manifest_rules_contrib.txt` could silently redirect an existing core token to a different component. | Refuted | The merge is `dict.setdefault` per component and `check`'s own `tok2comp.setdefault` per token — both first-wins; a core-resolved token is never reassigned, only an unresolved one gains a resolver. |
+| 2 | Skipping every non-`.py`, non-`.sh`, non-shebang file in `scan()` could silently stop scanning a real script with an unconventional extension. | Survives, scoped | Every script this repo or a craft ships either ends `.sh` or opens with a shebang line (the same two signals `shebang()` already used); a file with neither is, by the same evidence, not a script the package or craft actually executes. |
+| 3 | `manifest_rules_contrib.txt` is a *new* trust boundary, wider than `infrastructure_contrib.md`'s (a row can only ever be inert data; a token can silence a real undeclared-invocation failure). | Survives, scoped | The same boundary `REFERENCES_CONTRIB` and `infrastructure_contrib.md` already accept for craft-shipped data (Rule-11 property 2); a craft's own manifest gap is reported under the contributing craft's own name, never silently, exactly as those two already are. |
+
+Mutation: `craft_manifest_rules()` (new, mirrors `craft_infra_rows()`), merged into `check_manifest()`'s
+`rules` before `check()` runs; `scan()`'s file loop only treats `.sh` or a real-shebang file as
+shell text; `craft_python_dirs()` gains `server/`.
+
+Pairwise: 14–11: no package-layout change, the contribution mechanism is Rule-11 property 2's, not
+a new one. 14–13: no import. 14–12: the fix's own tests are the check. 14–1: agent-zone file only.
+No other concern moves. Coherent, orthogonal.
+
+*Residue, not fixed here:* `crafts/sysarch/rules/manifest.md` gains the matching craft-contribution
+sentence in its own, later PR (Rule-1: this file, the referent, before the craft rule, the
+referrer — the same order this record's own #31 amendment already established for this exact
+craft-zone file).
+
+Disposition: see ledger #105.

@@ -163,6 +163,64 @@ class CraftContributionTests(unittest.TestCase):
         craft_fixture(self.pkg, name="researcher")
         n, m, msgs = inf.check_manifest(self.pkg)
         self.assertTrue(any("'Anthropic API' (crafts/researcher/infrastructure_contrib.md): already declared by crafts/automaton/infrastructure_contrib.md" in x for x in msgs), msgs)
+    def test_no_craft_no_rules_contribution(self):
+        self.assertEqual(inf.craft_manifest_rules(self.pkg), [])
+    def test_craft_manifest_rules_contrib_parsed(self):
+        d = craft_fixture(self.pkg, infra=None)
+        (d / "manifest_rules_contrib.txt").write_text("X: tok1 tok2\n")
+        self.assertEqual(inf.craft_manifest_rules(self.pkg), [("automaton", {"X": ["tok1", "tok2"]})])
+    def test_craft_token_unresolved_without_the_contrib_file(self):
+        """#105 mechanism 2, before the fix: a craft's own script invokes a tool only that craft
+        knows about; declaring the component (infrastructure_contrib.md) is not enough — the
+        *token* still resolves against the core's manifest_rules.txt alone."""
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        d = craft_fixture(self.pkg); (d / "scripts").mkdir()
+        (d / "scripts" / "fetch.sh").write_text("anthropic-cli fetch\n")
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertTrue(any("anthropic-cli" in x and "maps to no declared component" in x for x in msgs), msgs)
+    def test_craft_manifest_rules_contrib_resolves_the_same_token(self):
+        """#105 fix: the craft's own manifest_rules_contrib.txt resolves the token the core map
+        never could, for the component the craft already declared."""
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        d = craft_fixture(self.pkg); (d / "scripts").mkdir()
+        (d / "scripts" / "fetch.sh").write_text("anthropic-cli fetch\n")
+        (d / "manifest_rules_contrib.txt").write_text("Anthropic API: anthropic-cli\n")
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
+    def test_craft_rules_contrib_never_overrides_a_core_token(self):
+        """A craft's own rules can add tokens to a core component but a core-resolved token stays
+        resolved to the core's own mapping (first-wins, `tok2comp.setdefault`) -- a craft cannot
+        silently redirect an existing token's component."""
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+        d = craft_fixture(self.pkg, infra=None)
+        (d / "manifest_rules_contrib.txt").write_text("Anthropic API: python3\n")   # python3 is already Python's token
+        n, m, msgs = inf.check_manifest(self.pkg)
+        self.assertTrue(any("rules map 'Anthropic API' which the manifest does not declare" in x for x in msgs), msgs)
+    def test_craft_non_script_file_is_not_swept_as_shell_text(self):
+        """#105 mechanism 1: a craft's own guards/README.md is prose, not a shell script; scan()
+        must not extract "shell words" from it."""
+        d = craft_fixture(self.pkg, infra=None)
+        (d / "guards" / "README.md").write_text("Run curl against the endpoint, then check the output with grep.\n")
+        toks = inf.scan(self.pkg)
+        self.assertNotIn("curl", toks); self.assertNotIn("grep", toks); self.assertNotIn("Run", toks)
+    def test_craft_sh_file_is_still_scanned_as_shell(self):
+        d = craft_fixture(self.pkg, infra=None); (d / "scripts").mkdir()
+        (d / "scripts" / "x.sh").write_text("#!/usr/bin/env bash\ncurl https://example\n")
+        toks = inf.scan(self.pkg)
+        self.assertIn("curl", toks)
+    def test_craft_server_dir_is_scanned_for_internal_imports(self):
+        """#105 mechanism 3: crafts/syseng/rules/invariants.md already anticipates crafts/*/server/
+        as a craft-file location; craft_python_dirs must include it so a sibling test's import of
+        the craft's own server module is not misread as an undeclared third-party import."""
+        d = craft_fixture(self.pkg, infra=None)
+        (d / "server").mkdir(); (d / "server" / "app.py").write_text("import flask\n")
+        (d / "tests").mkdir(); (d / "tests" / "test_app.py").write_text("import app\nimport server\n")
+        self.assertIn(d / "server", inf.craft_python_dirs(self.pkg))
+        toks = inf.python_imports(self.pkg)
+        self.assertEqual(toks, {"import:flask": ["crafts/automaton/server/app.py"]})
 
 
 class InvariantTests(unittest.TestCase):
