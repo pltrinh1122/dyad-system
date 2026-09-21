@@ -23,10 +23,14 @@ Before any reversible or destructive host action: the Agent reads every file in
 Every reversible or destructive action gets a row in the host's change log
 (`workstation-corpus/CHANGELOG.md`, instance; seeded from `crafts/sysadmin/templates/CHANGELOG.md`)
 with the columns (date, d-work, class, action, undo, outcome, actor), in a workstation-zone PR of
-the same d-work. `actor` is `operator` or `agent` — the party whose hands and credential executed
-the action, matching what a server's own audit log and a run-book event's `role` (server-instances
-rule) already mean; an Operator-run ops script (Rule-18) is `operator`, an Agent-run command
-`agent`. Only an action the Agent takes is *required* by Rule-8's kernel (Target: "a host action");
+the same d-work. `actor` is `operator` or `agent` — the party whose hands executed the action (who
+drove it: typed the command or ran the ops script, versus the Agent's own process), matching what
+a server's own audit log and a run-book event's `role` (server-instances rule) already mean; an
+Operator-run ops script (Rule-18) is `operator`, an Agent-run command `agent`. The credential it
+ran under can diverge from the hands that drove it (an Agent-run git commit still carries the
+Operator's own git identity, Rule-2 Enforcement) — `actor` names hands only; a divergent credential
+is named in the row's `outcome`. Only an action the Agent takes is *required* by Rule-8's kernel
+(Target: "a host action");
 an Operator action performed independently — outside an ops script, for the Operator's own reasons
 — has no row the kernel requires, but this craft records one it learns of, at the Operator's
 instruction (d-work #216). A run-book command's event (server-instances rule, telemetry) is its

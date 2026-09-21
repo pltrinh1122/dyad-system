@@ -7,8 +7,9 @@ template's header is always FIELDS; an instance header is FIELDS, or FIELDS with
 columns dropped (`actor`, #216 — an instance mid-migration between a craft-zone PR that adds a column and the
 workstation-zone PR that backfills it, Rule-1: referent before referrer). Each row has a `YYYY-MM-DD` date, a
 `#<id>` d-work cell (resolved by `references.py`, Rule-20), a class in dyadlib.HOST_CLASSES, a non-empty
-action, an `actor` in ACTORS where the column is present (the party whose hands and credential executed the
-action — an Operator-run ops script is `operator`, an Agent-run command `agent`), and — for a reversible or
+action, an `actor` in ACTORS where the column is present (the party whose hands executed the action
+— an Operator-run ops script is `operator`, an Agent-run command `agent`; a divergent credential is
+named in `outcome`, host-mutation.md), and — for a reversible or
 destructive action — a non-empty undo (Rule-8 Conduct; a destructive action may say `none` and why). A missing
 change log passes (fresh install before the first host action). Whether the row matches the plan's H-row
 stays inference (Rule-8).
@@ -28,7 +29,7 @@ NAME, OWNER = "change-log row", "Rule-8"
 FIELDS = ("date", "d-work", "class", "action", "undo", "outcome", "actor")
 OPTIONAL = ("actor",)   # trailing suffix of FIELDS an *instance* header may omit while migrating (#216);
                         # the template (check_package) is always FIELDS exactly — never truncated
-ACTORS = ("operator", "agent")   # actor enum: the party whose hands and credential executed the action
+ACTORS = ("operator", "agent")   # actor enum: the party whose hands executed the action (a divergent credential is named in outcome, host-mutation.md)
 CLASSES = dyadlib.HOST_CLASSES
 LOGGED = ("reversible", "destructive")      # classes that need an undo cell (read-only is not normally logged)
 INVARIANTS = [("logged-classes-subset", lambda: set(LOGGED) <= set(CLASSES)),   # crafts/syseng/rules/invariants.md
