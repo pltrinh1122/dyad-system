@@ -28,3 +28,27 @@ with one `Y`, and a set of completion counter-prompts with one `Y`; an ignored c
   infrastructure, ops scripts or server instances. Coherent, orthogonal.
 
 Disposition: see ledger #17.
+
+## Amendment — d-work #106 (2026-09-21, release's reason split from destructive's)
+
+**Claim (Operator, 2026-09-21):** release isn't destructive — a new release can supersede any
+error, and that remediation is accepted — so release isn't subject to attack 4's "batched or not"
+exclusion above.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A superseding release is a true undo, like Rule-8's reversible examples (`git config`, a kept-copy edit, stopping a service). | Refuted | Those restore the *prior* observable state; a superseding release doesn't — the erroneous tag stays forever resolvable (Rule-11 property 4: tags "never retagged," "do not move"). Forward patch, not a reversal. |
+| 2 | Even without a true undo, if remediation is accepted, release fails Rule-8's own disjunctive test (no undo / loses data / untested undo) on its own terms. | Survives, scoped | Fair reading, but reveals release was never a Rule-8 *class* to begin with — Rule-8's Target is "a host action"; release is Rule-11's own domain. Asking "is release destructive" is a category error either direction. |
+| 3 | Since release isn't Rule-8-destructive (or isn't Rule-8's business at all), and attack 4 above was specifically about destructive actions riding along, its exclusion has no surviving basis against release. | Refuted | Rule-11 gives release an independent reason, unconnected to destructiveness: "A release publishes to the world, so it is the Operator's to ratify however few d-works it gathers." Holds regardless of later fixability. |
+| 4 | Attack 4 above bundles release with destructive under one shared "batched or not" exclusion, as if one risk. | Confirmed | Split: destructive stays unconditional (Rule-8's own criteria genuinely apply); release gains its own narrower form (Rule-11 Ratification events), scoped to tags of one already-`done` d-work's own already-surfaced output. |
+| 5 | Any carve-out invites scope creep — "these releases were all just named" is a judgment call, not a mechanical gate. | Survives, scoped | The gate is conservative by construction: a batchable release must already appear, unmerged, individually named, in the *same reply's own completion evidence* — exactly this record's own attack 2 survivor (the pending queue's visibility discipline), extended to the one case attack 4 arbitrarily excluded it from, not invented fresh. |
+| 6 | One live instance (three release tags batched under one `Y`, no visible loss of scrutiny) doesn't prove safety in general. | Survives, scoped | Not offered as proof by itself — the *gate* above (already-named, already-Done, same d-work) is what made it safe, now the formal requirement rather than an ad hoc reading of one bare `Y`. |
+
+Rule-3's Boundaries bullet reworded: destructive-action counter-prompts stay always one-per-
+question, never batched (Rule-8, unaffected by this amendment); release counter-prompts stay
+one-per-question by default, with a release-specific batch form now owned by Rule-11 (Ratification
+events), never Rule-3's own plan or Done batch. Pairwise: 3–11 (attack 4 above) updated to reflect
+the split, not excluded wholesale any longer for release; 3–8 unchanged (destructive). No other
+Rule's concern moves. Coherent, orthogonal.
+
+Disposition: see ledger #106.
