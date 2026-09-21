@@ -14,7 +14,10 @@ values are observed on this system; only its *form* is this craft's.
 1. **One manifest.** Every dependency of The Dyad System on The World is a row in the one
    manifest at the package root: six cells — component, partition (`kernel`, `library` or
    `The World`), version, purpose, license, replacement. Nothing reaches The World except through
-   a row.
+   a row. A craft contributes its own rows through `infrastructure_contrib.md` beside its root,
+   the same six cells (Rule-11 property 2's craft-shipped contribution, #101); a name already
+   declared elsewhere fails, naming both sources — a component leaves the manifest when its craft
+   does.
 2. **Library rows are replaceable.** Everything the package or the workflow invokes that is not
    kernel is a library row, and each names its replacement (what would be used if the component
    went away). CI, hosting and any runner are library adapters; the package must not depend on
@@ -26,7 +29,11 @@ values are observed on this system; only its *form* is this craft's.
    `uses:` / `run:` word in the `dyad-*` workflows and third-party Python import maps, through a
    data file beside the guard (`dyad/guards/infra/manifest_rules.txt`), to a declared component; an
    unmapped token fails, a component with no token warns. (The scan's mechanics are implementation,
-   `syseng` on #162; the *design* — a token is either mapped or refused — is this rule's.)
+   `syseng` on #162; the *design* — a token is either mapped or refused — is this rule's.) A craft
+   ships its own `manifest_rules_contrib.txt` beside its root, the same grammar, to map a token
+   only its own files invoke — the token-map half of property 1's craft-shipped-contribution
+   mechanism, which `infrastructure_contrib.md` alone only carried for rows (Rule-11 property 2,
+   #105).
 
 ## Inference, stated
 Whether a row's version, license and replacement are right stays inference (Rule-13 criteria,
