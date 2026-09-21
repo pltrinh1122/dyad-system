@@ -105,6 +105,12 @@ dyad system without clashes or hand-editing.
   (an image, an archive to a distribution repo) are clerical execution of it. Rule-2 applies by
   reference (S2). A release publishes to the world, so it is the Operator's to ratify however few
   d-works it gathers — distinct from a d-work's Done-`Y`, which verifies that d-work's own output.
+- Or, naming several tags in one question — `Y/N: release <tag-a>, <tag-b>, <tag-c>?` — whose
+  content was already verified and ratified by one d-work's own Done-`Y`, each tag already named
+  individually, unmerged, in the same reply's completion evidence before this question (the same
+  discipline Rule-3's own Done-batch items already carry). Never a tag of a different d-work;
+  never folded into Rule-3's plan or Done batch, so a release stays its own, visibly-a-publication
+  moment. A `Y` ratifies exactly the named tags; anything else, none of them (Rule-2, Binding).
 
 ## Enforcement
 `dyad/scripts/package.py check` on every push and PR (A5): a runner that first runs the invariant
@@ -144,6 +150,9 @@ under the superseded convention, never retagged (tags do not move). See
 `../falsification/rules/rule-11-distribution-structure.md`, amendment #196. Property 4 gains its
 converse and the drift guard 2026-09-18 (d-work #91); see the same record, amendment #91. Property
 2 gains the craft-contribution sentence 2026-09-20 (d-work #100, per #101's survivor); see the same
-record, amendment #100.
+record, amendment #100. Ratification events gains the release-batch form 2026-09-21 (d-work #106):
+several tags whose content one d-work's own Done-`Y` already verified, each already named
+individually beforehand — split from destructive's unconditional one-per-question rule, which
+rested on a different, unaffected basis; see the same record, amendment #106.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

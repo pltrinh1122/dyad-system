@@ -8,8 +8,10 @@
 - Which zone a change belongs to — Rule-1.
 - Bare `Y`/`N` disposals: they answer a counter-prompt and open nothing.
 - What the Agent may do on the live host — Rule-8 (a plan names host actions; Rule-8 classes them).
-- Release and destructive-action counter-prompts: always one-per-question, batched or not —
-  Rule-11, Rule-8.
+- Destructive-action counter-prompts: always one-per-question, never batched — Rule-8. Release
+  counter-prompts: one-per-question by default; a release-specific batch naming several tags of
+  one already-`done` d-work's own surfaced output is Rule-11's own form, never Rule-3's plan or
+  Done batch.
 - How another agent frames a proposal to its own Operator — that system's Rule-10; Rule-3 judges
   only what its message carries when it arrives here (Intake, below).
 
@@ -137,7 +139,9 @@ Preference `batch-disposition-mode` (`preferences-corpus/PREFERENCES.md`). `off`
 and completion counter-prompt above is asked and disposed singly. `on-ignore` — singly, until
 the Operator leaves one outstanding (Conditions, above: the next message is a prompt, not its
 bare disposal) — the engagement signal itself, nothing else needed. `always` — never singly:
-the first pending item already opens the queue.
+the first pending item already opens the queue. Release counter-prompts have their own, narrower
+batch form, owned by Rule-11 (several tags whose content one d-work's own Done-`Y` already
+verified); it is never a plan or Done batch and never enters this section's pending queue.
 
 Once engaged, the Agent holds a **pending queue**: every plan-ready d-work (its plan file
 written, Rule-15, counter-prompt not yet asked as part of a batch) and, separately, every
@@ -206,6 +210,6 @@ by an ignored counter-prompt or the `always` preference; see
 `../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
 three intakes from peer sessions in two days — one carrying its Operator's plan-`Y`, one a defect
 with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
-an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68.
+an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106.
 
 Set: System Requirements.

@@ -216,3 +216,24 @@ Pairwise (Rule-5): 11–1 (craft/instance) unaffected — a contribution file is
 craft's own tracked content, never instance; 11–5 (one code path) unaffected — contribution is
 discovery, the same primitive `dyadlib.craft_dirs` every existing mechanism already uses. Others
 unchanged. Coherent, orthogonal. Disposition: see ledger #100.
+
+## Amendment — d-work #106 (2026-09-21, release-batch ratification form)
+**Claim:** release's one-per-question rule and destructive's shared one root justification
+(irreversibility, `dyad/falsification/rules/rules-2-3-batch-disposition.md` #17 attack 4). The full
+attack table falsifying this claim, and the survivor it yields, live in that record's own
+`Amendment — d-work #106` (not duplicated here, the shared mechanism's own home). Summary: release
+was never a Rule-8 class to begin with (Rule-8's Target is a host action; release is this Rule's
+own domain), and Rule-11's existing "publishes to the world" reason for one-per-question is
+independent of destructiveness, so it survives that record's attacks untouched — but a narrower
+batch form is now warranted, gated exactly the way Rule-3's own Done-batch already gates its items
+(named individually, unmerged, in the same reply, before the question).
+
+Ratification events gains a second form: several tags whose content one d-work's own Done-`Y`
+already verified, each already named individually beforehand, never mixed with a different
+d-work's tag, never folded into Rule-3's plan or Done batch.
+
+Pairwise (Rule-5): 11–3 Rule-3's Boundaries and Batch-disposition sections cross-reference this
+form by name, own none of its mechanics (S4); 11–8 unaffected — destructive's own rule and reason
+are untouched by this amendment; 11–2 unaffected — Rule-2's existing batch-counter-prompt Binding
+sentence already covers "names several d-works, PRs, or both," binding a release-batch `Y` the
+same way. Others unchanged. Coherent, orthogonal. Disposition: see ledger #106.
