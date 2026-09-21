@@ -146,12 +146,15 @@ def workflow_words(text: str) -> list[str]:
     return out
 
 def craft_python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
-    """Every installed craft's own guards/, tests/, scripts/ and projectors/ that exist — a
-    craft's Python files carry their own imports, discovered the same way the core's are
-    (Rule-11 property 2's craft-shipped contribution, `agent-corpus/falsification/extensibility.md` #101)."""
+    """Every installed craft's own guards/, tests/, scripts/, projectors/ and server/ that exist —
+    a craft's Python files carry their own imports, discovered the same way the core's are
+    (Rule-11 property 2's craft-shipped contribution, `agent-corpus/falsification/extensibility.md`
+    #101). `server/` is a craft-file location this repo's own `crafts/syseng/rules/invariants.md`
+    already anticipates (`exempt: crafts/*/server/*.py`); omitting it here left a sibling test
+    import of a craft's own server module invisible to `python_imports`'s `internal` set (#105)."""
     dirs = []
     for c in dyadlib.craft_dirs(pkg):
-        dirs += [d for d in (c / "guards", c / "tests", c / "scripts", c / "projectors") if d.is_dir()]
+        dirs += [d for d in (c / "guards", c / "tests", c / "scripts", c / "projectors", c / "server") if d.is_dir()]
     return dirs
 
 def python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
@@ -214,13 +217,16 @@ def scan(pkg: Path = dyadlib.PKG, workflows_dir: Path | None = None) -> dict[str
         if not p.is_file() or p.name.endswith((".txt", ".pyc")):
             continue
         rel = str(p.relative_to(pkg) if p.is_relative_to(pkg) else p.relative_to(pkg.parent)); text = p.read_text(errors="ignore")
-        add(shebang(text), f"{rel}:1")
+        sb = shebang(text)
+        add(sb, f"{rel}:1")
         if p.suffix == ".py":
             for t in python_calls(text):
                 add(t, rel)
-        else:
+        elif p.suffix == ".sh" or sb:
             for t in shell_words(text):
                 add(t, rel)
+        # else: not a recognized script (a craft's own README, data file, ...) -- shell_words is
+        # never run over prose; only a `.sh` file or one with a real shebang is shell text (#105)
     if workflows_dir.is_dir():
         for p in sorted(workflows_dir.glob("dyad-*.yml")):
             for t in workflow_words(p.read_text()):
@@ -263,6 +269,20 @@ def check(rows: list[tuple[str, ...]], rules: dict[str, list[str]], tokens: dict
             msgs.append(f"warning: '{comp}' declared but no token maps to it (add tokens or `-` in manifest_rules.txt)")
     return msgs
 
+def craft_manifest_rules(pkg: Path = dyadlib.PKG) -> list[tuple[str, dict[str, list[str]]]]:
+    """[(craft, rules)] from every installed craft's own `manifest_rules_contrib.txt` (same
+    `component: token token ...` grammar `parse_rules` already reads): a craft's own invocation
+    tokens resolve against its own contributed rules too, not only the core's `manifest_rules.txt`
+    (Rule-11 property 2, `agent-corpus/falsification/extensibility.md` #101, #105 — the token-map
+    half of the contribution `infrastructure_contrib.md` gave only manifest *rows*, not this).
+    Empty when a craft ships none."""
+    out = []
+    for c in dyadlib.craft_dirs(pkg):
+        f = c / "manifest_rules_contrib.txt"
+        if f.is_file():
+            out.append((c.name, parse_rules(f.read_text())))
+    return out
+
 def craft_infra_rows(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple[str, ...]]]:
     """[(craft, row)] from every installed craft's own `infrastructure_contrib.md` (same six cells
     as INFRASTRUCTURE.md, parsed by the same `parse_manifest`): a core-owned table accepting a
@@ -277,11 +297,18 @@ def craft_infra_rows(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple[str, ...]
 
 def check_manifest(pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
     """(components, tokens, messages) over the live package plus every installed craft's own
-    contributed rows. A contributed component already declared (by the core manifest or an
-    earlier craft) fails, naming both sources — a component leaves with its craft, so it is
-    never shared."""
+    contributed rows and rules. A contributed component already declared (by the core manifest or
+    an earlier craft) fails, naming both sources — a component leaves with its craft, so it is
+    never shared. A craft's own `manifest_rules_contrib.txt` rows merge into the token map the same
+    way its `infrastructure_contrib.md` rows merge into the manifest (#105): a token the core map
+    already resolves is unaffected (`dict.setdefault`, first-wins, matching `check`'s own `tok2comp`
+    merge order); an unresolved token is only ever the caller's, never blamed on a craft that has
+    not contributed a mapping for it."""
     core_rows = parse_manifest((pkg / "infrastructure" / "INFRASTRUCTURE.md").read_text())
-    rules = load_rules(pkg / "guards" / "infra" / "manifest_rules.txt")
+    rules = dict(load_rules(pkg / "guards" / "infra" / "manifest_rules.txt"))
+    for craft, craft_rules in craft_manifest_rules(pkg):
+        for comp, toks in craft_rules.items():
+            rules.setdefault(comp, []).extend(toks)
     tokens = scan(pkg)
     all_rows, msgs, seen = list(core_rows), [], {dyadlib.plain(r[0]): "the manifest" for r in core_rows}
     for craft, row in craft_infra_rows(pkg):
