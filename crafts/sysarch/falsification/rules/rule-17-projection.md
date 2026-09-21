@@ -71,3 +71,19 @@ p4 rewritten: a registry keyed `craft/surface`, collision-free by construction; 
 --list` prints `<craft/surface> <path>`.
 
 Disposition: see ledger #100.
+
+## Amendment — d-work #104 (2026-09-20, --list format is a compatibility surface)
+
+**Finding (workstation-252):** the D3 rekey above changed `dyad project --list`'s output from one
+column to two; a downstream craft (workstation's own `surfacer`) parsed the old shape and broke.
+Fixed on their own side; no dyad-system defect (the change was #100's ratified survivor, already
+documented) — surfaced only because p4 named the format without naming who else reads it.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Naming it a compatibility surface with no guard behind the claim is unenforceable prose. | Survives, scoped | Inference-only by design, matching every other property in this rule's "Inference, stated" section (whether a surface is legible, whether a projector hand-draws); the sentence's job is to change what a future *falsification* of a `--list` format change must weigh, not to add a mechanical check. |
+
+p4 gains one sentence: the `--list` line is a compatibility surface for tooling outside this repo;
+a further change to its columns or separator is falsified with that cost in view.
+
+Disposition: see ledger #104.
