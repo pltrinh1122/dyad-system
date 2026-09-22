@@ -13,6 +13,7 @@ defines what each value means.
 | delegation | none | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | off | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
+| concise-mode | off | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -44,3 +45,10 @@ defines what each value means.
   forms (Rule-3, Batch disposition), lapsing back to singly once the queue drains. `always`:
   never singly. Seeded `off`: the existing single-question behavior, until the Operator has
   engaged it once.
+- `concise-mode` — `off`: the Agent may speak before and between its actions. `on`: exactly one
+  reply per Operator prompt, the synthesis, emitted when the turn ends (done, or stopped at a
+  blocking question); every finding, incident, evidence block and queue count a Rule requires is
+  in it, written to the corpus first where a Rule stores it; long execution is delegated to a
+  fork (`delegation`) so the reply is prompt and the Agent stays free; a harness mid-turn prompt
+  gets one status line, never a second reply (Rule-10 Form, Rule-3 Incidents; d-work #113).
+  Seeded `off`: the harness's own default, until the Operator has read the trade.

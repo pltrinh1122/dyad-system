@@ -112,3 +112,15 @@ sibling fault, same root: #67's plan-`Y` was asked before its plan file existed 
 Pairwise (Rule-5): 3–2 unchanged in substance — Rule-2 owns the event, Rule-3 names when its
 clerical execution happens; 3–15 the sibling fault cites Rule-15 phase 1 without editing it. Others
 unchanged. Coherent, orthogonal. Disposition: see ledger #68.
+
+## Amendment — d-work #113 (2026-09-22, `concise-mode`: the record precedes the one reply)
+Incidents gains one bullet: under `concise-mode: on` the reply where an incident occurred and the
+completion reply are one reply, so the incident's record (attack row or `INCIDENTS.md` row, and
+the plan file's falsification section) is written during the turn, before the reply reports it.
+The attack table is in `rules-9-10-promotion.md`, amendment #113 (attacks 2 and 4 are this
+Rule's: an interrupted turn loses narration, never record; delegation moves the two
+execute-before-plan-`Y` incident classes out of reach of the actor that drafts, since a subagent
+may not commit, push or open a PR — Scope's subagent sentence, unchanged). Pairwise: 3–10 the
+key is read by both for different concerns; 3–8 unchanged; 3–15 the plan file is where a
+mid-turn finding is written first, as phase 1 already requires. Coherent, orthogonal.
+Disposition: see ledger #113.
