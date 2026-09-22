@@ -322,11 +322,16 @@ def cmd_pr(base=None, head="HEAD"):
             print(f"ok   [pr] {label} {mode} ({span})")
     return int(rc)
 
+def evidence_sha256(lines):
+    """Pure: the sha256 of an evidence block's lines, joined by newline (Rule-14 property 3)."""
+    import hashlib
+    return hashlib.sha256(chr(10).join(lines).encode()).hexdigest()
+
 def cmd_evidence():
     """Rule-14 property 3: the evidence block. Runs `check` and `check --guards` on the exact
     head, prints head/tree/dirty, every line they print, and a sha256 of all preceding lines
     (joined by newline) so the Operator can re-run it on the same head and compare."""
-    import io, hashlib, contextlib
+    import io, contextlib
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
     lines = [f"head={git('rev-parse', 'HEAD')}", f"tree={git('rev-parse', 'HEAD^{tree}')}",
              f"dirty={'yes' if git('status', '--porcelain') else 'no'}"]
@@ -336,7 +341,7 @@ def cmd_evidence():
     lines += buf.getvalue().splitlines()
     for l in lines:
         print(l)
-    print(f"evidence-sha256={hashlib.sha256(chr(10).join(lines).encode()).hexdigest()}")
+    print(f"evidence-sha256={evidence_sha256(lines)}")
     return int(rc)
 
 def cmd_check():

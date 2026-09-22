@@ -1,4 +1,4 @@
-import importlib.util, os, shutil, subprocess, sys, tempfile, unittest
+import importlib.util, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
@@ -33,7 +33,9 @@ def scratch_install(with_craft: bool) -> Path:
 
 def load_package():
     spec = importlib.util.spec_from_file_location("package", PKG / "scripts" / "package.py")
-    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); return mod
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod   # package.py's own invariant_modules() looks itself up via sys.modules[__name__]
+    spec.loader.exec_module(mod); return mod
 
 def scratch_repo(paths, tracked=True):
     """A temp git repo holding `paths` (added and committed when tracked, else left untracked)."""
@@ -308,19 +310,30 @@ class PackageTests(livetest.LiveCase):
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--list"], capture_output=True, text=True, env=env())
         self.assertNotEqual(r.returncode, 0); self.assertIn("declares CORPUS 'nowhere', not a zone in containment.ZONES", r.stdout)
         shutil.rmtree(d, ignore_errors=True)
-    # Rule-14 property 3 (d-work #138): the evidence block
+    # Rule-14 property 3 (d-work #138): the evidence block. d-work #108 (separation of concerns):
+    # the shape assertions still exercise a real `cmd_evidence()` traversal (unavoidably
+    # integration-flavored — head/tree/dirty and the guard lines come from the real repo), but
+    # in-process (load_package() + redirect_stdout, no subprocess) and with DYAD_NO_NESTED_TESTS
+    # forced for the call's duration so Rule-12's own nested-suite recursion guard applies exactly
+    # as it does for run_py's subprocess env. The hash property itself is unit-tested separately,
+    # on fixed fake lines, in test_evidence_sha256_is_pure_and_deterministic below.
     def test_evidence_block_shape_and_hash(self):
-        import hashlib, re
-        r = self.run_py("check", "--evidence")
-        lines = r.stdout.splitlines()
+        import contextlib, io
+        pkg = load_package()
+        buf = io.StringIO()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_NO_NESTED_TESTS": "1"}), contextlib.redirect_stdout(buf):
+            pkg.cmd_evidence()
+        lines = buf.getvalue().splitlines()
         self.assertRegex(lines[0], r"^head=[0-9a-f]{40}$"); self.assertRegex(lines[1], r"^tree=[0-9a-f]{40}$")
         self.assertRegex(lines[2], r"^dirty=(yes|no)$")
-        self.assertTrue(any("[Rule-11]" in l for l in lines) and any("[guards] infra/containment" in l for l in lines), r.stdout)
+        self.assertTrue(any("[Rule-11]" in l for l in lines) and any("[guards] infra/containment" in l for l in lines), buf.getvalue())
         self.assertRegex(lines[-1], r"^evidence-sha256=[0-9a-f]{64}$")
-        self.assertEqual(lines[-1], "evidence-sha256=" + hashlib.sha256("\n".join(lines[:-1]).encode()).hexdigest())
+        self.assertEqual(lines[-1], "evidence-sha256=" + pkg.evidence_sha256(lines[:-1]))
     def test_evidence_block_deterministic(self):
-        a, b = self.run_py("check", "--evidence"), self.run_py("check", "--evidence")
-        self.assertEqual(a.stdout, b.stdout); self.assertEqual(a.returncode, b.returncode)
+        pkg = load_package()
+        lines = ["head=deadbeef", "dirty=no", "ok   [Rule-11]"]
+        self.assertEqual(pkg.evidence_sha256(lines), pkg.evidence_sha256(list(lines)))
+        self.assertNotEqual(pkg.evidence_sha256(lines), pkg.evidence_sha256(lines + ["extra"]))
 
     # Rule-11 property 6 (generated files, d-work #108)
     def test_generated_entries_parse(self):
@@ -487,11 +500,15 @@ class InvariantPassTests(unittest.TestCase):
         for label, mod, extra in pkg.invariant_modules():
             self.assertEqual([n for n, _ in extra], ["entity-non-empty", "corpus-matches-directory", "fields-unique-strings", "transaction-implies-check_transaction"] if "/" in label else [])
             dyadlib.check_invariants(mod, extra, label)
-        for cmd in (("check", "--guards"), ("check",)):
-            r = self.run_py(*cmd)
-            lines = [l for l in r.stdout.splitlines() if "[invariant]" in l]
-            self.assertEqual(lines[: len(labels)], [f"ok   [invariant] {l} ({dyadlib.check_invariants(m, e)})" for l, m, e in pkg.invariant_modules()], cmd)
-            self.assertTrue(r.stdout.splitlines()[0].startswith("ok   [invariant] dyadlib ("), cmd)   # before any check
+        for name, fn in (("check --guards", pkg.cmd_guards), ("check", pkg.cmd_check)):
+            import contextlib, io
+            buf = io.StringIO()
+            with unittest.mock.patch.dict(os.environ, {"DYAD_NO_NESTED_TESTS": "1"}), contextlib.redirect_stdout(buf):
+                fn()
+            out = buf.getvalue()
+            lines = [l for l in out.splitlines() if "[invariant]" in l]
+            self.assertEqual(lines[: len(labels)], [f"ok   [invariant] {l} ({dyadlib.check_invariants(m, e)})" for l, m, e in pkg.invariant_modules()], name)
+            self.assertTrue(out.splitlines()[0].startswith("ok   [invariant] dyadlib ("), name)   # before any check
         self.assertNotIn("invariants", pkg.CHECKS)   # the pass is not a check entry; it precedes them
     def test_list_and_help_do_not_run_the_pass(self):
         self.assertNotIn("[invariant]", self.run_py("check", "--list").stdout)
