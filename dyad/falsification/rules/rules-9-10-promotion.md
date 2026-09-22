@@ -24,3 +24,25 @@ become Rules 9 and 10; the other three stay conduct, explicitly unenforced.
   9–10: Rule-9 finds the survivor, Rule-10 frames it; each names the other. Coherent, orthogonal.
 
 Disposition: see ledger #67.
+
+## Amendment — d-work #113 (2026-09-22, `concise-mode`: one reply per prompt)
+
+**Claim (Operator, 2026-09-22):** a preference under which the Agent produces a single synthesized
+reply to each prompt, all interim narration kept in reasoning; feasibility studied first, then —
+on the Operator's `N` — whether delegating execution to a subagent detects issues sooner.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Hiding the interim blocks hides findings; "detect, don't dispose" wants them on screen as found. | Refuted | Over this session's last ten turns every interim block was restated in full in the final one; timing changes, content does not, and a finding that should stop work still ends the turn as the reply. |
+| 2 | A cut-off turn (compaction mid-turn happened this session) loses the unspoken finding. | Survives, scoped | The record precedes the reply: plan file, `INCIDENTS.md`, provenance are written during the turn (Rule-3 Incidents gains the sentence); an interruption loses prose, never record. |
+| 3 | "One reply per prompt" forces finishing a long turn before a blocking question can be asked. | Refuted | The mode bounds replies per prompt, not work per reply; a blocking question ends the turn and is the reply (Rule-8 unchanged). |
+| 4 | Delegating to a subagent detects issues sooner, so the mode should rest on that instead. | Refuted, by the study | A fork reports once, at its end: a finding reaches the Operator no earlier than under the mode alone (latency *T − t* vs. the fork's duration plus a notification). What delegation buys is structural — of eight recent incidents, the two execute-before-plan-`Y` ones become impossible where they happened (the drafting actor cannot commit, push or open a PR), one is contained to a worktree, five (merge-before-Done-`Y`, ask-before-row) are the main Agent's own ordering and untouched — and a free main Agent the Operator can redirect at once. The mode couples the two for that reason, not for speed. |
+| 5 | This binds the Agent's process; it is a Rule, not a preference. | Refuted | It selects between two conducts both Rules already permit — Rule-10 fixes the form of the one reply, never how many precede it — on the same footing as `batch-disposition-mode` (#17). |
+| 6 | The harness keeps injecting "say what you're doing"; unenforceable. | Survives, scoped | Outside the corpus, like the harness permission mode (Rule-8 Boundaries); the bullet names the one-status-line answer; a second synthesis is an incident. |
+
+Rule-10 Form gains one bullet reading the preference; enforcement stays inference. Pairwise
+(Rule-5): 10–3 each reads the same key for its own concern (form here, content there); 10–8 the
+blocking question is unchanged and named; 10–2, 10–11 the ratification forms are unchanged; others:
+no path. Coherent, orthogonal.
+
+Disposition: see ledger #113.

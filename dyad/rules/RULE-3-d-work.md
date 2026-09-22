@@ -197,6 +197,10 @@ what an agent may bring, never what the Operator may ask for.
   cause, consequence). Written in the d-work's own PR, or the next agent-zone PR for an
   incident during clerical work.
 - If the plan changes as a result, a fresh plan-`Y` precedes any further mutation. (E9)
+- Under `concise-mode: on` (`preferences-corpus/PREFERENCES.md`) the reply where it occurred and
+  the completion reply are the same reply; the incident's record — the attack row or the
+  `INCIDENTS.md` row, and the plan file's own falsification section — is written during the turn,
+  before that single reply reports it, so an interrupted turn loses narration, never the record.
 
 ## Ratification events
 - Answering `Y` to a plan counter-prompt (mutation authorization).
@@ -210,6 +214,8 @@ by an ignored counter-prompt or the `always` preference; see
 `../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
 three intakes from peer sessions in two days — one carrying its Operator's plan-`Y`, one a defect
 with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
-an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106.
+an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106. Incidents gains the
+`concise-mode` bullet 2026-09-22 (d-work #113): under one reply per prompt the record precedes the
+reply; see the same record, amendment #113.
 
 Set: System Requirements.
