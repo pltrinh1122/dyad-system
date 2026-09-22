@@ -14,6 +14,7 @@ defines what each value means.
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | on-ignore | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | agent | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case, #23) |
+| concise-mode | on | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -55,3 +56,19 @@ defines what each value means.
     unaffected and follows `merge-disposition`. The Agent checks the whole diff mechanically
     before each such merge, and the merge commit cites this preference and the file list, so
     `git log` alone shows why no counter-prompt preceded it.
+- `concise-mode`
+  - `off` — the Agent may speak before and between its actions: a preface, progress lines,
+    interim findings, then the synthesis.
+  - `on` — exactly one reply per Operator prompt: the synthesis, emitted when the turn ends —
+    done, or stopped at a blocking question (Rule-8) — with no preface and no progress lines.
+    Everything a Rule requires reported appears in it: findings, incidents, the evidence block,
+    the pending-queue counts, the one `Y/N` last (Rule-10) — each written to the corpus first
+    where a Rule stores it (the plan file, `INCIDENTS.md`, provenance), so an interrupted turn
+    loses narration, never record. Execution longer than a few tool calls is delegated to a
+    fork in its own worktree (`delegation: plan-and-execute`, Rule-3 Scope), so the reply comes
+    at once and the Agent stays free for the next prompt; the fork's findings appear in the next
+    synthesis, and only the main Agent commits, pushes and asks. A harness "say what you're
+    doing" prompt gets one status line, never a second synthesis; a mid-turn Operator message is
+    answered in the same reply under the batch queue. Determined in d-work #113: delegation
+    detects nothing sooner — it fences execution from the plan-`Y` structurally and frees the
+    Agent; that is what is bought.
