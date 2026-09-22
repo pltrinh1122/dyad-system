@@ -54,7 +54,16 @@ dyad system without clashes or hand-editing.
    The one command-line entrypoint is `dyad/bin/dyad`, invoked by path (its shape: `distribution.md`).
    A core-owned table that holds craft-varying data accepts a craft-shipped contribution,
    discovered like a guard and reported under the contributing craft's own name, so the data
-   leaves when the craft does (`agent-corpus/falsification/extensibility.md`, #101).
+   leaves when the craft does (`agent-corpus/falsification/extensibility.md`, #101). A **bundled
+   craft** is a Tended craft the core release carries: `dyad build` puts its tree in the core's
+   archive and `dyad install` writes it, so a system that installs the core alone still has it.
+   It stays a Tended craft in every other respect — its own root, its own zone, its own `VERSION`
+   and its own `<craft>-vX.Y.Z` tag (property 4) — and it is bundled only because it says so
+   itself, in the contribution shape above (a `BUNDLED_WITH_CORE` declaration in one of its own
+   guard modules, discovered like a guard), never by a list the core keeps: a craft removed from
+   the tree takes its own claim with it. A core Rule that cites a craft by path is the reason to
+   bundle one — what the core ships and what its own Rules depend on must not disagree — and it is
+   the only reason the core's install may write outside its own root.
 3. **Craft-relative paths.** Craft files reference their own paths relative to the craft root, and
    instance paths through one instance location, `DYAD_INSTANCE` (default `agent-corpus`;
    `crafts/sysarch/rules/distribution.md`). Paths printed in Rule text are the defaults.
@@ -153,6 +162,9 @@ converse and the drift guard 2026-09-18 (d-work #91); see the same record, amend
 record, amendment #100. Ratification events gains the release-batch form 2026-09-21 (d-work #106):
 several tags whose content one d-work's own Done-`Y` already verified, each already named
 individually beforehand — split from destructive's unconditional one-per-question rule, which
-rested on a different, unaffected basis; see the same record, amendment #106.
+rested on a different, unaffected basis; see the same record, amendment #106. Property 2 gains the
+bundled craft 2026-09-22 (d-work #114): four core Agent Rules cite `crafts/sysadmin/` by path while
+the core release shipped without it, and a core-only install of `main` was red; see the same
+record, amendment #114.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

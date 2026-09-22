@@ -484,6 +484,61 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(pkg.check_generated(pkg.REPO, pkg.rules()["generated"]), [])
 
 
+class BundledCraftTests(unittest.TestCase):
+    """Rule-11 property 2's bundled craft (d-work #114). The core keeps no list: a craft is bundled
+    only by its own `BUNDLED_WITH_CORE` declaration in one of its guard modules, so these tests
+    drive the mechanism through a real craft guard file rather than patching the function."""
+
+    def setUp(self):
+        sys.path.insert(0, str(PKG / "scripts"))
+        import package
+        self.package = package
+
+    def test_release_roots_is_core_plus_bundled(self):
+        """`release_roots` is `CORE_ROOTS` plus one `crafts/<name>` per bundled craft, in that order."""
+        with unittest.mock.patch.object(self.package, "bundled_crafts", lambda pkg=None: ["zeta", "alpha"]):
+            self.assertEqual(self.package.release_roots(), self.package.CORE_ROOTS + ["crafts/zeta", "crafts/alpha"])
+
+    def test_no_declaration_means_core_only(self):
+        """A tree whose crafts declare nothing yields exactly the core's own roots — so adding the
+        mechanism changes nothing until a craft opts in (the compatibility this d-work relies on)."""
+        with unittest.mock.patch.object(self.package, "bundled_crafts", lambda pkg=None: []):
+            self.assertEqual(self.package.release_roots(), self.package.CORE_ROOTS)
+
+    def test_declaration_is_discovered_from_a_craft_guard(self):
+        """The real discovery path: a craft guard module setting `BUNDLED_WITH_CORE = True` is found
+        through `dyadlib.guard_files()`, and one setting it `False`/omitting it is not."""
+        crafts = dyadlib.craft_dirs()
+        if not crafts:
+            self.skipTest("no Tended craft in this tree")
+        guards = sorted((crafts[0] / "guards").glob("*.py"))
+        if not guards:
+            self.skipTest(f"{crafts[0].name} ships no guard module")
+        target, name = guards[0], crafts[0].name
+        original = target.read_text()
+
+        def fresh():
+            """`dyadlib.load_module` caches by name, as it should — two loaders of one file must
+            share a module. A test that rewrites the file on disk is the one caller that needs the
+            cache dropped, so it drops it here rather than weakening the loader."""
+            for key in [k for k in sys.modules if k.startswith("dyad_crafts_")]:
+                del sys.modules[key]
+            return self.package.bundled_crafts()
+
+        try:
+            target.write_text(original + "\n\nBUNDLED_WITH_CORE = True\n")
+            self.assertIn(name, fresh())
+            target.write_text(original + "\n\nBUNDLED_WITH_CORE = False\n")
+            self.assertNotIn(name, fresh())
+            target.write_text(original)
+            self.assertNotIn(name, fresh())
+        finally:
+            target.write_text(original)
+            shutil.rmtree(target.parent / "__pycache__", ignore_errors=True)
+            for key in [k for k in sys.modules if k.startswith("dyad_crafts_")]:
+                del sys.modules[key]
+
+
 class InvariantPassTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md p1, p4: the pass runs before any check in `check` and `check --guards`, prints one
     line per model module in a fixed order, never runs at import or under --list/--help, and a false invariant is a red
