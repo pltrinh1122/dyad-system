@@ -201,6 +201,13 @@ what an agent may bring, never what the Operator may ask for.
   the completion reply are the same reply; the incident's record — the attack row or the
   `INCIDENTS.md` row, and the plan file's own falsification section — is written during the turn,
   before that single reply reports it, so an interrupted turn loses narration, never the record.
+- Periodically the incident log is worked whole rather than row by row: an exercise groups an
+  incident ledger into failure modes and closes each one by a fence at a named moment, by a
+  `backlog` row naming the fence still to build, or by a recorded impossibility on this kernel
+  naming the Rule that makes it so — that exercise is the incident-hardening play-book
+  (`dyad/playbooks/incident-hardening.md`), which takes the incident ledger it hardens as its
+  parameter and, on one that has not grown since the last exercise, does nothing beyond
+  re-testing the fences already closed.
 
 ## Ratification events
 - Answering `Y` to a plan counter-prompt (mutation authorization).
@@ -216,6 +223,9 @@ three intakes from peer sessions in two days — one carrying its Operator's pla
 with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
 an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by Operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their Done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106. Incidents gains the
 `concise-mode` bullet 2026-09-22 (d-work #113): under one reply per prompt the record precedes the
-reply; see the same record, amendment #113.
+reply; see the same record, amendment #113. Incidents gains the periodic-exercise bullet
+2026-09-23 (d-work #137): the grouping-and-mitigation exercise run by hand in #116, #128 and #135
+becomes a play-book Rule-3 reads, parameterized by the ledger it hardens and idempotent on one
+that has not grown; see the same record, amendment #137.
 
 Set: System Requirements.
