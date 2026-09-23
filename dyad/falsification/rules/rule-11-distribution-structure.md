@@ -237,3 +237,32 @@ form by name, own none of its mechanics (S4); 11–8 unaffected — destructive'
 are untouched by this amendment; 11–2 unaffected — Rule-2's existing batch-counter-prompt Binding
 sentence already covers "names several d-works, PRs, or both," binding a release-batch `Y` the
 same way. Others unchanged. Coherent, orthogonal. Disposition: see ledger #106.
+
+## Amendment — d-work #114 (2026-09-22, the bundled craft)
+
+**Claim:** the core release should carry the `sysadmin` craft.
+
+| # | attack | result |
+|---|--------|--------|
+| R1 | The bundle (property 7, tag `vX.Y.Z`) already releases the core and every Tended craft together. | **refuted as sufficient** — the bundle is a manifest over separate archives; the receiver installs each craft in its own step. A system that pins the *core* tag gets no `sysadmin` at all. Co-release is not core-inclusion. |
+| R2 | Preference, not defect: the core stands alone. | **refuted, measured** — four core Agent Rules (5, 8, 18, 19) cite `crafts/sysadmin/` by path, nine distinct paths, and a core-only install of `main` at `25a1834` was red (`FAIL [Rule-12] tests failed (dyad/tests)`, 1 failure + 1 error; backlog #10 names that class). The dependency is real already; only the shipping was missing. |
+| R3 | Then merge the craft into `dyad/`. | **refuted** — it reverses the extraction that created the craft and collapses Rule-4's Agent Rule / Tended Rule split. The survivor ships the tree without absorbing it: a bundled craft keeps its root, its zone, its `VERSION` and its own tag. |
+| R4 | Forcing a host craft on every system breaks craft optionality. | **survives — conceded** — a system with no host carries a tree it never uses. The cost is disk, not doctrine: the craft stays separately versioned and separately removable, and removing it removes its own claim to being bundled. |
+| R5 | Fix the coupling instead — stop core Rules citing craft paths. | **survives as the honest alternative**, and is recorded as such rather than dismissed. It preserves optionality and is arguably more correct, but it is a large Rule-text change across four Agent Rules. The Operator chose this branch; that one stays available. |
+| R6 | Property 2 forbids a core install writing another craft's root. | **confirmed — which is why this is a Rule amendment and not a build change.** A `dyad install` that quietly wrote `crafts/sysadmin/` without amending p2 would be a Rule breach dressed as a feature. |
+| R7 | Bundling one craft reddens the siblings' citations, because `references.py`'s `crafts_absent` is one flag for the whole tree. | **refuted by reading the code** — `craft_state` resolves per craft (#167): an absent sibling with no registry is `skip`, with a registry that omits it `warn`; `FAIL` is reserved for installed-then-deleted. `crafts/sysarch/rules/distribution.md`'s paragraph claiming a one-craft subset leaves `check --guards` red predates #167 and is stale. |
+| R8 | The core should keep the list of which crafts it bundles — it is the core's release. | **refuted** — property 2's own craft-contribution sentence (#100, per `agent-corpus/falsification/extensibility.md`) already settles this shape for craft-varying data: discovered, reported under the contributing craft's name, gone when the craft is. A core-kept list would need editing every time a craft arrived or left, and would outlive the craft it named. |
+| R9 | A craft declaring itself bundled lets a craft decide what the core ships. | **survives, scoped** — true, and bounded by the same limit as every other contribution: the declaration only has effect for a craft that is *in the tree*, which is already the authoring repo's decision. What it removes is a second place to keep the same fact in sync. |
+
+**Survivor.** Property 2 gains the bundled craft: a Tended craft the core release carries, declared
+by the craft itself (`BUNDLED_WITH_CORE` in one of its own guard modules, discovered like a guard),
+Tended in every other respect, bundled only because a core Rule cites it by path. `release_roots()`
+is used by `build` and `install` alone — never by `check`, whose craft/instance scan still judges
+the core craft by itself, so bundling changes what ships and not what anything *is*.
+
+Pairwise (Rule-5): 11–1 a bundled craft's tree stays zone `craft`, so a change to it is still a
+craft-zone PR — the bundling is the core's *release* reaching it, never the zone moving; 11–4 the
+craft keeps its own `VERSION` and its own `<craft>-vX.Y.Z` tag, so the drift guard is unaffected;
+11–12 the mechanism carries its own tests (`BundledCraftTests`); 11–20 no new reference kind — the
+declaration is a module constant, not a citation. Others unchanged. Coherent, orthogonal.
+Disposition: see ledger #114.

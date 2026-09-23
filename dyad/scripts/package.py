@@ -88,6 +88,32 @@ TEMPLATES = {"VERSION": f"{INSTANCE}/d-work/VERSION", "rows-README.md": f"{INSTA
 CORE_ROOTS = ["dyad"]                                  # the core craft's tree (Rule-11 p1)
 CORE_HOOKS = distribute.Hooks(templates=TEMPLATES, import_line=IMPORT_LINE, gitignore=True)   # its host-side hooks (p2); gitignore: d-work #179, G9
 
+def bundled_crafts(pkg=None):
+    """Every **bundled craft** (Rule-11 property 2, vocabulary): a Tended craft the core release
+    carries. A craft declares itself by setting `BUNDLED_WITH_CORE = True` in any one of its own
+    guard modules — the craft-shipped contribution shape property 2 already blesses for
+    `REFERENCES_CONTRIB` (#101), discovered through `dyadlib.guard_files()`'s craft half. The core
+    keeps no list, so a craft removed from the tree takes its own claim with it and nothing here
+    needs editing. Returns craft names, sorted."""
+    pkg = pkg or dyadlib.PKG
+    out = set()
+    for py in dyadlib.guard_files(pkg):
+        corpus, craft = dyadlib.guard_key(py, pkg)[:2]
+        if corpus != "craft" or craft in out:
+            continue
+        if getattr(dyadlib.load_guard_file(py, pkg), "BUNDLED_WITH_CORE", False):
+            out.add(craft)
+    return sorted(out)
+
+
+def release_roots(pkg=None):
+    """The roots the core *release* carries: `CORE_ROOTS` plus every bundled craft's tree. Used by
+    `build` and `install` only — never by `check`, whose craft/instance scan (property 1) still
+    judges the core craft alone, and never by the craft guard, which judges each Tended craft on
+    its own. Bundling changes what ships, not what anything is."""
+    return CORE_ROOTS + [f"crafts/{c}" for c in bundled_crafts(pkg)]
+
+
 def core_extra():
     """The `dyad-*` workflow files: the core craft's host-side hooks that ship in its archive (p2)."""
     out = subprocess.check_output(["git", "ls-files", ".github/workflows"], cwd=REPO, text=True).split()
@@ -361,8 +387,10 @@ def cmd_check():
 
 def cmd_build(out=None):
     """The core craft's export: the one code path (distribute.build; deterministic, p5)."""
-    out = distribute.build(REPO, CORE_ROOTS, out or f"dyad-{version()}.tar.gz", extra=core_extra())
-    print(f"built {out} (version {version()})")
+    roots = release_roots()
+    out = distribute.build(REPO, roots, out or f"dyad-{version()}.tar.gz", extra=core_extra())
+    bundled = bundled_crafts()
+    print(f"built {out} (version {version()})" + (f"; bundled: {', '.join(bundled)}" if bundled else ""))
     return 0
 
 def cmd_install(target):
@@ -374,8 +402,10 @@ def cmd_install(target):
     pre-#160 -> current upgrade unpruned). Destination path resolution goes through the host
     adapter (#179), not a bare `.resolve()` call at the site."""
     target = hostadapter.resolve(target)
-    changed = distribute.install(REPO, target, CORE_ROOTS, prune=True, hooks=CORE_HOOKS, extra=core_extra())
-    print(f"installed into {target}: {changed} changes; run: git -C {target} config core.hooksPath dyad/hooks")
+    bundled = bundled_crafts()
+    changed = distribute.install(REPO, target, release_roots(), prune=True, hooks=CORE_HOOKS, extra=core_extra())
+    print(f"installed into {target}: {changed} changes" + (f"; bundled: {', '.join(bundled)}" if bundled else "")
+          + f"; run: git -C {target} config core.hooksPath dyad/hooks")
     return 0
 
 def cmd_craft(a):
