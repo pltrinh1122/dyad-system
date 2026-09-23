@@ -92,8 +92,10 @@ class CraftCliTests(unittest.TestCase):
         bad = scratch(); author(bad, files={**CRAFT, "docs/d.md": f"backups at {HOME}/b\n"})
         r = dyad(bad, "export", "fx", str(bad / "bad.tar.gz")); self.assertEqual(r.returncode, 1); self.assertIn(f"host-specific string '{MARK}'", r.stderr); self.assertIn("not exported", r.stderr)
         self.assertFalse((bad / "bad.tar.gz").exists())
+        before = snapshot(self.dst)
         r = dyad(self.dst, "install", str(bad / "crafts" / "fx")); self.assertEqual(r.returncode, 1); self.assertIn("not installed", r.stderr)
-        self.assertFalse((self.dst / "crafts").exists()); shutil.rmtree(bad, ignore_errors=True)
+        self.assertFalse((self.dst / "crafts" / "fx").exists()); self.assertEqual(snapshot(self.dst), before)   # nothing written; crafts/ may already hold a bundled craft (#114)
+        shutil.rmtree(bad, ignore_errors=True)
     def test_install_twice_writes_only_the_craft_and_registry(self):
         before = snapshot(self.dst)
         r = dyad(self.dst, "install", str(self.archive), "--dwork", "156")
@@ -154,8 +156,9 @@ class CraftCliTests(unittest.TestCase):
         src2 = scratch(); author(src2, files={**CRAFT, "MANIFEST.md": "name: fx\nrequires: syseng>=0.2.0 dyad-operator>=0.1.0\n"})
         r = dyad(src2, "check", "fx"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [craft] crafts/fx: requires syseng>=0.2.0: not installed (checked at install)", r.stdout)
         r = dyad(src2, "export", "fx", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 0, r.stderr)
+        before = snapshot(self.dst)
         r = dyad(self.dst, "install", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 1)
-        self.assertIn("requires syseng>=0.2.0: not installed", r.stderr); self.assertIn("requirements unmet", r.stderr); self.assertFalse((self.dst / "crafts").exists())
+        self.assertIn("requires syseng>=0.2.0: not installed", r.stderr); self.assertIn("requirements unmet", r.stderr); self.assertEqual(snapshot(self.dst), before)   # the refusal wrote nothing at all; crafts/ itself may already hold a bundled craft the core install wrote (Rule-11 p2)
         author(self.dst, name="syseng", files={**CRAFT, "VERSION": "0.2.0\n"})
         r = dyad(self.dst, "install", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 0, r.stderr); shutil.rmtree(src2, ignore_errors=True)
     def test_install_from_directory_and_repo_root(self):
@@ -167,7 +170,8 @@ class CraftCliTests(unittest.TestCase):
     def test_check_in_receiving_repo_after_install(self):
         dyad(self.dst, "install", str(self.archive)); git(self.dst, "add", "-A"); git(self.dst, "commit", "-qm", "craft")
         r = subprocess.run([sys.executable, str(self.dst / "dyad" / "scripts" / "package.py"), "check", "--guards"], capture_output=True, text=True, env=env())
-        self.assertIn("ok   [guards] craft/crafts (1 craft(s))", r.stdout); self.assertIn("ok   [guards] fx/w", r.stdout)   # the craft guard and the craft's guard run there
+        n_crafts = 1 + len(dyadlib.runner_module().bundled_crafts())   # fx, plus every bundled craft the core install brought (Rule-11 p2) — 0 on a branch where none declares itself
+        self.assertIn(f"ok   [guards] craft/crafts ({n_crafts} craft(s))", r.stdout); self.assertIn("ok   [guards] fx/w", r.stdout)   # the craft guard and the craft's guard run there
         self.assertFalse(any("FAIL [guards] craft/" in l or "FAIL [guards] fx/" in l for l in r.stdout.splitlines()), r.stdout)
         # (the whole run is not asserted: Rules 8, 18, 19 name `crafts/sysadmin/…` paths, which references.py skips only on a core-only install — Rule-20, outside #156)
 

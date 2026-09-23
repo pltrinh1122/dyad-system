@@ -24,8 +24,8 @@ def scratch_install(with_craft: bool) -> Path:
     d = Path(tempfile.mkdtemp()); subprocess.run(["git", "init", "-q", str(d)], check=True)
     r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "install", str(d)], capture_output=True, text=True); assert r.returncode == 0, r.stderr
     if with_craft:
-        for c in dyadlib.craft_dirs(PKG):
-            shutil.copytree(c, d / "crafts" / c.name, ignore=shutil.ignore_patterns("__pycache__"))
+        for c in dyadlib.craft_dirs(PKG):   # dirs_exist_ok: `install` has already written every *bundled* craft (Rule-11 p2, package.release_roots()); its tracked files are a subset of this tree, so copying over it leaves exactly the tree this helper has always placed, and places the non-bundled crafts as before
+            shutil.copytree(c, d / "crafts" / c.name, ignore=shutil.ignore_patterns("__pycache__"), dirs_exist_ok=True)
         shutil.copy(dyadlib.crafts_dir(PKG) / "REGISTRY.md", d / "crafts" / "REGISTRY.md")   # the craft zone's instance state (#156); Rule-11 names it
     subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
     subprocess.run(["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "scratch"], check=True)
@@ -145,7 +145,11 @@ class PackageTests(livetest.LiveCase):
         import tarfile
         with tarfile.open(d / "a.tar.gz") as tar:
             names = tar.getnames()
-        self.assertEqual(names, load_package().package_files()); self.assertTrue(all(n.startswith("dyad/") or n.startswith(".github/workflows/dyad-") for n in names))
+        # #114: `build` archives `release_roots()` — the core tree plus every bundled craft's — so the expectation
+        # is derived from it, not from `package_files()` (still core-only: that is what `check`'s own scan judges).
+        pkg = load_package(); roots = pkg.release_roots()
+        self.assertEqual(names, pkg.distribute.files(pkg.REPO, roots, pkg.core_extra()))
+        self.assertTrue(all(any(n.startswith(f"{r}/") for r in roots) or n.startswith(".github/workflows/dyad-") for n in names))
         shutil.rmtree(d, ignore_errors=True)
     def test_install_twice_is_zero_changes(self):
         d = scratch_install(with_craft=False)
@@ -241,24 +245,53 @@ class PackageTests(livetest.LiveCase):
         for c in CRAFTS: self.assertIn(c, r.stdout, c)                                          # and every Tended craft installed (#171)
     # #155: the second guard root, in a scratch install with and without the sysadmin craft (attack 6)
     def test_scratch_install_without_a_craft_runs_the_core_registry(self):
+        """A core install's own registry is the core guards plus every **bundled** craft's, and
+        nothing else (Rule-11 p2, d-work #114). Before bundling that set was exactly `CORE`; the
+        assertions below derive the craft half from `bundled_crafts()` instead of assuming it is
+        empty, so this holds on a tree where no craft declares itself as well as on one where
+        sysadmin does. The conditional blocks are the same statement seen from either side: what a
+        core install can and cannot do depends on whether anything came with it."""
+        pkg = load_package()
+        bundled = pkg.bundled_crafts()
         d = scratch_install(with_craft=False)
         py = [sys.executable, str(d / "dyad" / "scripts" / "package.py")]
         r = subprocess.run(py + ["check", "--list"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         labels = [l.split()[0] + "/" + l.split()[1] for l in r.stdout.splitlines()[1:]]
-        self.assertEqual(labels, CORE)
+        self.assertEqual(labels, CORE + [f"{c}/{e}" for c in bundled for e in craft_guards(c)])
+        self.assertEqual(livetest.crafts_installed(d / "dyad"), bundled, "a core install carries exactly the bundled crafts")
         r = subprocess.run(py + ["check", "--guards"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        # Rule-11 property 2's contribution mechanism (#101) retired these four core rows in favor
-        # of the sysadmin craft's own `REFERENCES_CONTRIB`: absent here, they print nothing at all,
-        # never a skip line — there is no core row left to skip.
+        # Rule-11 property 2's contribution mechanism (#101) retired these four core rows in favor of
+        # the sysadmin craft's own `REFERENCES_CONTRIB`. With no craft installed they print nothing
+        # at all, never a skip line — there is no core row left to skip. With that craft *bundled*,
+        # they print again, each tagged with the contributing craft's own name: the same property
+        # from the other side, and the sharper check of the two, since it proves the row travels
+        # with its craft rather than merely vanishing (Rule-11 p2, d-work #114). Which craft
+        # contributes which kind is read from the register, never assumed.
+        contrib = {row[0]: craft for craft, row in
+                   dyadlib.load_guard("agent", "references").craft_references_contrib()}
         for kind in ("changelog.action->ops", "ops.dwork->row", "ops.changelog->changelog", "changelog.event->event"):
-            self.assertNotIn(kind, r.stdout, kind)
+            craft = contrib.get(kind)
+            self.assertIsNotNone(craft, f"{kind} is a craft contribution, not a core row")
+            if craft in bundled:
+                # It is the craft's row, so it may print (a skip, when its store is empty) or stay
+                # silent (when it resolves) — but it is never an untagged *core* row again.
+                if kind in r.stdout:
+                    self.assertIn(f"{kind} (crafts/{craft})", r.stdout, kind)
+            else:
+                self.assertNotIn(kind, r.stdout, kind)   # the craft is gone and its row went with it
         self.assertNotIn("skip event.command->command", r.stdout)   # no craft needed: the core run-book (dyad/runbooks/craft.md) resolves alone; nothing prints with no events store to check against it (#213 d-work #46)
-        self.assertIn("skip rule.text->path: `crafts/…` tokens; no crafts/ tree is installed", r.stdout)   # Rules 1, 11 name crafts/ paths
+        if bundled:   # a crafts/ tree exists, so the whole-tree skip no longer fires and each craft resolves on its own (#167)
+            self.assertNotIn("no crafts/ tree is installed", r.stdout)
+        else:
+            self.assertIn("skip rule.text->path: `crafts/…` tokens; no crafts/ tree is installed", r.stdout)   # Rules 1, 11 name crafts/ paths
         self.assertFalse((d / "workstation-corpus" / "CHANGELOG.md").exists())   # no core seed since #155; the craft's install seeds it (#156)
         r = subprocess.run(py + ["runbook", "check"], capture_output=True, text=True, env=env())
-        self.assertEqual(r.returncode, 2); self.assertIn("no craft provides the run-book check", r.stderr)
+        if any("runbooks" in craft_guards(c) for c in bundled):   # a bundled craft supplies the check, so it runs instead of refusing
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        else:
+            self.assertEqual(r.returncode, 2); self.assertIn("no craft provides the run-book check", r.stderr)
         r = subprocess.run(py + ["runbook", "list", "x"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 2); self.assertIn("refused: no run-book", r.stderr)   # the runner itself works without a craft (#155 amendment)
         shutil.rmtree(d, ignore_errors=True)
@@ -448,15 +481,32 @@ class PackageTests(livetest.LiveCase):
         self.require_craft("sysarch")   # with no projector the line names the install instead (test below)
         r = self.run_py("project", "nope")
         self.assertEqual(r.returncode, 2); self.assertIn("no projector for 'nope': registered:", r.stderr)
-    def test_project_without_a_craft_prints_the_install_line(self):
-        """A core-only install (no crafts/ tree): `dyad project <s>` exits 2 naming the install; `--list` prints an empty registry with the same line."""
+    def test_project_on_a_bundled_crafts_only_install_reports_the_registry(self):
+        """The minimal install is no longer empty: it is exactly the bundled crafts (Rule-11 p2, d-work #114).
+        Asked for a surface no installed craft provides, it still exits 2 and still says what is available --
+        the registry when a craft is bundled, the install line when none is. Both sides derive from
+        `bundled_crafts()`, so this holds on a tree where no craft declares itself as well as on one where
+        sysadmin does. Successor to the core-only case, whose premise (an install with no craft at all) a
+        bundled craft ends by design."""
+        pkg = load_package()
         d = scratch_install(with_craft=False)
         self.addCleanup(shutil.rmtree, d)
+        bundled = pkg.bundled_crafts()
+        self.assertEqual(livetest.crafts_installed(d / "dyad"), bundled, "a core install carries exactly the bundled crafts")
+        reg = sorted(k for k, (craft, _rel) in pkg.projectors().items() if craft in bundled)
+        surface = "no-such-surface"   # named by no craft in this tree, bundled or not
+        self.assertNotIn(surface, {k.split("/", 1)[1] for k in pkg.projectors()})
+        self.assertIn("dyad craft install", pkg.NO_PROJECTOR, "the empty-registry line names the remedy")
         run = lambda *a: subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "project", *a], capture_output=True, text=True, env=env(), cwd=d)
-        r = run("erd")
-        self.assertEqual(r.returncode, 2, r.stdout + r.stderr); self.assertIn("no projector for 'erd': no installed craft provides projectors (dyad craft install crafts/sysarch)", r.stderr)
+        r = run(surface)
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+        self.assertIn(f"no projector for {surface!r}: " + (f"registered: {' '.join(reg)}" if reg else pkg.NO_PROJECTOR), r.stderr)
         r = run("--list")
-        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "no projector: no installed craft provides projectors (dyad craft install crafts/sysarch)")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        if reg:
+            self.assertEqual([l.split()[0] for l in r.stdout.splitlines()], reg)
+        else:
+            self.assertEqual(r.stdout.strip(), f"no projector: {pkg.NO_PROJECTOR}")
     def test_project_surface_in_two_crafts_disambiguates(self):
         # D3 (#100, #99): two crafts naming the same surface now coexist in the registry — a bare
         # name lists the qualified candidates and exits 2 rather than failing the registry itself
@@ -507,7 +557,10 @@ class BundledCraftTests(unittest.TestCase):
 
     def test_declaration_is_discovered_from_a_craft_guard(self):
         """The real discovery path: a craft guard module setting `BUNDLED_WITH_CORE = True` is found
-        through `dyadlib.guard_files()`, and one setting it `False`/omitting it is not."""
+        through `dyadlib.guard_files()`, and one setting it `False`/omitting it is not. Measured
+        against the craft stripped of whatever declaration it ships today, never against absolute
+        membership of the tree as it stands, so the case holds whether no craft, one craft or every
+        craft here declares itself bundled (d-work #114)."""
         crafts = dyadlib.craft_dirs()
         if not crafts:
             self.skipTest("no Tended craft in this tree")
@@ -515,7 +568,8 @@ class BundledCraftTests(unittest.TestCase):
         if not guards:
             self.skipTest(f"{crafts[0].name} ships no guard module")
         target, name = guards[0], crafts[0].name
-        original = target.read_text()
+        originals = {py: py.read_text() for py in guards}   # every module of this craft: its declaration may live in any of them
+        bare = {py: "".join(l for l in t.splitlines(keepends=True) if not l.startswith("BUNDLED_WITH_CORE")) for py, t in originals.items()}
 
         def fresh():
             """`dyadlib.load_module` caches by name, as it should — two loaders of one file must
@@ -525,18 +579,23 @@ class BundledCraftTests(unittest.TestCase):
                 del sys.modules[key]
             return self.package.bundled_crafts()
 
+        baseline = fresh()
         try:
-            target.write_text(original + "\n\nBUNDLED_WITH_CORE = True\n")
-            self.assertIn(name, fresh())
-            target.write_text(original + "\n\nBUNDLED_WITH_CORE = False\n")
-            self.assertNotIn(name, fresh())
-            target.write_text(original)
-            self.assertNotIn(name, fresh())
+            for py, text in bare.items():
+                py.write_text(text)
+            without = fresh()
+            self.assertNotIn(name, without)                       # omitted: not discovered
+            target.write_text(bare[target] + "\nBUNDLED_WITH_CORE = True\n")
+            self.assertEqual(fresh(), sorted([*without, name]))   # declared: discovered, and no other craft moves
+            target.write_text(bare[target] + "\nBUNDLED_WITH_CORE = False\n")
+            self.assertEqual(fresh(), without)                    # declared False: not discovered
         finally:
-            target.write_text(original)
+            for py, text in originals.items():
+                py.write_text(text)
             shutil.rmtree(target.parent / "__pycache__", ignore_errors=True)
             for key in [k for k in sys.modules if k.startswith("dyad_crafts_")]:
                 del sys.modules[key]
+        self.assertEqual(fresh(), baseline)   # restored: read from disk again, so this tree's own answer returns
 
 
 class InvariantPassTests(unittest.TestCase):
