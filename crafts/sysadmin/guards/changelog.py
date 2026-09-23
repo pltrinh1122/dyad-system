@@ -25,6 +25,15 @@ import dyadlib
 
 CRAFT = Path(__file__).resolve().parents[1]           # crafts/sysadmin: the template sits beside the rule
 ENTITY, CORPUS, TRANSACTION = "changelog", "workstation", False
+
+# Rule-11 property 2: this craft is a **bundled craft** — the core release carries it, so a system
+# that installs the core alone still has it. The declaration lives here, in one of the craft's own
+# guard modules, because the core keeps no list: `package.py bundled_crafts()` discovers it through
+# `dyadlib.guard_files()`, exactly as `REFERENCES_CONTRIB` is discovered (#101), and a craft removed
+# from the tree takes its own claim with it. One declaration per craft suffices; this module holds
+# it because `host-mutation.md` — the rule this guard checks — is what Rule-8's own kernel reads by
+# path, and a core Rule citing a craft by path is the reason to bundle one at all (d-work #114).
+BUNDLED_WITH_CORE = True
 NAME, OWNER = "change-log row", "Rule-8"
 FIELDS = ("date", "d-work", "class", "action", "undo", "outcome", "actor")
 OPTIONAL = ("actor",)   # trailing suffix of FIELDS an *instance* header may omit while migrating (#216);
