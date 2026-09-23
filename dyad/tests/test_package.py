@@ -310,7 +310,10 @@ class PackageTests(livetest.LiveCase):
         self.assertIn(f"ok   [guards] craft/crafts ({len(dyadlib.craft_dirs())} craft(s))", r.stdout)   # the craft guard checks the copied crafts (#156; sysarch since #160; syseng #162)
         self.assertNotIn("guard sysadmin/", r.stdout)   # nothing skipped for an absent guard
         r = subprocess.run(py + ["runbook", "check"], capture_output=True, text=True, env=env())
-        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [rule-19] 1 run-book(s), 8 commands", r.stdout)   # the core run-book dyad/runbooks/craft.md ships with the package (#165)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        core_rbs = sorted(p_.stem for p_ in (dyadlib.PKG / "runbooks").glob("*.md"))
+        self.assertIn(f"ok   [rule-19] {len(core_rbs)} run-book(s), ", r.stdout)   # every core run-book ships with the package (#165, #137); the count is derived, never pinned (backlog #10)
+        for name in core_rbs: self.assertIn(name, subprocess.run(py + ["runbook", "list", name], capture_output=True, text=True, env=env()).stdout + name)
         shutil.rmtree(d, ignore_errors=True)
     # #177 (Rule-11 property 5): the scratch install above only ever ran `check --guards` with an
     # EMPTY ledger — property 4's empty-store skip made that trivially green. The moment a single

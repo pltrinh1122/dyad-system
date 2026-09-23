@@ -62,6 +62,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan gate | the check that a PR's cited d-work carries a `Y plan` disposition (`dyad/guards/agent/prs.py`) | 3 | 3 |
 | completion reply | the Agent's reply that ends with a completion counter-prompt; carries the evidence the Operator's verification needs | 3 | 3 |
 | incident | an action or outcome the plan did not name, or a plan item not achieved as the plan said; reported at once and recorded | 3 | 3 |
+| failure mode | the mechanism by which an incident happened — the thing that would have to change for it not to recur; never the Rule breached and never the harm caused | 3 | 3 |
 | claim | anything a Rule, plan, preference or verdict would encode; falsified before it is | 9 | 9 |
 | provenance record | `<instance>/d-work/provenance/<id>.md`: one d-work's Operator prompts and dispositions, verbatim, as numbered `## <n> <kind> <date>` entries each holding a fenced body; the Agent's own text is never in one | 7 | 7 |
 | provenance store | `<instance>/d-work/provenance/`: the set of provenance records, one file per d-work id, written clerically beside the rows; raw session transcripts never enter it | 7 | 7 |

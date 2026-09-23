@@ -124,3 +124,62 @@ may not commit, push or open a PR — Scope's subagent sentence, unchanged). Pai
 key is read by both for different concerns; 3–8 unchanged; 3–15 the plan file is where a
 mid-turn finding is written first, as phase 1 already requires. Coherent, orthogonal.
 Disposition: see ledger #113.
+
+## Amendment — d-work #137 (2026-09-23, the incident-hardening play-book)
+**Claim (Operator, 2026-09-23):** the incident-to-mitigation exercise run by hand in #116, #128
+and #135 is a repeatable procedure of the core craft — group the incident log into observed
+failure modes, plan a mitigation per mode, execute it, verify it — run periodically so that
+reliability keeps up with the system's own mutation; named `incident-hardening`, taking an
+incident ledger as its parameter, and doing no work when that ledger has not grown.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | A play-book is the wrong container: Rule-13 says recurrence proposes *code*, so this procedure should be a script. | **Refuted, scoped** | Rule-13 property 1 yields a code path for a recurring *task*; this is a recurring *decision* — which incident belongs to which mode, and which mitigation is worth building — and the vocabulary's `play-book` is exactly "an executable procedure … for a recurring decision". The steps that *are* mechanical do become commands: that is the run-book half. |
+| 2 | Rule-5 already owns periodic review, so this duplicates a sweep (Rule-5 Conditions: "The operator prompts a sweep of the set"). | **Refuted** | A sweep's target is the Agent Rule set, checked pairwise for coherence and orthogonality; this one's target is the incident log, grouped by mechanism and closed by fences. Different target, different verdict, no shared ownership (Rule-5's own orthogonality test). The name `incident-sweep` is excluded for the term's sake, not the Rule's. |
+| 3 | The exercise produced nine records and zero fences last time (#128): formalizing it institutionalizes an audit nobody builds. | **Confirmed — and the reason phase 4 is written as it is** | The strongest attack, and it is why a mode may close only by one of three named exits, and why phase 2's inventory must be read from code rather than prose — the failure in #116/#128 was that a surfaced candidate had no row and no moment. The play-book cannot make the Operator dispose; it can make an undisposed candidate visible as a row instead of a paragraph. |
+| 4 | The run-book half is unrunnable in this instance: `runbook.py`'s `DEFAULT_RUNBOOKS` is `workstation-corpus/runbooks`, and `workstation-corpus/` does not exist here. | **Survives, scoped** | It runs: `runbook.py`'s `run` makes the events directory itself — `ep.parent.mkdir(parents=True, exist_ok=True)` beside the `events_path(root, instance)` call — so the first run creates it. The consequence is real and is stated in the play-book rather than solved here — the events file is instance state in the *workstation* zone, so it lands in its own PR (Rule-1), and this instance's want of a host is backlog #60. `DYAD_RUNBOOKS` can redirect it. |
+| 5 | Phase 1's "one observed failure mode per row" was already falsified as lossy: two rows carry two mechanisms. | **Survives, scoped** | Carried over from #116 with its answer: primary is the mechanism that *started* it, the second is named secondary in that mode's record. #116's own attack, kept rather than re-litigated. |
+| 6 | The taxonomy is not closed: #128 attack 7 found a tenth pattern the nine modes do not name. | **Confirmed** | Which is why phase 1 re-derives the modes from the log each exercise instead of reading the previous index's list — stated in the play-book as a step, not an assumption. |
+| 7 | Rule-3 is already the longest Rule; another clause worsens it (Rule-4 shape, Rule-5 coherence). | **Survives, scoped** | One sentence, in the clause that already owns incidents, delegating the procedure to a file — which is what a play-book is for. The alternative, a new Rule, would need its own block and a coherence statement against all nineteen. |
+| 8 | The watermark belongs in the events file the runner already appends, not in a prose audit — an audit can be hand-edited and drift from the ledger. | **Refuted, scoped** | The events store is `<runbooks>/events/`, workstation-zone instance state this system does not have (backlog #60, and attack 4 above); an idempotence gate that needs a zone the instance lacks is unusable on the first invocation. The audit is agent zone, always present, and is the artifact a reader consults anyway. The drift risk is real and is answered by deriving the live count at survey time rather than trusting the watermark alone: the watermark is only ever compared, never believed. |
+| 9 | A row count is a weak watermark: rows are inserted mid-file by concurrent sessions (the #114 rows sit at lines 9–13), so a count can stay equal while content changes. | **Survives, scoped** | True, and the reason the watermark carries the latest row's date beside the count. Two rows added and one removed would still defeat it, but `INCIDENTS.md` is append-mostly and a removed row would be its own incident. The cheap, kernel-only check is a count plus a date; a content hash would be stronger and is named here as the upgrade if the pair is ever seen to fail. |
+| 10 | Parameterizing by ledger path lets the play-book write records into another system's instance, which Rule-1 does not govern across repositories. | **Survives, scoped** | The parameter names a path inside the running system's own tree; hardening a peer's log means having that log in this tree, which is an intake (Rule-3), not a cross-repository write. Stated in the play-book as a boundary rather than enforced, since no guard reaches another repository. |
+| 11 | Idempotence means the play-book can never notice a mitigation that regressed, because an unchanged ledger stops the exercise before phase 4. | **Confirmed — and it changes phase 4** | A shipped fence can rot without any new incident being logged, and the no-op gate would hide exactly that. Phase 4's verification of *already-closed* modes is therefore not gated by the watermark: the survey's no-op stops phases 1 to 3, and phase 4 re-tests each closed mode's fence against the incidents it claimed whenever the exercise is invoked. So an invocation on an unchanged ledger is not "do nothing" but "re-verify the fences and report"; it writes no file when every fence still holds, which is what `0 changes` means here. |
+
+Pairwise (Rule-5), for the one sentence Incidents gains. The four neighbours it could have
+collided with, and why each is untouched: **3–5** — Rule-5's `sweep` is the pairwise coherence and
+orthogonality check of the Agent Rule set, recorded in `agent-corpus/audits/`; the exercise this
+sentence names reads an incident ledger and closes failure modes by fences. Different target,
+different verdict, and the one name that would have blurred them (`incident-sweep`) was excluded
+in the plan's own naming table (attack 2), so Rule-5 keeps sole ownership of the periodic review
+*of Rules*. **3–9** — Rule-9 owns falsification: each mitigation candidate the exercise surfaces
+is a claim, attacked and recorded as any other, and phase 2's "falsify the claim *this mode is
+addressed*" is Rule-9's form used, not a second one declared. Rule-3 states when the exercise
+happens and what closes a mode; it says nothing about how a claim is attacked. **3–19** — Rule-19
+owns a *server instance's* run-book and health command; the steps here are a core run-book
+(`dyad/runbooks/`, its own section set, Rule-19 Boundaries), run through the same core runner,
+which is the arrangement the craft play-book already uses. No server is deployed, so Rule-19's
+property 2 is never reached and its concern does not move. **3–13** — Rule-13 property 1
+(recurrence proposes code) is satisfied, not displaced: the mechanical steps become the run-book's
+commands, and what stays in the play-book is a decision, which `play-book` is defined as covering
+(attack 1). Rule-13 keeps ownership of when inference must yield code; nothing here exempts
+anything from it.
+
+The rest: **3–1** the exercise's own output lands zone by zone, one PR each, as the play-book says
+and Rule-1 already requires (attack 4's events file is the workstation case). **3–2** an exercise
+opens no ratification event: each mode's mitigation is an ordinary d-work with its own plan-`Y`
+and Done-`Y`, and the no-op writes nothing to dispose. **3–4** the Rule-4 block is unchanged — one
+bullet inside an existing clause, no new Intent, Target, Boundary or Condition, so the counts the
+guard checks are as before. **3–6** one term, `failure mode` (owner 3, used by 3); the compound
+*incident ledger* names the play-book's parameter and is never the `ledger` the vocabulary defines
+(the row-file store, owner 3), a distinction the new bullet holds by never writing `ledger`
+unqualified. **3–11** the play-book and its run-book are core-craft files under `dyad/`, their
+events instance — the split Rule-11 property 1 already draws. **3–15** the exercise runs *inside*
+the d-work the prompt opened, its phases planned in that d-work's own plan file first, and each
+mode's child d-work stores its own plan before its plan-`Y` — Rule-15 phase 1 as it already reads,
+no phase added. **3–16** the modes' child d-works are ordinary rows in the row-file store, each
+its own file. **3–20** the bullet's one package path (`dyad/playbooks/incident-hardening.md`) is a
+`rule.text->path` reference the register already resolves; no kind is added. Others unchanged.
+Coherent, orthogonal.
+
+Disposition: see ledger #137.
