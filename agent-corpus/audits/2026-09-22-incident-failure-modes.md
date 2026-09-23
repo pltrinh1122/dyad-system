@@ -22,15 +22,15 @@ incidents** across **9 modes**.
 
 | mode | observed failure mode | count | d-work | record |
 |------|----------------------|------:|--------|--------|
-| A | acting before the Operator's `Y` | 9 | #117 | `2026-09-22-incident-mode-A.md` |
-| G | mechanism defect | 6 | #123 | `2026-09-22-incident-mode-G.md` |
-| B | stale local view of the remote | 5 | #118 | `2026-09-22-incident-mode-B.md` |
-| F | form error in a clerical record | 4 | #122 | `2026-09-22-incident-mode-F.md` |
-| C | concurrent-session race | 3 | #119 | `2026-09-22-incident-mode-C.md` |
-| E | plan content wrong | 3 | #121 | `2026-09-22-incident-mode-E.md` |
-| D | wrong cause asserted, then retracted | 2 | #120 | `2026-09-22-incident-mode-D.md` |
-| H | fence collision not surfaced | 1 | #124 | `2026-09-22-incident-mode-H.md` |
-| I | external environment | 1 | #125 | `2026-09-22-incident-mode-I.md` |
+| A | acting before the Operator's `Y` | 9 | #117 | `2026-09-22-incident-mode-a.md` |
+| G | mechanism defect | 6 | #123 | `2026-09-22-incident-mode-g.md` |
+| B | stale local view of the remote | 5 | #118 | `2026-09-22-incident-mode-b.md` |
+| F | form error in a clerical record | 4 | #122 | `2026-09-22-incident-mode-f.md` |
+| C | concurrent-session race | 3 | #119 | `2026-09-22-incident-mode-c.md` |
+| E | plan content wrong | 3 | #121 | `2026-09-22-incident-mode-e.md` |
+| D | wrong cause asserted, then retracted | 2 | #120 | `2026-09-22-incident-mode-d.md` |
+| H | fence collision not surfaced | 1 | #124 | `2026-09-22-incident-mode-h.md` |
+| I | external environment | 1 | #125 | `2026-09-22-incident-mode-i.md` |
 
 Each mode's record holds its definition, its incidents with dates and d-work ids, the pattern
 across them, and one remediation candidate with its attacks. The candidates are surfaced for the
