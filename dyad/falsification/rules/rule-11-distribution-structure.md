@@ -266,3 +266,49 @@ craft keeps its own `VERSION` and its own `<craft>-vX.Y.Z` tag, so the drift gua
 11–12 the mechanism carries its own tests (`BundledCraftTests`); 11–20 no new reference kind — the
 declaration is a module constant, not a citation. Others unchanged. Coherent, orthogonal.
 Disposition: see ledger #114.
+
+## Amendment — d-work #156 (2026-09-24, property 7's unreleased-craft sentence)
+Not the 2026-09-14 amendment of the same number above (R-craft-2): the ledger's ids restarted, and
+this is the later row #156 (the countersign craft, plan Revision 2, incident I2).
+
+**Claim:** property 7's "one row per craft in the tree", enforced in both directions (A27 above),
+admits an order in which a new craft can be added. Falsified in #156's own execution: with the craft
+first, `'countersign' is in the tree but has no bundle row`; with the row first, `'countersign': not a
+craft in this tree`. Rule-1 puts `crafts/` (zone `craft`) and `BUNDLE.md` (zone `infra`) in different
+PRs, and the pre-push hook runs the guard, so neither branch could be pushed without bypassing a hook
+that runs and fails, which Rule-1 forbids. Never hit before because every existing craft predates
+`BUNDLE.md`. A Rule-5 coherence gap between Rule-1 and property 7.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A1 | Softening the missing-row check weakens the bundle's completeness guarantee: `BUNDLE.md` no longer names every craft in the tree. | Survives, scoped | Only an *unreleased* craft may be absent, one with no `<craft>-v*` tag of its own. It has no archive, so there is nothing for the bundle to pin or publish (the bundle is built by sequencing each row's release, property 7). A released craft without a row still fails, and so does a row naming a craft not in the tree. A27's two-way check stands for every craft that has a release. |
+| A2 | A craft could stay unreleased forever and never be bundled. | Survives, as a risk | It is visible: every `dyad check` and every push prints `warn [bundle] '<craft>' is in the tree but unreleased … not yet bundled`. Releasing is the Operator's call (Ratification events), and the first release's own PR must add the row, because the tag makes the guard strict for that craft. |
+| A3 | Rule-1 coherence: is there now a legal order? | Refuted as a gap (coherence restored) | Yes, and it is the one Rule-1 names: change the referent before the referrer. The craft lands first in a craft-zone PR (it warns). Its first release adds the row in an infra-zone PR (strict from then on). Each PR is one zone, and every push passes. |
+| A4 | Client impact: does a receiving system see a change? | Refuted | A core-only install carries no `BUNDLE.md`, so the guard skips (property 7; this record, A28). In the authoring repo, only a missing row for an unreleased craft changes, from FAIL to warning. |
+| A5 | Local tags can be missing (not fetched), so a released craft reads as unreleased and its missing row only warns. | Survives, scoped | Same staleness as the drift guard (#91 attack 2). The kernel-only path never fetches, and a clone without tags softens only this one case to a warning. It never hides a row naming a craft not in the tree, and never hides a version mismatch. CI's full-depth checkout has every tag and corroborates strictly. |
+| A6 | The bundle's own unprefixed `vX.Y.Z` tag, or another craft's tag, could count as a craft's release. | Refuted | The pattern is `<craft>-v*` (property 4's prefix, `bundle.tag_pattern`). The core's is `dyad-operator-v*`, and `v0.10.0` matches no craft. The test `test_released_components_reads_local_tags` covers both. |
+
+**Survivor.** Property 7 gains one sentence: an unreleased craft (no `<craft>-vMAJOR.MINOR.PATCH` tag
+of its own) may be absent from the bundle until its first release, whose release adds its row; a
+released craft without a row fails. Mechanism: `bundle.released_components(root, components)` reads
+the local tags (`git tag -l '<craft>-v*'`, the kernel's Git only). `bundle.check(version, rows, live,
+released)` stays pure: when `released` is omitted every component counts as released (strict). Tests:
+`UnreleasedCraftTests` in `dyad/tests/guards/infra/test_bundle.py`.
+
+Pairwise (Rule-5): 11–1 coherent again: the referent-before-referrer order now exists for a new
+craft (A3), and neither Rule's zone table changes. 11–2 unaffected: a release is still ratified by
+`Y/N: release <tag>?`, and the row follows the release. 11–3 unaffected: no new state or
+counter-prompt. 11–4 the block is unchanged; one sentence in a property. 11–5 this record carries
+the statement. 11–6 no term added or changed, see below. 11–7 unaffected. 11–8 unaffected: `git tag
+-l` is read-only. 11–9 falsified here. 11–10 unaffected. 11–12 the mechanism carries its tests.
+11–13 no new import. 11–14 shells to Git only, the kernel; the kernel-only path is unchanged.
+11–15, 11–16, 11–18, 11–19 unaffected. 11–20 no new reference kind: a tag is a World object that git
+resolves, as in #91. Coherent, orthogonal.
+
+Rule-6: no term added or changed. One finding is named rather than absorbed. The vocabulary's
+`bundle` row reads "the core craft plus every Tended craft in the tree", and property 7's opening
+sentence still reads the same way. Both describe the bundle as released, and the new sentence scopes
+the interim. If the Operator wants the row to say "every released craft", that is a vocabulary edit
+for a later agent-zone PR; this PR does not make it.
+
+Disposition: disposed by the Done-`Y` of d-work #156; see ledger #156.

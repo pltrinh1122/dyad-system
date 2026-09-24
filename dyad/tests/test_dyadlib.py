@@ -256,4 +256,11 @@ class InvariantTests(livetest.LiveCase):
             self.assertEqual(stems, [], "a core-only install has no projector")            # the documented absent-craft behaviour
             return
         self.require_craft("sysadmin", "sysarch")
-        self.assertEqual(stems, ["project_events", "project_entities", "project_erd", "project_instances", "project_kanban", "project_schema"])   # by craft, then surface
+        # Expected set derived from the tree, not a literal list (#156 I1, the #46/#98 class): any craft
+        # may ship a projector. Order: by craft, then surface.
+        crafts = dyadlib.PKG.parent / "crafts"
+        on_disk = [(p.parents[1].name, p.stem) for p in sorted(crafts.glob("*/projectors/project_*.py"))]
+        self.assertEqual(stems, [s for _c, s in on_disk])
+        known = {"sysadmin": ["project_events"], "sysarch": ["project_entities", "project_erd", "project_instances", "project_kanban", "project_schema"]}
+        for craft, surfaces in known.items():   # a known craft silently dropping a projector still fails
+            self.assertEqual([s for c, s in on_disk if c == craft], surfaces, craft)

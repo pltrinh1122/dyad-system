@@ -99,11 +99,13 @@ dyad system without clashes or hand-editing.
    a core-only install carries no bundle naming a craft it lacks; property 1's instance-inside-a-craft
    refusal is unaffected — the bundle sits outside every craft). One row per craft in the tree, each
    row's version equal to that craft's live `VERSION`; the bundle carries its own version, independent
-   of the core's — a craft-only change bumps the bundle, never forcing an unrelated core bump. Its
-   release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the unprefixed
-   form, the GitHub convention and the repo's one front door, built by sequencing property 5's one
-   code path once per row (never a second build mechanism) and publishing every component's archive
-   together. A system that wants only some components pins them individually by their own crafts'
+   of the core's — a craft-only change bumps the bundle, never forcing an unrelated core bump. An
+   unreleased craft (no `<craft>-vMAJOR.MINOR.PATCH` tag of its own, property 4) may be absent from
+   the bundle until its first release, whose release adds its row; a released craft without a row
+   fails. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
+   unprefixed form, the GitHub convention and the repo's one front door, built by sequencing
+   property 5's one code path once per row (never a second build mechanism) and publishing every
+   component's archive together. A system that wants only some components pins them individually by their own crafts'
    tags (property 4); the bundle is the convenience of pinning all of them at once, never the only way.
 
 ## Ratification events
@@ -165,6 +167,8 @@ individually beforehand — split from destructive's unconditional one-per-quest
 rested on a different, unaffected basis; see the same record, amendment #106. Property 2 gains the
 bundled craft 2026-09-22 (d-work #114): four core Agent Rules cite `crafts/sysadmin/` by path while
 the core release shipped without it, and a core-only install of `main` was red; see the same
-record, amendment #114.
+record, amendment #114. Property 7 gains the unreleased-craft sentence 2026-09-24 (d-work #156):
+adding any new craft had no order satisfying both Rule-1 (one zone per PR) and the bundle guard; see
+the same record, amendment #156 (2026-09-24).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
