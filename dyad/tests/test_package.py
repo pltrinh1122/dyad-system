@@ -1,4 +1,4 @@
-import importlib.util, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
+import importlib.util, inspect, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
@@ -115,6 +115,65 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(crafts / "sysarch" / "tests" in pkg.test_suites(), "sysarch" in CRAFTS)   # a core-only install runs the core suite alone (#171)
         self.assertEqual(pkg.check_rule_12(), [])   # under DYAD_NO_NESTED_TESTS: no mapping, no failure
         self.assertNotIn("CHANGELOG.md", pkg.TEMPLATES)   # the change log's seed is the craft's (#155, attack 13)
+    # d-work #155: the local gate never ran the suite (the pre-push hook is `check --guards`, 61
+    # checks and no tests), so the Agent ran it by hand 134 times in one session (#154's audit).
+    # `cmd_tests` is that run as one verb, always with DYAD_NO_NESTED_TESTS; `cmd_guards` runs it
+    # too, gated on the pushed range being more than ledger-only.
+    def test_tests_verb_runs_one_dotted_target_with_the_nested_flag(self):
+        r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "check", "--tests",
+                            "dyad.tests.test_playbooks"], capture_output=True, text=True,
+                           env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 4 tests OK", r.stdout)
+        self.assertNotIn("Ran 479", r.stdout)          # the target only, never the whole root
+        pkg = load_package()
+        self.assertIn("DYAD_NO_NESTED_TESTS", inspect.getsource(pkg.run_suite))   # the flag is the point (120 s -> 39 s)
+
+    def test_tests_verb_exits_non_zero_on_a_failing_target(self):
+        r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "check", "--tests",
+                            "dyad.tests.no_such_module_155"], capture_output=True, text=True,
+                           env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+
+    def test_tests_verb_and_guard_suite_do_not_recurse_inside_a_test_run(self):
+        """Both return early under DYAD_NO_NESTED_TESTS — without it a suite that invokes `check`
+        re-enters the suite (observed live in #155: 44 orphaned unittest processes)."""
+        pkg = load_package()
+        self.assertEqual(pkg.cmd_tests(), 0)            # env() sets the flag for this whole suite
+        for src in (inspect.getsource(pkg.cmd_tests), inspect.getsource(pkg.cmd_guards)):
+            self.assertIn("DYAD_NO_NESTED_TESTS", src)
+
+    def test_guards_gate_the_suite_on_a_ledger_only_range(self):
+        """The prefix, never the suffix: a `.py` filter would have passed #137's markdown run-book,
+        which broke the core suite by falsifying a pinned count."""
+        pkg = load_package(); inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        d = Path(tempfile.mkdtemp(prefix="dyad-gate-"))
+        try:
+            subprocess.run(["git", "init", "-q", "-b", "main", str(d)], check=True)
+            for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+                subprocess.run(["git", "-C", str(d), "config", k, v], check=True)
+            (d / "seed.txt").write_text("seed\n")
+            subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(d), "commit", "-qm", "seed"], check=True)
+            base = subprocess.check_output(["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
+            rows = d / inst / "d-work" / "rows"; rows.mkdir(parents=True)
+            (rows / "1.md").write_text("id: 1\n")
+            subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(d), "commit", "-qm", "ledger"], check=True)
+            old = pkg.REPO
+            try:
+                pkg.REPO = d
+                self.assertTrue(pkg.ledger_only_range(base, "HEAD"))     # rows only -> skip the suite
+                (d / "note.md").write_text("a play-book, not a .py\n")
+                subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
+                subprocess.run(["git", "-C", str(d), "commit", "-qm", "md"], check=True)
+                self.assertFalse(pkg.ledger_only_range(base, "HEAD"))    # markdown counts -> run it
+                self.assertFalse(pkg.ledger_only_range("HEAD", "HEAD"))  # empty range -> run it
+            finally:
+                pkg.REPO = old
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
     # Rule-19 (d-work #150): the run-book subcommand dispatches to scripts/runbook.py (core; #155 amendment)
     def test_runbook_subcommand_dispatches(self):
         r = self.run_py("runbook")
