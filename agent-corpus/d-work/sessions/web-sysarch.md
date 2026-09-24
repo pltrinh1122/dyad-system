@@ -1,6 +1,6 @@
 session: web-sysarch
-seen: 2026-09-18T02:42:00+00:00
+seen: 2026-09-24T14:06:03+00:00
 root: /home/user/dyad-system
-rows: 
+rows: 140
 files: 
-writer: 0d98255fc22e
+writer: 27e404b802a4
