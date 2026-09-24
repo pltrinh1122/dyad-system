@@ -1,0 +1,54 @@
+#!/bin/sh
+# dyad interpreter resolver (d-work #82). Resolves the first interpreter that satisfies the
+# Rule-14 property 2 kernel pin and execs it with the arguments it was given:
+#
+#   dyad/bin/dyad-python <script> [args...]   ==   <conforming python3> <script> [args...]
+#
+# Why it exists: dyad/bin/dyad and the two hooks used to `exec python3` unconditionally, so on a
+# host whose `python3` is below the pin every gate failed -- both git hooks inert and
+# `dyad check --evidence` (the Rule-14 property 3 merge evidence) unavailable -- even when a
+# conforming interpreter was installed under a versioned name.
+#
+# Shell, not Python, of necessity: the thing being located IS the interpreter, so it cannot be
+# resolved from inside Python; hence one file here and not a function in scripts/hostadapter.py
+# (plan #82, attack F5). One place because three callers need it (Rule-13 property 1).
+#
+# Each candidate is probed by RUNNING it and asking sys.version_info -- never by parsing a
+# version string. The printed version is diagnostic only; the decision is the probe's exit code.
+#
+# PIN_MAJOR/PIN_MINOR duplicate the Python-side pin (`sys.version_info < (3, 12)` in
+# dyad/scripts/package.py). dyad/tests/test_entrypoint.py asserts the two are equal, so the
+# shell pin and the Python pin cannot drift apart silently.
+set -u
+
+PIN_MAJOR=3
+PIN_MINOR=12
+CANDIDATES="python3.13 python3.12 python3"
+
+probe='import sys; print("%d.%d.%d" % sys.version_info[:3]); sys.exit(0 if sys.version_info[:2] >= (int(sys.argv[1]), int(sys.argv[2])) else 1)'
+
+report=''
+found=''
+for candidate in $CANDIDATES; do
+    resolved=$(command -v "$candidate" 2>/dev/null) || resolved=''
+    if [ -z "$resolved" ]; then
+        report="$report
+  $candidate: not on PATH"
+        continue
+    fi
+    if found=$("$resolved" -c "$probe" "$PIN_MAJOR" "$PIN_MINOR" 2>/dev/null); then
+        exec "$resolved" "$@"
+    fi
+    if [ -n "$found" ]; then
+        report="$report
+  $candidate ($resolved): Python $found, below the pin"
+    else
+        report="$report
+  $candidate ($resolved): not a usable Python interpreter"
+    fi
+done
+
+printf '%s\n' "dyad-python: no interpreter satisfying the kernel pin (Python ${PIN_MAJOR}.${PIN_MINOR}+, Rule-14 property 2) is available." >&2
+printf '%s\n' "candidates tried:${report}" >&2
+printf '%s\n' "Install Python ${PIN_MAJOR}.${PIN_MINOR} or newer, or put a conforming interpreter on PATH under one of those names." >&2
+exit 1

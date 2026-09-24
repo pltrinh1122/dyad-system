@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 # dyad pre-push (I2): every guard runs on the kernel before anything leaves this machine.
-exec python3 "$(git rev-parse --show-toplevel)/dyad/scripts/package.py" check --guards
+exec "$(git rev-parse --show-toplevel)/dyad/bin/dyad-python" "$(git rev-parse --show-toplevel)/dyad/scripts/package.py" check --guards
