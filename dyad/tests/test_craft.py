@@ -4,7 +4,7 @@ modified tree without --force and --force overwrites, `requires` refused, the re
 different, a failing craft is neither exported nor installed, nothing outside crafts/<name>/ + REGISTRY.md written
 (A11) even when the craft declares `seeds:` (#180) — install prints a reminder for an absent seed and stays silent
 once it exists, but never writes it itself."""
-import hashlib, os, shutil, subprocess, sys, tarfile, tempfile, unittest
+import atexit, hashlib, os, shutil, subprocess, sys, tarfile, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -22,12 +22,36 @@ def env():
 def git(d, *a):
     subprocess.run(["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t", *a], check=True, capture_output=True)
 
-def scratch() -> Path:
-    """A scratch git repo with the core craft installed and committed."""
-    d = Path(tempfile.mkdtemp()); git(d, "init", "-q")
-    r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "install", str(d)], capture_output=True, text=True); assert r.returncode == 0, r.stderr
+_TEMPLATE: list[Path] = []   # the one real core install per module run; read only inside scratch(), never returned or written
+_MADE: list[Path] = []       # every scratch dir, registered before it is filled; removed by tearDownModule even when a test fails
+
+def _install(prefix=None) -> Path:
+    """The real install path, unchanged: a git repo with the core craft installed by `package.py install` and committed."""
+    d = Path(tempfile.mkdtemp(prefix=prefix)); _MADE.append(d); git(d, "init", "-q")
+    r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "install", str(d)], capture_output=True, text=True)
+    if r.returncode:
+        raise AssertionError(r.stderr)
     git(d, "add", "-A"); git(d, "commit", "-qm", "scratch")
     return d
+
+def scratch() -> Path:
+    """An independent copy of ONE real core install made per module run (#138): its bytes, modes, index and commit, with
+    new inodes and mtimes; every copy shares one HEAD sha. The real install itself is tested in test_package.py."""
+    if not _TEMPLATE:
+        _TEMPLATE.append(_install(prefix="dyad-craft-template-"))
+    d = Path(tempfile.mkdtemp()); _MADE.append(d)
+    shutil.copytree(_TEMPLATE[0], d, copy_function=shutil.copy, dirs_exist_ok=True)   # modes kept; mtimes new, as a fresh install's
+    r = subprocess.run(["git", "-C", str(d), "update-index", "--refresh"], capture_output=True, text=True)   # re-stat; fails on any content difference
+    if r.returncode:
+        raise AssertionError(r.stdout + r.stderr)
+    return d
+
+def tearDownModule():
+    for d in _MADE:
+        shutil.rmtree(d, ignore_errors=True)
+    _MADE.clear(); _TEMPLATE.clear()
+
+atexit.register(tearDownModule)   # backstop for an interrupt or an importer outside unittest; idempotent
 
 def author(d: Path, name="fx", files=CRAFT):
     for rel, text in files.items():
