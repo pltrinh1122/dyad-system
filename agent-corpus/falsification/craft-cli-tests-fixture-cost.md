@@ -32,3 +32,20 @@ test or guard code touched); implementing (a), with a full `check --guards` run 
 follow-on plan-`Y` this record's disposition would authorize separately.
 
 Disposition: see ledger #110.
+
+## Amendment #138 — Stage 2's remaining item, implemented
+
+Scoped by workflow `wf_70de145a-a4c` (three designs, three judges, a scratchpad prototype, three
+adversarial lenses, a completeness critic); plan `agent-corpus/d-work/plans/138.md`.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 6 | Attack 4 above: a `copytree` copy is "byte-identical to what `scratch()` produces today". | Refuted as worded | Measured equal in path set, bytes, modes, `.git/config`, `ls-files -s`, `HEAD^{tree}` and `status --porcelain --ignored`, with no absolute path anywhere. It differs in four ways no test reads: a shared HEAD sha, new inodes and ctimes, the template's directory mtimes, and an index stat cache that starts stale. `copy_function=shutil.copy` gives new file mtimes, and a non-`-q` `git update-index --refresh` re-verifies every entry and fails on any content difference. |
+| 7 | The recorded path — a `setUpClass` template copied in `setUp` — is enough. | Refuted | `scratch()` runs 19 times per module run: 1 in `setUpClass`, 14 in `setUp`, and 4 in test bodies (L92, L117, L150, L156 at `87faf72`; the record's lines 44-45 and 24-27 are stale). The recorded path misses 5 of the 19. The survivor is one lazy, private template behind `scratch()`, which covers all 19. The class hooks and all 15 test bodies are unchanged. |
+| 8 | A copy stays stale-free under a mixed git config (the refresh run under one `checkStat`, read under another). | Dropped, unproven | A critic reproduced 1–6 stale entries in 14 of 19 copies. It is harmless: `status` is clean and one run never mixes configs. The claim is withdrawn, not relied on. |
+| 9 | One real core install per module run stops these tests testing the install. | Refuted, scoped | The template is built by the unchanged install path, and every `dyad craft` call is still a real subprocess in its own mutable repo. The real core install is tested in `dyad/tests/test_package.py`, which keeps its per-test installs. |
+
+Measured on this host: 25.7s / 25.6s before, 12.0s / 11.2s after (n=2 each, a shared host). About
+2×, a host-specific ratio. Real core installs per module run: 19 → 1.
+
+Disposition: see ledger #138.
