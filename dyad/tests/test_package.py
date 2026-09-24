@@ -476,7 +476,14 @@ class PackageTests(livetest.LiveCase):
         for surface, craft in (("erd", "sysarch"), ("schema", "sysarch"), ("entities", "sysarch"), ("events", "sysadmin"), ("kanban", "sysarch"), ("instances", "sysarch")):
             self.assertRegex(r.stdout, rf"(?m)^{craft}/{surface}\s+crafts/{craft}/projectors/project_{surface}\.py$")
         pkg = load_package(); reg = pkg.projectors()
-        self.assertEqual(set(reg), {f"{c}/{s}" for c, s in (("sysarch", "entities"), ("sysarch", "erd"), ("sysadmin", "events"), ("sysarch", "schema"), ("sysarch", "kanban"), ("sysarch", "instances"))})
+        # Registry derived from the tree, not a literal set (#156 I1, the #46/#98 class): any craft may ship
+        # a projector. The known surfaces above stay asserted, so one silently dropped still fails.
+        on_disk = {f"{p.parents[1].name}/{p.stem.removeprefix('project_')}" for p in (PKG.parent / "crafts").glob("*/projectors/project_*.py")}
+        self.assertEqual(set(reg), on_disk)
+        self.assertLessEqual({f"{c}/{s}" for c, s in (("sysarch", "entities"), ("sysarch", "erd"), ("sysadmin", "events"), ("sysarch", "schema"), ("sysarch", "kanban"), ("sysarch", "instances"))}, set(reg))
+        import re
+        listed = {m.group(1) for m in re.finditer(r"(?m)^(\S+/\S+)\s+crafts/\S+/projectors/project_\S+\.py$", r.stdout)}
+        self.assertEqual(listed, on_disk, "--list prints exactly the discovered registry")
         self.assertEqual(pkg.PROJECTORS, {k: rel for k, (c, rel) in reg.items()})
         for key, (craft, rel) in reg.items():
             self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(rel.split("/")[1], craft); self.assertEqual(key, f"{craft}/{key.split('/', 1)[1]}")

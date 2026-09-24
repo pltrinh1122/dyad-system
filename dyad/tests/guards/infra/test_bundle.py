@@ -170,3 +170,43 @@ class DriftTests(unittest.TestCase):
         (root / "BUNDLE.md").write_text(BUNDLE.replace("| syseng | 0.1.2 |", "| syseng | 0.1.3 |"))
         r = subprocess.run([sys.executable, str(Path(bd.__file__)), str(root)], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [bundle] skip 'syseng'", r.stdout); self.assertIn("ok   [bundle] 3 components", r.stdout)
+
+class UnreleasedCraftTests(unittest.TestCase):
+    """#156: a craft with no release tag of its own and no row warns (unreleased, not yet bundled);
+    a released craft with no row, and a row naming a craft not in the tree, still fail (Rule-11 p7)."""
+    ROWS = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.1"), ("syseng", "0.1.2")]
+    def test_unreleased_craft_without_row_warns(self):
+        live = {**LIVE, "newcraft": "0.1.0"}
+        msgs = bd.check("0.5.0", self.ROWS, live, released=set(LIVE))
+        self.assertEqual(msgs, ["warning: 'newcraft' is in the tree but unreleased (no newcraft-v* tag): not yet bundled"])
+    def test_released_craft_without_row_fails(self):
+        live = {**LIVE, "newcraft": "0.1.0"}
+        msgs = bd.check("0.5.0", self.ROWS, live, released=set(live))
+        self.assertEqual(msgs, ["'newcraft' is in the tree but has no bundle row"])
+    def test_row_for_craft_not_in_tree_still_fails(self):
+        msgs = bd.check("0.5.0", self.ROWS + [("ghost", "1.0.0")], LIVE, released=set())
+        self.assertEqual(msgs, ["'ghost': not a craft in this tree"])
+    def test_released_defaults_to_strict(self):
+        self.assertEqual(bd.check("0.5.0", [], {"sysarch": "0.1.1"}), ["'sysarch' is in the tree but has no bundle row"])
+    def test_released_components_reads_local_tags(self):
+        root, pkg = tree()
+        try:
+            git(root, "init", "-q"); git(root, "add", "-A"); git(root, "commit", "-qm", "seed")
+            git(root, "tag", "sysarch-v0.0.9")            # any release of its own counts, not only the live VERSION's
+            git(root, "tag", "v0.5.0")                     # the bundle's own unprefixed tag names no craft
+            self.assertEqual(bd.released_components(root, LIVE), {"sysarch"})
+        finally:
+            import shutil; shutil.rmtree(root, ignore_errors=True)
+    def test_check_bundle_end_to_end(self):
+        root, pkg = repo()                                  # every LIVE component tagged
+        try:
+            c = root / "crafts" / "newcraft"; c.mkdir(); (c / "VERSION").write_text("0.1.0\n")
+            git(root, "add", "-A"); git(root, "commit", "-qm", "new craft")
+            (root / "BUNDLE.md").write_text(BUNDLE)
+            self.assertEqual(bd.check_bundle(root, pkg)[2], ["warning: 'newcraft' is in the tree but unreleased (no newcraft-v* tag): not yet bundled"])
+            r = subprocess.run([sys.executable, str(Path(bd.__file__)), str(root)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [bundle] 'newcraft' is in the tree but unreleased", r.stdout)
+            git(root, "tag", "newcraft-v0.1.0")
+            self.assertEqual(bd.check_bundle(root, pkg)[2], ["'newcraft' is in the tree but has no bundle row"])
+        finally:
+            import shutil; shutil.rmtree(root, ignore_errors=True)

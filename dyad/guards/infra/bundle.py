@@ -4,9 +4,12 @@
 content, so a core-only install carries no bundle naming a craft it lacks, Rule-11 property 7) names
 the whole distribution this repo authors: one row per craft in the tree, the core craft
 (`CORE_NAME`) plus every Tended craft `dyadlib.craft_dirs` finds. A row's version must equal that
-craft's live `VERSION`; every craft in the tree needs a row and every row names a craft in the tree
-— checked both directions. A missing `BUNDLE.md` skips (a core-only install, or this repo before
-its first bundle): zero messages, never a failure.
+craft's live `VERSION`; every *released* craft in the tree needs a row and every row names a craft
+in the tree — checked both directions. A craft with no release tag of its own (`<name>-v*`, see
+`released_components`) and no row warns instead: it is unreleased, so it has no archive to bundle,
+and its first release adds its row (#156: a new craft otherwise had no order satisfying both Rule-1's
+one zone per PR and this guard). A missing `BUNDLE.md` skips (a core-only install, or this repo
+before its first bundle): zero messages, never a failure.
 
 Drift (#91, after #61/#67/#71/#90): property 4's converse. Once `<name>-v<VERSION>` exists, the
 tree under that craft's root at HEAD must be the tree the tag holds; `check_drift` fails a craft
@@ -34,6 +37,10 @@ def tag_name(component: str, version: str) -> str:
     """Rule-11 property 4: `<name>-v<VERSION>` for every craft, the core included (`dyad-operator-v…`)."""
     return f"{component}-v{version}"
 
+def tag_pattern(component: str) -> str:
+    """The `git tag -l` pattern for every release of one craft (property 4): `<name>-v*`."""
+    return f"{component}-v*"
+
 def component_roots(root: Path, pkg: Path = dyadlib.PKG) -> dict[str, Path]:
     """{component: root-relative craft root}: the core craft's `dyad/` plus every Tended craft's."""
     out = {CORE_NAME: pkg.resolve().relative_to(root.resolve())}
@@ -43,6 +50,12 @@ def component_roots(root: Path, pkg: Path = dyadlib.PKG) -> dict[str, Path]:
 
 def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
+
+def released_components(root: Path, components) -> set[str]:
+    """The components with at least one local release tag of their own (`<name>-v*`). Tags not
+    fetched read as unreleased — the kernel-only path never fetches — which only softens a missing
+    row to a warning; it never hides a row naming a craft not in the tree."""
+    return {c for c in components if _git(root, "tag", "-l", tag_pattern(c)).stdout.strip()}
 
 def check_drift(root: Path, pkg: Path = dyadlib.PKG) -> list[str]:
     """Per component: tag absent -> `warning: skip …`; tree at HEAD == tag's -> nothing; differs -> FAIL."""
@@ -83,7 +96,10 @@ def live_components(pkg: Path = dyadlib.PKG) -> dict[str, str]:
         out[d.name] = (d / "VERSION").read_text().strip()
     return out
 
-def check(version: str, rows: list[tuple[str, str]], live: dict[str, str]) -> list[str]:
+def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], released: set[str] | None = None) -> list[str]:
+    """`released`: the components with a release tag of their own; None treats every one as released
+    (the strict form). A released craft with no row fails; an unreleased one warns (Rule-11 p7, #156)."""
+    released = set(live) if released is None else released
     msgs: list[str] = []
     if not version:
         msgs.append("no `version:` line")
@@ -99,8 +115,12 @@ def check(version: str, rows: list[tuple[str, str]], live: dict[str, str]) -> li
         elif ver != live[comp]:
             msgs.append(f"'{comp}': bundle names {ver}, the tree has {live[comp]}")
     for comp in live:
-        if comp not in seen:
+        if comp in seen:
+            continue
+        if comp in released:
             msgs.append(f"'{comp}' is in the tree but has no bundle row")
+        else:
+            msgs.append(f"warning: '{comp}' is in the tree but unreleased (no {tag_pattern(comp)} tag): not yet bundled")
     return msgs
 
 def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str, list[tuple[str, str]], list[str]]:
@@ -110,7 +130,8 @@ def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str
     if not p.exists():
         return "", [], []
     version, rows = parse(p.read_text())
-    return version, rows, check(version, rows, live_components(pkg))
+    live = live_components(pkg)
+    return version, rows, check(version, rows, live, released_components(root, live))
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
