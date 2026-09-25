@@ -13,5 +13,8 @@ tags available to check against; `0.2.0`/`0.3.0`/`0.4.0` are not fetched here, s
 not be mechanically confirmed or refuted. Raised to `0.5.0`, matching what could actually be
 verified, rather than left at a value never checked.
 
+#175: raised to `0.10.0` — the naming guard resolves `<host>` through `dyadlib.host_path`, first
+shipped in `0.10.0`.
+
 name: syseng
-requires: dyad-operator>=0.5.0
+requires: dyad-operator>=0.10.0

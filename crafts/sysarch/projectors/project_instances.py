@@ -133,7 +133,7 @@ def _seed_stores(m: Model, root: Path, c) -> None:
     inc = c.inst / "audits" / "INCIDENTS.md"
     if inc.exists():
         _seed(m, "incident:" + _rel(root, inc), "incident", "incidents (every row, one file)", _rel(root, inc))
-    cl = root / "workstation-corpus" / "CHANGELOG.md"
+    cl = root / dyadlib.host_path(root) / "CHANGELOG.md"   # the host path (preference `host-path`, #175)
     if cl.exists():
         _seed(m, "changelog:" + _rel(root, cl), "changelog", "change log (every row, one file)", _rel(root, cl))
     bundle = root / "BUNDLE.md"

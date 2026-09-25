@@ -28,5 +28,8 @@ a second, higher floor this same d-work introduces: `project_entities.py`'s `REL
 d-work's own core PR) — raised here rather than left for D1 to fail against once that release
 exists to check against.
 
+#175: raised to `0.10.0` — this craft's projectors now read `dyadlib.host_path` and
+`manifest.manifest_rows` (the host path and the union manifest), both first shipped in `0.10.0`.
+
 name: sysarch
-requires: dyad-operator>=0.8.0
+requires: dyad-operator>=0.10.0

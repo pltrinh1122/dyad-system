@@ -2,7 +2,7 @@
 """Change-log guard (entity `changelog`, store zone `workstation`; the sysadmin craft's `host-mutation.md` owns the
 row's columns, Rule-8's kernel binds that a row exists, placed per Rule-11 property 1 — a Tended craft's guard,
 `crafts/sysadmin/guards/`, discovered by the core runner as `sysadmin/changelog`, #155). Kernel: Python 3.12+.
-`workstation-corpus/CHANGELOG.md` (instance; seeded from `crafts/sysadmin/templates/CHANGELOG.md`): the
+`<host>/CHANGELOG.md` (the host path, preference `host-path`, default `workstation-corpus`, #175; instance; seeded from `crafts/sysadmin/templates/CHANGELOG.md`): the
 template's header is always FIELDS; an instance header is FIELDS, or FIELDS with its OPTIONAL trailing
 columns dropped (`actor`, #216 — an instance mid-migration between a craft-zone PR that adds a column and the
 workstation-zone PR that backfills it, Rule-1: referent before referrer). Each row has a `YYYY-MM-DD` date, a
@@ -59,11 +59,11 @@ def changelog_action_ops(c):
     i = header.index("action") if "action" in header else None
     if i is None:
         return []
-    ops = dyadlib.find_guard("workstation", "ops_scripts", c.pkg)
+    ops = dyadlib.find_guard(dyadlib.HOST_CORPUS, "ops_scripts", c.pkg)
     if ops is None:
         return []
     pat = re.compile(re.escape(c.rel(ops.ops_dir(c.root))) + r"/[\w.-]+\.sh")
-    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} action", m) for k, r in enumerate(rows) if len(r) > i for m in pat.findall(r[i])]
+    return [(f"{c.rel(changelog_path(c.root))} row {k + 1} action", m) for k, r in enumerate(rows) if len(r) > i for m in pat.findall(r[i])]
 
 def _ops_path_exists(c, t):
     return (c.root / t).exists()
@@ -74,7 +74,7 @@ def changelog_event_outcome(c):
     i = header.index("outcome") if "outcome" in header else None
     if i is None:
         return []
-    return [(f"workstation-corpus/CHANGELOG.md row {k + 1} outcome", m) for k, r in enumerate(rows) if len(r) > i for m in _EVENT.findall(r[i])]
+    return [(f"{c.rel(changelog_path(c.root))} row {k + 1} outcome", m) for k, r in enumerate(rows) if len(r) > i for m in _EVENT.findall(r[i])]
 
 def _event_id_exists(c, t):
     return any(e.get("id") == t for evs in c.events.values() for e in evs)
@@ -85,7 +85,7 @@ REFERENCES_CONTRIB = [
 ]
 
 def changelog_path(root: Path) -> Path:
-    return root / "workstation-corpus" / "CHANGELOG.md"
+    return root / dyadlib.host_path(root) / "CHANGELOG.md"   # the host path (preference `host-path`, #175)
 
 def parse(text: str) -> tuple[list[str], list[list[str]]]:
     return dyadlib.table_header(text), dyadlib.table_rows(text)

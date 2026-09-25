@@ -122,10 +122,11 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> Schema:
     s.layers.append((LAYERS[0], parties + [sets[k] for k in sorted(sets)]))
     # 2. repo structure: zone -> path pattern (containment.ZONES) -> package | instance trees
     pkg_files = [f for f in tracked(rel(pkg)) + tracked(".github/workflows") if f.startswith(rel(pkg) + "/") or Path(f).name.startswith("dyad-")]
-    inst_trees = [t for t in (rel(inst), "workstation-corpus", "preferences-corpus") if (root / t).is_dir()]
+    host = dyadlib.host_path(root)                     # the host path (preference `host-path`, #175)
+    inst_trees = [t for t in (rel(inst), host, "preferences-corpus") if (root / t).is_dir()]
     inst_files = [f for t in inst_trees for f in tracked(t)]
     zones: dict[str, Box] = {}
-    for zone, pat in containment.ZONES:
+    for zone, pat in containment.table(root):
         zones.setdefault(zone, Box(f"zone:{zone}", "zone", zone)).items.append((pat, pat))
         for tree, files in (("package", pkg_files), ("instance", inst_files)):
             if any(fnmatch.fnmatchcase(f, pat) for f in files):
@@ -158,8 +159,7 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> Schema:
     guard_boxes = [Box(f"guards:{c}", "guards", f"dyad/guards/{c}/", [(n, n) for n in names]) for c, names in guards.items()]
     guard_boxes += [Box(f"guards:{c}", "guards", f"crafts/{c}/guards/", [(n, n) for n in names]) for c, names in craft_guards.items()]
     projector_boxes = [Box(f"projectors:{c}", "runner", f"crafts/{c}/projectors/", [(n, n) for n in names]) for c, names in craft_projectors.items()]
-    manifest = pkg / "infrastructure" / "INFRASTRUCTURE.md"
-    rows = infrastructure.parse_manifest(manifest.read_text()) if manifest.exists() else []
+    rows = [r for _, r in infrastructure.manifest_rows(pkg, root)[0]]   # the one manifest: core, crafts, instance (#175)
     status = next((r[3] for r in rows if "Actions" in r[0]), "no Actions row in the manifest")
     ci_boxes = []
     for wf in workflows:
@@ -191,7 +191,7 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> Schema:
             name = f"<instance>/{d.relative_to(inst)}" if d.is_relative_to(inst) else rel(d)
             stores.append(Box(f"store:{name}", "store", f"{name}/{' (generated)' if gen else ''}",
                               [("count", "untracked, generated" if gen else f"{len(tracked(rel(d)))} files tracked")]))
-    changelog = root / "workstation-corpus" / "CHANGELOG.md"
+    changelog = root / dyadlib.host_path(root) / "CHANGELOG.md"
     if changelog.exists():
         stores.append(Box("store:changelog", "store", rel(changelog), [("count", f"{len(changelog.read_text().splitlines())} lines")]))
     prefs = root / "preferences-corpus" / "PREFERENCES.md"

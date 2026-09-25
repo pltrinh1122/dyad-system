@@ -32,7 +32,8 @@ half). A guard's docstring names what it checks and what it leaves to inference.
    (`<instance>/`, `workstation-corpus/`, `preferences-corpus/`) and identical across systems.
 3. **The guard contract.** A guard module declares `ENTITY` (the entity key the entities surface
    shows), `CORPUS` (equal to its directory under `dyad/guards/`; for a craft guard, a zone name in
-   `containment.ZONES`), `FIELDS` (the schema constant, the entity's parsed fields in order),
+   `containment.ZONES`, or `workstation`, the logical host corpus, which resolves to the host path's
+   zone — `containment.corpora()` / `corpus_zone()`, #175), `FIELDS` (the schema constant, the entity's parsed fields in order),
    `TRANSACTION` (bool), `check_package(root) -> list[str]` (bare lines fail, `warning:` lines
    warn) and, when `TRANSACTION`, `check_transaction(root, base, head) -> list[str]`; it provides
    `describe(root, pkg)` for the entities surface (`templates/entity-card.md` names the fields) and

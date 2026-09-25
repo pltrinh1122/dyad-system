@@ -111,6 +111,30 @@ class ReferencesContribTests(unittest.TestCase):
         c = FakeCorpus(Path("."), events={"x": [{"id": "x-20260914T120000Z-start"}]})
         self.assertTrue(cl._event_id_exists(c, "x-20260914T120000Z-start"))
         self.assertFalse(cl._event_id_exists(c, "x-20260914T120001Z-start"))
+
+class _HostEnv:
+    """#175: DYAD_HOST / DYAD_HOST_ZONE set for one block, restored after."""
+    def __init__(self, **kw): self.kw = kw
+    def __enter__(self):
+        import os
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        os.environ.update(self.kw)
+    def __exit__(self, *a):
+        import os
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+class HostPathTests(unittest.TestCase):
+    """#175: the change log lives under the host path."""
+    def test_changelog_path_follows_the_host_path(self):
+        root = Path(tempfile.mkdtemp())
+        with _HostEnv():
+            self.assertEqual(cl.changelog_path(root), root / "workstation-corpus" / "CHANGELOG.md")
+        with _HostEnv(DYAD_HOST="infrastructure", DYAD_HOST_ZONE="infra"):
+            self.assertEqual(cl.changelog_path(root), root / "infrastructure" / "CHANGELOG.md")
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):

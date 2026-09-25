@@ -119,7 +119,7 @@ def main() -> int:
     out = dyadlib.instance(root) / "projections" / "events.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     store = collect(root)
-    text = render(store, runbooks.runbooks_rel() + "/events")
+    text = render(store, runbooks.runbooks_rel(root) + "/events")
     out.write_text(text)
     n = sum(len(v) for v in store.values())
     print(f"ok   [project] events: {n} events, {len(store)} instances -> {out} ({len(text.encode())} bytes)")

@@ -136,6 +136,12 @@ def tree_paths(root: Path, pkg: Path = dyadlib.PKG) -> list[str]:
     patterns = dyadlib.package_rules(pkg, root)["generated"]
     return sorted({p for p in out if p and not generated_matches(p, patterns)})
 
+def with_host(entries, host: str):
+    """`kind:`/`mode:` entries (pattern, glob, regex|mode) with `<host>` resolved to the host path in the
+    glob and the regex (`dyadlib.host_path`, #175); the pattern — a row of rules/naming.md — is unchanged."""
+    return [(pattern, glob.replace("<host>", host), last.replace("<host>", re.escape(host)) if isinstance(last, str) else last)
+            for pattern, glob, last in entries]
+
 def instance_rel(root: Path) -> str:
     inst = dyadlib.instance(root)
     return str(inst.relative_to(root)) if inst.is_relative_to(root) else str(inst)
@@ -308,11 +314,11 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path 
     allow = dict(r["allow"])
     for _craft, cr in contrib:
         allow |= dict(cr["allow"])
-    inst = instance_rel(root)
-    contrib_kinds = [k for _c, cr in contrib for k in cr["kind"]]
-    all_modes = r["mode"] + [k for _c, cr in contrib for k in cr["mode"]]
+    inst, host = instance_rel(root), dyadlib.host_path(root)
+    contrib_kinds = with_host([k for _c, cr in contrib for k in cr["kind"]], host)
+    all_modes = with_host(r["mode"] + [k for _c, cr in contrib for k in cr["mode"]], host)
     all_symbols = r["symbol"] + [s for _c, cr in contrib for s in cr["symbol"]]
-    m, used = check_kinds(paths, r["kind"], contrib_kinds, allow, inst, root)
+    m, used = check_kinds(paths, with_host(r["kind"], host), contrib_kinds, allow, inst, root)
     pats = table_patterns(table)
     # check_table stays native-only (F3, plan #15): a contributed pattern's table row lives in the
     # contributing craft's own rule, not rules/naming.md

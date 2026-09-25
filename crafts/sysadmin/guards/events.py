@@ -96,7 +96,7 @@ def parent(sha, cwd):
 def check_events(sha: str, cwd, events_prefix: str | None = None) -> list[str]:
     """Rule-19 property 7: an event file under `<runbooks>/events/` only grows (append-only), against
     the commit's first parent — so a merge is judged on what the PR added."""
-    prefix = events_prefix if events_prefix is not None else f"{runbooks_rel()}/events/"
+    prefix = events_prefix if events_prefix is not None else f"{runbooks_rel(Path(cwd) if cwd is not None else None)}/events/"
     label, fails = sha[:9], []
     par = parent(sha, cwd)
     for st, path in (l.split("\t", 1) for l in git("diff-tree", "--root", "--no-commit-id", "-r", "--name-status", "--no-renames", "-m", "--first-parent", sha, cwd=cwd).splitlines() if "\t" in l):
