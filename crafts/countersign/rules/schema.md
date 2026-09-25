@@ -67,7 +67,7 @@ What a system must map, and how each known system does. Survived and refuted as 
 | F7 | **Representation**: projection, never storage migration | markdown `key: value` stores → the projector here | pydantic `SystemState` → its own mapping module, validated against a pinned copy of the schema file (version and sha256 recorded) |
 
 ## 4. Derivation rules (dyad-system)
-The projector applies exactly these; a change to one is a change to this rule and its test.
+The projector applies exactly these (D1–D7 here, D8 in `interaction.md`); a change to one is a change to this rule and its test.
 - **D1 — acts.** Every d-work row is an Act: `mode = explicit`, `processor = agent`. dyad-system has
   no implicit or automatic act by construction (F3).
 - **D2 — proposals.** A row's plan file is the proposal `proposal-<id>-plan` (`body_ref` its path,
@@ -101,6 +101,8 @@ The projector applies exactly these; a change to one is a change to this rule an
   when the row is not in this instance), opening none. Both are "where identifiable": a
   `<system>-<id>` token that is a plain cross-reference, not an intake, is read as one — stated, not
   checked.
+- **D8 — initiations.** Owned by `interaction.md` (I6): each act's initiation is derived into its
+  `profile.initiation`, never into a core field (the core has no Initiation entity yet).
 
 ## When
 - A system maps its stores onto the core: it states its own F1–F7 column and derivation rules.

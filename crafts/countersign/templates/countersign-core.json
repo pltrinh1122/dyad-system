@@ -7,7 +7,7 @@
   "required": ["schema_version", "system", "parties", "acts", "proposals", "countersignatures", "mandates", "releases", "events", "escalations"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": {"const": "0.1.0"},
+    "schema_version": {"const": "0.2.0"},
     "system": {"type": "string", "description": "the name of the projecting system (a profile name)"},
     "parties": {"type": "array", "items": {"$ref": "#/$defs/party"}},
     "acts": {"type": "array", "items": {"$ref": "#/$defs/act"}},
