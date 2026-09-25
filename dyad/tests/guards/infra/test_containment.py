@@ -1,4 +1,4 @@
-import os, subprocess, sys, tempfile, unittest
+import os, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -222,8 +222,67 @@ class HostRowTests(unittest.TestCase):
         os.environ.pop("DYAD_HOST"); os.environ.pop("DYAD_HOST_ZONE")
         self.assertEqual(c.corpus_zone("workstation", r.d), "workstation")
     def test_zones_cli_unchanged_for_defaults(self):
-        out = subprocess.run([sys.executable, str(Path(c.__file__)), "zones"], cwd=Repo().d, capture_output=True, text=True).stdout
+        # the CLI prints the table of the repo it ships in (`ZONES`), so the defaults are pinned by env,
+        # never assumed from the live preferences (#179: a four-zone system is a legal instance)
+        env = dict(os.environ, DYAD_HOST=dyadlib.DEFAULT_HOST, DYAD_HOST_ZONE=dyadlib.DEFAULT_HOST_ZONE)
+        out = subprocess.run([sys.executable, str(Path(c.__file__)), "zones"], cwd=Repo().d, env=env, capture_output=True, text=True).stdout
         self.assertEqual(out, "zone         pattern\n" + "".join(f"{z:<12} {p}\n" for z, p in DEFAULT_TABLE))
+        env = {k: v for k, v in os.environ.items() if k not in ("DYAD_HOST", "DYAD_HOST_ZONE")}   # unpinned: the live repo's own table
+        live = subprocess.run([sys.executable, str(Path(c.__file__)), "zones"], cwd=Repo().d, env=env, capture_output=True, text=True).stdout
+        self.assertEqual(live, "zone         pattern\n" + "".join(f"{z:<12} {p}\n" for z, p in c.table(dyadlib.repo_root())))
+
+
+FOUR_ZONE_INFRA = """| component | partition | version | purpose | license | replacement | profile |
+|-----------|-----------|---------|---------|---------|-------------|---------|
+| venv + pip (PyPI) | library | stdlib | builds the kernel's Python slice | PSF-2.0 / MIT | a system-wide install | operating |
+"""
+
+class FourZoneSystemTests(unittest.TestCase):
+    """#179: end to end on a scratch system whose own preferences set `host-path: infrastructure`,
+    `host-zone: infra` — the live package copied in, its guards run from that copy by path with no
+    `DYAD_HOST*` in the environment, so they read the scratch tree's preferences exactly as that
+    system's hooks would. #175 shipped tests that held only on dyad-system's defaults; this is the
+    check that would have caught it."""
+    @classmethod
+    def setUpClass(cls):
+        cls.env = {k: v for k, v in os.environ.items() if k not in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        r = cls.r = Repo(); live = dyadlib.PKG.parent
+        files = {rel: (live / rel).read_text() for rel in sh("git", "ls-files", "dyad", cwd=live).split()}
+        files.update({
+            "preferences-corpus/PREFERENCES.md": PREFS.format(path="infrastructure", zone="infra"),
+            "infrastructure/INFRASTRUCTURE.md": FOUR_ZONE_INFRA, "infrastructure/HOST.md": "# Host\n",
+            "CLAUDE.md": "@dyad/CLAUDE.md\n"})
+        for rel, text in files.items():
+            p = r.d / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text)
+            if (live / rel).is_file() and os.access(live / rel, os.X_OK): p.chmod(0o755)
+        sh("git", "add", "-A", cwd=r.d); sh("git", "commit", "-qm", "four-zone system", cwd=r.d)
+    def guard(self, name, *args):
+        return subprocess.run([sys.executable, str(self.r.d / "dyad" / "guards" / "infra" / f"{name}.py"), *args],
+                              cwd=self.r.d, env=self.env, capture_output=True, text=True)
+    def test_zone_guard_sees_four_zones(self):
+        out = self.guard("containment", "zones")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        rows = [l.split() for l in out.stdout.splitlines()[1:]]
+        self.assertIn(["infra", "infrastructure/*"], rows)
+        self.assertEqual({z for z, _ in rows}, {"agent", "preferences", "infra", "craft"})
+        self.assertEqual(c.classify("infrastructure/x", self.r.d), "infra")
+        tree = self.guard("containment", "tree")
+        self.assertEqual(tree.returncode, 0, tree.stdout + tree.stderr)
+    def test_zone_guard_one_infra_commit_passes(self):
+        base = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        head = self.r.commit({"infrastructure/HOST.md": "# Host\nkernel\n", "CLAUDE.md": "@dyad/CLAUDE.md\n\n"})
+        out = self.guard("containment", "commits", base, head)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+    def test_manifest_guard_loads_the_instance_row(self):
+        out = self.guard("manifest")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertNotIn("FAIL", out.stdout + out.stderr)
+        inf = dyadlib.load_guard("infra", "manifest")
+        with unittest.mock.patch.dict(os.environ, {}, clear=False):   # restored after, whatever the caller set
+            for k in ("DYAD_HOST", "DYAD_HOST_ZONE"): os.environ.pop(k, None)
+            rows, msgs = inf.manifest_rows(self.r.d / "dyad", self.r.d)
+        self.assertEqual(msgs, [])
+        self.assertEqual([s for s, _ in rows if s != "the manifest"], ["infrastructure/INFRASTRUCTURE.md"])
 
 
 class InvariantTests(unittest.TestCase):

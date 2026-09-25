@@ -148,11 +148,14 @@ class CraftGuardTests(unittest.TestCase):
         if not (root / "crafts" / "sysadmin").is_dir(): self.skipTest("no sysadmin craft here")
         msgs = cg.check_craft(root, root / "crafts" / "sysadmin", PKG)
         self.assertEqual(fails(msgs), [], msgs)
-        self.assertEqual(cg.seeds(root / "crafts" / "sysadmin", root), [("CHANGELOG.md", "workstation-corpus/CHANGELOG.md")])   # `<host>` resolved to this repo's host path (#175)
-        self.assertEqual(cg.seed_status(root, root / "crafts" / "sysadmin"), [
-            "warning: crafts/sysadmin: seed 'CHANGELOG.md' not copied to workstation-corpus/CHANGELOG.md — "
-            "copy it by hand: cp crafts/sysadmin/templates/CHANGELOG.md workstation-corpus/CHANGELOG.md"])
-        # this instance authors sysadmin but tends no host of its own (d-work #58): no workstation-corpus/, so never seeded here
+        dest = f"{dyadlib.host_path(root)}/CHANGELOG.md"   # `<host>` resolved to this repo's host path (#175), whatever it is (#179)
+        self.assertEqual(cg.seeds(root / "crafts" / "sysadmin", root), [("CHANGELOG.md", dest)])
+        # dyad-system authors sysadmin but tends no host of its own (d-work #58): its host path has no
+        # change log, so the seed warns; an operating system that copied the seed gets no warning
+        expect = [] if (root / dest).exists() else [
+            f"warning: crafts/sysadmin: seed 'CHANGELOG.md' not copied to {dest} — "
+            f"copy it by hand: cp crafts/sysadmin/templates/CHANGELOG.md {dest}"]
+        self.assertEqual(cg.seed_status(root, root / "crafts" / "sysadmin"), expect)
     def test_cli_line(self):
         r = subprocess.run([sys.executable, str(PKG / "guards" / "craft" / "crafts.py")], capture_output=True, text=True, cwd=dyadlib.repo_root())
         self.assertEqual(r.returncode, 0, r.stderr); self.assertTrue(any(l.startswith("ok   [craft] crafts/") for l in r.stdout.splitlines()) or "crafts/" not in r.stdout)

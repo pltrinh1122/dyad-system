@@ -284,10 +284,18 @@ class InstanceContributionTests(unittest.TestCase):
         n, m, msgs = inf.check_manifest(self.pkg, self.root)
         self.assertIn("'Anthropic API' (workstation-corpus/INFRASTRUCTURE.md): already declared by crafts/automaton/infrastructure_contrib.md", msgs)
     def test_live_union_is_unchanged_in_content(self):
-        """dyad-system: the 15 components as before the move (core 11 + instance 4)."""
+        """The live union is exactly core + crafts + this instance's own file, nothing dropped or
+        duplicated, and the core ships no `operating` row (they moved to the instance, #175). Derived
+        from the live repo's own files, never from dyad-system's counts (#179: on dyad-system this is
+        core 11 + instance 4 = 15; another system has its own instance rows)."""
         rows, msgs = inf.manifest_rows()
-        self.assertEqual(msgs, []); self.assertEqual(len(rows), 15)
-        self.assertEqual({dyadlib.plain(r[0]) for s, r in rows if s != "the manifest"}, {"Gitea", "Docker Engine + Compose", "GHCR (ghcr.io)", "curl"})
+        self.assertEqual(msgs, [])
+        core = inf.parse_manifest((dyadlib.PKG / "infrastructure" / "INFRASTRUCTURE.md").read_text())
+        crafts, instance = inf.craft_infra_rows(dyadlib.PKG), inf.instance_infra_rows(dyadlib.PKG.parent)
+        self.assertEqual(len(rows), len(core) + len(crafts) + len(instance))
+        self.assertEqual({dyadlib.plain(r[0]) for s, r in rows if s != "the manifest"},
+                         {dyadlib.plain(r[0]) for _, r in crafts} | {dyadlib.plain(r[0]) for r in instance})
+        self.assertEqual([r[0] for r in core if r[-1] == "operating"], [])
 
 
 class InvariantTests(unittest.TestCase):

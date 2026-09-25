@@ -100,7 +100,12 @@ class HostPathTests(unittest.TestCase):
                 fn(self.root)
             os.environ.pop(var)
     def test_live_repo_keeps_the_default(self):
-        self.assertEqual(dyadlib.host_zone(), "workstation")
+        """No root: the live repo's own preference row, else the default — whatever this instance set
+        (#179: dyad-system's `workstation` is its value, not every system's)."""
+        live = dyadlib.repo_root()
+        self.assertEqual(dyadlib.host_zone(), dyadlib.preference("host-zone", live) or dyadlib.DEFAULT_HOST_ZONE)
+        self.assertEqual(dyadlib.host_path(), (dyadlib.preference("host-path", live) or dyadlib.DEFAULT_HOST).strip().rstrip("/"))
+        self.assertIn(dyadlib.host_zone(), dyadlib.HOST_ZONES)
 
 class TableHeaderTests(unittest.TestCase):
     def test_header_is_the_line_before_the_separator(self):
