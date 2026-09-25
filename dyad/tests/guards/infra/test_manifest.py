@@ -1,15 +1,15 @@
-import shutil, sys, tempfile, unittest
+import os, shutil, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
 inf = dyadlib.load_guard("infra", "manifest")
 
-MANIFEST = """| component | partition | version | purpose | license | replacement |
-|-----------|-----------|---------|---------|---------|-------------|
-| Python | kernel | 3.12 | code | PSF | — |
-| Git | kernel | 2.43 | repo | GPL-2.0 | — |
-| `actions/checkout@v4` | library | v4 | CI checkout | MIT | LAN runner |
-| Linux (OS) | The World | 7.0 | provides | — | observed |
+MANIFEST = """| component | partition | version | purpose | license | replacement | profile |
+|-----------|-----------|---------|---------|---------|-------------|---------|
+| Python | kernel | 3.12 | code | PSF | — | both |
+| Git | kernel | 2.43 | repo | GPL-2.0 | — | both |
+| `actions/checkout@v4` | library | v4 | CI checkout | MIT | LAN runner | authoring |
+| Linux (OS) | The World | 7.0 | provides | — | observed | both |
 """
 RULES = "# map\nPython: python3 python\nGit: git\nactions/checkout@v4: actions/checkout@v4\nLinux (OS): -\n"
 TOKENS = {"python3": ["scripts/x.py:1"], "git": ["scripts/x.py"], "actions/checkout@v4": ["dyad-x.yml"]}
@@ -21,16 +21,16 @@ class InfrastructureTests(unittest.TestCase):
     def test_passes(self):
         self.assertEqual(run(), [])
     def test_malformed_row(self):
-        self.assertIn("malformed", run(MANIFEST + "| jq | library | 1.7 | | MIT | json |\n", RULES + "jq: jq\n")[0])
+        self.assertIn("malformed", run(MANIFEST + "| jq | library | 1.7 | | MIT | json | both |\n", RULES + "jq: jq\n")[0])
     def test_bad_partition(self):
-        self.assertIn("partition 'host'", run(MANIFEST + "| jq | host | 1.7 | json | MIT | json |\n", RULES + "jq: jq\n")[0])
+        self.assertIn("partition 'host'", run(MANIFEST + "| jq | host | 1.7 | json | MIT | json | both |\n", RULES + "jq: jq\n")[0])
     def test_undeclared_token_fails(self):
         msgs = run(tokens={**TOKENS, "curl": ["hooks/pre-push"]})
         self.assertEqual(len(msgs), 1); self.assertIn("'curl' invoked by hooks/pre-push", msgs[0]); self.assertFalse(msgs[0].startswith("warning:"))
     def test_rules_naming_undeclared_component_fails(self):
         self.assertIn("does not declare", run(rules=RULES + "jq: jq\n")[0])
     def test_declared_never_invoked_warns_only(self):
-        msgs = run(MANIFEST + "| jq | library | 1.7 | json | MIT | json |\n")
+        msgs = run(MANIFEST + "| jq | library | 1.7 | json | MIT | json | both |\n")
         self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("warning:")); self.assertIn("'jq'", msgs[0])
     def test_shell_words(self):
         text = 'set -e\nT=$(mktemp -d); git -C "$T" init -q\ncd "$T"; [ -f x ] || { echo no; exit 1; }\nexec "$(git rev-parse --show-toplevel)/dyad/scripts/c.py" staged\n'
@@ -42,7 +42,7 @@ class InfrastructureTests(unittest.TestCase):
         self.assertEqual(inf.python_calls(py), ["python3", "git", "<cmd>"])
         self.assertEqual(inf.shebang("#!/usr/bin/env bash\n"), "bash"); self.assertEqual(inf.shebang("#!/bin/sh\n"), "sh")
     def test_contract(self):
-        self.assertEqual((inf.ENTITY, inf.CORPUS, inf.TRANSACTION), ("component", "infra", False)); self.assertEqual(len(inf.FIELDS), 6)
+        self.assertEqual((inf.ENTITY, inf.CORPUS, inf.TRANSACTION), ("component", "infra", False)); self.assertEqual(len(inf.FIELDS), 7); self.assertEqual(inf.FIELDS[-1], "profile")
         self.assertTrue(inf.RULES_FILE.exists()); self.assertEqual(inf.RULES_FILE.parent, Path(inf.__file__).parent)
     def test_live_package(self):
         n, m, msgs = inf.check_manifest()
@@ -50,7 +50,7 @@ class InfrastructureTests(unittest.TestCase):
         self.assertGreaterEqual(n, 10); self.assertGreaterEqual(m, 8)
 
 
-IMPORT_MANIFEST = MANIFEST + "| requests | library | 2.32 | http | Apache-2.0 | urllib |\n"
+IMPORT_MANIFEST = MANIFEST + "| requests | library | 2.32 | http | Apache-2.0 | urllib | both |\n"
 IMPORT_RULES = RULES + "requests: import:requests\n"
 
 def fixture(files: dict[str, str]) -> Path:
@@ -95,9 +95,9 @@ class ImportScanTests(unittest.TestCase):
         self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
 
 
-CRAFT_INFRA = """| component | partition | version | purpose | license | replacement |
-|-----------|-----------|---------|---------|---------|-------------|
-| Anthropic API | library | v1 | fetches research briefs | proprietary | — |
+CRAFT_INFRA = """| component | partition | version | purpose | license | replacement | profile |
+|-----------|-----------|---------|---------|---------|-------------|---------|
+| Anthropic API | library | v1 | fetches research briefs | proprietary | — | operating |
 """
 
 def craft_root(files: dict[str, str] | None = None) -> Path:
@@ -140,7 +140,7 @@ class CraftContributionTests(unittest.TestCase):
     def test_craft_row_joins_the_manifest(self):
         craft_fixture(self.pkg)
         rows = inf.craft_infra_rows(self.pkg)
-        self.assertEqual(rows, [("automaton", ("Anthropic API", "library", "v1", "fetches research briefs", "proprietary", "—"))])
+        self.assertEqual(rows, [("automaton", ("Anthropic API", "library", "v1", "fetches research briefs", "proprietary", "—", "operating"))])
     def test_check_manifest_includes_craft_rows(self):
         (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
         (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
@@ -151,9 +151,9 @@ class CraftContributionTests(unittest.TestCase):
     def test_colliding_component_name_fails_naming_both_sources(self):
         (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
         (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
-        craft_fixture(self.pkg, infra="| component | partition | version | purpose | license | replacement |\n"
-                      "|-----------|-----------|---------|---------|---------|-------------|\n"
-                      "| Python | library | 1.0 | craft's own | MIT | — |\n")
+        craft_fixture(self.pkg, infra="| component | partition | version | purpose | license | replacement | profile |\n"
+                      "|-----------|-----------|---------|---------|---------|-------------|---------|\n"
+                      "| Python | library | 1.0 | craft's own | MIT | — | both |\n")
         n, m, msgs = inf.check_manifest(self.pkg)
         self.assertTrue(any("'Python' (crafts/automaton/infrastructure_contrib.md): already declared by the manifest" in x for x in msgs), msgs)
     def test_second_craft_colliding_with_first_craft_is_named(self):
@@ -221,6 +221,73 @@ class CraftContributionTests(unittest.TestCase):
         self.assertIn(d / "server", inf.craft_python_dirs(self.pkg))
         toks = inf.python_imports(self.pkg)
         self.assertEqual(toks, {"import:flask": ["crafts/automaton/server/app.py"]})
+
+
+INSTANCE_INFRA = """| component | partition | version | purpose | license | replacement | profile |
+|-----------|-----------|---------|---------|---------|-------------|---------|
+| Gitea | library | 1.27 | LAN git server | MIT | Forgejo | operating |
+"""
+
+class ProfileTests(unittest.TestCase):
+    """#175: the seventh cell `profile`; a kernel row is `both`."""
+    def test_bad_profile_fails(self):
+        msgs = run(MANIFEST + "| jq | library | 1.7 | json | MIT | json | sometimes |\n", RULES + "jq: jq\n")
+        self.assertEqual(len(msgs), 1); self.assertIn("profile 'sometimes' not in", msgs[0])
+    def test_kernel_row_must_be_both(self):
+        msgs = run(MANIFEST.replace("| GPL-2.0 | — | both |", "| GPL-2.0 | — | authoring |"))
+        self.assertEqual(len(msgs), 1); self.assertIn("'Git': a kernel row serves both profiles", msgs[0])
+    def test_six_cell_row_is_malformed(self):
+        self.assertIn("malformed", run(MANIFEST + "| jq | library | 1.7 | json | MIT | json |\n", RULES + "jq: jq\n")[0])
+    def test_live_core_rows_all_carry_a_profile(self):
+        rows = inf.parse_manifest((dyadlib.PKG / "infrastructure" / "INFRASTRUCTURE.md").read_text())
+        self.assertTrue(rows and all(r[6] in inf.PROFILES for r in rows))
+        self.assertTrue(all(r[6] == "both" for r in rows if r[1] == "kernel"))
+        self.assertFalse({"Gitea", "Docker Engine + Compose", "GHCR (ghcr.io)", "curl"} & {dyadlib.plain(r[0]) for r in rows})   # operating rows are instance
+
+
+class InstanceContributionTests(unittest.TestCase):
+    """#175: `<host path>/INFRASTRUCTURE.md` joins the core and craft rows as one manifest."""
+    def setUp(self):
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        self.pkg = craft_root({"scripts/a.py": "import os\n"}); self.root = self.pkg.parent
+        (self.pkg / "infrastructure").mkdir(); (self.pkg / "infrastructure" / "INFRASTRUCTURE.md").write_text(MANIFEST)
+        (self.pkg / "guards" / "infra").mkdir(parents=True); (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text(RULES)
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    def instance(self, text=INSTANCE_INFRA, host="workstation-corpus"):
+        d = self.root / host; d.mkdir(parents=True, exist_ok=True); (d / "INFRASTRUCTURE.md").write_text(text)
+    def test_absent_file_adds_nothing(self):
+        self.assertEqual(inf.instance_infra_rows(self.root), [])
+        n, m, msgs = inf.check_manifest(self.pkg, self.root)
+        self.assertEqual(n, 4); self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
+    def test_instance_rows_join_without_a_token(self):
+        self.instance()
+        rows, msgs = inf.manifest_rows(self.pkg, self.root)
+        self.assertEqual(msgs, []); self.assertEqual(rows[-1][0], "workstation-corpus/INFRASTRUCTURE.md")
+        n, m, msgs = inf.check_manifest(self.pkg, self.root)
+        self.assertEqual(n, 5); self.assertEqual(msgs, [])   # no "declared but no token" warning for an instance row
+    def test_host_path_moves_the_instance_file(self):
+        os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "infrastructure", "infra"
+        self.instance(host="infrastructure")
+        self.assertEqual(inf.instance_source(self.root), "infrastructure/INFRASTRUCTURE.md")
+        self.assertEqual([r[0] for r in inf.instance_infra_rows(self.root)], ["Gitea"])
+    def test_duplicate_across_core_and_instance_fails(self):
+        self.instance(INSTANCE_INFRA + "| Python | kernel | 3.12 | again | PSF | — | both |\n")
+        n, m, msgs = inf.check_manifest(self.pkg, self.root)
+        self.assertIn("'Python' (workstation-corpus/INFRASTRUCTURE.md): already declared by the manifest", msgs)
+    def test_duplicate_across_craft_and_instance_fails(self):
+        craft_fixture(self.pkg); self.instance(INSTANCE_INFRA + "| Anthropic API | library | v2 | again | proprietary | — | operating |\n")
+        n, m, msgs = inf.check_manifest(self.pkg, self.root)
+        self.assertIn("'Anthropic API' (workstation-corpus/INFRASTRUCTURE.md): already declared by crafts/automaton/infrastructure_contrib.md", msgs)
+    def test_live_union_is_unchanged_in_content(self):
+        """dyad-system: the 15 components as before the move (core 11 + instance 4)."""
+        rows, msgs = inf.manifest_rows()
+        self.assertEqual(msgs, []); self.assertEqual(len(rows), 15)
+        self.assertEqual({dyadlib.plain(r[0]) for s, r in rows if s != "the manifest"}, {"Gitea", "Docker Engine + Compose", "GHCR (ghcr.io)", "curl"})
 
 
 class InvariantTests(unittest.TestCase):

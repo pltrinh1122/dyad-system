@@ -63,16 +63,22 @@ def requires(craft_dir: Path) -> list[tuple[str, str]]:
         out.append((name, ver or "0.0.0"))
     return out
 
-def seeds(craft_dir: Path) -> list[tuple[str, str]]:
-    """[(template name, instance-relative dest)] from `seeds: CHANGELOG.md->workstation-corpus/CHANGELOG.md
+HOST_TOKEN = "<host>"   # in a `seeds:` destination: the receiving system's host path (dyadlib.host_path, #175)
+
+def seeds(craft_dir: Path, root: Path | None = None) -> list[tuple[str, str]]:
+    """[(template name, instance-relative dest)] from `seeds: CHANGELOG.md-><host>/CHANGELOG.md
     ...` (MANIFEST.md, space-separated `<template>-><dest>` tokens, the same shape as `requires:`);
-    absent manifest = none. Never copied (Rule-11 p2: host-side hooks are the core craft's only) —
-    `check_craft` validates the mapping (template exists, destination zone is one this craft's own
-    guards claim) and `seed_status` reports an absent destination in a named repo; #180."""
-    out = []
+    absent manifest = none. With `root`, a leading `<host>` in a destination is that repo's host path
+    (`dyadlib.host_path`, #175); without, the destination is returned as written. Never copied
+    (Rule-11 p2: host-side hooks are the core craft's only) — `check_craft` validates the mapping
+    (template exists, destination zone is one this craft's own guards claim) and `seed_status`
+    reports an absent destination in a named repo; #180."""
+    out, host = [], dyadlib.host_path(Path(root)) if root is not None else None
     for tok in manifest(craft_dir).get("seeds", "").split():
         tmpl, sep, dest = tok.partition("->")
         if sep and tmpl and dest:
+            if host is not None and dest.startswith(HOST_TOKEN + "/"):
+                dest = host + dest[len(HOST_TOKEN):]
             out.append((tmpl, dest))
     return out
 
@@ -272,7 +278,7 @@ def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=())
         if zones is None:
             try:
                 containment = dyadlib.load_guard("infra", "containment", pkg)
-                zones = {z for z, _ in containment.ZONES}
+                zones = containment.corpora(repo)   # zones plus the logical host corpus (#175)
             except Exception:
                 zones = None
         problem = dyadlib.contract_problem(mod, "craft", name, zones)
@@ -285,13 +291,13 @@ def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=())
             containment = dyadlib.load_guard("infra", "containment", pkg)
         except Exception:
             containment = None
-    for tmpl, dest in seeds(d):
+    for tmpl, dest in seeds(d, repo):
         if not (d / "templates" / tmpl).is_file():
             msgs.append(f"{rel}/MANIFEST.md: seeds '{tmpl}->{dest}': no templates/{tmpl}")
         elif containment is None:
             msgs.append(f"{rel}/MANIFEST.md: seeds '{tmpl}->{dest}': cannot classify (infra/containment guard unavailable)")
-        elif containment.classify(dest) not in own_corpora:
-            msgs.append(f"{rel}/MANIFEST.md: seeds '{tmpl}->{dest}': destination zone '{containment.classify(dest)}' is not one this craft's own guards claim as CORPUS ({', '.join(sorted(own_corpora)) or 'none'})")
+        elif containment.classify(dest, repo) not in {containment.corpus_zone(c, repo) for c in own_corpora}:
+            msgs.append(f"{rel}/MANIFEST.md: seeds '{tmpl}->{dest}': destination zone '{containment.classify(dest, repo)}' is not one this craft's own guards claim as CORPUS ({', '.join(sorted(own_corpora)) or 'none'})")
     if (d / "rules").is_dir():
         msgs += dyadlib.load_guard("agent", "rules", pkg).check_tended(d / "rules", data()["agent-token"], rel_to=repo)
     msgs += [f"warning: {rel}: {u} (checked at install)" for u in unmet(repo, d)]
@@ -307,7 +313,7 @@ def seed_status(repo: Path, craft_dir: Path) -> list[str]:
     repo, d = Path(repo), Path(craft_dir); rel = f"crafts/{d.name}"
     return [f"warning: {rel}: seed '{tmpl}' not copied to {dest} — copy it by hand: "
             f"cp {rel}/templates/{tmpl} {dest}"
-            for tmpl, dest in seeds(d) if not (repo / dest).exists()]
+            for tmpl, dest in seeds(d, repo) if not (repo / dest).exists()]
 
 def crafts(root: Path) -> list[Path]:
     """Every `crafts/<name>/` directory of `root` (a VERSION or not: a directory beside REGISTRY.md is a craft)."""

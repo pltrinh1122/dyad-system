@@ -18,6 +18,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | Tended Rule | an Operator-tended rule in `workstation-corpus/rules/` or a Tended craft's `rules/` governing the craft or host, never the dyad's process; a separately contained set | 4 | 4 5 8 |
 | block | the countable header of an Agent Rule: one Intent, one Target, Boundaries, Conditions | 4 | 4 |
 | zone | a named set of paths; a repo transaction touches exactly one | 1 | 1 2 3 4 |
+| host path | the repo-relative directory holding a system's host and operating records, the host row of the zone table; preference `host-path` (default `workstation-corpus`), its zone preference `host-zone` (`workstation` or `infra`) | 1 | 1 14 |
 | repo transaction | a commit or a PR | 1 | 1 |
 | ratification event | an act only the Operator may perform: merge, direct push, finalising a verdict, or an event another Rule declares | 2 | 2 3 |
 | proposer | the party that authors a proposal, PR, verdict or record — always the Agent | 2 | 2 |
@@ -52,7 +53,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | sweep | a pairwise coherence and orthogonality check of the Agent Rules, recorded in `agent-corpus/audits/` | 5 | 5 |
 | falsification record | a table of attacks on a claim and their survivors, in `agent-corpus/falsification/`; a Rule's record lives in `rules/` and is package, any other is instance; disposed by the Done-Y of its d-work | 9 | 2 4 5 6 9 11 |
 | audit | an agent-authored review elevating gaps for Operator disposition, in `agent-corpus/audits/` | frame | 2 4 5 |
-| preference | an Operator-owned setting in `preferences-corpus/`, read by the Rule it names | frame | 2 3 4 5 13 |
+| preference | an Operator-owned setting in `preferences-corpus/`, read by the Rule it names | frame | 1 2 3 4 5 13 |
 | vocabulary | this file: the master record of Agent terms | 6 | 4 5 6 |
 | subagent | a process the Agent spawns for part of its work; its actions are the Agent's; it reads, searches and drafts (plan files and branch changes under `delegation`), never acts on the Operator's behalf | 3 | 3 8 |
 | delegation | the preference under which subagents draft plan files and execution branches while the main Agent keeps every act a disposition binds to | 3 | 3 |
@@ -92,11 +93,12 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | The World | everything that is not The Dyad System: the OS, hosting, services, packages, network | 14 | 14 |
 | System Infrastructure | the surface between The Dyad System and The World; the container for every integration dependency; partitioned into kernel and library | 14 | 14 |
 | kernel | the minimal pinned part of the System Infrastructure: a CLI inferencing agent, Python at a pinned version, Git as a local repository, and pydantic at a pinned version | 14 | 14 |
-| manifest | the one file listing every System Infrastructure dependency: component, partition, version, purpose, license, replacement | 14 | 14 |
+| manifest | the one list of every System Infrastructure dependency: component, partition, version, purpose, license, replacement, profile; the union of the core file, every craft's contribution and the instance's (under the host path) | 14 | 14 |
+| profile | the manifest cell saying which activity of a system needs a row: `authoring`, `operating` or `both`; a kernel row is `both` | 14 | 14 |
 | evidence block | the output of `package.py check --evidence` on an exact head: head sha, tree hash, dirty flag, every check and guard line, and a sha256 of those lines; pasted verbatim in the completion reply as the merge evidence, re-runnable by the Operator | 14 | 2 14 |
 | recurring task | an operation the Agent has performed by inference before and will perform again; Rule-13's trigger | 13 | 13 |
 | consistent | of a term: every Agent Rule uses it in the vocabulary's sense (Rule-6; distinct from *coherent*) | 6 | 6 |
 | server instance | a long-running service on the host that the Agent deploys or is asked to operate: one run-book, one health command; its supervisor and the run-book's form are the sysadmin craft's | 19 | 8 19 |
 | entrypoint | `dyad/bin/dyad`: the package's one command-line entry, `dyad <noun> <verb>`; invoked by path, never installed on the host's PATH | 11 | 11 |
 | guard | one craft module that mechanically checks one entity kind: `dyad/guards/<corpus>/<entity>.py` (core) or `crafts/<craft>/guards/<entity>.py` (a Tended craft's), its data beside it, its test under that craft's `tests/guards/`; the entity's parser, imported by projectors and other guards (the contract: `crafts/sysarch/rules/guards.md`) | 11 | 1 2 3 4 6 8 11 12 13 14 15 16 18 19 20 |
-| corpus | the Rule-1 zone of an entity's store: for a core guard the directory under `dyad/guards/` that holds it (`agent`, `workstation`, `preferences`, `infra`); for a craft guard its declared `CORPUS`, a zone name; the core craft stays one tree in the agent zone | 11 | 11 12 20 |
+| corpus | the Rule-1 zone of an entity's store: for a core guard the directory under `dyad/guards/` that holds it (`agent`, `workstation`, `preferences`, `infra`); for a craft guard its declared `CORPUS`, a zone name or `workstation`, the logical host corpus, which resolves to the host path's zone; the core craft stays one tree in the agent zone | 11 | 11 12 20 |

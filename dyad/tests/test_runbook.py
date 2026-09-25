@@ -228,6 +228,37 @@ class CoreRunbookTests(unittest.TestCase):
         self.assertIsNone(rb.declared_sections("# T\n\n## A\n# sections: A\n"))     # after the first section: not a header
         self.assertIsNone(rb.declared_sections(runbook_text()))
 
+
+class _HostEnv:
+    """#175: DYAD_HOST / DYAD_HOST_ZONE set for one block, restored after."""
+    def __init__(self, **kw): self.kw = kw
+    def __enter__(self):
+        import os
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        os.environ.update(self.kw)
+    def __exit__(self, *a):
+        import os
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+class HostPathTests(unittest.TestCase):
+    """#175: `<runbooks>` defaults to `<host path>/runbooks`; DYAD_RUNBOOKS still overrides."""
+    def test_runbooks_rel_follows_the_host_path(self):
+        root = Path(tempfile.mkdtemp()); prev = os.environ.pop("DYAD_RUNBOOKS", None)
+        try:
+            with _HostEnv():
+                self.assertEqual(rb.runbooks_rel(root), rb.DEFAULT_RUNBOOKS)
+            with _HostEnv(DYAD_HOST="infrastructure", DYAD_HOST_ZONE="infra"):
+                self.assertEqual(rb.runbooks_dir(root), root / "infrastructure" / "runbooks")
+                os.environ["DYAD_RUNBOOKS"] = "elsewhere/"
+                self.assertEqual(rb.runbooks_rel(root), "elsewhere")
+        finally:
+            os.environ.pop("DYAD_RUNBOOKS", None)
+            if prev is not None:
+                os.environ["DYAD_RUNBOOKS"] = prev
+
 class LiveTests(livetest.LiveCase):
     """The instance's run-books pass the guard. Empty instance (a fresh install): no run-book, and no craft
     to check one with, so the case skips with its reason (#171). Skipped too while a run-book still holds

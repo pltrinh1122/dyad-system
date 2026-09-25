@@ -4,7 +4,7 @@ term equal to an Agent term fails; `the Agent` in a rule warns and does not fail
 fails; unmet `requires` warns; `seeds:` (#180) — a mismatched destination zone fails, a missing template fails, a
 collision between two crafts warns, `seed_status` warns only when the destination is absent and never writes; the
 live sysadmin craft passes; the contract and CLI line."""
-import shutil, subprocess, sys, tempfile, unittest
+import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -101,6 +101,24 @@ class CraftGuardTests(unittest.TestCase):
         (self.craft() / "MANIFEST.md").write_text("name: fx\nseeds: CHANGELOG.md->agent-corpus/d-work/rows/README.md\n")
         f = fails(check(self.r))
         self.assertTrue(any("destination zone 'agent' is not one this craft's own guards claim as CORPUS (workstation)" in m for m in f), f)
+    def test_seeds_host_token_resolves_per_repo(self):
+        """#175: `<host>` in a seed destination is the receiving repo's host path; under `host-zone:
+        infra` the destination classifies `infra` and the logical corpus `workstation` still claims it."""
+        prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        try:
+            (self.craft() / "MANIFEST.md").write_text("name: fx\nseeds: CHANGELOG.md-><host>/CHANGELOG.md\n")
+            self.assertEqual(cg.seeds(self.craft(), self.r), [("CHANGELOG.md", "workstation-corpus/CHANGELOG.md")])
+            self.assertEqual(fails(check(self.r)), [])
+            os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "infrastructure", "infra"
+            self.assertEqual(cg.seeds(self.craft(), self.r), [("CHANGELOG.md", "infrastructure/CHANGELOG.md")])
+            self.assertEqual(fails(check(self.r)), [])   # the guard's CORPUS `workstation` resolves to the infra host zone
+            self.assertEqual(cg.seed_status(self.r, self.craft()), [
+                "warning: crafts/fx: seed 'CHANGELOG.md' not copied to infrastructure/CHANGELOG.md — copy it by hand: cp crafts/fx/templates/CHANGELOG.md infrastructure/CHANGELOG.md"])
+        finally:
+            for k, v in prev.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
     def test_seed_status_warns_only_when_absent_and_never_writes(self):
         (self.craft() / "MANIFEST.md").write_text("name: fx\nseeds: CHANGELOG.md->workstation-corpus/CHANGELOG.md\n")
         self.assertEqual(cg.seed_status(self.r, self.craft()),
@@ -130,7 +148,7 @@ class CraftGuardTests(unittest.TestCase):
         if not (root / "crafts" / "sysadmin").is_dir(): self.skipTest("no sysadmin craft here")
         msgs = cg.check_craft(root, root / "crafts" / "sysadmin", PKG)
         self.assertEqual(fails(msgs), [], msgs)
-        self.assertEqual(cg.seeds(root / "crafts" / "sysadmin"), [("CHANGELOG.md", "workstation-corpus/CHANGELOG.md")])
+        self.assertEqual(cg.seeds(root / "crafts" / "sysadmin", root), [("CHANGELOG.md", "workstation-corpus/CHANGELOG.md")])   # `<host>` resolved to this repo's host path (#175)
         self.assertEqual(cg.seed_status(root, root / "crafts" / "sysadmin"), [
             "warning: crafts/sysadmin: seed 'CHANGELOG.md' not copied to workstation-corpus/CHANGELOG.md — "
             "copy it by hand: cp crafts/sysadmin/templates/CHANGELOG.md workstation-corpus/CHANGELOG.md"])

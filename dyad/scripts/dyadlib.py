@@ -222,6 +222,46 @@ def tracked_mode(root: Path, rel: str | Path) -> str | None:
 def instance(root: Path | None = None) -> Path:
     return (root or repo_root()) / os.environ.get("DYAD_INSTANCE", "agent-corpus")
 
+# ---- the host path and zone (Rule-1, d-work #175): where an instance keeps its host and operating
+# records, and which zone holds them. Instance data, read from the Operator's preferences (`host-path`,
+# `host-zone`) so hooks, CI and a fresh session all see the same value; `DYAD_HOST` / `DYAD_HOST_ZONE`
+# override for tests, as `DYAD_INSTANCE` does. The defaults reproduce the five-zone table of every
+# system before #175; `infra` folds the host records into the infra zone (a four-zone system).
+# A guard's logical corpus for these stores stays `workstation` (HOST_CORPUS) whatever the zone.
+DEFAULT_HOST, DEFAULT_HOST_ZONE = "workstation-corpus", "workstation"
+HOST_ZONES = ("workstation", "infra")
+HOST_CORPUS = "workstation"
+PREFERENCES_REL = "preferences-corpus/PREFERENCES.md"
+
+def preference(key: str, root: Path | None = None) -> str | None:
+    """The value cell of one preference row (emphasis stripped), or None when the file or the row is
+    absent. The table's grammar is the preference guard's (`guards/preferences/preferences.py`); this is
+    the one read the core needs before any guard loads."""
+    p = (root or repo_root()) / PREFERENCES_REL
+    if not p.is_file():
+        return None
+    for r in table_rows(p.read_text().replace("\\|", "\x00")):
+        if len(r) >= 2 and plain(r[0]).strip() == key:
+            return plain(r[1]).strip()
+    return None
+
+def host_path(root: Path | None = None) -> str:
+    """The host path, repo-relative, no trailing `/`: `DYAD_HOST`, else preference `host-path`, else
+    DEFAULT_HOST. ValueError on an empty, absolute or `..` path."""
+    v = os.environ.get("DYAD_HOST") or preference("host-path", root) or DEFAULT_HOST
+    v = v.strip().rstrip("/")
+    if not v or v.startswith("/") or ".." in Path(v).parts:
+        raise ValueError(f"host-path {v!r}: must be a relative path inside the repo")
+    return v
+
+def host_zone(root: Path | None = None) -> str:
+    """The zone of the host path: `DYAD_HOST_ZONE`, else preference `host-zone`, else DEFAULT_HOST_ZONE.
+    ValueError on a value outside HOST_ZONES (never a silent fallback: #175 F1)."""
+    v = (os.environ.get("DYAD_HOST_ZONE") or preference("host-zone", root) or DEFAULT_HOST_ZONE).strip()
+    if v not in HOST_ZONES:
+        raise ValueError(f"host-zone {v!r}: not one of {', '.join(HOST_ZONES)}")
+    return v
+
 RULES_LOCAL = "package_rules.local.txt"   # <instance>/: this host's own refuse-list rows (Rule-11 property 1; d-work #192)
 
 def package_rules(pkg: Path | None = None, root: Path | None = None) -> dict[str, list[str]]:
@@ -417,4 +457,7 @@ INVARIANTS: list[Invariant] = [
     ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS)),
     ("semver-accepts-build-metadata", lambda: bool(SEMVER.fullmatch("1.2.3")) and bool(SEMVER.fullmatch("1.2.3+local.1")) and not SEMVER.fullmatch("1.2")),
     ("semver-tuple-strips-build", lambda: semver_tuple("1.2.3+local.1") == (1, 2, 3)),
+    ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),
+    ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
+    ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
 ]

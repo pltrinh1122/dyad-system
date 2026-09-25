@@ -4,20 +4,17 @@
 # a shell command word, a workflow `uses:` value, or `import:<module>` — the top-level name of a
 # third-party Python import (stdlib and package-internal imports need no entry). A lone `-` marks
 # a component the package never invokes (Claude Code runs the Agent; Linux provides the kernel; GitHub is a remote).
-# Blank lines and # comments ignored.
+# Blank lines and # comments ignored. Only core components are mapped here: a map naming a component
+# the core does not declare fails on every system that lacks it. A system's own operating rows
+# (`<host>/INFRASTRUCTURE.md`: Gitea, Docker, GHCR, curl on dyad-system, #175) need no entry — the
+# package never invokes them.
 Claude Code: -
 Python: python3 python
 Git: git
 bash + GNU coreutils, grep, awk, sed: bash sh grep awk sed tr cut sort uniq mktemp cat ls rm cp mv mkdir printf echo tail head wc
 GitHub (hosting): -
-# Gitea, Docker and GHCR: invoked by the Agent's workflow and crafts/lan-git/scripts/deploy.py (the lan-git craft, #181;
-# crafts/sysadmin/server/ before it, #155), never by the core package (#124)
-Gitea: -
-Docker Engine + Compose: -
-GHCR (ghcr.io): -
 GitHub Actions + actions/checkout@v4: actions/checkout@v4
 actions/setup-python@v5: actions/setup-python@v5
-curl: curl
 gh: gh
 jq: jq
 Linux (OS): -

@@ -168,7 +168,7 @@ def main(argv):
     if len(argv) != 2:
         sys.exit(__doc__)
     root = dyadlib.repo_root()
-    ev = dyadlib.find_guard("workstation", "events")
+    ev = dyadlib.find_guard(dyadlib.HOST_CORPUS, "events")   # the logical host corpus, whatever zone holds it (#175)
     fails = check_range(argv[0], argv[1], cwd=root) + (ev.check_range(argv[0], argv[1], cwd=root) if ev else [])
     for f in fails:
         print(f, file=sys.stderr)

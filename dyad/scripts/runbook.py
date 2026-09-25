@@ -41,7 +41,7 @@ ROLES = ("any", "operator")                                              # who m
 CREDENTIAL_WORDS = ("sudo", "password", "token", "credential")           # force role `operator` (Rule-8: Operator-run)
 NONE = "none"                                                            # an undo or postcondition that does not exist
 PROSE_FENCES = {"", "bash", "sh", "shell", "console"}                    # refused by the guard: a command is a dyad-cmd block or it is prose
-DEFAULT_RUNBOOKS = "workstation-corpus/runbooks"
+DEFAULT_RUNBOOKS = f"{dyadlib.DEFAULT_HOST}/runbooks"                    # under the default host path; a system's own is `<host>/runbooks` (#175)
 CORE_RUNBOOKS = "dyad/runbooks"                                          # the core craft's own run-books (package; #165): the play-books' steps
 SECTIONS_KEY = "sections:"                                               # header line `# sections: A, B, C` — the run-book's own section set (default: the craft rule's)
 _CRED = re.compile(r"\b(" + "|".join(CREDENTIAL_WORDS) + r")\b", re.I)
@@ -100,11 +100,12 @@ class Refused(Exception):
         super().__init__(msg); self.code = code
 
 # ---- paths
-def runbooks_rel() -> str:
-    return os.environ.get("DYAD_RUNBOOKS", DEFAULT_RUNBOOKS).rstrip("/")   # absolute allowed (tests)
+def runbooks_rel(root: Path | None = None) -> str:
+    """`DYAD_RUNBOOKS` (absolute allowed: tests), else `<host path>/runbooks` of the repo at `root` (#175)."""
+    return (os.environ.get("DYAD_RUNBOOKS") or f"{dyadlib.host_path(root)}/runbooks").rstrip("/")
 
 def runbooks_dir(root: Path | None = None) -> Path:
-    return (root or dyadlib.repo_root()) / runbooks_rel()
+    return (root or dyadlib.repo_root()) / runbooks_rel(root)
 
 def runbook_path(root: Path, instance: str) -> Path:
     """`<runbooks>/<instance>.md`; when absent and a core run-book of that name exists, `dyad/runbooks/<instance>.md`
@@ -345,7 +346,7 @@ def main(argv=None) -> int:
     a = argv if argv is not None else sys.argv[1:]
     root = dyadlib.repo_root()
     if a and a[0] == "check":
-        guard = dyadlib.find_guard("workstation", "runbooks")
+        guard = dyadlib.find_guard(dyadlib.HOST_CORPUS, "runbooks")
         if guard is None:
             print("refused: no craft provides the run-book check (crafts/*/guards/runbooks.py)", file=sys.stderr); return 2
         return guard.main([str(root)])

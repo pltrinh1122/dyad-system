@@ -165,6 +165,67 @@ class VerbTableTests(unittest.TestCase):
             self.assertIn("containment.py staged", out.stderr)
 
 
+DEFAULT_TABLE = [
+    ("agent", "agent-corpus/*"), ("agent", "dyad/*"), ("workstation", "workstation-corpus/*"),
+    ("preferences", "preferences-corpus/*"), ("craft", "crafts/*"), ("infra", ".github/*"),
+    ("infra", ".githooks/*"), ("infra", "CLAUDE.md"), ("infra", "README.md"), ("infra", "LICENSE"),
+    ("infra", ".gitignore"), ("infra", "BUNDLE.md"), ("infra", ".claude/*"),
+]
+PREFS = """| key | value | allowed | read by |
+|-----|-------|---------|---------|
+| host-path | {path} | a repo-relative directory | Rule-1 |
+| host-zone | {zone} | `workstation` \\| `infra` | Rule-1 |
+"""
+
+class HostRowTests(unittest.TestCase):
+    """#175: the host row of the zone table is read from the preferences `host-path` / `host-zone`
+    (env `DYAD_HOST` / `DYAD_HOST_ZONE` for tests); the defaults reproduce the five-zone table."""
+    def setUp(self):
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+    def tearDown(self):
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    def test_default_table_byte_identical(self):
+        self.assertEqual(c.zones_for(), DEFAULT_TABLE)
+        self.assertEqual(c.zone_names_for(), ("agent", "workstation", "preferences", "infra", "craft"))
+        r = Repo()   # no preferences: the defaults
+        self.assertEqual(c.table(r.d), DEFAULT_TABLE)
+    def test_env_infra_host_gives_four_zones(self):
+        os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "infrastructure", "infra"
+        r = Repo(); t = c.table(r.d)
+        self.assertEqual(t[c.HOST_ROW], ("infra", "infrastructure/*"))
+        self.assertEqual({z for z, _ in t}, {"agent", "preferences", "infra", "craft"})
+        self.assertEqual(c.zone_names_for("infra"), ("agent", "preferences", "infra", "craft"))
+        self.assertEqual(c.classify("infrastructure/x.md", r.d), "infra")
+        self.assertEqual(c.classify("workstation-corpus/x.md", r.d), "unclassified")
+        self.assertEqual(c.classify("dyad/infrastructure/INFRASTRUCTURE.md", r.d), "agent")
+    def test_preferences_drive_the_table_and_transactions(self):
+        r = Repo()
+        r.commit({"preferences-corpus/PREFERENCES.md": PREFS.format(path="infrastructure", zone="infra")})
+        self.assertEqual(c.table(r.d)[c.HOST_ROW], ("infra", "infrastructure/*"))
+        r.commit({"infrastructure/HOST.md": "h", "README.md": "r"})          # one zone: infra
+        self.assertEqual(c.check_tree(cwd=r.d), [])
+        base = sh("git", "rev-parse", "HEAD", cwd=r.d).strip()
+        head = r.commit({"infrastructure/INFRASTRUCTURE.md": "i", "dyad/a.md": "x"})
+        self.assertTrue(any("multiple zones: agent infra" in f for f in c.check_commits(base, head, cwd=r.d)))
+    def test_bad_host_zone_raises(self):
+        os.environ["DYAD_HOST_ZONE"] = "host"
+        with self.assertRaises(ValueError):
+            c.table(Repo().d)
+    def test_infra_host_keeps_logical_corpus(self):
+        os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "infrastructure", "infra"
+        r = Repo()
+        self.assertIn(dyadlib.HOST_CORPUS, c.corpora(r.d)); self.assertNotIn("workstation", {z for z, _ in c.table(r.d)})
+        self.assertEqual(c.corpus_zone("workstation", r.d), "infra"); self.assertEqual(c.corpus_zone("agent", r.d), "agent")
+        os.environ.pop("DYAD_HOST"); os.environ.pop("DYAD_HOST_ZONE")
+        self.assertEqual(c.corpus_zone("workstation", r.d), "workstation")
+    def test_zones_cli_unchanged_for_defaults(self):
+        out = subprocess.run([sys.executable, str(Path(c.__file__)), "zones"], cwd=Repo().d, capture_output=True, text=True).stdout
+        self.assertEqual(out, "zone         pattern\n" + "".join(f"{z:<12} {p}\n" for z, p in DEFAULT_TABLE))
+
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):
