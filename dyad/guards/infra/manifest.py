@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Manifest guard (entity `component`, infra corpus; Rule-14 owns the check, placed per Rule-11 property 1). Kernel: Python 3.12+.
-The manifest (infrastructure/INFRASTRUCTURE.md) is well-formed and every invocation token the
+The manifest — the core's infrastructure/INFRASTRUCTURE.md, every installed craft's own
+`infrastructure_contrib.md` and the instance's `<host>/INFRASTRUCTURE.md` (the host path,
+`dyadlib.host_path`; the system's own operating rows, observed, #175), one union — is well-formed
+(seven cells; `partition` in PARTITIONS, `profile` in PROFILES, a kernel row `both`; a component
+declared twice fails naming both sources) and every invocation token the
 package makes — shebang interpreters, subprocess argv[0], shell command words in hooks and
 `.sh` files, `uses:` and `run:` words in the dyad-* workflows, and third-party Python `import`s
 (token `import:<module>`) — maps, through guards/infra/manifest_rules.txt (beside this guard), to
@@ -25,9 +29,13 @@ ENTITY, CORPUS, TRANSACTION = "component", "infra", False
 NAME, OWNER = "manifest row", "Rule-14"
 RULES_FILE = Path(__file__).resolve().parent / "manifest_rules.txt"
 PARTITIONS = {"kernel", "library", "The World"}
-FIELDS = ("component", "partition", "version", "purpose", "license", "replacement")
+PROFILES = {"authoring", "operating", "both"}     # which activity needs the row; the kernel serves both (#175)
+KERNEL_PROFILE = "both"
+FIELDS = ("component", "partition", "version", "purpose", "license", "replacement", "profile")
+INSTANCE_FILE = "INFRASTRUCTURE.md"               # `<host>/INFRASTRUCTURE.md`: the instance contribution (#175)
 INVARIANTS = [("partitions-fixed", lambda: PARTITIONS == {"kernel", "library", "The World"}),   # crafts/syseng/rules/invariants.md
-              ("six-fields", lambda: len(FIELDS) == 6 and len(set(FIELDS)) == 6)]
+              ("seven-fields", lambda: len(FIELDS) == 7 and len(set(FIELDS)) == 7 and FIELDS[-1] == "profile"),
+              ("profiles-fixed", lambda: PROFILES == {"authoring", "operating", "both"} and KERNEL_PROFILE in PROFILES)]
 # shell words that name no program: builtins, keywords, syntax
 SHELL_SKIP = {"cd", "set", "[", "[[", "]", "]]", "exit", "export", "return", "shift", "true", "false",
               "if", "then", "else", "elif", "fi", "for", "while", "do", "done", "in", "case", "esac",
@@ -40,7 +48,7 @@ _RUN = re.compile(r"^(\s*)-?\s*run:\s*(.*)$")
 
 # ---- manifest
 def parse_manifest(text: str) -> list[tuple[str, ...]]:
-    """Rows of the first markdown table: 6-tuples (short rows padded with '')."""
+    """Rows of the first markdown table: 7-tuples, FIELDS order (short rows padded with '')."""
     rows = []
     for line in text.splitlines():
         if not line.startswith("|"):
@@ -48,7 +56,7 @@ def parse_manifest(text: str) -> list[tuple[str, ...]]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if not cells or cells[0] in ("component", "") or set(cells[0]) <= {"-"}:
             continue
-        rows.append(tuple((cells + [""] * 6)[:6]))
+        rows.append(tuple((cells + [""] * len(FIELDS))[:len(FIELDS)]))
     return rows
 
 def parse_rules(text: str) -> dict[str, list[str]]:
@@ -237,17 +245,24 @@ def scan(pkg: Path = dyadlib.PKG, workflows_dir: Path | None = None) -> dict[str
     return found
 
 # ---- check
-def check(rows: list[tuple[str, ...]], rules: dict[str, list[str]], tokens: dict[str, list[str]] | set[str]) -> list[str]:
-    """Failures (bare) and warnings (`warning:` prefix), in the package.py convention."""
+def check(rows: list[tuple[str, ...]], rules: dict[str, list[str]], tokens: dict[str, list[str]] | set[str],
+          untokened: set[str] = frozenset()) -> list[str]:
+    """Failures (bare) and warnings (`warning:` prefix), in the package.py convention. `untokened`:
+    components exempt from the no-token warning — the instance's own operating rows, which the package
+    never invokes (the scan covers the core and the crafts only; #175)."""
     msgs, comps = [], []
     if not isinstance(tokens, dict):
         tokens = {t: [] for t in tokens}
     for r in rows:
         comp = dyadlib.plain(r[0])
-        if not all(r) or len(r) < 6:
+        if not all(r) or len(r) < len(FIELDS):
             msgs.append(f"'{r[0]}': malformed row (needs {', '.join(FIELDS)})"); continue
         if r[1] not in PARTITIONS:
             msgs.append(f"'{r[0]}': partition '{r[1]}' not in {sorted(PARTITIONS)}")
+        if r[6] not in PROFILES:
+            msgs.append(f"'{r[0]}': profile '{r[6]}' not in {sorted(PROFILES)}")
+        elif r[1] == "kernel" and r[6] != KERNEL_PROFILE:
+            msgs.append(f"'{r[0]}': a kernel row serves both profiles; profile '{r[6]}' must be '{KERNEL_PROFILE}'")
         if comp in comps:
             msgs.append(f"'{r[0]}': declared twice")
         comps.append(comp)
@@ -265,7 +280,7 @@ def check(rows: list[tuple[str, ...]], rules: dict[str, list[str]], tokens: dict
         else:
             msgs.append(f"'{t}' invoked by {', '.join(sorted(set(where))) or 'the package'} maps to no declared component")
     for comp in comps:
-        if not rules.get(comp):
+        if not rules.get(comp) and comp not in untokened:
             msgs.append(f"warning: '{comp}' declared but no token maps to it (add tokens or `-` in manifest_rules.txt)")
     return msgs
 
@@ -284,7 +299,7 @@ def craft_manifest_rules(pkg: Path = dyadlib.PKG) -> list[tuple[str, dict[str, l
     return out
 
 def craft_infra_rows(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple[str, ...]]]:
-    """[(craft, row)] from every installed craft's own `infrastructure_contrib.md` (same six cells
+    """[(craft, row)] from every installed craft's own `infrastructure_contrib.md` (same seven cells
     as INFRASTRUCTURE.md, parsed by the same `parse_manifest`): a core-owned table accepting a
     craft-shipped contribution, discovered like a guard (Rule-11 property 2,
     `agent-corpus/falsification/extensibility.md` #101). Empty when a craft ships none."""
@@ -295,47 +310,77 @@ def craft_infra_rows(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple[str, ...]
             out += [(c.name, row) for row in parse_manifest(f.read_text())]
     return out
 
-def check_manifest(pkg: Path = dyadlib.PKG) -> tuple[int, int, list[str]]:
-    """(components, tokens, messages) over the live package plus every installed craft's own
-    contributed rows and rules. A contributed component already declared (by the core manifest or
-    an earlier craft) fails, naming both sources — a component leaves with its craft, so it is
-    never shared. A craft's own `manifest_rules_contrib.txt` rows merge into the token map the same
-    way its `infrastructure_contrib.md` rows merge into the manifest (#105): a token the core map
-    already resolves is unaffected (`dict.setdefault`, first-wins, matching `check`'s own `tok2comp`
-    merge order); an unresolved token is only ever the caller's, never blamed on a craft that has
-    not contributed a mapping for it."""
-    core_rows = parse_manifest((pkg / "infrastructure" / "INFRASTRUCTURE.md").read_text())
+def instance_manifest(root: Path) -> Path:
+    """`<root>/<host path>/INFRASTRUCTURE.md`: the instance contribution — this system's own operating
+    rows, as observed on it (#175). Instance data, never inside a craft."""
+    return Path(root) / dyadlib.host_path(Path(root)) / INSTANCE_FILE
+
+def instance_source(root: Path) -> str:
+    """The instance contribution's path as messages name it: relative to `root`."""
+    f = instance_manifest(root)
+    return str(f.relative_to(root)) if f.is_relative_to(root) else str(f)
+
+def instance_infra_rows(root: Path) -> list[tuple[str, ...]]:
+    """The instance contribution's rows (same seven cells); empty when the file is absent."""
+    f = instance_manifest(root)
+    return parse_manifest(f.read_text()) if f.is_file() else []
+
+def manifest_rows(pkg: Path = dyadlib.PKG, root: Path | None = None) -> tuple[list[tuple[str, tuple[str, ...]]], list[str]]:
+    """([(source, row)], messages): the one manifest, the union of the core file, every craft's
+    contribution and the instance's, in that order. A component already declared by an earlier source
+    fails, naming both (a component is never shared), and is left out of the union."""
+    root = Path(root) if root is not None else pkg.parent
+    core = pkg / "infrastructure" / "INFRASTRUCTURE.md"
+    sources = [("the manifest", r) for r in (parse_manifest(core.read_text()) if core.is_file() else [])]
+    sources += [(f"crafts/{craft}/infrastructure_contrib.md", r) for craft, r in craft_infra_rows(pkg)]
+    sources += [(instance_source(root), r) for r in instance_infra_rows(root)]
+    out, msgs, seen = [], [], {}
+    for src, row in sources:
+        comp = dyadlib.plain(row[0])
+        if comp in seen:
+            msgs.append(f"'{row[0]}' ({src}): already declared by {seen[comp]}")
+            continue
+        seen[comp] = src
+        out.append((src, row))
+    return out, msgs
+
+def check_manifest(pkg: Path = dyadlib.PKG, root: Path | None = None) -> tuple[int, int, list[str]]:
+    """(components, tokens, messages) over the one manifest (`manifest_rows`: core, crafts, instance)
+    and every installed craft's own contributed rules. A contributed component already declared fails,
+    naming both sources — a component leaves with its craft or its instance, so it is never shared. A
+    craft's own `manifest_rules_contrib.txt` rows merge into the token map the same way its
+    `infrastructure_contrib.md` rows merge into the manifest (#105): a token the core map already
+    resolves is unaffected (`dict.setdefault`, first-wins, matching `check`'s own `tok2comp` merge
+    order); an unresolved token is only ever the caller's, never blamed on a craft that has not
+    contributed a mapping for it. The instance's rows need no token (the package never invokes them)."""
     rules = dict(load_rules(pkg / "guards" / "infra" / "manifest_rules.txt"))
     for craft, craft_rules in craft_manifest_rules(pkg):
         for comp, toks in craft_rules.items():
             rules.setdefault(comp, []).extend(toks)
     tokens = scan(pkg)
-    all_rows, msgs, seen = list(core_rows), [], {dyadlib.plain(r[0]): "the manifest" for r in core_rows}
-    for craft, row in craft_infra_rows(pkg):
-        comp = dyadlib.plain(row[0])
-        if comp in seen:
-            msgs.append(f"'{row[0]}' (crafts/{craft}/infrastructure_contrib.md): already declared by {seen[comp]}")
-            continue
-        seen[comp] = f"crafts/{craft}/infrastructure_contrib.md"
-        all_rows.append(row)
-    msgs += check(all_rows, rules, tokens)
+    root = Path(root) if root is not None else pkg.parent
+    rows, msgs = manifest_rows(pkg, root)
+    untokened = {dyadlib.plain(r[0]) for src, r in rows if src == instance_source(root)}
+    all_rows = [r for _, r in rows]
+    msgs += check(all_rows, rules, tokens, untokened)
     return len(all_rows), len(tokens), msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
-    return check_manifest(pkg)[2]
+    return check_manifest(pkg, root)[2]
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
-    n, m, _ = check_manifest(pkg)
+    n, m, _ = check_manifest(pkg, root)
     return f"{n} components, {m} tokens"
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     manifest = pkg / "infrastructure" / "INFRASTRUCTURE.md"
-    comps = parse_manifest(manifest.read_text()) if manifest.exists() else []
+    comps = [r for _, r in manifest_rows(pkg, root)[0]]
     ex = comps[0] if comps else None
     rel = manifest.relative_to(root) if manifest.is_relative_to(root) else manifest
-    return {"store": str(rel), "parser": "`manifest.parse_manifest`", "observed": len(comps),
-            "note": "every invocation token maps to a row through `manifest_rules.txt`",
-            "fields": [(c, "enum" if c == "partition" else "text", " | ".join(sorted(PARTITIONS)) if c == "partition" else "", True, ex[i] if ex else "", "manifest.FIELDS") for i, c in enumerate(FIELDS)]}
+    enums = {"partition": PARTITIONS, "profile": PROFILES}
+    return {"store": f"{rel} (+ crafts' `infrastructure_contrib.md`, `<host>/{INSTANCE_FILE}`)", "parser": "`manifest.parse_manifest` / `manifest_rows`", "observed": len(comps),
+            "note": "one manifest, the union of core, crafts and instance; every invocation token maps to a row through `manifest_rules.txt`; a kernel row's profile is `both`",
+            "fields": [(c, "enum" if c in enums else "text", " | ".join(sorted(enums[c])) if c in enums else "", True, ex[i] if ex else "", "manifest.FIELDS") for i, c in enumerate(FIELDS)]}
 
 def main():
     n, m, msgs = check_manifest()

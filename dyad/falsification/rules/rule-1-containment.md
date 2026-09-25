@@ -121,3 +121,34 @@ scan; Rule-11 keeps the install and the seeded `.gitignore`; Rule-12: the row en
 No new term (Rule-6). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #152.
+
+## Amendment — d-work #175 (2026-09-25, the host row is instance data)
+countersign-system keeps its host and operating records at `infrastructure/` in the infra zone
+(its own #2, revision 3); `ZONES` hard-coded `("workstation", "workstation-corpus/*")`, so any other
+host path was unclassified and a four-zone system impossible. The table stays `containment.py`'s
+alone; only its host row becomes instance data, computed from the preferences `host-path` and
+`host-zone` (`dyadlib.host_path` / `host_zone`; `DYAD_HOST` / `DYAD_HOST_ZONE` override for tests).
+Rule-1 gains one sentence saying so.
+| # | attack | result | survivor |
+|---|---|---|---|
+| 33 | An environment variable (as `DYAD_INSTANCE`) suffices; no preference is needed. | Refuted | Hooks, hosted CI and a fresh session read the tree, not the shell: a system relying on a variable silently falls back to `workstation-corpus` wherever it is unset (plan #175 F1). The variable stays only as a test override. |
+| 34 | Defaults change dyad-system or its client. | Refuted | `zones_for()` with the defaults returns the table byte-for-byte in the same order; `zones` output is identical to the previous module's (compared by running both); `test_default_table_byte_identical` pins the table and the invariant `default-host-row` pins the row. |
+| 35 | `infrastructure/*` collides with another row (`dyad/infrastructure/*`, `.claude/*`). | Refuted | `fnmatchcase` over whole paths: `infrastructure/*` matches neither `dyad/…` nor any root file; the invariant `infra-host-four-zones` runs `zone-patterns-disjoint`'s test over the infra variant, and `zone-patterns-disjoint` over the live one. |
+| 36 | Removing the `workstation` zone breaks every craft guard declaring `CORPUS = "workstation"` (the contract requires a zone name). | Survives, scoped | `workstation` stays the *logical* host corpus (`dyadlib.HOST_CORPUS`): `containment.corpora()` admits it beside the zone names and `corpus_zone()` resolves it to the host row's zone, so `contract_problem` and the seeds check hold under both settings (`test_infra_host_keeps_logical_corpus`). No guard's `CORPUS` is renamed. |
+| 37 | A bad `host-zone` value silently yields the default table. | Refuted | `dyadlib.host_zone` raises on a value outside `workstation`, `infra`; the preference guard also refuses it through the row's enumerated `allowed` cell. |
+| 38 | Reading the preference per classified path makes `tree` slow. | Refuted | `check_paths` and `check_tree` resolve the table once per call and classify against it (`classify(path, zones=…)`). |
+| 39 | A preference is the wrong owner for zone data. | Survives, with cost | The zone *table* and the zone set stay Rule-1's (`containment.py`); only the host row's two values are the Operator's, and changing them is a preferences-zone PR the Operator disposes (Rule-2, Not ratification) — the cost is this Rule's one added sentence. |
+
+Pairwise: Rule-1 keeps its concern — which paths a transaction may touch — and reads two preference
+values for one row of its own table; what a preference is stays the frame's, changing one Rule-2's.
+Rule-14 reads the same host path for its instance contribution (its own amendment #175); Rule-11
+keeps the install and property 3's `DYAD_INSTANCE` (the host path is a second instance location,
+resolved the same way, and property 3's "paths printed in Rule text are the defaults" covers every
+`workstation-corpus/…` Rule text). Gap named, not closed here: Rules 8, 18 and 19 describe the host
+stores as "workstation zone" — true of the default only; under `host-zone: infra` they are infra
+zone. No instruction conflicts (the zone guard decides; those Rules own class, delivery and
+run-book, not the zone), so the text is read as the default. New term `host path` (Rule-6: owner 1,
+used by 1 and 14); `preference` gains Rule-1 in its `used by`. Others unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #175.

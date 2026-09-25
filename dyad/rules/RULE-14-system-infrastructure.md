@@ -9,7 +9,7 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
 - Which implementation path to take — Rule-12. Package layout — Rule-11. Zones — Rule-1.
 - The Dyad System itself (Operator, Agent, the core craft, the Tended crafts, the instance):
   Rule-14 governs its surface, not its content.
-- The manifest's form — one manifest of six cells, library rows replaceable and naming their
+- The manifest's form — one manifest of seven cells, library rows replaceable and naming their
   replacement, The World observed and never pinned: the sysarch craft's
   `crafts/sysarch/rules/manifest.md`. Rule-14 keeps the kernel and the kernel-only path, the
   sentences Rule-2's Binding relies on (#160).
@@ -27,7 +27,10 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
 ## Properties
 1. **One manifest.** Every dependency on The World is a row in the manifest at the package
    root (`dyad/infrastructure/INFRASTRUCTURE.md`); its form — component, partition, version,
-   purpose, license, replacement — is `crafts/sysarch/rules/manifest.md`.
+   purpose, license, replacement, profile — is `crafts/sysarch/rules/manifest.md`. The profile
+   cell (`authoring`, `operating` or `both`; a kernel row is `both`) says which activity needs the
+   row, and a system's own operating rows are its instance contribution, `INFRASTRUCTURE.md` under
+   its host path (Rule-1), joined to the core's and the crafts' rows as one manifest (#175).
 2. **Kernel.** Claude Code (or another CLI inferencing agent), Python at a pinned version, Git
    as a local repository, and pydantic at a pinned version — the one third-party package the
    kernel-only path may import directly. Minimal; versions recorded as observed, with the
@@ -51,8 +54,9 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
 
 ## Enforcement
 `dyad/guards/infra/manifest.py` (I5, ledger #102; placed per Rule-11 property 1) runs on every push
-and PR, registered in Rule-11's runner. It checks that the manifest is well-formed (six cells;
-partition `kernel`, `library` or `The World`) and that every invocation and every third-party
+and PR, registered in Rule-11's runner. It checks that the manifest is well-formed (seven cells;
+partition `kernel`, `library` or `The World`; profile `authoring`, `operating` or `both`, a kernel
+row `both`; no component declared twice across core, crafts and instance) and that every invocation and every third-party
 Python import the package makes maps, through `dyad/guards/infra/manifest_rules.txt` (beside the
 guard), to a declared component — an unmapped one fails, a component with no token warns; the
 scan's mechanics are `crafts/syseng/rules/imports.md` property 4 (#117, #162). Rule-11's runner
@@ -64,5 +68,7 @@ Operator rule, 2026-09-13 (Architecture Rule 4). Falsified; see
 `../falsification/rules/rule-14-system-infrastructure.md`. Properties 1 (the six cells), 4 and 5
 moved to `crafts/sysarch/rules/manifest.md` 2026-09-14 (#160); the kernel stays here. The token map
 and import-scan mechanics of Enforcement moved to `crafts/syseng/rules/imports.md` 2026-09-14 (#162).
+Property 1 gains the profile cell and the instance contribution 2026-09-25 (d-work #175): the core
+manifest had shipped one system's operating rows to every install; see the same record, amendment #175.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).

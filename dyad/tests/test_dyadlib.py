@@ -66,6 +66,42 @@ class PathTests(unittest.TestCase):
     def test_plain_strips_emphasis(self):
         self.assertEqual(dyadlib.plain("plan-`Y` *coherent*"), "plan-Y coherent")
 
+class HostPathTests(unittest.TestCase):
+    """#175: host_path / host_zone — env override, else the preference rows, else the defaults."""
+    PREFS = ("| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+             "| host-path | `infrastructure/` | a repo-relative directory | Rule-1 |\n"
+             "| host-zone | infra | `workstation` \\| `infra` | Rule-1 |\n")
+    def setUp(self):
+        import tempfile
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        self.root = Path(tempfile.mkdtemp())
+    def tearDown(self):
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    def write(self, text):
+        (self.root / "preferences-corpus").mkdir(exist_ok=True)
+        (self.root / dyadlib.PREFERENCES_REL).write_text(text)
+    def test_defaults_without_preferences(self):
+        self.assertEqual((dyadlib.host_path(self.root), dyadlib.host_zone(self.root)), ("workstation-corpus", "workstation"))
+        self.assertIsNone(dyadlib.preference("host-path", self.root))
+    def test_preference_rows(self):
+        self.write(self.PREFS)
+        self.assertEqual((dyadlib.host_path(self.root), dyadlib.host_zone(self.root)), ("infrastructure", "infra"))
+    def test_env_overrides_preference(self):
+        self.write(self.PREFS)
+        os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "elsewhere", "workstation"
+        self.assertEqual((dyadlib.host_path(self.root), dyadlib.host_zone(self.root)), ("elsewhere", "workstation"))
+    def test_invalid_values_raise(self):
+        for var, val, fn in (("DYAD_HOST_ZONE", "host", dyadlib.host_zone), ("DYAD_HOST", "/abs", dyadlib.host_path), ("DYAD_HOST", "a/../b", dyadlib.host_path)):
+            os.environ[var] = val
+            with self.assertRaises(ValueError):
+                fn(self.root)
+            os.environ.pop(var)
+    def test_live_repo_keeps_the_default(self):
+        self.assertEqual(dyadlib.host_zone(), "workstation")
+
 class TableHeaderTests(unittest.TestCase):
     def test_header_is_the_line_before_the_separator(self):
         self.assertEqual(dyadlib.table_header(LEDGER), ["id", "title", "opened", "state", "disposed", "refs"])

@@ -135,3 +135,32 @@ referrer — the same order this record's own #31 amendment already established 
 craft-zone file).
 
 Disposition: see ledger #105.
+
+## Amendment — d-work #175 (2026-09-25, profiles and the instance contribution)
+**Finding:** the core manifest (`dyad/infrastructure/INFRASTRUCTURE.md`) shipped dyad-system's own
+operating rows — Gitea, Docker Engine + Compose, GHCR, curl — to every install, and
+`crafts/sysarch/rules/manifest.md` said the running manifest "stays core: its values are observed on
+this system". Observed values are instance. Survivor: one kernel, two library profiles, one manifest
+as a union; a seventh cell `profile` (`authoring` | `operating` | `both`, kernel rows `both`); the
+instance contribution `<host path>/INFRASTRUCTURE.md` beside the craft contributions; the four
+operating rows move there (`workstation-corpus/INFRASTRUCTURE.md` on dyad-system).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Two manifests (authoring, operating) are simpler. | Refuted | Contradicts property 1 (one manifest) and duplicates the kernel, which then drifts between them. |
+| 2 | A profile cell alone fixes the shipped operating rows. | Refuted | The rows still ship in the core file; they must leave it, hence the instance contribution. |
+| 3 | The instance contribution breaks "one manifest". | Refuted | The union is one manifest exactly as craft contributions already are (#101); a component declared twice across core, crafts and instance fails naming both (`test_duplicate_across_core_and_instance_fails`). |
+| 4 | Moving rows breaks token mapping mid-sequence. | Survives as ordering | The instance file lands first (unread by the old guard); this PR reads it and removes the core rows together. The four rows' `manifest_rules.txt` lines leave the core too: a core map naming a component only one instance declares would fail on every other system. |
+| 5 | An instance row with no token warns forever ("declared but no token maps"). | Refuted by construction | The scan covers the core and the crafts only; the package never invokes an instance row, so `check` exempts instance rows from that warning (`untokened`). Core and craft rows keep it. |
+| 6 | A kernel row marked `authoring` or `operating` is a quiet split of the kernel. | Refuted | `check` fails a kernel row whose profile is not `both` (`test_kernel_row_must_be_both`); the invariant `profiles-fixed` pins the set. |
+| 7 | A craft's existing six-cell `infrastructure_contrib.md` now reads as malformed. | Confirmed, accepted | No craft in this tree ships one; the form (`manifest.md` p1) now says seven cells for all three sources, and core 0.10.0 is the minor bump that announces it. |
+| 8 | The union changes dyad-system's manifest. | Refuted | Same 15 components, same values; rows only moved (the guard reports `15 components`, as before), plus the added `profile` cell. |
+
+Pairwise: 14–1: the instance file's path is Rule-1's host path, read, not redefined. 14–11: the
+instance contribution is instance data outside every craft (property 1); the craft contribution
+mechanism (property 2) is unchanged. 14–13: no import. 14–12: the guard's tests carry the change.
+14–19: server software rows are still manifest rows — now instance rows where the server is the
+system's own. New term `profile` (owner 14); `manifest` redefined as the union (Rule-6, used by 14
+only; it still reads correctly). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #175.

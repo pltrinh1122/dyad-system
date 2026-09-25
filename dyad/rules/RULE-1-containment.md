@@ -27,7 +27,10 @@ Tended craft's tree (a craft corpus), one zone so a craft changes by craft PRs a
 instance PRs — what makes it exportable, #153). A commit touches exactly one.
 A PR touches exactly one. The zone→path table is defined **only** in
 `dyad/guards/infra/containment.py` (`ZONES`; the zone guard, placed per Rule-11 property 1); print it with
-`python3 dyad/guards/infra/containment.py zones`.
+`python3 dyad/guards/infra/containment.py zones`. Its host row alone is instance data: the host path
+and its zone are the preferences `host-path` and `host-zone` (`preferences-corpus/PREFERENCES.md`;
+defaults `workstation-corpus` and `workstation`), and `infra` puts the host path in the infra zone,
+a four-zone system with no `workstation` zone (#175).
 
 Unclassified paths are forbidden. Cross-zone work = separate branches, separate PRs;
 change the referent before the referrer.
@@ -55,5 +58,6 @@ and never bypasses a hook that runs and fails (#23).
 ## Provenance
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-1-containment.md`.
 Lived in the root `CLAUDE.md` until 2026-09-13 (A2, Rule-11 property 2: host files hold only an import line).
+The host row is read from the preferences 2026-09-25 (d-work #175); see the same record, amendment #175.
 
 Set: System Requirements.

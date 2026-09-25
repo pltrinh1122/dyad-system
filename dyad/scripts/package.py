@@ -257,13 +257,14 @@ def cmd_tests(target=None):
 # crafts/<craft>/guards/<entity>.py (every Tended craft, #155), never hand-listed. Each module declares
 # ENTITY, CORPUS, FIELDS, TRANSACTION, check_package(root) and, when TRANSACTION, check_transaction(root, base, head);
 # the runner owns none of their semantics (S4). A core guard's CORPUS equals its directory; a craft
-# guard's CORPUS is a zone name (containment.ZONES), the zone of the entity's store.
+# guard's CORPUS is a zone name (containment.ZONES), the zone of the entity's store, or `workstation`,
+# the logical host corpus resolving to the host path's zone (containment.corpora, #175).
 GUARD_FIELDS = ("corpus", "entity", "module", "transaction", "root")
 CONTRACT = dyadlib.CONTRACT   # one definition, shared with the craft guard (dyadlib.contract_problem, #156)
 
 def zone_names():
     try:
-        return {z for z, _ in dyadlib.load_guard("infra", "containment", PKG).ZONES}
+        return dyadlib.load_guard("infra", "containment", PKG).corpora(REPO)   # zones plus the logical host corpus (#175)
     except Exception:
         return set()
 

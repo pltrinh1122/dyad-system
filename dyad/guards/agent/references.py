@@ -34,9 +34,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
 vocabulary = dyadlib.load_guard("agent", "vocabulary")
 craft_cli = dyadlib.load_module(dyadlib.PKG / "scripts" / "craft.py", "dyad_craft_cli")   # the craft registry's format is craft.py's (Rule-13 p2): read through it, never re-authored
-ops_scripts = dyadlib.find_guard("workstation", "ops_scripts")   # the sysadmin craft's guards: None when no craft provides them
+ops_scripts = dyadlib.find_guard(dyadlib.HOST_CORPUS, "ops_scripts")   # the sysadmin craft's guards (logical host corpus, #175): None when no craft provides them
 runbook_core = dyadlib.load_module(dyadlib.PKG / "scripts" / "runbook.py", "dyad_references_runbook")   # core: always present, core + instance run-books (#213)
-events = dyadlib.find_guard("workstation", "events")
+events = dyadlib.find_guard(dyadlib.HOST_CORPUS, "events")
 provenance = dyadlib.load_guard("agent", "provenance")   # core guard: always present
 
 ENTITY, CORPUS, TRANSACTION = "reference", "agent", False
@@ -128,7 +128,8 @@ class Corpus:
         self.frame_lines = [l.strip() for l in frame.read_text().splitlines() if l.startswith("@")] if frame.exists() else []
         prefs = root / "preferences-corpus" / "PREFERENCES.md"
         self.prefs = (dyadlib.table_header(prefs.read_text()), table_rows(prefs.read_text().replace("\\|", "/"))) if prefs.exists() else ([], [])
-        cl = root / "workstation-corpus" / "CHANGELOG.md"
+        self.host = dyadlib.host_path(root)                 # the host path (preference `host-path`, #175)
+        cl = root / self.host / "CHANGELOG.md"
         self.changelog = (dyadlib.table_header(cl.read_text()), table_rows(cl.read_text())) if cl.exists() else ([], [])
         inc = self.inst / "audits" / "INCIDENTS.md"
         self.incidents = (dyadlib.table_header(inc.read_text()), table_rows(inc.read_text())) if inc.exists() else ([], [])
@@ -309,7 +310,7 @@ def _column_ids(c: Corpus, table, where: str, col: str):
     return [(f"{where} row {k + 1} {col}", t) for k, r in enumerate(rows) if len(r) > i for t in hash_ids(r[i])]
 
 def changelog_ids(c: Corpus):
-    return _column_ids(c, c.changelog, "workstation-corpus/CHANGELOG.md", "d-work")
+    return _column_ids(c, c.changelog, f"{c.host}/CHANGELOG.md", "d-work")
 
 def incident_ids(c: Corpus):
     return _column_ids(c, c.incidents, c.rel(c.inst / "audits" / "INCIDENTS.md"), "d-work")
