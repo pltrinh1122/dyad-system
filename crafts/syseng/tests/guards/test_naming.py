@@ -243,7 +243,7 @@ class LiveTests(unittest.TestCase):
         for pattern, _g, _r in r["kind"] + r["mode"]: self.assertIn(pattern, pats)
         self.assertTrue(r["mode"])   # the executables a host runs by name are checked at all (#141)
         self.assertGreaterEqual(len(naming.rows()), 20); self.assertEqual(r["bad"], [])
-        self.assertEqual(sorted(r["env"]), ["DYAD_INSTANCE", "DYAD_NO_NESTED_TESTS", "DYAD_OPS@sysadmin", "DYAD_ROLE", "DYAD_RUNBOOKS", "DYAD_SESSION"])   # @craft: checked only where that craft is installed (dyad-system #1)
+        self.assertEqual(sorted(r["env"]), ["DYAD_HOST", "DYAD_HOST_ZONE", "DYAD_INSTANCE", "DYAD_NO_NESTED_TESTS", "DYAD_OPS@sysadmin", "DYAD_ROLE", "DYAD_RUNBOOKS", "DYAD_SESSION"])   # @craft: checked only where that craft is installed (dyad-system #1)
         self.assertRegex(naming.summary(), r"^\d+ patterns, \d+ kinds, \d+ mode rules, \d+ symbol rules, \d+ allowed$")
     def test_contract_card_and_invariants(self):
         self.assertEqual((naming.ENTITY, naming.CORPUS, naming.TRANSACTION), ("name", "craft", False))
@@ -263,6 +263,31 @@ class EnvScopeTests(unittest.TestCase):
     def test_unqualified_tokens_unchanged(self):
         self.assertEqual(naming.check_env({}, ["DYAD_A"], None), ["naming_rules.txt: env DYAD_A is listed but no package code reads it (stale)"])
         self.assertEqual(naming.check_env({"DYAD_Z": ["z.py"]}, [], None), ["z.py: reads DYAD_Z, not in the naming table (`DYAD_<NAME>` row / `env:` line)"])
+
+class HostPathTests(unittest.TestCase):
+    """#175: `<host>` in a kind's glob and regex is the host path of the repo checked."""
+    def setUp(self):
+        import os
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+    def tearDown(self):
+        import os
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    def test_with_host_resolves_glob_and_regex_not_pattern(self):
+        k = naming.with_host([("<ops>/x", "<host>/ops/*", "<host>/ops/[a-z]+\\.sh")], "infra.structure")
+        self.assertEqual(k, [("<ops>/x", "infra.structure/ops/*", "infra\\.structure/ops/[a-z]+\\.sh")])
+    def test_real_ops_kind_under_an_infra_host(self):
+        import os
+        os.environ["DYAD_HOST"], os.environ["DYAD_HOST_ZONE"] = "infrastructure", "infra"
+        root = repo({"infrastructure/ops/213-h1-x.sh": "#!/usr/bin/env bash\n", "infrastructure/ops/Bad Name.sh": "x\n"})
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        r = naming.load_rules()
+        kinds = naming.with_host(r["kind"], naming.dyadlib.host_path(root))
+        msgs, _used = naming.check_kinds(naming.tree_paths(root), kinds, [], {}, naming.instance_rel(root), root)
+        self.assertEqual([m for m in msgs if "infrastructure/ops/" in m], [m for m in msgs if "Bad Name.sh" in m])
+        self.assertEqual(len([m for m in msgs if "Bad Name.sh" in m]), 1, msgs)
 
 if __name__ == "__main__":
     unittest.main()

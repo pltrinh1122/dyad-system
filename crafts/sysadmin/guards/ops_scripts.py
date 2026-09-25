@@ -11,7 +11,8 @@ header lines `# d-work:`, `# class:`, `# undo:`, `# change-log:`, `# postconditi
 final assert — property 6, idempotent), carries `# destructive:` and, when its value is not `none`,
 defines a `confirm()` function and names `confirm` at least twice in code (definition + one call —
 property 7 of the craft rule, destructive steps confirmed at run time). `<ops>` is `DYAD_OPS`, default
-`workstation-corpus/ops` (instance, workstation zone), relative to the git root; a missing
+`<host>/ops` — `<host>` the host path, preference `host-path`, default `workstation-corpus` (#175) —
+(instance, the host zone), relative to the git root; a missing
 directory passes. bash is a declared library row (Rule-14); the package never runs the scripts.
   ops_scripts.py [repo-root]
 """
@@ -82,7 +83,9 @@ def destructive_value(lines: list[str]) -> str | None:
     return None
 
 def ops_dir(root: Path | None = None) -> Path:
-    return (root or dyadlib.repo_root()) / os.environ.get("DYAD_OPS", "workstation-corpus/ops")
+    """`DYAD_OPS`, else `<host path>/ops` of the repo at `root` (preference `host-path`, #175)."""
+    root = root or dyadlib.repo_root()
+    return root / (os.environ.get("DYAD_OPS") or f"{dyadlib.host_path(root)}/ops")
 
 def check_mode(path: Path, root: Path | None) -> list[str]:
     """The script is executable where it counts: `100755` in git's index (`dyadlib.tracked_mode`).

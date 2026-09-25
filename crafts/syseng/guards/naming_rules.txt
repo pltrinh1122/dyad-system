@@ -1,7 +1,8 @@
 # Naming guard data (beside its guard, guards/naming.py; the table is rules/naming.md). One entry per line; blank lines
 # and # comments ignored. The guard fails on a `kind:` whose pattern is not a row of the table.
 #   kind: <pattern> = <path glob> = <regex>   — `*` one segment, `**` any; the regex spans the whole path; `<instance>` is the
-#                                                instance root (DYAD_INSTANCE); group `id` unique within the kind; group `beside`
+#                                                instance root (DYAD_INSTANCE), `<host>` the host path (preference `host-path`,
+#                                                default workstation-corpus; #175); group `id` unique within the kind; group `beside`
 #                                                names <dir>/<beside>.py that must exist
 #   mode: <pattern> = <path glob> = <mode>     — every selected path is tracked at that index mode (git ls-files -s, never the disk
 #                                                bit: core.fileMode=false hides a 100644 behind a 755, #135/#141); untracked warns
@@ -37,9 +38,9 @@ kind: dyad/tests/guards/<corpus>/test_<entity>.py = dyad/tests/guards/**.py = dy
 kind: crafts/<craft>/tests/guards/test_<entity>.py = crafts/*/tests/**.py = crafts/[a-z][a-z0-9-]*/tests(/guards)?/(test_[a-z0-9_]+|__init__)\.py
 kind: crafts/<craft>/projectors/project_<surface>.py = crafts/*/projectors/* = crafts/[a-z][a-z0-9-]*/projectors/project_[a-z]+\.py
 kind: .github/workflows/dyad-<slug>.yml = .github/workflows/* = \.github/workflows/dyad-[a-z0-9-]+\.yml
-kind: <ops>/<d-work>-<hN>-<slug>.sh = workstation-corpus/ops/* = workstation-corpus/ops/(\d+-h\d+-[a-z0-9-]+(-undo)?\.sh|README\.md)
-kind: <runbooks>/<instance>.md = workstation-corpus/runbooks/* = workstation-corpus/runbooks/([a-z][a-z0-9-]*|README)\.md
-kind: <runbooks>/events/<instance>.jsonl = workstation-corpus/runbooks/events/* = workstation-corpus/runbooks/events/([a-z][a-z0-9-]*\.jsonl|README\.md)
+kind: <ops>/<d-work>-<hN>-<slug>.sh = <host>/ops/* = <host>/ops/(\d+-h\d+-[a-z0-9-]+(-undo)?\.sh|README\.md)
+kind: <runbooks>/<instance>.md = <host>/runbooks/* = <host>/runbooks/([a-z][a-z0-9-]*|README)\.md
+kind: <runbooks>/events/<instance>.jsonl = <host>/runbooks/events/* = <host>/runbooks/events/([a-z][a-z0-9-]*\.jsonl|README\.md)
 kind: dyad/templates/<Name> = dyad/templates/* = dyad/templates/(VERSION|[A-Za-z-]+\.md)
 
 # files the host executes by name: the entrypoint, the hooks an install points core.hooksPath at, and the shell files a craft ships
@@ -54,7 +55,7 @@ symbol: dyad/guards/*/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package desc
 symbol: crafts/*/guards/*.py : ENTITY CORPUS FIELDS TRANSACTION check_package describe INVARIANTS
 symbol: crafts/*/projectors/*.py : main INVARIANTS
 
-env: DYAD_INSTANCE DYAD_OPS@sysadmin DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TESTS DYAD_SESSION
+env: DYAD_INSTANCE DYAD_OPS@sysadmin DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TESTS DYAD_SESSION DYAD_HOST DYAD_HOST_ZONE
 
 allow: .github/workflows/lan-git.yml # the lan-git craft's own CI (instance workflow, run by the hosting on the craft's server tree), not a package wrapper; unprefixed by design (#150; server.yml before it, #181)
 allow: .github/workflows/lan-git-image.yml # publishes the lan-git craft's image to GHCR (corroboration, kernel-only is the real path, #181); same reason, unprefixed by design

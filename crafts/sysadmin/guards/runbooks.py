@@ -6,8 +6,8 @@ Kernel: Python 3.12+, stdlib. The parser of a run-book lives in the core runner 
 so `dyad runbook` works with no craft installed; #155 amendment); this guard imports it and re-exports
 its names so `runbooks.parse`, `runbooks.FIELDS` … keep reading as before.
 
-A run-book (`<runbooks>/<instance>.md`; `DYAD_RUNBOOKS`, default `workstation-corpus/runbooks`, relative
-to the git root — instance, workstation zone) holds its commands as fenced blocks tagged `dyad-cmd`:
+A run-book (`<runbooks>/<instance>.md`; `DYAD_RUNBOOKS`, default `<host>/runbooks` — `<host>` the host path,
+preference `host-path`, default `workstation-corpus`, #175 — relative to the git root; instance, the host zone) holds its commands as fenced blocks tagged `dyad-cmd`:
 a header of `key: value` lines (FIELDS: name, class, role, undo, postcondition, scope), a blank line,
 then the command. Prose stays around the blocks; a bare shell block (```bash, ```sh, ```shell,
 ```console or untagged) is refused so every command is data the runner executes.
@@ -41,7 +41,7 @@ Command, parse_text, parse, prose_blocks, sections, in_section, needs_operator, 
 runbooks_rel, runbooks_dir, runbook_path, runbooks, core_runbooks, all_runbooks = (
     _rb.runbooks_rel, _rb.runbooks_dir, _rb.runbook_path, _rb.runbooks, _rb.core_runbooks, _rb.all_runbooks)
 SECTIONS = ("Status/health", "Start", "Stop", "Restart", "Logs", "Backup", "Restore", "Upgrade", "Credential rotation", "Data")
-SERVER_GLOBS = ("crafts/*/server*", "workstation-corpus/server*")        # a run-book cites one of these directories (warning otherwise)
+SERVER_GLOBS = ("crafts/*/server*", "<host>/server*")                    # a run-book cites one of these directories (warning otherwise); `<host>` is the host path (#175)
 _NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("fields-cover-parser-keys", lambda: {"class" if f.name == "cls" else f.name for f in __import__("dataclasses").fields(Command)} >= set(FIELDS)),
@@ -50,8 +50,13 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
 ]
 
 # ---- check
+def server_globs(root: Path) -> list[str]:
+    """SERVER_GLOBS with `<host>` resolved to the host path of the repo at `root` (dyadlib.host_path, #175)."""
+    host = dyadlib.host_path(root)
+    return [g.replace("<host>", host) for g in SERVER_GLOBS]
+
 def server_dirs(root: Path) -> list[Path]:
-    return sorted(p for g in SERVER_GLOBS for p in root.glob(g) if p.is_dir())
+    return sorted(p for g in server_globs(root) for p in root.glob(g) if p.is_dir())
 
 def check_runbook(path: Path, root: Path | None = None) -> list[str]:
     """Failures (and `warning: ` lines) for one run-book, each prefixed by its file name."""
@@ -93,7 +98,7 @@ def check_runbook(path: Path, root: Path | None = None) -> list[str]:
             msgs.append(f"{where}: {c.cls} command {label} names no postcondition")
     if root is not None and declared is None:            # a run-book with its own section set is not a server's
         if not any(f"{p.relative_to(root)}/" in text for p in server_dirs(root)):
-            msgs.append(f"warning: {name}: cites no {' or '.join(g + '/' for g in SERVER_GLOBS)} directory (no server counterpart)")
+            msgs.append(f"warning: {name}: cites no {' or '.join(g + '/' for g in server_globs(root))} directory (no server counterpart)")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:

@@ -182,6 +182,37 @@ class ReferencesContribTests(unittest.TestCase):
         self.assertFalse(ops._changelog_row_exists(c, "#7 H1"))
 
 
+
+class _HostEnv:
+    """#175: DYAD_HOST / DYAD_HOST_ZONE set for one block, restored after."""
+    def __init__(self, **kw): self.kw = kw
+    def __enter__(self):
+        import os
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE")}
+        os.environ.update(self.kw)
+    def __exit__(self, *a):
+        import os
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+
+class HostPathTests(unittest.TestCase):
+    """#175: `<ops>` defaults to `<host path>/ops`; DYAD_OPS still overrides."""
+    def test_ops_dir_follows_the_host_path(self):
+        root = Path(tempfile.mkdtemp()); prev = os.environ.pop("DYAD_OPS", None)
+        try:
+            with _HostEnv():
+                self.assertEqual(ops.ops_dir(root), root / "workstation-corpus" / "ops")
+            with _HostEnv(DYAD_HOST="infrastructure", DYAD_HOST_ZONE="infra"):
+                self.assertEqual(ops.ops_dir(root), root / "infrastructure" / "ops")
+                os.environ["DYAD_OPS"] = "elsewhere"
+                self.assertEqual(ops.ops_dir(root), root / "elsewhere")
+        finally:
+            os.environ.pop("DYAD_OPS", None)
+            if prev is not None:
+                os.environ["DYAD_OPS"] = prev
+
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
     def test_invariants_hold(self):

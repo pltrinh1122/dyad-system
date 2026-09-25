@@ -39,7 +39,7 @@ guard fails on a `kind:` whose pattern is not in this table, so the two cannot d
 | `main` | a projector's entrypoint | the sysarch `projection.md` p4 | `project_erd.main` | yes (symbol) |
 | `.github/workflows/dyad-<slug>.yml` | a package workflow wrapper | Rule-11 p2 (Rule-14 library) | `dyad-package.yml` | yes (prefix; an unprefixed workflow is instance and an allow line) |
 | `dyad-<version>.tar.gz`, `<craft>-<version>.tar.gz`, `vMAJOR.MINOR.PATCH` = `v` + `VERSION` | a release archive and tag | Rule-11 p4 | `dyad-0.1.0.tar.gz`, `v0.1.0` | tag: no (The World); `VERSION` shape: Rule-11's check and the craft guard |
-| `DYAD_<NAME>` | an environment variable the package reads | Rule-11 p3 | `DYAD_INSTANCE`, `DYAD_OPS`, `DYAD_RUNBOOKS`, `DYAD_ROLE`, `DYAD_NO_NESTED_TESTS` | yes (`env:` line; every variable the package code reads is listed, and every listed one is read) |
+| `DYAD_<NAME>` | an environment variable the package reads | Rule-11 p3 | `DYAD_INSTANCE`, `DYAD_OPS`, `DYAD_RUNBOOKS`, `DYAD_ROLE`, `DYAD_NO_NESTED_TESTS`, `DYAD_HOST`, `DYAD_HOST_ZONE` | yes (`env:` line; every variable the package code reads is listed, and every listed one is read) |
 | `dyad <noun> <verb>` | a CLI command | preference `cli-pattern` (#152) | `dyad check --evidence` | no (inference over `package.py`'s usage text) |
 | `<key>` kebab-case | a preference key | frame (`preferences.py`) | `merge-disposition` | no (the preferences guard's shape check) |
 | `<term>` lower-case noun phrase | a vocabulary term | Rule-6 | `plan file` | no (prose; Rule-6's guard) |

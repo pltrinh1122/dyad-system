@@ -7,7 +7,9 @@ first reached `0.2.0` at #162 — the earliest recorded version guaranteed to po
 change this craft's kernels depend on (#178). `seeds:` (#180) names a template this craft
 ships and the instance file it corresponds to; install never copies it (Rule-11 property 2: a
 Tended craft install writes only its own root), `dyad craft check` warns and names the exact
-copy command when the destination is absent.
+copy command when the destination is absent. `<host>` is the receiving system's host path
+(preference `host-path`, default `workstation-corpus`; #175), which is also why the floor is
+`0.10.0`: this craft's guards read `dyadlib.host_path`, first shipped there.
 
 D1 (#100): `0.2.0` was never checked mechanically against this craft's own code.
 `crafts.floor_problems` passes cleanly at `0.5.0`, `0.5.1`, `0.6.0`, `0.6.1`, `0.6.2` and `0.7.0` —
@@ -16,5 +18,5 @@ could not be mechanically confirmed or refuted. Raised to `0.5.0`, matching what
 verified, rather than left at a value never checked.
 
 name: sysadmin
-requires: dyad-operator>=0.5.0
-seeds: CHANGELOG.md->workstation-corpus/CHANGELOG.md
+requires: dyad-operator>=0.10.0
+seeds: CHANGELOG.md-><host>/CHANGELOG.md

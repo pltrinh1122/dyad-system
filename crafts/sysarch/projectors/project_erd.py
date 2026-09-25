@@ -123,12 +123,10 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> Graph:
             g.add(Entity("Preference", key, key, (("value", value), ("read by", read_by))))
             for n in sorted(set(_RULE_REF.findall(read_by)), key=int):
                 g.link(f"Preference:{key}", f"Rule:{n}", "read by")
-    manifest = pkg / "infrastructure" / "INFRASTRUCTURE.md"
-    if manifest.exists():
-        for row in infrastructure.parse_manifest(manifest.read_text()):
-            comp = dyadlib.plain(row[0])
-            g.add(Entity("Component", comp, comp, (("partition", row[1]), ("version", row[2]))))
-            g.link(f"Component:{comp}", "Rule:14", "declared by")
+    for _, row in infrastructure.manifest_rows(pkg, root)[0]:   # the one manifest: core, crafts, instance (#175)
+        comp = dyadlib.plain(row[0])
+        g.add(Entity("Component", comp, comp, (("partition", row[1]), ("version", row[2]))))
+        g.link(f"Component:{comp}", "Rule:14", "declared by")
     for zone, pat in containment.ZONES:
         if not any(e.kind == "Zone" and e.id == zone for e in g.entities):
             g.add(Entity("Zone", zone, zone))
