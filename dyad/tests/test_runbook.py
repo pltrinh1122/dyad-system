@@ -122,6 +122,7 @@ class RunTests(livetest.LiveCase):
     def test_cli(self):
         self.require_guard("workstation", "runbooks")   # `runbook check` is the craft's guard and exits 2 with no craft (#155)
         env = dict(os.environ, DYAD_RUNBOOKS=str(self.root / rb.DEFAULT_RUNBOOKS)); env.pop("DYAD_ROLE", None)   # the CLI resolves the git root from the package
+        env.update(DYAD_HOST=dyadlib.DEFAULT_HOST, DYAD_HOST_ZONE=dyadlib.DEFAULT_HOST_ZONE)   # the fixture's default host path, never the live repo's preferences (#179)
         py = [sys.executable, str(Path(rb.__file__))]
         r = subprocess.run(py + ["check"], cwd=self.root, env=env, capture_output=True, text=True)
         core = rb.core_runbooks(dyadlib.repo_root())                     # the package's own run-books count too (#165)
