@@ -15,6 +15,8 @@ defines what each value means.
 | batch-disposition-mode | on-ignore | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | agent | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case, #23) |
 | concise-mode | on | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
+| host-path | workstation-corpus | a repo-relative directory | Rule-1 (host row of the zone table), Rule-14 (instance contribution) |
+| host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -72,3 +74,8 @@ defines what each value means.
     answered in the same reply under the batch queue. Determined in d-work #113: delegation
     detects nothing sooner — it fences execution from the plan-`Y` structurally and frees the
     Agent; that is what is bought.
+- `host-path` — where this system keeps its host and operating records (change log, ops scripts,
+  run-books, its own operating manifest rows `INFRASTRUCTURE.md`); the host row of the zone table
+  is `<host-path>/*` (Rule-1). dyad-system: `workstation-corpus` (d-work #175).
+- `host-zone` — the zone that row belongs to. `workstation`: five zones. `infra`: the host records
+  are infrastructure of the repo and the system has four zones.
