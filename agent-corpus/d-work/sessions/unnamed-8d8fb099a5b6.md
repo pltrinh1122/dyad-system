@@ -1,0 +1,6 @@
+session: unnamed-8d8fb099a5b6
+seen: 2026-09-25T15:12:46+00:00
+root: /mnt/shared_data/dyad/dyad-system
+rows: 166 175 178 81 99
+files: BUNDLE.md VERSIONs agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md crafts/sysadmin/** crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md crafts/sysarch/projectors/** crafts/sysarch/rules/manifest.md crafts/syseng/guards/naming_rules.txt dyad/VERSION dyad/falsification/rules/rule-1-containment.md dyad/falsification/rules/rule-14-system-infrastructure.md dyad/guards/agent/references.py dyad/guards/agent/rows.py dyad/guards/craft/crafts.py dyad/guards/infra/containment.py dyad/guards/infra/manifest.py dyad/guards/infra/manifest_rules.txt dyad/infrastructure/INFRASTRUCTURE.md dyad/rules/RULE-1-containment.md dyad/rules/RULE-14-system-infrastructure.md dyad/scripts/dyadlib.py dyad/scripts/runbook.py preferences-corpus/PREFERENCES.md tests their workstation-corpus/INFRASTRUCTURE.md
+writer: 7f2ac014bdaa
