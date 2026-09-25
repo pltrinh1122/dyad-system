@@ -22,6 +22,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 when it declares one — containment's whole-diff `range` mode — else its
                                 `check_transaction`. Run before opening a PR; since #168 no hosted job
                                 checks a PR's whole diff before it merges
+  dyad check --tests [<target>]
+                          Rule-12's suites the way the runner runs them (d-work #155): every test root,
+                                or one root by path, or one dotted module/class/method — always with
+                                DYAD_NO_NESTED_TESTS set, which is what makes it ~39 s and not ~120 s
   dyad check --evidence   the evidence block (Rule-14 property 3): head=, tree=, dirty=,
                                 every line `check` and `check --guards` print, then
                                 evidence-sha256= of those lines; non-zero if any check fails
@@ -173,13 +177,19 @@ def test_suites():
     """The test roots `unittest discover` runs: the core `dyad/tests/`, then every `crafts/<craft>/tests/` present."""
     return [PKG / "tests"] + dyadlib.craft_glob("tests", PKG)
 
+_SUITE_RAN = False   # d-work #155: the suite runs at most once per process — `cmd_evidence` calls
+                     # both `cmd_check` and `cmd_guards`, and without this the evidence block paid
+                     # for the whole suite twice (caught by the pre-merge evidence run, #155)
+
 def check_rule_12():
     """Rule-12's kernel: the tests pass — `unittest discover` once per test root (the core's, then every Tended
     craft's; guards/ subdirectories are packages). Which module maps to which test file is the syseng craft's
     guard (`crafts/syseng/guards/tests.py`, `syseng/tests`; #162) — the runner runs, the craft maps."""
+    global _SUITE_RAN
     msgs = []
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return msgs  # already inside a test run (test_package.py calls `check`); do not recurse
+    _SUITE_RAN = True
     for suite in test_suites():
         r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(suite), "-q"],
                            capture_output=True, text=True, timeout=600,
@@ -189,6 +199,52 @@ def check_rule_12():
         if r.returncode != 0:
             msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + r.stderr.strip().splitlines()[-1])
     return msgs
+
+def ledger_only_range(base, head):
+    """True when every path `base..head` touches lives under `<instance>/d-work/` — a range that
+    cannot change a suite's outcome. The prefix, never the file suffix: a `.py` filter would have
+    let #137's markdown run-book through, which broke the core suite by falsifying a pinned count
+    (d-work #155, plan's revision table). Unknown range → False, so the suite runs."""
+    inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+    try:
+        out = subprocess.check_output(["git", "diff", "--name-only", f"{base}..{head}"], cwd=REPO, text=True)
+    except subprocess.CalledProcessError:
+        return False
+    paths = out.split()
+    return bool(paths) and all(p.startswith(f"{inst}/d-work/") for p in paths)
+
+def run_suite(suite, target=None):
+    """One `unittest` child, the way `check_rule_12` spawns it — always with `DYAD_NO_NESTED_TESTS`,
+    which is what makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run
+    their own suites). Returns (rc, summary lines)."""
+    argv = ["-m", "unittest", target, "-q"] if target else ["-m", "unittest", "discover", "-s", str(suite), "-q"]
+    r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
+                       env={**os.environ, "DYAD_NO_NESTED_TESTS": "1"})
+    summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
+    return r.returncode, summary, r.stderr
+
+def cmd_tests(target=None):
+    """Rule-13 property 1: the suites, run the way the runner runs them, as one verb. Without a
+    target every root of `test_suites()`; with a directory that root; with anything else a dotted
+    module, class or method handed to `unittest`. The point is the environment, not the typing:
+    a hand-run without `DYAD_NO_NESTED_TESTS` pays about three times (d-work #154's audit)."""
+    global _SUITE_RAN
+    rc = 0
+    if os.environ.get("DYAD_NO_NESTED_TESTS"):
+        return rc       # already inside a test run (a suite invoking `check`); do not recurse
+    _SUITE_RAN = True
+    if target and not Path(target).is_dir():
+        code, summary, err = run_suite(None, target)
+        print(f"     [Rule-12] {target}: " + " ".join(summary))
+        if code:
+            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+        return rc
+    for suite in ([Path(target)] if target else test_suites()):
+        code, summary, err = run_suite(suite)
+        print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
+        if code:
+            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+    return rc
 
 # ---- the guard registry (crafts/sysarch/rules/guards.md p4): discovered from dyad/guards/<corpus>/<entity>.py (core) and
 # crafts/<craft>/guards/<entity>.py (every Tended craft, #155), never hand-listed. Each module declares
@@ -313,6 +369,16 @@ def cmd_guards(base="origin/main"):
             rc = 1
         else:
             print(f"ok   [guards] {label} transaction{f' [{mode}]' if mode else ''} ({base}..HEAD)")
+    # Rule-12's suite, gated (d-work #155): the local gate tested nothing before this, so the Agent
+    # ran it by hand 134 times in one session (#154's audit). A ledger-only range cannot change a
+    # suite's outcome, so it skips and the push stays at the guards' own ~1.7 s; anything else pays
+    # the suite here rather than by hand at three times the price. The guards above are never gated.
+    if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
+        pass            # inside a test run, or `cmd_check` already ran it in this process
+    elif ledger_only_range(base, head):
+        print(f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)")
+    elif cmd_tests():
+        rc = 1
     return int(rc)
 
 def cmd_pr(base=None, head="HEAD"):
@@ -586,4 +652,6 @@ if __name__ == "__main__":
         sys.exit(cmd_guards())
     if a[0] == "check" and "--list" in a:
         sys.exit(cmd_list())
+    if a[0] == "check" and "--tests" in a:
+        i = a.index("--tests"); sys.exit(cmd_tests(*a[i + 1:i + 2]))
     sys.exit({"check": lambda: cmd_check(), "build": lambda: cmd_build(*a[1:2]), "install": lambda: cmd_install(*a[1:2])}[a[0]]())
