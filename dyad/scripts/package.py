@@ -177,13 +177,19 @@ def test_suites():
     """The test roots `unittest discover` runs: the core `dyad/tests/`, then every `crafts/<craft>/tests/` present."""
     return [PKG / "tests"] + dyadlib.craft_glob("tests", PKG)
 
+_SUITE_RAN = False   # d-work #155: the suite runs at most once per process — `cmd_evidence` calls
+                     # both `cmd_check` and `cmd_guards`, and without this the evidence block paid
+                     # for the whole suite twice (caught by the pre-merge evidence run, #155)
+
 def check_rule_12():
     """Rule-12's kernel: the tests pass — `unittest discover` once per test root (the core's, then every Tended
     craft's; guards/ subdirectories are packages). Which module maps to which test file is the syseng craft's
     guard (`crafts/syseng/guards/tests.py`, `syseng/tests`; #162) — the runner runs, the craft maps."""
+    global _SUITE_RAN
     msgs = []
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return msgs  # already inside a test run (test_package.py calls `check`); do not recurse
+    _SUITE_RAN = True
     for suite in test_suites():
         r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(suite), "-q"],
                            capture_output=True, text=True, timeout=600,
@@ -222,9 +228,11 @@ def cmd_tests(target=None):
     target every root of `test_suites()`; with a directory that root; with anything else a dotted
     module, class or method handed to `unittest`. The point is the environment, not the typing:
     a hand-run without `DYAD_NO_NESTED_TESTS` pays about three times (d-work #154's audit)."""
+    global _SUITE_RAN
     rc = 0
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
+    _SUITE_RAN = True
     if target and not Path(target).is_dir():
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
@@ -365,8 +373,8 @@ def cmd_guards(base="origin/main"):
     # ran it by hand 134 times in one session (#154's audit). A ledger-only range cannot change a
     # suite's outcome, so it skips and the push stays at the guards' own ~1.7 s; anything else pays
     # the suite here rather than by hand at three times the price. The guards above are never gated.
-    if os.environ.get("DYAD_NO_NESTED_TESTS"):
-        pass            # already inside a test run: `check_rule_12`'s own guard, or this recurses
+    if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
+        pass            # inside a test run, or `cmd_check` already ran it in this process
     elif ledger_only_range(base, head):
         print(f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)")
     elif cmd_tests():

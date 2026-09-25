@@ -1,4 +1,4 @@
-import importlib.util, inspect, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
+import contextlib, importlib.util, inspect, io, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
@@ -142,6 +142,21 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(pkg.cmd_tests(), 0)            # env() sets the flag for this whole suite
         for src in (inspect.getsource(pkg.cmd_tests), inspect.getsource(pkg.cmd_guards)):
             self.assertIn("DYAD_NO_NESTED_TESTS", src)
+
+    def test_evidence_runs_the_suite_once(self):
+        """`cmd_evidence` calls `cmd_check` and then `cmd_guards`; the suite belongs to the first
+        of them only, or the evidence block pays for the whole suite twice (#155, caught by the
+        pre-merge evidence run). Asserted in-process: spawning `check --evidence` from here would
+        re-enter this very suite, which is the recursion the same d-work already logged."""
+        pkg = load_package()
+        pkg._SUITE_RAN = True
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            pkg.cmd_guards()
+        self.assertNotIn("[Rule-12]", buf.getvalue())
+        self.assertIn("_SUITE_RAN", inspect.getsource(pkg.cmd_guards))
+        self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.check_rule_12))
+        self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.cmd_tests))
 
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
         """The prefix, never the suffix: a `.py` filter would have passed #137's markdown run-book,
