@@ -44,3 +44,30 @@ path` and `mechanical check` leave the Agent vocabulary for the craft's `CRAFT.m
 means the craft's sense. Pairwise: 12–11 the runner runs the pass, Rule-11's Enforcement names it, Rule-12 owns the term;
 12–3 a false invariant is an incident (Rule-3's form, referenced); 12–20 unchanged; 12–13, 12–14 unchanged. Coherent,
 orthogonal. Disposition: see ledger #162.
+
+## Amendment — d-work #159 (2026-09-24, property 2: the suite is the runner's to run)
+
+**Claim:** a release that ships a push-time test gate must also ship the directive to use it —
+the Agent defers the suite to that gate and does not hand-run a whole test root.
+
+Occasioned by an Operator prompt during the release d-work #158, and by #154's audit: the capability
+to run the suite cheaply had existed all along (`check_rule_12` sets `DYAD_NO_NESTED_TESTS` for the
+child it spawns), and the Agent still paid about three times for it, 134 times in one session,
+3,894 s — the largest single number in that audit and required by no Rule.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A Rule that says "prefer this command" is not a Rule: Rule-4 wants a process binding, not a style tip. | Survives, scoped | It binds what the Agent does before asking for a Done-`Y`: the evidence it cites comes from the gate, not from a hand-run whose environment it may have forgotten. Written as a property of Rule-12's own check, never as advice. |
+| 2 | Rule-13 already makes recurrence propose code, and #155 built it — the directive is redundant. | Refuted | Rule-13 binds the *plan* that proposes code. Nothing said the Agent must then use it, and the audit measured exactly that gap. |
+| 3 | The gate cannot be deferred to where it does not run: no remote, no `origin/main`. | Refuted by #158 | `cmd_guards` returned before the gate on an unresolvable base; #158 moved the suite above that return and made an unknown range run it. This property lands after that. |
+| 4 | "Never hand-run" is too absolute: a failing case needs its own output. | **Confirmed — and the property says so** | It names `dyad check --tests <target>` for one module, class or method as the debugging path, and reserves the objection to a whole root, which the gate has already covered. |
+| 5 | It slows the Agent: it must push to learn that a test fails. | Survives, scoped | It must push *or* run one target. What it may no longer do is re-run 490 tests it did not change. |
+| 6 | The directive belongs in the incident-hardening play-book (#137), not in a Rule. | Refuted | That play-book is a procedure for a recurring decision about incidents; this is a standing constraint on every d-work, and a play-book is read by a Rule, never instead of one. |
+
+Pairwise (Rule-5): 12–14 property 3 owns *where* the kernel-only path runs and when it is the merge
+evidence; property 2 owns *who runs Rule-12's suite*, and cites Rule-14 rather than restating it.
+12–13 Rule-13 owns the move from inference to code (recurrence proposes it); property 2 owns the use
+of the code once it exists — no shared ownership. 12–11 the runner is Rule-11's and runs the pass;
+Rule-12 keeps its check's semantics, unchanged. 12–3 a d-work's completion evidence is Rule-3's; this
+property says only which run produced it. 12–1, 12–2, 12–15, 12–16, 12–20 untouched. Coherent,
+orthogonal. Disposition: see ledger #159.

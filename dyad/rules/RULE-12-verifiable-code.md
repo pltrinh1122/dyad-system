@@ -30,6 +30,16 @@ behind reusable code carrying a mechanical check.
    an incident (Rule-3). The test mapping and the invariant protocol's form are the syseng
    craft's (`crafts/syseng/rules/verifiable-code.md`, `crafts/syseng/rules/invariants.md`); the
    runner runs both.
+2. The suite is run by the runner, not by hand. Rule-14 property 3's pre-push path runs it on every
+   push whose range touches anything outside `<instance>/d-work/`, so by the time the Agent asks for
+   a Done-`Y` the gate has already run what a hand-run would have run. One target — a module, a
+   class, a method — is run while fixing it, through `dyad check --tests <target>`, which is the
+   same child the runner spawns. A hand-typed `unittest` over a whole test root is not an error and
+   nothing refuses it; it is the expensive path, because it does not set the environment the runner
+   sets for itself and so pays about three times (120 s against 40 s on the core root, measured in
+   `agent-corpus/audits/2026-09-24-performance-bottlenecks.md`), and it re-runs what the gate will
+   run again. Which environment and which child: `check_rule_12` and `cmd_tests` in
+   `dyad/scripts/package.py`.
 
 ## Enforcement
 Rule-12 owns its check — package code carries a mechanical check — implemented as a function that
@@ -48,6 +58,9 @@ Operator rule, 2026-09-13 (Architecture Rule 2). Falsified; see
 `crafts/sysarch/rules/guards.md` 2026-09-14 (#160); the kernel stays here. Implementation clauses
 (p1's implementation half, p3, p4, the test mapping) moved to `crafts/syseng/rules/verifiable-code.md`
 2026-09-14 (#162); the one property kept gains the term `invariant` (Rule-6) and cites
-`crafts/syseng/rules/invariants.md`.
+`crafts/syseng/rules/invariants.md`. Property 2 added 2026-09-24 (d-work #159): the suite is the
+runner's to run — at Rule-14 property 3's push gate, or one target at a time — after an audit
+measured 134 hand-runs in one session at about three times the runner's price (#154); see the
+same record, amendment #159.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).
