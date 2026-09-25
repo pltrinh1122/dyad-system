@@ -1,8 +1,9 @@
 """countersign projector tests (crafts/countersign/rules/schema.md; d-work #156): a fixture system with every
 store the mapping reads projects to a document that validates against `countersign-core.json`; each derivation
 rule (D1-D7) yields what the rule says; the validator rejects what the schema rejects; determinism (collect and
-render twice, byte-equal); and a live run over this instance: every instance validates, every mode is one of
-the three, every countersignature's signer is a human party."""
+render twice, byte-equal); the I6 interaction check (crafts/countersign/rules/interaction.md; d-work #152): D8
+derives each act's initiation, an act without one is flagged as a warning; and a live run over this instance: every
+instance validates, every mode is one of the three, every countersignature's signer is a human party."""
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts")); sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "projectors"))
@@ -87,7 +88,7 @@ class ContractTests(unittest.TestCase):
 
 class ValidatorTests(unittest.TestCase):
     def doc(self):
-        return {"schema_version": "0.1.0", "system": "x", **{e: [] for e in pc.ENTITIES}}
+        return {"schema_version": pc.SCHEMA_VERSION, "system": "x", **{e: [] for e in pc.ENTITIES}}
     def test_empty_document_validates(self):
         self.assertEqual(pc.check(self.doc()), [])
     def test_missing_entity_array_fails(self):
@@ -167,6 +168,43 @@ class FixtureTests(Env, unittest.TestCase):
         self.assertEqual(pc.render(pc.collect(self.root)), pc.render(pc.collect(self.root)))
         self.assertEqual(pc.render(self.doc), json.dumps(json.loads(pc.render(self.doc)), sort_keys=True, indent=1, ensure_ascii=False) + "\n")
 
+class InteractionTests(Env, unittest.TestCase):
+    """I6 (interaction.md): every act has an initiation — a prompt, a signal or a release trigger (D8 derives it)."""
+    def setUp(self):
+        super().setUp(); self.root = fixture(); self.doc = pc.collect(self.root)
+        self.ini = {a["id"]: a["profile"]["initiation"] for a in self.doc["acts"]}
+    def test_d8_prompt_from_provenance(self):
+        self.assertEqual(self.ini["act-1"], {"kind": "prompt", "source": "provenance", "entry": 1})
+    def test_d8_intake_origin_is_a_signal(self):
+        self.assertEqual(self.ini["act-2"], {"kind": "signal", "source": "intake", "origin": "workstation-7"})
+    def test_d8_act_without_initiation_is_flagged(self):
+        self.assertEqual(self.ini["act-3"]["kind"], None)
+        i = pc.interaction(self.doc)
+        self.assertEqual(i["uninitiated"], [("act-3", "no provenance record")])
+        self.assertEqual((i["initiated"], i["underivable"]), (2, ["act-runbook-git-server"]))
+        self.assertTrue(pc.interaction_line(i).startswith("warn [project] countersign: I6 initiated=2 uninitiated=1 underivable=1"))
+    def test_d8_record_without_prompt_is_named(self):
+        d = self.root / "agent-corpus" / "d-work"
+        (d / "provenance" / "3.md").write_text("# Provenance #3\n")
+        ini = {a["id"]: a["profile"]["initiation"] for a in pc.collect(self.root)["acts"]}
+        self.assertEqual(ini["act-3"]["missing"], "no prompt entry in the provenance record")
+    def test_d8_opening_disposition_is_a_prompt(self):
+        d = self.root / "agent-corpus" / "d-work"
+        r = dyadlib.Row(4, "deferred", "2026-09-20", "backlog", "2026-09-20 Y (opened from #1, deferred)", "1")
+        (d / "rows" / "4.md").write_text(dyadlib.format_row_file(r))
+        ini = {a["id"]: a["profile"]["initiation"] for a in pc.collect(self.root)["acts"]}
+        self.assertEqual((ini["act-4"]["kind"], ini["act-4"]["source"]), ("prompt", "opening-disposition"))
+    def test_act_without_profile_counts_as_uninitiated(self):
+        d = {"acts": [{"id": "act-9", "title": "t", "mode": "explicit", "processor": "agent", "state": "open", "refs": []}]}
+        self.assertEqual(pc.interaction(d)["uninitiated"], [("act-9", "no initiation derived")])
+    def test_all_initiated_is_ok(self):
+        d = {"acts": [{"id": "act-1", "profile": {"initiation": {"kind": "prompt"}}}]}
+        self.assertTrue(pc.interaction_line(pc.interaction(d)).startswith("ok   [project] countersign: I6 initiated=1 uninitiated=0"))
+    def test_warning_never_fails_the_document(self):
+        self.assertEqual(pc.check(self.doc), [])
+    def test_deterministic_with_initiation(self):
+        self.assertEqual(pc.render(pc.collect(self.root)), pc.render(self.doc))
+
 class GitFixtureTests(Env, unittest.TestCase):
     def setUp(self):
         super().setUp(); self.root = fixture(git=True); self.doc = pc.collect(self.root)
@@ -192,6 +230,10 @@ class LiveTests(livetest.LiveCase):
     def test_live_every_signer_is_human(self):
         kind = {p["id"]: p["kind"] for p in self.doc["parties"]}
         self.assertTrue(all(kind[s["signer"]] == "human" for s in self.doc["countersignatures"]))
+    def test_live_every_act_has_an_initiation_profile(self):
+        self.assertTrue(all("initiation" in a.get("profile", {}) for a in self.doc["acts"]))
+        i = pc.interaction(self.doc)
+        self.assertEqual(i["initiated"] + len(i["uninitiated"]) + len(i["underivable"]), len(self.doc["acts"]))
     def test_live_deterministic(self):
         self.assertEqual(pc.render(self.doc), pc.render(pc.collect(dyadlib.repo_root())))
 

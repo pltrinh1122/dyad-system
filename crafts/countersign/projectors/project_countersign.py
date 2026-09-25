@@ -13,13 +13,17 @@ as one instance document, by the mapping contract and derivation rules of `../ru
   - every release tag (`git for-each-ref refs/tags`) is a Release (D5); no git or no tags: none;
   - every run-book event (`runbook.all_events`) is an Event of one Act per run-book instance (D6);
   - an intake origin in a row's refs (`<system>-<id>`, Rule-3 Intake) and every incident
-    (`<instance>/audits/INCIDENTS.md`) is an Escalation (D7).
+    (`<instance>/audits/INCIDENTS.md`) is an Escalation (D7);
+  - every act's Initiation (`../rules/interaction.md`, imperative I6) is derived into its `profile` — a `prompt`
+    entry of its provenance record, an intake origin in its refs, or an opening disposition (D8) — and `interaction`
+    reports the acts where none is found, as warnings: I6 is checked, never gated (interaction.md, Checks).
 Never hand-drawn: every instance comes from a parser the data's owning Rule provides. Deterministic: sorted
 keys, arrays sorted by id (numeric parts compared as numbers), no clock. Output: one JSON document, written to
 <instance>/projections/countersign.json (generated, never tracked). `validate` is the stdlib subset of JSON
 Schema the schema file uses; `check` adds what a schema cannot say (references resolve, a signer is human,
-the processor's kind follows the mode).
-  project_countersign.py            write the projection, print per-entity counts; exit 1 if it does not check
+the processor's kind follows the mode); `interaction` adds the I6 warnings (I1 and I7 are `check`'s).
+  project_countersign.py            write the projection, print per-entity counts and the I6 line; exit 1 if it does
+                                    not check (I6 warnings never change the exit code)
 """
 import sys
 if sys.version_info < (3, 12):
@@ -30,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts")
 import dyadlib
 import runbook
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 SYSTEM = "dyad-system"                                          # the profile name this projection declares
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "templates" / "countersign-core.json"
 ENTITIES = ("parties", "acts", "proposals", "countersignatures", "mandates", "releases", "events", "escalations")
@@ -48,6 +52,10 @@ ANSWER_OF = {"Y": "yes", "N": "no"}                             # a bare disposa
 MANDATES = (("ledger-pr-merge", "agent", "merge of a PR whose whole diff is ledger-only (the d-work store)"),)   # D4: (key, value that grants, event class)
 LEGACY_CORE_VERSIONS = ("0.3.1", "0.3.2", "0.4.0")              # unprefixed tags cut before #196: core-only, never retagged (Rule-11 provenance)
 NOT_SYSTEMS = ("parent",)                                       # `parent-<n>` in refs names a parent row, not an origin system
+INITIATION_KINDS = ("prompt", "signal", "release-trigger")      # interaction.md I6: the only three origins of an act
+OPENING_WORDS = ("backlog", "intake", "opened")               # D8: the first word of a first disposition that opened the row (Rule-3: backlog is opened by a disposition)
+INITIATION_SOURCES = {"provenance": "prompt", "opening-disposition": "prompt", "intake": "signal"}   # D8: where dyad-system records an initiation -> its kind
+UNDERIVABLE = "underivable"                                     # D8: a run-book act (D6): an event records no d-work, so no initiation store reaches it
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("entities-are-eight", lambda: len(ENTITIES) == 8 and len(set(ENTITIES)) == 8),
@@ -62,6 +70,9 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("signer-is-human", lambda: dict(PARTIES).get(SIGNER) == "human"),
     ("answer-of-maps-to-answers", lambda: set(ANSWER_OF.values()) <= set(ANSWERS)),
     ("mandate-keys-distinct", lambda: len({k for k, _, _ in MANDATES}) == len(MANDATES)),
+    ("initiation-kinds-are-three", lambda: INITIATION_KINDS == ("prompt", "signal", "release-trigger")),
+    ("initiation-sources-map-to-kinds", lambda: len(INITIATION_SOURCES) > 0 and set(INITIATION_SOURCES.values()) <= set(INITIATION_KINDS) and UNDERIVABLE not in INITIATION_SOURCES),
+    ("opening-words-distinct", lambda: len(set(OPENING_WORDS)) == len(OPENING_WORDS) > 0),
 ]
 
 _ENTRY = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(Y|N)\b\s*(.*)$")
@@ -104,13 +115,15 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     for r in dyadlib.read_rows(root):
         aid = f"act-{r.id}"
         refs = [t for t in re.split(r"[\s,]+", r.refs) if t]
-        acts.append({"id": aid, "title": r.title, "mode": DERIVED_MODE, "processor": DERIVED_PROCESSOR, "state": r.state, "refs": refs})
+        entries = prov.dispositions(r.disposed)
+        rec = prov.store(root) / f"{r.id}.md"
+        parsed = prov.parse(rec.read_text(errors="ignore")) if rec.exists() else []
+        texts = [e["text"] for e in parsed if e["kind"] == "disposition"]
+        acts.append({"id": aid, "title": r.title, "mode": DERIVED_MODE, "processor": DERIVED_PROCESSOR, "state": r.state, "refs": refs,
+                     "profile": {"initiation": _initiation(parsed, refs, entries, rec.exists())}})
         plan = inst / "d-work" / "plans" / f"{r.id}.md"
         if plan.exists():
             proposals[f"proposal-{r.id}-plan"] = _proposal(r.id, "plan", root, plan)
-        entries = prov.dispositions(r.disposed)
-        rec = prov.store(root) / f"{r.id}.md"
-        texts = [e["text"] for e in prov.parse(rec.read_text(errors="ignore")) if e["kind"] == "disposition"] if rec.exists() else []
         verbatim = len(texts) == len(entries)
         for i, entry in enumerate(entries):
             m = _ENTRY.match(entry)
@@ -138,6 +151,23 @@ def collect(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     for e in ENTITIES:
         doc[e] = _sorted(doc[e])
     return doc
+
+def _initiation(parsed: list[dict], refs: list[str], entries: list[str], has_record: bool) -> dict:
+    """D8 (interaction.md): where this system records the act's Initiation, in this order — a `prompt` entry of the
+    provenance record (Rule-7), an intake origin in refs (Rule-3 Intake: a signal the Operator's `Y` admitted), or a
+    first disposition whose word opens the row (`Y backlog`, `Y intake`: opened by a disposition, Rule-3). `kind` None
+    when none is found; `missing` then says what was looked for, so the I6 warning names it."""
+    n = next((e["n"] for e in parsed if e["kind"] == "prompt"), None)
+    if n is not None:
+        return {"kind": INITIATION_SOURCES["provenance"], "source": "provenance", "entry": int(n)}
+    origin = next((t for t in refs if (o := _ORIGIN.match(t)) and o.group(1) not in NOT_SYSTEMS), None)
+    if origin:
+        return {"kind": INITIATION_SOURCES["intake"], "source": "intake", "origin": origin}
+    m = _ENTRY.match(entries[0]) if entries else None
+    w = _WORD.search(m.group(3).lower()) if m else None
+    if w and w.group(0) in OPENING_WORDS:
+        return {"kind": INITIATION_SOURCES["opening-disposition"], "source": "opening-disposition", "entry": entries[0]}
+    return {"kind": None, "source": None, "missing": "no prompt entry in the provenance record" if has_record else "no provenance record"}
 
 def _proposal(rid: int, word: str, root: Path, body: Path | None) -> dict:
     return {"id": f"proposal-{rid}-{word}", "act": f"act-{rid}", "author": DERIVED_PROCESSOR,
@@ -198,7 +228,8 @@ def _events(root: Path, doc: dict) -> None:
         slug = re.sub(r"[^a-z0-9.-]+", "-", name.lower()).strip("-") or "runbook"
         aid = f"act-runbook-{slug}"
         doc["acts"].append({"id": aid, "title": f"run-book {name}", "mode": DERIVED_MODE, "processor": DERIVED_PROCESSOR,
-                            "state": "recorded", "refs": [f"{runbook.runbooks_rel()}/{name}.md"]})
+                            "state": "recorded", "refs": [f"{runbook.runbooks_rel()}/{name}.md"],
+                            "profile": {"initiation": {"kind": None, "source": UNDERIVABLE}}})
         for seq, e in enumerate(events):
             payload = {k: e[k] for k in ("id", "name", "cmd", "class", "role", "exit", "postcondition") if k in e}
             doc["events"].append({"id": f"event-{slug}-{seq}", "act": aid, "seq": seq, "payload": payload, "at": str(e.get("ts", ""))})
@@ -324,6 +355,31 @@ def check(doc: dict, sch: dict | None = None) -> list[str]:
             errs.append(f"{x['id']}: opens {x['opens']}, not an explicit act")
     return errs
 
+# ---- interaction: the imperatives a projection can check (../rules/interaction.md, Checks)
+def interaction(doc: dict) -> dict:
+    """I6 over the document: every act's `profile.initiation` (D8). Returns {"initiated": n, "underivable": [ids],
+    "uninitiated": [(id, missing)]}. An act with no profile, or no initiation in it, counts as uninitiated — a
+    projection from another system that does not derive D8 is reported, never silently passed. Warnings only:
+    I6 is checked, never gated (interaction.md) — dyad-system rows predate the store that would carry the prompt."""
+    out = {"initiated": 0, "underivable": [], "uninitiated": []}
+    for a in doc["acts"]:
+        ini = (a.get("profile") or {}).get("initiation") or {}
+        if ini.get("kind") in INITIATION_KINDS:
+            out["initiated"] += 1
+        elif ini.get("source") == UNDERIVABLE:
+            out["underivable"].append(a["id"])
+        else:
+            out["uninitiated"].append((a["id"], ini.get("missing", "no initiation derived")))
+    return out
+
+def interaction_line(i: dict) -> str:
+    """One line for the I6 result: `ok` when every derivable act is initiated, else `warn` with the count and the first ids."""
+    head = f"I6 initiated={i['initiated']} uninitiated={len(i['uninitiated'])} underivable={len(i['underivable'])}"
+    if not i["uninitiated"]:
+        return f"ok   [project] countersign: {head}"
+    first = ", ".join(f"{aid} ({why})" for aid, why in i["uninitiated"][:3])
+    return f"warn [project] countersign: {head} — first: {first}"
+
 # ---- render and main
 def render(doc: dict) -> str:
     """Byte-identical for the same document: sorted keys, arrays already sorted by collect, no clock."""
@@ -343,6 +399,7 @@ def main() -> int:
     for p in problems:
         print(f"FAIL [project] countersign: {p}", file=sys.stderr)
     print(f"{'ok  ' if not problems else 'FAIL'} [project] countersign: {counts(doc)} -> {out} ({len(text.encode())} bytes)")
+    print(interaction_line(interaction(doc)))
     return 1 if problems else 0
 
 if __name__ == "__main__":
