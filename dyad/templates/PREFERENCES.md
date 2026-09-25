@@ -14,6 +14,8 @@ defines what each value means.
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | off | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | concise-mode | off | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
+| host-path | workstation-corpus | a repo-relative directory | Rule-1 (host row of the zone table), Rule-14 (instance contribution) |
+| host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -52,3 +54,8 @@ defines what each value means.
   fork (`delegation`) so the reply is prompt and the Agent stays free; a harness mid-turn prompt
   gets one status line, never a second reply (Rule-10 Form, Rule-3 Incidents; d-work #113).
   Seeded `off`: the harness's own default, until the Operator has read the trade.
+- `host-path` — where this system keeps its host and operating records (change log, ops scripts,
+  run-books, its own operating manifest rows `INFRASTRUCTURE.md`); the host row of the zone table
+  is `<host-path>/*` (Rule-1, `dyad/guards/infra/containment.py`). Default `workstation-corpus`.
+- `host-zone` — the zone that row belongs to. `workstation` (default): the five zones. `infra`: the
+  host records are infrastructure of the repo and the system has four zones (no `workstation`).
