@@ -102,3 +102,22 @@ invariant this flow argues for. Rule-3's incident form is untouched. No new term
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #24.
+
+## Amendment — d-work #152 (2026-09-25, `.claude/` belongs to the infra zone)
+`.claude/` was claimed by no zone, so a committed slash command (`.claude/commands/*.md`) or
+project Skill was an unclassified path Rule-1 forbids — `agent-corpus/falsification/playbook-vs-skill.md`
+attack 4, blocking once #152 ships command adapters. `ZONES` gains `("infra", ".claude/*")`; the
+Rule's text names no infra path (the table is `containment.py`'s alone) and is not edited.
+| # | attack | result | survivor |
+|---|---|---|---|
+| 29 | `.claude/` is craft content (it carries play-book entry points), so it belongs in `agent` or `craft`, not `infra`. | Refuted | It holds harness configuration of one kernel — a library adapter (Rule-14), not System content — exactly as the root `CLAUDE.md`, the host frame, already is `infra`. A command changes with its harness, never with a Rule; `test_claude_adapter_rides_with_host_frame` keeps it in one transaction with `CLAUDE.md`. |
+| 30 | Classifying `.claude/*` lets local settings and credentials (`settings.local.json`) be committed. | Survives, scoped | A zone classifies a path; it never decides whether the path is tracked. Before this a secret there failed only as *unclassified*, never as a secret — no protection was lost. The credential scan (Rule-7 property 2) covers provenance bodies only. Follow-up, infra zone: `.gitignore` gains `.claude/settings.local.json` (per-machine, as `~/.claude` is, attack 6); not in this PR — one zone, and `.gitignore` is seeded by `hostadapter.write_gitignore` from `package_rules.txt`, so the durable fix is there. |
+| 31 | An adapter in `.claude/` duplicates `dyad/playbooks/` and splits the procedure's home. | Refuted | Per `playbook-vs-skill.md` attack 7's survivor: the adapter only invokes the play-book, never *is* it; the procedure stays agent zone, and `test_claude_adapter_never_mixes_with_package` makes the two separate transactions — referent (`dyad/…`) before referrer (`.claude/…`), attack 4. |
+| 32 | Every installed system inherits a zone change it did not ask for. | Refuted | A core-only install gains one classification and nothing else: a tree with no `.claude/` path is unchanged, and one that had tracked it was already failing `tree` as unclassified. Invariants hold (`zone-patterns-disjoint`: `.claude/*` matches no other pattern; `test_invariants_hold`). |
+
+Pairwise: Rule-1 keeps its concern — which paths a transaction may touch — and gains one row of its
+own table. Rule-14 keeps whether the harness is a kernel or library row; Rule-7 keeps the credential
+scan; Rule-11 keeps the install and the seeded `.gitignore`; Rule-12: the row enters with its tests.
+No new term (Rule-6). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #152.

@@ -30,6 +30,10 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual(c.classify("dyadx/y"), "unclassified")
         self.assertEqual(c.classify("crafts/sysadmin/rules/host-mutation.md"), "craft")
         self.assertEqual(c.classify("craftsx/y"), "unclassified")
+        # #152: committed harness adapters (slash commands, skills) are infra, beside the host frame
+        self.assertEqual(c.classify(".claude/commands/falsify.md"), "infra")
+        self.assertEqual(c.classify(".claude/skills/pb-craft/SKILL.md"), "infra")
+        self.assertEqual(c.classify(".claudex/y"), "unclassified")
 
 class TransactionTests(unittest.TestCase):
     def setUp(self): self.r = Repo()
@@ -39,6 +43,15 @@ class TransactionTests(unittest.TestCase):
     def test_cross_zone_commit_fails(self):
         sha = self.r.commit({"dyad/a.md": "x", "CLAUDE.md": "y"})
         self.assertTrue(any("multiple zones" in f for f in c.check_commit(sha, cwd=self.r.d)))
+    def test_claude_adapter_rides_with_host_frame(self):
+        """#152: a slash command and CLAUDE.md are one zone (infra)."""
+        sha = self.r.commit({".claude/commands/x.md": "x", "CLAUDE.md": "y"})
+        self.assertEqual(c.check_commit(sha, cwd=self.r.d), [])
+    def test_claude_adapter_never_mixes_with_package(self):
+        """#152: an adapter and the procedure it invokes (dyad/...) are separate transactions."""
+        sha = self.r.commit({".claude/commands/x.md": "x", "dyad/playbooks/x.md": "y"})
+        fails = c.check_commit(sha, cwd=self.r.d)
+        self.assertTrue(any("multiple zones: agent infra" in f for f in fails), fails)
     def test_craft_zone_never_mixes_with_instance(self):
         sha = self.r.commit({"crafts/a/VERSION": "0.1.0", "workstation-corpus/x.md": "y"})
         self.assertTrue(any("multiple zones" in f for f in c.check_commit(sha, cwd=self.r.d)))
