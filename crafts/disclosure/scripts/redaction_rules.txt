@@ -1,0 +1,37 @@
+# Redaction data (beside its module, scripts/redaction.py; the table is rules/redaction.md property 3).
+# One entry per line; blank lines and # comments ignored.
+#   a: <name> = <regex>   — Class A, identity: a shape that must never appear in an assembled disclosure
+#   b: <name> = <regex>   — Class B, substance: a shape that must be pseudonymized before it appears
+#   allow: <field>        — a field the producing procedure may put in a disclosure (property 1)
+#
+# Class A borrows the core provenance guard's key shapes by import (redaction.CREDENTIAL_SHAPES),
+# never by re-listing them here: one owner per shape (Rule-13).
+
+a: absolute path = (?<![\w.])/(?:home|Users|root|var|etc|opt|tmp)(?:/[\w.@+-]+)+
+a: ipv4 literal = (?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])
+a: ipv6 literal = (?<![\w:])(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}(?![\w:])
+a: e-mail address = [\w.+-]+@[\w-]+\.[\w.-]+
+a: repository url = https?://(?:www\.)?(?:github|gitlab|bitbucket)\.com/\S+
+a: session link = https?://\S*/(?:code|session)[/_]\S+
+a: request number = (?:\bPR\b|\bpull request\b)\s*#\d+
+a: session id = \bsession_[A-Za-z0-9]{8,}
+a: host label = \b(?:hostname|localhost\.[\w.-]+)\b
+
+b: rule number = \bRule-\d+\b
+b: guard module = \b[a-z_]+\.py\b
+b: repo path = \b(?:dyad|crafts|agent-corpus|workstation-corpus|preferences-corpus)/[\w./*-]+
+b: craft name = \bcrafts/[a-z][a-z0-9-]*\b
+b: ledger id = (?<![\w#])#\d+\b
+b: d-work phrase = \bd-work\s+#?\d+\b
+
+allow: date
+allow: group
+allow: subsystem
+allow: failure-mode
+allow: consequence
+allow: status
+allow: count
+allow: summary
+allow: audience
+allow: level
+allow: watermark
