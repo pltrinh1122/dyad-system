@@ -46,6 +46,7 @@ ZONES = [
     ("infra", "LICENSE"),                             # a public distribution repo carries one (#192)
     ("infra", ".gitignore"),
     ("infra", "BUNDLE.md"),                           # the bundle manifest (Rule-11 property 7, #196)
+    ("infra", ".claude/*"),                           # committed harness adapters: slash commands, skills (#152)
 ]
 
 ZONE_NAMES = ("agent", "workstation", "preferences", "infra", "craft")   # the zone set (Rule-1; `craft` since #154)

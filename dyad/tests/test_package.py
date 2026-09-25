@@ -753,5 +753,17 @@ class InvariantPassTests(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0); self.assertIn("refused: dyadlib: invariant(s) failed: archived-is-terminal", r.stderr)
         self.assertEqual(list((d / "agent-corpus" / "d-work" / "rows").glob("[0-9]*.md")), [])
 
+class SuiteEnvTests(unittest.TestCase):
+    """#152: a test child never inherits a hook's GIT_VARS (an absolute GIT_DIR from a linked worktree)."""
+    def test_git_vars_dropped_and_nesting_marked(self):
+        pkg = load_package()
+        with unittest.mock.patch.dict(os.environ, {"GIT_DIR": "/elsewhere/.git", "GIT_WORK_TREE": "/elsewhere",
+                                                   "GIT_INDEX_FILE": "/elsewhere/.git/index",
+                                                   "GIT_COMMON_DIR": "/elsewhere/.git"}):   # #169: a linked worktree's hook exports it
+            env = pkg.suite_env()
+        self.assertFalse(set(dyadlib.GIT_VARS) & set(env), env.keys() & set(dyadlib.GIT_VARS))
+        self.assertNotIn("GIT_COMMON_DIR", env)
+        self.assertEqual(env["DYAD_NO_NESTED_TESTS"], "1")
+
 if __name__ == "__main__":
     unittest.main()

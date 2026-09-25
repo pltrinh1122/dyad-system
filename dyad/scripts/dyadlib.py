@@ -186,7 +186,7 @@ HOST_CLASSES = ("read-only", "reversible", "destructive")
 
 # git's per-invocation variables: a hook exports them, and a command run from the work tree then reads
 # another repository's dir, tree or index (d-work #142). Every git call here runs without them.
-GIT_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")
+GIT_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR")   # a hook in a linked worktree exports GIT_COMMON_DIR too (#161, #169)
 MODE_EXEC, MODE_FILE = "100755", "100644"   # the index modes tracked_mode reports (Rule-18's scripts, the hooks and bin/)
 
 def git_env() -> dict[str, str]:
