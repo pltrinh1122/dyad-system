@@ -193,7 +193,7 @@ def check_rule_12():
     for suite in test_suites():
         r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(suite), "-q"],
                            capture_output=True, text=True, timeout=600,
-                           env={**os.environ, "DYAD_NO_NESTED_TESTS": "1"})
+                           env=suite_env())
         summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]  # no timing: the evidence block must be deterministic (#138)
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if r.returncode != 0:
@@ -213,13 +213,20 @@ def ledger_only_range(base, head):
     paths = out.split()
     return bool(paths) and all(p.startswith(f"{inst}/d-work/") for p in paths)
 
+def suite_env() -> dict[str, str]:
+    """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
+    A git hook exports an absolute `GIT_DIR` when it runs in a linked worktree; a suite that inherits
+    it points every scratch-repo git call at the real repository (#152: `core.bare`, a `feature`
+    branch and a tag written into the live repo by the pre-push hook's run)."""
+    return {**dyadlib.git_env(), "DYAD_NO_NESTED_TESTS": "1"}
+
 def run_suite(suite, target=None):
     """One `unittest` child, the way `check_rule_12` spawns it — always with `DYAD_NO_NESTED_TESTS`,
     which is what makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run
     their own suites). Returns (rc, summary lines)."""
     argv = ["-m", "unittest", target, "-q"] if target else ["-m", "unittest", "discover", "-s", str(suite), "-q"]
     r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
-                       env={**os.environ, "DYAD_NO_NESTED_TESTS": "1"})
+                       env=suite_env())
     summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
     return r.returncode, summary, r.stderr
 
