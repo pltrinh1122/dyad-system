@@ -356,10 +356,14 @@ def cmd_guards(base="origin/main"):
             print(f"ok   [guards] {label}{extra}")
     try:
         subprocess.check_output(["git", "rev-parse", "--verify", "-q", base], cwd=REPO)
+        base_ok = True
     except subprocess.CalledProcessError:
-        print(f"skip [guards] transaction guards: no {base}"); return int(rc)
+        # d-work #158: the transaction guards need the base ref; the suite below does not, and used
+        # to be unreachable here — so a fresh install, a system with no remote, or one whose default
+        # branch is not `main` never ran Rule-12's suite at push at all.
+        print(f"skip [guards] transaction guards: no {base}"); base_ok = False
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
-    for corpus, entity, rel, tx, mod, problem in entries:
+    for corpus, entity, rel, tx, mod, problem in (entries if base_ok else ()):
         if not tx or mod is None:
             continue
         fails = mod.check_transaction(REPO, base, head)
@@ -375,7 +379,7 @@ def cmd_guards(base="origin/main"):
     # the suite here rather than by hand at three times the price. The guards above are never gated.
     if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
         pass            # inside a test run, or `cmd_check` already ran it in this process
-    elif ledger_only_range(base, head):
+    elif base_ok and ledger_only_range(base, head):
         print(f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)")
     elif cmd_tests():
         rc = 1

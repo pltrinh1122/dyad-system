@@ -158,6 +158,26 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.check_rule_12))
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.cmd_tests))
 
+    def test_guards_run_the_suite_when_the_base_ref_does_not_resolve(self):
+        """#158: the transaction guards need the base ref and say so; the suite does not. It used to
+        sit after an early `return`, so a fresh install, a system with no remote, or one whose
+        default branch is not `main` never ran Rule-12's suite at push at all — the release's
+        headline, inert exactly where a downstream installation starts. An unknown range cannot be
+        shown ledger-only, so the safe default is to test."""
+        pkg = load_package(); pkg._SUITE_RAN = False
+        calls = []
+        with unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(a) or 0), \
+             unittest.mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = pkg.cmd_guards(base="refs/heads/no-such-base-158")
+            out = buf.getvalue()
+        self.assertIn("skip [guards] transaction guards: no refs/heads/no-such-base-158", out)
+        self.assertNotIn("skip [guards] Rule-12 suite", out)   # unknown range -> run it, never skip
+        self.assertEqual(len(calls), 1, out)                   # the suite was reached
+        self.assertEqual(rc, 0, out)
+
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
         """The prefix, never the suffix: a `.py` filter would have passed #137's markdown run-book,
         which broke the core suite by falsifying a pinned count."""
