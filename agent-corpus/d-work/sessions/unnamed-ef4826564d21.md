@@ -1,0 +1,6 @@
+session: unnamed-ef4826564d21
+seen: 2026-09-29T23:52:26+00:00
+root: /home/user/dyad-system
+rows: 182 185 186 189 194 81 99
+files: BUNDLE.md agent-corpus/d-work/plans/185.md agent-corpus/d-work/plans/186.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/185.md agent-corpus/d-work/provenance/186.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/185.md agent-corpus/d-work/rows/186.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md crafts/countersign/tests/test_project_countersign.py crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/tests/guards/test_ops_scripts.py crafts/sysadmin/vocabulary/CRAFT.md dyad/guards/craft/crafts.py dyad/guards/infra/manifest.py dyad/scripts/dyadlib.py dyad/tests/guards/agent/test_records.py dyad/tests/guards/agent/test_references.py dyad/tests/guards/agent/test_vocabulary.py dyad/tests/guards/craft/test_crafts.py dyad/tests/guards/infra/test_manifest.py dyad/tests/test_dyadlib.py dyad/tests/test_package.py
+writer: 2a20ab54845d
