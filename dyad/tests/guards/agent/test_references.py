@@ -150,8 +150,9 @@ class FixtureTests(Fixtured):
 
     def test_register_shape(self):
         kinds = [r[0] for r in refint.REFERENCES]
-        self.assertEqual(len(kinds), 27); self.assertEqual(len(set(kinds)), 27, "one entry per kind")
-        self.assertEqual(kinds[-3:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft"])   # #177, #196 appended; order stable
+        self.assertEqual(len(kinds), 28); self.assertEqual(len(set(kinds)), 28, "one entry per kind")
+        self.assertEqual(kinds[-4:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft",
+                                      "provenance.legacy->row"])   # #177, #196, #191 appended; order stable
         for kind, src, field, ext, tgt, res in refint.REFERENCES:
             self.assertRegex(kind, r"^[a-z_]+\.[a-z_#]+->[a-z]+$")
             self.assertTrue(callable(res) or res == "world" or res.startswith("guard:"), kind)

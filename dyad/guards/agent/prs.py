@@ -3,7 +3,12 @@
 A PR must cite at least one `d-work #N`; every cited N must be a ledger row at the base commit with
 state open, planned or blocked and a `Y plan` disposition (plan gate, E3). A PR lives in The World
 (hosting), so the package check has nothing to read; the transaction check (TRANSACTION) reads the
-branch's commit messages as the body on any branch but `main`.
+branch's commit messages as the body on any branch but `main`, and skips a range that touches only
+`<instance>/d-work/` (`ledger_only`, d-work #191): Rule-2 and Rule-3 class a ledger-only commit as
+clerical — it records a prompt or a disposition, it claims no d-work — so the gate never applies to
+one. Before #191 it did, and a session fenced off `main` (Rule-1, #23) could push a ledger-only branch
+only around the hook, which skipped every other guard too. The row and provenance guards still judge
+the range.
   PR_BODY="..." BASE_SHA=<sha> prs.py
 """
 import sys
@@ -46,9 +51,17 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     """Nothing in a store: a PR is in The World (Rule-14)."""
     return []
 
+def ledger_only(root: Path, base: str, head: str) -> bool:
+    """The range's own commits (three-dot) touch only `<instance>/d-work/` — `dyadlib.ledger_only`,
+    rename detection off, so a move of code into the ledger is never read as ledger-only (#191)."""
+    return dyadlib.ledger_only(root, base, head)
+
 def check_transaction(root: Path, base: str, head: str) -> list[str]:
-    """On a branch: the commit messages of base..head are the body; rows read at the base."""
+    """On a branch: the commit messages of base..head are the body; rows read at the base. A
+    ledger-only range is clerical and cites nothing (`ledger_only`, #191)."""
     if subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True).strip() == "main":
+        return []
+    if ledger_only(root, base, head):
         return []
     body = subprocess.check_output(["git", "log", "--format=%B", f"{base}..{head}"], cwd=root, text=True)
     return check(body, rows=dyadlib.read_rows(root, at=base))

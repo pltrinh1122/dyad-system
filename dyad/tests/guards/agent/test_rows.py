@@ -144,7 +144,8 @@ class BranchIdCollisionTests(unittest.TestCase):
         self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one but renamed on this branch"))
         h = self.r.commit("collide")
         out = m.check_transaction(self.r.d, self.base, h)
-        self.assertEqual(len(out), 1, out); self.assertIn("id 1 already names", out[0])
+        self.assertIn("id 1 already names", out[0])
+        self.assertIn("changes id or title", out[1])   # #191: a ledger-only branch is fenced as `main` would fence it
 
 class DisposedShapeTests(unittest.TestCase):
     """d-work #133: every `disposed` entry a range adds is `<date> <Y|N>[ text]` with balanced parentheses,
@@ -173,6 +174,69 @@ class DisposedShapeTests(unittest.TestCase):
         self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y (a; b)")); h = self.r.commit()
         out = m.check_transaction(self.r.d, self.base, h)
         self.assertEqual(len(out), 2, out); self.assertTrue(all("[disposed]" in o for o in out), out)
+
+class LedgerBranchFenceTests(unittest.TestCase):
+    """#191: a ledger-only branch skips the plan gate because `main` would admit its commits — so the fence
+    judges each of them as `main` would. A PR merge (`--no-ff`) lands them where the first-parent walk of
+    the main fence never looks."""
+    R = "agent-corpus/d-work/rows/1.md"
+    def setUp(self):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-01 Y done")); self.base = self.r.commit("root")
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+    def test_regression_on_a_ledger_branch_fails(self):
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan")); h = self.r.commit()
+        out = m.check_transaction(self.r.d, self.base, h)
+        self.assertTrue(any("state regresses done\u2192planned" in o for o in out), out)
+    def test_deletion_and_retitle_on_a_ledger_branch_fail(self):
+        self.r.remove(self.R); h = self.r.commit()
+        self.assertTrue(any("deletes row file" in o for o in m.check_transaction(self.r.d, self.base, h)))
+        sh("git", "reset", "-q", "--hard", self.base, cwd=self.r.d)
+        self.r.write(self.R, row(1, "renamed", "done", "2026-01-01 Y plan; 2026-01-01 Y done")); h = self.r.commit()
+        out = m.check_transaction(self.r.d, self.base, h)
+        self.assertTrue(any("changes id or title" in o for o in out), out)
+    def test_a_legal_ledger_branch_passes(self):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); h = self.r.commit()
+        self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])
+    def test_a_code_branch_is_not_fenced_here(self):
+        """Not ledger-only: the plan gate judges it (a planned d-work), not this per-commit fence."""
+        self.r.write("dyad/x.md", "x"); h = self.r.commit()
+        self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])
+    def test_a_regression_made_resolving_a_merge_fails(self):
+        """The per-commit walk skips merges; the merge is judged against both parents."""
+        sh("git", "checkout", "-q", "-B", "main", self.base, cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan")); self.r.commit("planned")   # a legal-looking base for the test
+        sh("git", "checkout", "-q", "-B", "ledger", cwd=self.r.d); base = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("branch row")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done")); main_done = self.r.commit("done on main")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "-s", "ours", "main", cwd=self.r.d)   # keep the branch's `planned`: a regression against main
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_transaction(self.r.d, main_done, h)
+        self.assertTrue(any("merge" in o and "regresses done\u2192planned" in o for o in out), out)
+    def test_repairing_an_unparseable_row_on_a_ledger_branch_does_not_crash(self):
+        sh("git", "checkout", "-q", "-B", "main", self.base, cwd=self.r.d)
+        self.r.write(self.R, "id: 1\ntitle: one\nopened: d\nstate: done\n"); broken = self.r.commit("broken")
+        sh("git", "checkout", "-q", "-B", "fix", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-01 Y done")); h = self.r.commit("repair")
+        self.assertEqual(m.check_transaction(self.r.d, broken, h), [])
+    def test_a_branch_that_ever_touched_code_is_not_ledger_only(self):
+        """A revert makes the net diff ledger-only; the gate and the fence still read it commit by commit."""
+        self.r.write("dyad/x.md", "x"); self.r.commit("code"); self.r.remove("dyad/x.md"); self.r.commit("revert")
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); h = self.r.commit("ledger")
+        self.assertFalse(dyadlib.ledger_only(self.r.d, self.base, h))
+        self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])   # the plan gate's, not this fence's
+    def test_ledger_only_under_another_instance(self):
+        os.environ["DYAD_INSTANCE"] = "other-corpus"; self.addCleanup(os.environ.pop, "DYAD_INSTANCE", None)
+        self.r.write("other-corpus/d-work/rows/2.md", row(2, "two")); h = self.r.commit()
+        self.assertTrue(dyadlib.ledger_only(self.r.d, self.base, h))
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three")); h = self.r.commit()   # the default instance is no ledger here
+        self.assertFalse(dyadlib.ledger_only(self.r.d, self.base, h))
+    def test_a_non_canonical_row_file_name_fails_the_package_check(self):
+        root = Path(tempfile.mkdtemp()); (root / "agent-corpus" / "d-work" / "rows").mkdir(parents=True)
+        (root / "agent-corpus" / "d-work" / "rows" / "01.md").write_text(row(1, "one"))
+        self.assertIn("differs from the file name", " ".join(m.check_package(root)))
 
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""

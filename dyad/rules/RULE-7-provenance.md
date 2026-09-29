@@ -26,7 +26,8 @@ built on.
 - The Operator disposes a counter-prompt: the disposition's text is written as an entry, then,
   in the same clerical commit that records it in the row (Rule-3).
 - Every push and PR: `dyad/guards/agent/provenance.py` runs through `package.py check`
-  (`agent/provenance`) and on the kernel-only path (`check --guards`, Rule-14 property 3).
+  (`agent/provenance`) and on the kernel-only path (`check --guards`, Rule-14 property 3), where it
+  also judges the commits being pushed as a transaction guard (Enforcement).
 - A `*.jsonl` is about to be tracked under the d-work store: forbidden (property 2).
 
 ## Properties
@@ -54,20 +55,44 @@ built on.
    own words are never entered — a defect's observation stays in the plan file (#34).
 5. **Checked against the row.** The `disposition` entries of a record correspond one-to-one, in
    order, with the entries of its row's `disposed` column; a mismatch is a failing check, so a
-   dropped or invented disposition is visible without reading the chat.
+   dropped or invented disposition is visible without reading the chat. A row the instance lists as
+   predating enforcement (Enforcement) holds exactly as many fewer as the list says its earlier
+   dispositions were, whose words were never written and which property 3 forbids writing now;
+   every disposition after enforcement is exact.
 
 ## Enforcement
-`dyad/guards/agent/provenance.py` (`check_package`; agent corpus, placed per Rule-11 property 1;
-tests in `dyad/tests/guards/agent/test_provenance.py`, Rule-12; registered in Rule-11's runner as
-`agent/provenance`). It fails on: a record whose title id differs from its file name; entries not
-numbered from 1 without gaps; an unknown `kind`; a missing or unterminated fenced body; a
-`disposition` count that differs from the row's `disposed` count (property 5); a credential shape in
-any body (property 2's residue: `gh[pous]_…`, `github_pat_…`, a PEM private-key header, an
-`Authorization:` bearer or token value); and any tracked `*.jsonl` under the d-work store. It warns
-on: a row with id at or above `provenance.SINCE_ID` that has no record — a warning, not a failure,
-because a concurrent session (Rule-16) opens rows without having loaded this Rule, and a red `main`
-is the wrong way to learn that; and a bare 40-hex string, which a commit sha and a Gitea token
-share.
+`dyad/guards/agent/provenance.py` (`check_package` and `check_transaction`; agent corpus, placed
+per Rule-11 property 1; tests in `dyad/tests/guards/agent/test_provenance.py`, Rule-12; registered in
+Rule-11's runner as `agent/provenance`). Its two checks are split by what a failure costs (#191):
+- **Transaction**, each non-merge commit being pushed (the range's own history, merge base to head)
+  against its parent, as property 3 binds a commit: a row the commit adds brings at least one new
+  entry in its record — a `disposition` when it is born `backlog`, which only a disposition opens
+  (Rule-3); a row going `backlog` → `open` brings a `prompt` (Rule-3: the Operator prompts for it); a
+  row whose `disposed` gains k entries gains k `disposition` entries; and a record only grows — its
+  earlier entries stay word for word and the file is never deleted, a merge commit's records judged
+  against each of its parents. This check blocks only the push
+  that creates the gap, on the session that wrote it, which is what a concurrent session (Rule-16)
+  that has not loaded this Rule needs. `dyad dwork new|state` write the entries with the row
+  (`--prompt`, `--said`, each also `-file`), make every refusal before the first write, and refuse a
+  row, a disposition or a `backlog` → `open` without its words.
+- **State**, over the store: it fails on a record whose title id differs from its file name;
+  entries not numbered from 1 without gaps; an unknown `kind`; a missing or unterminated fenced
+  body; a `disposition` count that differs from the row's `disposed` count (property 5); a credential
+  shape in any body (property 2's residue: `gh[pous]_…`, `github_pat_…`, a PEM private-key header,
+  an `Authorization:` bearer or token value); any tracked `*.jsonl` under the d-work store; and a
+  row with no record that the instance does not name in `<instance>/provenance_legacy.local.txt`.
+  That list holds the rows that predate enforcement, one `<id> <n> <reason>` per line, n the
+  dispositions the row held whose words were never written (property 3 forbids writing them now): a
+  listed row's record holds exactly n fewer disposition entries than the row, and a listed row with
+  no record passes only while its `disposed` holds n. A list line of another shape, an id listed
+  twice, a listed id that is no row, or an n above the row's count fails too. With the transaction
+  check in place, a gap reaches the tree only around the hook; it then fails this check in every
+  session until it is recorded or listed — the alarm for that bypass, a cost the design accepts.
+  Naming a row in the list is a decision, made in a reviewed agent-zone PR (the list lies outside
+  `<instance>/d-work/`, so no ledger-only commit can touch it). The list is instance data and never
+  the core's (Rule-11 property 1). It warns on every unrecorded row while an instance keeps no list
+  — a system installing this version, which writes its own — and on a bare 40-hex string, which a
+  commit sha and a Gitea token share.
 Whether an entry is a faithful transcription is inference, as every clerical write is
 (`../../agent-corpus/falsification/e3-plan-gate.md` states it of the `Y plan` entry); property 5's
 count is its mechanical fence, and the Operator's own copy of the chat is the other.
@@ -75,6 +100,10 @@ count is its mechanical fence, and the Operator's own copy of the chat is the ot
 ## Provenance
 Operator gap, ledger #54 (2026-09-12, deferred) and #55; prompted again and planned as #164
 (2026-09-14). Falsified; see `../falsification/rules/rule-7-provenance.md`. Property 4 gains the
-relayed-prompt sentence 2026-09-16 (d-work #34, Rule-3 Intake).
+relayed-prompt sentence 2026-09-16 (d-work #34, Rule-3 Intake). Enforcement split into a
+transaction check that fails the gap where it is born and a state check that fails against the
+instance's legacy list, replacing `SINCE_ID` (an id of an earlier ledger that had come to warn on
+unrelated rows and to exempt rows holding dispositions); property 5 gains the legacy sentence
+2026-09-29 (d-work #191); see the same record, amendment #191.
 
 Set: System Requirements.

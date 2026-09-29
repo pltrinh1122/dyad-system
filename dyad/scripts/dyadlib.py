@@ -222,6 +222,72 @@ def tracked_mode(root: Path, rel: str | Path) -> str | None:
 def instance(root: Path | None = None) -> Path:
     return (root or repo_root()) / os.environ.get("DYAD_INSTANCE", "agent-corpus")
 
+def instance_rel(root: Path | None = None) -> str | None:
+    """The instance as a repo-relative posix path, whatever form DYAD_INSTANCE takes (relative, with a
+    trailing slash, or absolute inside the work tree); None when it lies outside the work tree, where
+    nothing is tracked and no range can touch it (#191)."""
+    root = root or repo_root()
+    try:
+        return Path(os.path.normpath(instance(root))).relative_to(Path(os.path.normpath(root))).as_posix()
+    except ValueError:
+        return None
+
+def range_paths(root: Path, base: str, head: str, merge_base: bool = True) -> list[str] | None:
+    """Every path a range touches, or None when git cannot say. Rename detection is off, so a move
+    lists its source as well as its destination — `git diff --name-only` shows only the destination,
+    which let a move of code into `<instance>/d-work/` pass as ledger-only (#191). NUL-separated, so
+    no path is split or trimmed. `merge_base`: the three-dot form, the head side's own commits only,
+    so paths `main` gained after a branch point are never the branch's."""
+    spec = f"{base}...{head}" if merge_base else f"{base}..{head}"
+    try:
+        r = subprocess.run(["git", "diff", "--no-renames", "-z", "--name-only", spec], cwd=root,
+                           capture_output=True, env=git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode:
+        return None
+    return [p for p in r.stdout.decode("utf-8", "surrogateescape").split("\0") if p]
+
+def commit_paths(root: Path, sha: str) -> list[str] | None:
+    """The paths one commit changes against its first parent (every path, for a root commit), rename
+    detection off; None when git cannot say. `diff-tree --root` needs no empty-tree id, so it holds in a
+    sha256 repository as in a sha1 one."""
+    try:
+        r = subprocess.run(["git", "diff-tree", "--root", "--no-commit-id", "-r", "--no-renames", "-z", "--name-only", sha],
+                           cwd=root, capture_output=True, env=git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode:
+        return None
+    return [p for p in r.stdout.decode("utf-8", "surrogateescape").split("\0") if p]
+
+def range_commits(root: Path, base: str, head: str, merges: bool = False) -> list[str] | None:
+    """The commits `head` has that `base` lacks, oldest first — the non-merge ones, or with `merges`
+    the merge commits; None when git cannot say."""
+    try:
+        r = subprocess.run(["git", "rev-list", "--reverse", "--merges" if merges else "--no-merges", f"{base}..{head}"],
+                           cwd=root, capture_output=True, text=True, env=git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.split() if r.returncode == 0 else None
+
+def ledger_only(root: Path, base: str, head: str, merge_base: bool = True) -> bool:
+    """True when a range is clerical — Rule-2's and Rule-3's ledger-only commits and nothing else.
+    `merge_base` (the gates, #191): every one of the range's own non-merge commits touches only
+    `<instance>/d-work/`, judged commit by commit, the same walk the fence then makes; a branch that
+    ever touched anything else — even reverted, or squashed into `main` since — is not ledger-only and
+    goes through the plan gate. Without it (Rule-12's suite skip, #155): the two-dot tree difference,
+    since what the suite tests is the tree. An empty or unreadable range, or an instance outside the
+    work tree, is never ledger-only."""
+    rel = instance_rel(root)
+    if not rel:
+        return False
+    inside = lambda paths: bool(paths) and all(p.startswith(f"{rel}/d-work/") for p in paths)
+    if not merge_base:
+        return inside(range_paths(root, base, head, merge_base=False))
+    commits = range_commits(root, base, head)
+    return bool(commits) and all(inside(commit_paths(root, c)) for c in commits)
+
 # ---- the host path and zone (Rule-1, d-work #175): where an instance keeps its host and operating
 # records, and which zone holds them. Instance data, read from the Operator's preferences (`host-path`,
 # `host-zone`) so hooks, CI and a fresh session all see the same value; `DYAD_HOST` / `DYAD_HOST_ZONE`

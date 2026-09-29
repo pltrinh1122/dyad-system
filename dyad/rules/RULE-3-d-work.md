@@ -100,7 +100,9 @@ Any other response leaves it incomplete, to be resumed later.
   the ledger on the base branch and requires it to be `open`, `planned` or `blocked` and to carry a
   `Y plan` disposition (the plan gate, E3). The phrase is a claim of work on that d-work,
   not a mention, in a commit message exactly as in a PR body — cross-reference other rows as plain
-  `#<id>` (#23).
+  `#<id>` (#23). A ledger-only range claims no d-work — it is clerical (Rule-2) — so the gate skips
+  it wherever it travels, on a branch as on `main`; the fence and the provenance guard judge each of
+  its commits as they would on `main` (#191).
 
 ## Mechanisms
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
@@ -109,8 +111,15 @@ as transaction guards (`package.py check --guards`); their workflow wrapper
 (`.github/workflows/dyad-d-work.yml`) is infra zone. Changing a guard is an agent-zone PR, changing
 the wrapper an infra-zone PR, each citing a Rule-3 d-work. The plan gate is enforced before a push
 by the kernel-only path (the PR guard over `origin/main..HEAD` with the commit messages as body);
-the wrapper corroborates on `main` only (#168). Rule-2 references `rows.py` by name; it
-does not own it.
+the wrapper corroborates on `main` only (#168). A range that touches only `<instance>/d-work/` is
+exempt from the plan gate (`prs.ledger_only`, #191): every one of its own non-merge commits touches
+only that path, read commit by commit with rename detection off, so a branch that ever touched
+anything else — a move into the ledger, a reverted edit, code squashed into `main` since — is not
+ledger-only. Before the exemption, a session fenced off a direct push to `main` (Rule-1, #23) moved
+uncited ledger commits around the hook, which skipped every guard. The exemption rests on `main`
+admitting the same commits, so the fence judges each commit of a ledger-only branch as it would on
+`main`, and each of its merge commits against both parents — a PR merge lands them where the fence's
+first-parent walk never looks. Rule-2 references `rows.py` by name; it does not own it.
 
 ## Completion counter-prompt (intent verification)
 - Done-`Y` is the Operator's verification that the original intent of the d-work was
@@ -226,6 +235,9 @@ an Operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34
 reply; see the same record, amendment #113. Incidents gains the periodic-exercise bullet
 2026-09-23 (d-work #137): the grouping-and-mitigation exercise run by hand in #116, #128 and #135
 becomes a play-book Rule-3 reads, parameterized by the ledger it hardens and idempotent on one
-that has not grown; see the same record, amendment #137.
+that has not grown; see the same record, amendment #137. Ledger and Mechanisms gain the plan
+gate's ledger-only exemption 2026-09-29 (d-work #191): the gate refused a clerical range, which
+pushed ledger commits around the hook and past every other guard; see the same record, amendment
+#191.
 
 Set: System Requirements.

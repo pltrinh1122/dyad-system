@@ -433,6 +433,7 @@ REFERENCES = [
     ("record.ledger->provenance", "record",     "ledger #",      record_ledger_world, "row",      "world"),
     ("craft_rule.text->provenance","craft_rule", "text",          craft_rule_ledger, "row",        "world"),
     ("bundle.component->craft",   "bundle",     "component",     None,              "craft",      "guard:infra/bundle.py"),
+    ("provenance.legacy->row",    "provenance", "provenance_legacy.local.txt", None, "row",        "guard:agent/provenance.py"),   # #191
 ]
 
 def craft_references_contrib(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple]]:
