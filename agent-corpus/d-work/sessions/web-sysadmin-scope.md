@@ -1,6 +1,6 @@
 session: web-sysadmin-scope
-seen: 2026-09-29T03:01:51+00:00
+seen: 2026-09-29T12:29:50+00:00
 root: /home/user/dyad-system
-rows: 152 161 166 178 180 81 99
+rows: 152 161 166 178 180 182 183 184 186 81 99
 files: #152 (`dyad/` (countersign-system): (new BUNDLE.md Files `.github/workflows/dyad-*.yml` `.gitignore` `CLAUDE.md`) `README.md` `crafts/REGISTRY.md` `crafts/countersign/**` `crafts/sysadmin/` `dyad/falsification/rules/rule-1-containment.md` `dyad/guards/infra/containment.py` `dyad/tests/guards/infra/test_containment.py` `preferences-corpus/PREFERENCES.md` agent-corpus/d-work/plans/152.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/148.md agent-corpus/d-work/provenance/149.md agent-corpus/d-work/provenance/150.md agent-corpus/d-work/provenance/151.md agent-corpus/d-work/provenance/152.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/148.md agent-corpus/d-work/rows/149.md agent-corpus/d-work/rows/150.md agent-corpus/d-work/rows/151.md agent-corpus/d-work/rows/152.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md as countersign-system craft crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md dyad-system files if install's instance is ledger of plan plans provenance registered roots rows seeded the touched tree §5)
-writer: 93173e2a19a3
+writer: ed933ac6c566
