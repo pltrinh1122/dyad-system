@@ -75,7 +75,7 @@ class PackageTests(livetest.LiveCase):
             self.assertIsInstance(mod.ENTITY, str); self.assertTrue(mod.FIELDS); self.assertTrue(callable(mod.check_package))
             self.assertEqual(tx, mod.TRANSACTION); self.assertEqual(tx, hasattr(mod, "check_transaction") and tx)
             self.assertTrue(callable(mod.describe), f"{rel}: no describe()")
-        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171)
+        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs", "provenance"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171); provenance: #191
         self.assertEqual(pkg.CONTRACT, dyadlib.CONTRACT)   # one contract definition, shared with the craft guard (#156)
         self.assertEqual(len({mod.ENTITY for *_, mod, _ in reg}), len(reg), "one ENTITY per guard")
     def test_list_prints_registry(self):
@@ -309,7 +309,7 @@ class PackageTests(livetest.LiveCase):
             git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", msg)
             return git("rev-parse", "HEAD").strip()
         git("checkout", "-q", "-B", "main")
-        rid = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan"], capture_output=True, text=True, env=env(), cwd=d).stdout.strip()
+        rid = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y"], capture_output=True, text=True, env=env(), cwd=d).stdout.strip()
         base = commit(f"ledger: open #{rid}")
         git("remote", "add", "origin", str(d)); git("fetch", "-q", "origin")   # so `check --guards` has an origin/main base
         git("checkout", "-q", "-b", "zone-span")
@@ -421,7 +421,7 @@ class PackageTests(livetest.LiveCase):
         self.addCleanup(shutil.rmtree, d, ignore_errors=True)
         py = [sys.executable, str(d / "dyad" / "scripts" / "package.py")]
         git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True).stdout
-        r = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan"], capture_output=True, text=True, env=env(), cwd=d)
+        r = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y"], capture_output=True, text=True, env=env(), cwd=d)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         rid = r.stdout.strip()
         self.assertTrue((d / "agent-corpus" / "d-work" / "rows" / f"{rid}.md").exists())
@@ -430,6 +430,15 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(g.returncode, 0, g.stdout + g.stderr)
         self.assertNotIn("FAIL", g.stdout)
         self.assertIn("ok   [guards] agent/references", g.stdout)
+        # #191: the pre-push path refuses a row pushed without the words that opened it
+        git("checkout", "-q", "-B", "main"); git("remote", "add", "origin", str(d)); git("fetch", "-q", "origin")
+        git("checkout", "-q", "-b", "gap")
+        row = d / "agent-corpus" / "d-work" / "rows" / f"{int(rid) + 1}.md"
+        row.write_text(f"id: {int(rid) + 1}\ntitle: t\nopened: 2026-09-29\nstate: open\ndisposed: \nrefs: \n")
+        git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "ledger: a row by hand")
+        g = subprocess.run(py + ["check", "--guards"], capture_output=True, text=True, env=env(), cwd=d)
+        self.assertNotEqual(g.returncode, 0, g.stdout)
+        self.assertIn("FAIL [guards] agent/provenance", g.stdout); self.assertIn("its record gains no entry", g.stdout)
         c = subprocess.run(py + ["check"], capture_output=True, text=True, env=env(), cwd=d)
         self.assertEqual(c.returncode, 0, c.stdout + c.stderr)
         self.assertNotIn("FAIL", c.stdout)
@@ -510,14 +519,14 @@ class PackageTests(livetest.LiveCase):
     # d-work #140: `dwork new` may create a row in any dyadlib.NEW_STATES state
     def test_dwork_new_defaults_to_open(self):
         d, rows = self.dwork_repo()
-        r = self.dwork_new(d, "three", "#1")
+        r = self.dwork_new(d, "three", "#1", "--prompt", "open three")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "3")
         text = rows.joinpath("3.md").read_text()
         self.assertIn("state: open\n", text); self.assertIn("refs: #1\n", text)
     def test_dwork_new_backlog_flag(self):
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         d, rows = self.dwork_repo()
-        r = self.dwork_new(d, "four", "--backlog", "-d", "Y backlog, on #2 Done", "#2")
+        r = self.dwork_new(d, "four", "--backlog", "-d", "Y backlog, on #2 Done", "--said", "Y", "#2")
         self.assertEqual(r.returncode, 0, r.stderr)
         text = rows.joinpath("3.md").read_text()
         self.assertIn("state: backlog\n", text); self.assertIn("refs: #2\n", text)
@@ -530,11 +539,115 @@ class PackageTests(livetest.LiveCase):
             with self.subTest(args=r.args[3:]):
                 self.assertNotEqual(r.returncode, 0); self.assertIn("contains ';'", r.stderr)
         self.assertIn("state: open\n", rows.joinpath("1.md").read_text()); self.assertFalse(rows.joinpath("3.md").exists())
-    def test_dwork_new_refuses_flag_as_title(self):
+    def test_dwork_new_never_takes_a_flag_as_title(self):
+        """#133 wrote `--backlog` as a title; #191 parses flags by position, so a flag before the title is a
+        flag, and a flag before the verb is refused rather than read as the title (the title is immutable)."""
         d, rows = self.dwork_repo()
-        r = self.dwork_new(d, "--backlog", "four")
-        self.assertNotEqual(r.returncode, 0); self.assertIn("begins with '-'", r.stderr)
-        self.assertFalse(rows.joinpath("3.md").exists())
+        r = self.dwork_new(d, "--backlog", "four", "-d", "Y backlog", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("title: four\n", rows.joinpath("3.md").read_text()); self.assertIn("state: backlog\n", rows.joinpath("3.md").read_text())
+        import os
+        env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))
+        r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "dwork", "--prompt", "the words", "new", "five"],
+                           cwd=d, env=env, capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0); self.assertIn("the verb first", r.stderr)
+        self.assertFalse(rows.joinpath("4.md").exists())
+    # d-work #191: the row and its provenance record are written in one step, or not at all
+    def test_dwork_writes_the_record_with_the_row(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        words = d / "p.txt"; words.write_text("do it\n```\nfenced\n```\n")
+        r = self.dwork_new(d, "three", "#1", "--prompt-file", str(words))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("prompt", "do it\n```\nfenced\n```")])   # verbatim, fenced as data
+        r = self.dwork_state(d, "3", "planned", "-d", "Y plan", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["n"], x["kind"], x["note"], x["text"]) for x in e][1], ("2", "disposition", "Y plan", "Y"))
+        row = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual(pv.check_record(rec / "3.md", row=row), [])                        # property 5 holds by construction
+        r = self.dwork_new(d, "four", "--backlog", "-d", "Y backlog, from #3", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([x["kind"] for x in pv.parse(rec.joinpath("4.md").read_text())], ["disposition"])
+        r = self.dwork_state(d, "1", "open", "--prompt", "go on with one")                   # a prompt received on an existing row
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([x["kind"] for x in pv.parse(rec.joinpath("1.md").read_text())], ["prompt"])
+    def test_dwork_refuses_a_row_or_a_disposition_without_its_words(self):
+        d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
+        cases = [(self.dwork_new, ("three",), "opened by the Operator's words"),
+                 (self.dwork_new, ("three", "-d", "Y open"), "--said"),
+                 (self.dwork_new, ("three", "--backlog", "--prompt", "p"), "opens a row by disposition"),
+                 (self.dwork_new, ("three", "--said", "Y"), "name it in the row with -d"),
+                 (self.dwork_new, ("three", "--said", "Y", "--said-file", "x", "-d", "Y"), "not both"),
+                 (self.dwork_state, ("1", "planned", "-d", "Y plan"), "--said"),
+                 (self.dwork_state, ("1", "planned", "-d"), "needs a value"),
+                 (self.dwork_state, ("1", "planned", "-d", "Y plan", "--said", "  "), "empty"),
+                 (self.dwork_new, ("three", "--prompt", "real words", "-d", "Y open", "--said", " "), "empty"),   # nothing half-written
+                 (self.dwork_new, ("three", "--prompt", "```\n~~~\n"), "no fence can hold it")]
+        for fn, args, msg in cases:
+            with self.subTest(args=args):
+                r = fn(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
+        self.assertFalse(rows.joinpath("3.md").exists()); self.assertFalse((rows.parent / "provenance").exists())
+    def test_dwork_backlog_opens_only_on_a_prompt(self):
+        d, rows = self.dwork_repo()
+        rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        r = self.dwork_state(d, "5", "open")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("opens on the Operator's prompt", r.stderr)
+        self.assertIn("state: backlog", rows.joinpath("5.md").read_text())
+        r = self.dwork_state(d, "5", "open", "--prompt", "work five")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: open", rows.joinpath("5.md").read_text())
+    def test_dwork_record_entries_are_verbatim_and_complete(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        f = d / "w.txt"; f.write_bytes("  indented\r\n\r\n  ```\n  fenced, indented: data\n  ```\n~~~ at column 0\nend\r\n".encode())
+        r = self.dwork_new(d, "three", "--prompt-file", str(f), "-d", "Y open, intake", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["note"]) for x in e], [("prompt", ""), ("disposition", "Y open, intake")])
+        self.assertTrue(e[0]["text"].startswith("  indented"))            # leading whitespace kept
+        self.assertIn("  ```", e[0]["text"]); self.assertIn("~~~ at column 0", e[0]["text"])   # an indented fence is data
+        self.assertTrue(e[0]["text"].endswith("end"))                    # one final line ending dropped, no more
+        rows.joinpath("3.md").unlink()                                   # an orphan record for the next id
+        r = self.dwork_new(d, "again", "--prompt", "p")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("already exists for the new id", r.stderr)
+        g = d / "latin1.txt"; g.write_bytes("caf\xe9".encode("latin-1"))
+        r = self.dwork_new(d, "four", "--prompt-file", str(g))
+        self.assertNotEqual(r.returncode, 0); self.assertIn("refused: --prompt-file", r.stderr); self.assertNotIn("Traceback", r.stderr)
+    def test_dwork_refuses_what_it_would_drop_or_forge(self):
+        """#191: a line break in -d forges structure in the row and the record heading; an unknown flag,
+        a stray argument or a non-numeric id is refused before any write, never silently dropped."""
+        d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
+        cases = [(self.dwork_state, ("1", "planned", "-d", "Y plan\n## 9 prompt 2026-01-01", "--said", "Y"), "line break"),
+                 (self.dwork_new, ("three", "--prompt", "p", "--promt-file", "x"), "does not take --promt-file"),
+                 (self.dwork_new, ("three", "#1", "extra", "--prompt", "p"), "unexpected argument"),
+                 (self.dwork_new, ("three", "#1", "-r", "#2", "--prompt", "p"), "refs given twice"),
+                 (self.dwork_new, ("three", "--relayed-via", "peer", "-d", "Y", "--said", "Y"), "give the prompt too"),
+                 (self.dwork_state, ("x", "open"), "is not a number")]
+        for fn, args, msg in cases:
+            with self.subTest(args=args):
+                r = fn(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
+        self.assertFalse(rows.joinpath("3.md").exists()); self.assertFalse((rows.parent / "provenance").exists())
+    def test_dwork_new_takes_refs_by_flag_and_notes_a_relayed_prompt(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo()
+        f = d / "p.txt"; f.write_text("keep the blank line\n\n")
+        r = self.dwork_new(d, "three", "-r", "#1", "--prompt-file", str(f), "--relayed-via", "peer-session")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("refs: #1\n", rows.joinpath("3.md").read_text())
+        e = pv.parse((rows.parent / "provenance" / "3.md").read_text())[0]
+        self.assertEqual((e["note"], e["text"]), ("relayed via peer-session", "keep the blank line\n"))   # one line ending dropped, not two
+    def test_dwork_flag_values_are_never_positionals(self):
+        pkg = load_package()
+        self.assertEqual(pkg.dwork_args(["new", "t", "-d", "#1", "#2", "--said", "Y", "--backlog"]),
+                         (["new", "t", "#2"], {"-d": "#1", "--said": "Y"}, {"--backlog"}))   # -d's value is not the refs
     # F3, d-work #32: cmd_dwork's fetch of origin/main used to fail silently; it now warns loudly
     # and states that allocation fell back to local ids, before still allocating from what it has.
     def test_dwork_new_warns_loudly_when_origin_main_is_unreadable(self):
@@ -551,7 +664,7 @@ class PackageTests(livetest.LiveCase):
         with mock.patch.dict(os.environ, env), mock.patch.object(dyadlib, "read_rows", side_effect=fake):
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
-                rc = pkg.cmd_dwork(["new", "three", "#1"])
+                rc = pkg.cmd_dwork(["new", "three", "#1", "--prompt", "open three"])
         self.assertEqual(rc, 0)
         self.assertIn("warning: could not read origin/main's rows", stderr.getvalue())
         self.assertIn("local ids only", stderr.getvalue())
@@ -570,7 +683,7 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
     def test_dwork_state_accepts_open_to_planned(self):
         d, rows = self.dwork_repo()
-        r = self.dwork_state(d, "1", "planned", "-d", "Y plan")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("1: planned", r.stdout)
         text = rows.joinpath("1.md").read_text()
         self.assertIn("state: planned", text); self.assertIn("Y plan", text)

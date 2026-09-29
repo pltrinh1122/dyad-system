@@ -43,10 +43,15 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 export one as <craft>-<version>.tar.gz, install one from an archive or
                                 a tree (writes crafts/<craft>/ and its crafts/REGISTRY.md row only)
   dyad ledger             render <instance>/d-work/LEDGER.md from rows/ (Rule-16)
-  dyad dwork new <title> [refs] [--backlog] [-d text]
+  dyad dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] <p> | --said[-file] <s>)
                                 allocate the next id, write its row file (state open, or
-                                backlog with --backlog; -d records the creating disposition)
-  dyad dwork state <id> <state> [-d text] [-r refs]  change state / append disposition
+                                backlog with --backlog; -d records the creating disposition) and
+                                its provenance record: the Operator's words verbatim, a `prompt`
+                                entry from --prompt, a `disposition` entry from --said (Rule-7).
+                                -d needs --said; --backlog needs -d (Rule-3: a disposition opens it)
+  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p> [--relayed-via <session>]] [-r refs]
+                                change state / append a disposition to the row and its words to
+                                the record in one step; --prompt records a prompt received (#191)
   dyad dwork list [--state <s>] [--craft <c>]
                                 rows from the row store (Rule-16), one `#<id> [<state>] <title>`
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
@@ -204,14 +209,11 @@ def ledger_only_range(base, head):
     """True when every path `base..head` touches lives under `<instance>/d-work/` — a range that
     cannot change a suite's outcome. The prefix, never the file suffix: a `.py` filter would have
     let #137's markdown run-book through, which broke the core suite by falsifying a pinned count
-    (d-work #155, plan's revision table). Unknown range → False, so the suite runs."""
-    inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
-    try:
-        out = subprocess.check_output(["git", "diff", "--name-only", f"{base}..{head}"], cwd=REPO, text=True)
-    except subprocess.CalledProcessError:
-        return False
-    paths = out.split()
-    return bool(paths) and all(p.startswith(f"{inst}/d-work/") for p in paths)
+    (d-work #155, plan's revision table). Unknown range → False, so the suite runs. Two-dot, as
+    before; rename detection off (`dyadlib.ledger_only`, #191), so a move of code into the ledger
+    no longer skips the suite."""
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    return dyadlib.ledger_only(REPO, base, head, merge_base=False)
 
 def suite_env() -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
@@ -538,6 +540,79 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
+DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft")
+DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
+    "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via"}, {"--backlog"}, 3),
+    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via"}, set(), 3),
+    "list": ({"--state", "--craft"}, set(), 1)}
+
+def dwork_args(a):
+    """`dwork` argv as (positionals, {flag: value}, {bare flags}). A flag's value is never a
+    positional, whatever it spells — the position, not a second `index()` lookup, decides (#133)."""
+    pos, vals, bare, i = [], {}, set(), 0
+    while i < len(a):
+        x = a[i]
+        if x in DWORK_VALUE_FLAGS:
+            if i + 1 >= len(a):
+                sys.exit(f"refused: {x} needs a value")
+            vals[x] = a[i + 1]; i += 2; continue
+        if x.startswith("-") and len(x) > 1:
+            bare.add(x)
+        else:
+            pos.append(x)
+        i += 1
+    return pos, vals, bare
+
+def words(vals, flag):
+    """The Operator's words for `--<flag>` / `--<flag>-file`, or None. A file is read as UTF-8 with its
+    line endings kept (`newline=""`), and only one final line ending is dropped. Both given is refused:
+    one entry, one source."""
+    inline, path = vals.get(f"--{flag}"), vals.get(f"--{flag}-file")
+    if inline is not None and path is not None:
+        sys.exit(f"refused: give --{flag} or --{flag}-file, not both")
+    if path is not None:
+        try:
+            with open(path, encoding="utf-8", newline="") as f:
+                text = f.read()
+        except (OSError, UnicodeDecodeError) as e:
+            sys.exit(f"refused: --{flag}-file {path}: {e}")
+        for end in ("\r\n", "\n", "\r"):
+            if text.endswith(end):
+                return text[:-len(end)]
+        return text
+    return inline
+
+def fence_for(kind, text):
+    """The fence a record entry holds `text` in, or a refusal. `provenance.parse` opens and closes a
+    fence only at column 0, so a column-0 ``` or ~~~ in the text is what rules a fence out; an
+    indented one is data. Text that opens column-0 lines with both, or holds nothing, is refused."""
+    if not text.strip():
+        sys.exit(f"refused: an empty {kind} (Rule-7 property 1: a fenced body)")
+    starts = {l[:3] for l in text.splitlines()}
+    fence = next((f for f in ("```", "~~~") if f not in starts), None)
+    if fence is None:
+        sys.exit(f"refused: the {kind} opens lines with both ``` and ~~~; no fence can hold it as data")
+    return fence
+
+def append_provenance(rid, entries, today, fresh=False):
+    """Append entries [(kind, text, note)] to `<instance>/d-work/provenance/<rid>.md` (Rule-7 property
+    1), creating the record when absent. Every entry's fence is chosen before this is called; with
+    `fresh` an existing record for a newly allocated id is refused — it would be another row's words."""
+    import dyadlib
+    pv = dyadlib.load_guard("agent", "provenance")
+    path = pv.store(REPO) / f"{rid}.md"
+    if fresh and path.exists():
+        sys.exit(f"refused: {path} already exists for the new id #{rid}; it holds words no row owns — resolve it first")
+    head = path.read_text(encoding="utf-8") if path.is_file() else f"# Provenance #{rid}\n" + (
+        f"\nsession: {os.environ['DYAD_SESSION']}\n" if os.environ.get("DYAD_SESSION") else "")
+    n, body = len(pv.parse(head)), head.rstrip("\n") + "\n"
+    for kind, text, note in entries:
+        n += 1; fence = fence_for(kind, text)
+        body += f"\n## {n} {kind} {today}{' ' + note if note else ''}\n\n{fence}\n{text}\n{fence}\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
     try:
@@ -546,14 +621,46 @@ def cmd_dwork(a):
         sys.exit(f"refused: {e}")
     rows = {r.id: r for r in dyadlib.read_rows(REPO)}
     today = datetime.date.today().isoformat()
-    if "-d" in a and ";" in (a[a.index("-d") + 1] if a.index("-d") + 1 < len(a) else ""):
+    pos, vals, bare = dwork_args(a)
+    verb = pos[0] if pos else None
+    if verb in DWORK_VERB_FLAGS:
+        takes, flags, most = DWORK_VERB_FLAGS[verb]
+        extra = sorted((set(vals) - takes) | (bare - flags))
+        if extra:
+            sys.exit(f"refused: dwork {verb} does not take {' '.join(extra)}")
+        if len(pos) > most:
+            sys.exit(f"refused: dwork {verb}: unexpected argument(s) {' '.join(pos[most:])!r}")
+    d = vals.get("-d")
+    if d is not None and ";" in d:
         # d-work #133: `;` joins `disposed` entries (Rule-3 Ledger); inside the text it splits one
         # disposition in two (#67, #100). The Operator's words go verbatim to provenance (Rule-7).
         sys.exit("refused: -d text contains ';', which separates disposed entries; use ',' or '—'")
-    if a and a[0] == "new" and len(a) >= 2:
-        if a[1].startswith("-"):
-            # d-work #133: the title is the first argument; a flag there became rows #129-#134's title
-            sys.exit(f"refused: title {a[1]!r} begins with '-'; usage: dwork new <title> [refs] [--backlog] [-d text]")
+    for flag in ("-d", "-r", "--relayed-via"):
+        if any(c in vals.get(flag, "") for c in "\r\n"):
+            # #191: -d lands unfenced in the row and in a record heading, where a line break forges structure
+            sys.exit(f"refused: {flag} text holds a line break; it is one line of a row or a heading")
+    prompt, said = words(vals, "prompt"), words(vals, "said")
+    if d is not None and said is None:
+        # d-work #191: a disposition written to the row without its words is property 5's gap at birth
+        sys.exit("refused: -d records a disposition; give its words verbatim with --said or --said-file (Rule-7)")
+    if said is not None and d is None:
+        sys.exit("refused: --said records a disposition's words; name it in the row with -d (Rule-3 Ledger)")
+    if "--relayed-via" in vals and prompt is None:
+        sys.exit("refused: --relayed-via notes a relayed prompt (Rule-7 property 4); give the prompt too")
+    relayed = f"relayed via {vals['--relayed-via']}" if "--relayed-via" in vals else ""
+    entries = ([("prompt", prompt, relayed)] if prompt is not None else []) + ([("disposition", said, d)] if said is not None else [])
+    for kind, text, _ in entries:
+        fence_for(kind, text)                  # every refusal before the first write (#191): nothing half-written
+    if verb == "new" and len(pos) >= 2:
+        title = pos[1]
+        if a[0] != "new" or title.startswith("-"):
+            # d-work #133: the title is the first argument after `new`; a flag there became rows #129-#134's title
+            sys.exit(f"refused: usage: dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] … | --said[-file] …), the verb first")
+        backlog = "--backlog" in bare
+        if backlog and d is None:
+            sys.exit("refused: --backlog opens a row by disposition (Rule-3); give -d and --said")
+        if not entries:
+            sys.exit("refused: a row is opened by the Operator's words; give --prompt[-file] or -d with --said[-file] (Rule-7, #191)")
         try:
             subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=REPO, check=False, timeout=30)
             remote = {r.id for r in dyadlib.read_rows(REPO, at="origin/main")}
@@ -562,28 +669,34 @@ def cmd_dwork(a):
                   f"only — a concurrent session's unpushed id may collide (d-work #32 F3)", file=sys.stderr)
             remote = set()
         rid = max(set(rows) | remote, default=0) + 1
-        state = "backlog" if "--backlog" in a else "open"          # d-work #140: dyadlib.NEW_STATES
-        disposed = f"{today} {a[a.index('-d') + 1]}" if "-d" in a else ""
-        pos = [x for x in a[2:] if not x.startswith("-") and (a.index(x) < 2 or a[a.index(x) - 1] != "-d")]
-        r = dyadlib.Row(rid, a[1], today, state, disposed, pos[0] if pos else "")
+        state = "backlog" if backlog else "open"          # d-work #140: dyadlib.NEW_STATES
+        disposed = f"{today} {d}" if d is not None else ""
+        if len(pos) > 2 and "-r" in vals:
+            sys.exit("refused: refs given twice, as an argument and with -r")
+        r = dyadlib.Row(rid, title, today, state, disposed, vals.get("-r", pos[2] if len(pos) > 2 else ""))
+        append_provenance(rid, entries, today, fresh=True)
         f = dyadlib.rows_dir(REPO) / f"{rid}.md"; f.write_text(dyadlib.format_row_file(r))
         print(f"{rid}"); return 0
-    if a and a[0] == "state" and len(a) >= 3:
-        rid, state = int(a[1]), a[2]
+    if verb == "state" and len(pos) >= 3:
+        if not pos[1].isdigit():
+            sys.exit(f"refused: id {pos[1]!r} is not a number")
+        rid, state = int(pos[1]), pos[2]
         if rid not in rows: sys.exit(f"no row {rid}")
         r = rows[rid]; disposed, refs = r.disposed, r.refs
         if state not in dyadlib.STATES:
             sys.exit(f"no such state {state!r}; states: {' '.join(sorted(dyadlib.STATES))}")
         if not dyadlib.allowed(r.state, state):
             sys.exit(f"transition {r.state}\u2192{state} not in the table (Rule-16); allowed from {r.state}: {' '.join(sorted(dyadlib.TRANSITIONS[r.state])) or 'none'}")
-        if "-d" in a: disposed = (disposed + "; " if disposed else "") + f"{today} " + a[a.index("-d") + 1]
-        if "-r" in a: refs = a[a.index("-r") + 1]
+        if r.state == "backlog" and state == "open" and prompt is None:
+            sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
+        if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
+        if "-r" in vals: refs = vals["-r"]
+        if entries: append_provenance(rid, entries, today)
         r = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs)
         (dyadlib.rows_dir(REPO) / f"{rid}.md").write_text(dyadlib.format_row_file(r))
         print(f"{rid}: {state}"); return 0
-    if a and a[0] == "list":
-        state = a[a.index("--state") + 1] if "--state" in a else None
-        craft = a[a.index("--craft") + 1] if "--craft" in a else None
+    if verb == "list":
+        state, craft = vals.get("--state"), vals.get("--craft")
         if state is not None and state not in dyadlib.STATES:
             sys.exit(f"no such state {state!r}; states: {' '.join(sorted(dyadlib.STATES))}")
         out = [r for r in sorted(rows.values(), key=lambda r: r.id)

@@ -1,0 +1,30 @@
+# Rows that predate Rule-7's enforcement (d-work #191): each has no provenance record, and the words
+# that opened it were never written, so none can be (Rule-7 property 3). Read by dyad/guards/agent/provenance.py;
+# instance data, never the core's (Rule-11 property 1). One `<id> <n> <reason>` per line: n is how many of the
+# row's dispositions predate enforcement with no words written. A row added here is a
+# decision, made in a reviewed agent-zone PR, never by a ledger-only commit.
+
+38 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+70 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+84 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+85 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+86 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+87 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+88 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+89 1 records one disposition (Y backlog, audit sweep #83) whose words were never written to a record
+129 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+130 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+131 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+132 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+134 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+136 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+162 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+163 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+164 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+165 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+170 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+171 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+172 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+173 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+177 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write
+181 0 backlog row with an empty disposed column: no opening disposition was recorded, so no words exist to write

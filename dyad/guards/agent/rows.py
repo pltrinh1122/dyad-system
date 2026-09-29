@@ -14,7 +14,10 @@ LEDGER.md is untracked (d-work #111) and is not diffed. This full fence applies 
 on a branch `check_transaction` instead runs `check_id_collisions` (d-work #32 F2): a row id this
 range adds or modifies must not already exist at the base under a *different* title — the
 signature of two sessions racing the allocator — leaving the append-only rules themselves to this
-same fence once the branch reaches `main`, and the plan gate to `prs.py`. On both, every `disposed`
+same fence once the branch reaches `main`, and the plan gate to `prs.py`. That hand-off held only for
+a branch replayed onto `main`: a PR merge (`--no-ff`) lands commits this fence, walking
+`--first-parent`, never visits. So a ledger-only branch, which the plan gate now skips (#191), is
+fenced here, each of its own commits as `main` would fence it (`check_ledger_branch`). On both, every `disposed`
 entry a range *adds* must have the entry shape `<YYYY-MM-DD> <Y|N>[ <text>]` with balanced
 parentheses (`check_disposed`, d-work #133): a `;` inside disposition text splits one entry into
 two, and nothing judged the shape before (#67, #100). Entries already present are never re-judged. The append-only rule of the run-book event store
@@ -61,8 +64,8 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             r = dyadlib.parse_row_file(p.read_text())
         except ValueError as e:
             fails.append(f"{rel}: {e}"); continue
-        if r.id != int(p.stem):
-            fails.append(f"{rel}: id {r.id} differs from the file name")
+        if p.stem != str(r.id):
+            fails.append(f"{rel}: id {r.id} differs from the file name (the name is exactly `<id>.md`, #191)")
         if r.state not in dyadlib.STATES:
             fails.append(f"{rel}: state '{r.state}' not one of {' '.join(sorted(dyadlib.STATES))}")
         if r.id in seen:
@@ -92,7 +95,7 @@ def check_disposed(root: Path, base: str, head: str) -> list[str]:
     """`disposed_problems` over every row file base..head changes, as a whole diff (a branch)."""
     prefix = f"{os.environ.get('DYAD_INSTANCE', 'agent-corpus')}/d-work/rows/"
     try:
-        paths = git("diff", "--name-only", "--diff-filter=AM", f"{base}..{head}", "--", prefix, cwd=root).split()
+        paths = git("diff", "--no-renames", "--name-only", "--diff-filter=AM", f"{base}..{head}", "--", prefix, cwd=root).split()
     except subprocess.CalledProcessError:
         return []
     fails = []
@@ -125,8 +128,14 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
         if st.startswith("D"):
             fails.append(f"FAIL [main-fence]: {label} deletes row file {path}"); continue
         if st.startswith("M"):
-            before = dyadlib.parse_row_file(git("show", f"{par}:{path}", cwd=cwd))
-            after = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
+            try:
+                before = dyadlib.parse_row_file(git("show", f"{par}:{path}", cwd=cwd))
+            except ValueError:
+                continue    # a repair of a row that did not parse: nothing to compare against (the package check judges the result)
+            try:
+                after = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
+            except ValueError:
+                fails.append(f"FAIL [main-fence]: {label} leaves row file {path} unparseable"); continue
             if before.id != after.id or before.title != after.title:
                 fails.append(f"FAIL [main-fence]: {label} changes id or title of row file {path}"); continue
             if not dyadlib.allowed(before.state, after.state):
@@ -134,7 +143,10 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
             fails += disposed_problems(path, before.disposed, after.disposed, label)
         elif st.startswith("A"):
-            new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
+            try:
+                new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
+            except ValueError:
+                fails.append(f"FAIL [main-fence]: {label} adds row file {path} that does not parse"); continue
             if new.state not in dyadlib.NEW_STATES:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} in state {new.state} (not one of {' '.join(sorted(dyadlib.NEW_STATES))})")
             fails += disposed_problems(path, "", new.disposed, label)
@@ -155,8 +167,47 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
     independently allocating the same id for different work (d-work #32) — leaving everything
     else (the append-only rules) to this same fence once the branch reaches `main`."""
     if branch(root) != "main":
-        return check_id_collisions(root, base, head) + check_disposed(root, base, head)
+        # a ledger-only branch gets the fence per commit, which already judges each added `disposed` entry
+        whole = check_ledger_branch if dyadlib.ledger_only(root, base, head) else check_disposed
+        return check_id_collisions(root, base, head) + whole(root, base, head)
     return check_range(base, head, cwd=root)
+
+def check_ledger_branch(root: Path, base: str, head: str) -> list[str]:
+    """A ledger-only branch skips the plan gate (Rule-3, #191) because `main` would admit the same
+    commits — so it gets what `main` gives them: the fence, per commit, over the branch's own
+    non-merge commits. Without it a PR merge (`--no-ff`) lands commits the fence, walking
+    `--first-parent`, never visits: a row regressed, deleted or retitled on a branch. A merge commit
+    on the branch (origin/main brought in) is judged too, against both its parents, so a regression
+    made while resolving it is not hidden in the one commit the per-commit walk skips."""
+    rel = dyadlib.instance_rel(root) or os.environ.get("DYAD_INSTANCE", "agent-corpus")
+    fails = []
+    for sha in dyadlib.range_commits(root, base, head) or []:
+        fails += check_commit(sha, root, rel)
+    for sha in dyadlib.range_commits(root, base, head, merges=True) or []:
+        fails += check_merge(sha, root, rel)
+    return fails
+
+def check_merge(sha: str, cwd, instance: str) -> list[str]:
+    """Each row file of a merge commit against each parent: present in a parent means present here,
+    id and title unchanged, state equal or a legal transition (Rule-16)."""
+    label, prefix, fails = sha[:9], f"{instance}/d-work/rows/", []
+    parents = git("rev-list", "--parents", "-n", "1", sha, cwd=cwd).split()[1:]
+    for par in parents:
+        for st, path in (l.split("\t", 1) for l in git("diff", "--no-renames", "--name-status", par, sha, "--", prefix, cwd=cwd).splitlines() if "\t" in l):
+            if st.startswith("D"):
+                fails.append(f"FAIL [main-fence]: merge {label} drops row file {path} that parent {par[:9]} has"); continue
+            if not st.startswith("M"):
+                continue
+            try:
+                before = dyadlib.parse_row_file(git("show", f"{par}:{path}", cwd=cwd))
+                after = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
+            except ValueError:
+                continue
+            if before.id != after.id or before.title != after.title:
+                fails.append(f"FAIL [main-fence]: merge {label} changes id or title of row file {path}")
+            elif before.state != after.state and not dyadlib.allowed(before.state, after.state):
+                fails.append(f"FAIL [main-fence]: merge {label} row file {path} state regresses {before.state}\u2192{after.state} against parent {par[:9]}")
+    return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
     """On a branch: a row file this range adds or modifies must not name an id that already
@@ -167,7 +218,7 @@ def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
     instance = os.environ.get("DYAD_INSTANCE", "agent-corpus")
     prefix = f"{instance}/d-work/rows/"
     try:
-        paths = git("diff", "--name-only", f"{base}..{head}", "--", prefix, cwd=root).split()
+        paths = git("diff", "--no-renames", "--name-only", f"{base}..{head}", "--", prefix, cwd=root).split()
     except subprocess.CalledProcessError:
         return []
     fails = []

@@ -183,3 +183,27 @@ its own file. **3–20** the bullet's one package path (`dyad/playbooks/incident
 Coherent, orthogonal.
 
 Disposition: see ledger #137.
+
+## Amendment — d-work #191 (2026-09-29, the plan gate exempts a ledger-only range)
+Ledger and Mechanisms gain one sentence each: a range that touches only `<instance>/d-work/` claims no
+d-work, so the plan gate (`prs.py`) skips it (`prs.ledger_only`, three-dot, so paths `main` gained after
+the branch point never count as the branch's).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | The gate is harmless on a ledger-only branch. | Refuted | It refused every uncited ledger commit, and a commit opening or planning a row can cite nothing (no `Y plan` exists yet). A session fenced off `main` (Rule-1, #23) then pushed around the hook — #204, #208–#210, and #207, which could have cited its planned row — and the hook it skipped holds every guard. The gate was causing the bypass it exists to prevent. |
+| 2 | The exemption lets unplanned work in. | Refuted | A ledger-only range cannot change code, a Rule or a preference; Rule-2 already classes it clerical, and on `main` the same commit passes the fence with no gate at all. Any other path in the range re-arms the gate. |
+| 3 | A plan-`Y` could be forged in a row by a ledger-only range and then cited. | Survives, unchanged | The same row edit pushed directly to `main` was always admitted by the fence; forging a disposition is self-ratification (Rule-2). Rule-7's per-commit check now requires a record entry with every `disposed` entry, so a forgery must also forge the Operator's words — a second act, in a store the Operator reads. |
+| 4 | A two-dot range judges a stale branch as touching code. | Confirmed | `ledger_only` diffs the merge base to head. |
+| 5 | `git diff --name-only` lists every path a range touched. | Refuted by review | Rename detection lists only a move's destination, so a `git mv` of code into `<instance>/d-work/` read as ledger-only and skipped the gate — a code deletion with no plan. Survivor: `dyadlib.range_paths`, `--no-renames -z`, for the gate and for Rule-12's suite skip (which had the same hole since #155). |
+| 6 | "`main` would admit the same commits" holds for a branch merged by PR. | Refuted by review | The fence walks `--first-parent` and skips merges, so a ledger-only branch merged `--no-ff` landed commits it never saw: a row regressed `done` → `planned`, deleted or retitled on the branch passed every guard. Survivor: the fence judges each commit of a ledger-only branch as it would on `main` (`rows.check_ledger_branch`). |
+| 7 | The net diff decides whether a branch is ledger-only. | Refuted by review, round 2 | A branch that edited code and reverted it, or whose code was squashed into `main`, has a ledger-only net diff; the gate skipped it while the fence, walking commits, refused its code commit — and a branch citing a planned d-work was stuck. Survivor: ledger-only is decided commit by commit, the same walk the fence makes; such a branch goes through the plan gate. |
+| 8 | Merge commits on a ledger-only branch need no fence. | Refuted by review, round 2 | A row kept at `planned` while resolving a merge of a `main` that had it `done` regressed and passed. Survivor: each merge commit's rows are judged against both parents (no drop, no retitle, no illegal transition). |
+
+Pairwise: Rule-7's record, amendment #191, carries the table for this d-work; for Rule-3 the change is one
+exemption inside its own mechanism. **3–1**: no zone moves; the containment guard still judges the range.
+**3–2**: the exemption's ground is Rule-2's own "not ratification" list. **3–7**: Rule-7's transaction check
+is what makes the exempted range safe. **3–16**: the transitions are untouched; the fence now also runs, per commit, on a ledger-only branch,
+enforcing the table Rule-16 owns where it was not reached before. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #191.
