@@ -14,7 +14,10 @@ LEDGER.md is untracked (d-work #111) and is not diffed. This full fence applies 
 on a branch `check_transaction` instead runs `check_id_collisions` (d-work #32 F2): a row id this
 range adds or modifies must not already exist at the base under a *different* title — the
 signature of two sessions racing the allocator — leaving the append-only rules themselves to this
-same fence once the branch reaches `main`, and the plan gate to `prs.py`. The append-only rule of the run-book event store
+same fence once the branch reaches `main`, and the plan gate to `prs.py`. On both, every `disposed`
+entry a range *adds* must have the entry shape `<YYYY-MM-DD> <Y|N>[ <text>]` with balanced
+parentheses (`check_disposed`, d-work #133): a `;` inside disposition text splits one entry into
+two, and nothing judged the shape before (#67, #100). Entries already present are never re-judged. The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
   rows.py <before> <after>          the main fence over a pushed range (rows and events)
@@ -22,7 +25,7 @@ the CLI below runs both when that guard is installed, as the former `main_fence.
 import sys
 if sys.version_info < (3, 12):
     sys.exit("rows.py: Python 3.12+ required")
-import os, subprocess
+import os, re, subprocess
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -31,6 +34,7 @@ ENTITY, CORPUS, TRANSACTION = "row", "agent", True
 NAME, OWNER = "d-work row file", "Rule-3 (content), Rule-16 (store)"
 FIELDS = dyadlib.FIELDS
 INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]   # crafts/syseng/rules/invariants.md
+ENTRY = re.compile(r"\d{4}-\d{2}-\d{2} [YN](?: |$)")   # Rule-3 Ledger: `<date> <Y|N> <plan|done|merge #n|reason>`
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 def git(*a, cwd, stderr=None): return subprocess.check_output(["git", *a], cwd=cwd, text=True, stderr=stderr)
@@ -71,6 +75,41 @@ def summary(root: Path | None = None) -> str:
     d = dyadlib.rows_dir(root)
     return f"{sum(1 for p in d.glob('*.md') if p.stem.isdigit()) if d.is_dir() else 0} rows"
 
+# ---- disposed-entry shape (d-work #133)
+def entries(disposed: str) -> list[str]:
+    return [e.strip() for e in disposed.split(";") if e.strip()]
+
+def disposed_problems(path: str, before: str, after: str, label: str) -> list[str]:
+    """Every entry `after` holds beyond `before`'s must be one well-shaped entry: a `;` inside a
+    disposition's text leaves a fragment (`falsify extensibility first)`, #100) that fails here."""
+    old = entries(before); new = entries(after)
+    added = new[len(old):] if new[:len(old)] == old else [e for e in new if e not in old]
+    return [f"FAIL [disposed]: {label} {path} adds entry {e!r}: not `<YYYY-MM-DD> <Y|N> <text>` with balanced "
+            f"parentheses — a `;` inside disposition text splits one entry in two (Rule-3 Ledger)"
+            for e in added if not ENTRY.match(e) or e.count("(") != e.count(")")]
+
+def check_disposed(root: Path, base: str, head: str) -> list[str]:
+    """`disposed_problems` over every row file base..head changes, as a whole diff (a branch)."""
+    prefix = f"{os.environ.get('DYAD_INSTANCE', 'agent-corpus')}/d-work/rows/"
+    try:
+        paths = git("diff", "--name-only", "--diff-filter=AM", f"{base}..{head}", "--", prefix, cwd=root).split()
+    except subprocess.CalledProcessError:
+        return []
+    fails = []
+    for path in paths:
+        if not Path(path).stem.isdigit():
+            continue
+        try:
+            after = dyadlib.parse_row_file(git("show", f"{head}:{path}", cwd=root, stderr=subprocess.DEVNULL)).disposed
+        except (subprocess.CalledProcessError, ValueError):
+            continue   # a malformed row file is check_package's report
+        try:
+            before = dyadlib.parse_row_file(git("show", f"{base}:{path}", cwd=root, stderr=subprocess.DEVNULL)).disposed
+        except (subprocess.CalledProcessError, ValueError):
+            before = ""
+        fails += disposed_problems(path, before, after, "range")
+    return fails
+
 # ---- transaction check (the main fence)
 def check_commit(sha: str, cwd, instance: str) -> list[str]:
     label = sha[:9]
@@ -93,10 +132,12 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
             if not dyadlib.allowed(before.state, after.state):
                 how = "leaves the table" if after.state not in dyadlib.STATES else "regresses"
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
+            fails += disposed_problems(path, before.disposed, after.disposed, label)
         elif st.startswith("A"):
             new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
             if new.state not in dyadlib.NEW_STATES:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} in state {new.state} (not one of {' '.join(sorted(dyadlib.NEW_STATES))})")
+            fails += disposed_problems(path, "", new.disposed, label)
     return fails
 
 def check_range(before: str, after: str, cwd=None) -> list[str]:
@@ -114,7 +155,7 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
     independently allocating the same id for different work (d-work #32) — leaving everything
     else (the append-only rules) to this same fence once the branch reaches `main`."""
     if branch(root) != "main":
-        return check_id_collisions(root, base, head)
+        return check_id_collisions(root, base, head) + check_disposed(root, base, head)
     return check_range(base, head, cwd=root)
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:

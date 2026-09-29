@@ -546,7 +546,14 @@ def cmd_dwork(a):
         sys.exit(f"refused: {e}")
     rows = {r.id: r for r in dyadlib.read_rows(REPO)}
     today = datetime.date.today().isoformat()
+    if "-d" in a and ";" in (a[a.index("-d") + 1] if a.index("-d") + 1 < len(a) else ""):
+        # d-work #133: `;` joins `disposed` entries (Rule-3 Ledger); inside the text it splits one
+        # disposition in two (#67, #100). The Operator's words go verbatim to provenance (Rule-7).
+        sys.exit("refused: -d text contains ';', which separates disposed entries; use ',' or '—'")
     if a and a[0] == "new" and len(a) >= 2:
+        if a[1].startswith("-"):
+            # d-work #133: the title is the first argument; a flag there became rows #129-#134's title
+            sys.exit(f"refused: title {a[1]!r} begins with '-'; usage: dwork new <title> [refs] [--backlog] [-d text]")
         try:
             subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=REPO, check=False, timeout=30)
             remote = {r.id for r in dyadlib.read_rows(REPO, at="origin/main")}
