@@ -53,34 +53,50 @@ class OpsScriptTests(unittest.TestCase):
         self.assertEqual(ops.check_package(fixture(None)), [])
     def test_empty_ops_dir_passes(self):
         self.assertEqual(ops.check_package(fixture({})), [])
-    def test_missing_header_fails(self):
-        msgs = ops.check_package(fixture({"a.sh": GOOD.replace("# undo: btrfs subvolume delete /srv/git\n", "")}))
-        self.assertEqual(len(msgs), 1); self.assertIn("`# undo:`", msgs[0])
-    def test_missing_postcondition_header_fails(self):
-        msgs = ops.check_package(fixture({"a.sh": GOOD.replace("# postcondition: /srv/git is a btrfs subvolume with nodatacow\n", "")}))
-        self.assertEqual(len(msgs), 1); self.assertIn("`# postcondition:`", msgs[0])
+    # One shape, ten rows (d-work #186): `GOOD` with one element mutated yields exactly one failure
+    # message, naming that element. `old` -> `new` -> the substring the message must carry; the label
+    # is the method this row replaces, verbatim including its `test_` prefix, so a subTest failure
+    # still reports the case by its old name and the two falsification records that cite
+    # `test_postcondition_in_comments_not_counted` (crafts/sysadmin/falsification/rules/ops-scripts.md
+    # attack 18.11, dyad/falsification/rules/rule-18-ops-scripts.md attack 11) still resolve by grep.
+    # Six rows are the six `ops.HEADERS` — all of them, which is why the collapse was worth doing:
+    # `# d-work:`, `# class:` and `# change-log:` had no missing-header case at all before #186,
+    # and `ops.check_script`'s `for h in HEADERS` loop was exercised on only half its entries.
+    ONE_MUTATION_ONE_FAILURE = (
+        ("test_missing_dwork_header_fails",            "# d-work: #126\n", "", "`# d-work:`"),
+        ("test_missing_class_header_fails",            "# class: reversible\n", "", "`# class:`"),
+        ("test_missing_header_fails",                  "# undo: btrfs subvolume delete /srv/git\n", "", "`# undo:`"),
+        ("test_missing_changelog_header_fails",        "# change-log: 2026-09-14 #126 H1\n", "", "`# change-log:`"),
+        ("test_missing_postcondition_header_fails",    "# postcondition: /srv/git is a btrfs subvolume with nodatacow\n", "", "`# postcondition:`"),
+        ("test_missing_destructive_header_fails",      "# destructive: none\n", "", "`# destructive:`"),
+        ("test_single_postcondition_call_fails",       'postcondition && { echo "already satisfied"; exit 0; }\n', "", "named 2 time(s) in code, need 3"),
+        ("test_postcondition_in_comments_not_counted", 'postcondition && { echo "already satisfied"; exit 0; }\n',
+                                                       "# postcondition postcondition postcondition\n", "need 3"),
+        ("test_missing_strict_mode_fails",             "set -euo pipefail\n", "", "set -euo pipefail"),
+        ("test_wrong_shebang_fails",                   "#!/usr/bin/env bash", "#!/bin/sh", "first line"),
+    )
+    def test_one_mutation_one_failure(self):
+        rows = self.ONE_MUTATION_ONE_FAILURE
+        self.assertEqual(len(rows), 10)
+        # Every `ops.HEADERS` entry has a row: a seventh header added without one fails here rather
+        # than shipping an unexercised iteration of `check_script`'s `for h in HEADERS` (#186).
+        self.assertEqual({o.split(":")[0] + ":" for _, o, _, _ in rows if o.startswith("# ")}, set(ops.HEADERS))
+        for label, old, new, expected in rows:
+            with self.subTest(label):
+                self.assertIn(old, GOOD, f"{label}: absent from GOOD, the row would be a no-op")
+                msgs = ops.check_package(fixture({"a.sh": GOOD.replace(old, new)}))
+                self.assertEqual(len(msgs), 1, msgs); self.assertIn(expected, msgs[0])
     def test_missing_postcondition_function_fails(self):
         text = GOOD.replace("postcondition() { lsattr -d /srv/git | cut -c1-21 | grep -q C; }\n", "")
         msgs = ops.check_package(fixture({"a.sh": text}))
         self.assertEqual(len(msgs), 2)
         self.assertTrue(any("no `postcondition()` function" in m for m in msgs))
         self.assertTrue(any("named 2 time(s)" in m for m in msgs))
-    def test_single_postcondition_call_fails(self):
-        text = GOOD.replace("postcondition && { echo \"already satisfied\"; exit 0; }\n", "")
-        msgs = ops.check_package(fixture({"a.sh": text}))
-        self.assertEqual(len(msgs), 1); self.assertIn("named 2 time(s) in code, need 3", msgs[0])
-    def test_postcondition_in_comments_not_counted(self):
-        text = GOOD.replace("postcondition && { echo \"already satisfied\"; exit 0; }\n", "# postcondition postcondition postcondition\n")
-        msgs = ops.check_package(fixture({"a.sh": text}))
-        self.assertEqual(len(msgs), 1); self.assertIn("need 3", msgs[0])
     def test_function_keyword_form_accepted(self):
         text = GOOD.replace("postcondition() {", "function postcondition {")
         self.assertEqual(ops.check_package(fixture({"a.sh": text})), [])
     def test_destructive_with_confirm_passes(self):
         self.assertEqual(ops.check_package(fixture({"a.sh": DESTRUCTIVE})), [])
-    def test_missing_destructive_header_fails(self):
-        msgs = ops.check_package(fixture({"a.sh": GOOD.replace("# destructive: none\n", "")}))
-        self.assertEqual(len(msgs), 1); self.assertIn("`# destructive:`", msgs[0])
     def test_destructive_without_confirm_function_fails(self):
         text = DESTRUCTIVE.replace('confirm() { echo "$1"; read -r -p "Y/N: " ans < /dev/tty; [[ $ans == Y ]] || { echo "declined"; exit 2; }; }\n', "")
         msgs = ops.check_package(fixture({"a.sh": text}))
@@ -93,12 +109,6 @@ class OpsScriptTests(unittest.TestCase):
         self.assertEqual(len(msgs), 1); self.assertIn("`confirm` named 1 time(s) in code, need 2", msgs[0])
     def test_destructive_none_needs_no_confirm(self):
         self.assertNotIn("confirm", GOOD.split("set -euo pipefail")[1]); self.assertEqual(ops.check_package(fixture({"a.sh": GOOD})), [])
-    def test_missing_strict_mode_fails(self):
-        msgs = ops.check_package(fixture({"a.sh": GOOD.replace("set -euo pipefail\n", "")}))
-        self.assertEqual(len(msgs), 1); self.assertIn("set -euo pipefail", msgs[0])
-    def test_wrong_shebang_fails(self):
-        msgs = ops.check_package(fixture({"a.sh": GOOD.replace("#!/usr/bin/env bash", "#!/bin/sh")}))
-        self.assertEqual(len(msgs), 1); self.assertIn("first line", msgs[0])
     def test_syntax_error_fails(self):
         msgs = ops.check_package(fixture({"a.sh": GOOD + "if true; then\n"}))
         self.assertEqual(len(msgs), 1); self.assertIn("bash -n failed", msgs[0])
