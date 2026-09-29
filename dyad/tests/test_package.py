@@ -517,12 +517,24 @@ class PackageTests(livetest.LiveCase):
     def test_dwork_new_backlog_flag(self):
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         d, rows = self.dwork_repo()
-        r = self.dwork_new(d, "four", "--backlog", "-d", "opened as backlog on #2 Done", "#2")
+        r = self.dwork_new(d, "four", "--backlog", "-d", "Y backlog, on #2 Done", "#2")
         self.assertEqual(r.returncode, 0, r.stderr)
         text = rows.joinpath("3.md").read_text()
         self.assertIn("state: backlog\n", text); self.assertIn("refs: #2\n", text)
-        self.assertIn("opened as backlog on #2 Done", text)
+        self.assertIn("Y backlog, on #2 Done", text)
         self.assertIn("backlog", dyadlib.NEW_STATES)
+    # d-work #133: a `;` in -d text splits one disposed entry in two; a flag in the title slot became a title
+    def test_dwork_refuses_semicolon_in_disposition_text(self):
+        d, rows = self.dwork_repo()
+        for r in (self.dwork_state(d, "1", "planned", "-d", "N plan (a; b)"), self.dwork_new(d, "three", "-d", "Y x; y")):
+            with self.subTest(args=r.args[3:]):
+                self.assertNotEqual(r.returncode, 0); self.assertIn("contains ';'", r.stderr)
+        self.assertIn("state: open\n", rows.joinpath("1.md").read_text()); self.assertFalse(rows.joinpath("3.md").exists())
+    def test_dwork_new_refuses_flag_as_title(self):
+        d, rows = self.dwork_repo()
+        r = self.dwork_new(d, "--backlog", "four")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("begins with '-'", r.stderr)
+        self.assertFalse(rows.joinpath("3.md").exists())
     # F3, d-work #32: cmd_dwork's fetch of origin/main used to fail silently; it now warns loudly
     # and states that allocation fell back to local ids, before still allocating from what it has.
     def test_dwork_new_warns_loudly_when_origin_main_is_unreadable(self):

@@ -167,13 +167,13 @@ class ConcurrencyTests(unittest.TestCase):
 
     def test_2b_state_regression_refused(self):
         # d-work #112: Rule-16 "state never regresses" — the fence refuses done -> open.
-        self.A.write_row(dyadlib.Row(1, "one", "2026-09-13", "done", "Y plan; Y done", "")); self.A.commit(); self.A.push()
+        self.A.write_row(dyadlib.Row(1, "one", "2026-09-13", "done", "2026-09-13 Y plan; 2026-09-13 Y done", "")); self.A.commit(); self.A.push()
         before = self.origin_main()
-        self.B.write_row(dyadlib.Row(1, "one", "2026-09-13", "open", "Y plan", "")); self.B.commit()
+        self.B.write_row(dyadlib.Row(1, "one", "2026-09-13", "open", "2026-09-14 N plan", "")); self.B.commit()
         self.B.push_rejected()
         self.assertNotEqual(self.B.fetch_rebase().returncode, 0, "same line, still a conflict")
         row = self.B.d / ROWS / "1.md"
-        row.write_text(dyadlib.format_row_file(dyadlib.Row(1, "one", "2026-09-13", "open", "Y plan", "")))
+        row.write_text(dyadlib.format_row_file(dyadlib.Row(1, "one", "2026-09-13", "open", "2026-09-14 N plan", "")))
         sh("git", "add", str(row), cwd=self.B.d)
         sh("git", "-c", "core.editor=true", "rebase", "--continue", cwd=self.B.d)
         out = m.check_range(before, self.B.head(), cwd=self.B.d)
@@ -203,7 +203,7 @@ class ConcurrencyTests(unittest.TestCase):
     # -- scenario 4: two ids ----------------------------------------------------------
     def test_4_two_ids_merge_clean(self):
         self.A.write_row(dyadlib.Row(2, "two", "d", "open", "", "")); self.A.commit("ledger: #2 open"); self.A.push()
-        self.B.write_row(dyadlib.Row(1, "one", "2026-09-13", "done", "Y plan; Y done", "")); self.B.commit("ledger: #1 done")
+        self.B.write_row(dyadlib.Row(1, "one", "2026-09-13", "done", "2026-09-13 Y plan; 2026-09-13 Y done", "")); self.B.commit("ledger: #1 done")
         self.B.push_rejected()
         r = self.B.fetch_rebase()
         self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(self.B.unmerged(), [])

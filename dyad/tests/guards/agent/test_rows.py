@@ -30,7 +30,7 @@ class FenceTests(unittest.TestCase):
     def test_root_commit_rows_only_passes(self):
         self.assertEqual(m.check_commit(self.base, self.r.d, "agent-corpus"), [])
     def test_append_and_state_change_pass(self):
-        self.r.write(self.R, row(1, "one", "done", "Y done", "PR #9")); self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); h = self.r.commit()
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y done", "PR #9")); self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); h = self.r.commit()
         self.assertEqual(self.fails(self.base, h), [])
     def test_other_path_fails(self):
         self.r.write("dyad/x.md", "x"); h = self.r.commit()
@@ -44,7 +44,7 @@ class FenceTests(unittest.TestCase):
     # d-work #112: state transitions (Rule-16, dyadlib.TRANSITIONS)
     def transition(self, a, b):
         """Row 1 goes a -> b in two commits; return the fence output for the second."""
-        self.r.write(self.R, row(1, "one", a, "seed")); base = self.r.commit("to a")  # disposed differs from root so the commit is never empty
+        self.r.write(self.R, row(1, "one", a, "2026-01-01 Y seed")); base = self.r.commit("to a")  # disposed differs from root so the commit is never empty
         self.r.write(self.R, row(1, "one", b)); h = self.r.commit("to b")
         return self.fails(base, h)
     def test_allowed_transition_per_source_state(self):
@@ -59,10 +59,10 @@ class FenceTests(unittest.TestCase):
         out = self.transition("open", "foo")
         self.assertEqual(len(out), 1, out); self.assertIn("state leaves the table open\u2192foo", out[0])
     def test_same_state_edit_passes(self):
-        self.r.write(self.R, row(1, "one", "open", "Y plan", "PR #3")); h = self.r.commit()
+        self.r.write(self.R, row(1, "one", "open", "2026-01-01 Y plan", "PR #3")); h = self.r.commit()
         self.assertEqual(self.fails(self.base, h), [])
     def test_new_row_as_done_fails(self):
-        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "done", "Y done")); h = self.r.commit()
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "done", "2026-01-01 Y done")); h = self.r.commit()
         out = self.fails(self.base, h)
         self.assertEqual(len(out), 1, out); self.assertIn("adds row file agent-corpus/d-work/rows/2.md in state done", out[0])
     def test_new_row_as_backlog_passes(self):
@@ -125,7 +125,7 @@ class BranchIdCollisionTests(unittest.TestCase):
         self.assertEqual(len(out), 1, out)
         self.assertIn("id 1 already names", out[0]); self.assertIn("'one'", out[0])
     def test_same_id_same_title_passes(self):
-        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one", "planned", "Y plan"))
+        self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one", "planned", "2026-01-01 Y plan"))
         h = self.r.commit("state change only")
         self.assertEqual(m.check_id_collisions(self.r.d, self.base, h), [])
     def test_new_id_passes(self):
@@ -145,6 +145,34 @@ class BranchIdCollisionTests(unittest.TestCase):
         h = self.r.commit("collide")
         out = m.check_transaction(self.r.d, self.base, h)
         self.assertEqual(len(out), 1, out); self.assertIn("id 1 already names", out[0])
+
+class DisposedShapeTests(unittest.TestCase):
+    """d-work #133: every `disposed` entry a range adds is `<date> <Y|N>[ text]` with balanced parentheses,
+    on `main` (the fence, per commit) and on a branch (the whole diff); existing entries are never re-judged."""
+    R = "agent-corpus/d-work/rows/1.md"
+    def setUp(self):
+        self.r = Repo(); self.r.write(self.R, row(1, "one", "open", "2026-01-01 Y plan")); self.base = self.r.commit("root")
+        os.environ.pop("DYAD_INSTANCE", None)
+    def test_semicolon_split_fails_on_main(self):   # the #100 shape
+        self.r.write(self.R, row(1, "one", "open", "2026-01-01 Y plan; 2026-01-02 N plan (patching; falsify first)")); h = self.r.commit()
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 2, out); self.assertTrue(all("[disposed]" in o for o in out), out)
+    def test_entry_without_disposition_fails_on_a_new_row(self):   # the #94 shape
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "backlog", "2026-01-01 opened by #1's prompt")); h = self.r.commit()
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("opened by", out[0])
+    def test_well_formed_append_passes(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #1, #2)")); h = self.r.commit()
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+    def test_existing_malformed_entry_not_rejudged(self):
+        self.r.write(self.R, row(1, "one", "open", "legacy")); legacy = self.r.commit("legacy")
+        self.r.write(self.R, row(1, "one", "planned", "legacy; 2026-01-03 Y plan")); h = self.r.commit()
+        self.assertEqual(m.check_range(legacy, h, cwd=self.r.d), [])
+    def test_branch_whole_diff_checked(self):
+        sh("git", "checkout", "-q", "-b", "feature", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y (a; b)")); h = self.r.commit()
+        out = m.check_transaction(self.r.d, self.base, h)
+        self.assertEqual(len(out), 2, out); self.assertTrue(all("[disposed]" in o for o in out), out)
 
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
