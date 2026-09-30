@@ -71,11 +71,12 @@ initiation; it is counted apart, never as a finding.
 
 **Severity: a warning, never a failure.** `dyad project countersign` prints one `I6` line — `ok` when every
 derivable act is initiated, `warn` with the count and the first three ids otherwise — and its exit code stays the
-schema check's. Three reasons, each observed: rows opened before Rule-7 carry no prompt entry, and dyad-system's
-`provenance.SINCE_ID` (164) lies above every row id of this instance, so no id cut-off separates the legitimate
-gaps; a concurrent session opens rows without having loaded Rule-7 (the reason Rule-7 itself only warns); and D8
-is a heuristic (a `<system>-<id>` token read as an intake origin). A red projection is the wrong way to learn any
-of the three. What a warning names is a candidate for the Operator, never a verdict: a row opened by the agent's
+schema check's. The reason is that D8 is a heuristic (a `<system>-<id>` token read as an intake origin): a red
+projection is the wrong way to learn what a heuristic only suspects. The gaps that are not heuristic are Rule-7's
+already: rows opened before it carry no prompt entry, and the instance names exactly those rows — the ones whose
+initiation words were never written — in `<instance>/provenance_legacy.local.txt`; any other row without its
+record fails Rule-7's own check at the push that creates it (core d-work #191). A failing I6 would only repeat
+that failure. What a warning names is a candidate for the Operator, never a verdict: a row opened by the agent's
 own finding (a backlog row with an empty `disposed`) is exactly what I6 forbids, and the warning makes it visible.
 
 ## 4. Lifecycles, one per mode, built only from the primitives

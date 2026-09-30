@@ -35,3 +35,20 @@ dsys-repo, not re-verified here. The I6 counts are this instance's at the drafti
 flagged act was really self-initiated is inference.
 
 Disposition: disposed by the Done-Y of dyad-system d-work #152 (see ledger #152).
+
+## Amendment — dyad-system d-work #194 (2026-09-29, I6's severity rests on D8 alone)
+R8's last sentence reasons from dyad-system's `provenance.SINCE_ID` (164): an id cut-off that could not separate
+legitimate gaps from real ones, and Rule-7's own missing-record check, which then only warned. Core d-work #191
+removed both premises: `SINCE_ID` is gone, replaced by the instance's `<instance>/provenance_legacy.local.txt`,
+which names exactly the rows whose initiation words were never written; and Rule-7 now fails a missing record at
+the push that creates it, and at its state check for any row the list does not name. R8 is left as written — it
+records what was true at its base — and this amendment supersedes that sentence. `../rules/interaction.md` §3's
+severity paragraph now gives the reason that stands.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| R13 | **With Rule-7 failing, I6 should fail too.** | **Refuted** | A missing prompt entry is already a Rule-7 failure; a failing I6 would report the same gap twice. What I6 adds is D8's intake-origin reading, a heuristic, and a heuristic gating a projection is the red-`main` problem again. Warn-only survives on that reason alone. |
+| R14 | **The sentence is cosmetic; leave it.** | **Refuted** | It is the stated reason I6 warns; two of its three premises are false since #191, so a reader weighing a promotion of I6 would reason from a removed constant. |
+| R15 | **The change needs a `VERSION` bump.** | **Refuted** | The craft is unreleased (no `countersign-v*` tag, no `BUNDLE.md` row): no drift guard (Rule-11 property 4) binds it, and the rule's behaviour (warn-only) is unchanged. |
+
+Disposition: disposed by the Done-Y of dyad-system d-work #194 (see ledger #194).
