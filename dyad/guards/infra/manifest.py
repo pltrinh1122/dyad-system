@@ -23,7 +23,7 @@ import ast
 import re
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-import dyadlib
+import dyadlib, distribute
 
 ENTITY, CORPUS, TRANSACTION = "component", "infra", False
 NAME, OWNER = "manifest row", "Rule-14"
@@ -165,13 +165,25 @@ def craft_python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
         dirs += [d for d in (c / "guards", c / "tests", c / "scripts", c / "projectors", c / "server") if d.is_dir()]
     return dirs
 
+def _code_dir(d: Path) -> bool:
+    """A directory that can hold this package's own Python — so a *generated* one is not. The set of
+    generated directory names has one owner, `distribute.SKIP_DIRS` (Rule-13; its invariant
+    `skip-dirs-are-generated-or-git` keeps it to generated-or-VCS names), so no second literal here
+    can drift from it. Why `python_dirs` needs this at all: both of its globs take whatever
+    directories exist, and `python_imports` turns those directory *names* into internal module
+    names — so once a `unittest` child had written `dyad/tests/guards/__pycache__`, the token
+    `__pycache__` was swallowed as package-internal and bytecode on disk changed a guard's verdict
+    (#187, #185)."""
+    return d.is_dir() and d.name not in distribute.SKIP_DIRS
+
 def python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
     """scripts/, every guards/<corpus>/, tests/ and every tests/guards/<corpus>/ that exists (core),
-    plus every installed craft's own (craft_python_dirs)."""
-    dirs = [pkg / "scripts"] + sorted(d for d in (pkg / "guards").glob("*") if d.is_dir()) + [pkg / "tests"]
-    dirs += sorted(d for d in (pkg / "tests" / "guards").glob("*") if d.is_dir()) + [pkg / "tests" / "guards"]
+    plus every installed craft's own (craft_python_dirs). Generated directories are not code
+    directories and never enter the result (`_code_dir`)."""
+    dirs = [pkg / "scripts"] + sorted(d for d in (pkg / "guards").glob("*") if _code_dir(d)) + [pkg / "tests"]
+    dirs += sorted(d for d in (pkg / "tests" / "guards").glob("*") if _code_dir(d)) + [pkg / "tests" / "guards"]
     dirs += craft_python_dirs(pkg)
-    return [d for d in dirs if d.is_dir()]
+    return [d for d in dirs if _code_dir(d)]
 
 def python_imports(pkg: Path = dyadlib.PKG) -> dict[str, list[str]]:
     """{`import:<name>`: [file, ...]} for every third-party Python import under scripts/, guards/

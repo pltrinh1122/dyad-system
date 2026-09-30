@@ -1,7 +1,7 @@
 import os, shutil, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-import dyadlib
+import dyadlib, distribute
 inf = dyadlib.load_guard("infra", "manifest")
 
 MANIFEST = """| component | partition | version | purpose | license | replacement | profile |
@@ -88,6 +88,23 @@ class ImportScanTests(unittest.TestCase):
         (pkg / "guards" / "agent" / "rows.py").write_text("import dyadlib\nimport requests\n")
         (pkg / "tests" / "guards" / "agent" / "test_rows.py").write_text("import dyadlib\nimport guards.agent\n")
         self.assertEqual(inf.python_imports(pkg), {"import:requests": ["guards/agent/rows.py"]})
+    def test_generated_dirs_are_not_code_dirs(self):
+        """#185/#187: both of `python_dirs`' globs took whatever directories existed, and
+        `python_imports` turns those directory *names* into internal module names — so once a
+        `unittest` child had written `dyad/tests/guards/__pycache__`, the token `__pycache__` was
+        swallowed as package-internal: bytecode on disk changed a guard's verdict. Two assertions,
+        both failing before the `_code_dir` filter — the mechanism (no generated directory in
+        `python_dirs`' result) and, second, the consequence (the token is no longer swallowed). The
+        generated-directory names have one owner, `distribute.SKIP_DIRS` (Rule-13), so this test
+        carries no second literal either."""
+        pkg = fixture({"scripts/a.py": "import __pycache__\n", "scripts/dyadlib.py": "X = 1\n"})
+        (pkg / "guards" / "agent").mkdir(parents=True)
+        (pkg / "tests" / "guards" / "agent").mkdir(parents=True)
+        for d in ("guards", "guards/agent", "tests", "tests/guards", "tests/guards/agent"):
+            (pkg / d / "__pycache__").mkdir()
+            (pkg / d / "__pycache__" / "a.cpython-313.pyc").write_bytes(b"\x00")
+        self.assertEqual([str(d) for d in inf.python_dirs(pkg) if d.name in distribute.SKIP_DIRS], [])
+        self.assertEqual(inf.python_imports(pkg), {"import:__pycache__": ["scripts/a.py"]})
     def test_live_package_has_no_third_party_import(self):
         self.assertEqual(inf.python_imports(dyadlib.PKG), {})
         self.assertIn("import:", inf.RULES_FILE.read_text())
