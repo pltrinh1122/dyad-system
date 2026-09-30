@@ -126,6 +126,11 @@ class FixtureTests(Env, unittest.TestCase):
     def setUp(self):
         super().setUp(); self.root = fixture(); self.doc = pc.collect(self.root)
     def test_fixture_validates(self):
+        # Carries the claim `InteractionTests.test_warning_never_fails_the_document` held until #186
+        # (its body was character-identical to this one under an equivalent setUp): the fixture
+        # already contains the uninitiated `act-3` that D8 flags, so the I6 warning
+        # (crafts/countersign/rules/interaction.md, asserted at test_d8_act_without_initiation_is_flagged)
+        # is a warning only — it never becomes a validation error.
         self.assertEqual(pc.check(self.doc), [])
     def test_counts(self):
         self.assertEqual(pc.counts(self.doc), "parties=2 acts=4 proposals=4 countersignatures=5 mandates=1 releases=0 events=2 escalations=3")
@@ -200,8 +205,6 @@ class InteractionTests(Env, unittest.TestCase):
     def test_all_initiated_is_ok(self):
         d = {"acts": [{"id": "act-1", "profile": {"initiation": {"kind": "prompt"}}}]}
         self.assertTrue(pc.interaction_line(pc.interaction(d)).startswith("ok   [project] countersign: I6 initiated=1 uninitiated=0"))
-    def test_warning_never_fails_the_document(self):
-        self.assertEqual(pc.check(self.doc), [])
     def test_deterministic_with_initiation(self):
         self.assertEqual(pc.render(pc.collect(self.root)), pc.render(self.doc))
 
