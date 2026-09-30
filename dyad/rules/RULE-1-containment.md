@@ -16,8 +16,9 @@
 
 ## Conditions (triggers)
 - A commit is created (`dyad/hooks/pre-commit`, blocking).
-- Commits are pushed (`dyad/hooks/pre-push` → `dyad check --guards`, blocking; each commit of the
-  range, never the range itself — a push range is not a transaction, #166).
+- Commits are pushed (`dyad/hooks/pre-push` → `dyad check --guards --pre-push`, blocking, over the
+  refs being pushed — Rule-14 property 3, #194; each commit of the range, never the range itself — a
+  push range is not a transaction, #166).
 - A PR is about to be opened or updated (`dyad check --pr <base> <head>`, run by the Agent), and
   `main` is pushed (`.github/workflows/dyad-containment.yml`, detecting, after the merge).
 - A path is added that no zone claims (forbidden).
@@ -59,5 +60,7 @@ and never bypasses a hook that runs and fails (#23).
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-1-containment.md`.
 Lived in the root `CLAUDE.md` until 2026-09-13 (A2, Rule-11 property 2: host files hold only an import line).
 The host row is read from the preferences 2026-09-25 (d-work #175); see the same record, amendment #175.
+The push condition names `--pre-push` and the refs being pushed 2026-09-29 (d-work #194); see the same
+record, amendment #194.
 
 Set: System Requirements.

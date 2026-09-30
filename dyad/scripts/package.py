@@ -16,6 +16,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 the transaction guards (TRANSACTION = True: infra/containment,
                                 agent/rows, agent/prs, sysadmin/events) over <base>..HEAD, each in its
                                 declared transaction mode (a push range: containment checks commits, #166)
+  dyad check --guards --pre-push   what dyad/hooks/pre-push runs: the same, over the refs git is pushing
+                                (read from stdin, `<local ref> <local sha> <remote ref> <remote sha>`); a
+                                push the guards cannot judge is refused — a ref other than the checked-out
+                                HEAD, or a working tree with changes (#194)
   dyad check --pr <base> [<head>]
                                 the PR transaction (Rule-1 binds a commit and a PR; a push range is
                                 neither): the invariant pass, then every transaction guard's `check_pr`
@@ -345,9 +349,59 @@ def cmd_list():
         print(f"{corpus:<12} {entity:<12} {rel:<44} {'yes' if tx else 'no':<12} {guard_root(rel)}{'  FAIL ' + problem if problem else ''}")
     return int(any(e[5] for e in registry()))
 
-def cmd_guards(base="origin/main"):
+ZERO_SHA = frozenset("0")
+
+def pushed_refs(lines, base="origin/main"):
+    """The refs git is pushing (pre-push stdin), judged for whether the guards can see them (#194).
+    Returns (head, refusals): `head`, the one commit every judged ref resolves to (None when every ref is
+    a deletion or already on `base`); `refusals`, each ref the guards cannot judge, with the command
+    that fixes it. The state checks read the checked-out tree, so a pushed commit must be HEAD and the
+    tree clean; a ref whose commit `base` already holds (a release tag on `main`) adds nothing to judge."""
+    git = lambda *a: subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True)
+    here = git("rev-parse", "HEAD").stdout.strip()
+    heads, refusals = set(), []
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 4:
+            continue
+        local_ref, local_sha, remote_ref, _ = parts
+        if set(local_sha) <= ZERO_SHA:
+            continue                                     # a deletion carries no commit
+        sha = git("rev-parse", "--verify", "-q", f"{local_sha}^{{commit}}").stdout.strip()
+        if not sha:
+            continue                                     # not a commit-ish (a tag on a tree or blob): nothing the guards judge
+        if git("merge-base", "--is-ancestor", sha, base).returncode == 0:
+            continue                                     # already on the base: no new commit leaves
+        if sha != here:
+            refusals.append(f"{local_ref} is at {sha[:9]} but HEAD is {here[:9]}: the guards judge the checked-out tree — "
+                            f"check it out and push it from there (`git switch {local_ref.removeprefix('refs/heads/')} && git push`)")
+            continue
+        heads.add(sha)
+    if heads:
+        dirty = git("status", "--porcelain", "--untracked-files=normal").stdout.splitlines()
+        if dirty:
+            shown = ", ".join(l[3:] for l in dirty[:5]) + (f" and {len(dirty) - 5} more" if len(dirty) > 5 else "")
+            refusals.append(f"the working tree has changes the push does not carry ({shown}): the guards would judge "
+                            f"them, not the commit — commit, stash or remove them, then push")
+    return (heads.pop() if heads else None), refusals
+
+def cmd_guards(base="origin/main", pre_push=False):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
-    then every TRANSACTION guard over base..HEAD. Returns rc."""
+    then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
+    refs git is pushing come on stdin: a push the guards cannot judge is refused before any check
+    runs, a push that adds no commit passes at once, and otherwise the transaction head is the
+    pushed commit, which the refusal rule makes the checked-out HEAD."""
+    if pre_push:
+        pushed, refusals = pushed_refs(sys.stdin.read().splitlines(), base)
+        for m in refusals:
+            print(f"FAIL [pre-push] {m}")
+        if refusals:
+            return 1
+        if pushed is None:
+            print(f"ok   [pre-push] nothing new to judge: every ref is a deletion or already on {base}")
+            return 0
+    else:
+        pushed = None
     rc = cmd_invariants()
     entries = registry()
     for corpus, entity, rel, tx, mod, problem in entries:
@@ -372,7 +426,7 @@ def cmd_guards(base="origin/main"):
         # to be unreachable here — so a fresh install, a system with no remote, or one whose default
         # branch is not `main` never ran Rule-12's suite at push at all.
         print(f"skip [guards] transaction guards: no {base}"); base_ok = False
-    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+    head = pushed or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     for corpus, entity, rel, tx, mod, problem in (entries if base_ok else ()):
         if not tx or mod is None:
             continue
@@ -781,7 +835,7 @@ if __name__ == "__main__":
     if a[0] == "check" and "--pr" in a:
         i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
     if a[0] == "check" and "--guards" in a:
-        sys.exit(cmd_guards())
+        sys.exit(cmd_guards(pre_push="--pre-push" in a))
     if a[0] == "check" and "--list" in a:
         sys.exit(cmd_list())
     if a[0] == "check" and "--tests" in a:

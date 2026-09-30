@@ -878,6 +878,83 @@ class InvariantPassTests(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0); self.assertIn("refused: dyadlib: invariant(s) failed: archived-is-terminal", r.stderr)
         self.assertEqual(list((d / "agent-corpus" / "d-work" / "rows").glob("[0-9]*.md")), [])
 
+class PrePushTests(unittest.TestCase):
+    """d-work #194 (Rule-14 property 3): the pre-push hook judges the refs git pushes (its stdin), not
+    `origin/main..HEAD` and whatever tree is on disk. Real `git push` to a bare remote, so the installed
+    hook itself runs; one install shared by every case (each case leaves the checkout on `main`, clean)."""
+    @classmethod
+    def setUpClass(cls):
+        cls.d = scratch_install(with_craft=False)
+        cls.bare = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init", "-q", "--bare", str(cls.bare)], check=True)
+        for a in (("checkout", "-q", "-B", "main"), ("remote", "add", "origin", str(cls.bare)), ("config", "core.hooksPath", "dyad/hooks")):
+            cls.git(*a)
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.d, ignore_errors=True); shutil.rmtree(cls.bare, ignore_errors=True)
+    @classmethod
+    def git(cls, *a):
+        return subprocess.run(["git", "-C", str(cls.d), *a], check=True, capture_output=True, text=True, env=env()).stdout
+    def push(self, *a):
+        return subprocess.run(["git", "-C", str(self.d), "push", "origin", *a], capture_output=True, text=True, env=env())
+    def commit_on(self, branch, name):
+        """A new commit on `branch` (created from main, left checked out) touching one host-zone file."""
+        self.git("checkout", "-q", "-B", branch, "main")
+        f = self.d / "workstation-corpus" / f"{name}.md"; f.parent.mkdir(parents=True, exist_ok=True); f.write_text(f"# {name}\n")
+        self.git("add", "-A"); self.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", f"{name}")
+    def ensure_main_pushed(self):
+        if subprocess.run(["git", "-C", str(self.d), "rev-parse", "-q", "--verify", "origin/main"], capture_output=True).returncode:
+            r = self.push("main"); self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    def tearDown(self):
+        subprocess.run(["git", "-C", str(self.d), "checkout", "-q", "main"], capture_output=True)
+        subprocess.run(["git", "-C", str(self.d), "clean", "-qfd"], capture_output=True)
+    def test_a_clean_head_push_passes(self):
+        r = self.push("main")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("[pre-push]", r.stdout + r.stderr)          # judged, not waved through
+        self.assertIn("ok   [guards] infra/containment", r.stdout + r.stderr)
+    def test_b_another_branch_than_head_is_refused(self):
+        self.ensure_main_pushed()
+        self.commit_on("other", "other"); self.git("checkout", "-q", "main")
+        r = self.push("other")
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("FAIL [pre-push] refs/heads/other", r.stdout + r.stderr)
+        self.assertIn("git switch other && git push", r.stdout + r.stderr)
+        self.assertNotIn("[guards]", r.stdout + r.stderr)             # refused before any guard runs
+    def test_c_a_dirty_tree_is_refused(self):
+        self.ensure_main_pushed()
+        self.commit_on("dirty", "dirty")
+        (self.d / "stray.txt").write_text("x\n")
+        r = self.push("dirty")
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("FAIL [pre-push] the working tree has changes the push does not carry (stray.txt)", r.stdout + r.stderr)
+        (self.d / "stray.txt").unlink()
+        (self.d / "scratch.pyc").write_text("x\n")                     # ignored (.gitignore `*.pyc`): not a change
+        r = self.push("dirty")
+        self.assertNotIn("FAIL [pre-push]", r.stdout + r.stderr)      # judged now: the guards run over the pushed commit,
+        self.assertIn("FAIL [guards] agent/prs", r.stdout + r.stderr)  # whose uncited message the plan gate refuses
+        (self.d / "scratch.pyc").unlink()
+    def test_d_a_deletion_passes(self):
+        self.ensure_main_pushed()
+        r = self.push("main:refs/heads/side")                           # a ref on a commit origin/main holds
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ok   [pre-push] nothing new to judge", r.stdout + r.stderr)
+        r = self.push("--delete", "side")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ok   [pre-push] nothing new to judge", r.stdout + r.stderr)
+    def test_e_a_tag_on_main_passes_while_head_is_elsewhere(self):
+        self.ensure_main_pushed()
+        self.git("-c", "user.name=t", "-c", "user.email=t@t", "tag", "-a", "-m", "t", "rel-v0.0.1", "main")   # annotated: its sha is the tag object
+        self.commit_on("elsewhere", "elsewhere")
+        (self.d / "stray.txt").write_text("x\n")                        # nothing new leaves, so the tree is not judged
+        r = self.push("rel-v0.0.1")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ok   [pre-push] nothing new to judge", r.stdout + r.stderr)
+    def test_pushed_refs_skips_lines_it_cannot_read(self):
+        pkg = load_package()
+        z = "0" * 40
+        self.assertEqual(pkg.pushed_refs(["", "garbage", f"(delete) {z} refs/heads/x {'1' * 40}"]), (None, []))
+
 class SuiteEnvTests(unittest.TestCase):
     """#152: a test child never inherits a hook's GIT_VARS (an absolute GIT_DIR from a linked worktree)."""
     def test_git_vars_dropped_and_nesting_marked(self):

@@ -164,3 +164,40 @@ system's own. New term `profile` (owner 14); `manifest` redefined as the union (
 only; it still reads correctly). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #175.
+
+## Amendment — d-work #194 (2026-09-29, the pre-push hook judges what is pushed)
+**Finding:** `dyad/hooks/pre-push` ran `package.py check --guards` and ignored the
+`<local ref> <local sha> <remote ref> <remote sha>` lines git writes to its stdin. The transaction
+guards judged `origin/main..HEAD` and every state check the tree on disk, so three pushes were judged
+on something other than what left the machine: a branch other than the checked-out one (`git push
+origin gap` while on `main`, and the reverse: a clean push failed over an unrelated HEAD), a dirty
+working tree (the state checks read uncommitted files), and a tag pushed on its own (its commit is
+not HEAD). Survivor: the hook runs `check --guards --pre-push`; `package.pushed_refs` reads git's
+lines, skips a deletion and a ref whose commit `origin/main` already holds, refuses any other ref
+not at HEAD (naming `git switch <ref> && git push`) and a working tree with tracked changes or
+untracked files (ignored files excepted); otherwise the guards run as before with the transaction
+head the pushed commit. Without `--pre-push` — by hand, and the evidence path — nothing changes.
+Property 3 gains one sentence.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Judge each pushed ref in a temporary worktree at its commit, rather than refusing. | Refuted, scoped | It costs the full suite once per ref, and a worktree's hook environment is the #152/#169 class of bug. Refusing with the one command to run judges exactly what leaves, at no extra cost. |
+| 2 | Use the remote sha as the transaction base, the true "new commits". | Refuted | The plan gate would then fail a follow-up push whose new commits do not re-cite the d-work — a behaviour change nobody asked for. The base stays `origin/main`; only the head moves. |
+| 3 | Refusing a dirty tree blocks ordinary work (a stray scratch file). | Survives, scoped | Ignored files pass (`git status --porcelain` honours `.gitignore`; `test_c_a_dirty_tree_is_refused` pushes past an ignored `*.pyc`); scratch belongs outside the repo or in `.gitignore`. A dirty tree is exactly when the state checks judge the wrong thing, and the refusal names the files. |
+| 4 | A release pushes a tag from a checkout that is not the tagged commit. | Survives | A ref whose commit is already on `origin/main` adds no commit and passes before any check (`test_e_…`, an annotated tag, with HEAD elsewhere and the tree dirty); a tag on an unpushed commit is judged like a branch. |
+| 5 | Fetch `origin` in the hook to get a fresh base. | Refuted | The kernel-only path must not depend on the hosting (property 3). A stale `origin/main` only widens the range judged — and may refuse a ref another session already pushed, which a fetch clears — conservative either way. |
+| 6 | An annotated tag's local sha is the tag object, never equal to HEAD, so every annotated tag on an unpushed HEAD is refused. | Refuted by construction | Each local sha is peeled to its commit (`<sha>^{commit}`) before the comparison; a ref that peels to no commit (a tag on a tree or blob) carries no commit to judge and is skipped. |
+| 7 | `git push origin HEAD:refs/heads/x`, or several refs at one commit, confuse "the pushed commit". | Refuted | The comparison is by commit, not by ref name: every judged ref must peel to HEAD, so there is at most one pushed commit, and it is the one the tree on disk holds. |
+| 8 | The refusal is a new way to skip the guards (a refused push is retried with `--no-verify`). | Survives, unchanged | `--no-verify` bypassed the hook before this change as well; Rule-1 already forbids bypassing a hook that runs and fails (#23). The refusal names the command that lets the hook judge the push, so the honest path is the short one. |
+
+Pairwise (Rule-5): **14–1** Rule-1's push condition now names `check --guards --pre-push` and the
+refs being pushed (Rule-1's amendment #194); containment's *commits* mode over the range is
+unchanged, only the range's head is the pushed commit. Rule-1 owns what a transaction may touch,
+Rule-14 the path that runs the check. **14–3** the plan gate still reads every commit message of
+`origin/main..<head>` (attack 2); the head is the pushed commit, which the refusal makes HEAD, so
+the gate judges the commits that leave. **14–7** Rule-7's transaction check runs over the same
+range, now the pushed one; its semantics are untouched. **14–12** Rule-12 property 2's push-time
+suite runs as before and now only on a push the hook can judge; the suite skip for a ledger-only
+range reads the same head. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #194.
