@@ -1,7 +1,8 @@
 """Live-test support tests (d-work #171): the store predicates over a fixture instance (absent, seeded-only,
 populated), the craft predicates over a fixture package, and each `require_*` skipping with its stated reason.
-Every case here is a fixture case — this module is the one that must run identically in an empty install."""
-import os, tempfile, unittest, shutil, sys
+Every case here is a fixture case — this module is the one that must run identically in an empty install.
+`ScratchInstallsTests` covers the shared scratch-install fixture (#163, d-work #199 N3a)."""
+import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import dyadlib, livetest
@@ -113,6 +114,55 @@ class RequireTests(unittest.TestCase):
         r = self.skip_reason(c.require_guard, "workstation", "nosuchentity")
         self.assertTrue(r.startswith(livetest.ABSENT)); self.assertIn("workstation/nosuchentity", r)
         self.assertIs(c.require_guard("agent", "rows"), dyadlib.load_guard("agent", "rows"))   # a core guard is always there
+
+
+class ScratchInstallsTests(unittest.TestCase):
+    """The shared scratch-install fixture (#163, d-work #199 N3a): one real install per variant per instance, handed
+    out as independent copies whose index is clean, all removed by `cleanup`. One instance serves the class, so the
+    install runs once here too."""
+    @classmethod
+    def setUpClass(cls):
+        cls.si = livetest.ScratchInstalls()
+    @classmethod
+    def tearDownClass(cls):
+        cls.si.cleanup()
+
+    def git(self, d, *a) -> str:
+        return subprocess.run(["git", "-C", str(d), *a], capture_output=True, text=True, check=True, env=dyadlib.git_env()).stdout
+
+    def test_copies_are_independent_copies_of_one_install(self):
+        a, b = self.si.copy(), self.si.copy()
+        self.assertNotEqual(a, b)
+        self.assertEqual(list(self.si.templates), [False])                    # one install for the variant, not one per copy
+        self.assertEqual(self.git(a, "rev-parse", "HEAD"), self.git(b, "rev-parse", "HEAD"))   # the same commit
+        self.assertTrue((a / "dyad" / "scripts" / "package.py").is_file())    # a real core install
+        (a / "only-in-a.txt").write_text("a\n"); (a / "dyad" / "VERSION").write_text("9.9.9\n")
+        self.assertFalse((b / "only-in-a.txt").exists())
+        self.assertNotEqual((b / "dyad" / "VERSION").read_text(), "9.9.9\n")
+        c = self.si.copy()
+        self.assertFalse((c / "only-in-a.txt").exists())                        # a later copy: the template itself was never written
+        self.assertEqual((c / "dyad" / "VERSION").read_text(), (b / "dyad" / "VERSION").read_text())
+
+    def test_a_copy_starts_clean(self):
+        d = self.si.copy()
+        self.assertEqual(self.git(d, "status", "--porcelain"), "")
+        self.assertEqual(self.git(d, "diff-files", "--name-only"), "")        # the index was re-stat'ed, not just compared
+        self.assertTrue(os.access(d / "dyad" / "hooks" / "pre-commit", os.X_OK))   # modes kept: the hooks still run
+
+    def test_cleanup_removes_every_copy_and_dir_it_made(self):
+        si = livetest.ScratchInstalls()
+        si.templates[False] = self.si.copy()                                   # borrowed: not made by `si`, so not its to remove
+        copies = [si.copy(), si.copy()]; other = si.mkdtemp(prefix="dyad-livetest-")
+        self.assertTrue(all(p.is_dir() for p in (*copies, other)))
+        si.cleanup()
+        self.assertFalse(any(p.exists() for p in (*copies, other)))
+        self.assertEqual((si.made, si.templates), ([], {}))
+        self.assertTrue(self.si.templates[False].is_dir())                     # a dir it did not make is left alone
+        si.cleanup()                                                           # idempotent (atexit calls it again)
+
+    def test_an_unknown_variant_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.si.copy(with_craft="sysadmin")
 
 
 class InvariantTests(unittest.TestCase):

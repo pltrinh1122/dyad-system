@@ -19,17 +19,15 @@ CRAFTS = livetest.crafts_installed()   # #171: a core-only install has none; the
 def env(**kw):
     return {**os.environ, "DYAD_NO_NESTED_TESTS": "1", "PYTHONDONTWRITEBYTECODE": "1", **kw}
 
+SCRATCH = livetest.ScratchInstalls()   # one real install per variant per module run, copied per case (#163, d-work #199 N3a)
+tearDownModule = SCRATCH.cleanup       # removes every scratch install and every SCRATCH.mkdtemp() dir; atexit is the backstop
+
 def scratch_install(with_craft: bool) -> Path:
-    """A scratch git repo with the core craft installed (package.py install) and, optionally, every crafts/<craft>/ copied in (whatever this repo currently has, discovered dynamically)."""
-    d = Path(tempfile.mkdtemp()); subprocess.run(["git", "init", "-q", str(d)], check=True)
-    r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "install", str(d)], capture_output=True, text=True); assert r.returncode == 0, r.stderr
-    if with_craft:
-        for c in dyadlib.craft_dirs(PKG):   # dirs_exist_ok: `install` has already written every *bundled* craft (Rule-11 p2, package.release_roots()); its tracked files are a subset of this tree, so copying over it leaves exactly the tree this helper has always placed, and places the non-bundled crafts as before
-            shutil.copytree(c, d / "crafts" / c.name, ignore=shutil.ignore_patterns("__pycache__"), dirs_exist_ok=True)
-        shutil.copy(dyadlib.crafts_dir(PKG) / "REGISTRY.md", d / "crafts" / "REGISTRY.md")   # the craft zone's instance state (#156); Rule-11 names it
-    subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
-    subprocess.run(["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "scratch"], check=True)
-    return d
+    """A scratch git repo with the core craft installed (package.py install) and, optionally, every crafts/<craft>/ copied in
+    (whatever this repo currently has, discovered dynamically): an independent copy of this module's one install of that
+    variant (`livetest.ScratchInstalls`). The install path itself runs once per variant, and again in every case below that
+    re-installs into its copy (`install twice`, `prunes`, `gitignore`)."""
+    return SCRATCH.copy(with_craft)
 
 def load_package():
     spec = importlib.util.spec_from_file_location("package", PKG / "scripts" / "package.py")
@@ -39,7 +37,7 @@ def load_package():
 
 def scratch_repo(paths, tracked=True):
     """A temp git repo holding `paths` (added and committed when tracked, else left untracked)."""
-    d = Path(tempfile.mkdtemp())
+    d = SCRATCH.mkdtemp()
     subprocess.run(["git", "init", "-q", str(d)], check=True)
     for rel in paths:
         f = d / rel; f.parent.mkdir(parents=True, exist_ok=True); f.write_bytes(b"\x00cafe")
@@ -95,7 +93,7 @@ class PackageTests(livetest.LiveCase):
         """A module under guards/ lacking check_package is a failing check, not a silent skip (plan #151, attack 6)."""
         import os, shutil
         pkg = load_package()
-        d = Path(tempfile.mkdtemp()); shutil.copytree(PKG, d / "dyad", ignore=shutil.ignore_patterns("__pycache__"))
+        d = SCRATCH.mkdtemp(); shutil.copytree(PKG, d / "dyad", ignore=shutil.ignore_patterns("__pycache__"))
         (d / "dyad" / "guards" / "agent" / "zzz.py").write_text("ENTITY = 'zzz'\n")
         subprocess.run(["git", "init", "-q", str(d)], check=True)
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--list"], capture_output=True, text=True, env={**os.environ, "DYAD_NO_NESTED_TESTS": "1"})
@@ -103,10 +101,20 @@ class PackageTests(livetest.LiveCase):
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--guards"], capture_output=True, text=True, env={**os.environ, "DYAD_NO_NESTED_TESTS": "1"})
         self.assertIn("FAIL [guards] agent/zzz:", r.stdout)
     def test_guards_entry_point(self):
-        r = self.run_py("check", "--guards")
-        for g in ("infra/containment", "agent/rules", "agent/vocabulary", "agent/references", *CRAFT):   # every craft guard this install carries (#171)
-            self.assertTrue(any(l.startswith(("ok   [guards] " + g, "FAIL [guards] " + g)) for l in r.stdout.splitlines()), g)
-        self.assertRegex(r.stdout, r"\[guards\] agent/rules \(\d+ Rules\)")
+        """`cmd_guards` (the `check --guards` entry point) reports a line for each named guard. In-process over
+        the registry narrowed to those guards (#163, d-work #199 N3a): the assertion reads their lines only, so
+        the real-repo child and every other guard it paid for (`craft/crafts` above all) bought nothing here.
+        The argv dispatch to `cmd_guards` stays covered by the scratch-install children and PrePushTests."""
+        pkg = load_package(); full = pkg.registry
+        named = ("infra/containment", "agent/rules", "agent/vocabulary", "agent/references", *CRAFT)   # every craft guard this install carries (#171)
+        buf = io.StringIO()
+        with unittest.mock.patch.object(pkg, "registry", lambda: [e for e in full() if f"{e[0]}/{e[1]}" in named]), \
+             unittest.mock.patch.dict(os.environ, {"DYAD_NO_NESTED_TESTS": "1"}), contextlib.redirect_stdout(buf):
+            pkg.cmd_guards()
+        out = buf.getvalue()
+        for g in named:
+            self.assertTrue(any(l.startswith(("ok   [guards] " + g, "FAIL [guards] " + g)) for l in out.splitlines()), g)
+        self.assertRegex(out, r"\[guards\] agent/rules \(\d+ Rules\)")
     def test_rule_12_runs_the_suites_and_maps_nothing(self):
         """#162: the mapping is the syseng craft's guard (`syseng/tests`); the runner keeps the suites."""
         pkg = load_package(); crafts = dyadlib.crafts_dir(PKG)
@@ -150,10 +158,17 @@ class PackageTests(livetest.LiveCase):
         re-enter this very suite, which is the recursion the same d-work already logged."""
         pkg = load_package()
         pkg._SUITE_RAN = True
+        calls = []
         buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+        # #163 (d-work #199 N3a): the gate is what is asserted, not the guards, so the registry is emptied rather
+        # than run in full over the real repo; and the nesting flag is dropped so `_SUITE_RAN` alone must stop it
+        with unittest.mock.patch.object(pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(a) or 0), \
+             unittest.mock.patch.dict(os.environ, {}, clear=False), contextlib.redirect_stdout(buf):
+            os.environ.pop("DYAD_NO_NESTED_TESTS", None)
             pkg.cmd_guards()
         self.assertNotIn("[Rule-12]", buf.getvalue())
+        self.assertEqual(calls, [], buf.getvalue())     # the suite was not reached a second time
         self.assertIn("_SUITE_RAN", inspect.getsource(pkg.cmd_guards))
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.check_rule_12))
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.cmd_tests))
@@ -166,7 +181,10 @@ class PackageTests(livetest.LiveCase):
         shown ledger-only, so the safe default is to test."""
         pkg = load_package(); pkg._SUITE_RAN = False
         calls = []
-        with unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(a) or 0), \
+        # #163 (d-work #199 N3a): the suite gate is asserted, not the guards, so the registry is emptied rather
+        # than run in full over the real repo; rc 0 then reads the gate's own result, not every guard's
+        with unittest.mock.patch.object(pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(a) or 0), \
              unittest.mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("DYAD_NO_NESTED_TESTS", None)
             buf = io.StringIO()
@@ -220,7 +238,7 @@ class PackageTests(livetest.LiveCase):
             self.assertEqual(r.returncode, 2); self.assertIn("no craft provides the run-book check", r.stderr)
         else:
             self.assertIn("[rule-19]", r.stdout + r.stderr)
-        d = Path(tempfile.mkdtemp()); (d / "x.md").write_text("# x\n")   # `new` refuses to overwrite an existing run-book (#155, attack 7)
+        d = SCRATCH.mkdtemp(); (d / "x.md").write_text("# x\n")   # `new` refuses to overwrite an existing run-book (#155, attack 7)
         r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "runbook", "new", "x"], capture_output=True, text=True, env=env(DYAD_RUNBOOKS=str(d)))
         self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
         # both refusals are documented: no craft to seed from (core-only install), else the existing file (#171)
@@ -232,7 +250,7 @@ class PackageTests(livetest.LiveCase):
     # #156: build and install go through scripts/distribute.py — deterministic archive, idempotent install (Rule-11 p5)
     def test_build_deterministic(self):
         import hashlib
-        d = Path(tempfile.mkdtemp())
+        d = SCRATCH.mkdtemp()
         a, b = self.run_py("build", str(d / "a.tar.gz")), self.run_py("build", str(d / "b.tar.gz"))
         self.assertEqual(a.returncode, 0, a.stderr); self.assertIn(f"built {d}/a.tar.gz (version {load_package().version()})", a.stdout)
         self.assertEqual(hashlib.sha256((d / "a.tar.gz").read_bytes()).hexdigest(), hashlib.sha256((d / "b.tar.gz").read_bytes()).hexdigest())
