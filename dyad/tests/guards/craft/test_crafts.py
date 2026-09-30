@@ -273,6 +273,25 @@ class FloorTests(unittest.TestCase):
         self.assertIn("helper", sys.modules)   # contamination is genuinely present in this process
         msgs = cg.floor_problems(self.r, self.d)
         self.assertEqual(msgs, [], msgs)   # the floor genuinely holds; unaffected by the cache above
+    def test_floor_child_writes_no_bytecode_into_the_craft_tree(self):
+        """#185: `_FLOOR_SCRIPT`'s `sys.dont_write_bytecode = True` governs the spawned child, not
+        this module's own imports, and the child's target is the *live* craft's guard file — so
+        without it the child writes `.pyc` into a craft tree and the next run's by-path import can
+        be served a cache whose (mtime, size) validation cannot see a same-size rewrite.
+        PYTHONDONTWRITEBYTECODE is popped from the environment the child inherits, or CI's own `=1`
+        would make this pass vacuously (plan #185 A8)."""
+        guards = self.d / "guards"
+        prev = os.environ.pop("PYTHONDONTWRITEBYTECODE", None)
+        try:
+            self.assertNotIn("PYTHONDONTWRITEBYTECODE", os.environ)
+            msgs = cg.floor_problems(self.r, self.d)
+        finally:
+            if prev is not None:
+                os.environ["PYTHONDONTWRITEBYTECODE"] = prev
+        # the child really ran and really loaded the target, so an empty guards/ below is the
+        # suppression working, not the check silently skipping
+        self.assertEqual(msgs, ["crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor"])
+        self.assertEqual(sorted(x.name for x in guards.iterdir()), ["w.py"])
     def test_live_repo_no_local_stale_tag_skips_cleanly(self):
         # the live sysarch/syseng/sysadmin crafts still declare the stale requires: dyad-operator
         # >=0.2.0 (raised properly in a later, craft-zone d-work, #100 PR3-5); the tag is not fetched

@@ -136,6 +136,11 @@ def _floor_pkg(repo: Path, tag: str) -> Path | None:
 _FLOOR_SCRIPT = """\
 import importlib.util, sys
 from pathlib import Path
+# This line governs the spawned floor-check subprocess, not this module's own imports (those go
+# through dyadlib.load_module, which sets the same flag for its own reason). Here the targets are
+# the *live* craft's guard and projector files, so without it the child would write `.pyc` into a
+# craft tree, and the next run's by-path import could be served a cache whose (mtime, size)
+# validation cannot see a same-size rewrite -- a floor check reporting on code not on disk (#185).
 sys.dont_write_bytecode = True
 scripts = Path({scripts!r})
 sys.path.insert(0, str(scripts))

@@ -35,9 +35,32 @@ def guard_key(py: Path, pkg: Path = PKG) -> tuple[str, str, str]:
     return ("craft", py.parents[1].name, py.stem)
 
 def load_module(path: Path, name: str | None = None):
-    """Import a Python file by path without writing bytecode (file counts stay deterministic).
-    The module is cached in sys.modules under `name` (default: the file stem) so two loaders of
-    the same file share one module object."""
+    """Import a Python file by path, executing the file that is on disk. The module is cached in
+    sys.modules under `name` (default: the file stem) so two loaders of the same file share one
+    module object.
+
+    Why `dont_write_bytecode` is set here (#185, and two earlier reasons that are refuted): a
+    by-path import must execute the source, never a `.pyc` whose validation is (mtime-to-the-
+    second, size) and therefore cannot see a same-size rewrite inside one second. Measured with
+    the suppression removed: this function returned `VALUE = 111` from a path whose source read
+    `222`. The guard registry is loaded only through here, so that is `dyad check` reporting on
+    code that is not on disk — the one artifact Rule-2's Binding cannot tolerate, since the
+    evidence block must be about the head being merged.
+
+    Both earlier reasons are **refuted**; neither is a reason to keep or drop this line:
+      - "file counts stay deterministic" — false. Both counts the runner prints come from
+        `distribute.files(tracked=True)`, i.e. `git ls-files`, which an untracked `.pyc` cannot move.
+      - "a read-only command leaves no files behind" — false. With this suppression and
+        `crafts.py`'s `_FLOOR_SCRIPT` one both in place, `dyad check --guards` still leaves
+        `dyad/scripts/__pycache__`, written by `package.py`'s own `sys.path` imports, which this
+        function does not mediate.
+
+    Cost, measured: about 0.3 s per full gate. `crafts/sysarch/tests` is the only root where
+    retaining bytecode replicates as faster (−12.5% of that root, 0.3% of total suite time);
+    `dyad/tests`, `check --guards` and `check --evidence` are all inside their own between-run
+    spread. See `agent-corpus/audits/2026-09-29-bytecode-retention-profile.md` (#190). Keeping the
+    cache *and* being correct is available at the price of a `compileall --invalidation-mode
+    checked-hash` step in the install path, refused on that price (plan #185 A5, revision 3)."""
     name = name or path.stem
     if name in sys.modules and getattr(sys.modules[name], "__file__", None) == str(path):
         return sys.modules[name]

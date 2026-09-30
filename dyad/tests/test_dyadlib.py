@@ -1,4 +1,4 @@
-import os, sys, unittest, unittest.mock
+import os, shutil, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import dyadlib, livetest
@@ -153,6 +153,46 @@ class GuardRootsTests(livetest.LiveCase):
         # alphabetical order — false the moment any craft sorts earlier (lan-git does, #181).
         # Membership is the actual invariant this line is protecting.
         self.assertIn("sysadmin", names); self.assertIn("sysarch", names)
+
+class LoadModuleTests(unittest.TestCase):
+    """`dyadlib.load_module`'s `sys.dont_write_bytecode` (#185): two earlier reasons for it are
+    refuted (see the docstring); the one that survives is that a by-path import must execute the
+    file on disk, never a `.pyc` whose validation is (mtime-to-the-second, size) and so cannot see
+    a same-size rewrite inside one second. One test on the mechanism, one on that consequence."""
+    NAME = "dyad_test_loadmod_185"
+
+    def setUp(self):
+        # CI exports PYTHONDONTWRITEBYTECODE=1, which would make both tests below pass vacuously
+        # (plan #185 A8). sys.dont_write_bytecode is a runtime flag and outranks the variable for
+        # this process, so set it False here and restore it after.
+        self.prev_flag = sys.dont_write_bytecode
+        sys.dont_write_bytecode = False
+        self.tmp = Path(tempfile.mkdtemp(prefix="dyad-loadmod-185-"))
+
+    def tearDown(self):
+        sys.dont_write_bytecode = self.prev_flag
+        sys.modules.pop(self.NAME, None)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_no_bytecode_beside_the_file_and_the_flag_restored(self):
+        p = self.tmp / "m.py"; p.write_text("VALUE = 111\n")
+        self.assertEqual(dyadlib.load_module(p, self.NAME).VALUE, 111)
+        self.assertEqual(sorted(x.name for x in self.tmp.iterdir()), ["m.py"])   # no __pycache__
+        self.assertFalse(sys.dont_write_bytecode, "load_module must restore the caller's flag")
+
+    def test_a_same_size_rewrite_under_one_mtime_is_not_served_from_cache(self):
+        """The consequence, not the mechanism: with the suppression removed this fails as
+        `AssertionError: 111 != 222` — `load_module` returning code that is not on disk. The guard
+        registry is loaded only through this function, so that is `dyad check` reporting on a tree
+        other than the head being merged (Rule-2, Binding)."""
+        p = self.tmp / "m.py"; p.write_text("VALUE = 111\n")
+        st = p.stat()
+        self.assertEqual(dyadlib.load_module(p, self.NAME).VALUE, 111)   # the run that would warm a cache
+        sys.modules.pop(self.NAME)
+        p.write_text("VALUE = 222\n")                     # same byte length as the first source
+        os.utime(p, (st.st_atime, st.st_mtime))            # and the same mtime, to the second
+        self.assertEqual(dyadlib.load_module(p, self.NAME).VALUE, 222)
+
 
 class PackageRulesTests(unittest.TestCase):
     """dyadlib.package_rules (#192): the package file is generic; a host's own strings come from
