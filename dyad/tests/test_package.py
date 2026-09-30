@@ -148,8 +148,9 @@ class PackageTests(livetest.LiveCase):
         re-enters the suite (observed live in #155: 44 orphaned unittest processes)."""
         pkg = load_package()
         self.assertEqual(pkg.cmd_tests(), 0)            # env() sets the flag for this whole suite
-        for src in (inspect.getsource(pkg.cmd_tests), inspect.getsource(pkg.cmd_guards)):
+        for src in (inspect.getsource(pkg.cmd_tests), inspect.getsource(pkg.suite_gate)):   # cmd_guards' gate: suite_gate (#164)
             self.assertIn("DYAD_NO_NESTED_TESTS", src)
+        self.assertIn("suite_gate(", inspect.getsource(pkg.cmd_guards))
 
     def test_evidence_runs_the_suite_once(self):
         """`cmd_evidence` calls `cmd_check` and then `cmd_guards`; the suite belongs to the first
@@ -169,7 +170,7 @@ class PackageTests(livetest.LiveCase):
             pkg.cmd_guards()
         self.assertNotIn("[Rule-12]", buf.getvalue())
         self.assertEqual(calls, [], buf.getvalue())     # the suite was not reached a second time
-        self.assertIn("_SUITE_RAN", inspect.getsource(pkg.cmd_guards))
+        self.assertIn("_SUITE_RAN", inspect.getsource(pkg.suite_gate))   # the gate cmd_guards consults (#164)
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.check_rule_12))
         self.assertIn("_SUITE_RAN = True", inspect.getsource(pkg.cmd_tests))
 
@@ -196,36 +197,119 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(len(calls), 1, out)                   # the suite was reached
         self.assertEqual(rc, 0, out)
 
+    def gate_repo(self):
+        """A scratch repo: `seed` (one file), then `ledger` (a row under `<instance>/d-work/`). Returns
+        (repo, seed sha, git). Built without GIT_VARS, removed at module teardown."""
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        d = SCRATCH.mkdtemp()
+        git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True, env=dyadlib.git_env()).stdout.strip()
+        git("init", "-q", "-b", "main")
+        for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+            git("config", k, v)
+        (d / "seed.txt").write_text("seed\n"); git("add", "-A"); git("commit", "-qm", "seed")
+        seed = git("rev-parse", "HEAD")
+        rows = d / inst / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "1.md").write_text("id: 1\n"); git("add", "-A"); git("commit", "-qm", "ledger")
+        return d, seed, git
+
+    def gate_run(self, pkg, base, evidence=False):
+        """`cmd_guards` (or `cmd_evidence`) over the real gate with the registry emptied and `cmd_tests`
+        recorded (#163 idiom, d-work #199 N3a), the invariant pass stubbed (it loads modules under `REPO`,
+        here a scratch repo); returns (suite calls, output)."""
+        calls, buf = [], io.StringIO()
+        pkg._SUITE_RAN = False
+        def rule_12():
+            pkg._SUITE_RAN = True; calls.append(("check",)); return []
+        with unittest.mock.patch.object(pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(pkg, "cmd_invariants", lambda: 0), \
+             unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(a) or 0), \
+             unittest.mock.patch.object(pkg, "CHECKS", {"Rule-12": rule_12}), \
+             unittest.mock.patch.dict(os.environ, {}, clear=False), contextlib.redirect_stdout(buf):
+            os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+            if evidence:
+                pkg.cmd_evidence()
+            else:
+                pkg.cmd_guards(base=base)
+        return calls, buf.getvalue()
+
+    def test_suite_gate_truth_table(self):
+        """#164 (d-work #199 N1): `suite_gate`'s decision order, each row over a real range."""
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        old = pkg.REPO; pkg.REPO = d
+        try:
+            with unittest.mock.patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+                pkg._SUITE_RAN = False
+                self.assertEqual(pkg.suite_gate("HEAD", "HEAD"), (False, "skip [guards] Rule-12 suite: HEAD..HEAD is empty (d-work #164)"))
+                self.assertEqual(pkg.suite_gate(seed, "HEAD"), (False, f"skip [guards] Rule-12 suite: {seed}..HEAD is ledger-only (d-work #155)"))
+                self.assertEqual(pkg.suite_gate("refs/heads/no-such-164", "HEAD"), (True, None))   # unreadable range -> run
+                self.assertEqual(pkg.suite_gate("HEAD", "HEAD", base_ok=False), (True, None))      # base unresolved -> run, before the range
+                with unittest.mock.patch.object(dyadlib, "range_paths", lambda *a, **k: None):
+                    self.assertEqual(pkg.suite_gate(seed, "HEAD"), (True, None))                   # None, never read as empty
+                pkg._SUITE_RAN = True
+                self.assertEqual(pkg.suite_gate("HEAD", "HEAD"), (False, None))                    # already ran: silent
+                pkg._SUITE_RAN = False
+                os.environ["DYAD_NO_NESTED_TESTS"] = "1"
+                self.assertEqual(pkg.suite_gate(seed, "HEAD"), (False, None))                      # nested: silent
+                os.environ.pop("DYAD_NO_NESTED_TESTS")
+                (d / "note.md").write_text("a play-book, not a .py\n"); git("add", "-A"); git("commit", "-qm", "md")
+                self.assertEqual(pkg.suite_gate(seed, "HEAD"), (True, None))                       # markdown counts -> run
+        finally:
+            pkg.REPO = old
+        self.assertFalse(hasattr(pkg, "ledger_only_range"))   # one decision point, no second reading of the range
+
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
         """The prefix, never the suffix: a `.py` filter would have passed #137's markdown run-book,
         which broke the core suite by falsifying a pinned count."""
-        pkg = load_package(); inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
-        d = Path(tempfile.mkdtemp(prefix="dyad-gate-"))
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        old = pkg.REPO; pkg.REPO = d
         try:
-            subprocess.run(["git", "init", "-q", "-b", "main", str(d)], check=True)
-            for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
-                subprocess.run(["git", "-C", str(d), "config", k, v], check=True)
-            (d / "seed.txt").write_text("seed\n")
-            subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
-            subprocess.run(["git", "-C", str(d), "commit", "-qm", "seed"], check=True)
-            base = subprocess.check_output(["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
-            rows = d / inst / "d-work" / "rows"; rows.mkdir(parents=True)
-            (rows / "1.md").write_text("id: 1\n")
-            subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
-            subprocess.run(["git", "-C", str(d), "commit", "-qm", "ledger"], check=True)
-            old = pkg.REPO
-            try:
-                pkg.REPO = d
-                self.assertTrue(pkg.ledger_only_range(base, "HEAD"))     # rows only -> skip the suite
-                (d / "note.md").write_text("a play-book, not a .py\n")
-                subprocess.run(["git", "-C", str(d), "add", "-A"], check=True)
-                subprocess.run(["git", "-C", str(d), "commit", "-qm", "md"], check=True)
-                self.assertFalse(pkg.ledger_only_range(base, "HEAD"))    # markdown counts -> run it
-                self.assertFalse(pkg.ledger_only_range("HEAD", "HEAD"))  # empty range -> run it
-            finally:
-                pkg.REPO = old
+            calls, out = self.gate_run(pkg, seed)
+            self.assertIn(f"skip [guards] Rule-12 suite: {seed}..HEAD is ledger-only (d-work #155)", out)
+            self.assertEqual(calls, [], out)
+            (d / "note.md").write_text("a play-book, not a .py\n"); git("add", "-A"); git("commit", "-qm", "md")
+            calls, out = self.gate_run(pkg, seed)                                  # non-empty, not ledger-only -> run
+            self.assertNotIn("skip [guards] Rule-12 suite", out)
+            self.assertEqual(len(calls), 1, out)
         finally:
-            shutil.rmtree(d, ignore_errors=True)
+            pkg.REPO = old
+
+    def test_guards_skip_the_suite_on_an_empty_range(self):
+        """#164 (d-work #199 N1): `HEAD == base` changes nothing, so it cannot change a suite's outcome
+        (#190: 115 s for that). The plan gate and the fence still read an empty range as not ledger-only."""
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        old = pkg.REPO; pkg.REPO = d
+        try:
+            calls, out = self.gate_run(pkg, "HEAD")
+            self.assertIn("skip [guards] Rule-12 suite: HEAD..HEAD is empty (d-work #164)", out)
+            self.assertEqual(calls, [], out)
+            self.assertFalse(dyadlib.ledger_only(d, "HEAD", "HEAD"))   # unchanged for the plan gate and the fence
+        finally:
+            pkg.REPO = old
+
+    def test_guards_run_the_suite_on_an_unreadable_range(self):
+        """#164: `range_paths` answering None (git could not say) is never read as empty — run."""
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        old = pkg.REPO; pkg.REPO = d
+        try:
+            with unittest.mock.patch.object(dyadlib, "range_paths", lambda *a, **k: None):
+                calls, out = self.gate_run(pkg, "HEAD")
+            self.assertNotIn("skip [guards] Rule-12 suite", out)
+            self.assertEqual(len(calls), 1, out)
+        finally:
+            pkg.REPO = old
+
+    def test_evidence_runs_the_suite_on_an_empty_range(self):
+        """#164: `check --evidence` is the merge evidence (Rule-14 p3) and observes; its `cmd_check` runs
+        the suite before `cmd_guards` meets the gate, so an empty range never skips it there."""
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        old = pkg.REPO; pkg.REPO = d
+        try:
+            calls, out = self.gate_run(pkg, "HEAD", evidence=True)
+            self.assertEqual(calls, [("check",)], out)             # the suite ran, once, through cmd_check
+            self.assertNotIn("skip [guards] Rule-12 suite", out)   # the gate's skip line never enters evidence
+        finally:
+            pkg.REPO = old
 
     # Rule-19 (d-work #150): the run-book subcommand dispatches to scripts/runbook.py (core; #155 amendment)
     def test_runbook_subcommand_dispatches(self):
