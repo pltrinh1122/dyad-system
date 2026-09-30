@@ -36,7 +36,10 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    kernel-only path may import directly. Minimal; versions recorded as observed, with the
    minimum the package was last verified on. A hosted git service is never kernel.
 3. **Kernel-only path.** Every guard runs on the kernel alone: `package.py check --guards`,
-   called by `dyad/hooks/pre-push` before every push (I2). CI, hosting
+   called by `dyad/hooks/pre-push` before every push (I2). The hook runs it as `check --guards
+   --pre-push`, which judges the refs git pushes (read from its stdin) and refuses a push it cannot
+   judge: a ref other than the checked-out HEAD, or a working tree with changes; a deletion, or a
+   ref already on `origin/main`, carries no new commit and passes (d-work #194). CI, hosting
    and any runner are library adapters; the package must not depend on them to enforce a Rule.
    The kernel-only path is the merge evidence for every merge: `package.py check --evidence`,
    run by the main Agent on the exact head being merged, prints the evidence block (head sha,
@@ -70,5 +73,7 @@ moved to `crafts/sysarch/rules/manifest.md` 2026-09-14 (#160); the kernel stays 
 and import-scan mechanics of Enforcement moved to `crafts/syseng/rules/imports.md` 2026-09-14 (#162).
 Property 1 gains the profile cell and the instance contribution 2026-09-25 (d-work #175): the core
 manifest had shipped one system's operating rows to every install; see the same record, amendment #175.
+Property 3 gains the pre-push sentence 2026-09-29 (d-work #194): the hook judged `origin/main..HEAD`
+and the tree on disk, not the refs git pushes; see the same record, amendment #194.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).

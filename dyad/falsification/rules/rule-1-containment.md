@@ -152,3 +152,23 @@ used by 1 and 14); `preference` gains Rule-1 in its `used by`. Others unchanged.
 orthogonal.
 
 Disposition: see ledger #175.
+
+## Amendment — d-work #194 (2026-09-29, the push condition names the refs being pushed)
+The pre-push hook ran `check --guards` over `origin/main..HEAD` whatever git was pushing; containment's
+*commits* mode therefore judged the checked-out branch's commits, not the pushed ref's (`git push origin
+gap` while on `main` judged `main`). Survivor (Rule-14 property 3, which owns the kernel-only path, and
+its amendment #194 for the full table): the hook runs `check --guards --pre-push`, which refuses a ref
+other than the checked-out HEAD and a working tree with changes, passes a deletion or a ref already on
+`origin/main`, and otherwise judges the pushed commit. Rule-1's push condition names it.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 40 | Containment judged each commit that left the machine before this change. | Refuted | It judged `origin/main..HEAD`; a push of another branch sent commits it never read, and a clean push was refused over an unrelated HEAD. |
+| 41 | The condition belongs in Rule-1's own text in full (the refusal rules). | Refuted | The refusal is the kernel-only path's, which Rule-14 owns; Rule-1's condition names the command and the refs, one line, so ownership is not shared. |
+| 42 | Refusing a ref other than HEAD breaks the *commits* mode's promise (a push of several single-zone commits that together span zones is correct). | Refuted | Nothing about modes changes: the range is still `origin/main..<head>`, judged commit by commit; only which head is judged is corrected. |
+
+Pairwise (Rule-5): **1–14** the refusal rules and the kernel-only path stay Rule-14's; Rule-1 reads
+them in its condition. **1–3** the plan gate over the same range is Rule-3's, unaffected. Others
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #194.
