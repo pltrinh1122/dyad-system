@@ -35,7 +35,18 @@ class RecordTests(unittest.TestCase):
     def test_no_instance_dir_passes(self):
         root, pkg = fixture({"rule-1-x.md": GOOD}); self.assertEqual(rc.check_package(root, pkg), [])
     def test_live_records_pass(self):
-        self.assertEqual(rc.check_package(dyadlib.repo_root()), []); self.assertGreaterEqual(len(rc.record_files(dyadlib.repo_root())), 18)   # the package ships one record per Rule (A6; 18 Rules since #160 retired 17 and 21); a scratch install has no instance records
+        # #186 replaced a floor of 18 justified as "one record per Rule (18 Rules)". Both were false:
+        # `dyad/rules/RULE-*.md` is 19 files (1-16, 18-20; 17 and 21 were retired by #160), and
+        # `dyad/falsification/rules/` holds 20 records of which only 17 are per-Rule — Rules 9 and 10
+        # share `rules-9-10-promotion.md`, while `rule-sets.md` and `rules-2-3-batch-disposition.md`
+        # are multi-Rule. The package partition is pinned exactly, not floored, because it ships with
+        # the package and is identical in every install; the instance partition is not pinned at all,
+        # because a scratch install has none (CI runs this suite inside one, `dyad-package.yml`), which
+        # is why `record_files(repo_root())` reads 31 here and 20 there.
+        root = dyadlib.repo_root()
+        self.assertEqual(rc.check_package(root), [])
+        pkg_records = [f for f in rc.record_files(root) if f.parent == dyadlib.PKG / "falsification" / "rules"]
+        self.assertEqual(len(pkg_records), 20)
     def test_describe(self):
         root, pkg = fixture({"rule-1-x.md": GOOD}, {"gap.md": AMEND})
         d = rc.describe(root, pkg)
