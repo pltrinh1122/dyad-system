@@ -21,7 +21,7 @@ The guard composes the Rule-4 and Rule-6 scans by import (crafts/sysarch/rules/g
 import sys
 if sys.version_info < (3, 12):
     sys.exit("crafts.py: Python 3.12+ required")
-import io, subprocess, tarfile, tempfile
+import io, shutil, subprocess, tarfile, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, distribute
@@ -117,23 +117,49 @@ def unmet(repo: Path, craft_dir: Path) -> list[str]:
             out.append(f"requires {name}>={ver}: found {have}")
     return out
 
-def _floor_pkg(repo: Path, tag: str) -> Path | None:
-    """The whole `dyad/` tree as it stood at `tag`, extracted into a scratch root (`git archive`
+def _floor_pkg(repo: Path, tag: str, tmp: Path) -> Path | None:
+    """The whole `dyad/` tree as it stood at `tag`, extracted under `tmp` (`git archive`
     piped through the stdlib `tarfile`, no new World dependency, Rule-14 property 2's kernel-only
     path): a craft's guard and projector modules call their own `dyadlib.load_guard`/`load_module`
     at import time to resolve sibling files, so a bare `dyadlib.py` alone made every one of them
     fail to *load* against the floor rather than testing its invariants — noise, not signal. `None`
-    when the tag holds no `dyad/` (should not happen for a real release; named, not guessed at)."""
+    when the tag holds no `dyad/` (should not happen for a real release; named, not guessed at).
+    `tmp` is the caller's (`FloorCache`), which removes it on every path (#199 R2-2: this function
+    once made its own `mkdtemp` and never removed it, one `dyad-floor-*` per floor per run)."""
     archive = subprocess.run(["git", "archive", tag, "--", "dyad"], cwd=repo, capture_output=True)
     if archive.returncode != 0 or not archive.stdout:
         return None
-    tmp = Path(tempfile.mkdtemp(prefix="dyad-floor-"))
     with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tf:
         tf.extractall(tmp, filter="data")
     pkg = tmp / "dyad"
     return pkg if (pkg / "scripts" / "dyadlib.py").is_file() else None
 
-_FLOOR_SCRIPT = """\
+class FloorCache:
+    """Extracted floor trees for one caller's scope, keyed by (repo, the tag's commit), so crafts
+    sharing a floor extract it once per `check_package` (#199 N3b). Keyed by the commit `rev-parse`
+    already resolved rather than the tag name, so a tag moved within the scope is never served stale.
+    A context manager: leaving the scope — normally, by exception or by early return — removes every
+    `dyad-floor-*` directory it made (R2-2)."""
+    def __init__(self):
+        self._pkgs: dict[tuple[str, str], Path | None] = {}
+        self._dirs: list[Path] = []
+    def get(self, repo: Path, tag: str, commit: str) -> Path | None:
+        key = (str(Path(repo).resolve()), commit)
+        if key not in self._pkgs:
+            tmp = Path(tempfile.mkdtemp(prefix="dyad-floor-"))
+            self._dirs.append(tmp)   # registered before extraction, so a failing extract is removed too
+            self._pkgs[key] = _floor_pkg(repo, tag, tmp)
+        return self._pkgs[key]
+    def close(self) -> None:
+        while self._dirs:
+            shutil.rmtree(self._dirs.pop(), ignore_errors=True)
+        self._pkgs.clear()
+    def __enter__(self):
+        return self
+    def __exit__(self, *exc):
+        self.close()
+
+_FLOOR_PRELUDE = """\
 import importlib.util, sys
 from pathlib import Path
 # This line governs the spawned floor-check subprocess, not this module's own imports (those go
@@ -170,6 +196,9 @@ for _p in sorted(scripts.glob("*.py")):
         except Exception:
             pass   # a script that cannot load stand-alone at this floor is not this check's target
 
+"""
+
+_FLOOR_SCRIPT = _FLOOR_PRELUDE + """\
 spec = importlib.util.spec_from_file_location("__floor_target__", {path!r})
 mod = importlib.util.module_from_spec(spec)
 try:
@@ -182,6 +211,36 @@ for n, pred in getattr(mod, "INVARIANTS", []):
     except Exception:
         ok = False
     print("INV", n, ok)
+"""
+
+# One child per floor for every file of it (#199 N3b): the prelude's pre-seeded floor modules are
+# shared, as they were by a single file's own transitive imports; whatever a target adds to
+# `sys.modules` or `sys.path` is undone before the next, so no target sees another's. A target
+# that leaves the child some other way (SystemExit, a crash, a hang) never prints its end marker,
+# and `_check_files_against_floor` re-runs every unfinished file through `_FLOOR_SCRIPT`, one
+# child each, so that file's message is exactly the single-file one.
+_FLOOR_BEGIN, _FLOOR_END = "__dyad_floor_begin__", "__dyad_floor_end__"
+_FLOOR_BATCH_SCRIPT = _FLOOR_PRELUDE + """\
+for _i, _path in enumerate({paths!r}):
+    print("__dyad_floor_begin__", _i, flush=True)
+    _mods, _syspath = set(sys.modules), list(sys.path)
+    spec = importlib.util.spec_from_file_location("__floor_target__", _path)
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        print("LOAD_ERROR", repr(e))
+    else:
+        for n, pred in getattr(mod, "INVARIANTS", []):
+            try:
+                ok = bool(pred())
+            except Exception:
+                ok = False
+            print("INV", n, ok)
+    for _k in set(sys.modules) - _mods:
+        del sys.modules[_k]
+    sys.path[:] = _syspath
+    print("__dyad_floor_end__", _i, flush=True)
 """
 
 def _check_invariants_against_floor(py: Path, floor_pkg: Path) -> tuple[str | None, list[tuple[str, bool]]]:
@@ -210,7 +269,35 @@ def _check_invariants_against_floor(py: Path, floor_pkg: Path) -> tuple[str | No
         error = (r.stderr.strip().splitlines()[-1] if r.stderr.strip() else f"exit {r.returncode}")
     return error, results
 
-def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list[str]:
+def _check_files_against_floor(files: list[Path], floor_pkg: Path) -> list[tuple[str | None, list[tuple[str, bool]]]]:
+    """`_check_invariants_against_floor` for every file of one floor, in one child
+    (`_FLOOR_BATCH_SCRIPT`) instead of one each, in `files`' order. A file the child did not finish
+    is re-run alone, so the result per file is the single-file one."""
+    done: dict[int, tuple[str | None, list[tuple[str, bool]]]] = {}
+    if files:
+        script = _FLOOR_BATCH_SCRIPT.format(scripts=str(floor_pkg / "scripts"), paths=[str(p) for p in files])
+        try:
+            stdout = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60 * len(files)).stdout
+        except subprocess.TimeoutExpired:
+            stdout = ""   # every file re-runs alone below, where a hung one times out as it always did
+        cur, error, results = None, None, []
+        for line in stdout.splitlines():
+            if line.startswith(_FLOOR_BEGIN + " "):
+                cur, error, results = int(line.split()[1]), None, []
+            elif line.startswith(_FLOOR_END + " "):
+                if cur is not None:
+                    done[cur] = (error, results)
+                cur = None
+            elif cur is None:
+                continue
+            elif line.startswith("LOAD_ERROR "):
+                error = line[len("LOAD_ERROR "):]
+            elif line.startswith("INV "):
+                _, inv_name, ok = line.split(" ", 2)
+                results.append((inv_name, ok == "True"))
+    return [done[i] if i in done else _check_invariants_against_floor(py, floor_pkg) for i, py in enumerate(files)]
+
+def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, cache: FloorCache | None = None) -> list[str]:
     """D1 (#100): for each `requires: dyad-operator>=X` whose tag `dyad-operator-vX` resolves
     locally, re-run the craft's own guard and projector `INVARIANTS` against that tag's
     `dyad/scripts/dyadlib.py` instead of the live one — the craft's own already-declared facts,
@@ -218,7 +305,11 @@ def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list
     floor from a hand-maintained "feature added in version N" table just recreates the bug (a
     second table to drift); this is the one check that can't drift from what the craft actually
     needs. A false invariant fails; no local tag, or the blob absent there, is one skip line each —
-    the drift guard's own pattern (#91)."""
+    the drift guard's own pattern (#91). `cache` is the caller's (`check_package` shares one across
+    crafts); without one, a cache lives and is removed within this call."""
+    if cache is None:
+        with FloorCache() as own:
+            return floor_problems(repo, craft_dir, pkg, own)
     repo, d = Path(repo), Path(craft_dir); name = d.name; msgs = []
     files = []
     for sub in ("guards", "projectors"):
@@ -233,12 +324,11 @@ def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list
         if rp.returncode != 0:
             msgs.append(f"warning: {name}: floor {req_name}>={ver}: no tag {tag} here (not yet released, or tags not fetched)")
             continue
-        floor_pkg = _floor_pkg(repo, tag)
+        floor_pkg = cache.get(repo, tag, rp.stdout.strip())
         if floor_pkg is None:
             msgs.append(f"warning: {name}: floor {req_name}>={ver}: {tag}:dyad/ not found")
             continue
-        for py in files:
-            error, results = _check_invariants_against_floor(py, floor_pkg)
+        for py, (error, results) in zip(files, _check_files_against_floor(files, floor_pkg)):
             if error is not None:
                 msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: does not load against floor {req_name}>={ver}: {error}")
                 continue
@@ -247,7 +337,7 @@ def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG) -> list
                     msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: floor {req_name}>={ver}: {inv_name} is false against {ver} — raise the floor")
     return msgs
 
-def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=()) -> list[str]:
+def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=(), floor_cache: FloorCache | None = None) -> list[str]:
     """One craft: bare lines fail, `warning:` lines warn. `repo` is the tree the craft sits in (the repo, or a
     staged export); `others` are the other craft roots present (shared-word warning)."""
     repo, d = Path(repo), Path(craft_dir); name = d.name; rel = f"crafts/{name}"; msgs = []; own_corpora = set()
@@ -306,7 +396,7 @@ def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=())
     if (d / "rules").is_dir():
         msgs += dyadlib.load_guard("agent", "rules", pkg).check_tended(d / "rules", data()["agent-token"], rel_to=repo)
     msgs += [f"warning: {rel}: {u} (checked at install)" for u in unmet(repo, d)]
-    msgs += floor_problems(repo, d, pkg)
+    msgs += floor_problems(repo, d, pkg, floor_cache)
     return msgs
 
 def seed_status(repo: Path, craft_dir: Path) -> list[str]:
@@ -328,7 +418,8 @@ def crafts(root: Path) -> list[Path]:
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = Path(root or dyadlib.repo_root())
     all_ = crafts(root)
-    return [m for d in all_ for m in check_craft(root, d, pkg, others=[o for o in all_ if o != d]) + seed_status(root, d)]
+    with FloorCache() as fc:
+        return [m for d in all_ for m in check_craft(root, d, pkg, others=[o for o in all_ if o != d], floor_cache=fc) + seed_status(root, d)]
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     return f"{len(crafts(Path(root or dyadlib.repo_root())))} craft(s)"

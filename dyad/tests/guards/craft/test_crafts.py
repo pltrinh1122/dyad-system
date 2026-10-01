@@ -5,6 +5,7 @@ fails; unmet `requires` warns; `seeds:` (#180) — a mismatched destination zone
 collision between two crafts warns, `seed_status` warns only when the destination is absent and never writes; the
 live sysadmin craft passes; the contract and CLI line."""
 import os, shutil, subprocess, sys, tempfile, unittest
+from unittest import mock
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -292,6 +293,104 @@ class FloorTests(unittest.TestCase):
         # suppression working, not the check silently skipping
         self.assertEqual(msgs, ["crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor"])
         self.assertEqual(sorted(x.name for x in guards.iterdir()), ["w.py"])
+    def _private_tmp(self):
+        # a private temp root, so the assertion sees only directories this check made (#199 R2-2)
+        priv = Path(tempfile.mkdtemp()); prev = tempfile.tempdir; tempfile.tempdir = str(priv)
+        self.addCleanup(shutil.rmtree, priv, True)
+        self.addCleanup(setattr, tempfile, "tempdir", prev)
+        return priv
+    def test_floor_check_leaves_no_temp_dir(self):
+        priv = self._private_tmp()
+        msgs = cg.floor_problems(self.r, self.d)
+        self.assertEqual(len(msgs), 1, msgs)   # the floor really was extracted and checked
+        self.assertEqual(list(priv.glob("dyad-floor-*")), [])
+    def test_floor_check_leaves_no_temp_dir_when_the_tag_has_no_dyadlib(self):
+        priv = self._private_tmp()
+        (self.r / "dyad" / "other.txt").write_text("x\n")
+        subprocess.run(["git", "-C", str(self.r), "rm", "-q", "dyad/scripts/dyadlib.py"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "commit", "-qm", "no dyadlib"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "-f", "dyad-operator-v0.1.0", "HEAD"], check=True, capture_output=True)
+        self.assertEqual(cg.floor_problems(self.r, self.d), ["warning: fx: floor dyad-operator>=0.1.0: dyad-operator-v0.1.0:dyad/ not found"])
+        self.assertEqual(list(priv.glob("dyad-floor-*")), [])
+    def test_floor_check_leaves_no_temp_dir_on_exception(self):
+        priv = self._private_tmp()
+        def boom(*a, **k): raise RuntimeError("extract failed")
+        with mock.patch.object(cg, "_floor_pkg", boom):
+            with self.assertRaises(RuntimeError):
+                cg.floor_problems(self.r, self.d)
+        self.assertEqual(list(priv.glob("dyad-floor-*")), [])
+    def test_check_package_shares_one_extraction_per_floor_and_removes_it(self):
+        priv = self._private_tmp()
+        g = self.r / "crafts" / "gx"; (g / "guards").mkdir(parents=True)
+        (g / "VERSION").write_text("0.1.0\n"); (g / "MANIFEST.md").write_text("name: gx\nrequires: dyad-operator>=0.1.0\n")
+        (g / "guards" / "w.py").write_text(GUARD_W)
+        made = []; real = tempfile.mkdtemp
+        def spy(*a, **k):
+            p = real(*a, **k)
+            if k.get("prefix") == "dyad-floor-": made.append(p)
+            return p
+        with mock.patch.object(tempfile, "mkdtemp", spy):
+            msgs = cg.check_package(self.r)
+        self.assertEqual(len(made), 1, made)   # two crafts, one floor, one extraction
+        self.assertEqual([m for m in msgs if "widget-exists" in m],
+                         ["crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor",
+                          "crafts/gx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor"])
+        self.assertEqual(list(priv.glob("dyad-floor-*")), [])
+    def _single_file_reference(self):
+        # the pre-#199 algorithm, one child per file through `_FLOOR_SCRIPT`, as the identity oracle
+        files = sorted(f for f in (self.d / "guards").glob("*.py") if not f.name.startswith("_"))
+        out = []
+        with cg.FloorCache() as fc:
+            rp = subprocess.run(["git", "rev-parse", "dyad-operator-v0.1.0^{commit}"], cwd=self.r, capture_output=True, text=True)
+            floor = fc.get(self.r, "dyad-operator-v0.1.0", rp.stdout.strip())
+            for py in files:
+                error, results = cg._check_invariants_against_floor(py, floor)
+                if error is not None:
+                    out.append(f"crafts/fx/guards/{py.name}: does not load against floor dyad-operator>=0.1.0: {error}"); continue
+                out += [f"crafts/fx/guards/{py.name}: floor dyad-operator>=0.1.0: {n} is false against 0.1.0 — raise the floor" for n, ok in results if not ok]
+        return out
+    def _count_children(self):
+        real = subprocess.run; calls = []
+        def wrap(argv, *a, **k):
+            if argv[0] == sys.executable and argv[1] == "-c": calls.append(argv)
+            return real(argv, *a, **k)
+        with mock.patch.object(subprocess, "run", wrap):
+            msgs = cg.floor_problems(self.r, self.d)
+        return msgs, calls
+    def test_one_child_per_floor_with_identical_messages(self):
+        (self.d / "guards" / "w3.py").write_text(GUARD_W_SELF_PATH)
+        (self.d / "guards" / "w4.py").write_text("raise ImportError('no widget here')\n")
+        expected = self._single_file_reference()
+        self.assertEqual(expected, [
+            "crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor",
+            "crafts/fx/guards/w3.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor",
+            "crafts/fx/guards/w4.py: does not load against floor dyad-operator>=0.1.0: ImportError('no widget here')"])
+        msgs, calls = self._count_children()
+        self.assertEqual(msgs, expected)
+        self.assertEqual(len(calls), 1, calls)
+    def test_a_file_that_exits_the_child_falls_back_alone_with_identical_messages(self):
+        # w2 ends the batch child; it and every file after it re-run one child each, so its message
+        # is the single-file one ("exit 3") and w3's result is still reported, in order
+        (self.d / "guards" / "w2.py").write_text("import sys\nsys.exit(3)\n")
+        (self.d / "guards" / "w3.py").write_text(GUARD_W_SELF_PATH)
+        expected = self._single_file_reference()
+        self.assertEqual(expected, [
+            "crafts/fx/guards/w.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor",
+            "crafts/fx/guards/w2.py: does not load against floor dyad-operator>=0.1.0: exit 3",
+            "crafts/fx/guards/w3.py: floor dyad-operator>=0.1.0: widget-exists is false against 0.1.0 — raise the floor"])
+        msgs, calls = self._count_children()
+        self.assertEqual(msgs, expected)
+        self.assertEqual(len(calls), 3, calls)   # the batch, then w2 and w3 alone
+    def test_a_target_s_imports_do_not_reach_the_next_target(self):
+        # w1 plants a module and a sys.path entry; w2 must not see either, as in its own child
+        (self.d / "guards" / "w1.py").write_text("import sys, types\nsys.modules['planted'] = types.ModuleType('planted')\nsys.path.insert(0, '/planted')\nINVARIANTS = []\n")
+        (self.d / "guards" / "w2.py").write_text("import sys\nINVARIANTS = [('clean', lambda: 'planted' not in sys.modules and '/planted' not in sys.path)]\n")
+        expected = self._single_file_reference()
+        msgs, calls = self._count_children()
+        self.assertEqual(msgs, expected)
+        self.assertEqual(len(calls), 1, calls)
+        self.assertFalse(any("w2.py" in m for m in msgs), msgs)
     def test_live_repo_no_local_stale_tag_skips_cleanly(self):
         # the live sysarch/syseng/sysadmin crafts still declare the stale requires: dyad-operator
         # >=0.2.0 (raised properly in a later, craft-zone d-work, #100 PR3-5); the tag is not fetched
