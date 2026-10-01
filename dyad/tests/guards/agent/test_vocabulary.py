@@ -26,7 +26,11 @@ class VocabularyTests(unittest.TestCase):
         self.assertIn("does not mention", v.check(TABLE + "| orphan | d | frame | 5 |\n", RULES)[1][0])
     def test_live_package(self):
         n, fails = v.check_vocabulary()
-        self.assertEqual(fails, []); self.assertGreaterEqual(n, 67)
+        # 90 is the data-row count of `dyad/vocabulary/VOCABULARY.md` (its pipe lines less the header
+        # and the separator), which is exactly what `check_vocabulary` returns. Raised from a stale 67
+        # in #186: 23 terms of slack meant 23 could be deleted and the floor still pass. Raise it with
+        # the table.
+        self.assertEqual(fails, []); self.assertGreaterEqual(n, 90)
         self.assertEqual(v.check_package(dyadlib.repo_root()), [])
     def test_contract(self):
         self.assertEqual((v.ENTITY, v.CORPUS, v.TRANSACTION, v.FIELDS), ("term", "agent", False, v.COLUMNS))
