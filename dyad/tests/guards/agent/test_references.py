@@ -90,8 +90,11 @@ def fail_kinds(msgs):
 RESOLVABLE = {k for k, *_ , r in refint.REFERENCES if callable(r)}
 # `event.command->command` (source `event`, kept core per #213 — it needs no craft) still reads
 # through `refint.events`, a module bound at import time to the *live* repo (`dyadlib.find_guard`'s
-# default pkg), not to a test fixture; its two tests need that module, whatever the fixture holds.
-needs_sysadmin = unittest.skipUnless(refint.events is not None, "the sysadmin craft's guards are not installed here")
+# default pkg), not to a test fixture; its two cases need that module, whatever the fixture holds.
+HAVE_EVENTS = refint.events is not None
+NO_EVENTS = "the sysadmin craft's guards are not installed here"
+# #186: the two cases that need it are rows of one table now, so the condition is a constant the
+# loop reads per row rather than a decorator; skipping the whole table would hide the other 12.
 # Rule-11 property 2's contribution mechanism (#101) retired the four sysadmin-specific core rows
 # (`changelog.action->ops`, `ops.dwork->row`, `ops.changelog->changelog`, `changelog.event->event`)
 # in favor of the sysadmin craft declaring them itself via `REFERENCES_CONTRIB`; a contributed kind
@@ -108,6 +111,12 @@ class Fixtured(unittest.TestCase):
         for k, v in self.prev.items():
             if v is not None: os.environ[k] = v
         shutil.rmtree(self.root, ignore_errors=True)
+    def rebuild(self):
+        """A fresh scratch corpus inside one test: what `setUp` gives the first row of a `subTest`
+        table, this gives each later row (#186), so no row inherits another's mutation. The `DYAD_*`
+        pops stay with setUp/tearDown, which bracket the whole test."""
+        shutil.rmtree(self.root, ignore_errors=True)
+        self.root, self.pkg, self.inst = fixture()
     def check(self):
         return refint.check(self.root, self.pkg)
     def rewrite(self, p, old, new):
@@ -168,12 +177,50 @@ class FixtureTests(Fixtured):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), {kind}, msgs)
     def row(self, r): return self.inst / "d-work" / "rows" / f"{r}.md"
-    def test_row_refs_row(self):
-        self.broken(lambda: self.rewrite(self.row(7), "#1,", "#42,"), "row.refs->row")
-    def test_row_refs_rule(self):
-        self.broken(lambda: self.rewrite(self.row(7), "Rule-2", "Rule-9"), "row.refs->rule")
-    def test_plan_id_row(self):
-        self.broken(lambda: (self.inst / "d-work" / "plans" / "8.md").write_text("# Plan #8\n"), "plan.id->row")
+    # #186: one table replaces the 14 methods whose whole body was one `self.broken(...)` call. Each
+    # row's `subTest` label is the method name it carries forward, so a failure still names the case
+    # (C3). `Fixtured` builds a scratch corpus per *test*, so the loop calls `rebuild()` to give every
+    # row its own: row 0 uses setUp's, rows 1.. their own, none shared. The two rows that carried
+    # `@needs_sysadmin` skip per row, never the table.
+    def test_a_broken_reference_fails_under_its_own_kind(self):
+        rows = (
+            ("test_row_refs_row", "row.refs->row", False,
+             lambda: self.rewrite(self.row(7), "#1,", "#42,")),
+            ("test_row_refs_rule", "row.refs->rule", False,
+             lambda: self.rewrite(self.row(7), "Rule-2", "Rule-9")),
+            ("test_plan_id_row", "plan.id->row", False,
+             lambda: (self.inst / "d-work" / "plans" / "8.md").write_text("# Plan #8\n")),
+            ("test_rule_text_rule", "rule.text->rule", False,
+             lambda: self.rewrite(self.pkg / "rules" / "RULE-1-x.md", "Rule-2 owns", "Rule-7 owns")),
+            ("test_rule_provenance_record", "rule.provenance->record", False,
+             lambda: (self.pkg / "falsification" / "rules" / "rule-2-x.md").unlink()),
+            ("test_rule_text_path", "rule.text->path", False,
+             lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "`dyad/rules/`", "`dyad/nope/`")),
+            ("test_rule_text_glob_needs_a_match", "rule.text->path", False,
+             lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "project_<surface>.py", "render_<surface>.py")),
+            ("test_preference_read_by", "preference.read_by->rule", False,
+             lambda: self.rewrite(self.root / "preferences-corpus" / "PREFERENCES.md", "Rule-2 |", "Rule-5 |")),
+            ("test_changelog_dwork", "changelog.dwork->row", False,
+             lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "| 2026-09-14 | #7 |", "| 2026-09-14 | #8 |")),
+            ("test_incident_dwork_range", "incident.dwork->row", False,
+             lambda: self.rewrite(self.inst / "audits" / "INCIDENTS.md", "#2-#3", "#2-#4")),
+            ("test_record_ledger", "record.ledger->row", False,
+             lambda: self.rewrite(self.inst / "falsification" / "gap.md", "Disposition: see ledger #7", "Disposition: see ledger #71")),
+            ("test_event_command", "event.command->command", True,
+             lambda: self.rewrite(self.root / "workstation-corpus" / "runbooks" / "events" / "x.jsonl", '"name": "start"', '"name": "launch"')),
+            ("test_event_command_needs_the_instance_runbook", "event.command->command", True,
+             lambda: (self.root / "workstation-corpus" / "runbooks" / "x.md").rename(self.root / "workstation-corpus" / "runbooks" / "y.md")),
+            ("test_registry_module", "registry.module->file", False,
+             lambda: self.rewrite(self.pkg / "scripts" / "package.py", 'project_erd.py', 'project_nope.py')),
+        )
+        self.assertEqual(len(rows), 14); self.assertEqual(len({r[0] for r in rows}), 14)
+        for i, (name, kind, needs_events, mutate) in enumerate(rows):
+            with self.subTest(name):
+                if needs_events and not HAVE_EVENTS:
+                    self.skipTest(NO_EVENTS)
+                if i:
+                    self.rebuild()
+                self.broken(mutate, kind)
     def test_plan_base_commit(self):
         self.rewrite(self.row(7), "state: done", "state: open")   # active: Rule-15 phase 2 still needs it checked
         self.broken(lambda: self.rewrite(self.inst / "d-work" / "plans" / "7.md", "base commit: ", "base commit: deadbeef0"), "plan.base->commit")
@@ -183,8 +230,6 @@ class FixtureTests(Fixtured):
         self.rewrite(self.inst / "d-work" / "plans" / "7.md", "base commit: ", "base commit: deadbeef0")
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs)
-    def test_rule_text_rule(self):
-        self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-1-x.md", "Rule-2 owns", "Rule-7 owns"), "rule.text->rule")
     def test_rule_text_row_is_world_never_fails(self):
         # #177: a package Rule's own `ledger #N` citation is historical provenance of the
         # authoring instance, not a reference a receiving instance can resolve — world, not row_exists.
@@ -217,10 +262,6 @@ class FixtureTests(Fixtured):
         self.assertIn("warn craft_rule.text->provenance: 1 reference(s) to row; unresolvable (The World), inference", msgs)
         c = refint.Corpus(self.root, self.pkg)
         self.assertEqual(refint.craft_rule_ledger(c), [("crafts/sysadmin/rules/x.md", "5")])
-    def test_rule_provenance_record(self):
-        self.broken(lambda: (self.pkg / "falsification" / "rules" / "rule-2-x.md").unlink(), "rule.provenance->record")
-    def test_rule_text_path(self):
-        self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "`dyad/rules/`", "`dyad/nope/`"), "rule.text->path")
     def test_rule_text_craft_path(self):
         # #155: kind 11 resolves `crafts/…` paths too — a kernel cites "the active craft's <rule> rule" by path
         self.assertIn(("dyad/rules/RULE-1-x.md", "crafts/sysadmin/rules/x.md"), refint.package_paths(refint.Corpus(self.root, self.pkg)))
@@ -231,8 +272,6 @@ class FixtureTests(Fixtured):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs); self.assertTrue(any(m.startswith("skip rule.text->path: `crafts/…` tokens") for m in msgs))
         self.assertEqual(k, len(RUNNABLE), "the kind still ran for its dyad/ tokens")
-    def test_rule_text_glob_needs_a_match(self):
-        self.broken(lambda: self.rewrite(self.pkg / "rules" / "RULE-2-x.md", "project_<surface>.py", "render_<surface>.py"), "rule.text->path")
     def test_rule_text_command_word_cut(self):
         # `dyad/scripts/containment.py zones` resolves to the file; the trailing word is never a path
         self.assertIn(("dyad/rules/RULE-1-x.md", "dyad/guards/infra/containment.py"), refint.package_paths(refint.Corpus(self.root, self.pkg)))
@@ -244,29 +283,13 @@ class FixtureTests(Fixtured):
         self.assertEqual(by["frame.import->rule"], "guard:agent/frame.py"); self.assertEqual(by["frame.import->file"], "guard:agent/frame.py")
         self.rewrite(self.pkg / "CLAUDE.md", "@rules/RULE-2-x.md\n", "")
         self.assertEqual(fail_kinds(self.check()[2]), set(), "listed, not re-checked here (the frame guard fails it)")
-    def test_preference_read_by(self):
-        self.broken(lambda: self.rewrite(self.root / "preferences-corpus" / "PREFERENCES.md", "Rule-2 |", "Rule-5 |"), "preference.read_by->rule")
-    def test_changelog_dwork(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "CHANGELOG.md", "| 2026-09-14 | #7 |", "| 2026-09-14 | #8 |"), "changelog.dwork->row")
-    def test_incident_dwork_range(self):
-        self.broken(lambda: self.rewrite(self.inst / "audits" / "INCIDENTS.md", "#2-#3", "#2-#4"), "incident.dwork->row")
     def test_incident_pre_ledger_segment_is_not_a_reference(self):
         self.assertEqual(refint.hash_ids("#1–#3 (pre-ledger)"), [])
         self.assertEqual(refint.hash_ids("#2–#4, #9; PR #1 #5; was #6"), ["2", "3", "4", "9", "6"])
         self.assertEqual(refint.hash_ids("PRs #61 #62"), [])
-    def test_record_ledger(self):
-        self.broken(lambda: self.rewrite(self.inst / "falsification" / "gap.md", "Disposition: see ledger #7", "Disposition: see ledger #71"), "record.ledger->row")
-    @needs_sysadmin
-    def test_event_command(self):
-        self.broken(lambda: self.rewrite(self.root / "workstation-corpus" / "runbooks" / "events" / "x.jsonl", '"name": "start"', '"name": "launch"'), "event.command->command")
-    @needs_sysadmin
-    def test_event_command_needs_the_instance_runbook(self):
-        self.broken(lambda: (self.root / "workstation-corpus" / "runbooks" / "x.md").rename(self.root / "workstation-corpus" / "runbooks" / "y.md"), "event.command->command")
     def test_rules_components_read_beside_the_manifest_guard(self):
         (self.pkg / "guards" / "infra" / "manifest_rules.txt").write_text("Python: python3\n")
         self.assertEqual(refint.rules_components(refint.Corpus(self.root, self.pkg)), [("dyad/guards/infra/manifest_rules.txt", "Python")])
-    def test_registry_module(self):
-        self.broken(lambda: self.rewrite(self.pkg / "scripts" / "package.py", 'project_erd.py', 'project_nope.py'), "registry.module->file")
     def test_failure_names_file_field_and_token(self):
         self.rewrite(self.row(7), "#1,", "#42,")
         fails = [m for m in self.check()[2] if m.startswith("FAIL ")]
