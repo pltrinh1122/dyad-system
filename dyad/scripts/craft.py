@@ -30,14 +30,17 @@ import dyadlib, distribute
 REGISTRY = "crafts/REGISTRY.md"
 REGISTRY_FIELDS = ("craft", "version", "source", "sha256", "d-work")
 REGISTRY_HEAD = ("# Craft registry (instance state in the craft zone, Rule-11 property 2; #156)\n\n"
-                 "One row per *installed* Tended craft, written by `dyad craft install`, never by hand. A craft authored\n"
-                 "in this system has no row (`dyad craft list` shows it as `authored`). `sha256` is `distribute.archive_sha256`\n"
-                 "of the installed tree — the proof it is unmodified; `source` is where the archive came from (a `world`\n"
-                 "reference); `d-work` the installing d-work. No date: a second install of the same version changes nothing.\n\n"
+                 "One row per *installed* craft, never written by hand: a Tended craft's by `dyad craft install`, the core\n"
+                 "craft's (`dyad-operator`, tree `dyad/`) by `dyad install` (#199). A craft authored in this system has no row\n"
+                 "(`dyad craft list` shows it as `authored`). `sha256` is `distribute.archive_sha256` of the installed tree —\n"
+                 "the proof it is unmodified, and what lets the push gate skip its test root (Rule-12 property 2); `source` is\n"
+                 "where the archive came from (a `world` reference); `d-work` the installing d-work. No date: a second install\n"
+                 "of the same version changes nothing.\n\n"
                  "| craft | version | source | sha256 | d-work |\n|-------|---------|--------|--------|--------|\n")
 
 INVARIANTS = [("registry-fields-distinct", lambda: len(set(REGISTRY_FIELDS)) == len(REGISTRY_FIELDS)),
-              ("registry-head-names-fields", lambda: REGISTRY_HEAD.rstrip().splitlines()[-2] == "| " + " | ".join(REGISTRY_FIELDS) + " |")]   # crafts/syseng/rules/invariants.md
+              ("registry-head-names-fields", lambda: REGISTRY_HEAD.rstrip().splitlines()[-2] == "| " + " | ".join(REGISTRY_FIELDS) + " |"),
+              ("core-name-is-the-guards", lambda: CORE_NAME == guard().CORE_NAME)]   # crafts/syseng/rules/invariants.md
 
 def guard():
     return dyadlib.load_guard("craft", "crafts", PKG)
@@ -55,9 +58,37 @@ def write_registry(repo: Path, rows: dict[str, dict[str, str]]) -> None:
     body = "".join("| " + " | ".join(r[k] for k in REGISTRY_FIELDS) + " |\n" for _, r in sorted(rows.items()))
     (Path(repo) / REGISTRY).write_text(REGISTRY_HEAD + body)
 
+CORE_NAME, CORE_ROOT = "dyad-operator", "dyad"   # the core craft's registry name (guards/craft/crafts.py CORE_NAME) and tree (package.py CORE_ROOTS)
+
+def craft_root(name: str) -> str:
+    """The repo-relative tree a registry row names: `dyad` for the core craft, else `crafts/<name>`."""
+    return CORE_ROOT if name == CORE_NAME else f"crafts/{name}"
+
 def tree_sha(repo: Path, name: str) -> str:
     """The identity of the tree on disk (tracked or not: an install is not yet committed)."""
-    return distribute.archive_sha256(repo, [f"crafts/{name}"], tracked=False)
+    return distribute.archive_sha256(repo, [craft_root(name)], tracked=False)
+
+def unmodified(repo: Path, name: str, rows: dict | None = None) -> dict[str, str] | None:
+    """`name`'s registry row when its tree on disk hashes to the row's sha256 — installed and unmodified —
+    else None: no row (authored here, or never installed), no tree, or a different hash (modified since)."""
+    row = (registry_rows(repo) if rows is None else rows).get(name)
+    if row is None or not (Path(repo) / craft_root(name)).is_dir():
+        return None
+    return row if row["sha256"] == tree_sha(repo, name) else None
+
+def record_core(repo: Path, version: str, source: str) -> int:
+    """`dyad install`'s registry row for the core craft (Rule-11 property 2, d-work #199): the row `cmd_install`
+    writes for a Tended craft, its sha256 the tree `dyad/` as installed (`tree_sha`, the same computation). Written
+    only when it differs, so a second install of the same source is 0 changes. Returns the files written (0 or 1)."""
+    rows = registry_rows(repo)
+    new = {"craft": CORE_NAME, "version": version, "source": source, "sha256": tree_sha(repo, CORE_NAME),
+           "d-work": rows.get(CORE_NAME, {}).get("d-work", "")}
+    if rows.get(CORE_NAME) == new:
+        return 0
+    rows[CORE_NAME] = new
+    (Path(repo) / REGISTRY).parent.mkdir(parents=True, exist_ok=True)
+    write_registry(repo, rows)
+    return 1
 
 def cmd_list(repo: Path) -> int:
     g = guard(); rows = registry_rows(repo)

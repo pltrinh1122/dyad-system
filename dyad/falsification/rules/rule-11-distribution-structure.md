@@ -312,3 +312,32 @@ the interim. If the Operator wants the row to say "every released craft", that i
 for a later agent-zone PR; this PR does not make it.
 
 Disposition: disposed by the Done-`Y` of d-work #156; see ledger #156.
+
+## Amendment — d-work #199 (2026-10-01, node N5 for backlog row #176: property 2's core registry row)
+
+**Claim:** the craft registry records the core install too — `dyad install` writes the
+`dyad-operator` row, its `sha256` the installed `dyad/` tree by the computation a Tended craft's row
+uses, rewritten only when it differs — so that Rule-12 property 2's push path can tell an installed,
+unmodified core from an authored or a modified one.
+
+Mechanism: `craft.record_core` (`dyad/scripts/craft.py`, the registry's one reader and writer),
+called by `package.py` `cmd_install` after `distribute.install`; `craft.tree_sha` and `craft_root`
+map `dyad-operator` to `dyad/`; `craft.unmodified` is the comparison the push gate reads.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A1 | Property 2: the core install writes only its root, its hooks and a bundled craft's tree; `crafts/REGISTRY.md` is none of these. | **Confirmed — which is why property 2 gains a sentence** | The row is a new write outside the core's root, named in the Rule rather than added silently (as #114 R6 put it for the bundled tree). It is instance state in the craft zone the install itself owns, as `dyad craft install`'s row already is; no host file is overwritten — other rows and an existing `d-work` cell are kept. |
+| A2 | Idempotence (property 5; syseng `idempotence.md`): a second install must be `0 changes`. | **Survives, tested** | The row is written only when it differs from the one there: a second install of the same source writes nothing (`0 changes`, the registry's bytes unchanged); a deleted registry is one change, the same bytes again. |
+| A3 | The `sha256` must mean exactly what a Tended craft's row means, or the gate compares unlike things. | **Survives, by reuse** | `tree_sha` is the one function for both (`distribute.archive_sha256(repo, [root], tracked=False)`), its root `dyad` for the core. A test pins it to that computation. |
+| A4 | A row edited by hand, or a registry in an authoring repo, makes the core "installed". | **Survives, scoped** | See Rule-12's record, amendment #199 (N5), attacks 2 and 3: a range that changes the registry runs every root; an authored tree has no row; any edit to an installed tree changes its sha. |
+| A5 | Rule-20 reads the registry: `references.py` treats a present `crafts/REGISTRY.md` as "this install keeps a registry". | **Confirmed; a finding, not fixed here** | Observed in a scratch core install: a sibling craft the core cites but does not bundle (`sysarch`, `syseng`) now reads `warn … absent and not in crafts/REGISTRY.md (unknown craft …)` where it read `skip … absent (Rule-20 property 4)`, because the registry is no longer absent once the core writes its row. A warning, never a failure, and the check stays green; the guard is Rule-20's and outside this node's files, so the fix (a registry holding only the core row reads as no Tended registry) is reported for the Operator to place. |
+| A6 | The core row and #201: a bundled craft still has none. | **Confirmed; out of scope** | #201 owns it. The two rows have one shape, so #201 can write a bundled craft's row through the same `tree_sha`. |
+| A7 | `crafts/REGISTRY.md`'s head prose says "one row per installed Tended craft". | **Confirmed; split by zone** | The prose a fresh registry gets is `craft.REGISTRY_HEAD`, agent zone, updated here. This repo's own `crafts/REGISTRY.md` is craft zone and keeps the old prose until a craft-zone PR (Rule-1); its table, empty, is unaffected. |
+
+Pairwise (Rule-5): 11–12 property 2 records the row; Rule-12 property 2 owns when the push path reads
+it, so neither restates the other. 11–1 the registry stays craft zone; the write is an install's,
+never a transaction of this repo. 11–2, 11–3 no ratification event or state added. 11–4 the block is
+unchanged; one sentence in a property. 11–6 `craft registry` and `install` change their definitions
+(both owner 11; Rule-12 joins `craft registry`'s users), and Rules 11 and 12 read correctly with
+them. 11–14 no new dependency. 11–20 finding A5. 11–5, 11–7, 11–8, 11–9, 11–10, 11–13, 11–15, 11–16,
+11–18, 11–19 unaffected. Coherent, orthogonal, with A5 named. Disposition: see ledger #199.

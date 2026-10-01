@@ -113,3 +113,43 @@ content. 12–1 `.git/` is no zone's path and the memo is no repo transaction. 1
 git directory, as git writes its index — stated as inference, not a host action the Agent takes.
 12–4 the block is unchanged. 12–7, 12–9, 12–10, 12–13, 12–15, 12–18, 12–19, 12–20 untouched.
 Coherent, orthogonal. Disposition: see ledger #199.
+
+## Amendment — d-work #199 (2026-10-01, node N5 for backlog row #176: property 2 gains the installed-root skip)
+
+**Claim:** the pre-push path may skip a test root whose installed tree is byte-identical to its craft
+registry row (Rule-11 property 2), and `check --evidence` runs every root.
+
+Occasioned by #176 (relayed via #175 S6): a system that installs the crafts and authors none of them
+ran their authoring suites on every push (countersign-system: 494 core tests per push), over trees it
+had installed and never changed. Mechanism (`dyad/scripts/package.py` `installed_roots`, consulted by
+`cmd_guards` only under `pre_push`, only after `suite_gate` — its memo clause included — has said
+run): a root `dyad/tests` maps to the `dyad-operator` row and `dyad/`, a root `crafts/<c>/tests` to row
+`<c>` and `crafts/<c>/`; `craft.unmodified` compares the row's `sha256` with `craft.tree_sha`, the
+computation `dyad craft install` already writes. The roots left run through `cmd_tests(roots=…)`, a
+partial run, never memoized.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A modified file under an installed root still skips. | **Refuted by construction** | The hash is `distribute.archive_sha256` of the tree on disk: one byte, one mode bit, one added or removed file (untracked or ignored included; only `__pycache__` and `.git` are skipped) is another sha, and the root runs. Under `--pre-push` the tree is the pushed commit's (#194 refuses a dirty one). Tested: a test file added under `dyad/tests` runs the core root. |
+| 2 | A registry row edited by hand (or a sha recomputed to match a modified tree) buys a skip. | **Survives, scoped** | A range that changes `crafts/REGISTRY.md` runs every root, so a hand-edited or a newly written row is first judged by a full run in this system; tested. A row edited in a range the hook never judged (`--no-verify`, a hook unset) is N2's attack 6 again: the party that can do it can already skip the whole hook. The merge evidence never reads the registry for this purpose (attack 4). |
+| 3 | An authoring repo that also has rows skips the suite of what it authors. | **Refuted as stated; scoped** | A craft authored here has no row (Rule-11 property 2: `dyad craft list` shows it `authored`), so its root runs; this repo's registry has no row at all and its gate is unchanged. A row exists only for a tree an install wrote, and the first edit to that tree changes its sha. A repo that installs one craft from elsewhere skips that craft's root alone, exactly while it is the installed bytes. |
+| 4 | The evidence path loses roots: an assumed pass in the merge evidence. | **Refuted by construction** | `installed_roots` is called from `cmd_guards` only when `pre_push` is set; `cmd_evidence` calls `cmd_check()` (every root, observed) and `cmd_guards()` without it, and `check --guards` without `--pre-push` never calls it. Tested: under `--evidence` the suite runs through `check`, and without `--pre-push` `cmd_tests` gets every root; neither prints an `installed unmodified` line. Every merge an operating system makes still runs every root (Rule-14 property 3). |
+| 5 | Plan A4: what an installed system checks at push is the Operator's policy — a preference (`system-profile`) — not a refactor. | **Survives, scoped (as the plan's A4)** | A preference is refuted as the mechanism: an Operator-owned value set to `operating` in an authoring repo would drop the suite by configuration. What skips is decided by bytes alone — only a tree identical to a recorded install — and only at the push gate, never at the merge evidence. It still changes every installed system's push and edits Rules 11 and 12, which is why the plan named both amendments for its `Y` to bind and placed this node last; conceded, as there, that the Operator may want it decided alone, and an `N` re-plans this node only. |
+| 6 | Roots are not independent: a craft's tests import the core, and the core's tests read the crafts and the instance. | **Confirmed; closed for the first, scoped for the second** | A Tended craft's root skips only while the core's tree is unmodified too (tested: a core edit runs every root). Neither `requires:` between Tended crafts nor the instance is hashed: the core's live tests (`LiveCase`) read the instance's stores, which change on every push. The guards judge those stores on every push, unmemoized; the live tests over them run at every merge's evidence and on any push that changes the registry. A live test that fails where its guard passes is found there, one merge later at most. |
+| 7 | The installed tree passed in its authoring system, not in this one: another interpreter, another git, another instance. | **Survives, scoped** | The first push after an install changes the registry and so runs every root here (attack 2). An interpreter or git upgrade later is not keyed (unlike the memo, N2 attack 2): it is observed at the next `check --evidence`, which runs every root. |
+| 8 | A bundled craft (Rule-11 property 2) is written by `dyad install` with no row, so its root never skips. | **Confirmed; out of scope, reported** | Conservative: no row is "run". The missing row is backlog #201 (opened 2026-10-01), which also blocks `dyad craft install` of that craft afterwards; when #201 writes the row, this clause skips that root with no further change. |
+| 9 | A partial pre-push run writes a suite memo under the all-roots key, so a later push skips roots that never ran. | **Refuted by construction** | `cmd_tests(roots=…)` sets no memo parts, as a targeted run does (N2 attack 7); the memo key's `roots` part stays `test_suites()`, every root, so a hit still means every root passed. Tested: the gated push leaves the memo store empty, and a full run after it writes exactly its key. The memo clause precedes this one, so a memo hit skips every root before any hash is computed. |
+| 10 | An unreadable range or an unresolved base skips through the registry. | **Refuted** | `installed_roots` returns every root when `range_paths` is None, and `cmd_guards` never calls it without a resolved base; N1's invariant ("an unknown range runs") is unchanged. |
+
+Measured (a scratch operating install; Falsification A5's method): see the completion reply of node N5
+and the audit M.
+
+Pairwise (Rule-5): 12–11 the registry and its row are Rule-11's (property 2, amended in the same
+d-work); property 2 here reads the row and owns only when its own suite may skip on the push path.
+12–2 Binding names `check --evidence` as the merge evidence, which runs every root; unchanged. 12–3
+the completion evidence pastes the evidence block, which never carries this skip line. 12–14 property
+3 owns where the kernel-only path runs; property 2 cites it and skips no guard. 12–1 the registry stays
+craft zone and is written by an install, never by this check. 12–6 the term `craft registry` gains
+Rule-12 as a user; its definition gains the core row. 12–16 no row, plan or presence file is read.
+12–4 the block is unchanged. 12–7, 12–8, 12–9, 12–10, 12–13, 12–15, 12–18, 12–19, 12–20 untouched.
+Coherent, orthogonal. Disposition: see ledger #199.

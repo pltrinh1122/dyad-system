@@ -35,7 +35,10 @@ behind reusable code carrying a mechanical check.
    a Done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
    suite when a suite memo on this checkout proves the same tree already passed every root in the
    same environment; `check --evidence` never reads one, so the merge evidence always observes
-   (Rule-2, Binding; Rule-14 property 3). One target — a module, a
+   (Rule-2, Binding; Rule-14 property 3). That path also skips a test root whose installed tree is
+   byte-identical to its craft registry row (Rule-11 property 2) — a Tended craft's root only while
+   the core's tree is too — unless the pushed range changes the registry; `check --evidence` runs
+   every root. One target — a module, a
    class, a method — is run while fixing it, through `dyad check --tests <target>`, which is the
    same child the runner spawns. A hand-typed `unittest` over a whole test root is not an error and
    nothing refuses it; it is the expensive path, because it does not set the environment the runner
@@ -66,6 +69,9 @@ runner's to run — at Rule-14 property 3's push gate, or one target at a time �
 measured 134 hand-runs in one session at about three times the runner's price (#154); see the
 same record, amendment #159. Property 2 gains the suite memo 2026-09-30 (d-work #199, node N2 for
 backlog row #162): 53 of 112 merges pushed a tree `check --evidence` had already passed, and the
-push gate ran the suite on it again (#161, C2); see the same record, amendment #199.
+push gate ran the suite on it again (#161, C2); see the same record, amendment #199. Property 2
+gains the installed-root skip 2026-10-01 (d-work #199, node N5 for backlog row #176): a system that
+installs the crafts ran their authoring suites on every push (countersign-system: 494 core tests);
+see the same record, amendment #199 (N5).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

@@ -63,7 +63,9 @@ dyad system without clashes or hand-editing.
    guard modules, discovered like a guard), never by a list the core keeps: a craft removed from
    the tree takes its own claim with it. A core Rule that cites a craft by path is the reason to
    bundle one — what the core ships and what its own Rules depend on must not disagree — and it is
-   the only reason the core's install may write outside its own root.
+   the only reason the core's install may write outside its own root. The registry records the core
+   install too: `dyad install` writes the `dyad-operator` row, its `sha256` the installed `dyad/`
+   tree by the same computation as a Tended craft's row, rewritten only when it differs (#199).
 3. **Craft-relative paths.** Craft files reference their own paths relative to the craft root, and
    instance paths through one instance location, `DYAD_INSTANCE` (default `agent-corpus`;
    `crafts/sysarch/rules/distribution.md`). Paths printed in Rule text are the defaults.
@@ -169,6 +171,9 @@ bundled craft 2026-09-22 (d-work #114): four core Agent Rules cite `crafts/sysad
 the core release shipped without it, and a core-only install of `main` was red; see the same
 record, amendment #114. Property 7 gains the unreleased-craft sentence 2026-09-24 (d-work #156):
 adding any new craft had no order satisfying both Rule-1 (one zone per PR) and the bundle guard; see
-the same record, amendment #156 (2026-09-24).
+the same record, amendment #156 (2026-09-24). Property 2 gains the core's registry row 2026-10-01
+(d-work #199, node N5 for backlog row #176): an operating system's push gate ran the core's whole
+suite over a tree it had installed unmodified, and only a recorded sha can show that it is; see the
+same record, amendment #199.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

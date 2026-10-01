@@ -1374,5 +1374,142 @@ class SuiteMemoTests(unittest.TestCase):
         (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "not ledger")
         self.assertEqual(gate(), (True, None))                          # one non-ledger commit: the clause is off
 
+class InstalledRootTests(unittest.TestCase):
+    """#176 (d-work #199 N5): `dyad install` records the core's tree in the craft registry, and the pre-push
+    path skips a test root whose craft tree is byte-identical to its row — never `check --evidence`, never
+    `check --guards` without `--pre-push`, never a modified tree, a missing row, or a range that changes the
+    registry; a partial run writes no suite memo. Every case runs over a scratch install with `pkg.REPO`
+    pointed at it and `test_suites` pinned to its own roots."""
+
+    def setUp(self):
+        self.pkg = load_package()
+        self.craft = self.pkg.craft_cli()
+        self.addCleanup(setattr, self.pkg, "REPO", self.pkg.REPO)
+        e = unittest.mock.patch.dict(os.environ, {}, clear=False); e.start(); self.addCleanup(e.stop)
+        os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+        self.pkg._SUITE_RAN = False
+
+    def repo(self, craft_row=False):
+        """A scratch install (core row written by the install), optionally a row for its bundled craft, then
+        one pushed commit outside every craft. Returns (repo, base sha, git)."""
+        d = scratch_install(with_craft=False)
+        git = lambda *a: subprocess.run(["git", "-C", str(d), *livetest.IDENTITY, *a], check=True, capture_output=True,
+                                        text=True, env=dyadlib.git_env()).stdout.strip()
+        self.bundled = sorted(c.name for c in dyadlib.craft_dirs(d / "dyad"))
+        if craft_row:
+            rows = self.craft.registry_rows(d)
+            for c in self.bundled:
+                rows[c] = {"craft": c, "version": "0.0.0", "source": "t", "sha256": self.craft.tree_sha(d, c), "d-work": ""}
+            self.craft.write_registry(d, rows); git("add", "-A"); git("commit", "-qm", "rows")
+        base = git("rev-parse", "HEAD")
+        (d / "notes.txt").write_text("not a craft\n"); git("add", "-A"); git("commit", "-qm", "notes")
+        self.pkg.REPO = d
+        p = unittest.mock.patch.object(self.pkg, "test_suites", lambda: [d / "dyad" / "tests"] + sorted((d / "crafts").glob("*/tests")))
+        p.start(); self.addCleanup(p.stop)
+        return d, base, git
+
+    def gate(self, base, pre_push=True, evidence=False):
+        """`cmd_guards` (or `cmd_evidence`) with the registry emptied and `cmd_tests` recorded as its `roots`
+        (repo-relative, or None for every root). Returns (calls, output)."""
+        pkg, calls, buf = self.pkg, [], io.StringIO()
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=pkg.REPO, capture_output=True, text=True, env=dyadlib.git_env()).stdout.strip()
+        rel = lambda roots: None if roots is None else [Path(os.path.relpath(r, pkg.REPO)).as_posix() for r in roots]
+        def rule_12():
+            pkg._SUITE_RAN = True; calls.append("check"); return []
+        with unittest.mock.patch.object(pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(pkg, "cmd_invariants", lambda: 0), \
+             unittest.mock.patch.object(pkg, "cmd_tests", lambda target=None, roots=None: calls.append(rel(roots)) or 0), \
+             unittest.mock.patch.object(pkg, "CHECKS", {"Rule-12": rule_12}), \
+             unittest.mock.patch.object(sys, "stdin", io.StringIO(f"refs/heads/main {head} refs/heads/main {'0' * 40}\n")), \
+             contextlib.redirect_stdout(buf):
+            pkg._SUITE_RAN = False
+            pkg.cmd_evidence() if evidence else pkg.cmd_guards(base=base, pre_push=pre_push)
+        return calls, buf.getvalue()
+
+    def skip_line(self, rel, name):
+        row = self.craft.registry_rows(self.pkg.REPO)[name]
+        return f"skip [guards] Rule-12 suite: {rel} — {name} {row['version']} installed unmodified (crafts/REGISTRY.md)"
+
+    def test_install_writes_the_core_row_idempotently(self):
+        d, base, git = self.repo()
+        row = self.craft.registry_rows(d)[self.craft.CORE_NAME]
+        self.assertEqual((row["version"], row["sha256"]), (self.pkg.version(), self.craft.tree_sha(d, self.craft.CORE_NAME)))
+        self.assertEqual(row["sha256"], self.pkg.distribute.archive_sha256(d, ["dyad"], tracked=False))   # the computation craft install uses
+        reg = (d / "crafts" / "REGISTRY.md").read_bytes()
+        r = PackageTests.run_py(self, "install", str(d))
+        self.assertIn(f"installed into {Path(d).resolve()}: 0 changes", r.stdout, r.stdout + r.stderr)
+        self.assertEqual((d / "crafts" / "REGISTRY.md").read_bytes(), reg)                                 # the same row, untouched
+        (d / "crafts" / "REGISTRY.md").unlink()
+        r = PackageTests.run_py(self, "install", str(d))
+        self.assertIn(f"installed into {Path(d).resolve()}: 1 changes", r.stdout, r.stdout + r.stderr)    # the row alone
+        self.assertEqual((d / "crafts" / "REGISTRY.md").read_bytes(), reg)
+
+    def test_unmodified_installed_root_skips_under_pre_push_only(self):
+        d, base, git = self.repo()
+        calls, out = self.gate(base)
+        self.assertIn(self.skip_line("dyad/tests", self.craft.CORE_NAME), out)
+        self.assertEqual(calls, [[f"crafts/{c}/tests" for c in self.bundled if (d / "crafts" / c / "tests").is_dir()]], out)   # a bundled craft has no row (#201): it runs
+        calls, out = self.gate(base, pre_push=False)                         # check --guards without --pre-push
+        self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
+        calls, out = self.gate(base, evidence=True)                          # check --evidence runs every root
+        self.assertEqual(calls, ["check"], out); self.assertNotIn("installed unmodified", out)
+
+    def test_a_craft_root_skips_with_its_own_row_and_an_unmodified_core(self):
+        d, base, git = self.repo(craft_row=True)
+        calls, out = self.gate(base)
+        self.assertEqual(calls, [], out)                                     # every root skipped: no child at all
+        for c in self.bundled:
+            if (d / "crafts" / c / "tests").is_dir():
+                self.assertIn(self.skip_line(f"crafts/{c}/tests", c), out)
+        with (d / "dyad" / "VERSION").open("a") as f:                        # the core modified: a craft's tests import it
+            f.write("\n")
+        git("commit", "-qam", "core edit")
+        calls, out = self.gate(base)
+        self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
+
+    def test_a_modified_file_runs_the_root(self):
+        d, base, git = self.repo()
+        (d / "dyad" / "tests" / "test_local_addition.py").write_text("import unittest\n")
+        git("add", "-A"); git("commit", "-qm", "a local test")
+        calls, out = self.gate(base)
+        self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
+
+    def test_no_row_runs_the_root(self):
+        d, base, git = self.repo()
+        git("rm", "-q", "crafts/REGISTRY.md"); git("commit", "-qm", "no registry")
+        calls, out = self.gate(git("rev-parse", "HEAD~1"))                   # the range: the registry's removal
+        self.assertEqual(calls, [None], out)
+        calls, out = self.gate(git("rev-parse", "HEAD"))                     # nothing pushed: empty, skipped by #164
+        self.assertEqual(calls, [], out)
+        (d / "more.txt").write_text("x\n"); git("add", "-A"); git("commit", "-qm", "more")
+        calls, out = self.gate(git("rev-parse", "HEAD~1"))                   # no row, registry untouched by the range
+        self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
+
+    def test_a_range_that_changes_the_registry_runs_every_root(self):
+        """A hand-edited row is judged once, in this system, before the gate trusts it."""
+        d, base, git = self.repo()
+        rows =self.craft.registry_rows(d); rows[self.craft.CORE_NAME]["d-work"] = "#1"
+        self.craft.write_registry(d, rows); git("commit", "-qam", "hand edit")
+        calls, out = self.gate(base)
+        self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
+
+    def test_a_partial_pre_push_run_writes_no_memo(self):
+        d, base, git = self.repo()
+        memo = lambda: sorted(p.name for p in (d / ".git" / self.pkg.SUITE_MEMO_DIR).glob("*")) if (d / ".git" / self.pkg.SUITE_MEMO_DIR).is_dir() else []
+        ran = []
+        ok = lambda suite, target=None: ran.append(Path(os.path.relpath(suite, d)).as_posix()) or (0, ["Ran 1 test", "OK"], "")
+        head = git("rev-parse", "HEAD")
+        with unittest.mock.patch.object(self.pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(self.pkg, "cmd_invariants", lambda: 0), \
+             unittest.mock.patch.object(self.pkg, "run_suite", ok), \
+             unittest.mock.patch.object(sys, "stdin", io.StringIO(f"refs/heads/main {head} refs/heads/main {'0' * 40}\n")), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.pkg.cmd_guards(base=base, pre_push=True), 0)
+            self.assertNotIn("dyad/tests", ran); self.assertEqual(memo(), [])          # partial: the core root skipped, nothing memoized
+            self.pkg._SUITE_RAN = False; ran.clear()
+            self.assertEqual(self.pkg.cmd_tests(), 0)                                  # the control: a full run writes one
+        self.assertIn("dyad/tests", ran)
+        self.assertEqual(memo(), [self.pkg.suite_memo_key(self.pkg.suite_memo_parts())])
+
 if __name__ == "__main__":
     unittest.main()

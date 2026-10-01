@@ -180,7 +180,23 @@ class CraftCliTests(unittest.TestCase):
 class InvariantTests(unittest.TestCase):
     def test_invariants_hold(self):
         craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
-        self.assertEqual(dyadlib.check_invariants(craft), len(craft.INVARIANTS)); self.assertEqual(len(craft.INVARIANTS), 2)
+        self.assertEqual(dyadlib.check_invariants(craft), len(craft.INVARIANTS)); self.assertEqual(len(craft.INVARIANTS), 3)
+
+class CoreRowTests(unittest.TestCase):
+    """d-work #199 (#176): the registry's core row, written by `dyad install`, read by the push gate."""
+    def test_core_row_and_unmodified(self):
+        craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
+        self.assertEqual((craft.craft_root(craft.CORE_NAME), craft.craft_root("fx")), ("dyad", "crafts/fx"))
+        d = scratch()                                               # a real install: the core row is already there
+        row = craft.unmodified(d, craft.CORE_NAME)
+        self.assertIsNotNone(row); self.assertEqual(row["sha256"], craft.tree_sha(d, craft.CORE_NAME))
+        self.assertEqual(craft.record_core(d, row["version"], row["source"]), 0)   # the same row: nothing written
+        self.assertIsNone(craft.unmodified(d, "fx"))                # no row
+        (d / "dyad" / "VERSION").write_text("9.9.9\n")
+        self.assertIsNone(craft.unmodified(d, craft.CORE_NAME))     # a modified tree
+        self.assertEqual(craft.record_core(d, "9.9.9", row["source"]), 1)
+        self.assertIsNotNone(craft.unmodified(d, craft.CORE_NAME))  # re-recorded: unmodified again
+        shutil.rmtree(d, ignore_errors=True)
 
 if __name__ == "__main__":
     unittest.main()
