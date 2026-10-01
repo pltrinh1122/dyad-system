@@ -125,7 +125,14 @@ class PackageTests(livetest.LiveCase):
                            env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 4 tests OK", r.stdout)
-        self.assertNotIn("Ran 479", r.stdout)          # the target only, never the whole root
+        # the target only, never the whole root: `cmd_tests` prints one `[Rule-12] … Ran` line for one
+        # dotted target, where a rootful run prints one per test root (six as this repo stands). #186
+        # replaced `assertNotIn("Ran 479", …)`: 479 was a whole-root total from an older tree, and the
+        # root has held several hundred methods more for many d-works, so the literal could not appear
+        # in any run and the assertion could not fail. A count does not rot the same way — it fails
+        # both if the roots are run and if the line stops being printed at all — and it pins no total.
+        ran = [l for l in r.stdout.splitlines() if "[Rule-12]" in l and "Ran" in l]
+        self.assertEqual(len(ran), 1, r.stdout)
         pkg = load_package()
         self.assertIn("DYAD_NO_NESTED_TESTS", inspect.getsource(pkg.run_suite))   # the flag is the point (120 s -> 39 s)
 
