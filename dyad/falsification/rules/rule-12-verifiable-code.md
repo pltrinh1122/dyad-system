@@ -71,3 +71,45 @@ of the code once it exists — no shared ownership. 12–11 the runner is Rule-1
 Rule-12 keeps its check's semantics, unchanged. 12–3 a d-work's completion evidence is Rule-3's; this
 property says only which run produced it. 12–1, 12–2, 12–15, 12–16, 12–20 untouched. Coherent,
 orthogonal. Disposition: see ledger #159.
+
+## Amendment — d-work #199 (2026-09-30, node N2 for backlog row #162: property 2 gains the suite memo)
+
+**Claim:** the pre-push path may skip Rule-12's suite when a suite memo on this checkout proves the
+same tree already passed every root in the same environment, and `check --evidence` never reads one.
+
+Occasioned by #161's C2: `check --evidence` runs the suite on a branch head, and the post-merge push
+of `main` runs it again over a merge commit whose tree, for 53 of 112 merges in seven days, is the
+same tree. Mechanism (`dyad/scripts/package.py`): `check_rule_12` and `cmd_tests()` without a target
+write `<git common dir>/dyad-suite-memo/<key>` after a full, all-roots pass on a clean tree
+(`os.replace`, pruned to the newest 64); `suite_gate` reads it only under `pre_push`, as its last
+clause before "run" — first `head`'s own tree, then a ledger-only branch's merge-base tree.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Unobserved evidence: a memo puts an assumed pass where Rule-3 wants every result "as observed, never assumed" (#161 C2 attack 1). | **Refuted by construction** | The memo is read in one place, `suite_memo_clause`, reached only from `suite_gate` under `pre_push`. `cmd_evidence` runs `cmd_check` (the suite, observed) and then `cmd_guards()` without `pre_push`; `check --guards` without `--pre-push` never reads it either. Tests plant a matching memo and assert both still run the suite and record no memo read. The skip line is printed by the hook, never into an evidence block. |
+| 2 | Key completeness: a tree hash misses inputs the suite reads outside the tree. | **Confirmed; survives as a closed list, stated** | Keyed: the tree; `sys.executable` and `sys.version`; `git --version`; the sorted roots `test_suites()` runs (a craft added or removed is a new root); the env knobs the runner, `dyadlib` and the craft guards read (`DYAD_INSTANCE`, `DYAD_HOST`, `DYAD_HOST_ZONE`, `DYAD_OPS`, `DYAD_RUNBOOKS`, `DYAD_ROLE`; not `DYAD_SESSION`, a presence id, nor `DYAD_NO_NESTED_TESTS`, unset whenever a memo is read or written); a digest of `refs/tags` (`check_drift`); a digest of the instance's `*.local.txt` (git ignores `provenance_legacy.local.txt`, which the provenance guard reads, so it can differ between worktrees of one tree); the UTC date, which bounds every unkeyed input to one day. Not keyed, stated: installed third-party packages (none is imported today; pydantic is a kernel row "adopted when a plan first imports it" — that plan adds its version to the key), and `origin/main` (below). A miss only costs a real run. |
+| 3 | `origin/main` is an input — real-repo `check --guards` children judge `origin/main..HEAD` — and plan #199 listed the base sha in the key. | **Survives, scoped; a departure from the plan's key list, reported** | The history-dependent verdicts are the transaction guards, and the push gate runs every one of them on every push, unmemoized: the memo skips the suite, never a guard. Keying the base would also make the second clause unreachable by definition (a ledger branch behind `origin/main` is one whose base has moved past its merge-base). The node brief omitted it; the omission is stated here and in the completion reply. |
+| 4 | A stale memo after a force-push: history is rewritten, the memo still says "passed". | **Survives** | The memo is keyed by tree, never by commit or ref; a force-push to a tree that passed is still that tree, and one to any other tree is a miss. What depends on history is attack 3's guards, which run. A memo past its day is dead by key. |
+| 5 | A memo shared across worktrees lets one worktree's pass stand for another's different state. | **Survives, scoped** | Sharing is the point (the merge runs in one worktree, the push from another checkout of `main`). What differs between worktrees of one tree is untracked or ignored state: untracked files make the tree dirty, and no memo is read or written then; the ignored instance data the guards read is keyed (attack 2). The ignored build output (`__pycache__/`, `*.pyc`) cannot change a verdict. A test writes from a linked worktree under the hook's `GIT_DIR` and finds the file in the common dir, and a hit from the main worktree. |
+| 6 | A poisoned memo: anyone can write a 64-hex file by hand and skip the suite. | **Survives; trust model stated** | Writing `.git/dyad-suite-memo/` needs the same user, on the same checkout, as editing `.git/hooks`, setting `core.hooksPath` or pushing with `--no-verify` — each of which already skips the whole hook. The memo grants that party nothing it lacks; the hook is the Agent's fence against its own mistakes, never a boundary against the checkout's owner. The merge evidence never reads it (attack 1), and hosted CI corroborates on `main` after the merge (Rule-14 property 3). A file that is not the key of a pass only ever produces a hit for the exact key it names. |
+| 7 | A partial, failed, targeted or moving run could be memoized. | **Refuted by construction** | Only `check_rule_12` (every root) and `cmd_tests()` with no target write, only when every root passed, and only when the parts read before the run equal those read after it (a commit, a tag or an untracked file mid-run is no write). Tests: a dirty tree, a dotted target, one root by path and a failure each leave the store empty; a clean full pass writes exactly its key. |
+| 8 | The second clause (ledger branch behind `origin/main`) passes a merge commit's own changes as ledger-only. | **Confirmed of the walk alone; closed** | The three-dot walk (`dyadlib.ledger_only`, the plan gate's) reads non-merge commits only, so the clause also requires the tree difference between the merge-base and `head` to lie under `<instance>/d-work/` (`dyadlib.ledger_only(..., merge_base=False)`); the premise that a ledger-only difference cannot change a suite's outcome is #155's, unchanged. A branch with one non-ledger commit runs (tested). |
+| 9 | N1's invariant — an unknown or unreadable range runs — is weakened by a memo hit. | **Refuted** | The memo clause is reached only after the range was read and found neither empty nor ledger-only; an unresolvable base or an unreadable range returns "run" before it. |
+
+Pairwise (Rule-5): 12–2 Binding names `check --evidence` as the merge evidence; the memo is never read
+there, so the Binding is unchanged and property 2 cites it. 12–3 the completion evidence is Rule-3's
+and pastes the evidence block, which carries no memo line; property 2 changes which push runs the
+suite, not what a Done-`Y` is asked on. 12–11 the runner is Rule-11's and owns no semantics; when the
+suite may be skipped is Rule-12's own check's concern, placed in the runner as `check_rule_12` is. The
+memo lives under the git directory, never in the tree, so property 6 (generated files never tracked)
+is not engaged and no craft carries instance state. 12–14 property 3 owns where the kernel-only path
+runs, that the pre-push hook is the only check before a merge and that `--evidence` is the merge
+evidence; property 2 owns only when its own suite may be skipped on that path, and cites property 3
+rather than restating it — the guards the hook runs are never skipped. 12–16 the memo is not the
+d-work store and touches no row, plan or presence file; concurrent sessions on one checkout share it
+by design, each write atomic and each file named by its own key, so two writers never collide on
+content. 12–1 `.git/` is no zone's path and the memo is no repo transaction. 12–6 one term added,
+`suite memo`, owner 12, used by 12. 12–8 the memo is a file the runner writes inside the checkout's
+git directory, as git writes its index — stated as inference, not a host action the Agent takes.
+12–4 the block is unchanged. 12–7, 12–9, 12–10, 12–13, 12–15, 12–18, 12–19, 12–20 untouched.
+Coherent, orthogonal. Disposition: see ledger #199.
