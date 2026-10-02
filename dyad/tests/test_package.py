@@ -974,5 +974,99 @@ class SuiteEnvTests(unittest.TestCase):
         self.assertNotIn("GIT_COMMON_DIR", env)
         self.assertEqual(env["DYAD_NO_NESTED_TESTS"], "1")
 
+class SuiteEnvWorktreeTests(unittest.TestCase):
+    """#165 end to end (d-work #199 N0): a pre-push hook in a linked worktree exports
+    `GIT_DIR=<common>/worktrees/<wt>` and `GIT_PREFIX` (observed, git 2.43.0). A test child that
+    inits and configures its own scratch repo under `suite_env()` leaves the shared repository
+    untouched; under the raw hook env the same child writes `core.bare`, `user.*` and a branch
+    into it — the #152 damage, reproduced here as the control."""
+    CHILD = ("import subprocess as s\n"
+             "for a in (['init', '-q', '.'], ['config', 'user.name', 'x'], ['config', 'user.email', 'x@x'],\n"
+             "          ['commit', '-q', '--allow-empty', '-m', 'c'], ['branch', 'feature']):\n"
+             "    s.run(['git', *a], check=True, capture_output=True)\n")
+    def fixture(self):
+        """A shared scratch repo with one commit and a linked worktree `wt`, built without any GIT_VARS;
+        returns (shared, hook vars as the worktree's pre-push hook receives them, a snapshot function)."""
+        td = tempfile.TemporaryDirectory(); self.addCleanup(td.cleanup)
+        root, clean = Path(td.name), dyadlib.git_env()
+        git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True, text=True, env=clean).stdout
+        shared = root / "shared"; git("init", "-q", str(shared))
+        git("-C", str(shared), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "base")
+        git("-C", str(shared), "worktree", "add", "-q", str(root / "wt"), "-b", "wt")
+        hook = {"GIT_DIR": str(shared / ".git" / "worktrees" / "wt"), "GIT_PREFIX": ""}
+        snap = lambda: (git("-C", str(shared), "config", "--local", "--list"), git("-C", str(shared), "for-each-ref"))
+        other = root / "other"; other.mkdir()
+        return shared, hook, snap, other
+    def test_child_under_suite_env_leaves_shared_repo_untouched(self):
+        pkg = load_package()
+        shared, hook, snap, other = self.fixture()
+        before = snap()
+        self.assertIn("core.bare=false", before[0])
+        with unittest.mock.patch.dict(os.environ, hook):
+            env = pkg.suite_env()
+        r = subprocess.run([sys.executable, "-c", self.CHILD], cwd=other, env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(snap(), before)   # core.bare, user.*, every ref: unchanged
+        self.assertTrue((other / ".git").is_dir())   # the child wrote its own repo instead
+    def test_control_child_under_raw_hook_env_writes_into_shared_repo(self):
+        shared, hook, snap, other = self.fixture()
+        before = snap()
+        r = subprocess.run([sys.executable, "-c", self.CHILD], cwd=other, env={**dyadlib.git_env(), **hook},
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        config, refs = snap()
+        self.assertNotEqual((config, refs), before)
+        self.assertIn("core.bare=true", config); self.assertIn("user.name=x", config)
+        self.assertIn("refs/heads/feature", refs)
+
+class SpawnSiteTests(unittest.TestCase):
+    """#165 fence (d-work #199 N0): every process `package.py` spawns is classified. A python child (a test
+    root, a target) runs with `env=suite_env()`; every other site is a git call the runner makes for itself,
+    listed here with why it may inherit `os.environ` — so a new spawn site fails until it is judged."""
+    SPAWN = {"run", "Popen", "check_output", "check_call", "call", "system", "popen", "execv", "execve", "execvp",
+             "execvpe", "execl", "execle", "execlp", "execlpe", "spawnv", "spawnve", "spawnl", "spawnle", "posix_spawn"}
+    GIT_ALLOWED = {   # enclosing function -> why its git call(s) run with the parent's environment
+        "<module>": "REPO discovery; strips the hook's GIT_DIR itself (#142) so --show-toplevel finds the true root",
+        "core_extra": "ls-files of the repo the runner judges; a hook's GIT_DIR names that same repo",
+        "tracked_files": "ls-files of the repo the runner judges; a hook's GIT_DIR names that same repo",
+        "pushed_refs": "reads the refs the hook is pushing, in the repo the hook runs for (#194)",
+        "cmd_guards": "rev-parse of base and HEAD in the repo being pushed; no write",
+        "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
+        "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",
+        "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
+    }
+    def sites(self):
+        import ast
+        tree = ast.parse((PKG / "scripts" / "package.py").read_text())
+        out = []
+        def walk(node, fn):
+            for c in ast.iter_child_nodes(node):
+                if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
+                        and c.func.value.id in ("subprocess", "os") and c.func.attr in self.SPAWN:
+                    out.append((c.lineno, fn, c))
+                walk(c, c.name if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef)) else fn)
+        walk(tree, "<module>")
+        return out
+    def test_python_children_use_suite_env_and_git_sites_are_listed(self):
+        import ast
+        python, git_fns, problems = [], set(), []
+        for line, fn, call in self.sites():
+            argv = call.args[0] if call.args else None
+            head = ast.unparse(argv.elts[0]) if isinstance(argv, ast.List) and argv.elts else None
+            env = next((k.value for k in call.keywords if k.arg == "env"), None)
+            if head == "sys.executable" or (head or "").strip("'\"").startswith("python"):
+                python.append(line)
+                if not (isinstance(env, ast.Call) and ast.unparse(env.func).endswith("suite_env")):
+                    problems.append(f"l.{line} {fn}: python child without env=suite_env()")
+            elif head == "'git'":
+                git_fns.add(fn)
+                if fn not in self.GIT_ALLOWED:
+                    problems.append(f"l.{line} {fn}: git call not listed in GIT_ALLOWED")
+            else:
+                problems.append(f"l.{line} {fn}: unclassified spawn {ast.unparse(call)[:80]}")
+        self.assertEqual(problems, [])
+        self.assertGreaterEqual(len(python), 2, "check_rule_12 and run_suite spawn the suite")
+        self.assertEqual(set(self.GIT_ALLOWED) - git_fns, set(), "stale GIT_ALLOWED entry")
+
 if __name__ == "__main__":
     unittest.main()
