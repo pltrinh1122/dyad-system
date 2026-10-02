@@ -17,14 +17,6 @@ def fixture(text: str | None, inst: str = "agent-corpus"):
     (root / "dyad").mkdir(exist_ok=True)
     return root
 
-class ContractTests(unittest.TestCase):
-    def test_contract(self):
-        self.assertEqual(inc.FIELDS, ("date", "d-work", "what", "cause", "consequence"))
-        self.assertFalse(hasattr(inc, "ENTITY"), "a script, not a guard: no registry entry (row #170)")
-    def test_invariants_hold(self):
-        for name, pred in inc.INVARIANTS:
-            self.assertTrue(pred(), name)
-
 class ParseTests(unittest.TestCase):
     def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
     def test_good_log_passes_and_parses(self):

@@ -35,6 +35,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("fields-distinct", lambda: len(set(FIELDS)) == len(FIELDS)),
     ("fields-open-with-date", lambda: FIELDS[0] == "date"),
     ("rel-under-audits", lambda: REL.startswith("audits/") and REL.endswith(".md")),
+    ("fields-are-the-log-header", lambda: FIELDS == ("date", "d-work", "what", "cause", "consequence")),   # Rule-3 Incidents' columns (#203)
+    ("not-a-guard", lambda: "ENTITY" not in globals()),   # a script, not a guard: no registry entry (row #170)
 ]
 
 def log_path(root: Path | None = None) -> Path:

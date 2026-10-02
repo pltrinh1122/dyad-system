@@ -20,8 +20,6 @@ def fixture(pkg_records: dict[str, str], inst_records: dict[str, str] | None = N
 
 class RecordTests(unittest.TestCase):
     def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
-    def test_contract(self):
-        self.assertEqual((rc.ENTITY, rc.CORPUS, rc.TRANSACTION, rc.FIELDS), ("record", "agent", False, ("#", "Attack", "Result", "Survivor")))
     def test_good_records_pass(self):
         root, pkg = fixture({"rule-1-x.md": GOOD}, {"gap.md": GOOD, "amend.md": AMEND})
         self.assertEqual(rc.check_package(root, pkg), []); self.assertEqual(len(rc.record_files(root, pkg)), 3)

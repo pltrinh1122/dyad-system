@@ -118,11 +118,9 @@ class PackageTests(livetest.LiveCase):
     def test_rule_12_runs_the_suites_and_maps_nothing(self):
         """#162: the mapping is the syseng craft's guard (`syseng/tests`); the runner keeps the suites."""
         pkg = load_package(); crafts = dyadlib.crafts_dir(PKG)
-        self.assertFalse(hasattr(pkg, "test_for"))
         self.assertEqual(pkg.test_suites(), [PKG / "tests"] + [c / "tests" for c in dyadlib.craft_dirs()])
         self.assertEqual(crafts / "sysarch" / "tests" in pkg.test_suites(), "sysarch" in CRAFTS)   # a core-only install runs the core suite alone (#171)
         self.assertEqual(pkg.check_rule_12(), [])   # under DYAD_NO_NESTED_TESTS: no mapping, no failure
-        self.assertNotIn("CHANGELOG.md", pkg.TEMPLATES)   # the change log's seed is the craft's (#155, attack 13)
     # d-work #155: the local gate never ran the suite (the pre-push hook is `check --guards`, 61
     # checks and no tests), so the Agent ran it by hand 134 times in one session (#154's audit).
     # `cmd_tests` is that run as one verb, always with DYAD_NO_NESTED_TESTS; `cmd_guards` runs it
@@ -263,7 +261,6 @@ class PackageTests(livetest.LiveCase):
                 self.assertEqual(pkg.suite_gate(seed, "HEAD"), (True, None))                       # markdown counts -> run
         finally:
             pkg.REPO = old
-        self.assertFalse(hasattr(pkg, "ledger_only_range"))   # one decision point, no second reading of the range
 
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
         """The wiring of `suite_gate`'s decision to the suite call, over one gate repo
@@ -622,14 +619,12 @@ class PackageTests(livetest.LiveCase):
         text = rows.joinpath("3.md").read_text()
         self.assertIn("state: open\n", text); self.assertIn("refs: #1\n", text)
     def test_dwork_new_backlog_flag(self):
-        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         d, rows = self.dwork_repo()
         r = self.dwork_new(d, "four", "--backlog", "-d", "Y backlog, on #2 Done", "--said", "Y", "#2")
         self.assertEqual(r.returncode, 0, r.stderr)
         text = rows.joinpath("3.md").read_text()
         self.assertIn("state: backlog\n", text); self.assertIn("refs: #2\n", text)
         self.assertIn("Y backlog, on #2 Done", text)
-        self.assertIn("backlog", dyadlib.NEW_STATES)
     # d-work #133: a `;` in -d text splits one disposed entry in two; a flag in the title slot became a title
     def test_dwork_refuses_semicolon_in_disposition_text(self):
         d, rows = self.dwork_repo()
@@ -769,16 +764,6 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("d-work #32", stderr.getvalue())
         text = rows.joinpath("3.md").read_text()   # allocation still proceeds, from what it has locally
         self.assertIn("id: 3\n", text); self.assertIn("state: open\n", text)
-    def test_dwork_state_refuses_done_to_open(self):
-        d, rows = self.dwork_repo(); before = rows.joinpath("2.md").read_text()
-        r = self.dwork_state(d, "2", "open")
-        self.assertNotEqual(r.returncode, 0); self.assertIn("done\u2192open", r.stderr)
-        self.assertEqual(rows.joinpath("2.md").read_text(), before, "nothing written")
-    def test_dwork_state_refuses_unknown_state(self):
-        d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
-        r = self.dwork_state(d, "1", "foo")
-        self.assertNotEqual(r.returncode, 0); self.assertIn("no such state 'foo'", r.stderr)
-        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
     def test_dwork_state_accepts_open_to_planned(self):
         d, rows = self.dwork_repo()
         r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")

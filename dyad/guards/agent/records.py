@@ -20,7 +20,8 @@ ENTITY, CORPUS, TRANSACTION = "record", "agent", False
 NAME, OWNER = "falsification record (attack row)", "Rule-9"
 FIELDS = ("#", "Attack", "Result", "Survivor")          # the attack-table header, as the records write it
 REQUIRED = ("attack", "result", "survivor")             # header cells the check needs, lower-cased
-INVARIANTS = [("required-in-fields", lambda: set(REQUIRED) <= {f.lower() for f in FIELDS})]   # crafts/syseng/rules/invariants.md
+INVARIANTS = [("required-in-fields", lambda: set(REQUIRED) <= {f.lower() for f in FIELDS}),   # crafts/syseng/rules/invariants.md
+              ("fields-in-order", lambda: FIELDS == ("#", "Attack", "Result", "Survivor"))]   # the attack-table header as the records write it (#203)
 DISPOSITION = re.compile(r"\bDisposition:")
 
 def record_files(root: Path, pkg: Path = dyadlib.PKG) -> list[Path]:

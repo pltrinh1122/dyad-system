@@ -924,8 +924,10 @@ def cmd_dwork(a):
         if len(pos) > 2 and "-r" in vals:
             sys.exit("refused: refs given twice, as an argument and with -r")
         r = dyadlib.Row(rid, title, today, state, disposed, vals.get("-r", pos[2] if len(pos) > 2 else ""))
-        append_provenance(rid, entries, today, fresh=True)
-        f = dyadlib.rows_dir(REPO) / f"{rid}.md"; f.write_text(dyadlib.format_row_file(r))
+        try:   # the transition check (dyadlib.require_transition, #203) runs before either write
+            dyadlib.write_row(REPO, r, None, first=lambda: append_provenance(rid, entries, today, fresh=True))
+        except dyadlib.TransitionError as e:
+            sys.exit(f"refused: {e}")
         print(f"{rid}"); return 0
     if verb == "state" and len(pos) >= 3:
         if not pos[1].isdigit():
@@ -933,17 +935,15 @@ def cmd_dwork(a):
         rid, state = int(pos[1]), pos[2]
         if rid not in rows: sys.exit(f"no row {rid}")
         r = rows[rid]; disposed, refs = r.disposed, r.refs
-        if state not in dyadlib.STATES:
-            sys.exit(f"no such state {state!r}; states: {' '.join(sorted(dyadlib.STATES))}")
-        if not dyadlib.allowed(r.state, state):
-            sys.exit(f"transition {r.state}\u2192{state} not in the table (Rule-16); allowed from {r.state}: {' '.join(sorted(dyadlib.TRANSITIONS[r.state])) or 'none'}")
         if r.state == "backlog" and state == "open" and prompt is None:
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
-        if entries: append_provenance(rid, entries, today)
-        r = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs)
-        (dyadlib.rows_dir(REPO) / f"{rid}.md").write_text(dyadlib.format_row_file(r))
+        new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs)
+        try:   # an unknown state or a transition outside Rule-16's table is refused here, before either write (#203)
+            dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None)
+        except dyadlib.TransitionError as e:
+            sys.exit(str(e))
         print(f"{rid}: {state}"); return 0
     if verb == "list":
         state, craft = vals.get("--state"), vals.get("--craft")

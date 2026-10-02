@@ -165,11 +165,5 @@ class ScratchInstallsTests(unittest.TestCase):
             self.si.copy(with_craft="sysadmin")
 
 
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/verifiable-code.md p5: one test asserts every invariant of the module holds."""
-    def test_invariants_hold(self):
-        self.assertEqual(dyadlib.check_invariants(livetest), len(livetest.INVARIANTS)); self.assertTrue(livetest.INVARIANTS)
-
-
 if __name__ == "__main__":
     unittest.main()

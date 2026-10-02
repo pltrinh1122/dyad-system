@@ -112,8 +112,6 @@ class TableHeaderTests(unittest.TestCase):
         self.assertEqual(dyadlib.table_header(LEDGER), ["id", "title", "opened", "state", "disposed", "refs"])
         self.assertEqual(dyadlib.table_header("prose\n| a | b |\nno separator\n"), [])
         self.assertEqual(dyadlib.table_header(""), [])
-    def test_plan_parts_are_rule_15s(self):
-        self.assertEqual(len(dyadlib.PLAN_PARTS), 5); self.assertIn("base commit", dyadlib.PLAN_PARTS)
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,8 @@ NAME, OWNER = "Agent Rule block", "Rule-4"
 # The countable block (Rule-4 Criteria): field -> (min, max); None = unbounded. check() reads it.
 BLOCK: dict[str, tuple[int, int | None]] = {"intent": (1, 1), "target": (1, 1), "boundaries": (1, None), "conditions": (1, None)}
 FIELDS = tuple(BLOCK)
-INVARIANTS = [("block-counts-positive", lambda: all(lo >= 1 and (hi is None or hi >= lo) for lo, hi in BLOCK.values()) and FIELDS == tuple(BLOCK))]   # crafts/syseng/rules/invariants.md
+INVARIANTS = [("block-counts-positive", lambda: all(lo >= 1 and (hi is None or hi >= lo) for lo, hi in BLOCK.values()) and FIELDS == tuple(BLOCK)),   # crafts/syseng/rules/invariants.md
+              ("block-is-the-four-parts", lambda: FIELDS == ("intent", "target", "boundaries", "conditions"))]   # Rule-4 Criteria 1-4, in order (#203)
 
 def bullets_under(text: str, heading: str) -> int:
     n, insec = 0, False
