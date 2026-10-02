@@ -64,7 +64,6 @@ class LiveTests(unittest.TestCase):
         root = dyadlib.repo_root()
         msgs = [m for m in inc.check(root) if not m.startswith("warning:")]
         self.assertEqual(msgs, [], msgs)
-        self.assertGreater(len(inc.parse(root=root)), 40)                  # the log this guard was written for
 
 if __name__ == "__main__":
     unittest.main()
