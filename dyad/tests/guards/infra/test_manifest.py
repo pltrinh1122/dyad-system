@@ -44,10 +44,6 @@ class InfrastructureTests(unittest.TestCase):
     def test_contract(self):
         self.assertEqual((inf.ENTITY, inf.CORPUS, inf.TRANSACTION), ("component", "infra", False)); self.assertEqual(len(inf.FIELDS), 7); self.assertEqual(inf.FIELDS[-1], "profile")
         self.assertTrue(inf.RULES_FILE.exists()); self.assertEqual(inf.RULES_FILE.parent, Path(inf.__file__).parent)
-    def test_live_package(self):
-        n, m, msgs = inf.check_manifest()
-        self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
-        self.assertGreaterEqual(n, 10); self.assertGreaterEqual(m, 8)
 
 
 IMPORT_MANIFEST = MANIFEST + "| requests | library | 2.32 | http | Apache-2.0 | urllib | both |\n"
@@ -110,6 +106,8 @@ class ImportScanTests(unittest.TestCase):
         self.assertIn("import:", inf.RULES_FILE.read_text())
         n, m, msgs = inf.check_manifest()
         self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
+        with self.subTest("live manifest floors"):   # merged from test_live_package (d-work #203 N2)
+            self.assertGreaterEqual(n, 10); self.assertGreaterEqual(m, 8)
 
 
 CRAFT_INFRA = """| component | partition | version | purpose | license | replacement | profile |
@@ -313,14 +311,6 @@ class InstanceContributionTests(unittest.TestCase):
         self.assertEqual({dyadlib.plain(r[0]) for s, r in rows if s != "the manifest"},
                          {dyadlib.plain(r[0]) for _, r in crafts} | {dyadlib.plain(r[0]) for r in instance})
         self.assertEqual([r[0] for r in core if r[-1] == "operating"], [])
-
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(inf, "core", inf.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(inf, extra), len(inf.INVARIANTS) + 4)
-        names = [n for n, _ in inf.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

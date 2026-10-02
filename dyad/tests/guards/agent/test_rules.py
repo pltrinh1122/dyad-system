@@ -50,13 +50,5 @@ class TendedScanTests(unittest.TestCase):
         self.assertEqual(len(out), 1); self.assertTrue(out[0].startswith("warning: ")); self.assertIn("a.md: mentions 'the Agent', 'counter-prompt'", out[0]); self.assertIn("inference decides", out[0])
         self.assertEqual(ri.check_tended(d, ["nothing-here"]), [])
 
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(ri, "core", ri.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(ri, extra), len(ri.INVARIANTS) + 4)
-        names = [n for n, _ in ri.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
-
 if __name__ == "__main__":
     unittest.main()

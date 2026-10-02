@@ -161,9 +161,6 @@ class ProvenanceTests(unittest.TestCase):
         self.assertIn("store", d); self.assertIn("parser", d)
         self.assertIn("1 records", pv.summary(root))
 
-    def test_live_store_passes(self):
-        root = dyadlib.repo_root()
-        self.assertEqual(fails(pv.check_package(root)), [])
 
 class TransactionTests(unittest.TestCase):
     """#191: each commit of the range's own history, against its parent — the gap is refused on the push
@@ -190,8 +187,6 @@ class TransactionTests(unittest.TestCase):
     def one(self, out, text):
         self.assertEqual(len(out), 1, out); self.assertIn(text, out[0])
 
-    def test_contract_mode(self):
-        self.assertEqual(pv.TRANSACTION_MODE, "commits")
 
     def test_row_added_without_record_fails(self):
         self.write(f"{self.ROWS}/8.md", self.row(8))

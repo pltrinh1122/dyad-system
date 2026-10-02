@@ -266,43 +266,35 @@ class PackageTests(livetest.LiveCase):
         self.assertFalse(hasattr(pkg, "ledger_only_range"))   # one decision point, no second reading of the range
 
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
-        """The prefix, never the suffix: a `.py` filter would have passed #137's markdown run-book,
-        which broke the core suite by falsifying a pinned count."""
+        """The wiring of `suite_gate`'s decision to the suite call, over one gate repo
+        (`test_suite_gate_truth_table` holds the decisions themselves). The prefix, never the suffix:
+        a `.py` filter would have passed #137's markdown run-book, which broke the core suite by
+        falsifying a pinned count. Merged from the empty- and unreadable-range tests (d-work #203 N2)."""
         pkg = load_package(); d, seed, git = self.gate_repo()
         old = pkg.REPO; pkg.REPO = d
         try:
-            calls, out = self.gate_run(pkg, seed)
-            self.assertIn(f"skip [guards] Rule-12 suite: {seed}..HEAD is ledger-only (d-work #155)", out)
-            self.assertEqual(calls, [], out)
-            (d / "note.md").write_text("a play-book, not a .py\n"); git("add", "-A"); git("commit", "-qm", "md")
-            calls, out = self.gate_run(pkg, seed)                                  # non-empty, not ledger-only -> run
-            self.assertNotIn("skip [guards] Rule-12 suite", out)
-            self.assertEqual(len(calls), 1, out)
-        finally:
-            pkg.REPO = old
-
-    def test_guards_skip_the_suite_on_an_empty_range(self):
-        """#164 (d-work #199 N1): `HEAD == base` changes nothing, so it cannot change a suite's outcome
-        (#190: 115 s for that). The plan gate and the fence still read an empty range as not ledger-only."""
-        pkg = load_package(); d, seed, git = self.gate_repo()
-        old = pkg.REPO; pkg.REPO = d
-        try:
-            calls, out = self.gate_run(pkg, "HEAD")
-            self.assertIn("skip [guards] Rule-12 suite: HEAD..HEAD is empty (d-work #164)", out)
-            self.assertEqual(calls, [], out)
-            self.assertFalse(dyadlib.ledger_only(d, "HEAD", "HEAD"))   # unchanged for the plan gate and the fence
-        finally:
-            pkg.REPO = old
-
-    def test_guards_run_the_suite_on_an_unreadable_range(self):
-        """#164: `range_paths` answering None (git could not say) is never read as empty — run."""
-        pkg = load_package(); d, seed, git = self.gate_repo()
-        old = pkg.REPO; pkg.REPO = d
-        try:
-            with unittest.mock.patch.object(dyadlib, "range_paths", lambda *a, **k: None):
+            with self.subTest("empty range -> skip"):
+                # #164 (d-work #199 N1): `HEAD == base` changes nothing, so it cannot change a suite's outcome
+                # (#190: 115 s for that). The plan gate and the fence still read an empty range as not ledger-only.
                 calls, out = self.gate_run(pkg, "HEAD")
-            self.assertNotIn("skip [guards] Rule-12 suite", out)
-            self.assertEqual(len(calls), 1, out)
+                self.assertIn("skip [guards] Rule-12 suite: HEAD..HEAD is empty (d-work #164)", out)
+                self.assertEqual(calls, [], out)
+                self.assertFalse(dyadlib.ledger_only(d, "HEAD", "HEAD"))   # unchanged for the plan gate and the fence
+            with self.subTest("unreadable range -> run"):
+                # #164: `range_paths` answering None (git could not say) is never read as empty — run.
+                with unittest.mock.patch.object(dyadlib, "range_paths", lambda *a, **k: None):
+                    calls, out = self.gate_run(pkg, "HEAD")
+                self.assertNotIn("skip [guards] Rule-12 suite", out)
+                self.assertEqual(len(calls), 1, out)
+            with self.subTest("ledger-only range -> skip"):
+                calls, out = self.gate_run(pkg, seed)
+                self.assertIn(f"skip [guards] Rule-12 suite: {seed}..HEAD is ledger-only (d-work #155)", out)
+                self.assertEqual(calls, [], out)
+            with self.subTest("markdown range -> run"):
+                (d / "note.md").write_text("a play-book, not a .py\n"); git("add", "-A"); git("commit", "-qm", "md")
+                calls, out = self.gate_run(pkg, seed)                              # non-empty, not ledger-only -> run
+                self.assertNotIn("skip [guards] Rule-12 suite", out)
+                self.assertEqual(len(calls), 1, out)
         finally:
             pkg.REPO = old
 
@@ -354,16 +346,6 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(names, pkg.distribute.files(pkg.REPO, roots, pkg.core_extra()))
         self.assertTrue(all(any(n.startswith(f"{r}/") for r in roots) or n.startswith(".github/workflows/dyad-") for n in names))
         shutil.rmtree(d, ignore_errors=True)
-    def test_install_twice_is_zero_changes(self):
-        d = scratch_install(with_craft=False)
-        r = self.run_py("install", str(d))
-        # cmd_install prints the resolved destination (hostadapter.resolve; d-work #179, G5) — d itself
-        # may be a symlink (e.g. macOS /var -> /private/var) even though it never is on this kernel,
-        # which is exactly how this assertion passed here by coincidence before the fix (#179 plan, attack 3)
-        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn(f"installed into {Path(d).resolve()}: 0 changes", r.stdout)
-        self.assertEqual((d / "CLAUDE.md").read_text().count("@dyad/CLAUDE.md"), 1)
-        for t, rel in load_package().TEMPLATES.items(): self.assertTrue((d / rel).exists(), rel)
-        pkg = load_package(); self.assertEqual(pkg.CORE_ROOTS, ["dyad"]); self.assertEqual(pkg.CORE_HOOKS.templates, pkg.TEMPLATES); self.assertEqual(pkg.CORE_HOOKS.import_line, pkg.IMPORT_LINE)
     # #178 (G3): an upgrade must not leave behind a file the new version dropped — `cmd_install` forgot
     # `prune=True` (distribute.install defaults it False); distribute's own prune mechanics are
     # test_distribute.InstallTests.test_prune_removes_dropped_file_and_empty_dir, this is the CLI wiring.
@@ -395,8 +377,15 @@ class PackageTests(livetest.LiveCase):
         pkg = load_package(); self.assertTrue(pkg.CORE_HOOKS.gitignore)
         # a second install changes nothing: the seed is never overwritten (hostadapter.write_gitignore)
         r = self.run_py("install", str(d))
+        # cmd_install prints the resolved destination (hostadapter.resolve; d-work #179, G5) — d itself
+        # may be a symlink (e.g. macOS /var -> /private/var) even though it never is on this kernel,
+        # which is exactly how this assertion passed here by coincidence before the fix (#179 plan, attack 3)
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn(f"installed into {Path(d).resolve()}: 0 changes", r.stdout)
         self.assertEqual((d / ".gitignore").read_text(), ignore_text)
+        with self.subTest("install twice: import line once, templates, core roots and hooks"):   # merged from test_install_twice_is_zero_changes (d-work #203 N2)
+            self.assertEqual((d / "CLAUDE.md").read_text().count("@dyad/CLAUDE.md"), 1)
+            for t, rel in pkg.TEMPLATES.items(): self.assertTrue((d / rel).exists(), rel)
+            self.assertEqual(pkg.CORE_ROOTS, ["dyad"]); self.assertEqual(pkg.CORE_HOOKS.templates, pkg.TEMPLATES); self.assertEqual(pkg.CORE_HOOKS.import_line, pkg.IMPORT_LINE)
         # the artifact G9 describes: nested bytecode, the shape a real `python3 …/package.py` run leaves
         pyc = d / "dyad" / "scripts" / "__pycache__" / "distribute.cpython-312.pyc"
         pyc.parent.mkdir(parents=True, exist_ok=True); pyc.write_bytes(b"\x00")
@@ -867,9 +856,6 @@ class PackageTests(livetest.LiveCase):
         fails = pkg.check_generated(d, pkg.rules()["generated"])
         self.assertEqual(len(fails), 1, fails); self.assertTrue(fails[0].startswith("agent-corpus/projections/erd.html:"))
         self.assertIn("'projections/*'", fails[0])
-    def test_live_repo_tracks_no_generated_file(self):
-        pkg = load_package()
-        self.assertEqual(pkg.check_generated(pkg.REPO, pkg.rules()["generated"]), [])
 
 
 class BundledCraftTests(unittest.TestCase):

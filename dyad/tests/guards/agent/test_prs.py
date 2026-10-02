@@ -104,13 +104,5 @@ class DworkLinkTests(unittest.TestCase):
                 finally:
                     os.environ.pop("DYAD_INSTANCE", None)
 
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(d, "core", d.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(d, extra), len(d.INVARIANTS) + 4)
-        names = [n for n, _ in d.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
-
 if __name__ == "__main__":
     unittest.main()

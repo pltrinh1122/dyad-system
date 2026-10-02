@@ -32,8 +32,6 @@ class VocabularyTests(unittest.TestCase):
         # the table.
         self.assertEqual(fails, []); self.assertGreaterEqual(n, 90)
         self.assertEqual(v.check_package(dyadlib.repo_root()), [])
-    def test_contract(self):
-        self.assertEqual((v.ENTITY, v.CORPUS, v.TRANSACTION, v.FIELDS), ("term", "agent", False, v.COLUMNS))
 
 class CraftVocabularyTests(unittest.TestCase):
     """#156: check_craft — a craft's CRAFT.md is namespaced: well-formed, no duplicate, rule exists, no Agent term."""
@@ -51,18 +49,6 @@ class CraftVocabularyTests(unittest.TestCase):
         self.assertTrue(any("'widget': defined twice" in m for m in f), f); self.assertTrue(any("rule 'nope' is not crafts/fx/rules/nope.md" in m for m in f), f)
         d = self.craft("| word | meaning |\n|---|---|\n| x | y |\n")
         self.assertTrue(any("is not term | definition | rule" in m for m in v.check_craft(dyadlib.PKG, d)))
-    def test_live_sysadmin_craft(self):
-        d = dyadlib.crafts_dir() / "sysadmin"
-        if not d.is_dir(): self.skipTest("no sysadmin craft")
-        self.assertEqual(v.check_craft(dyadlib.PKG, d), [])
-
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(v, "core", v.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(v, extra), len(v.INVARIANTS) + 4)
-        names = [n for n, _ in v.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

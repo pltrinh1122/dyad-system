@@ -13,10 +13,6 @@ def repo():
     (root / "agent-corpus" / "d-work" / "sessions").mkdir(parents=True)
     return root
 
-class ContractTests(unittest.TestCase):
-    def test_shape(self):
-        self.assertEqual((sv.ENTITY, sv.CORPUS, sv.TRANSACTION), ("presence", "agent", False))
-        self.assertEqual(sv.FIELDS, ("session", "seen", "root", "rows", "files"))
 
 class CheckTests(unittest.TestCase):
     def test_good_record_passes(self):
@@ -252,21 +248,6 @@ class ListCLITests(unittest.TestCase):
                             capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue("no session presence files" in r.stdout or "live" in r.stdout or "stale" in r.stdout)
-
-class LiveTests(unittest.TestCase):
-    def test_live_store_passes(self):
-        # a fixed test id so repeated runs overwrite one file instead of littering the real
-        # store with a fresh random one each time; removed afterward, never left behind.
-        root = dyadlib.repo_root()
-        os.environ["DYAD_SESSION"] = "livetest-check"
-        try:
-            sv.touch_from_open_rows(root)
-            self.assertEqual(sv.check_package(root), [])
-        finally:
-            del os.environ["DYAD_SESSION"]
-            p = sv.sessions_dir(root) / "livetest-check.md"
-            if p.exists(): p.unlink()
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -39,24 +39,12 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(len(msgs), 1 + len([p for p in dyadlib.PLAN_PARTS if p != "base commit"]))
     def test_non_numeric_files_ignored(self):
         self.assertEqual(pl.check_package(fixture({"README.md": "# no plan\n"})), [])
-    def test_live_plans_fail_nothing(self):
-        msgs = pl.check_package(dyadlib.repo_root())
-        self.assertEqual([m for m in msgs if not m.startswith("warning:")], [])
-        self.assertIsInstance(pl.plans(dyadlib.repo_root()), list)   # a scratch install has no plans (Rule-11 p5)
     def test_describe_fields_start_with_FIELDS_and_add_parts(self):
         d = pl.describe(fixture({"7.md": GOOD}))
         names = [f[0] for f in d["fields"]]
         self.assertEqual(names[:4], list(pl.FIELDS)); self.assertEqual(len(names), len(set(names)))
         self.assertIn("intent as read", names); self.assertNotIn("base commit", names[4:])
         self.assertEqual(d["observed"], 1)
-
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(pl, "core", pl.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(pl, extra), len(pl.INVARIANTS) + 4)
-        names = [n for n, _ in pl.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

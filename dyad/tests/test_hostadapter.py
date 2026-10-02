@@ -23,8 +23,6 @@ class ResolveTests(unittest.TestCase):
         """No behavior change, only relocation: hostadapter.resolve is Path(...).resolve()."""
         self.assertEqual(hostadapter.resolve(__file__), Path(__file__).resolve())
         self.assertEqual(hostadapter.resolve("."), Path(".").resolve())
-    def test_resolve_returns_a_path(self):
-        self.assertIsInstance(hostadapter.resolve("."), Path)
 
 
 class ToGitignoreTests(unittest.TestCase):

@@ -64,9 +64,18 @@ class BundleTests(unittest.TestCase):
         finally:
             import shutil; shutil.rmtree(d, ignore_errors=True)
     def test_check_bundle_absent_skips(self):
+        """One absent-store path, three layers (d-work #203 N2: merged test_summary_no_bundle and
+        test_main_no_bundle_is_ok)."""
         d, pkg = tree()
         try:
-            self.assertEqual(bd.check_bundle(d, pkg), ("", [], []))
+            with self.subTest("check_bundle"):
+                self.assertEqual(bd.check_bundle(d, pkg), ("", [], []))
+            with self.subTest("summary"):
+                self.assertEqual(bd.summary(d), "no bundle")
+            with self.subTest("main"):
+                # main()'s pkg is bundle.py's own default (dyadlib.PKG); the skip path never reads it,
+                # so an empty root (no BUNDLE.md) is a clean 0 regardless of which tree main() defaults to.
+                self.assertEqual(bd.main([str(d)]), 0)
         finally:
             import shutil; shutil.rmtree(d, ignore_errors=True)
     def test_check_bundle_present_passes(self):
@@ -85,12 +94,6 @@ class BundleTests(unittest.TestCase):
             self.assertTrue(any("9.9.9" in m for m in msgs))
         finally:
             import shutil; shutil.rmtree(d, ignore_errors=True)
-    def test_summary_no_bundle(self):
-        d, pkg = tree()
-        try:
-            self.assertEqual(bd.summary(d), "no bundle")
-        finally:
-            import shutil; shutil.rmtree(d, ignore_errors=True)
     def test_describe(self):
         d, pkg = tree()
         try:
@@ -98,14 +101,6 @@ class BundleTests(unittest.TestCase):
             desc = bd.describe(d, pkg)
             self.assertEqual(desc["store"], "BUNDLE.md"); self.assertEqual(desc["observed"], 3)
             self.assertEqual([f[0] for f in desc["fields"]], list(bd.FIELDS))
-        finally:
-            import shutil; shutil.rmtree(d, ignore_errors=True)
-    def test_main_no_bundle_is_ok(self):
-        # main()'s pkg is bundle.py's own default (dyadlib.PKG); the skip path never reads it,
-        # so an empty root (no BUNDLE.md) is a clean 0 regardless of which tree main() defaults to.
-        d, _pkg = tree()
-        try:
-            self.assertEqual(bd.main([str(d)]), 0)
         finally:
             import shutil; shutil.rmtree(d, ignore_errors=True)
 

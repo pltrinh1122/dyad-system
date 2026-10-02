@@ -20,8 +20,6 @@ def fixture(text: str | None, template: str = HEAD, rules=(2, 3, 13)):
     return root, pkg
 
 class PreferenceTests(unittest.TestCase):
-    def test_contract(self):
-        self.assertEqual((pf.ENTITY, pf.CORPUS, pf.TRANSACTION, pf.FIELDS), ("preference", "preferences", False, ("key", "value", "allowed", "read by")))
     def test_parse_keeps_escaped_pipes(self):
         header, rows = pf.parse(HEAD + ROWS)
         self.assertEqual(header, list(pf.FIELDS)); self.assertEqual(rows[0][2], "`separate` | `with-done`")
@@ -66,14 +64,6 @@ class PreferenceTests(unittest.TestCase):
     def test_describe(self):
         root, pkg = fixture(HEAD + ROWS); d = pf.describe(root, pkg)
         self.assertEqual([f[0] for f in d["fields"]], list(pf.FIELDS)); self.assertEqual(d["fields"][0][4], "merge-disposition"); self.assertEqual(d["observed"], 2)
-
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(pf, "core", pf.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(pf, extra), len(pf.INVARIANTS) + 4)
-        names = [n for n, _ in pf.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

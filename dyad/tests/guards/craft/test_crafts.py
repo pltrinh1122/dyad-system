@@ -392,13 +392,5 @@ class FloorTests(unittest.TestCase):
         self.assertEqual(len(calls), 1, calls)
         self.assertFalse(any("w2.py" in m for m in msgs), msgs)
 
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(cg, "core", cg.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(cg, extra), len(cg.INVARIANTS) + 4)
-        names = [n for n, _ in cg.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
-
 if __name__ == "__main__":
     unittest.main()

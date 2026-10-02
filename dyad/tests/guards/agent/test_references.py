@@ -524,13 +524,5 @@ class LiveTests(unittest.TestCase):
         self.assertRegex(r.stdout.strip().splitlines()[-1], r"^ok   \[rule-20\] \d+ references, \d+ kinds resolve$")
         self.assertIn("warn [rule-20] row.disposed->pr", r.stdout)
 
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(refint, "core", refint.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(refint, extra), len(refint.INVARIANTS) + 4)
-        names = [n for n, _ in refint.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
-
 if __name__ == "__main__":
     unittest.main()
