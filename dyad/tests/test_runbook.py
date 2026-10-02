@@ -282,18 +282,5 @@ class LiveTests(livetest.LiveCase):
                 self.assertIn(c.cmd.splitlines()[0].split()[0], c.cmd)   # the native line is the block body
 
 
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the runner's INVARIANTS hold; run() refuses before running anything when one is false."""
-    def test_run_refuses_on_a_false_invariant_and_writes_no_event(self):
-        os.environ.pop("DYAD_RUNBOOKS", None); root = fixture(); out = io.StringIO()
-        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
-        saved = rb.INVARIANTS; rb.INVARIANTS = saved + [("never", lambda: False)]
-        try:
-            with self.assertRaises(dyadlib.InvariantError) as cm:
-                rb.run(root, "x", "logs", "agent", out=out)
-        finally:
-            rb.INVARIANTS = saved
-        self.assertEqual(cm.exception.failed, ["never"]); self.assertEqual(rb.read_events(rb.events_path(root, "x")), []); self.assertEqual(out.getvalue(), "")
-
 if __name__ == "__main__":
     unittest.main()

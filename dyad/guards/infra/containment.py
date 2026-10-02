@@ -105,6 +105,11 @@ def _disjoint(zones=None) -> bool:
 
 _INFRA_HOST = zones_for(dyadlib.DEFAULT_HOST, "infra")   # the four-zone variant, checked beside the live table
 
+def _usage_verbs() -> set[str]:
+    """The verbs the module docstring's usage block names (`  containment.py <verb> …` lines): the user-facing
+    contract that `verbs-in-usage` holds equal to the dispatch table `VERBS` (#25, #203)."""
+    return {l.split()[1] for l in (__doc__ or "").splitlines() if l.strip().startswith("containment.py ")}
+
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("zone-patterns-disjoint", _disjoint),
     ("every-zone-non-empty", lambda: {z for z, _ in ZONES} == set(ZONE_NAMES)),
@@ -115,7 +120,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("modes-declared-and-distinct", lambda: {TRANSACTION_MODE, PR_MODE} <= set(MODES) and TRANSACTION_MODE != PR_MODE),
     ("modes-are-verbs", lambda: set(MODES) <= set(VERBS)),                 # every documented check mode dispatches
     ("hook-verb-is-a-verb", lambda: HOOK_VERB in VERBS),                   # the pre-commit hook's verb still exists
-    ("verbs-in-usage", lambda: all(f"containment.py {v}" in (__doc__ or "") for v in VERBS)),   # a verb added without its usage line
+    ("verbs-in-usage", lambda: _usage_verbs() == set(VERBS)),   # the usage block and the dispatch table agree, both ways (#203)
 ]
 
 def classify(path: str, root: Path | str | None = None, zones: list[tuple[str, str]] | None = None) -> str:

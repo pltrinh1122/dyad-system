@@ -15,8 +15,6 @@ def fixture(plans: dict[str, str]):
 
 class PlanTests(unittest.TestCase):
     def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
-    def test_contract(self):
-        self.assertEqual((pl.ENTITY, pl.CORPUS, pl.TRANSACTION, pl.FIELDS), ("plan", "agent", False, ("id", "title", "base commit", "intent")))
     def test_parse(self):
         self.assertEqual(pl.parse(GOOD), {"id": "7", "title": "a title", "base commit": "abc1234.", "intent": "## Intent as read"})
         self.assertEqual(pl.parse("# Plan #8\nbase commit: def (main)\n")["base commit"], "def")

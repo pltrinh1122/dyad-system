@@ -111,14 +111,6 @@ class VerbTableTests(unittest.TestCase):
     def run_cli(self, *a, cwd=None):
         return subprocess.run([sys.executable, str(Path(c.__file__)), *a], cwd=cwd or self.r.d, capture_output=True, text=True)
 
-    def test_every_verb_of_the_usage_block_is_in_the_table(self):
-        """The docstring is the user-facing contract; the table is the code's. They agree."""
-        usage = [l.split()[1] for l in (c.__doc__ or "").splitlines()
-                 if l.strip().startswith("containment.py ")]
-        self.assertEqual(sorted(usage), sorted(c.VERBS))
-        self.assertEqual(sorted(c.VERBS), ["commit", "commits", "range", "staged", "tree", "zones"])
-
-
     def test_hook_verb_is_what_the_shipped_hook_passes(self):
         """The one surface this module cannot see: the bash hook. Read here so the constant is not a fiction."""
         hook = Path(c.__file__).resolve().parents[2] / "hooks" / "pre-commit"

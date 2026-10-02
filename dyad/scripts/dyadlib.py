@@ -500,6 +500,35 @@ def allowed(a: str, b: str) -> bool:
     (disposed/refs edits); anything outside TRANSITIONS is refused."""
     return a == b or b in TRANSITIONS.get(a, frozenset())
 
+class TransitionError(ValueError):
+    """A row write that would leave Rule-16's table: an unknown state, a transition the table lacks, or a new row
+    in a state rows are not created in. The message is the refusal `dyad dwork` prints."""
+
+def require_transition(before: str | None, after: str) -> None:
+    """The fail-loud check at the d-work state transition (crafts/syseng/rules/invariants.md p1, #203): raise
+    TransitionError unless `after` is a state and the table allows `before`→`after` — or, for a new row
+    (`before` None), `after` is one of NEW_STATES. Called once per disposition, by `write_row` only, before its
+    first write; never on the read path (`read_rows`, the fence and the renderers do not call it)."""
+    if after not in STATES:
+        raise TransitionError(f"no such state {after!r}; states: {' '.join(sorted(STATES))}")
+    if before is None:
+        if after not in NEW_STATES:
+            raise TransitionError(f"a new row starts in {' or '.join(sorted(NEW_STATES))}, not {after!r} (Rule-16)")
+    elif not allowed(before, after):
+        raise TransitionError(f"transition {before}→{after} not in the table (Rule-16); allowed from {before}: "
+                              f"{' '.join(sorted(TRANSITIONS.get(before, ()))) or 'none'}")
+
+def write_row(root: Path, row: Row, before: str | None, first: Callable[[], object] | None = None) -> Path:
+    """The one write of a row file (Rule-16): `require_transition(before, row.state)` first, so a refused
+    transition writes nothing; then `first` (the caller's other write of the same disposition, its provenance
+    entry, Rule-7) and the row file. `before` is the row's state on disk, None for a new row."""
+    require_transition(before, row.state)
+    if first is not None:
+        first()
+    path = rows_dir(root) / f"{row.id}.md"
+    path.write_text(format_row_file(row))
+    return path
+
 def parse_row_file(text: str) -> Row:
     """One row file: `key: value` lines in FIELDS order (Rule-16)."""
     d = {}
@@ -566,12 +595,13 @@ INVARIANTS: list[Invariant] = [
     ("transition-targets-are-states", lambda: all(t <= STATES for t in TRANSITIONS.values())),
     ("new-states-are-states", lambda: NEW_STATES <= STATES),
     ("archived-is-terminal", lambda: not TRANSITIONS["archived"]),
-    ("done-never-reopens", lambda: TRANSITIONS["done"] <= {"archived"}),
+    ("done-never-reopens", lambda: TRANSITIONS["done"] == frozenset({"archived"})),   # its one step is archived (#37)
+    ("no-self-transition", lambda: all(s not in t for s, t in TRANSITIONS.items())),   # same state is `allowed`'s edit, never a table entry (#203)
     ("row-fields-match-dataclass", lambda: FIELDS == tuple(f.name for f in fields(Row))),
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),
-    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS)),
+    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS) == 5 and "base commit" in PLAN_PARTS),   # Rule-15 phase 1's five parts (#203)
     ("semver-accepts-build-metadata", lambda: bool(SEMVER.fullmatch("1.2.3")) and bool(SEMVER.fullmatch("1.2.3+local.1")) and not SEMVER.fullmatch("1.2")),
     ("semver-tuple-strips-build", lambda: semver_tuple("1.2.3+local.1") == (1, 2, 3)),
     ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),

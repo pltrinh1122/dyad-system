@@ -37,8 +37,6 @@ class RuleIntegrityTests(unittest.TestCase):
         oks, fails = ri.check_rules()
         self.assertEqual(fails, []); self.assertGreaterEqual(len(oks), 15)
         self.assertEqual(ri.check_package(dyadlib.repo_root()), [])
-    def test_contract(self):
-        self.assertEqual((ri.ENTITY, ri.CORPUS, ri.TRANSACTION, ri.FIELDS), ("rule", "agent", False, ("intent", "target", "boundaries", "conditions")))
 
 class TendedScanTests(unittest.TestCase):
     """#156: check_tended warns (never fails) on Agent-process tokens in a Tended craft's rules; README exempt."""

@@ -20,7 +20,8 @@ import dyadlib
 ENTITY, CORPUS, TRANSACTION = "plan", "agent", False
 NAME, OWNER = "plan file", "Rule-15"
 FIELDS = ("id", "title", "base commit", "intent")     # the header parse() yields; the prose parts are dyadlib.PLAN_PARTS
-INVARIANTS = [("fields-distinct", lambda: len(set(FIELDS)) == len(FIELDS))]   # crafts/syseng/rules/invariants.md
+INVARIANTS = [("fields-distinct", lambda: len(set(FIELDS)) == len(FIELDS)),   # crafts/syseng/rules/invariants.md
+              ("fields-in-order", lambda: FIELDS == ("id", "title", "base commit", "intent"))]   # the parse contract parse() yields (#203)
 _TITLE = re.compile(r"^# Plan #(\d+)(?:\s*[—–-]+\s*(.*))?$")
 _BASE = re.compile(r"(?i)base commit[^:\n]*:\s*(\S+)")
 _INTENT = re.compile(r"(?i)\bintent\b")
