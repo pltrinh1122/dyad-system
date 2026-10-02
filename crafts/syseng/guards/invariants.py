@@ -38,7 +38,7 @@ CONSTRUCTORS = {"frozenset", "set", "dict", "tuple", "list"}
 _NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 LISTS = ("INVARIANTS", "TREE_INVARIANTS")          # p1: the pure list, enforced at import; the tree list, run by the pass only
 ENFORCE = "enforce"                                # p1: `dyadlib.enforce(INVARIANTS, __name__)`, at module level
-ENFORCE_FAILS_UNDER: tuple[str, ...] = ()          # top-level dirs where (iv) fails rather than warns; plan #203 P3 sets ("dyad",)
+ENFORCE_FAILS_UNDER: tuple[str, ...] = ("dyad",)   # top-level dirs where (iv) fails rather than warns (plan #203 P3); crafts warn
 # (v): the events that make a predicate impure — reading or writing a file, a stat, listing a directory, a child
 # process, the network, an environment read, or loading a module. The last three lines' events have no audit hook and
 # are recorded by wrappers in the child; what neither sees (a C-level getenv, a value read at import) is inference.
