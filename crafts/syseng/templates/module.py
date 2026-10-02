@@ -17,19 +17,35 @@ import dyadlib
 # ---- the data model: upper-case constants, literals (a tuple, dict, set, frozenset), never mutated
 STATES = frozenset({"a", "b"})
 TRANSITIONS: dict[str, frozenset[str]] = {"a": frozenset({"b"}), "b": frozenset()}
+TEMPLATE = Path(__file__).resolve().parent / "<module>.txt"
 
 # ---- crafts/syseng/rules/invariants.md p1: the architectural facts the constants encode, one predicate each,
-# named in words, sorted and run by dyadlib.check_invariants — by the runner's pass and before any write below.
-# Never `assert` (p3); never run at import.
+# named in words, unique across both lists. Never `assert` (p3).
+# INVARIANTS: pure — over this module's literals only (no file, stat, git, environment, module load), so the same
+# value on every host. Enforced at import by the call below, with no off-switch; a false one raises InvariantError.
 INVARIANTS: list[dyadlib.Invariant] = [
     ("transitions-keys-are-states", lambda: set(TRANSITIONS) == STATES),
     ("transition-targets-are-states", lambda: all(t <= STATES for t in TRANSITIONS.values())),
 ]
+# TREE_INVARIANTS: read the package tree or load modules; never at import — the runner's pass runs them.
+TREE_INVARIANTS: list[dyadlib.Invariant] = [
+    ("template-exists", lambda: TEMPLATE.is_file()),
+]
+dyadlib.enforce(INVARIANTS, __name__)   # after the list's last binding; the syseng guard checks it is here (iv)
 
-def write(path: Path, text: str) -> None:
-    """A mutating call site: check the model before the write (p1); an InvariantError is an incident (p5)."""
-    dyadlib.check_invariants(INVARIANTS, label="<module>")
-    path.write_text(text)
+class TransitionError(ValueError):
+    """Operator input asked for a transition the table does not hold."""
+
+def require_transition(before: str, after: str) -> None:
+    """A fail-loud check at a strategic point (invariants.md p1): a state transition, checked once per disposition,
+    in one function called from one place — before the one write. Never on the read path or per row."""
+    if after not in TRANSITIONS.get(before, frozenset()):
+        raise TransitionError(f"{before} -> {after} is not a transition (states: {', '.join(sorted(STATES))})")
+
+def write_state(path: Path, before: str, after: str) -> None:
+    """The one write: refused before anything is written, by construction."""
+    require_transition(before, after)
+    path.write_text(after + "\n")
 
 def main(argv=None) -> int:
     a = argv if argv is not None else sys.argv[1:]

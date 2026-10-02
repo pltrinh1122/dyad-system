@@ -24,9 +24,15 @@ Terms (`implementation path`, `mechanical check`, arriving from the core vocabul
    is legal (`dyad/tests/test_dyadlib_rows.py`). The runner's `check_rule_12` keeps "run the tests"
    (discovery of the test roots stays the runner's); this craft's `tests.py` keeps "every module
    has its test at the mapped path" — two predicates, two owners (plan #162 attack 7).
-5. **A model's own check is an invariant.** The check a module carries for its constants is its
-   `INVARIANTS` list (`invariants.md`); a unit test asserts once that every invariant holds, so the
-   predicate is written once (attack 2).
+5. **A model's own check is an invariant, and the import is the assertion.** The check a module
+   carries for its constants is its `INVARIANTS` list, enforced at import by
+   `dyadlib.enforce(INVARIANTS, __name__)` (`invariants.md` p1): every process that imports the
+   module — its own test first — runs it, so no per-module test asserts that the invariants hold,
+   and the predicate is written once (attack 2; amendment #203). A `TREE_INVARIANTS` entry is run
+   by the runner's pass. A test that only exercises a condition a fail-loud check at a strategic
+   point now guards (`invariants.md` p1, *Where a fail-loud check goes*) is redundant with the check
+   and goes; a behaviour test stays, and property 4's mapping is unchanged — a module still has its
+   test file.
 6. **A live test states its empty-instance behaviour.** A *live test* reads the system it runs in —
    the instance's stores, or which Tended crafts are installed — instead of a fixture it builds. It
    states what it does when that store is empty or that craft is absent: it asserts the *documented*
