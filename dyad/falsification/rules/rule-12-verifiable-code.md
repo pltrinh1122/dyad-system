@@ -153,3 +153,52 @@ craft zone and is written by an install, never by this check. 12–6 the term `c
 Rule-12 as a user; its definition gains the core row. 12–16 no row, plan or presence file is read.
 12–4 the block is unchanged. 12–7, 12–8, 12–9, 12–10, 12–13, 12–15, 12–18, 12–19, 12–20 untouched.
 Coherent, orthogonal. Disposition: see ledger #199.
+
+## Amendment — d-work #203 (2026-10-02, node P2: property 1 gains the fail-loud check)
+
+**Claim:** a module's pure `INVARIANTS` are a fail-loud check, enforced by the module at its own import
+(`dyadlib.enforce(INVARIANTS, __name__)`, no off-switch); the predicates that read the tree or load
+modules are `TREE_INVARIANTS` and never run at import; the runner's pass runs both lists; and a fail-loud
+check at a strategic point counts as the code's mechanical check, so a test that only exercises its
+condition is redundant with it.
+
+Occasioned by the Operator's prompt of #203 (provenance entries 1–3): "fail-loud checks in the target
+code being tested", read as reading B — "one that runs at import or on every use … this is what i
+meant" — and bounded: "strategic use is required". The form, the two lists and the placement criterion
+are the syseng craft's (`crafts/syseng/rules/invariants.md` p1 and p4, amendment #203 in its own record,
+node P1); this amendment covers only the kernel sentence of property 1 and the core code (node P2).
+Mechanism: `dyadlib.enforce` and `false_invariants`; `invariants_of` reads both lists, so
+`check_invariants` — the pass and the `dwork`/`runbook.run` call sites — runs both; `invariant_modules`
+reports a module whose import raised as `FAIL [invariant] <label>: does not load: …` and runs the rest;
+`load_module` drops a module whose import raised from `sys.modules`; all 22 core modules that declare
+`INVARIANTS` end with the call; twelve impure predicates moved (references 8, package 2, craft 1; the
+sysarch projector's `relations-from-register` is craft zone and stays, a warning). Plan #203 A6 and A7
+are the parent attacks; the rows below are this node's.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Fail-closed: a false invariant in the runner's own modules (`dyadlib`, `package`) stops every `dyad` command, `check --evidence` and `dwork` included, so Rule-2's evidence is absent exactly when it is most needed, and the incident cannot be recorded through `dwork`. | **Confirmed; conceded, bounded** | The cost is accepted, as plan #203 A7 and invariants.md p4 state it: `rc ≠ 0`, one line on stderr (`InvariantError: dyadlib: invariant(s) failed: <names>`, no traceback — `package.py` installs a one-line hook only when it is `__main__`), no block. Rule-2's Binding reads an absent block as an absent check, so nothing merges on it: fail-closed, never fail-open. A pure predicate has the same value on every host, so a false one cannot reach `main` through a green block — that block's own import would have failed. The incident is recorded by hand (Rule-3 Incidents). Tested: `dwork new` and `check --list` both stop with that one line and write no row. |
+| 2 | Cost at import: every process, every test module and every guard load now runs predicates it did not before (#162 attack 1 confirmed this cost once). | **Survives, measured** | The 71 pure predicates of the 22 core modules take 0.13 ms per full sweep, warm, in-process. `import dyadlib, package`, 5 interleaved runs per tree after a warm-up: P1 tree median 176.0 ms, this node 171.4 ms (ratio 0.97, inside the spread of 158–197 ms; no cost is distinguishable). What made import slow in #162 were the I/O predicates (0.8–1.4 ms each); they are `TREE_INVARIANTS` and never run there, and syseng guard (v) fails one left in an enforcing module's `INVARIANTS`. |
+| 3 | Operating-system import breakage: an installed system's guards, projectors or hooks stop importing after an upgrade, where today a false invariant was one red line in the pass. | **Survives, scoped** | Purity is what makes the value host-independent: no filesystem, version control, environment or module loading (syseng p1; guard (v) audits the events, and an environment read through `os.environ`). So a predicate true in the authoring system's evidence is true at every install; what differs by host is outside the list by construction. What (v) cannot see — a C-level `getenv`, a value read at import and then compared — is inference, stated in p1. A guard whose import fails is still one red line (`does not load`) and every other check runs; a pass module (projector, `runbook`, `craft`, `distribute`) is now caught too, where before its raise would have aborted the pass. Craft modules are not changed by this node (a warning until a craft follow-up). |
+| 4 | An invariant that raises is a different failure from one that is false: treating both as false hides a programming error (a `NameError` from a predicate placed before the name it reads) behind an architectural message. | **Survives, scoped** | Both mean the module's stated fact cannot be shown to hold, so both stop the import, and the name in the message is the invariant's, which is where to look. Placement is the real risk: the call must follow every name the predicates read, not only the list. Each core module places it last, before `if __name__ == "__main__"` (package's `contract-names-distinct` reads `CONTRACT`, bound about 270 lines after its list: placed at the list, it would raise on every import — the reason the call goes last). Guard (iv) checks the call follows the list's last binding; a later-bound name is not checked mechanically, but it fails on the first import, so it cannot pass any test or evidence run. Tested: `enforce` names a raising predicate among the false, sorted. |
+| 5 | A module whose import raised stays in `sys.modules` (`load_module` registers it before executing), so the next load returns it half-initialised and the check fails loud only once. | **Confirmed; closed** | `load_module` now deletes the entry when execution raises, as the import system does for `import`. Tested: two consecutive loads of a module with a false invariant both raise and leave no entry. |
+| 6 | "No off-switch" makes a broken invariant unfixable through the tool that would fix it (`dwork`, `check`). | **Survives** | The fix is an edit to the module's literal or to the predicate, made in an editor, not through `dyad`; an off-switch would make the check optional, which the Operator's "fail-loud" excludes (syseng p1). The pre-commit hook (`containment.py`) itself enforces only its own list, so a commit is blocked only when containment's own facts are false. |
+| 7 | The 12 moved predicates now run in fewer places: at the `dwork`/`runbook.run` call sites they ran via `check_invariants`, and they still do; did anything that read `INVARIANTS` alone lose them? | **Confirmed for one reader; reported** | `check_invariants` reads both lists (tested in the pass), as does the syseng guard's (iii). The sysarch entities projector reads `INVARIANTS` alone for its invariants column, so `agent/references` now shows 4 names there instead of 12 — a craft-zone reader, reported for the follow-up, not edited here (Rule-1). |
+| 8 | Easy agreement: the brief says "every core module that declares `INVARIANTS`". Is any core module's pure list actually impure outside the pass that guard (v) audits? | **Pushed** | `livetest` and `incidents` are not pass modules, so (v) never audits them; their predicates were run under the guard's own audit child by hand: no event. |
+
+Pairwise (Rule-5): 12–2 Binding reads the evidence block; a false runner invariant yields no block,
+which the Binding already reads as an absent check (attack 1) — Rule-2 is unchanged and cited, never
+restated. 12–3 Incidents owns what a false invariant is ("an incident") and how it is recorded;
+property 1 keeps the sentence and cites it; the completion evidence pastes the block, which now also
+carries a `does not load` line when one occurs; no counter-prompt changes. 12–11 the runner is Rule-11's
+and owns no semantics; it runs both lists and reports a load failure, Rule-12's check placed in the
+runner as `check_rule_12` is; Rule-11 Enforcement's "every model module's `INVARIANTS`" stays correct
+as a name of the pass and defers the term to Rule-12 — it now under-describes the pass by
+`TREE_INVARIANTS`, a wording sync left to the Operator, not a contradiction. 12–14 property 3 owns the
+kernel-only path; enforcement at import needs nothing beyond the kernel (Python), and the path's
+completeness is conceded only where the runner itself cannot import (attack 1). 12–16 no row, plan or
+presence file is touched; `dwork` writes exactly as before, and a false `dyadlib` invariant now stops it
+earlier (at import) rather than at its explicit call, which stays. 12–6 one term added (`fail-loud
+check`, owner 12, used by 12) and `invariant` redefined; Rule-11 and Rule-12, its users, still read
+correctly. 12–4 the block is unchanged. 12–1, 12–5, 12–7, 12–8, 12–9, 12–10, 12–13, 12–15, 12–18,
+12–19, 12–20 untouched. Coherent, orthogonal. Disposition: see ledger #203.

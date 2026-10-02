@@ -403,5 +403,7 @@ def main():
         print(f"ok   [rule-14] {n} components, {m} tokens resolve")
     return 1 if fails else 0
 
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
+
 if __name__ == "__main__":
     sys.exit(main())

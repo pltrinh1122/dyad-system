@@ -25,7 +25,7 @@ channel `core.fileMode=false` leaves for the bit to reach a later `git add`."""
 import filecmp, fnmatch, gzip, hashlib, io, os, shutil, subprocess, tarfile, tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-import hostadapter
+import dyadlib, hostadapter
 
 SKIP_DIRS = {"__pycache__", ".git"}
 INVARIANTS = [("skip-dirs-are-generated-or-git", lambda: SKIP_DIRS <= {"__pycache__", ".git", ".pytest_cache"}),   # crafts/syseng/rules/invariants.md
@@ -263,3 +263,5 @@ def instance_state(repo: Path, roots, rules: dict, exempt=("templates",), names=
             if first.startswith(h):
                 fails.append(f"{rel}: instance artifact by header '{h}' inside {what}")
     return fails
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)

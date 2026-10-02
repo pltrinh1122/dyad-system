@@ -67,7 +67,15 @@ def load_module(path: Path, name: str | None = None):
     prev, sys.dont_write_bytecode = sys.dont_write_bytecode, True
     try:
         spec = importlib.util.spec_from_file_location(name, path)
-        mod = importlib.util.module_from_spec(spec); sys.modules[name] = mod; spec.loader.exec_module(mod)
+        mod = importlib.util.module_from_spec(spec); sys.modules[name] = mod
+        try:
+            spec.loader.exec_module(mod)
+        except BaseException:
+            # as the import system does: a module whose import raised (an `enforce` at its bottom, #203) never
+            # stays cached half-initialised, or the next load would hand it out without raising again
+            if sys.modules.get(name) is mod:
+                del sys.modules[name]
+            raise
     finally:
         sys.dont_write_bytecode = prev
     return mod
@@ -119,10 +127,13 @@ def contract_problem(mod, root: str = "core", group: str | None = None, zones: s
         return f"declares CORPUS {mod.CORPUS!r}, not a zone in containment.ZONES ({', '.join(sorted(zones))})"
     return None
 
-# ---- run-time invariants (crafts/syseng/rules/invariants.md): a module declares `INVARIANTS`, a list of
-# (name, predicate) pairs over its own constants; the runner checks them before any check and the mutating
-# call sites (dwork new|state, runbook run) before they write. Never at import, never `assert`.
+# ---- run-time invariants (crafts/syseng/rules/invariants.md p1, amended #203): a module declares two lists of
+# (name, predicate) pairs. `INVARIANTS` is pure (its own literals only) and the module enforces it at import with
+# `enforce(INVARIANTS, __name__)`, a fail-loud check (Rule-12 p1) with no off-switch; `TREE_INVARIANTS` reads the
+# package tree or loads modules and never runs at import. The runner's pass runs both before any check, and the
+# mutating call sites (dwork new|state, runbook run) run both before they write. Never `assert`.
 Invariant = tuple[str, Callable[[], bool]]
+LISTS = ("INVARIANTS", "TREE_INVARIANTS")   # the pure list, enforced at import; the tree list, run by the pass only
 
 class InvariantError(Exception):
     """A module's invariants did not hold: `module` is its label, `failed` the names, sorted."""
@@ -131,16 +142,14 @@ class InvariantError(Exception):
         super().__init__(f"{module}: invariant(s) failed: {', '.join(self.failed)}")
 
 def invariants_of(source, extra=()) -> list[Invariant]:
-    """The entries of a module's `INVARIANTS` (or of a list passed directly) plus `extra`, sorted by name;
-    a module with no `INVARIANTS` yields the extras only (which modules must declare one is the syseng
-    guard's question, crafts/syseng/guards/invariants.py)."""
-    own = source if isinstance(source, (list, tuple)) else getattr(source, "INVARIANTS", ())
-    return sorted(list(own) + list(extra), key=lambda e: e[0] if isinstance(e, tuple) and e else str(e))
+    """The entries of a module's `INVARIANTS` and `TREE_INVARIANTS` (or of a list passed directly) plus `extra`,
+    sorted by name; a module with neither list yields the extras only (which modules must declare one is the
+    syseng guard's question, crafts/syseng/guards/invariants.py)."""
+    own = list(source) if isinstance(source, (list, tuple)) else [e for n in LISTS for e in getattr(source, n, ())]
+    return sorted(own + list(extra), key=lambda e: e[0] if isinstance(e, tuple) and e else str(e))
 
-def check_invariants(source, extra=(), label: str | None = None) -> int:
-    """Run every invariant of `source` (a module or a list); raise InvariantError naming the false ones (a
-    predicate that raises counts as false); return the number checked."""
-    entries = invariants_of(source, extra)
+def false_invariants(entries) -> list[str]:
+    """The names of the entries whose predicate is false or raises, sorted."""
     failed = []
     for name, pred in entries:
         try:
@@ -149,9 +158,27 @@ def check_invariants(source, extra=(), label: str | None = None) -> int:
             ok = False
         if not ok:
             failed.append(name)
+    return sorted(failed)
+
+def check_invariants(source, extra=(), label: str | None = None) -> int:
+    """Run every invariant of `source` (a module's two lists, or a list); raise InvariantError naming the false
+    ones (a predicate that raises counts as false); return the number checked."""
+    entries = invariants_of(source, extra)
+    failed = false_invariants(entries)
     if failed:
         raise InvariantError(label or getattr(source, "__name__", "invariants"), failed)
     return len(entries)
+
+def enforce(invariants: list[Invariant], name: str) -> int:
+    """The import-time fail-loud check (Rule-12 p1; crafts/syseng/rules/invariants.md p1): a module calls
+    `dyadlib.enforce(INVARIANTS, __name__)` at module level after the list's last binding. Every predicate runs;
+    one that is false or raises makes it raise InvariantError naming every false name, sorted, so the import
+    fails. No `assert`, no off-switch (no environment knob, flag or `-O` path skips it). The list is pure, so
+    this costs microseconds; `TREE_INVARIANTS` is never passed here. Returns the number checked."""
+    failed = false_invariants(invariants)
+    if failed:
+        raise InvariantError(name, failed)
+    return len(invariants)
 
 def contract_invariants(mod, root: str = "core", group: str | None = None, zones: set[str] | None = None) -> list[Invariant]:
     """The guard contract restated as four invariants the runner appends to every guard's list (the registry's
@@ -531,8 +558,9 @@ def plain(text: str) -> str:
     """Strip markdown emphasis so `Y` and *coherent* match their vocabulary terms."""
     return text.replace("`", "").replace("*", "")
 
-# crafts/syseng/rules/invariants.md: the architectural facts this module's tables encode, run by the runner's
-# pass and before every row write (`dyad dwork new|state`). Each names a fact a guard or a past incident relied on.
+# crafts/syseng/rules/invariants.md: the architectural facts this module's tables encode, enforced at import (the
+# call at the bottom), run again by the runner's pass and before every row write (`dyad dwork new|state`). Each
+# names a fact a guard or a past incident relied on.
 INVARIANTS: list[Invariant] = [
     ("transitions-keys-are-states", lambda: set(TRANSITIONS) == STATES),
     ("transition-targets-are-states", lambda: all(t <= STATES for t in TRANSITIONS.values())),
@@ -550,3 +578,5 @@ INVARIANTS: list[Invariant] = [
     ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
     ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
 ]
+
+enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding

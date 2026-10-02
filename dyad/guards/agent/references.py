@@ -472,14 +472,10 @@ def _no_craft_name_literal() -> bool:
     src = Path(__file__).read_text()
     return not any(re.search(rf"""['"]{re.escape(p.name)}['"]""", src) for p in dyadlib.craft_dirs())
 
+# Rule-20's register facts (crafts/syseng/rules/invariants.md). `INVARIANTS` is pure, over the register's literals,
+# enforced at import; `TREE_INVARIANTS` lists guard files, loads guards or reads crafts/, so only the pass runs it (#203).
 INVARIANTS = [
-    ("craft-set-is-craft-dirs", lambda: installed_crafts(dyadlib.PKG) == {p.name for p in dyadlib.craft_dirs(dyadlib.PKG)}),
-    ("craft-names-not-literal", _no_craft_name_literal),
     ("kinds-unique", lambda: len({r[0] for r in REFERENCES}) == len(REFERENCES)),
-    ("sources-are-entity-keys", lambda: {r[1] for r in REFERENCES} <= _entity_keys() | NON_GUARD_SOURCES | CORE_ROWS_NAME_CRAFT_ENTITY),
-    ("targets-are-entity-keys-or-world-kinds", lambda: {r[4] for r in REFERENCES} <= _entity_keys() | WORLD_TARGETS | CORE_ROWS_NAME_CRAFT_ENTITY),
-    ("core-rows-craft-entity-not-core", lambda: CORE_ROWS_NAME_CRAFT_ENTITY.isdisjoint(dyadlib.load_guard_file(py).ENTITY for py in dyadlib.guard_files() if dyadlib.guard_key(py)[0] == "core")),
-    ("resolver-shape", lambda: all(_resolver_ok(r[5]) for r in REFERENCES)),
     ("extractor-present-when-resolved-here", lambda: all(callable(r[3]) for r in REFERENCES if callable(r[5]))),
     # #177: a package/craft Rule's own ledger citations are historical provenance, not a reference
     # a receiving instance can resolve; an instance's own record citing its own missing row stays
@@ -487,6 +483,14 @@ INVARIANTS = [
     ("package-ledger-kinds-stay-world", lambda: all(r[5] == "world" for r in REFERENCES
                                                      if r[0] in {"rule.text->row", "record.ledger->provenance", "craft_rule.text->provenance"})),
     ("instance-record-ledger-stays-checked", lambda: any(r[0] == "record.ledger->row" and callable(r[5]) for r in REFERENCES)),
+]
+TREE_INVARIANTS = [
+    ("craft-set-is-craft-dirs", lambda: installed_crafts(dyadlib.PKG) == {p.name for p in dyadlib.craft_dirs(dyadlib.PKG)}),
+    ("craft-names-not-literal", _no_craft_name_literal),
+    ("sources-are-entity-keys", lambda: {r[1] for r in REFERENCES} <= _entity_keys() | NON_GUARD_SOURCES | CORE_ROWS_NAME_CRAFT_ENTITY),
+    ("targets-are-entity-keys-or-world-kinds", lambda: {r[4] for r in REFERENCES} <= _entity_keys() | WORLD_TARGETS | CORE_ROWS_NAME_CRAFT_ENTITY),
+    ("core-rows-craft-entity-not-core", lambda: CORE_ROWS_NAME_CRAFT_ENTITY.isdisjoint(dyadlib.load_guard_file(py).ENTITY for py in dyadlib.guard_files() if dyadlib.guard_key(py)[0] == "core")),
+    ("resolver-shape", lambda: all(_resolver_ok(r[5]) for r in REFERENCES)),
     # Rule-11 property 2's contribution mechanism, #101: a contributed row is shaped like a core one
     # (resolvable, its own extractor) and never collides with a core kind name.
     ("contrib-resolver-is-callable", lambda: all(callable(row[5]) for _craft, row in craft_references_contrib(dyadlib.PKG))),
@@ -577,6 +581,8 @@ def main(argv=None) -> int:
     if not fails:
         print(f"ok   [rule-20] {n} references, {k} kinds resolve")
     return 1 if fails else 0
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
 
 if __name__ == "__main__":
     sys.exit(main())
