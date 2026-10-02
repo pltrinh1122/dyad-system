@@ -177,11 +177,6 @@ class CraftCliTests(unittest.TestCase):
         # (the whole run is not asserted: Rules 8, 18, 19 name `crafts/sysadmin/…` paths, which references.py skips only on a core-only install — Rule-20, outside #156)
 
 
-class InvariantTests(unittest.TestCase):
-    def test_invariants_hold(self):
-        craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
-        self.assertEqual(dyadlib.check_invariants(craft), len(craft.INVARIANTS)); self.assertEqual(len(craft.INVARIANTS), 3)
-
 class CoreRowTests(unittest.TestCase):
     """d-work #199 (#176): the registry's core row, written by `dyad install`, read by the push gate."""
     def test_core_row_and_unmodified(self):

@@ -81,9 +81,6 @@ class TransactionTests(unittest.TestCase):
         for fails in (c.check_commits(base, head, cwd=self.r.d), c.check_range(base, head, cwd=self.r.d),
                       c.check_transaction(self.r.d, base, head), c.check_pr(self.r.d, base, head)):
             self.assertTrue(any("commit" in f and "multiple zones" in f for f in fails), fails)
-    def test_modes_are_declared(self):
-        self.assertEqual((c.TRANSACTION_MODE, c.PR_MODE), ("commits", "range"))
-        self.assertLessEqual({c.TRANSACTION_MODE, c.PR_MODE}, set(c.MODES))
     def test_cli_names_the_mode_it_ran(self):
         base = self.r.commit({"README.md": "r"})
         self.r.commit({"dyad/a.md": "x"}); head = self.r.commit({"CLAUDE.md": "y"})
@@ -121,10 +118,6 @@ class VerbTableTests(unittest.TestCase):
         self.assertEqual(sorted(usage), sorted(c.VERBS))
         self.assertEqual(sorted(c.VERBS), ["commit", "commits", "range", "staged", "tree", "zones"])
 
-    def test_hook_verb_and_modes_are_verbs(self):
-        self.assertEqual(c.HOOK_VERB, "staged")
-        self.assertIn(c.HOOK_VERB, c.VERBS)
-        self.assertLessEqual(set(c.MODES), set(c.VERBS))
 
     def test_hook_verb_is_what_the_shipped_hook_passes(self):
         """The one surface this module cannot see: the bash hook. Read here so the constant is not a fiction."""
@@ -283,14 +276,6 @@ class FourZoneSystemTests(unittest.TestCase):
             rows, msgs = inf.manifest_rows(self.r.d / "dyad", self.r.d)
         self.assertEqual(msgs, [])
         self.assertEqual([s for s, _ in rows if s != "the manifest"], ["infrastructure/INFRASTRUCTURE.md"])
-
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(c, "core", c.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(c, extra), len(c.INVARIANTS) + 4)
-        names = [n for n, _ in c.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

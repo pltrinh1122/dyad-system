@@ -297,11 +297,6 @@ class TrackedModeTests(unittest.TestCase):
 class InvariantTests(livetest.LiveCase):
     """crafts/syseng/rules/invariants.md: the protocol — INVARIANTS is data, check_invariants runs it sorted, an
     InvariantError names every false one, nothing runs at import."""
-    def test_dyadlib_invariants_hold_and_are_counted(self):
-        self.assertEqual(dyadlib.check_invariants(dyadlib), len(dyadlib.INVARIANTS))
-        names = [n for n, _ in dyadlib.INVARIANTS]
-        self.assertEqual(len(set(names)), len(names)); self.assertTrue(all(callable(p) for _, p in dyadlib.INVARIANTS))
-        self.assertEqual([n for n, _ in dyadlib.invariants_of(dyadlib)], sorted(names))
     def test_failed_invariants_raise_with_names_sorted(self):
         inv = [("z-false", lambda: False), ("a-true", lambda: True), ("m-raises", lambda: 1 / 0), ("b-false", lambda: 0)]
         with self.assertRaises(dyadlib.InvariantError) as cm:

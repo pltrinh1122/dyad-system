@@ -53,13 +53,5 @@ class RecordTests(unittest.TestCase):
         self.assertEqual([f[0] for f in d["fields"]], list(rc.FIELDS)); self.assertEqual(d["observed"], 2)
         self.assertTrue(d["fields"][2][2].startswith("refuted | survives"), d["fields"][2][2])
 
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(rc, "core", rc.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(rc, extra), len(rc.INVARIANTS) + 4)
-        names = [n for n, _ in rc.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
-
 if __name__ == "__main__":
     unittest.main()

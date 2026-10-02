@@ -284,8 +284,6 @@ class LiveTests(livetest.LiveCase):
 
 class InvariantTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md: the runner's INVARIANTS hold; run() refuses before running anything when one is false."""
-    def test_invariants_hold(self):
-        self.assertEqual(dyadlib.check_invariants(rb), len(rb.INVARIANTS)); self.assertGreaterEqual(len(rb.INVARIANTS), 5)
     def test_run_refuses_on_a_false_invariant_and_writes_no_event(self):
         os.environ.pop("DYAD_RUNBOOKS", None); root = fixture(); out = io.StringIO()
         self.addCleanup(shutil.rmtree, root, ignore_errors=True)

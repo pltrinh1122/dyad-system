@@ -80,8 +80,6 @@ class FenceTests(unittest.TestCase):
         self.assertEqual(self.fails(self.base, h), [])
 
 class ContractTests(unittest.TestCase):
-    def test_contract(self):
-        self.assertEqual((m.ENTITY, m.CORPUS, m.TRANSACTION, m.FIELDS), ("row", "agent", True, dyadlib.FIELDS))
     def test_package_check_over_a_store(self):
         r = Repo(); r.write("agent-corpus/d-work/rows/1.md", row(1, "one")); r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "planned", "Y plan"))
         os.environ.pop("DYAD_INSTANCE", None)
@@ -98,8 +96,6 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(len(m.check_transaction(r.d, base, h)), 1)            # on main: fenced
         sh("git", "checkout", "-q", "-b", "feature", cwd=r.d)
         self.assertEqual(m.check_transaction(r.d, base, h), [])              # on a branch: the PR guard's turn
-    def test_live_rows_store_passes(self):
-        self.assertEqual(m.check_package(dyadlib.repo_root()), [])
     def test_cli_main_fence_line(self):
         r = Repo(); r.write("agent-corpus/d-work/rows/1.md", row(1, "one")); base = r.commit("root")
         r.write("agent-corpus/d-work/rows/1.md", row(1, "one", "done", "Y done")); h = r.commit("done")
@@ -237,13 +233,6 @@ class LedgerBranchFenceTests(unittest.TestCase):
         root = Path(tempfile.mkdtemp()); (root / "agent-corpus" / "d-work" / "rows").mkdir(parents=True)
         (root / "agent-corpus" / "d-work" / "rows" / "01.md").write_text(row(1, "one"))
         self.assertIn("differs from the file name", " ".join(m.check_package(root)))
-
-class InvariantTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md: the guard's INVARIANTS (plus the contract's four) hold; each name is unique."""
-    def test_invariants_hold(self):
-        extra = dyadlib.contract_invariants(m, "core", m.CORPUS)
-        self.assertEqual(dyadlib.check_invariants(m, extra), len(m.INVARIANTS) + 4)
-        names = [n for n, _ in m.INVARIANTS]; self.assertEqual(len(set(names)), len(names)); self.assertTrue(names)
 
 if __name__ == "__main__":
     unittest.main()

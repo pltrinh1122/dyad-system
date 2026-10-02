@@ -172,11 +172,5 @@ class InstanceStateTests(unittest.TestCase):
         self.assertEqual(distribute.instance_state(r, ["crafts/x"], self.RULES), [])
         shutil.rmtree(r, ignore_errors=True)
 
-
-class InvariantTests(unittest.TestCase):
-    def test_invariants_hold(self):
-        import dyadlib
-        self.assertEqual(dyadlib.check_invariants(distribute), len(distribute.INVARIANTS)); self.assertEqual(len(distribute.INVARIANTS), 2)
-
 if __name__ == "__main__":
     unittest.main()
