@@ -20,7 +20,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 (read from stdin, `<local ref> <local sha> <remote ref> <remote sha>`); a
                                 push the guards cannot judge is refused — a ref other than the checked-out
                                 HEAD, or a working tree with changes (#194); Rule-12's suite is skipped
-                                when the suite memo proves this tree already passed on this checkout (#162)
+                                when the suite memo proves this tree already passed on this checkout (#162),
+                                and a test root is skipped whose craft tree is byte-identical to its
+                                crafts/REGISTRY.md row, an install's, unmodified (#176)
   dyad check --pr <base> [<head>]
                                 the PR transaction (Rule-1 binds a commit and a PR; a push range is
                                 neither): the invariant pass, then every transaction guard's `check_pr`
@@ -36,7 +38,8 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 evidence-sha256= of those lines; non-zero if any check fails
   dyad build [out.tar.gz] deterministic archive of the core craft (scripts/distribute.py, the one
                                 distribution code path every craft uses; #156)
-  dyad install <repo>     idempotent install of the core craft into another repo (same code path)
+  dyad install <repo>     idempotent install of the core craft into another repo (same code path), with its
+                                `dyad-operator` row in crafts/REGISTRY.md (#199)
   dyad bundle check | build [dir]
                                 Rule-11 p7 (guards/infra/bundle.py): check BUNDLE.md against the tree's
                                 craft VERSIONs (both directions; a missing BUNDLE.md skips), or build every
@@ -342,6 +345,35 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
             return False, line
     return True, None
 
+def installed_roots(base, head):
+    """`suite_gate`'s per-root clause (Rule-12 property 2, d-work #199 for backlog row #176), consulted by
+    `cmd_guards` only under `pre_push`, only once `suite_gate` has said run. Returns (roots to run, skip
+    lines): a test root skips when the craft tree it belongs to — `dyad/` for `dyad/tests`, `crafts/<c>/`
+    for `crafts/<c>/tests` — hashes to its row in the craft registry (`craft.unmodified`): the installed
+    tree, byte for byte, which its authoring system's own evidence already observed. A Tended craft's root
+    also needs the core's tree unmodified, since its tests import the core. Anything else runs: no row (an
+    authoring system, this one), a modified file, a registry the range itself changes (a hand-edited or a
+    new row is judged once, in this system, before it is trusted), or a range that cannot be read."""
+    roots = test_suites()
+    paths = dyadlib.range_paths(REPO, base, head, merge_base=False)
+    craft = craft_cli()
+    if paths is None or craft.REGISTRY in paths:
+        return roots, []
+    rows = craft.registry_rows(REPO)
+    if not rows:
+        return roots, []
+    core = craft.unmodified(REPO, craft.CORE_NAME, rows)
+    run, lines = [], []
+    for root in roots:
+        rel = Path(os.path.relpath(root, REPO)).as_posix()
+        name = craft.CORE_NAME if rel == f"{craft.CORE_ROOT}/tests" else rel.split("/")[1] if rel.startswith("crafts/") else None
+        row = (core if name == craft.CORE_NAME else craft.unmodified(REPO, name, rows) if core and name else None)
+        if row:
+            lines.append(f"skip [guards] Rule-12 suite: {rel} — {name} {row['version']} installed unmodified ({craft.REGISTRY})")
+        else:
+            run.append(root)
+    return run, lines
+
 def suite_env() -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
     A git hook exports an absolute `GIT_DIR` when it runs in a linked worktree; a suite that inherits
@@ -359,24 +391,26 @@ def run_suite(suite, target=None):
     summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
     return r.returncode, summary, r.stderr
 
-def cmd_tests(target=None):
+def cmd_tests(target=None, roots=None):
     """Rule-13 property 1: the suites, run the way the runner runs them, as one verb. Without a
     target every root of `test_suites()`; with a directory that root; with anything else a dotted
     module, class or method handed to `unittest`. The point is the environment, not the typing:
-    a hand-run without `DYAD_NO_NESTED_TESTS` pays about three times (d-work #154's audit)."""
+    a hand-run without `DYAD_NO_NESTED_TESTS` pays about three times (d-work #154's audit).
+    `roots` (the push gate's, d-work #199): exactly those roots, a subset of `test_suites()` — a
+    partial run, never memoized, like a targeted one."""
     global _SUITE_RAN
     rc = 0
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
     _SUITE_RAN = True
-    memo = None if target else suite_memo_parts()   # only a full, all-roots run is memoized (#162)
+    memo = None if target or roots is not None else suite_memo_parts()   # only a full, all-roots run is memoized (#162)
     if target and not Path(target).is_dir():
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
         if code:
             print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
         return rc
-    for suite in ([Path(target)] if target else test_suites()):
+    for suite in ([Path(target)] if target else test_suites() if roots is None else list(roots)):
         code, summary, err = run_suite(suite)
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
@@ -571,7 +605,15 @@ def cmd_guards(base="origin/main", pre_push=False):
     run, line = suite_gate(base, head, pre_push, base_ok)
     if line:
         print(line)
-    if run and cmd_tests():
+    roots = None
+    if run and pre_push and base_ok:   # an installed, unmodified tree skips its own root (#176, d-work #199); never for --evidence
+        roots, lines = installed_roots(base, head)
+        for l in lines:
+            print(l)
+        if not lines:
+            roots = None               # every root runs: the full run, memoized as before
+        run = bool(roots) or roots is None
+    if run and cmd_tests(roots=roots):
         rc = 1
     return int(rc)
 
@@ -664,13 +706,18 @@ def cmd_install(target):
     target = hostadapter.resolve(target)
     bundled = bundled_crafts()
     changed = distribute.install(REPO, target, release_roots(), prune=True, hooks=CORE_HOOKS, extra=core_extra())
+    changed += craft_cli().record_core(target, version(), REPO.name)   # the core's registry row (Rule-11 p2, d-work #199)
     print(f"installed into {target}: {changed} changes" + (f"; bundled: {', '.join(bundled)}" if bundled else "")
           + f"; run: git -C {target} config core.hooksPath dyad/hooks")
     return 0
 
+def craft_cli():
+    """scripts/craft.py, the craft registry's one reader and writer (Rule-11 p2)."""
+    return dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
+
 def cmd_craft(a):
     """Rule-11 p5: the Tended-craft CLI lives in scripts/craft.py; this is dispatch only (S4)."""
-    return dyadlib.load_module(PKG / "scripts" / "craft.py", "craft").main(a)
+    return craft_cli().main(a)
 
 def cmd_bundle(a):
     """Rule-11 p7: `check` runs the bundle guard by hand; `build [dir]` sequences the one
