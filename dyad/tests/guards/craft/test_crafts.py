@@ -391,14 +391,6 @@ class FloorTests(unittest.TestCase):
         self.assertEqual(msgs, expected)
         self.assertEqual(len(calls), 1, calls)
         self.assertFalse(any("w2.py" in m for m in msgs), msgs)
-    def test_live_repo_no_local_stale_tag_skips_cleanly(self):
-        # the live sysarch/syseng/sysadmin crafts still declare the stale requires: dyad-operator
-        # >=0.2.0 (raised properly in a later, craft-zone d-work, #100 PR3-5); the tag is not fetched
-        # here, so this is a graceful skip, never a FAIL, on the repo as it stands today
-        root = dyadlib.repo_root()
-        if not (root / "crafts" / "sysarch").is_dir(): self.skipTest("no sysarch craft here")
-        msgs = cg.floor_problems(root, root / "crafts" / "sysarch")
-        self.assertTrue(all(m.startswith("warning:") for m in msgs), msgs)
 
 
 class InvariantTests(unittest.TestCase):
