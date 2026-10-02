@@ -32,7 +32,10 @@ behind reusable code carrying a mechanical check.
    runner runs both.
 2. The suite is run by the runner, not by hand. Rule-14 property 3's pre-push path runs it on every
    push whose range touches anything outside `<instance>/d-work/`, so by the time the Agent asks for
-   a Done-`Y` the gate has already run what a hand-run would have run. One target — a module, a
+   a Done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
+   suite when a suite memo on this checkout proves the same tree already passed every root in the
+   same environment; `check --evidence` never reads one, so the merge evidence always observes
+   (Rule-2, Binding; Rule-14 property 3). One target — a module, a
    class, a method — is run while fixing it, through `dyad check --tests <target>`, which is the
    same child the runner spawns. A hand-typed `unittest` over a whole test root is not an error and
    nothing refuses it; it is the expensive path, because it does not set the environment the runner
@@ -61,6 +64,8 @@ Operator rule, 2026-09-13 (Architecture Rule 2). Falsified; see
 `crafts/syseng/rules/invariants.md`. Property 2 added 2026-09-24 (d-work #159): the suite is the
 runner's to run — at Rule-14 property 3's push gate, or one target at a time — after an audit
 measured 134 hand-runs in one session at about three times the runner's price (#154); see the
-same record, amendment #159.
+same record, amendment #159. Property 2 gains the suite memo 2026-09-30 (d-work #199, node N2 for
+backlog row #162): 53 of 112 merges pushed a tree `check --evidence` had already passed, and the
+push gate ran the suite on it again (#161, C2); see the same record, amendment #199.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

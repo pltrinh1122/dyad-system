@@ -19,7 +19,8 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
   dyad check --guards --pre-push   what dyad/hooks/pre-push runs: the same, over the refs git is pushing
                                 (read from stdin, `<local ref> <local sha> <remote ref> <remote sha>`); a
                                 push the guards cannot judge is refused — a ref other than the checked-out
-                                HEAD, or a working tree with changes (#194)
+                                HEAD, or a working tree with changes (#194); Rule-12's suite is skipped
+                                when the suite memo proves this tree already passed on this checkout (#162)
   dyad check --pr <base> [<head>]
                                 the PR transaction (Rule-1 binds a commit and a PR; a push range is
                                 neither): the invariant pass, then every transaction guard's `check_pr`
@@ -79,7 +80,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
 import sys
 if sys.version_info < (3, 12):
     sys.exit(f"package.py: Python 3.12+ required (kernel pin), found {sys.version.split()[0]}")
-import os, re, subprocess, functools, fnmatch, hashlib
+import os, re, subprocess, functools, fnmatch, hashlib, json, datetime
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
 
@@ -199,6 +200,7 @@ def check_rule_12():
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return msgs  # already inside a test run (test_package.py calls `check`); do not recurse
     _SUITE_RAN = True
+    memo = suite_memo_parts()   # read before the run, compared after it: a tree that moved mid-run is never memoized
     for suite in test_suites():
         r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(suite), "-q"],
                            capture_output=True, text=True, timeout=600,
@@ -207,7 +209,106 @@ def check_rule_12():
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if r.returncode != 0:
             msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + r.stderr.strip().splitlines()[-1])
+    if not msgs and memo and suite_memo_parts() == memo:
+        suite_memo_write(memo)   # a full, all-roots pass on a clean tree (d-work #162)
     return msgs
+
+# ---- the suite memo (Rule-12 property 2, d-work #162): proof, on this checkout, that one tree already passed
+# every root of Rule-12's suite in one environment. Written after a full, all-roots pass on a clean tree
+# (`check_rule_12`, `cmd_tests()` without a target); read only by `suite_gate` under `pre_push`, never by
+# `check --evidence` nor by `check --guards` without `--pre-push` (Rule-2 Binding, Rule-14 property 3). One
+# file per key under `<git common dir>/dyad-suite-memo/`, so every worktree of the checkout shares it; never
+# tracked. Its absence only costs time: a cold or mismatched key runs the suite for real.
+SUITE_MEMO_DIR = "dyad-suite-memo"
+SUITE_MEMO_KEEP = 64
+# The env knobs the runner, dyadlib and the craft guards read that can change a check's verdict. Not keyed:
+# DYAD_NO_NESTED_TESTS (unset whenever a memo is written or read; `suite_env` sets it in every child) and
+# DYAD_SESSION (a presence id, never an input to a verdict; keyed, it would make every session cold).
+SUITE_MEMO_ENV = ("DYAD_INSTANCE", "DYAD_HOST", "DYAD_HOST_ZONE", "DYAD_OPS", "DYAD_RUNBOOKS", "DYAD_ROLE")
+SUITE_MEMO_NAME = re.compile(r"[0-9a-f]{64}")
+
+def _git(*a):
+    """One read-only git call for the suite memo, in the repo judged and without a hook's GIT_VARS; its
+    stdout stripped, or None when git cannot say."""
+    try:
+        r = subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True, env=dyadlib.git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+def utc_date() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+
+def suite_memo_parts(rev="HEAD"):
+    """Every input of a Rule-12 pass the memo keys on: `rev`'s tree, the interpreter (`sys.executable`,
+    `sys.version`), git's version, the roots `test_suites()` runs, the env knobs (`SUITE_MEMO_ENV`), a digest
+    of `refs/tags` (`check_drift` reads tags), a digest of the instance's `*.local.txt` files (ignored by git,
+    so per worktree, and read by guards) and the UTC day. None on a dirty working tree (untracked files
+    count: a new craft's `tests/` is a root) or when git cannot say — no memo is written or read then."""
+    if _git("status", "--porcelain", "--untracked-files=normal") != "":
+        return None
+    tree, gitv = _git("rev-parse", "--verify", "-q", f"{rev}^{{tree}}"), _git("--version")
+    tags = _git("for-each-ref", "--format=%(objectname) %(refname)", "refs/tags")
+    if not tree or not gitv or tags is None:
+        return None
+    local = hashlib.sha256()
+    for f in sorted(dyadlib.instance(REPO).glob("*.local.txt")):   # instance data git ignores, read by guards (#191, #192)
+        local.update(f.name.encode() + b"\0" + f.read_bytes() + b"\0")
+    return {"tree": tree, "executable": sys.executable, "python": sys.version, "git": gitv,
+            "roots": sorted(Path(os.path.relpath(p, REPO)).as_posix() for p in test_suites()),
+            "env": {k: os.environ.get(k) for k in SUITE_MEMO_ENV},
+            "tags": hashlib.sha256(tags.encode()).hexdigest(), "local": local.hexdigest(), "date": utc_date()}
+
+def suite_memo_key(parts: dict) -> str:
+    """Pure: the memo's key, the sha256 of every part as canonical JSON, so any part changed is a miss."""
+    return hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest()
+
+def suite_memo_dir():
+    common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    return Path(common) / SUITE_MEMO_DIR if common else None
+
+def suite_memo_write(parts):
+    """Record a pass: the key file written atomically (`os.replace`), then the store pruned to the newest
+    `SUITE_MEMO_KEEP`. Returns the file, or None when nothing was written. Never raises: a memo is an
+    optimisation, and failing to write one fails nothing."""
+    d = suite_memo_dir() if parts else None
+    if d is None:
+        return None
+    key = suite_memo_key(parts)
+    try:
+        d.mkdir(exist_ok=True)
+        tmp = d / f".{key}.{os.getpid()}.tmp"
+        tmp.write_text(json.dumps(parts, sort_keys=True, indent=1) + "\n")
+        os.replace(tmp, d / key)
+        memos = sorted((f for f in d.iterdir() if SUITE_MEMO_NAME.fullmatch(f.name)),
+                       key=lambda f: (f.stat().st_mtime_ns, f.name), reverse=True)
+        for f in memos[SUITE_MEMO_KEEP:]:
+            f.unlink(missing_ok=True)
+    except OSError:
+        return None
+    return d / key
+
+def suite_memo_hit(parts) -> bool:
+    d = suite_memo_dir() if parts else None
+    return bool(d) and (d / suite_memo_key(parts)).is_file()
+
+def suite_memo_clause(base, head):
+    """`suite_gate`'s memo clauses (pre-push only): the skip line, or None. First, `head`'s own tree already
+    passed. Second, the range's own non-merge commits all touch only `<instance>/d-work/` (the three-dot walk
+    the plan gate reads, `dyadlib.ledger_only`), `head`'s tree differs from its merge-base's only under
+    `<instance>/d-work/` too (so a merge commit's own changes count), and that merge-base's tree already
+    passed: a ledger branch behind `origin/main`, whose two-dot range carries `main`'s own advances."""
+    parts = suite_memo_parts(head)
+    if suite_memo_hit(parts):
+        return f"skip [guards] Rule-12 suite: tree {parts['tree'][:9]} already passed on this checkout (d-work #162)"
+    if parts and dyadlib.ledger_only(REPO, base, head):
+        mb = _git("merge-base", base, head)
+        if mb and dyadlib.ledger_only(REPO, mb, head, merge_base=False):
+            mparts = suite_memo_parts(mb)
+            if suite_memo_hit(mparts):
+                return (f"skip [guards] Rule-12 suite: {base}...HEAD is ledger-only and its merge-base tree "
+                        f"{mparts['tree'][:9]} already passed on this checkout (d-work #162)")
+    return None
 
 def suite_gate(base, head, pre_push=False, base_ok=True):
     """Rule-12's suite at the local gate (d-work #155, #164): whether `cmd_guards` runs it, and the one
@@ -219,8 +320,10 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     under `<instance>/d-work/` → skip, the prefix and never the file suffix (a `.py` filter would have let
     #137's markdown run-book through, which broke the core suite by falsifying a pinned count); anything
     else → run. Rename detection off (#191), so a move of code into the ledger still runs it. The plan gate
-    and the fence keep `dyadlib.ledger_only`, where an empty range is never ledger-only. `pre_push` is the
-    hook's flag, unread here. `cmd_evidence` never reaches a skip: its `cmd_check` runs the suite first."""
+    and the fence keep `dyadlib.ledger_only`, where an empty range is never ledger-only. Last, and only under
+    `pre_push` (the hook's flag), a readable range that would run consults the suite memo
+    (`suite_memo_clause`, #162); an unknown range never does. `cmd_evidence` never reaches a skip: its
+    `cmd_check` runs the suite first, and it never passes `pre_push`."""
     if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
         return False, None
     if not base_ok:
@@ -233,6 +336,10 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     rel = dyadlib.instance_rel(REPO)
     if rel and all(p.startswith(f"{rel}/d-work/") for p in paths):
         return False, f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)"
+    if pre_push:
+        line = suite_memo_clause(base, head)
+        if line:
+            return False, line
     return True, None
 
 def suite_env() -> dict[str, str]:
@@ -262,6 +369,7 @@ def cmd_tests(target=None):
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
     _SUITE_RAN = True
+    memo = None if target else suite_memo_parts()   # only a full, all-roots run is memoized (#162)
     if target and not Path(target).is_dir():
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
@@ -273,6 +381,8 @@ def cmd_tests(target=None):
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
             print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+    if rc == 0 and memo and suite_memo_parts() == memo:
+        suite_memo_write(memo)
     return rc
 
 # ---- the guard registry (crafts/sysarch/rules/guards.md p4): discovered from dyad/guards/<corpus>/<entity>.py (core) and

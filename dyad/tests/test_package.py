@@ -1136,6 +1136,8 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
         "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
+        "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, "
+                "under dyadlib.git_env() so a hook's GIT_VARS never redirect them; no write (#162)",
     }
     def sites(self):
         import ast
@@ -1169,6 +1171,215 @@ class SpawnSiteTests(unittest.TestCase):
         self.assertEqual(problems, [])
         self.assertGreaterEqual(len(python), 2, "check_rule_12 and run_suite spawn the suite")
         self.assertEqual(set(self.GIT_ALLOWED) - git_fns, set(), "stale GIT_ALLOWED entry")
+
+class SuiteMemoTests(unittest.TestCase):
+    """#162 (d-work #199 N2): the suite memo. Written after a full, all-roots pass on a clean tree, under the
+    git common dir; read by `suite_gate` only under `pre_push`; never by `check --evidence` nor by
+    `check --guards` without `--pre-push`. Every case runs over a scratch repo with `pkg.REPO` pointed at it
+    and `test_suites` pinned to one root inside it, so the key's `roots` part is the scratch repo's."""
+    PARTS = {"tree", "executable", "python", "git", "roots", "env", "tags", "local", "date"}
+
+    def setUp(self):
+        self.pkg = load_package()
+        self.old = self.pkg.REPO
+        self.addCleanup(setattr, self.pkg, "REPO", self.old)
+        p = unittest.mock.patch.object(self.pkg, "test_suites", lambda: [self.pkg.REPO / "dyad" / "tests"])
+        p.start(); self.addCleanup(p.stop)
+        e = unittest.mock.patch.dict(os.environ, {}, clear=False); e.start(); self.addCleanup(e.stop)
+        os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+        self.pkg._SUITE_RAN = False
+
+    def repo(self):
+        """`seed` (one file), `ledger` (a row), `code` (a non-ledger file) on `main`; REPO points at it.
+        Returns (repo, seed sha, git)."""
+        d, seed, git = PackageTests.gate_repo(self)
+        (d / "code.txt").write_text("code\n"); (d / ".gitignore").write_text("*.local.txt\n")   # as the real repo ignores its legacy list
+        git("add", "-A"); git("commit", "-qm", "code")
+        self.pkg.REPO = d
+        return d, seed, git
+
+    def memos(self, d):
+        m = Path(d) / ".git" / self.pkg.SUITE_MEMO_DIR
+        return sorted(f.name for f in m.iterdir() if self.pkg.SUITE_MEMO_NAME.fullmatch(f.name)) if m.is_dir() else []
+
+    def guards(self, base, pre_push, evidence=False):
+        """`cmd_guards` (or `cmd_evidence`) with the registry emptied, `cmd_tests` recorded and every memo
+        read recorded; under `pre_push`, stdin carries the hook's line for HEAD. Returns (suite calls, memo
+        reads, output)."""
+        pkg, calls, reads, buf = self.pkg, [], [], io.StringIO()
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=pkg.REPO, capture_output=True, text=True, env=dyadlib.git_env()).stdout.strip()
+        real_hit = pkg.suite_memo_hit
+        def rule_12():
+            pkg._SUITE_RAN = True; calls.append(("check",)); return []
+        with unittest.mock.patch.object(pkg, "registry", lambda: []), \
+             unittest.mock.patch.object(pkg, "cmd_invariants", lambda: 0), \
+             unittest.mock.patch.object(pkg, "cmd_tests", lambda *a, **k: calls.append(("tests",) + a) or 0), \
+             unittest.mock.patch.object(pkg, "CHECKS", {"Rule-12": rule_12}), \
+             unittest.mock.patch.object(pkg, "suite_memo_hit", lambda parts: reads.append(parts) or real_hit(parts)), \
+             unittest.mock.patch.object(sys, "stdin", io.StringIO(f"refs/heads/main {head} refs/heads/main {'0' * 40}\n")), \
+             contextlib.redirect_stdout(buf):
+            pkg._SUITE_RAN = False
+            if evidence:
+                pkg.cmd_evidence()
+            else:
+                pkg.cmd_guards(base=base, pre_push=pre_push)
+        return calls, reads, buf.getvalue()
+
+    def test_key_changes_with_every_part(self):
+        d, seed, git = self.repo()
+        parts = self.pkg.suite_memo_parts()
+        self.assertEqual(set(parts), self.PARTS)
+        self.assertEqual(set(parts["env"]), set(self.pkg.SUITE_MEMO_ENV))
+        self.assertEqual(parts["roots"], ["dyad/tests"])
+        key = self.pkg.suite_memo_key(parts)
+        self.assertEqual(key, self.pkg.suite_memo_key(dict(reversed(list(parts.items())))))   # canonical: order never matters
+        for k in sorted(self.PARTS - {"env"}):
+            changed = {**parts, k: ["x"] if k == "roots" else parts[k] + "x"}
+            self.assertNotEqual(self.pkg.suite_memo_key(changed), key, k)
+        for k in self.pkg.SUITE_MEMO_ENV:
+            changed = {**parts, "env": {**parts["env"], k: (parts["env"][k] or "") + "x"}}
+            self.assertNotEqual(self.pkg.suite_memo_key(changed), key, k)
+        self.assertNotEqual(self.pkg.suite_memo_key({**parts, "roots": parts["roots"] + ["crafts/x/tests"]}), key)
+
+    def test_hit_under_pre_push_skips(self):
+        d, seed, git = self.repo()
+        memo = self.pkg.suite_memo_write(self.pkg.suite_memo_parts())
+        self.assertIsNotNone(memo)
+        tree = git("rev-parse", "HEAD^{tree}")
+        calls, reads, out = self.guards(seed, pre_push=True)
+        self.assertIn(f"skip [guards] Rule-12 suite: tree {tree[:9]} already passed on this checkout (d-work #162)", out)
+        self.assertEqual(calls, [], out)
+        calls, reads, out = self.guards(seed, pre_push=True)   # a second push of the same tree: still a hit
+        self.assertEqual(calls, [], out)
+        (Path(memo)).unlink()                                  # cold: the suite runs for real
+        calls, reads, out = self.guards(seed, pre_push=True)
+        self.assertNotIn("skip [guards] Rule-12 suite", out)
+        self.assertEqual(calls, [("tests",)], out)
+
+    def test_planted_memo_is_ignored_by_evidence_and_by_guards_without_pre_push(self):
+        d, seed, git = self.repo()
+        self.assertIsNotNone(self.pkg.suite_memo_write(self.pkg.suite_memo_parts()))
+        calls, reads, out = self.guards(seed, pre_push=False)
+        self.assertEqual(calls, [("tests",)], out)            # check --guards: cmd_tests is called
+        self.assertEqual(reads, [], "check --guards without --pre-push read the memo")
+        self.assertNotIn("skip [guards] Rule-12 suite", out)
+        calls, reads, out = self.guards(seed, pre_push=False, evidence=True)
+        self.assertEqual(calls, [("check",)], out)            # evidence: the suite ran, through cmd_check
+        self.assertEqual(reads, [], "check --evidence read the memo")
+        self.assertNotIn("skip [guards] Rule-12 suite", out)
+        self.assertNotIn("already passed", out)
+
+    def test_any_key_part_changed_is_a_miss(self):
+        d, seed, git = self.repo()
+        gate = lambda: self.pkg.suite_gate(seed, "HEAD", pre_push=True)
+        write = lambda: self.pkg.suite_memo_write(self.pkg.suite_memo_parts())
+        write(); self.assertFalse(gate()[0])                                        # the control: a hit
+        git("tag", "v9.9.9"); self.assertEqual(gate(), (True, None))                # tags (check_drift reads them)
+        write(); self.assertFalse(gate()[0])
+        os.environ["DYAD_HOST_ZONE"] = "infra"; self.assertEqual(gate(), (True, None))   # an env knob
+        write(); self.assertFalse(gate()[0])
+        with unittest.mock.patch.object(self.pkg, "utc_date", lambda: "2999-01-01"):
+            self.assertEqual(gate(), (True, None))                                  # the UTC day
+        with unittest.mock.patch.object(self.pkg, "test_suites", lambda: [d / "dyad" / "tests", d / "crafts" / "x" / "tests"]):
+            self.assertEqual(gate(), (True, None))                                  # the roots
+        with unittest.mock.patch.object(sys, "executable", sys.executable + "x"):
+            self.assertEqual(gate(), (True, None))                                  # the interpreter
+        with unittest.mock.patch.object(sys, "version", sys.version + "x"):
+            self.assertEqual(gate(), (True, None))
+        real = self.pkg._git
+        with unittest.mock.patch.object(self.pkg, "_git", lambda *a: "git version 0.0.0" if a == ("--version",) else real(*a)):
+            self.assertEqual(gate(), (True, None))                                  # git
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        (d / inst / "provenance_legacy.local.txt").write_text("1 0 predates\n")
+        self.assertEqual(self.pkg.suite_memo_parts()["tree"], git("rev-parse", "HEAD^{tree}"))   # ignored: still clean
+        self.assertEqual(gate(), (True, None))                                      # instance-local data git ignores
+        write(); self.assertFalse(gate()[0])
+        (d / "code.txt").write_text("changed\n"); git("commit", "-qam", "tree")
+        self.assertEqual(gate(), (True, None))                                      # the tree
+
+    def test_dirty_tree_partial_run_or_failure_never_writes(self):
+        d, seed, git = self.repo()
+        ok = lambda *a, **k: (0, ["Ran 1 test", "OK"], "")
+        with unittest.mock.patch.object(self.pkg, "run_suite", ok), contextlib.redirect_stdout(io.StringIO()):
+            (d / "stray.txt").write_text("untracked\n")                  # dirty: an untracked file counts
+            self.assertIsNone(self.pkg.suite_memo_parts())
+            self.assertEqual(self.pkg.cmd_tests(), 0)
+            self.assertEqual(self.memos(d), [])
+            (d / "stray.txt").unlink()
+            self.assertEqual(self.pkg.cmd_tests("dyad.tests.test_x"), 0)  # a targeted run
+            self.assertEqual(self.pkg.cmd_tests(str(d / "dyad" / "tests")), 0)   # one root by path
+            self.assertEqual(self.memos(d), [])
+            with unittest.mock.patch.object(self.pkg, "run_suite", lambda *a, **k: (1, ["FAILED"], "boom")), \
+                 contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(self.pkg.cmd_tests(), 1)                # a failure
+            self.assertEqual(self.memos(d), [])
+            self.assertEqual(self.pkg.cmd_tests(), 0)                    # the control: clean, full, passing
+        self.assertEqual(self.memos(d), [self.pkg.suite_memo_key(self.pkg.suite_memo_parts())])
+
+    def test_check_rule_12_writes_only_on_a_clean_full_pass(self):
+        """`check_rule_12` (hence `check` and `--evidence`) spawns the real child over a one-test root."""
+        d, seed, git = self.repo()
+        t = d / "dyad" / "tests"; t.mkdir(parents=True)
+        (t / "test_one.py").write_text("import unittest\nclass T(unittest.TestCase):\n    def test_ok(self): pass\n")
+        (d / ".gitignore").write_text("*.local.txt\n__pycache__/\n")   # the child's bytecode, ignored as the real repo ignores it
+        git("add", "-A"); git("commit", "-qm", "tests")
+        with contextlib.redirect_stdout(io.StringIO()):
+            (d / "stray.txt").write_text("x\n")
+            self.assertEqual(self.pkg.check_rule_12(), []); self.assertEqual(self.memos(d), [])
+            (d / "stray.txt").unlink(); self.pkg._SUITE_RAN = False
+            self.assertEqual(self.pkg.check_rule_12(), [])
+            self.assertEqual(self.memos(d), [self.pkg.suite_memo_key(self.pkg.suite_memo_parts())])
+            (t / "test_one.py").write_text("import unittest\nclass T(unittest.TestCase):\n    def test_no(self): self.fail()\n")
+            git("commit", "-qam", "red"); self.pkg._SUITE_RAN = False
+            self.assertNotEqual(self.pkg.check_rule_12(), [])
+        self.assertFalse(self.pkg.suite_memo_hit(self.pkg.suite_memo_parts()))
+
+    def test_write_from_a_linked_worktree_lands_in_the_common_dir(self):
+        shared, hook, snap, other = SuiteEnvWorktreeTests.fixture(self)
+        wt = shared.parent / "wt"
+        self.pkg.REPO = wt
+        with unittest.mock.patch.dict(os.environ, hook):                 # as the worktree's pre-push hook runs it
+            memo = self.pkg.suite_memo_write(self.pkg.suite_memo_parts())
+        self.assertEqual(Path(memo).parent, (shared / ".git" / self.pkg.SUITE_MEMO_DIR).resolve())
+        self.assertFalse((shared / ".git" / "worktrees" / "wt" / self.pkg.SUITE_MEMO_DIR).exists())
+        self.pkg.REPO = shared                                          # the main worktree, same tree: shared
+        self.assertTrue(self.pkg.suite_memo_hit(self.pkg.suite_memo_parts()))
+
+    def test_prune_keeps_the_newest_64(self):
+        d, seed, git = self.repo()
+        m = d / ".git" / self.pkg.SUITE_MEMO_DIR; m.mkdir()
+        old = [f"{i:064x}" for i in range(70)]
+        for i, name in enumerate(old):
+            (m / name).write_text("{}\n"); os.utime(m / name, ns=(10**18 + i, 10**18 + i))
+        (m / "README").write_text("not a memo\n")
+        new = Path(self.pkg.suite_memo_write(self.pkg.suite_memo_parts())).name
+        self.assertEqual(self.pkg.SUITE_MEMO_KEEP, 64)
+        kept = self.memos(d)
+        self.assertEqual(len(kept), 64)
+        self.assertIn(new, kept)
+        self.assertEqual(set(old) - set(kept), set(old[:7]))           # 71 written, the 7 oldest pruned
+        self.assertTrue((m / "README").exists())
+        self.assertEqual([f for f in os.listdir(m) if f.endswith(".tmp")], [])   # os.replace left no temp file
+
+    def test_ledger_branch_behind_main_skips_only_on_a_memoized_merge_base(self):
+        d, seed, git = self.repo()
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        fork = git("rev-parse", "HEAD")
+        git("switch", "-qc", "ledger")
+        (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "row 2")
+        git("switch", "-q", "main")
+        (d / "code.txt").write_text("main moved\n"); git("commit", "-qam", "main moves")
+        git("switch", "-q", "ledger")
+        gate = lambda: self.pkg.suite_gate("main", "HEAD", pre_push=True)
+        self.assertEqual(gate(), (True, None))                          # two-dot main..HEAD carries main's code
+        self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))
+        self.pkg.suite_memo_write(self.pkg.suite_memo_parts(fork))      # the merge-base's tree passed
+        tree = git("rev-parse", f"{fork}^{{tree}}")
+        self.assertEqual(gate(), (False, f"skip [guards] Rule-12 suite: main...HEAD is ledger-only and its merge-base tree "
+                                         f"{tree[:9]} already passed on this checkout (d-work #162)"))
+        self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
+        (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "not ledger")
+        self.assertEqual(gate(), (True, None))                          # one non-ledger commit: the clause is off
 
 if __name__ == "__main__":
     unittest.main()
