@@ -184,3 +184,5 @@ class ScratchInstalls:
         for d in self.made:
             shutil.rmtree(d, ignore_errors=True)
         self.made.clear(); self.templates.clear()
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)

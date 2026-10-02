@@ -25,11 +25,16 @@ behind reusable code carrying a mechanical check.
 ## Properties
 1. Code entering the package carries its mechanical check, run in CI; code without a check
    is not verifiable and does not enter. The check a module carries for its own data model is
-   its invariant list (vocabulary): a named predicate over the module's constants, listed in
-   `INVARIANTS`, run by the runner before any check and reported as `[invariant]`; a false one is
-   an incident (Rule-3). The test mapping and the invariant protocol's form are the syseng
-   craft's (`crafts/syseng/rules/verifiable-code.md`, `crafts/syseng/rules/invariants.md`); the
-   runner runs both.
+   its invariants (vocabulary), in two lists. The pure ones, listed in `INVARIANTS`, are a
+   fail-loud check (vocabulary): the module enforces them at import
+   (`dyadlib.enforce(INVARIANTS, __name__)`), so a false one fails every import of the module, and
+   nothing switches it off. The ones that read the package tree or load modules, listed in
+   `TREE_INVARIANTS`, never run at import. The runner's pass runs both lists before any check and
+   reports each module as `[invariant]`; a false invariant is an incident (Rule-3). A fail-loud
+   check at a strategic point is that code's mechanical check, and a test that only exercises its
+   condition is redundant with it. The lists' form, the placement criterion and the test mapping
+   are the syseng craft's (`crafts/syseng/rules/invariants.md`,
+   `crafts/syseng/rules/verifiable-code.md`); the runner runs both.
 2. The suite is run by the runner, not by hand. Rule-14 property 3's pre-push path runs it on every
    push whose range touches anything outside `<instance>/d-work/`, so by the time the Agent asks for
    a Done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
@@ -54,9 +59,10 @@ suite per test root (`dyad/tests/`, whose `guards/<corpus>/` subdirectories are 
 Tended craft's `crafts/<craft>/tests/`, discovered by the runner, #155). Which module maps to which test file is the syseng craft's guard
 (`crafts/syseng/guards/tests.py`, registry label `syseng/tests`); which module must declare an
 invariant and that none uses `assert` is its guard `crafts/syseng/guards/invariants.py`
-(`syseng/invariants`); whether every invariant holds is the runner's pass (`dyad/scripts/dyadlib.py`
-`check_invariants`, `dyad/scripts/package.py` `invariant_modules`). The runner owns no check
-semantics (S4).
+(`syseng/invariants`); whether every invariant holds is each module's own import for `INVARIANTS`
+(`dyad/scripts/dyadlib.py` `enforce`) and the runner's pass for both lists (`dyadlib.check_invariants`,
+`dyad/scripts/package.py` `invariant_modules`, where a module whose import fails is one red line). The
+runner owns no check semantics (S4).
 
 ## Provenance
 Operator rule, 2026-09-13 (Architecture Rule 2). Falsified; see
@@ -72,6 +78,9 @@ backlog row #162): 53 of 112 merges pushed a tree `check --evidence` had already
 push gate ran the suite on it again (#161, C2); see the same record, amendment #199. Property 2
 gains the installed-root skip 2026-10-01 (d-work #199, node N5 for backlog row #176): a system that
 installs the crafts ran their authoring suites on every push (countersign-system: 494 core tests);
-see the same record, amendment #199 (N5).
+see the same record, amendment #199 (N5). Property 1 gains the fail-loud check 2026-10-02 (d-work
+#203): the Operator asked for checks in the code itself, at import or on every use, at strategic
+points, in place of the tests that only exercise them; pure `INVARIANTS` are enforced at import and
+`TREE_INVARIANTS` stay in the runner's pass; see the same record, amendment #203.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

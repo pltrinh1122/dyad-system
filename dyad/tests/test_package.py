@@ -923,9 +923,10 @@ class BundledCraftTests(unittest.TestCase):
 
 
 class InvariantPassTests(unittest.TestCase):
-    """crafts/syseng/rules/invariants.md p1, p4: the pass runs before any check in `check` and `check --guards`, prints one
-    line per model module in a fixed order, never runs at import or under --list/--help, and a false invariant is a red
-    check that does not stop the other checks."""
+    """crafts/syseng/rules/invariants.md p1, p4 (amended #203): the pass runs both lists before any check in `check` and
+    `check --guards`, prints one line per model module in a fixed order, never runs under --list/--help; a false
+    TREE_INVARIANTS entry is a red line, a false INVARIANTS entry fails its module's import (one red line, the other
+    checks still run), and in the runner's own modules it stops every command with one line and no traceback."""
     def run_py(self, *a):
         return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), *a], capture_output=True, text=True, env=env())
     def test_pass_order_and_lines(self):
@@ -954,23 +955,32 @@ class InvariantPassTests(unittest.TestCase):
     def test_false_invariant_is_red_but_checks_still_run(self):
         d = scratch_install(with_craft=False)
         self.addCleanup(shutil.rmtree, d, ignore_errors=True)
-        g = d / "dyad" / "guards" / "agent" / "zzz.py"
-        g.write_text('ENTITY, CORPUS, TRANSACTION = "zzz", "agent", False\nFIELDS = ("a",)\nINVARIANTS = [("never-holds", lambda: False), ("holds", lambda: True)]\n'
-                     'def check_package(root=None, pkg=None): return []\ndef describe(root, pkg): return {"store": "", "parser": "", "fields": [("a", "text", "", True, "", "zzz.FIELDS")]}\n')
-        (d / "dyad" / "tests" / "guards" / "agent" / "test_zzz.py").write_text("import unittest\n")
+        body = ('import dyadlib\nENTITY, CORPUS, TRANSACTION = "{e}", "agent", False\nFIELDS = ("a",)\n{lists}\ndyadlib.enforce(INVARIANTS, __name__)\n'
+                'def check_package(root=None, pkg=None): return []\ndef describe(root, pkg): return {{"store": "", "parser": "", "fields": [("a", "text", "", True, "", "{e}.FIELDS")]}}\n')
+        guards = {"zzz": 'INVARIANTS = [("holds", lambda: True)]\nTREE_INVARIANTS = [("never-holds", lambda: False)]',   # tree list: red in the pass
+                  "zzy": 'INVARIANTS = [("never-holds", lambda: False), ("holds", lambda: True)]'}                       # pure list: the import fails
+        for e, lists in guards.items():
+            (d / "dyad" / "guards" / "agent" / f"{e}.py").write_text(body.format(e=e, lists=lists))
+            (d / "dyad" / "tests" / "guards" / "agent" / f"test_{e}.py").write_text("import unittest\n")
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check"], capture_output=True, text=True, env=env())
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("FAIL [invariant] agent/zzz: never-holds", r.stdout); self.assertNotIn("ok   [invariant] agent/zzz", r.stdout)
+        self.assertIn("FAIL [invariant] agent/zzy: does not load: dyad_guards_agent_zzy: invariant(s) failed: never-holds", r.stdout)   # one red line, named
         self.assertIn("ok   [Rule-11]", r.stdout); self.assertIn("ok   [agent/zzz]", r.stdout)   # the checks still run: evidence stays complete
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
         r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--guards"], capture_output=True, text=True, env=env())
         self.assertNotEqual(r.returncode, 0); self.assertIn("FAIL [invariant] agent/zzz: never-holds", r.stdout); self.assertIn("ok   [guards] agent/zzz", r.stdout)
+        self.assertIn("FAIL [invariant] agent/zzy: does not load", r.stdout)
     def test_dwork_refuses_when_dyadlib_invariants_break(self):
         d = scratch_install(with_craft=False)
         self.addCleanup(shutil.rmtree, d, ignore_errors=True)
         lib = d / "dyad" / "scripts" / "dyadlib.py"
         lib.write_text(lib.read_text().replace('"archived": frozenset(),', '"archived": frozenset({"open"}),'))   # archived is no longer terminal
-        r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "dwork", "new", "t"], capture_output=True, text=True, env=env(), cwd=d)
-        self.assertNotEqual(r.returncode, 0); self.assertIn("refused: dyadlib: invariant(s) failed: archived-is-terminal", r.stderr)
+        for argv in (["dwork", "new", "t"], ["check", "--list"]):   # fail-closed: every command stops at the runner's own import (p4, #203)
+            with self.subTest(argv=argv):
+                r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), *argv], capture_output=True, text=True, env=env(), cwd=d)
+                self.assertNotEqual(r.returncode, 0)
+                self.assertEqual(r.stderr.strip().splitlines(), ["InvariantError: dyadlib: invariant(s) failed: archived-is-terminal"])   # one line, no traceback
         self.assertEqual(list((d / "agent-corpus" / "d-work" / "rows").glob("[0-9]*.md")), [])
 
 class PrePushTests(unittest.TestCase):

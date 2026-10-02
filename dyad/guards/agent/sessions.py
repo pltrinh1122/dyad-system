@@ -237,5 +237,7 @@ def main(a: list[str]) -> int:
     print(f"ok   [sessions] {summary(Path(a[0]) if a else None)}" if not msgs else f"FAIL [sessions] {len(msgs)} problem(s)")
     return 1 if msgs else 0
 
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

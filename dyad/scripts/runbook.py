@@ -368,5 +368,7 @@ def main(argv=None) -> int:
         print(f"refused: {e}", file=sys.stderr); return 2
     sys.exit(__doc__)
 
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
+
 if __name__ == "__main__":
     sys.exit(main())

@@ -3,7 +3,7 @@
 Entrypoint: dyad/bin/dyad (`dyad <noun> <verb>`, preference cli-pattern, ledger #152); `dyad` below
 means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
 
-  dyad check              the invariant pass (every model module's INVARIANTS, crafts/syseng/rules/invariants.md:
+  dyad check              the invariant pass (every model module's INVARIANTS and TREE_INVARIANTS, crafts/syseng/rules/invariants.md:
                                 `ok   [invariant] <module> (<n>)` or `FAIL [invariant] <module>: <name>`; a
                                 FAIL is red but the checks still run), then Rule-11's own check, Rule-12's
                                 tests (the core suite, then every crafts/<craft>/tests/ present), then every
@@ -83,6 +83,15 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
 import sys
 if sys.version_info < (3, 12):
     sys.exit(f"package.py: Python 3.12+ required (kernel pin), found {sys.version.split()[0]}")
+if __name__ == "__main__":
+    # crafts/syseng/rules/invariants.md p4 (amended #203): a false import-time invariant in the runner's own modules
+    # (dyadlib, this file) stops every `dyad` command — fail-closed — with one line on stderr, never a traceback.
+    def _invariant_error_one_line(kind, exc, tb, _previous=sys.excepthook):
+        if kind.__name__ == "InvariantError":
+            print(f"InvariantError: {exc}", file=sys.stderr)
+        else:
+            _previous(kind, exc, tb)
+    sys.excepthook = _invariant_error_one_line
 import os, re, subprocess, functools, fnmatch, hashlib, json, datetime
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
@@ -157,11 +166,15 @@ def generated_matches(rel, patterns):
 def version():
     return (PKG / "VERSION").read_text().strip()
 
-# crafts/syseng/rules/invariants.md: the runner's own facts (over its constants and the package files they name).
+# crafts/syseng/rules/invariants.md: the runner's own facts. `INVARIANTS` is pure, over its constants, enforced at
+# import (the call at the bottom of this file); `TREE_INVARIANTS` reads the package files they name, so only the
+# pass runs it (#203).
 INVARIANTS = [
+    ("contract-names-distinct", lambda: len(set(CONTRACT)) == len(CONTRACT)),
+]
+TREE_INVARIANTS = [
     ("projector-modules-exist-with-main", lambda: all((REPO / rel).is_file() and hasattr(dyadlib.load_module(REPO / rel, f"project_{s.replace('/', '_')}"), "main") for s, rel in PROJECTORS.items())),
     ("templates-exist", lambda: all((PKG / "templates" / t).is_file() for t in TEMPLATES)),
-    ("contract-names-distinct", lambda: len(set(CONTRACT)) == len(CONTRACT)),
 ]
 
 def check_rule_11():
@@ -469,31 +482,38 @@ CHECKS = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
 CHECKS.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
 
 # ---- the invariant pass (crafts/syseng/rules/invariants.md p1, p4): before any check, over every model module
-def invariant_modules():
+def invariant_modules(failures: list | None = None):
     """[(label, module, extra invariants)] in pass order: dyadlib, this runner, every guard in registry order
     (each with the four contract invariants appended, dyadlib.contract_invariants), every projector in
-    PROJECTORS order, then the run-book runner, the craft CLI and the distribution path. A guard that does not
-    load is the registry's failure, not the pass's."""
+    PROJECTORS order, then the run-book runner, the craft CLI and the distribution path. A module that does not
+    load — a guard (the registry's own failure too) or any other, whose import-time `enforce` raised (#203) — is
+    left out and, when `failures` is a list, appended to it as (label, problem), so one module never aborts the pass."""
     out = [("dyadlib", dyadlib, ()), ("package", sys.modules[__name__], ())]
+    failures = [] if failures is None else failures
     zones = None
     for group, entity, rel, tx, mod, problem in registry():
         if mod is None:
+            if problem.startswith("does not load"):
+                failures.append((f"{group}/{entity}", problem))
             continue
         root = guard_root(rel)
         if root == "craft" and zones is None:
             zones = zone_names()
         out.append((f"{group}/{entity}", mod, dyadlib.contract_invariants(mod, root, group, zones)))
-    for s, rel in sorted(PROJECTORS.items()):
-        label = f"project_{s.replace('/', '_')}"   # `/`-free: distinct from a guard label's own `corpus/entity` shape below
-        out.append((label, dyadlib.load_module(REPO / rel, label), ()))
-    for name in ("runbook", "craft", "distribute"):
-        out.append((name, dyadlib.load_module(PKG / "scripts" / f"{name}.py", name), ()))
+    later = [(f"project_{s.replace('/', '_')}", REPO / rel) for s, rel in sorted(PROJECTORS.items())]   # `/`-free: distinct from a guard label
+    later += [(name, PKG / "scripts" / f"{name}.py") for name in ("runbook", "craft", "distribute")]
+    for label, path in later:
+        try:
+            out.append((label, dyadlib.load_module(path, label), ()))
+        except Exception as e:
+            failures.append((label, f"does not load: {type(e).__name__}: {e}"))
     return out
 
 def cmd_invariants():
-    """Print one line per module; rc 1 when any invariant is false. Never run at import, never by --list/--help."""
-    rc = 0
-    for label, mod, extra in invariant_modules():
+    """Print one line per module over both lists; rc 1 when any invariant is false or a module does not load (its
+    import-time `enforce` raised). Run by `check`, `check --guards`, `--pr` and `--evidence`, never by --list/--help."""
+    rc, failures = 0, []
+    for label, mod, extra in invariant_modules(failures):
         try:
             n = dyadlib.check_invariants(mod, extra, label)
             print(f"ok   [invariant] {label} ({n})")
@@ -501,6 +521,9 @@ def cmd_invariants():
             for name in e.failed:
                 print(f"FAIL [invariant] {label}: {name}")
             rc = 1
+    for label, problem in failures:
+        print(f"FAIL [invariant] {label}: {problem}")
+        rc = 1
     return rc
 
 def cmd_list():
@@ -984,6 +1007,8 @@ def cmd_session(a):
     guard); this is dispatch only (S4, d-work #185)."""
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     return dyadlib.load_guard("agent", "sessions").main(a)
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding (#203)
 
 if __name__ == "__main__":
     a = sys.argv[1:]

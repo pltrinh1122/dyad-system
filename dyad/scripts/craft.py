@@ -39,8 +39,8 @@ REGISTRY_HEAD = ("# Craft registry (instance state in the craft zone, Rule-11 pr
                  "| craft | version | source | sha256 | d-work |\n|-------|---------|--------|--------|--------|\n")
 
 INVARIANTS = [("registry-fields-distinct", lambda: len(set(REGISTRY_FIELDS)) == len(REGISTRY_FIELDS)),
-              ("registry-head-names-fields", lambda: REGISTRY_HEAD.rstrip().splitlines()[-2] == "| " + " | ".join(REGISTRY_FIELDS) + " |"),
-              ("core-name-is-the-guards", lambda: CORE_NAME == guard().CORE_NAME)]   # crafts/syseng/rules/invariants.md
+              ("registry-head-names-fields", lambda: REGISTRY_HEAD.rstrip().splitlines()[-2] == "| " + " | ".join(REGISTRY_FIELDS) + " |")]   # crafts/syseng/rules/invariants.md: pure, enforced at import
+TREE_INVARIANTS = [("core-name-is-the-guards", lambda: CORE_NAME == guard().CORE_NAME)]   # loads the craft guard: the pass only (#203)
 
 def guard():
     return dyadlib.load_guard("craft", "crafts", PKG)
@@ -224,6 +224,8 @@ def main(a=None) -> int:
         print(__doc__, file=sys.stderr); return 2
     return {"new": lambda: cmd_new(repo, a[1:]), "list": lambda: cmd_list(repo), "check": lambda: cmd_check(repo, a[1:]), "export": lambda: cmd_export(repo, a[1:]),
             "install": lambda: cmd_install(repo, a[1:])}[a[0]]()
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
 
 if __name__ == "__main__":
     sys.exit(main())

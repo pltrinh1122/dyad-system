@@ -82,5 +82,7 @@ def main(argv=None) -> int:
         print(f"ok   [rule-9] {len(record_files(root))} records")
     return 1 if msgs else 0
 
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
+
 if __name__ == "__main__":
     sys.exit(main())

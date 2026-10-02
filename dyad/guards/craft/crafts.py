@@ -452,5 +452,7 @@ def main(a=None):
         else: print(f"ok   [craft] crafts/{d.name} {version(d)}")
     return rc
 
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
+
 if __name__ == "__main__":
     sys.exit(main())

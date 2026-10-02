@@ -295,8 +295,33 @@ class TrackedModeTests(unittest.TestCase):
             self.assertEqual(dyadlib.tracked_mode(root, rel), dyadlib.MODE_EXEC, rel)
 
 class InvariantTests(livetest.LiveCase):
-    """crafts/syseng/rules/invariants.md: the protocol — INVARIANTS is data, check_invariants runs it sorted, an
-    InvariantError names every false one, nothing runs at import."""
+    """crafts/syseng/rules/invariants.md: the protocol — INVARIANTS and TREE_INVARIANTS are data, check_invariants runs
+    both sorted, an InvariantError names every false one; `enforce` runs the pure list at import (Rule-12 p1, #203)
+    and the tree list never runs there."""
+    def test_enforce_raises_naming_every_false_one_sorted_and_a_raising_predicate_is_false(self):
+        inv = [("z-false", lambda: False), ("a-true", lambda: True), ("m-raises", lambda: 1 / 0), ("b-false", lambda: 0)]
+        with self.assertRaises(dyadlib.InvariantError) as cm:
+            dyadlib.enforce(inv, "fx")
+        self.assertEqual(cm.exception.failed, ["b-false", "m-raises", "z-false"]); self.assertEqual(cm.exception.module, "fx")
+        self.assertEqual(str(cm.exception), "fx: invariant(s) failed: b-false, m-raises, z-false")
+        self.assertEqual(dyadlib.enforce([("a-true", lambda: True)], "fx"), 1)   # all true: returns the count, raises nothing
+    def test_a_false_invariant_fails_the_import_and_the_tree_list_never_runs_there(self):
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        head = "import dyadlib\nRAN = []\nTREE_INVARIANTS = [('tree', lambda: RAN.append(1) or False)]\n"
+        ok, bad = d / "dyad_fx_ok.py", d / "dyad_fx_bad.py"
+        ok.write_text(head + "INVARIANTS = [('holds', lambda: True)]\ndyadlib.enforce(INVARIANTS, __name__)\n")
+        bad.write_text(head + "INVARIANTS = [('holds', lambda: True), ('never', lambda: False)]\ndyadlib.enforce(INVARIANTS, __name__)\nAFTER = 1\n")
+        self.addCleanup(lambda: [sys.modules.pop(n, None) for n in ("dyad_fx_ok", "dyad_fx_bad")])
+        m = dyadlib.load_module(ok)
+        self.assertEqual(m.RAN, [])                                                    # TREE_INVARIANTS: not at import
+        with self.assertRaises(dyadlib.InvariantError) as cm:
+            dyadlib.check_invariants(m)                                                # the pass runs it, and it is red there
+        self.assertEqual((cm.exception.failed, m.RAN), (["tree"], [1]))
+        for attempt in (1, 2):                                                         # never served half-initialised from the cache
+            with self.subTest(attempt=attempt), self.assertRaises(dyadlib.InvariantError) as cm:
+                dyadlib.load_module(bad)
+            self.assertEqual((cm.exception.module, cm.exception.failed), ("dyad_fx_bad", ["never"]))
+            self.assertNotIn("dyad_fx_bad", sys.modules)
     def test_failed_invariants_raise_with_names_sorted(self):
         inv = [("z-false", lambda: False), ("a-true", lambda: True), ("m-raises", lambda: 1 / 0), ("b-false", lambda: 0)]
         with self.assertRaises(dyadlib.InvariantError) as cm:
