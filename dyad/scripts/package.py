@@ -209,15 +209,31 @@ def check_rule_12():
             msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + r.stderr.strip().splitlines()[-1])
     return msgs
 
-def ledger_only_range(base, head):
-    """True when every path `base..head` touches lives under `<instance>/d-work/` — a range that
-    cannot change a suite's outcome. The prefix, never the file suffix: a `.py` filter would have
-    let #137's markdown run-book through, which broke the core suite by falsifying a pinned count
-    (d-work #155, plan's revision table). Unknown range → False, so the suite runs. Two-dot, as
-    before; rename detection off (`dyadlib.ledger_only`, #191), so a move of code into the ledger
-    no longer skips the suite."""
-    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
-    return dyadlib.ledger_only(REPO, base, head, merge_base=False)
+def suite_gate(base, head, pre_push=False, base_ok=True):
+    """Rule-12's suite at the local gate (d-work #155, #164): whether `cmd_guards` runs it, and the one
+    line it prints when it does not. Returns (run, line); `line` is None when nothing is printed. In order:
+    inside a test run, or `cmd_check` already ran it in this process → no run, silently; `base` does not
+    resolve (`cmd_guards` has printed its own skip line) → run; then the two-dot range `base..head`, read
+    tri-state from `dyadlib.range_paths`: unreadable (None) → run, since an unknown range cannot be shown
+    harmless; empty → skip, since a range that changes nothing cannot change a suite's outcome; every path
+    under `<instance>/d-work/` → skip, the prefix and never the file suffix (a `.py` filter would have let
+    #137's markdown run-book through, which broke the core suite by falsifying a pinned count); anything
+    else → run. Rename detection off (#191), so a move of code into the ledger still runs it. The plan gate
+    and the fence keep `dyadlib.ledger_only`, where an empty range is never ledger-only. `pre_push` is the
+    hook's flag, unread here. `cmd_evidence` never reaches a skip: its `cmd_check` runs the suite first."""
+    if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
+        return False, None
+    if not base_ok:
+        return True, None
+    paths = dyadlib.range_paths(REPO, base, head, merge_base=False)
+    if paths is None:
+        return True, None
+    if not paths:
+        return False, f"skip [guards] Rule-12 suite: {base}..HEAD is empty (d-work #164)"
+    rel = dyadlib.instance_rel(REPO)
+    if rel and all(p.startswith(f"{rel}/d-work/") for p in paths):
+        return False, f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)"
+    return True, None
 
 def suite_env() -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
@@ -438,14 +454,14 @@ def cmd_guards(base="origin/main", pre_push=False):
         else:
             print(f"ok   [guards] {label} transaction{f' [{mode}]' if mode else ''} ({base}..HEAD)")
     # Rule-12's suite, gated (d-work #155): the local gate tested nothing before this, so the Agent
-    # ran it by hand 134 times in one session (#154's audit). A ledger-only range cannot change a
-    # suite's outcome, so it skips and the push stays at the guards' own ~1.7 s; anything else pays
-    # the suite here rather than by hand at three times the price. The guards above are never gated.
-    if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
-        pass            # inside a test run, or `cmd_check` already ran it in this process
-    elif base_ok and ledger_only_range(base, head):
-        print(f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)")
-    elif cmd_tests():
+    # ran it by hand 134 times in one session (#154's audit). A ledger-only or empty range cannot
+    # change a suite's outcome, so it skips (`suite_gate`, #164) and the push stays at the guards' own
+    # ~1.7 s; anything else pays the suite here rather than by hand at three times the price. The
+    # guards above are never gated.
+    run, line = suite_gate(base, head, pre_push, base_ok)
+    if line:
+        print(line)
+    if run and cmd_tests():
         rc = 1
     return int(rc)
 
