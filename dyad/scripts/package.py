@@ -391,8 +391,14 @@ def suite_env() -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
     A git hook exports an absolute `GIT_DIR` when it runs in a linked worktree; a suite that inherits
     it points every scratch-repo git call at the real repository (#152: `core.bare`, a `feature`
-    branch and a tag written into the live repo by the pre-push hook's run)."""
-    return {**dyadlib.git_env(), "DYAD_NO_NESTED_TESTS": "1"}
+    branch and a tag written into the live repo by the pre-push hook's run). Fixture commits are never
+    signed (#206): a host whose global config signs every commit (a cloud container's) paid ~90 ms per
+    scratch-repo commit for signatures nothing reads; appended as one more `GIT_CONFIG_*` entry, so an
+    entry the caller already set survives."""
+    env = {**dyadlib.git_env(), "DYAD_NO_NESTED_TESTS": "1"}
+    n = int(env.get("GIT_CONFIG_COUNT") or 0)
+    env.update({"GIT_CONFIG_COUNT": str(n + 1), f"GIT_CONFIG_KEY_{n}": "commit.gpgsign", f"GIT_CONFIG_VALUE_{n}": "false"})
+    return env
 
 def run_suite(suite, target=None):
     """One `unittest` child, the way `check_rule_12` spawns it — always with `DYAD_NO_NESTED_TESTS`,

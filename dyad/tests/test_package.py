@@ -1056,6 +1056,20 @@ class SuiteEnvTests(unittest.TestCase):
         self.assertFalse(set(dyadlib.GIT_VARS) & set(env), env.keys() & set(dyadlib.GIT_VARS))
         self.assertNotIn("GIT_COMMON_DIR", env)
         self.assertEqual(env["DYAD_NO_NESTED_TESTS"], "1")
+    def test_fixture_commits_unsigned_and_caller_config_kept(self):
+        """#206: a test child's scratch-repo commits are never signed, whatever the host's global config;
+        a `GIT_CONFIG_*` entry the caller set survives, the signing entry appended after it."""
+        pkg = load_package()
+        with unittest.mock.patch.dict(os.environ, {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.autocrlf",
+                                                   "GIT_CONFIG_VALUE_0": "false"}):
+            env = pkg.suite_env()
+        self.assertEqual((env["GIT_CONFIG_COUNT"], env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_KEY_1"], env["GIT_CONFIG_VALUE_1"]),
+                         ("2", "core.autocrlf", "commit.gpgsign", "false"))
+        with tempfile.TemporaryDirectory() as d:
+            git = lambda *a: subprocess.run(["git", *a], cwd=d, env=env, check=True, capture_output=True, text=True).stdout
+            git("init", "-q"); git("config", "commit.gpgsign", "true")   # the local config asks; the env entry wins
+            git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "c")
+            self.assertNotIn("gpgsig", git("cat-file", "-p", "HEAD"))
 
 class SuiteEnvWorktreeTests(unittest.TestCase):
     """#165 end to end (d-work #199 N0): a pre-push hook in a linked worktree exports
