@@ -137,6 +137,13 @@ first-parent walk never looks. Rule-2 references `rows.py` by name; it does not 
   breach); anything in the plan not delivered; any departure from the plan; and anything the
   Agent could not verify, stated before the counter-prompt. An omission is a breach of this
   Rule, not a style choice.
+- When the preference `dwork-trace` (`preferences-corpus/PREFERENCES.md`) is `always`, the completion
+  evidence cites the d-work trace of the d-work it completes (play-book `dyad/playbooks/dwork-trace.md`);
+  under `on-demand`, only when the Operator has prompted for one. The completion reply prints its
+  preview, from the prompt to the Done question; the reply that receives the Done-`Y` writes it to
+  `<instance>/d-work/traces/<id>.md` before the Done ledger commit, which carries it, so it covers the
+  Done-`Y` and stays ledger-only; the merge after it is not in it. A trace with no transcript is still
+  cited, its buckets marked absent (#213).
 - Form: `Y/N: Done with #<ledger id> <title>?` — one d-work per counter-prompt, or the batch
   form (Batch disposition, below) under `batch-disposition-mode`.
 - When `merge-disposition` is `with-done` (`preferences-corpus/PREFERENCES.md`), the form
@@ -238,6 +245,10 @@ becomes a play-book Rule-3 reads, parameterized by the ledger it hardens and ide
 that has not grown; see the same record, amendment #137. Ledger and Mechanisms gain the plan
 gate's ledger-only exemption 2026-09-29 (d-work #191): the gate refused a clerical range, which
 pushed ledger commits around the hook and past every other guard; see the same record, amendment
-#191.
+#191. Completion counter-prompt gains the d-work trace bullet 2026-10-05 (d-work #213): the
+per-d-work performance measurement done by hand three times (#204, #212) becomes a play-book whose
+trace the completion evidence cites, previewed in the completion reply and stored by the Done ledger
+commit (plan revision 2), as the preference `dwork-trace` reads (revision 3, #215); see the same
+record, amendment #213.
 
 Set: System Requirements.

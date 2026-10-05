@@ -50,5 +50,49 @@ class PlaybookTests(unittest.TestCase):
         self.assertTrue(re.search(r"^\| play-book \|.*\| 3 \| 3 \|$", voc, re.M))
         self.assertTrue(re.search(r"^\| craft-instantiation-criteria \|.*\| 3 \| 3 \|$", voc, re.M))
 
+TRACE_PLAYBOOK = PKG / "playbooks" / "dwork-trace.md"
+TRACE_RUNBOOK = PKG / "runbooks" / "dwork-trace.md"
+
+class DworkTracePlaybookTests(unittest.TestCase):
+    """The d-work trace play-book and its run-book (#213, revision 2): sections, steps, store path, Rule-3's citation."""
+    def test_playbook_sections_and_store(self):
+        text = TRACE_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Default", "Format", "Reading", "Evidence"])
+        self.assertIn("dyad/runbooks/dwork-trace.md", text)
+        self.assertIn("<instance>/d-work/traces/<id>.md", text)
+        self.assertNotIn("audits/traces", text)
+        for s in ("locate", "trace", "compare"):
+            self.assertIn(f"`{s}`", text, s)
+    def test_runbook_parses_into_the_steps(self):
+        text = TRACE_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], ["locate", "trace", "compare"])
+        self.assertEqual(rb.declared_sections(text), ["Locate", "Trace", "Compare"])
+        self.assertEqual({c.section for c in cmds}, set(rb.declared_sections(text)))
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual({c.name: c.cls for c in cmds}, {"locate": "read-only", "trace": "reversible", "compare": "read-only"})
+        trace = cmds[1]
+        self.assertIn("dwork trace", trace.cmd); self.assertIn("--out", trace.cmd)
+        self.assertTrue(trace.undo.startswith("rm ")); self.assertIn("d-work/traces/", trace.undo)
+        self.assertIn("test -s", trace.postcondition); self.assertIn("d-work/traces/", trace.postcondition)
+        for c in cmds:
+            self.assertIn("DWORK", c.cmd, c.name)
+        self.assertIn("dwork-trace", rb.core_runbooks(PKG.parent))
+    def test_runbook_passes_the_craft_check_when_present(self):
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        guard = dyadlib.find_guard("workstation", "runbooks")
+        if guard is None or not hasattr(guard, "declared_sections"):
+            self.skipTest("no craft provides a run-book check that reads `# sections:`")
+        self.assertEqual([m for m in guard.check_runbook(TRACE_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
+    def test_rule_3_and_vocabulary_read_the_playbook(self):
+        rule = (PKG / "rules" / "RULE-3-d-work.md").read_text()
+        self.assertIn("dyad/playbooks/dwork-trace.md", rule); self.assertIn("d-work trace", rule)
+        self.assertIn("<instance>/d-work/traces/<id>.md", rule)
+        self.assertIn("preference `dwork-trace`", rule)                  # conditional on the preference (revision 3)
+        self.assertIn("`dwork-trace`", TRACE_PLAYBOOK.read_text().split("## Trigger", 1)[1].split("## Default", 1)[0])
+        voc = (PKG / "vocabulary" / "VOCABULARY.md").read_text()
+        self.assertTrue(re.search(r"^\| d-work trace \|.*\| 3 \| 3 \|$", voc, re.M))
+
 if __name__ == "__main__":
     unittest.main()
