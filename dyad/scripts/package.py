@@ -65,6 +65,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
                                 carries the bare token `<c>` (row.refs->craft, Rule-20; d-work #22)
                                 — a routing tag, not a re-check of the guard's own resolution
+  dyad dwork trace <id> [--transcript <path>]... [--out]
+                                the d-work trace (scripts/trace.py, play-book dyad/playbooks/dwork-trace.md;
+                                #213): timeline, buckets, counts and bottleneck line from the row, its
+                                provenance and plan, git and the harness transcript (read in place, never
+                                copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
+                                at the Done-Y, in the Done ledger commit; without it, a preview to stdout
   dyad session touch [-r <row>]... [-f <file>]... | list
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
@@ -871,6 +877,8 @@ def append_provenance(rid, entries, today, fresh=False):
 
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
+    if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
+        return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
     try:
         dyadlib.check_invariants(dyadlib, label="dyadlib")   # a broken transition table must not write a row (syseng invariants.md p1)
     except dyadlib.InvariantError as e:

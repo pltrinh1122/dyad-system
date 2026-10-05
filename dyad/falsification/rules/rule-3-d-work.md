@@ -207,3 +207,52 @@ is what makes the exempted range safe. **3–16**: the transitions are untouched
 enforcing the table Rule-16 owns where it was not reached before. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #191.
+
+## Amendment — d-work #213 (2026-10-05, the d-work trace play-book)
+**Claim (Operator, via #212 and #213):** the per-d-work performance trace whose format #212 proposes is a
+repeatable procedure of the core craft — a play-book, a run-book whose steps run it through the core runner,
+and the code those steps call (`dyad dwork trace`) — and Rule-3's completion evidence cites its output for
+every d-work. Completion counter-prompt gains one bullet; the vocabulary gains `d-work trace` (owner 3, used
+by 3). Plan revision 2 (from #214, before execution finished): the trace store is
+`<instance>/d-work/traces/<id>.md`, written at the Done-`Y` before the Done ledger commit that carries it;
+the completion reply prints a preview, prompt to Done question; the store's well-formedness is tested.
+Plan revision 3 (from #215): the bullet is conditional on the preference `dwork-trace` (`always`, the
+default, or `on-demand`), which Rule-3 reads and the play-book's Trigger applies; the preference row lands in
+#215's preferences-zone PR, merged before this one.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | A core command that depends on Claude Code's transcript layout breaks on another kernel (Rule-14 property 2: "another CLI inferencing agent"). | **Confirmed** | The transcript is an optional input. Without one the trace holds the git and ledger timeline and marks every bucket absent; it never fails (`trace.py`, `test_trace.py` `test_no_transcript_gives_git_and_ledger_only`). The default path is derived, never configured: no new `DYAD_` variable, no host path in the core (`package_rules.txt` refuses the layout's directory name as a string, so the code builds it from parts). |
+| 2 | Tracing every d-work adds cost to each completion. | **Survives, measured** | One parse of the 42 MB transcript of this session took 1.2 s wall (`dyad dwork trace 211`); a suite run is about 40 s. Accepted — "for each d-work" is the Operator's own scope (#212). |
+| 3 | A trace inside the completion reply cannot hold its own Done-`Y` or merge. | **Confirmed; narrowed by revision 2** | The completion reply holds a preview whose window ends at the Done question. The stored trace is written at the Done-`Y`, after `dwork state <id> done` has written the disposition's entry and before the Done ledger commit, so its window runs through the Done-`Y` and covers the work PR's push and evidence run; only that commit and the merge after it stay out, as git events marked "after the window (clerical tail)". Stated in the bullet, the play-book and every trace's Limits (`test_before_the_done_y_the_trace_is_a_preview`). |
+| 4 | Anchoring provenance to the transcript fails on a disposition like a bare `Y`. | **Partly confirmed** | A disposition anchors only to an Operator message that answers a `Y/N:` line naming `#<id>`, in record order after the previous anchor, preferring the entry's own date; a prompt matching more than one message is ambiguous. An entry not anchored is listed under Limits and never guessed (`test_unmatched_and_ambiguous_entries_are_reported_never_guessed`; the fixture's `Y` to another d-work's question is never taken). |
+| 5 | A Rule-3 change under a "codify" prompt widens scope. | **Refuted, scoped** | A play-book is "read by a Rule, never a Rule" (vocabulary): without a Rule citing it, it binds nothing, so the citation is the codification. The bullet adds evidence to an existing list; it opens no event, gates nothing, and the Operator may drop it and keep the play-book as reference. |
+| 6 | An Operator message is a `user` record with text (found while implementing). | **Refuted** | A prompt sent while a turn runs is recorded as a queued-command attachment, not a `user` record; #211's two prompts are both of that kind. The loader reads both shapes, and a harness notification (a task finishing) starts an agent turn, never an Operator one. |
+| 7 | A module named `trace` is imported as `import trace`. | **Refuted** | `trace` is also a standard-library module; the runner and the test load `dyad/scripts/trace.py` by path (`dyadlib.load_module`), so neither depends on `sys.path` order. |
+| 8 | A trace file written by the Done ledger commit breaks that commit's ledger-only status (revision 2). | **Refuted, scoped** | The store lies under `<instance>/d-work/`, the one prefix the main fence (`rows.py`) and the plan gate's exemption (`prs.ledger_only`) read as ledger-only, so the commit adds no PR, push or suite run. Scoped: the provenance guard refuses only `*.jsonl` there, and the naming guard selects no `d-work/traces/*` path, so nothing in the guard registry checks the store's shape; `trace.check_store` does (one `<id>.md` per existing row, `# Trace #<id> — <title>`, the five sections), run over the live store by `test_trace.py` `LiveTests` with Rule-12's suite. A `kind:` row in the syseng naming table is a craft-zone follow-up, not this PR (Rule-1). |
+| 9 | An unconditional bullet is the only way to make the trace binding (revision 3). | **Refuted** | A preference the Operator owns makes it binding by default (`always`) and lets the Operator turn it to `on-demand` without a Rule edit — the same shape as `merge-disposition` and `concise-mode`, whose values Rule-3 reads. Scoped: no guard requires a key a Rule names to exist in the live table (`preferences.py` checks the table's own rows and that each `read by` Rule exists; `references.py` resolves `preference.read_by->rule`, not rule→preference), so the order "#215's preference PR first" is conduct, stated here, not a gate. The package's preference schema (`dyad/templates/PREFERENCES.md`, whose missing keys warn) does not yet carry `dwork-trace`; until it does, an install reads the default `always`. |
+| 10 | A trace leaks transcript text (credentials, the Operator's unrecorded words) into the corpus. | **Refuted by construction, tested** | Text is kept only on Operator messages, for matching, and never formatted; the report prints timestamps, durations, tool names and counts. The test plants a marker in every assistant text and tool result of its fixture and asserts it, the prompt and the tool inputs are absent from the output. |
+
+Pairwise (Rule-5). **3–1**: the trace file is instance state under `<instance>/d-work/traces/` (agent zone),
+carried by the Done ledger commit; no zone added. **3–2**: a trace is evidence, not a ratification event; the
+Done-`Y` binds as before. The preference `dwork-trace` is read by Rule-3 alone (its `read by` cell, #215); no other Rule's trigger
+reads it, so no pair instructs differently on it. **3–4**: one bullet inside an existing clause — Intent, Target, Boundaries and
+Conditions unchanged, so the counts are as before. **3–5**: no Rule's concern moves. **3–6**: one term,
+`d-work trace` (owner 3, used by 3), used verbatim by the new bullet. **3–7**: the trace reads provenance
+records and never writes one; Rule-7 property 2 (the raw transcript is never committed) is what the trace
+obeys by reading in place and printing no text. **3–8**: running the trace writes one repo file, a repo
+transaction's content, not a host action; the run-book step is classed reversible with its undo, the
+sysadmin form. **3–9**: the attacks above are Rule-9's form. **3–10**: the bottleneck line informs a
+proposal, never frames one. **3–11**: play-book, run-book and script are core-craft files under `dyad/`, the
+traces instance — Rule-11 property 1's split; no host string enters the core. **3–12**: `trace.py` carries
+`INVARIANTS`, enforced at import, and `dyad/tests/test_trace.py` at the mapped path. **3–13**: this is
+Rule-13 property 1 discharged — the third hand measurement became code. **3–14**: Claude Code stays the kernel
+row it is; its transcript is read as an optional input, never a dependency a guard needs. **3–15**: the
+trace reads the plan file and changes no phase. **3–16**: the d-work store gains one directory of one file per id, written once by the session that
+receives the Done-`Y` — collision-free in the same way as rows and plans; rows, transitions and presence
+untouched. **3–18**: no
+Operator-run command. **3–19**: a core run-book with its own section set (Rule-19 Boundaries), no server.
+**3–20**: the new paths in Rule-3's text are `rule.text->path` references the register already resolves.
+Coherent, orthogonal.
+
+Disposition: see ledger #213.
