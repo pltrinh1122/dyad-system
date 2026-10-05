@@ -149,6 +149,19 @@ class TraceTests(unittest.TestCase):
         self.assertIn("the widget (d-work #7)", out)
         self.assertIn("| tool calls, tokens, PRs created | absent | no transcript window |", out)
 
+    def test_a_done_y_never_anchors_a_plan_entry(self):
+        lines = [l for l in transcript() if l["uuid"] not in ("u5", "u6")]   # the plan was asked and answered elsewhere
+        root, path = fixture(lines=lines)
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([a["status"] for a in got], ["anchored", "unmatched", "anchored"])   # the Done `Y` at 400 is the done entry's only
+        self.assertEqual(got[2]["ts"], tr.ms(ts(400)))
+
+    def test_a_reply_on_another_date_is_unmatched(self):
+        entries = ENTRIES[:1] + [("disposition", "2026-10-04", "Y plan", "Y")] + ENTRIES[2:]
+        root, path = fixture(entries)
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([a["status"] for a in got], ["anchored", "unmatched", "anchored"])
+
     def test_unmatched_and_ambiguous_entries_are_reported_never_guessed(self):
         entries = ENTRIES[:1] + [("prompt", "2026-10-05", "", "words the Operator never sent in this session")] + ENTRIES[1:]
         root, path = fixture(entries)

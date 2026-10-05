@@ -60,6 +60,9 @@ AGENT_SIDE = re.compile(r"^\*\*Agent-side:\*\* (\d+) s", re.M)
 HEADER = re.compile(r"^# Trace #(\d+) — \S")
 SECTIONS = ("Timeline", "Buckets", "Counts", "Bottleneck", "Limits")   # a trace's parts, in order (the store check)
 DONE = re.compile(r"\bdone\b", re.I)       # a disposition note naming the Done-`Y` (Rule-3 Ledger: `Y done …`)
+PLAN = re.compile(r"\bplan\b", re.I)       # a disposition note naming a plan-`Y` (`Y plan …`)
+PROCEED = re.compile(r"^Y/N:\s*proceed with\b", re.I)    # the plan counter-prompt's form (Rule-3 Plan)
+DONE_ASKED = re.compile(r"^Y/N:\s*Done with\b", re.I)    # the completion counter-prompt's form (Rule-3)
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("bucket-names-unique", lambda: len(set(BUCKETS)) == len(BUCKETS)),
@@ -128,6 +131,16 @@ def _yn(text: str) -> set[int] | None:
     if not lines or not lines[-1].lstrip("*_`> ").startswith("Y/N:"):
         return None
     return {int(i) for i in re.findall(r"#(\d+)", lines[-1])}
+
+def _yn_kind(text: str) -> str | None:
+    """`plan` or `done`: which counter-prompt a reply's last `Y/N:` line asks (Rule-3 forms), else None."""
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    last = lines[-1].lstrip("*_`> ") if lines else ""
+    return "plan" if PROCEED.search(last) else "done" if DONE_ASKED.search(last) else None
+
+def _note_kind(note: str) -> str | None:
+    """`plan` or `done`: which counter-prompt a disposition note answers (`Y plan …`, `Y done …`), else None."""
+    return "done" if DONE.search(note) else "plan" if PLAN.search(note) else None
 
 def tool_kind(name: str, inp: dict) -> str:
     if name in SUBAGENT_TOOLS:
@@ -224,7 +237,7 @@ def _derive(o: dict) -> list[dict]:
                                 if "create_pull_request" in name else None,
                                 merge="merge_pull_request" in name))
             elif b.get("type") == "text":
-                out.append(_rec("text", t, sess, yn=_yn(b.get("text", ""))))
+                out.append(_rec("text", t, sess, yn=_yn(b.get("text", "")), ynk=_yn_kind(b.get("text", ""))))
             else:
                 out.append(_rec("thinking", t, sess))
         if out:
@@ -295,9 +308,10 @@ def anchor(entries: list[dict], recs: list[dict], rid: int) -> list[dict]:
         res = {"n": e["n"], "kind": e["kind"], "note": e["note"], "date": e["date"], "ts": None, "status": "unmatched", "asked_ts": None}
         cands = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos and _matches(e["text"], m["text"])]
         if e["kind"] == "disposition":
-            cands = [c for c in cands if c[2] is not None and rid in c[2]["yn"]]
-            dated = [c for c in cands if utc(c[1]["ts"])[:10] == e["date"]]
-            cands = dated or cands
+            want = _note_kind(e["note"])                 # a plan `Y` answers a plan question, a Done `Y` a Done one
+            cands = [c for c in cands if c[2] is not None and rid in c[2]["yn"]
+                     and (want is None or c[2].get("ynk") == want)]
+            cands = [c for c in cands if utc(c[1]["ts"])[:10] == e["date"]]   # a wrong date is unmatched, never guessed
             cands = cands[:1]                            # dispositions are taken in sequence (plan #213, attack 4)
         if len(cands) > 1:
             res["status"] = "ambiguous"
