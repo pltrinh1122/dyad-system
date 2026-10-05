@@ -1,0 +1,6 @@
+session: unnamed-c5c37a0a3696
+seen: 2026-10-05T13:37:48+00:00
+root: /home/user/dyad-system/.claude/worktrees/ledger
+rows: 189 212 213 81 99
+files: BUNDLE.md agent-corpus/audits/traces/204.md agent-corpus/audits/traces/205.md agent-corpus/audits/traces/206.md agent-corpus/audits/traces/207.md agent-corpus/audits/traces/208.md agent-corpus/audits/traces/209.md agent-corpus/audits/traces/210.md agent-corpus/audits/traces/211.md agent-corpus/audits/traces/212.md agent-corpus/audits/traces/README.md agent-corpus/d-work/plans/212.md agent-corpus/d-work/plans/213.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md dyad/falsification/rules/rule-3-d-work.md dyad/playbooks/dwork-trace.md dyad/rules/RULE-3-d-work.md dyad/runbooks/dwork-trace.md dyad/scripts/package.py dyad/scripts/trace.py dyad/tests/test_playbooks.py dyad/tests/test_trace.py dyad/vocabulary/VOCABULARY.md
+writer: c49173722bd0
