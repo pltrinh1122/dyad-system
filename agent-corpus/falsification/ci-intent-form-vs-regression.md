@@ -77,6 +77,7 @@ this split:
   through `test_package`, `test_concurrency`, `test_dyadlib` and `test_entrypoint`, all gate-code
   test files, so they need no separate entry in the sizing.
 
-## Disposition
-Disposed by the Done-`Y` of d-work #220 (Rule-2). No Rule or code is changed here. Adoption, if
-wanted, is a later d-work carrying the three preconditions.
+No Rule or code is changed here. Adoption, if wanted, is a later d-work carrying the three
+preconditions.
+
+Disposition: see ledger #220.
