@@ -1,0 +1,6 @@
+session: unnamed-ce35d77b917f
+seen: 2026-10-05T15:49:44+00:00
+root: /home/user/dyad-system
+rows: 189 212 216 219 220 221 81 99
+files: BUNDLE.md agent-corpus/audits/2026-10-05-ci-test-subset.md agent-corpus/audits/traces/204.md agent-corpus/audits/traces/205.md agent-corpus/audits/traces/206.md agent-corpus/audits/traces/207.md agent-corpus/audits/traces/208.md agent-corpus/audits/traces/209.md agent-corpus/audits/traces/210.md agent-corpus/audits/traces/211.md agent-corpus/audits/traces/212.md agent-corpus/audits/traces/README.md agent-corpus/d-work/plans/212.md agent-corpus/d-work/plans/216.md agent-corpus/d-work/plans/219.md agent-corpus/d-work/plans/220.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md agent-corpus/falsification/ci-intent-form-vs-regression.md crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md dyad/playbooks/dwork-trace.md dyad/scripts/trace.py dyad/tests/test_trace.py
+writer: 8ff7760d1b93
