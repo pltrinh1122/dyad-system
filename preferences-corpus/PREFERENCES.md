@@ -17,6 +17,7 @@ defines what each value means.
 | concise-mode | on | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
 | host-path | workstation-corpus | a repo-relative directory | Rule-1 (host row of the zone table), Rule-14 (instance contribution) |
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
+| dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -79,3 +80,8 @@ defines what each value means.
   is `<host-path>/*` (Rule-1). dyad-system: `workstation-corpus` (d-work #175).
 - `host-zone` — the zone that row belongs to. `workstation`: five zones. `infra`: the host records
   are infrastructure of the repo and the system has four zones.
+- `dwork-trace` — whether each d-work's performance trace (play-book `dyad/playbooks/dwork-trace.md`,
+  d-work #213) is part of its completion evidence. `always`: every completion cites the d-work's trace, so a
+  baseline exists before anyone optimizes and no d-work's timing is lost when an ephemeral session ends
+  (its transcript is never committed, Rule-7). `on-demand`: a trace only when the Operator prompts for one;
+  a d-work whose session has ended can then be traced from git and the ledger only (d-work #215).
