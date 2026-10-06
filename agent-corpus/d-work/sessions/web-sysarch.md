@@ -1,6 +1,6 @@
 session: web-sysarch
-seen: 2026-09-25T12:58:05+00:00
+seen: 2026-10-06T00:39:29+00:00
 root: /home/user/dyad-system
-rows: 166 167 81 99
-files: BUNDLE.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md
-writer: 6e938b37e2ef
+rows: 166 167 189 216 221 224 225 226 81 99
+files: BUNDLE.md agent-corpus/d-work/plans/216.md agent-corpus/d-work/plans/224.md agent-corpus/d-work/plans/225.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md dyad/playbooks/dwork-trace.md dyad/scripts/trace.py dyad/tests/test_trace.py
+writer: 32845e1121e9
