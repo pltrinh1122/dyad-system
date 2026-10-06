@@ -219,11 +219,6 @@ class TraceTests(unittest.TestCase):
         self.assertTrue(any("7.md: sections" in m for m in msgs))
 
 class LiveTests(unittest.TestCase):
-    def test_live_trace_store_is_well_formed(self):
-        os.environ.pop("DYAD_INSTANCE", None)
-        msgs = tr.check_store(dyadlib.repo_root())
-        self.assertEqual(msgs, [], msgs)
-
     def test_refusals(self):
         root, path = fixture()
         for argv in (["7", "--transcript"], ["7", "--bogus"], ["7", "--transcript", str(path) + ".missing"], []):
