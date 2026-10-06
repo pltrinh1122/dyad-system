@@ -111,7 +111,9 @@ as transaction guards (`package.py check --guards`); their workflow wrapper
 (`.github/workflows/dyad-d-work.yml`) is infra zone. Changing a guard is an agent-zone PR, changing
 the wrapper an infra-zone PR, each citing a Rule-3 d-work. The plan gate is enforced before a push
 by the kernel-only path (the PR guard over `origin/main..HEAD` with the commit messages as body);
-the wrapper corroborates on `main` only (#168). A range that touches only `<instance>/d-work/` is
+the wrapper corroborates on `main` only (#168). A state guard beside them checks the trace store on every
+push and evidence run: `traces.py`, through `trace.check_store` (#227); the incident log's check stays a
+script run by the suite until #170 lets a released craft's pinned entity list change. A range that touches only `<instance>/d-work/` is
 exempt from the plan gate (`prs.ledger_only`, #191): every one of its own non-merge commits touches
 only that path, read commit by commit with rename detection off, so a branch that ever touched
 anything else — a move into the ledger, a reverted edit, code squashed into `main` since — is not
@@ -249,6 +251,7 @@ pushed ledger commits around the hook and past every other guard; see the same r
 per-d-work performance measurement done by hand three times (#204, #212) becomes a play-book whose
 trace the completion evidence cites, previewed in the completion reply and stored by the Done ledger
 commit (plan revision 2), as the preference `dwork-trace` reads (revision 3, #215); see the same
-record, amendment #213.
+record, amendment #213. Mechanisms gains the trace guard 2026-10-06 (d-work #227): the store's check
+ran only inside Rule-12's suite, which a guard-only push skips (#217); see the same record, amendment #227.
 
 Set: System Requirements.

@@ -30,8 +30,7 @@ class VocabularyTests(unittest.TestCase):
         # and the separator), which is exactly what `check_vocabulary` returns. Raised from a stale 67
         # in #186: 23 terms of slack meant 23 could be deleted and the floor still pass. Raise it with
         # the table.
-        self.assertEqual(fails, []); self.assertGreaterEqual(n, 90)
-        self.assertEqual(v.check_package(dyadlib.repo_root()), [])
+        self.assertGreaterEqual(n, 90)   # the live verdict itself is the agent/vocabulary guard's (#227)
 
 class CraftVocabularyTests(unittest.TestCase):
     """#156: check_craft — a craft's CRAFT.md is namespaced: well-formed, no duplicate, rule exists, no Agent term."""

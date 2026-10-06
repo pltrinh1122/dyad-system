@@ -35,8 +35,7 @@ class RuleIntegrityTests(unittest.TestCase):
         self.assertIn("Conditions bullets 0", ri.check("x", text)[0])
     def test_live_package_all_ok(self):
         oks, fails = ri.check_rules()
-        self.assertEqual(fails, []); self.assertGreaterEqual(len(oks), 15)
-        self.assertEqual(ri.check_package(dyadlib.repo_root()), [])
+        self.assertGreaterEqual(len(oks), 15)   # the live verdict itself is the agent/rules guard's (#227)
 
 class TendedScanTests(unittest.TestCase):
     """#156: check_tended warns (never fails) on Agent-process tokens in a Tended craft's rules; README exempt."""

@@ -46,8 +46,6 @@ class PreferenceTests(unittest.TestCase):
     def test_template_checked_too(self):
         root, pkg = fixture(None, template=HEAD + ROWS.replace("Rule-13 (import criteria)", "Rule-99"))
         msgs = pf.check_package(root, pkg); self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("templates/PREFERENCES.md:"))
-    def test_live_table_passes(self):
-        self.assertEqual(pf.check_package(dyadlib.repo_root()), [])
     def test_missing_key_warns(self):
         live = HEAD + "| merge-disposition | with-done | `separate` \\| `with-done` | Rule-2 (binding), Rule-3 (form) |\n"
         root, pkg = fixture(live, template=HEAD + ROWS)

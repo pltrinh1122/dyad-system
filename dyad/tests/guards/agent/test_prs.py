@@ -28,9 +28,8 @@ class DworkLinkTests(unittest.TestCase):
         self.assertIn("no 'Y plan'", d.check("d-work #3", LEDGER)[0])
     def test_duplicate_citation_counted_once(self):
         self.assertEqual(d.cited("d-work #2 and again d-work #2"), [2])
-    def test_contract_and_package_check(self):
+    def test_contract(self):
         self.assertEqual((d.ENTITY, d.CORPUS, d.TRANSACTION, d.FIELDS), ("pr", "agent", True, ("body",)))
-        self.assertEqual(d.check_package(dyadlib.repo_root()), [])   # a PR lives in The World: nothing in a store
     def test_transaction_check_reads_branch_messages(self):
         import os, subprocess, tempfile
         root = Path(tempfile.mkdtemp()); sh = lambda *a: subprocess.run(a, cwd=root, check=True, capture_output=True, text=True)

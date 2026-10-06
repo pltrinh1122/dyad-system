@@ -41,8 +41,7 @@ class RecordTests(unittest.TestCase):
         # the package and is identical in every install; the instance partition is not pinned at all,
         # because a scratch install has none (CI runs this suite inside one, `dyad-package.yml`), which
         # is why `record_files(repo_root())` reads 31 here and 20 there.
-        root = dyadlib.repo_root()
-        self.assertEqual(rc.check_package(root), [])
+        root = dyadlib.repo_root()   # the live verdict itself is the agent/records guard's (#227)
         pkg_records = [f for f in rc.record_files(root) if f.parent == dyadlib.PKG / "falsification" / "rules"]
         self.assertEqual(len(pkg_records), 20)
     def test_describe(self):

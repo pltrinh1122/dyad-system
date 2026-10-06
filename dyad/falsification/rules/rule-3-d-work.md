@@ -256,3 +256,26 @@ Operator-run command. **3–19**: a core run-book with its own section set (Rule
 Coherent, orthogonal.
 
 Disposition: see ledger #213.
+
+## Amendment — d-work #227 (2026-10-06, the trace guard)
+**Claim (Operator, via #227: "recommend next best action per DAG sequence", plan-`Y` 2026-10-06; revision 2
+plan-`Y` the same day):** Rule-3's records whose check runs only inside Rule-12's suite move to registered
+guards, and the live tests that only re-asserted a core guard's verdict lose that assertion (#217).
+Mechanisms gains one sentence naming the trace guard.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | A new registry entry falsifies a released craft's pinned entity list, so it cannot land (the reason `incidents.py` stayed a script, row #170). | **Confirmed for `incident`; refuted for `trace`.** | `crafts/sysarch/tests/test_project_entities.py` asserts `incident` has no card, and the first push was refused on it (incident row, 2026-10-06). The incident guard waits on #170. `trace` is not pinned: the craft derives its entity set from the registry (#98). |
+| 2 | A guard needs a references-register entry, and `trace` has none. | **Confirmed.** | `trace.id->row` added to `references.REFERENCES`, resolved by the trace guard itself (`guard:agent/traces.py`, listed, not re-run). |
+| 3 | The guard doubles the check: the suite runs it too. | **Refuted after the edit.** | `test_live_trace_store_is_well_formed` is deleted; the store's fixture tests stay. |
+| 4 | Deleting a duplicate live assertion loses coverage. | **Refuted.** | Each removed assertion was the same call over the same tree the guard pass makes on every push and evidence run (#217 attack 4). Where a live test also pinned a count (`test_records`' 20 package records, `test_rules`' 15 Rules, `test_vocabulary`'s 90 terms, the register's kind count, provenance's no-warning floor), the count stays. |
+
+**Pairwise (Rule-5).** **3–1**: agent zone, one PR. **3–2**: a guard is not a ratification event. **3–4**:
+Rule-3 keeps its block; one Mechanisms sentence. **3–5**: Rule-3 alone owns the trace store; orthogonal.
+**3–6**: no new Agent term. **3–7**: the provenance guard is untouched. **3–8**: no host action. **3–9, 3–10**:
+the table above; one `Y/N`. **3–11**: the guard sits under `dyad/guards/agent/` and is discovered, never
+hand-listed. **3–12**: it carries `INVARIANTS` and a mapped test. **3–13, 3–14**: no import; kernel only.
+**3–15, 3–16**: no phase or store change. **3–18, 3–19**: no Operator command, no server. **3–20**: one
+register row, resolved by the new guard. Coherent, orthogonal.
+
+Disposition: see ledger #227.

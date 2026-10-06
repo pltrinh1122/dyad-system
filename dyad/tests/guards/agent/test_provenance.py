@@ -151,7 +151,7 @@ class ProvenanceTests(unittest.TestCase):
         listed, problems = pv.legacy(root)
         if listed is None:
             self.skipTest(f"this instance keeps no {pv.LEGACY}: a system that installed the core alone")
-        self.assertEqual(fails(problems), [])
+        # the live verdict (no FAIL) is the agent/provenance guard's (#227); this test keeps the stricter no-warning floor.
         self.assertEqual([m for m in warns(pv.check_package(root)) if "has no provenance record" in m], [])
 
     def test_describe_and_summary(self):
