@@ -1,0 +1,6 @@
+session: unnamed-04a28a99e946
+seen: 2026-10-07T23:10:16+00:00
+root: /mnt/shared_data/dyad/dyad-system
+rows: 189 216 221 228 238 239 241 81 99
+files: BUNDLE.md agent-corpus/audits/INCIDENTS.md agent-corpus/d-work/plans/216.md agent-corpus/d-work/plans/228.md agent-corpus/d-work/plans/238.md agent-corpus/d-work/plans/241.md agent-corpus/d-work/plans/81.md agent-corpus/d-work/provenance/228.md agent-corpus/d-work/provenance/241.md agent-corpus/d-work/provenance/81.md agent-corpus/d-work/rows/228.md agent-corpus/d-work/rows/241.md agent-corpus/d-work/rows/81.md agent-corpus/d-work/sessions/web-sysadmin-scope.md agent-corpus/d-work/traces/228.md agent-corpus/d-work/traces/241.md crafts/sysadmin/README.md crafts/sysadmin/VERSION crafts/sysadmin/falsification/rules/host-install.md crafts/sysadmin/falsification/rules/host-platform.md crafts/sysadmin/rules/README.md crafts/sysadmin/rules/host-install.md crafts/sysadmin/rules/host-platform.md crafts/sysadmin/vocabulary/CRAFT.md crafts/syseng/VERSION dyad/VERSION dyad/playbooks/dwork-trace.md dyad/scripts/craft.py dyad/scripts/package.py dyad/scripts/trace.py dyad/tests/test_craft.py dyad/tests/test_package.py dyad/tests/test_trace.py
+writer: cce9a93bcbad
