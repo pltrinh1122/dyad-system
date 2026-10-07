@@ -907,6 +907,66 @@ class BundledCraftTests(unittest.TestCase):
         self.assertEqual(fresh(), baseline)   # restored: read from disk again, so this tree's own answer returns
 
 
+class BundleWarningTests(unittest.TestCase):
+    """#241: `cmd_bundle` was the one caller that ignored the runner's `warning:` convention — it
+    printed every bundle message as `FAIL`, exited 1 from `check` and refused `build` on any of
+    them. #232's disposition (two crafts held out of the bundle, which Rule-11 p7's
+    unreleased-craft clause permits) made that fire on every call, so the release path was closed
+    by a warning. Both halves now split the messages as `package.py`'s own check paths do."""
+    def crafts(self, d: Path) -> list[str]:
+        return sorted(p.name for p in (d / "crafts").iterdir() if p.is_dir()) if (d / "crafts").is_dir() else []
+    def bundle_md(self, d: Path, core_version: str | None = None) -> None:
+        """A `BUNDLE.md` naming only the core craft, in a repo with no tags: every craft in the tree
+        is then unreleased and rowless, which is the #232 shape — warnings and nothing else."""
+        ver = core_version or (d / "dyad" / "VERSION").read_text().strip()
+        (d / "BUNDLE.md").write_text(f"# Bundle\n\nversion: 9.9.9\n\n| component | version |\n|---|---|\n| dyad-operator | {ver} |\n")
+    def run_bundle(self, d: Path, *a: str):
+        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "bundle", *a],
+                              capture_output=True, text=True, env=env(), cwd=str(d))
+    def test_a_warning_neither_fails_check_nor_refuses_build(self):
+        d = scratch_install(with_craft=True)
+        self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        crafts = self.crafts(d)
+        if not crafts:
+            self.skipTest("no craft in this tree: nothing can be rowless and unreleased")
+        self.bundle_md(d)
+        r = self.run_bundle(d, "check")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ok   [bundle] 1 components, v9.9.9", r.stdout)
+        self.assertNotIn("FAIL", r.stdout + r.stderr)
+        for c in crafts:
+            self.assertIn(f"warn [bundle] '{c}' is in the tree but unreleased", r.stdout)
+        out = SCRATCH.mkdtemp()
+        r = self.run_bundle(d, "build", str(out))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("refused", r.stdout + r.stderr)
+        ver = (d / "dyad" / "VERSION").read_text().strip()
+        self.assertTrue((out / f"dyad-{ver}.tar.gz").is_file(), sorted(p.name for p in out.iterdir()))
+        self.assertIn(f"dyad-{ver}.tar.gz", (out / "BUNDLE.sha256").read_text())
+    def test_a_hard_message_still_fails_and_still_refuses(self):
+        d = scratch_install(with_craft=True)
+        self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        self.bundle_md(d, core_version="0.0.1")   # a row that names a version the tree does not have
+        r = self.run_bundle(d, "check")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("FAIL [bundle] 'dyad-operator': bundle names 0.0.1", r.stderr)
+        out = SCRATCH.mkdtemp()
+        r = self.run_bundle(d, "build", str(out))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("refused: bundle fails its check; not built", r.stderr)
+        self.assertEqual(sorted(p.name for p in out.iterdir()), [])
+    def test_messages_split_where_the_runner_splits_them(self):
+        pkg = load_package()
+        warn = "warning: 'countersign' is in the tree but unreleased (no countersign-v* tag): not yet bundled"
+        hard = "'sysarch': bundle names 0.1.0, the tree has 0.2.0"
+        buf, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err):
+            left = pkg.bundle_messages([warn, hard])
+        self.assertEqual(left, [hard])                                    # only the hard one travels
+        self.assertEqual(buf.getvalue(), f"warn [bundle] {warn.removeprefix('warning:').strip()}\n")
+        self.assertEqual(err.getvalue(), f"FAIL [bundle] {hard}\n")
+        self.assertEqual(pkg.bundle_messages([]), [])
+
 class InvariantPassTests(unittest.TestCase):
     """crafts/syseng/rules/invariants.md p1, p4 (amended #203): the pass runs both lists before any check in `check` and
     `check --guards`, prints one line per model module in a fixed order, never runs under --list/--help; a false
