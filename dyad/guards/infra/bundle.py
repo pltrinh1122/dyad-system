@@ -11,6 +11,14 @@ and its first release adds its row (#156: a new craft otherwise had no order sat
 one zone per PR and this guard). A missing `BUNDLE.md` skips (a core-only install, or this repo
 before its first bundle): zero messages, never a failure.
 
+A craft released and then changed (#170, the released half of #156): its craft-zone PR bumps `VERSION`,
+and Rule-1 forbids that PR from carrying the infra-zone row. So a row that is *behind* the live
+`VERSION` warns, not fails, while it still names a released version (its own `<name>-v<row>` tag
+exists) and the live version has no tag yet — the infra-zone PR that updates the row follows. Any
+other mismatch fails: a row ahead of the tree, a row naming an untagged version, or a row left
+behind once the live version is itself tagged (a release cannot be cut against a row the tree
+contradicts). Tags not fetched read as untagged, so such a checkout keeps the strict form.
+
 Drift (#91, after #61/#67/#71/#90): property 4's converse. Once `<name>-v<VERSION>` exists, the
 tree under that craft's root at HEAD must be the tree the tag holds; `check_drift` fails a craft
 whose root differs from its own tag while `VERSION` is unchanged. A tag that does not resolve
@@ -57,6 +65,22 @@ def released_components(root: Path, components) -> set[str]:
     row to a warning; it never hides a row naming a craft not in the tree."""
     return {c for c in components if _git(root, "tag", "-l", tag_pattern(c)).stdout.strip()}
 
+def tagged_versions(root: Path, components) -> set[tuple[str, str]]:
+    """{(component, version)} for every local release tag `<name>-v<version>` (property 4)."""
+    out = set()
+    for c in components:
+        prefix = f"{c}-v"
+        for t in _git(root, "tag", "-l", tag_pattern(c)).stdout.split():
+            if t.startswith(prefix):
+                out.add((c, t[len(prefix):]))
+    return out
+
+def _semver(v: str) -> tuple[int, ...] | None:
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return None
+
 def check_drift(root: Path, pkg: Path = dyadlib.PKG) -> list[str]:
     """Per component: tag absent -> `warning: skip …`; tree at HEAD == tag's -> nothing; differs -> FAIL."""
     msgs: list[str] = []
@@ -96,9 +120,13 @@ def live_components(pkg: Path = dyadlib.PKG) -> dict[str, str]:
         out[d.name] = (d / "VERSION").read_text().strip()
     return out
 
-def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], released: set[str] | None = None) -> list[str]:
+def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], released: set[str] | None = None,
+          tagged: set[tuple[str, str]] | None = None) -> list[str]:
     """`released`: the components with a release tag of their own; None treats every one as released
-    (the strict form). A released craft with no row fails; an unreleased one warns (Rule-11 p7, #156)."""
+    (the strict form). A released craft with no row fails; an unreleased one warns (Rule-11 p7, #156).
+    `tagged`: the (component, version) pairs with a release tag; None is the strict form, where every
+    version mismatch fails. Given, a row behind an untagged live version that names a tagged one warns
+    (#170): the craft-zone bump lands first and the row follows."""
     released = set(live) if released is None else released
     msgs: list[str] = []
     if not version:
@@ -113,7 +141,12 @@ def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], relea
         if comp not in live:
             msgs.append(f"'{comp}': not a craft in this tree")
         elif ver != live[comp]:
-            msgs.append(f"'{comp}': bundle names {ver}, the tree has {live[comp]}")
+            row_v, live_v = _semver(ver), _semver(live[comp])
+            behind = row_v is not None and live_v is not None and row_v < live_v
+            if tagged is not None and behind and (comp, ver) in tagged and (comp, live[comp]) not in tagged:
+                msgs.append(f"warning: '{comp}': bundle names {ver}, the tree has {live[comp]}, which is unreleased: the row follows in an infra-zone PR (#170)")
+            else:
+                msgs.append(f"'{comp}': bundle names {ver}, the tree has {live[comp]}")
     for comp in live:
         if comp in seen:
             continue
@@ -131,7 +164,7 @@ def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str
         return "", [], []
     version, rows = parse(p.read_text())
     live = live_components(pkg)
-    return version, rows, check(version, rows, live, released_components(root, live))
+    return version, rows, check(version, rows, live, released_components(root, live), tagged_versions(root, live))
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()

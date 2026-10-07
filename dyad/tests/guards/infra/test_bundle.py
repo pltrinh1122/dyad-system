@@ -205,3 +205,61 @@ class UnreleasedCraftTests(unittest.TestCase):
             self.assertEqual(bd.check_bundle(root, pkg)[2], ["'newcraft' is in the tree but has no bundle row"])
         finally:
             import shutil; shutil.rmtree(root, ignore_errors=True)
+
+
+class ReleasedCraftChangedTests(unittest.TestCase):
+    """#170, the released half of #156: a craft-zone PR bumps `VERSION` and Rule-1 forbids that PR from carrying
+    the infra-zone row, so a row behind an unreleased live version that names a released one warns; every
+    other mismatch still fails."""
+    ROWS = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.1"), ("syseng", "0.1.2")]
+    TAGGED = {("dyad-operator", "0.5.0"), ("sysarch", "0.1.1"), ("syseng", "0.1.2")}
+    def live(self, **over):
+        return {**LIVE, **over}
+    def test_row_behind_an_unreleased_bump_warns(self):
+        msgs = bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=self.TAGGED)
+        self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("warning: 'sysarch': bundle names 0.1.1, the tree has 0.1.2"), msgs)
+        self.assertIn("infra-zone PR (#170)", msgs[0])
+    def test_row_ahead_of_the_tree_fails(self):
+        rows = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.3"), ("syseng", "0.1.2")]
+        tagged = self.TAGGED | {("sysarch", "0.1.3")}          # even a tagged row cannot run ahead of the tree
+        self.assertEqual(bd.check("0.5.0", rows, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.3, the tree has 0.1.2"])
+    def test_row_naming_an_untagged_version_fails(self):
+        tagged = self.TAGGED - {("sysarch", "0.1.1")}
+        self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
+    def test_row_left_behind_once_the_live_version_is_tagged_fails(self):
+        tagged = self.TAGGED | {("sysarch", "0.1.2")}           # the release was cut against a stale row
+        self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
+    def test_strict_form_unchanged_without_tags(self):
+        self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2")), ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
+    def test_unparseable_versions_fail(self):
+        rows = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.1-rc"), ("syseng", "0.1.2")]
+        tagged = self.TAGGED | {("sysarch", "0.1.1-rc")}
+        self.assertEqual(len(bd.check("0.5.0", rows, self.live(sysarch="0.1.2"), tagged=tagged)), 1)
+        self.assertFalse(bd.check("0.5.0", rows, self.live(sysarch="0.1.2"), tagged=tagged)[0].startswith("warning:"))
+    def test_tagged_versions_reads_local_tags(self):
+        root, pkg = repo()
+        try:
+            git(root, "tag", "sysarch-v0.1.0"); git(root, "tag", "v0.5.0")           # the bundle's own tag names no craft
+            self.assertEqual(bd.tagged_versions(root, LIVE),
+                             {("dyad-operator", "0.5.0"), ("sysarch", "0.1.1"), ("sysarch", "0.1.0"), ("syseng", "0.1.2")})
+        finally:
+            import shutil; shutil.rmtree(root, ignore_errors=True)
+    def test_landing_order_end_to_end(self):
+        """Craft-zone bump (warns) → infra-zone row (passes) → release tag; a tag cut against the stale row fails."""
+        root, pkg = repo()
+        try:
+            (root / "BUNDLE.md").write_text(BUNDLE)
+            self.assertEqual(bd.check_bundle(root, pkg)[2], [])
+            (root / "crafts" / "sysarch" / "VERSION").write_text("0.1.2\n")                        # PR 1: the craft-zone bump
+            git(root, "add", "-A"); git(root, "commit", "-qm", "sysarch 0.1.2")
+            msgs = bd.check_bundle(root, pkg)[2]
+            self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("warning: 'sysarch'"), msgs)
+            r = subprocess.run([sys.executable, str(Path(bd.__file__)), str(root)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [bundle] 'sysarch': bundle names 0.1.1", r.stdout)
+            git(root, "tag", "sysarch-v0.1.2")                                                       # a release cut against the stale row
+            self.assertEqual(bd.check_bundle(root, pkg)[2], ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
+            git(root, "tag", "-d", "sysarch-v0.1.2")
+            (root / "BUNDLE.md").write_text(BUNDLE.replace("sysarch | 0.1.1", "sysarch | 0.1.2"))  # PR 2: the infra-zone row
+            self.assertEqual(bd.check_bundle(root, pkg)[2], [])
+        finally:
+            import shutil; shutil.rmtree(root, ignore_errors=True)
