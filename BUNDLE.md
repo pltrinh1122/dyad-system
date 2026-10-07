@@ -17,3 +17,9 @@ version: 0.12.1
 | sysarch | 0.3.0 |
 | syseng | 0.4.0 |
 | sysadmin | 0.2.1 |
+
+`countersign` and `disclosure` are in the tree and deliberately absent from the table: the Operator
+disposed that they are not meant for release yet and are held until ready (d-work #232). Rule-11
+property 7 permits an unreleased craft to have no row, and `dyad bundle build` builds once per row,
+so nothing here publishes them. The two `not yet bundled` warnings the guard prints for them describe
+that decision, not an unfinished chore. Their first release adds their rows.
