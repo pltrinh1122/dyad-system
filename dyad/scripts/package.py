@@ -741,7 +741,14 @@ def cmd_install(target):
     target = hostadapter.resolve(target)
     bundled = bundled_crafts()
     changed = distribute.install(REPO, target, release_roots(), prune=True, hooks=CORE_HOOKS, extra=core_extra())
-    changed += craft_cli().record_core(target, version(), REPO.name)   # the core's registry row (Rule-11 p2, d-work #199)
+    cc = craft_cli()
+    rows = [(cc.CORE_NAME, version(), REPO.name)]                      # the core's registry row (Rule-11 p2, d-work #199)
+    # and one per bundled craft (#228 for #201), but only where the installed tree is not already
+    # recorded unmodified: `dyad craft install` of that same craft writes a richer row (its archive as
+    # `source`, its d-work), and re-asserting this one would clobber it on the next core install — the
+    # two commands would then ping-pong and neither install would be `0 changes` (Rule-11 p5).
+    rows += [(c, cc.guard().version(REPO / "crafts" / c), REPO.name) for c in bundled if cc.unmodified(target, c) is None]
+    changed += cc.record_install(target, rows)
     print(f"installed into {target}: {changed} changes" + (f"; bundled: {', '.join(bundled)}" if bundled else "")
           + f"; run: git -C {target} config core.hooksPath dyad/hooks")
     return 0

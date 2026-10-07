@@ -76,19 +76,34 @@ def unmodified(repo: Path, name: str, rows: dict | None = None) -> dict[str, str
         return None
     return row if row["sha256"] == tree_sha(repo, name) else None
 
-def record_core(repo: Path, version: str, source: str) -> int:
-    """`dyad install`'s registry row for the core craft (Rule-11 property 2, d-work #199): the row `cmd_install`
-    writes for a Tended craft, its sha256 the tree `dyad/` as installed (`tree_sha`, the same computation). Written
-    only when it differs, so a second install of the same source is 0 changes. Returns the files written (0 or 1)."""
+def record_install(repo: Path, entries: list[tuple[str, str, str]]) -> int:
+    """`dyad install`'s registry rows, one per tree it wrote: the core craft and every bundled craft
+    (Rule-11 property 2, d-work #199 for the core, #228 for the bundled case). Each row is the one
+    `cmd_install` writes for a craft installed on its own, its sha256 the tree as installed
+    (`tree_sha`, the same computation). The whole registry is written once, and only when some row
+    differs, so a second install of the same source is 0 changes (property 5 idempotence). Returns
+    the files written (0 or 1).
+
+    Without a bundled craft's row, `cmd_install` below reads its tree as locally authored and refuses
+    `craft install` of that same craft — the downstream core-then-craft upgrade path, and the install
+    step of `dyad-package.yml`, which is the only check property 5 has (`check --guards` runs no
+    install). Red on `main` from 2026-09-25 until #228."""
     rows = registry_rows(repo)
-    new = {"craft": CORE_NAME, "version": version, "source": source, "sha256": tree_sha(repo, CORE_NAME),
-           "d-work": rows.get(CORE_NAME, {}).get("d-work", "")}
-    if rows.get(CORE_NAME) == new:
+    changed = False
+    for name, version, source in entries:
+        new = {"craft": name, "version": version, "source": source, "sha256": tree_sha(repo, name),
+               "d-work": rows.get(name, {}).get("d-work", "")}
+        if rows.get(name) != new:
+            rows[name] = new; changed = True
+    if not changed:
         return 0
-    rows[CORE_NAME] = new
     (Path(repo) / REGISTRY).parent.mkdir(parents=True, exist_ok=True)
     write_registry(repo, rows)
     return 1
+
+def record_core(repo: Path, version: str, source: str) -> int:
+    """The core craft's row alone (d-work #199), through the one writer above."""
+    return record_install(repo, [(CORE_NAME, version, source)])
 
 def cmd_list(repo: Path) -> int:
     g = guard(); rows = registry_rows(repo)

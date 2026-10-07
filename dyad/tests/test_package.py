@@ -1450,7 +1450,10 @@ class InstalledRootTests(unittest.TestCase):
         d, base, git = self.repo()
         calls, out = self.gate(base)
         self.assertIn(self.skip_line("dyad/tests", self.craft.CORE_NAME), out)
-        self.assertEqual(calls, [[f"crafts/{c}/tests" for c in self.bundled if (d / "crafts" / c / "tests").is_dir()]], out)   # a bundled craft has no row (#201): it runs
+        self.assertEqual(calls, [], out)                                     # every root skipped: the core install now records each bundled craft's row too (#201, d-work #228)
+        for c in self.bundled:
+            if (d / "crafts" / c / "tests").is_dir():
+                self.assertIn(self.skip_line(f"crafts/{c}/tests", c), out)
         calls, out = self.gate(base, pre_push=False)                         # check --guards without --pre-push
         self.assertEqual(calls, [None], out); self.assertNotIn("installed unmodified", out)
         calls, out = self.gate(base, evidence=True)                          # check --evidence runs every root

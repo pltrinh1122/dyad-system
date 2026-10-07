@@ -193,5 +193,60 @@ class CoreRowTests(unittest.TestCase):
         self.assertIsNotNone(craft.unmodified(d, craft.CORE_NAME))  # re-recorded: unmodified again
         shutil.rmtree(d, ignore_errors=True)
 
+class BundledRowTests(unittest.TestCase):
+    """d-work #228 (#201): the core install writes every bundled craft's tree (Rule-11 p2), so it must write
+    that craft's registry row too. Without the row, `craft install` of the same craft is refused as authored
+    here (the `locally modified or authored` branch), which is what has failed `dyad-package.yml`'s install
+    step on `main` since 2026-09-25 — the only check Rule-11 property 5 has, since `check --guards` runs no
+    install."""
+    def test_bundled_craft_has_an_unmodified_row_after_a_core_install(self):
+        craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
+        bundled = dyadlib.runner_module().bundled_crafts()
+        if not bundled:
+            self.skipTest("no craft declares BUNDLED_WITH_CORE on this branch")
+        d = scratch()                                               # a real core install
+        try:
+            same = []
+            for name in bundled:
+                self.assertTrue((d / "crafts" / name).is_dir(), f"{name}: the core install wrote no tree")
+                row = craft.unmodified(d, name)
+                self.assertIsNotNone(row, f"{name}: the core install wrote the tree but no registry row")
+                self.assertEqual(row["sha256"], craft.tree_sha(d, name))
+                same.append((name, row["version"], row["source"]))
+            self.assertEqual(craft.record_install(d, same), 0,
+                             "re-recording the rows the install wrote changed the file (Rule-11 p5 idempotence)")
+            self.assertEqual(craft.record_install(d, [(n, "9.9.9", s) for n, _, s in same]), 1,
+                             "a changed version did not rewrite the registry")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_core_install_does_not_clobber_a_bundled_craft_row_a_craft_install_wrote(self):
+        """The other half of #228: once the row exists, `dyad install` must leave a richer one alone.
+        `dyad craft install` of the same craft writes its archive as `source` and its d-work; if the core
+        install re-asserted its own row every time, the two commands would ping-pong and neither would be
+        `0 changes` — `dyad-package.yml`'s last two greps. Found by running the CI sequence, not by the
+        unit test above, which is why it is pinned here."""
+        bundled = dyadlib.runner_module().bundled_crafts()
+        if not bundled:
+            self.skipTest("no craft declares BUNDLED_WITH_CORE on this branch")
+        name = bundled[0]
+        d = scratch(); arch = d.parent / f"{name}-bundled.tar.gz"
+        try:
+            e = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "craft", "export", name, str(arch)],
+                               capture_output=True, text=True, env=env(), cwd=PKG.parent)
+            self.assertEqual(e.returncode, 0, e.stderr)
+            r = dyad(d, "install", str(arch), "--dwork", "156")      # the step that was refused before #228
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNotIn("locally modified or authored", r.stderr)
+            again = dyad(d, "install", str(arch))                    # CI greps ' 0 changes'
+            self.assertIn(" 0 changes", again.stdout, again.stdout + again.stderr)
+            core = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "install", str(d)],
+                                  capture_output=True, text=True, env=env(), cwd=PKG.parent)
+            self.assertEqual(core.returncode, 0, core.stderr)
+            self.assertIn(" 0 changes", core.stdout, core.stdout + core.stderr)
+        finally:
+            arch.unlink(missing_ok=True); shutil.rmtree(d, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
