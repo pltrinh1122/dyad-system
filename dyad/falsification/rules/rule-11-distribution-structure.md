@@ -341,3 +341,29 @@ unchanged; one sentence in a property. 11–6 `craft registry` and `install` cha
 (both owner 11; Rule-12 joins `craft registry`'s users), and Rules 11 and 12 read correctly with
 them. 11–14 no new dependency. 11–20 finding A5. 11–5, 11–7, 11–8, 11–9, 11–10, 11–13, 11–15, 11–16,
 11–18, 11–19 unaffected. Coherent, orthogonal, with A5 named. Disposition: see ledger #199.
+
+## Amendment — d-work #230 (2026-10-07, property 7's released-craft sentence)
+**Claim (row #170, opened from #166; recommended by #227's DAG and authorized by plan-`Y` 2026-10-07):**
+property 7 and the bundle guard fail a craft's `VERSION` that differs from its bundle row in either
+direction, so changing a *released* craft has no legal order: the craft-zone PR that bumps `VERSION` fails
+the guard (`'sysarch': bundle names 0.3.0, the tree has 0.3.1`), and the infra-zone PR that bumps the row
+first fails it the other way, while Rule-1 forbids one PR carrying both. #156 settled the *unreleased* half.
+Found again in #227, whose released sysarch craft pinned a test that blocked an incident guard.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A1 | The bump-only window lets a release go out with a stale bundle. | **Refuted** | A release is its own Operator `Y` (Ratification events). Once the craft's new tag exists, `(craft, live version)` is tagged, the exception no longer applies, and the guard fails again, so no tag can be cut against a row the tree contradicts. Tested: `test_row_left_behind_once_the_live_version_is_tagged_fails` and the end-to-end landing order. |
+| A2 | A warning is a weakened guard. | **Survives, scoped** | The tolerance is one direction (row behind, by semver), one state (live version untagged), and the row must name a version whose own tag exists. A row ahead of the tree, a row naming an untagged version, an unparseable version, and a row behind a tagged live version all still fail. It has the shape of #156's unreleased-craft warning, which has held since 2026-09-24. |
+| A3 | Tags are not fetched in every checkout, so "tagged" is unknowable. | **Confirmed as a limit, no looser than before** | With no tags read, no `(craft, row version)` is tagged, the exception never fires, and the strict form applies exactly as before. The pre-push path never fetches, so it keeps the strict form wherever its checkout lacks the tags. The amendment cannot weaken a checkout that cannot see tags. |
+| A4 | The drift guard (property 4's converse) would still fail the craft-zone PR: its tree differs from its tag. | **Refuted** | `check_drift` compares a tagged craft's tree to its tag only when `VERSION` is unchanged; a bumped `VERSION` has no tag yet and skips (`test_bumped_version_has_no_tag_yet_and_skips`). The two guards already agree on a bump. |
+| A5 | A craft that bumps and never gets its row stays warned forever. | **Survives, as a risk** | Visible on every `dyad check` and push as `warn [bundle] '<craft>': bundle names …, the tree has …`, the same visibility #156 A2 accepted. The release itself cannot proceed, per A1. |
+| A6 | The core craft (`dyad-operator`) is a component too. | **Survives** | Same rule: its tags are `dyad-operator-v*` (property 4), `tagged_versions` reads them, and `test_core_is_a_component_too` covers drift. The new rule has no component-specific branch. |
+
+**The order this enables:** craft-zone PR (tree plus `VERSION` bump; the guard warns), then the infra-zone PR
+(`BUNDLE.md` row), then a release only on its own `Y/N: release <tag>?`. No tag is cut by this d-work.
+
+Pairwise (Rule-5): 11–1 each PR stays one zone; the guard is infra corpus, unchanged. 11–2 no ratification event
+added or moved: a release stays its own `Y`. 11–3, 11–4 no block change; one sentence in property 7. 11–6 no new
+term. 11–7, 11–8, 11–9 unaffected. 11–12 the new branches carry fixture tests at the mapped path. 11–13, 11–14 no
+import. 11–15, 11–16 no phase or store change. 11–18, 11–19 no Operator command, no server. 11–20 no reference
+kind. Coherent, orthogonal. Disposition: see ledger #230.

@@ -104,7 +104,9 @@ dyad system without clashes or hand-editing.
    of the core's — a craft-only change bumps the bundle, never forcing an unrelated core bump. An
    unreleased craft (no `<craft>-vMAJOR.MINOR.PATCH` tag of its own, property 4) may be absent from
    the bundle until its first release, whose release adds its row; a released craft without a row
-   fails. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
+   fails. A released craft whose live `VERSION` has moved ahead of its tag may run ahead of its row,
+   which still names its last release, until the infra-zone PR that updates the row; the guard warns
+   meanwhile, and fails once the new version is itself tagged. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
    unprefixed form, the GitHub convention and the repo's one front door, built by sequencing
    property 5's one code path once per row (never a second build mechanism) and publishing every
    component's archive together. A system that wants only some components pins them individually by their own crafts'
@@ -174,6 +176,8 @@ adding any new craft had no order satisfying both Rule-1 (one zone per PR) and t
 the same record, amendment #156 (2026-09-24). Property 2 gains the core's registry row 2026-10-01
 (d-work #199, node N5 for backlog row #176): an operating system's push gate ran the core's whole
 suite over a tree it had installed unmodified, and only a recorded sha can show that it is; see the
-same record, amendment #199.
+same record, amendment #199. Property 7 gains the released-craft sentence 2026-10-07 (d-work #230,
+row #170): changing a released craft needs a craft-zone `VERSION` bump and an infra-zone row, and no
+order landed both; see the same record, amendment #230.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
