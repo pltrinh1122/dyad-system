@@ -761,6 +761,21 @@ def cmd_craft(a):
     """Rule-11 p5: the Tended-craft CLI lives in scripts/craft.py; this is dispatch only (S4)."""
     return craft_cli().main(a)
 
+def bundle_messages(msgs):
+    """Print the bundle guard's messages as Rule-11's runner prints every guard's — a
+    `warning:`-prefixed message is a warning, anything else a failure — and return the hard
+    ones. `cmd_bundle` had printed every message as `FAIL` and refused the build on any of
+    them, so #232's deliberate hold of two unreleased crafts (Rule-11 p7 permits an unreleased
+    craft to have no row) made `bundle check` exit 1 and `bundle build` refuse: the release
+    path was disabled by a warning (#241)."""
+    hard = [m for m in msgs if not m.startswith("warning:")]
+    for m in msgs:
+        if m.startswith("warning:"):
+            print(f"warn [bundle] {m.removeprefix('warning:').strip()}")
+        else:
+            print(f"FAIL [bundle] {m}", file=sys.stderr)
+    return hard
+
 def cmd_bundle(a):
     """Rule-11 p7: `check` runs the bundle guard by hand; `build [dir]` sequences the one
     distribution code path once per BUNDLE.md row (`cmd_build` for the core, `craft.cmd_export`
@@ -771,20 +786,17 @@ def cmd_bundle(a):
     bundle = dyadlib.load_guard("infra", "bundle")
     if a[0] == "check":
         version, rows, msgs = bundle.check_bundle(REPO)
-        for m in msgs:
-            print(f"FAIL [bundle] {m}", file=sys.stderr)
+        hard = bundle_messages(msgs)
         if not rows and not version:
             print("skip [bundle] no BUNDLE.md"); return 0
-        if not msgs:
+        if not hard:
             print(f"ok   [bundle] {len(rows)} components, v{version}")
-        return 1 if msgs else 0
+        return 1 if hard else 0
     out_dir = Path(a[1]) if len(a) > 1 else Path(".")
     version, rows, msgs = bundle.check_bundle(REPO)
     if not rows:
         print("refused: no BUNDLE.md", file=sys.stderr); return 2
-    if msgs:
-        for m in msgs:
-            print(f"FAIL [bundle] {m}", file=sys.stderr)
+    if bundle_messages(msgs):
         print("refused: bundle fails its check; not built", file=sys.stderr); return 1
     out_dir.mkdir(parents=True, exist_ok=True)
     craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
