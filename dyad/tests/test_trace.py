@@ -141,6 +141,25 @@ class TraceTests(unittest.TestCase):
         for leak in (SECRET, PROMPT, "check --evidence\"", "sleep 60"):
             self.assertNotIn(leak, out)
 
+    def test_delegated_share_counts_the_subagent_bucket_over_the_agent_partition(self):
+        """#254: the count that makes an undelegated d-work visible. The fixture delegates nothing, so its
+        share is 0.0% of the same agent-side figure the bottleneck line prints; a window whose only tool call
+        is an Agent call reports that call's share of the agent partition, never of the whole window."""
+        root, path = fixture()
+        out = tr.trace(7, root, [path])
+        self.assertIn("| delegated share | 0.0% (0 s of 110 s agent-side, 160 output tokens) | transcript |", out)
+        lines = [user(0, PROMPT, "u0"),
+                 tool(10, "a1", "Agent", "u1", "m1", prompt="draft the plan file"),
+                 result(70, "a1", "u2"),
+                 text(80, f"{SECRET}\nY/N: Done with #7 widget?", "u3", "m2"),
+                 user(100, "Y", "u4")]
+        root2, path2 = fixture(entries=ENTRIES[:1] + [("disposition", "2026-10-05", "Y done", "Y")], lines=lines)
+        out2 = tr.trace(7, root2, [path2])
+        self.assertIn("| subagent | agent | 60 | 60.0% |", out2)              # window 100 s: operator 20, subagent 60
+        self.assertIn("**Agent-side:** 80 s", out2)                            # subagent 60 + inference 20
+        self.assertIn("| delegated share | 75.0% (60 s of 80 s agent-side, 20 output tokens) | transcript |", out2)
+        self.assertNotIn(SECRET, out2)
+
     def test_no_transcript_gives_git_and_ledger_only(self):
         root, _ = fixture()
         out = tr.trace(7, root, [])
