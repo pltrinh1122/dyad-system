@@ -92,7 +92,10 @@ counts of each), then five sections in this order:
      table, its run never summed a second time.
 3. **Counts.** Commits (ledger-only among them) and merges, ledger and work (git); PRs created by head
    branch (`ledger-…` is a ledger PR) and merged, full-suite runs and guards-only push gates, tool calls and output tokens
-   (transcript, the window only).
+   (transcript, the window only). Last, the **delegated share** — the `subagent` bucket over the agent
+   partition, beside the output tokens of the same window: a share at 0% on a d-work that drafted heavily is
+   `delegation: plan-and-execute` not firing for work the preference covers (Rule-3 Scope, Rule-10's
+   concise-mode clause), which is what leaves a turn open long enough for a lost segment to cost it (#254).
 4. **Bottleneck.** The top three buckets by share; then `**Agent-side:** <n> s` — inference plus every
    mechanical kind, the Operator's partition excluded, because only that is what a change to the system can
    move — beside the median of every other trace in the store.

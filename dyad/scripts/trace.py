@@ -484,7 +484,7 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
         lines.append("| — | — | no event found |")
     lines.append("")
     # buckets
-    agent_side = None
+    agent_side = agent_ms = sub_ms = None
     lines += ["## Buckets", ""]
     if start is None or end is None or end <= start:
         lines += ["Absent: " + ("no transcript." if not paths else "no window (no anchored provenance entry before a Done question)."), ""]
@@ -504,6 +504,7 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
             lines += [f"Background launches ({len(bg)}), counted once — their run overlaps the buckets above and is not summed again: "
                       + ", ".join(f"{utc(b['ts'])[11:]} {b['name']} ({b['tkind']})" for b in bg) + ".", ""]
         agent_ms = sum(got[b] for b in PARTITIONS["agent"])
+        sub_ms = got["subagent"]
         agent_side = round(agent_ms / 1000)
         long = [(a, b, lab) for a, b, lab in segs if lab in PARTITIONS["agent"] and b - a >= LONG_GAP_S * 1000]
         if long:
@@ -542,6 +543,12 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
                   f"| output tokens | {sum(tokens.values())} | transcript |"]
     else:
         lines.append("| tool calls, tokens, PRs created | absent | no transcript window |")
+    if sub_ms is not None:   # d-work #254: the `subagent` bucket over the agent partition, beside the tokens it
+        # drafted. 0% on a token-heavy d-work is `delegation: plan-and-execute` not firing for work it covers
+        # (Rule-3 Scope, Rule-10's concise-mode clause) — the omission that leaves a turn open to a lost segment.
+        lines.append(f"| delegated share | {(100 * sub_ms / agent_ms if agent_ms else 0.0):.1f}% "
+                     f"({round(sub_ms / 1000)} s of {agent_side} s agent-side, {sum(tokens.values())} output tokens) "
+                     "| transcript |")
     lines.append("")
     # bottleneck
     lines += ["## Bottleneck", ""]
