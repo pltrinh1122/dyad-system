@@ -4,7 +4,7 @@
 twenty-three per-mode records #262–#284. Detects and counts; disposes nothing (frame: detect,
 don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
-**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 142 rows, latest 2026-10-10
+**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 144 rows, latest 2026-10-10
 
 ## Phase 0 — the survey that made this a full derivation
 
@@ -238,9 +238,25 @@ survey:
   the separator characters inside a quoted `grep -E` alternation and refused it as seven cells. Second
   authoring-side occurrence after row 99, which opened backlog **#171**, where it still stands.
 
+- **row 143** → mode **S**, a form typed from memory: the 23 child rows were opened with the
+  ledger's bare-id `refs` form instead of the `refs: parent #259` the play-book and this plan both
+  write out. Corrected on all 23 rows, `refs` being mutable where id and title are not. Third
+  instance of mode S inside this one d-work, after rows 140 and 142.
+- **row 144** → mode **M**, no legal order: plan #259 required one child row per mode, and Rule-3
+  says a decomposed parent's counter-prompt is asked only when every child is `done` or `blocked`.
+  All 23 are `backlog`, which is neither, so **#259 cannot reach its own Done question**. Recorded as
+  plan #259 revision 3 before any question was asked. The consequence is the same escape revision 2
+  used: PR #365 and PR #366 take their own merge `Y`, Part B's output lands, and #259 stays `planned`
+  until the Operator disposes the 23 modes.
+
 The child rows' titles name their counts "of the 2026-10-10 derivation over 140" and are immutable
-(Rule-16); these two rows are additions beyond that derivation, and D and R therefore hold ten and
-eight rows respectively as of this commit.
+(Rule-16); these four rows are additions beyond that derivation, so D, R, S and M hold ten, eight,
+five and twelve rows respectively as of this commit.
+
+One of the four is a fact about this exercise rather than about the ledger: following the play-book's
+own phase-1 prescription is what made the parent uncloseable. The play-book says to open a child row
+per mode and Rule-3 says the parent waits for all of them, and nothing reads either clause — mode M
+meeting mode Q, in the exercise written to find them.
 
 ## What the next derivation should look at first
 
