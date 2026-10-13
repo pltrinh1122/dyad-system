@@ -1,6 +1,8 @@
 # Incident mode W — the suite's environment leaked into the live repository
 
-*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`. d-work #259, 2026-10-10. 2 rows of 140.*
+*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`. d-work #259, 2026-10-10. 2 rows of 140 phase
+1 derived, plus 1 logged after it and assigned here by inference — 3 rows in all (the final
+section).*
 
 ## Definition
 The mechanism: a process the Agent's own gate spawns inherits an environment that re-points its
@@ -174,3 +176,18 @@ Where verification stopped: I did not push from a linked worktree to observe the
 variables live; the hook variables I relied on are the ones
 `dyad/tests/test_package.py:1153` records as observed under git 2.43.0, and the claim that
 `dyad/hooks/pre-push` strips nothing is read from its four lines, not from a live run.
+
+
+## Rows added after the derivation (1)
+
+Logged after phase 1's reconciliation and assigned to this mode **by inference**, not by the two-view
+derivation. The counts in this record's title, in child row #284's immutable title and in the index's
+modes table are the derivation's and do not move (Rule-16). It is the mode read in the other
+direction, and the Definition covers it only by symmetry: the two derived rows are the suite writing
+into the live repository, and this one is the live invocation's own config reaching into the suite.
+Both are one process inheriting an environment that re-points its git calls at a tree it was not
+asked about.
+
+| date | d-work | what happened | why this mode |
+|------|--------|---------------|---------------|
+| 2026-10-13 | #259 | the pre-push gate refused twice with 29 suite errors that no hand-run of the same suite could reproduce, because `git -c core.hooksPath` exports `GIT_CONFIG_PARAMETERS` to every child and all 29 fixture-repo commits inherited a hooks path relative to a scratch repo | one process inherits an environment that re-points its git calls, which is this mode read in the other direction. `GIT_VARS` drops four variables and none of the `GIT_CONFIG_*` family, so the one-command `-c` is not local to the command. It is also the mechanism row 123 lacked |

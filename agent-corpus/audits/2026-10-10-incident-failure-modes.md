@@ -6,8 +6,8 @@ don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
 **Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 146 rows, latest 2026-10-12
 
-The live ledger holds 152 rows when this line lands — 147 at the head this amendment was written
-against, plus the five this d-work's Part C appends — and the watermark deliberately stops at 146,
+The live ledger holds 153 rows when this line lands — 147 at the head this amendment was written
+against, plus the six this d-work's Part C appends — and the watermark deliberately stops at 146,
 the last contiguous row carrying a mode. Rows 141 to 146 arrived while phases 1, 2 and 4 ran and
 carry a mode assigned **by inference**, not by phase 1's two-view reconciliation: 141 to 144 in the
 delta section below, 145 and 146 in their own consequence cells, both mode R with child row #279.
@@ -274,8 +274,8 @@ other is named secondary — and it was not applied. Surfaced here, not resolved
 append-only and a third reading would only add to the count. It is excluded from mode Q's record
 below for that reason.
 
-Six further rows arrived after those four — rows 145, 146 and 147, and the five this d-work's Part C
-appends (rows 148 to 152). Each is classified in its own consequence cell, in the form rows 145 and
+Seven further rows arrived after those four — rows 145, 146 and 147, and the six this d-work's Part
+C appends (rows 148 to 153). Each is classified in its own consequence cell, in the form rows 145 and
 146 already use, naming its mode and the child row that disposes it, and each mode's own record now
 carries it:
 
@@ -298,8 +298,12 @@ carries it:
   done` before `trace --out`, read by no code, with `check_store` holding the state it would need.
 - **row 152** (2026-10-13, #259) → mode **R**, sub-shape *not stable*, with the new sub-shape that
   the mitigation for a non-stable key was itself held in non-durable state.
+- **row 153** (2026-10-13, #259) → mode **W** inverted: the mode is the suite's environment leaking
+  into the live repository, and this is the live push invocation's `-c` config leaking into the
+  suite, through a variable `GIT_VARS` does not drop. It is also the cause row 123 lacked. Child
+  row #284.
 
-So mode Q now holds 14 rows and mode R 12, counting the derivation's own and these additions; the
+So mode Q now holds 14 rows, mode R 12 and mode W 3, counting the derivation's own and these additions; the
 immutable child-row titles and the modes table above keep naming the derivation's 12 and 7.
 
 One of the four is a fact about this exercise rather than about the ledger: following the play-book's
