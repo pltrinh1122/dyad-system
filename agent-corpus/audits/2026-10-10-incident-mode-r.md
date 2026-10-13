@@ -1,6 +1,8 @@
 # Incident mode R — a derived key that does not identify
 
-*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`, d-work #259, 2026-10-10, 7 of 140 rows.*
+*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`, d-work #259, 2026-10-10, 7 of 140 rows phase
+1 derived, plus 5 logged after it and assigned here by inference — 12 rows in all (the final
+section).*
 
 ## Definition
 The mechanism: a module composes a key — an id, a name, a pattern, a branch, a cell boundary, a
@@ -220,3 +222,28 @@ warns" about; row 96 has an available mitigation (`DYAD_SESSION`) that no mechan
 store measured 64 files, 57 unnamed, today; row 139 is one day old and unmitigated. The mode stays
 **open** in the index, and the Agent neither closes it nor asserts it addressed (play-book Conduct,
 Rule-2).
+
+
+## Rows added after the derivation (5)
+
+Logged after phase 1's reconciliation and assigned to this mode **by inference**, not by the two-view
+derivation. The counts in this record's title, in child row #279's immutable title and in the index's
+modes table are the derivation's and do not move (Rule-16); these five sit beside them, and the
+Pattern and Mitigations sections above remain the seven's. Row 142 was assigned in the index's own
+delta section; the four after it name this mode in their own consequence cells. Appended as a final
+section rather than inserted beside the derived table, because live incident rows cite line numbers
+into the sections above.
+
+One further row of this d-work's Part C sits beside these and is **not** assigned here: row 150, the
+batch of traces whose comparison figures were computed against the store the same loop was still
+writing. Its mechanism is the index's named-but-not-raised candidate, *a measurement invalidated by
+the act of measuring*, left in U, I and R, which no child row owns; forcing it into R would claim a
+disposer it does not have.
+
+| date | d-work | what happened | why this mode |
+|------|--------|---------------|---------------|
+| 2026-10-10 | #259 | an incident row quoting a shell alternation was refused as seven cells, not five, and was rewritten with the pattern described in words | the same key as row 99 from the authoring side: `dyadlib.tables` splits on every raw separator character and honours no escape, so the character cannot stand for itself. Not the right dimension; backlog #171 is the standing row |
+| 2026-10-12 | #285 | two `dyad session touch` calls with `DYAD_SESSION` unset shed two new presence files instead of refreshing this session's own | `session_id()` mints a fresh id per call when the variable is unset, so an unconfigured session has no stable identity. Not stable, beside row 96 |
+| 2026-10-12 | #261 | `check --evidence` run through the main checkout's entrypoint from a worktree standing at another head printed a self-signed 0-FAIL block for the wrong tree | the judged tree is keyed on the invoked package's own directory rather than on the head the command was asked about. Not the right dimension |
+| 2026-10-12 | #260 | the previewed and the stored trace of one batched d-work differ by 221.6 times, one of three collapsing to 1m08s while two moved by 4m15s | which of two window-end branches runs is decided by whether the Done disposition anchors, and the anchor key is the strictly previous record, which a compaction summary defeats. Not able to match the form written, beside rows 93 and 127; backlog #286 |
+| 2026-10-13 | #259 | a third presence file was shed for this one session and committed to `main`, after the `DYAD_SESSION` mitigation had been in force for three days | the same unstable key as row 96, with the carrier of the mitigation now the mechanism: a per-invocation shell variable recorded nowhere in the corpus cannot survive a compaction. Not stable, beside rows 96 and 145 |
