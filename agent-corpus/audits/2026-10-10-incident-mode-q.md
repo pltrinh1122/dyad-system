@@ -1,6 +1,8 @@
 # Incident mode Q — an obligation no mechanism reads
 
-*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`, d-work #259, 2026-10-10; 12 of the 140 rows.*
+*Per-mode audit of `agent-corpus/audits/INCIDENTS.md`, d-work #259, 2026-10-10; 12 of the 140 rows
+phase 1 derived, plus 2 logged after it and assigned here by inference — 14 rows in all (the final
+section).*
 
 ## Definition
 The mechanism is that an obligation is written into the corpus — a preference value, a Rule clause, a
@@ -228,3 +230,22 @@ push both live in a hosted service that Rule-14 property 2 keeps observed and ne
 (`dyad/rules/RULE-14-system-infrastructure.md:37,56`); no check the kernel can run reaches them. The
 remaining six are what the candidate addresses, and only as visibility. Nothing here closes the mode,
 and I assert nothing about it being addressed.
+
+
+## Rows added after the derivation (2)
+
+Logged after phase 1's reconciliation and assigned to this mode **by inference**, not by the two-view
+derivation. The counts in this record's title, in child row #278's immutable title and in the index's
+modes table are the derivation's and do not move (Rule-16); these two sit beside them, and the
+Pattern and Mitigations sections above remain the twelve's. Appended as a final section rather than
+inserted, because live incident rows cite line numbers into the sections above. Row 144 is
+deliberately absent: its own consequence cell names this mode, its cause cell names L and the index's
+delta names M, and the index surfaces that three-way conflict rather than settling it.
+
+Both are a fourth sub-shape beside the three the Definition names: an obligation whose object is an
+artifact no code parses, or whose only mechanism reads a different property of the same store.
+
+| date | d-work | what happened | why this mode |
+|------|--------|---------------|---------------|
+| 2026-10-12 | #261 | the completion reply asking three batched Done questions reproduced neither the agent-side seconds nor the store median the trace play-book's Evidence clause names, recomposing as prose the figures the same turn had fetched 93 s earlier | the obligation is a play-book clause read through Rule-3's completion evidence, and its object is a reply: nothing in the tree parses a completion reply, so the V test — name the check that would have fired — yields none. Child row #278 |
+| 2026-10-13 | #222, #231, #232 | three preview-shaped trace files are permanently committed, each written by the Done turn that owed the trace proper, because `--out` wrote whatever `trace()` returned without consulting its own preview flag | the obligation is the play-book's Trigger step 2 order, `dwork state done` before `trace --out`, which no code reads; and `check_store` already holds the state the refusing predicate needs and discards it. Child row #278 |

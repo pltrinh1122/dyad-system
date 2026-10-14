@@ -4,7 +4,20 @@
 twenty-three per-mode records #262–#284. Detects and counts; disposes nothing (frame: detect,
 don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
-**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 144 rows, latest 2026-10-10
+**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 146 rows, latest 2026-10-12
+
+The live ledger holds 153 rows when this line lands — 147 at the head this amendment was written
+against, plus the six this d-work's Part C appends — and the watermark deliberately stops at 146,
+the last contiguous row carrying a mode. Rows 141 to 146 arrived while phases 1, 2 and 4 ran and
+carry a mode assigned **by inference**, not by phase 1's two-view reconciliation: 141 to 144 in the
+delta section below, 145 and 146 in their own consequence cells, both mode R with child row #279.
+Row 147 is grouped by nobody — a concurrent session logged it, and grouping it is the next survey's
+delta work rather than this amendment's — so the watermark stops before it. That is deliberate: the
+play-book's phase 0 no-ops phases 1 to 3 when the live count **equals** the watermark and runs the
+delta when it exceeds it, so a watermark of 152 would leave row 147 ungrouped for good, while 146
+makes the next survey re-read from 147 on. The rows Part C appends are ahead of the watermark for
+the same reason and name their own mode in their own cells; a concurrent session appending again
+leaves this line correct, because it claims nothing about any row after 146.
 
 ## Phase 0 — the survey that made this a full derivation
 
@@ -228,9 +241,10 @@ it). Each is a measurement taken today, not a figure quoted from a row.
 
 ## The delta this exercise logged itself
 
-The derivation covered rows 1–140. Executing phases 1 and 2 then logged two more rows in this same
-log, so the watermark above reads 142 and both are classified here rather than left for the next
-survey:
+The derivation covered rows 1–140. Executing phases 1 and 2 then logged four more rows in this same
+log, and all four are classified here rather than left for the next survey. (This paragraph read
+"two more rows" and "the watermark above reads 142" until d-work #259's revision-4 amendment; two of
+the four below arrived after it was written, and the watermark is now 146.)
 
 - **row 141** → mode **D**, the wrong object read: row 124's cause asserted from the half of the
   pipeline the Agent had written, without reading the half it had not.
@@ -250,8 +264,47 @@ survey:
   until the Operator disposes the 23 modes.
 
 The child rows' titles name their counts "of the 2026-10-10 derivation over 140" and are immutable
-(Rule-16); these four rows are additions beyond that derivation, so D, R, S and M hold ten, eight,
-five and twelve rows respectively as of this commit.
+(Rule-16); these four rows are additions beyond that derivation, so D, R, S and M held ten, eight,
+five and twelve rows respectively when this section was first written.
+
+Row 144 is classified three ways in the corpus and this amendment does not settle it: its own cause
+cell in the log says mode L, its consequence cell says mode Q with child #278, and this section says
+mode M. The play-book's phase 1 gives the rule — the mechanism that *started* it is primary and the
+other is named secondary — and it was not applied. Surfaced here, not resolved: the log is
+append-only and a third reading would only add to the count. It is excluded from mode Q's record
+below for that reason.
+
+Seven further rows arrived after those four — rows 145, 146 and 147, and the six this d-work's Part
+C appends (rows 148 to 153). Each is classified in its own consequence cell, in the form rows 145 and
+146 already use, naming its mode and the child row that disposes it, and each mode's own record now
+carries it:
+
+- **row 145** (2026-10-12, #285) → mode **R**, sub-shape *not stable*: a third presence file shed
+  for this one working tree, `session_id()` minting a fresh id per call with `DYAD_SESSION` unset.
+- **row 146** (2026-10-12, #261) → mode **R**, sub-shape *not the right dimension*: `check
+  --evidence` keying the tree it judges on the invoked entrypoint's own directory rather than on the
+  head it was asked about, and printing a self-signed 0-FAIL block for the wrong one.
+- **row 147** (2026-10-13, #287) → **no mode**. A concurrent session logged it; grouping it is the
+  next survey's delta work, and the watermark above stops before it for that reason.
+- **row 148** (2026-10-12, #260) → mode **R**, *not able to match the form written*: which of two
+  window-end branches runs, decided by whether the Done disposition anchors.
+- **row 149** (2026-10-12, #261) → mode **Q**: the trace play-book's Evidence clause, whose object
+  is a completion reply no code parses.
+- **row 150** (2026-10-12, #260, #261, #285) → **no mode assigned**. Its mechanism is the
+  named-but-not-raised candidate of this audit, *a measurement invalidated by the act of measuring*
+  (the Modes section above, left in U, I and R), and no child row owns that candidate. Left
+  unassigned rather than forced into R.
+- **row 151** (2026-10-13, #222, #231, #232) → mode **Q**: the play-book's own order of `dwork state
+  done` before `trace --out`, read by no code, with `check_store` holding the state it would need.
+- **row 152** (2026-10-13, #259) → mode **R**, sub-shape *not stable*, with the new sub-shape that
+  the mitigation for a non-stable key was itself held in non-durable state.
+- **row 153** (2026-10-13, #259) → mode **W** inverted: the mode is the suite's environment leaking
+  into the live repository, and this is the live push invocation's `-c` config leaking into the
+  suite, through a variable `GIT_VARS` does not drop. It is also the cause row 123 lacked. Child
+  row #284.
+
+So mode Q now holds 14 rows, mode R 12 and mode W 3, counting the derivation's own and these additions; the
+immutable child-row titles and the modes table above keep naming the derivation's 12 and 7.
 
 One of the four is a fact about this exercise rather than about the ledger: following the play-book's
 own phase-1 prescription is what made the parent uncloseable. The play-book says to open a child row
