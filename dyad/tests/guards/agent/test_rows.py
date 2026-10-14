@@ -8,8 +8,8 @@ import dyadlib
 m = dyadlib.load_guard("agent", "rows")
 
 def sh(*a, cwd): return subprocess.run(a, cwd=cwd, check=True, capture_output=True, text=True).stdout
-def row(id, title, state="open", disposed="", refs=""):
-    return dyadlib.format_row_file(dyadlib.Row(id, title, "d", state, disposed, refs))
+def row(id, title, state="open", disposed="", refs="", mode="explicit"):
+    return dyadlib.format_row_file(dyadlib.Row(id, title, "d", state, disposed, refs, mode))
 
 class Repo:
     def __init__(self):
@@ -48,7 +48,8 @@ class FenceTests(unittest.TestCase):
         self.r.write(self.R, row(1, "one", b)); h = self.r.commit("to b")
         return self.fails(base, h)
     def test_allowed_transition_per_source_state(self):
-        for a, b in [("open", "planned"), ("planned", "done"), ("blocked", "open"), ("backlog", "open"), ("open", "done")]:
+        for a, b in [("open", "planned"), ("planned", "done"), ("blocked", "open"), ("backlog", "open"), ("open", "done"),
+                     ("backlog", "archived"), ("done", "archived")]:   # #290: the board's drain
             with self.subTest(a=a, b=b): self.assertEqual(self.transition(a, b), [])
     def test_refused_transition_per_source_state(self):
         for a, b in [("open", "backlog"), ("planned", "backlog"), ("blocked", "done"), ("backlog", "done"), ("done", "open"), ("done", "planned")]:
@@ -73,6 +74,70 @@ class FenceTests(unittest.TestCase):
         sh("git", "checkout", "-q", "main", cwd=self.r.d); sh("git", "merge", "-q", "--no-ff", "-m", "merge", "feat", cwd=self.r.d)
         h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
         self.assertEqual(self.fails(self.base, h), [])
+
+class ModeFenceTests(unittest.TestCase):
+    """d-work #290: `mode` is append-only like id and title. A row is born in its mode or not at all —
+    `implicit`→`explicit` would revoke a mandate by an edit and `explicit`→`implicit` would grant one after
+    the Operator read the plan that bounds it. A row born `implicit` is born `open` carrying exactly one
+    entry `<date> Y plan (mandate #<id>)`, since implicit mode takes no disposition of its own."""
+    R = "agent-corpus/d-work/rows/1.md"
+    MANDATE = "2026-10-14 Y plan (mandate #290)"
+    def setUp(self):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write(self.R, row(1, "one")); self.base = self.r.commit("root")
+    def fails(self, before, after): return m.check_range(before, after, cwd=self.r.d)
+    def add(self, state="open", disposed=MANDATE, mode="implicit"):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", state, disposed, "parent #290", mode))
+        return self.fails(self.base, self.r.commit("accrete"))
+    def test_a_row_born_implicit_open_under_its_mandate_passes(self):
+        self.assertEqual(self.add(), [])
+    def test_a_row_born_implicit_as_backlog_fails(self):
+        out = self.add(state="backlog")
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("adds implicit-mode row file agent-corpus/d-work/rows/2.md in state backlog", out[0])
+        self.assertIn("born open", out[0])
+    def test_a_row_born_implicit_without_its_mandate_entry_fails(self):
+        for disposed in ("", "2026-10-14 Y plan", "2026-10-14 Y plan (mandate #290); 2026-10-14 Y done",
+                         "2026-10-14 Y backlog (mandate #290)", "2026-10-14 Y plan (mandate #290) and more"):
+            with self.subTest(disposed=disposed):
+                sh("git", "reset", "-q", "--hard", self.base, cwd=self.r.d)
+                out = self.add(disposed=disposed)
+                self.assertTrue(any("not one entry `<date> Y plan (mandate #<id>)`" in o for o in out), out)
+                self.assertTrue(all("agent-corpus/d-work/rows/2.md" in o for o in out), out)
+    def test_a_row_born_explicit_is_judged_as_before(self):
+        self.assertEqual(self.add(disposed="", mode="explicit"), [])       # #290 adds nothing to the explicit path
+    def test_mode_never_changes_after_the_commit_that_adds_the_row(self):
+        for a, b, why in (("implicit", "explicit", "never revoked by an edit"),
+                          ("explicit", "implicit", "never made implicit later")):
+            with self.subTest(a=a, b=b):
+                sh("git", "reset", "-q", "--hard", self.base, cwd=self.r.d)
+                self.r.write(self.R, row(1, "one", "open", self.MANDATE, "", a)); base = self.r.commit("born " + a)
+                self.r.write(self.R, row(1, "one", "open", self.MANDATE, "", b)); h = self.r.commit("rewrite mode")
+                out = self.fails(base, h)
+                self.assertEqual(len(out), 1, out)
+                self.assertIn(f"changes mode of row file {self.R} {a}→{b}", out[0]); self.assertIn(why, out[0])
+    def test_an_implicit_rows_own_state_change_passes(self):
+        self.r.write(self.R, row(1, "one", "open", self.MANDATE, "", "implicit")); base = self.r.commit("born implicit")
+        self.r.write(self.R, row(1, "one", "done", self.MANDATE + "; 2026-10-15 Y done", "PR #9", "implicit")); h = self.r.commit("done")
+        self.assertEqual(self.fails(base, h), [])
+    def test_a_mode_rewritten_resolving_a_merge_fails(self):
+        """The per-commit walk skips merges, so the merge is judged against both parents (#191's hole, #290's field)."""
+        self.r.write(self.R, row(1, "one", "open", self.MANDATE, "", "implicit")); born = self.r.commit("born implicit")
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("branch row")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", self.MANDATE, "", "implicit")); main_h = self.r.commit("planned on main")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "-s", "ours", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", self.MANDATE, "", "explicit"))   # the rewrite, hidden in the merge
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_transaction(self.r.d, main_h, h)
+        self.assertTrue(any("merge" in o and "changes mode" in o and "implicit→explicit" in o for o in out), out)
+        self.assertNotEqual(born, h)
+    def test_an_unparseable_mode_is_the_package_checks_report(self):
+        p = self.r.d / "agent-corpus" / "d-work" / "rows" / "2.md"
+        p.write_text(row(2, "two") + "mode: automatic\n")
+        self.assertTrue(any("not one of explicit implicit" in x for x in m.check_package(self.r.d)))
 
 class ContractTests(unittest.TestCase):
     def test_package_check_over_a_store(self):

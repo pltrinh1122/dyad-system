@@ -764,6 +764,97 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("d-work #32", stderr.getvalue())
         text = rows.joinpath("3.md").read_text()   # allocation still proceeds, from what it has locally
         self.assertIn("id: 3\n", text); self.assertIn("state: open\n", text)
+    # d-work #290: implicit mode — the accreted row an authorized plan already describes, at no Operator cost
+    def test_dwork_new_mandate_writes_an_implicit_row(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv, prs = dyadlib.load_guard("agent", "provenance"), dyadlib.load_guard("agent", "prs")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go ahead")      # the mandate
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_new(d, "the accreted row", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "3")
+        born = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual((born.state, born.mode, born.refs), ("open", "implicit", "parent #1"))
+        self.assertRegex(born.disposed, r"^\d{4}-\d{2}-\d{2} Y plan \(mandate #1\)$")         # one entry, no disposition of its own
+        self.assertTrue(rows.joinpath("3.md").read_text().endswith("mode: implicit\n"))
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, go ahead")])   # the mandate's own words, copied verbatim
+        self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")                    # the date they were given, which predates the row
+        self.assertEqual(e[0]["date"], born.opened)                                           # the heading is today: the copy is made today
+        self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5 by construction
+        self.assertEqual(prs.check("d-work #3", rows=[born]), [])                              # and the plan gate passes it at once
+        r = self.dwork_state(d, "3", "done", "-d", "Y done, with #1", "--said", "Y")           # its Done rides the mandate's
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).mode, "implicit")   # carried, never rewritten
+    def test_dwork_new_mandate_refuses_before_it_writes(self):
+        d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
+        rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")
+        cases = [(("three", "--mandate", "9"), "is no row"),
+                 (("three", "--mandate", "x"), "is not a number"),
+                 (("three", "--mandate", "1"), "carries no 'Y plan' disposition"),             # open, nothing disposed
+                 (("three", "--mandate", "5"), "holds no `disposition` entry noted 'Y plan'"),  # a row whose record is absent
+                 (("three", "--mandate", "5", "--backlog", "-d", "Y backlog", "--said", "Y"), "it takes no -d"),
+                 (("three", "--mandate", "5", "-d", "Y open", "--said", "Y"), "it takes no -d"),
+                 (("three", "--mandate", "5", "--prompt", "the words"), "it takes no -d")]
+        for args, msg in cases:
+            with self.subTest(args=args):
+                r = self.dwork_new(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
+        self.assertFalse(rows.joinpath("3.md").exists()); self.assertFalse((rows.parent / "provenance").exists())
+    # d-work #290: the retirement form — backlog or done → archived over k rows on one Operator question
+    def dwork_retire(self, d, *a):
+        env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))
+        return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "dwork", "retire", *a],
+                              cwd=d, env=env, capture_output=True, text=True)
+    def test_dwork_retire_archives_a_batch_on_one_disposition(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        for args in (("state", "1", "planned", "-d", "Y plan", "--said", "Y"), ("state", "1", "done", "-d", "Y done", "--said", "Y")):
+            self.assertEqual(self.dwork_state(d, *args[1:]).returncode, 0)
+        self.assertEqual(self.dwork_new(d, "a surfaced mode", "--backlog", "-d", "Y backlog", "--said", "Y").returncode, 0)
+        r = self.dwork_retire(d, "1", "3", "-d", "Y archive", "--said", "Y, archive them")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "archived #1 #3")
+        for rid in ("1", "3"):
+            with self.subTest(row=rid):
+                got = dyadlib.parse_row_file(rows.joinpath(f"{rid}.md").read_text())
+                self.assertEqual(got.state, "archived")
+                self.assertRegex(got.disposed.split("; ")[-1], r"^\d{4}-\d{2}-\d{2} Y archive \(batch #1,#3\)$")   # the set it was batched with
+                e = pv.parse(rec.joinpath(f"{rid}.md").read_text())[-1]
+                self.assertEqual((e["kind"], e["text"]), ("disposition", "Y, archive them"))    # the same words in every named row's record
+                self.assertIn("(batch #1,#3)", e["note"])
+                self.assertEqual(pv.check_record(rec / f"{rid}.md", row=got), [])               # property 5 holds for each
+        self.assertNotEqual(self.dwork_retire(d, "1", "-d", "Y archive", "--said", "Y").returncode, 0)   # archived is terminal
+    def test_dwork_retire_one_row_takes_no_batch_note(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        d, rows = self.dwork_repo()
+        self.assertEqual(self.dwork_new(d, "a surfaced mode", "--backlog", "-d", "Y backlog", "--said", "Y").returncode, 0)
+        r = self.dwork_retire(d, "3", "-d", "Y archive, superseded by #290", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        got = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual(got.state, "archived"); self.assertNotIn("(batch", got.disposed)       # one row is no batch
+    def test_dwork_retire_refuses_before_it_writes(self):
+        d, rows = self.dwork_repo(); before = {p.name: p.read_text() for p in rows.glob("*.md")}
+        rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: backlog\ndisposed: 2026-10-01 Y backlog\nrefs: \n")
+        before["5.md"] = rows.joinpath("5.md").read_text()
+        cases = [((), "usage: dwork retire"),
+                 (("5",), "give -d and --said"),
+                 (("5", "-d", "Y archive"), "--said"),
+                 (("5", "-d", "Y archive (batch #5)", "--said", "Y"), "composes `(batch #a,#b,#c)`"),
+                 (("5", "x", "-d", "Y archive", "--said", "Y"), "is not a number"),
+                 (("5", "9", "-d", "Y archive", "--said", "Y"), "no row 9"),
+                 (("5", "5", "-d", "Y archive", "--said", "Y"), "named twice"),
+                 (("1", "-d", "Y archive", "--said", "Y"), "#1 is open; dwork retire archives a row from backlog or done"),
+                 (("5", "1", "-d", "Y archive", "--said", "Y"), "#1 is open"),                  # the whole set is judged first
+                 (("5", "-d", "Y archive; and more", "--said", "Y"), "contains ';'"),
+                 (("5", "--prompt", "the words"), "does not take --prompt")]
+        for args, msg in cases:
+            with self.subTest(args=args):
+                r = self.dwork_retire(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual({p.name: p.read_text() for p in rows.glob("*.md")}, before, "nothing written")
+        self.assertFalse((rows.parent / "provenance").exists())
     def test_dwork_state_accepts_open_to_planned(self):
         d, rows = self.dwork_repo()
         r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")

@@ -57,9 +57,27 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 its provenance record: the Operator's words verbatim, a `prompt`
                                 entry from --prompt, a `disposition` entry from --said (Rule-7).
                                 -d needs --said; --backlog needs -d (Rule-3: a disposition opens it)
+  dyad dwork new <title> [refs] --mandate <id>
+                                the accreted row an authorized plan already describes (implicit mode,
+                                d-work #290): state open, `mode: implicit`, the one entry
+                                `<date> Y plan (mandate #<id>)`, and entry 1 of its record the
+                                mandate's own authorizing words copied verbatim, noted
+                                `mandate #<id>, <the mandate's own date>` (Rule-7 property 4). It takes
+                                no disposition of its own, so --mandate refuses -d, --said, --prompt
+                                and --backlog, and refuses a target that is no row or carries no
+                                `Y plan`. refs defaults to `parent #<id>`
   dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p> [--relayed-via <session>]] [-r refs]
                                 change state / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191)
+  dyad dwork retire <id>... -d text --said[-file] <s>
+                                the retirement form (Rule-3 `archived`, d-work #290): backlog or done
+                                → archived over k rows in one call, one Operator question behind it.
+                                -d and --said are given once for the whole set and the batch suffix
+                                `(batch #a,#b,#c)` is composed from the ids named, so every row's
+                                entry reads `<date> <d> (batch #a,#b,#c)` and every record gains the
+                                same words (Rule-3 Batch disposition). Every refusal — an unknown id,
+                                a state the table cannot archive from, a repeated id — precedes the
+                                first write
   dyad dwork list [--state <s>] [--craft <c>]
                                 rows from the row store (Rule-16), one `#<id> [<state>] <title>`
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
@@ -821,10 +839,11 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft")
+DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate")
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
-    "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via"}, {"--backlog"}, 3),
+    "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
     "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via"}, set(), 3),
+    "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
     "list": ({"--state", "--craft"}, set(), 1)}
 
 def dwork_args(a):
@@ -894,6 +913,32 @@ def append_provenance(rid, entries, today, fresh=False):
     path.write_text(body, encoding="utf-8")
     return path
 
+def mandate_words(rows, raw):
+    """The mandate's own authorizing words and the date they were given: the *last* `disposition` entry of
+    `<instance>/d-work/provenance/<id>.md` whose note holds `Y plan` — last, because a re-plan supersedes an
+    earlier authorization and the live one is what an accreted row stands on (d-work #290). Every refusal is
+    made here, before `dwork new` writes anything: a target that is no row, one whose `disposed` holds no
+    `Y plan` (the same substring test the plan gate makes, `guards/agent/prs.py`; its unreliability on free
+    text is inherited, and named in plan #290), and one whose record holds no such entry — there being then
+    no Operator words to copy, which Rule-7 property 4 requires and property 3 forbids inventing later."""
+    if not raw.isdigit():
+        sys.exit(f"refused: --mandate {raw!r} is not a number")
+    mid = int(raw)
+    row = rows.get(mid)
+    if row is None:
+        sys.exit(f"refused: --mandate #{mid} is no row; a mandate stands on a d-work this ledger holds")
+    if "Y plan" not in row.disposed:
+        sys.exit(f"refused: --mandate #{mid} carries no 'Y plan' disposition, so no mandate stands on it (Rule-3 plan gate)")
+    import dyadlib
+    pv = dyadlib.load_guard("agent", "provenance")
+    path = pv.store(REPO) / f"{mid}.md"
+    es = pv.parse(path.read_text(encoding="utf-8")) if path.is_file() else []
+    cands = [e for e in es if e["kind"] == "disposition" and "Y plan" in e["note"]]
+    if not cands:
+        sys.exit(f"refused: #{mid}'s record holds no `disposition` entry noted 'Y plan'; there are no Operator "
+                 f"words to copy, and Rule-7 property 3 forbids writing them now")
+    return mid, cands[-1]["text"], cands[-1]["date"]
+
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
@@ -911,7 +956,7 @@ def cmd_dwork(a):
         extra = sorted((set(vals) - takes) | (bare - flags))
         if extra:
             sys.exit(f"refused: dwork {verb} does not take {' '.join(extra)}")
-        if len(pos) > most:
+        if most is not None and len(pos) > most:   # #290: `retire` declares None — k ids, an unbounded count
             sys.exit(f"refused: dwork {verb}: unexpected argument(s) {' '.join(pos[most:])!r}")
     d = vals.get("-d")
     if d is not None and ";" in d:
@@ -940,6 +985,18 @@ def cmd_dwork(a):
             # d-work #133: the title is the first argument after `new`; a flag there became rows #129-#134's title
             sys.exit(f"refused: usage: dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] … | --said[-file] …), the verb first")
         backlog = "--backlog" in bare
+        mandate, mode = vals.get("--mandate"), dyadlib.DEFAULT_MODE
+        if mandate is not None:
+            # #290: implicit mode. The row takes no disposition of its own — its one entry is the mandate's,
+            # and its record's entry 1 is the mandate's own words, copied with a note that discloses that they
+            # predate the row (Rule-7 property 4, parallel to the relayed prompt already there).
+            if backlog or d is not None or prompt is not None or said is not None:
+                sys.exit("refused: --mandate carries the mandate's own disposition (implicit mode, Rule-3); "
+                         "it takes no -d, --said, --prompt or --backlog — a row born backlog carries no PR "
+                         "and moves only on the Operator's prompt")
+            mid, mwords, mdate = mandate_words(rows, mandate)
+            fence_for("disposition", mwords)
+            entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], "implicit"
         if backlog and d is None:
             sys.exit("refused: --backlog opens a row by disposition (Rule-3); give -d and --said")
         if not entries:
@@ -956,7 +1013,11 @@ def cmd_dwork(a):
         disposed = f"{today} {d}" if d is not None else ""
         if len(pos) > 2 and "-r" in vals:
             sys.exit("refused: refs given twice, as an argument and with -r")
-        r = dyadlib.Row(rid, title, today, state, disposed, vals.get("-r", pos[2] if len(pos) > 2 else ""))
+        refs = vals.get("-r", pos[2] if len(pos) > 2 else "")
+        if mandate is not None:
+            disposed = f"{today} Y plan (mandate #{mid})"
+            refs = refs or f"parent #{mid}"   # the mandate is the row's parent; `row.refs->row` resolves it (Rule-20)
+        r = dyadlib.Row(rid, title, today, state, disposed, refs, mode)
         try:   # the transition check (dyadlib.require_transition, #203) runs before either write
             dyadlib.write_row(REPO, r, None, first=lambda: append_provenance(rid, entries, today, fresh=True))
         except dyadlib.TransitionError as e:
@@ -972,12 +1033,53 @@ def cmd_dwork(a):
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
-        new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs)
+        new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
         try:   # an unknown state or a transition outside Rule-16's table is refused here, before either write (#203)
             dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None)
         except dyadlib.TransitionError as e:
             sys.exit(str(e))
         print(f"{rid}: {state}"); return 0
+    if verb == "retire":
+        # #290: the retirement form. `archived` is the board's one terminal exit and had been used 0 times in
+        # 280 rows, because the table gave `backlog` only `open`: 75 rows could not be retired without being
+        # worked. One Operator question (`Y/N: archive #a, #b, … #k?`) stands behind one call, so the k rows
+        # get one disposition — its words written into every named row's record, as Rule-3's batch clause
+        # already prescribes for a plan or a Done batch — and the batch suffix is composed from the ids named
+        # rather than typed k times (the error this instance has made four times: `;` in the entry text).
+        ids = pos[1:]
+        if not ids:
+            sys.exit("refused: usage: dwork retire <id>... -d text --said[-file] <s>")
+        if d is None or said is None:
+            sys.exit("refused: dwork retire records one Operator disposition over the rows it names; give "
+                     "-d and --said[-file] (Rule-3 Batch disposition, Rule-7)")
+        if "(batch" in d:
+            sys.exit("refused: -d carries a batch note; dwork retire composes `(batch #a,#b,#c)` from the ids named")
+        seen, targets = set(), []
+        for x in ids:
+            if not x.isdigit():
+                sys.exit(f"refused: id {x!r} is not a number")
+            rid = int(x)
+            if rid in seen:
+                sys.exit(f"refused: id #{rid} named twice; one disposition writes one entry into one row")
+            seen.add(rid)
+            if rid not in rows:
+                sys.exit(f"refused: no row {rid}")
+            src = rows[rid].state
+            if "archived" not in dyadlib.TRANSITIONS.get(src, frozenset()):
+                # the table decides what may be archived (Rule-16), read as data so adding a source state needs
+                # no edit here. Membership, not `require_transition`: that allows a same-state edit, and an
+                # already-`archived` row must not collect a second retirement entry.
+                sys.exit(f"refused: #{rid} is {src}; dwork retire archives a row from "
+                         f"{' or '.join(sorted(s for s, t in dyadlib.TRANSITIONS.items() if 'archived' in t))} (Rule-16)")
+            targets.append(rows[rid])
+        note = d if len(targets) == 1 else f"{d} (batch {','.join(f'#{t.id}' for t in targets)})"
+        fence_for("disposition", said)
+        for t in targets:
+            new = dyadlib.Row(t.id, t.title, t.opened, "archived",
+                              (t.disposed + "; " if t.disposed else "") + f"{today} {note}", t.refs, t.mode)
+            dyadlib.write_row(REPO, new, t.state,
+                              first=lambda rid=t.id: append_provenance(rid, [("disposition", said, note)], today))
+        print(f"archived {' '.join(f'#{t.id}' for t in targets)}"); return 0
     if verb == "list":
         state, craft = vals.get("--state"), vals.get("--craft")
         if state is not None and state not in dyadlib.STATES:

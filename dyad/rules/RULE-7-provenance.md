@@ -52,7 +52,13 @@ built on.
    text lives in the plan, the row, the record and the incident log, each already owned. An
    Operator prompt relayed by another agent (Rule-3, Intake) is still an Operator's words: entered
    verbatim as the message carried it, the entry note `relayed via <session>`; the relaying agent's
-   own words are never entered — a defect's observation stays in the plan file (#34).
+   own words are never entered — a defect's observation stays in the plan file (#34). An **accreted
+   row**'s entry 1 (Rule-3, Scope) is still this Operator's words: the plan-`Y` of the mandate the
+   row is accreted under, entered verbatim as the Operator gave it to that mandate, the entry note
+   `mandate #<id>, <the mandate's own date>` — the id because the words were given on another row,
+   and the date because the writer stamps the day it writes, so without it the record misdates the
+   Operator. The note is what discloses that the words predate the row they open; the Agent's own
+   account of why the row exists stays in the mandate's plan file (#290).
 5. **Checked against the row.** The `disposition` entries of a record correspond one-to-one, in
    order, with the entries of its row's `disposed` column; a mismatch is a failing check, so a
    dropped or invented disposition is visible without reading the chat. A row the instance lists as
@@ -104,6 +110,12 @@ relayed-prompt sentence 2026-09-16 (d-work #34, Rule-3 Intake). Enforcement spli
 transaction check that fails the gap where it is born and a state check that fails against the
 instance's legacy list, replacing `SINCE_ID` (an id of an earlier ledger that had come to warn on
 unrelated rows and to exempt rows holding dispositions); property 5 gains the legacy sentence
-2026-09-29 (d-work #191); see the same record, amendment #191.
+2026-09-29 (d-work #191); see the same record, amendment #191. Property 4 gains the mandate
+sentence 2026-10-14 (d-work #290, Rule-3 Scope): a row born under another row's plan-`Y` has to
+hold that `Y`'s words to satisfy property 5, and the 27 rows already carrying an inherited
+authorization carried it in two ad-hoc note forms — #96 and #97 as `Y plan (named in plan 94.md,
+deferred)`, #240, #257 and #262–#284 as `Y backlog (… from #N's plan-Y)` — neither of which
+disclosed the day the Operator's words were given, which the writer stamps as today; see the same
+record, amendment #290.
 
 Set: System Requirements.

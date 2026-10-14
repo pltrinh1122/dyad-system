@@ -20,7 +20,11 @@ a branch replayed onto `main`: a PR merge (`--no-ff`) lands commits this fence, 
 fenced here, each of its own commits as `main` would fence it (`check_ledger_branch`). On both, every `disposed`
 entry a range *adds* must have the entry shape `<YYYY-MM-DD> <Y|N>[ <text>]` with balanced
 parentheses (`check_disposed`, d-work #133): a `;` inside disposition text splits one entry into
-two, and nothing judged the shape before (#67, #100). Entries already present are never re-judged. The append-only rule of the run-book event store
+two, and nothing judged the shape before (#67, #100). Entries already present are never re-judged. A row's
+`mode` (dyadlib.OPTIONAL_FIELDS, d-work #290) is append-only in the same way: it never changes after the
+commit that adds the row, in either direction, so a mandate is neither revoked nor granted by an edit; and a
+row born `implicit` is born `open` carrying exactly one `disposed` entry `<date> Y plan (mandate #<id>)`,
+since implicit mode takes no disposition of its own and a `backlog` row can carry no PR. The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
   rows.py <before> <after>          the main fence over a pushed range (rows and events)
@@ -37,7 +41,12 @@ ENTITY, CORPUS, TRANSACTION = "row", "agent", True
 NAME, OWNER = "d-work row file", "Rule-3 (content), Rule-16 (store)"
 FIELDS = dyadlib.FIELDS
 INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]   # crafts/syseng/rules/invariants.md
+# #290: `mode` is not asserted here. `crafts/sysarch/tests/test_project_entities.py` pins this guard's
+# INVARIANTS names to exactly the one above and this card's fields to exactly `dyadlib.FIELDS`, so the two
+# facts — `mode` is a Row field, and FIELDS and OPTIONAL_FIELDS are disjoint — are `dyadlib`'s own invariants
+# (`row-fields-match-dataclass`, `row-optional-fields-disjoint`), which the runner's pass runs all the same.
 ENTRY = re.compile(r"\d{4}-\d{2}-\d{2} [YN](?: |$)")   # Rule-3 Ledger: `<date> <Y|N> <plan|done|merge #n|reason>`
+MANDATE = re.compile(r"\d{4}-\d{2}-\d{2} Y plan \(mandate #\d+\)$")   # the one entry an implicit-mode row is born with (Rule-3, #290)
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 def git(*a, cwd, stderr=None): return subprocess.check_output(["git", *a], cwd=cwd, text=True, stderr=stderr)
@@ -91,6 +100,38 @@ def disposed_problems(path: str, before: str, after: str, label: str) -> list[st
             f"parentheses — a `;` inside disposition text splits one entry in two (Rule-3 Ledger)"
             for e in added if not ENTRY.match(e) or e.count("(") != e.count(")")]
 
+# ---- countersign mode (d-work #290)
+def mode_changed(path: str, before, after, label: str) -> list[str]:
+    """A row's `mode` never changes after the commit that adds the row. `implicit`→`explicit` would revoke a
+    mandate by an edit — the escalate edge is a disposition on the row, not a rewrite of this field — and
+    `explicit`→`implicit` would grant one after the Operator read the plan that bounds it. A row is born in
+    its mode or not at all."""
+    if before.mode == after.mode:
+        return []
+    why = ("a mandate is never revoked by an edit; the escalate edge is a disposition on the row"
+           if before.mode == "implicit" else
+           "a row is born implicit under its mandate, never made implicit later")
+    return [f"FAIL [main-fence]: {label} changes mode of row file {path} {before.mode}→{after.mode} "
+            f"(Rule-3: {why})"]
+
+def born_implicit_problems(path: str, new, label: str) -> list[str]:
+    """What an added `implicit`-mode row must look like: born `open`, since a `backlog` row carries no PR and
+    moves only on the Operator's own prompt (Rule-3); and carrying exactly one `disposed` entry
+    `<date> Y plan (mandate #<id>)`, since implicit mode is authorized by one mandate and takes no
+    disposition of its own. Anything else is the shape no plan-`Y` covers."""
+    if new.mode != "implicit":
+        return []
+    fails, es = [], entries(new.disposed)
+    if new.state != "open":
+        fails.append(f"FAIL [main-fence]: {label} adds implicit-mode row file {path} in state {new.state} "
+                     f"(Rule-3: an implicit-mode row is born open — a backlog row carries no PR and moves "
+                     f"only on the Operator's prompt)")
+    if len(es) != 1 or not MANDATE.match(es[0]):
+        fails.append(f"FAIL [main-fence]: {label} adds implicit-mode row file {path} with disposed "
+                     f"{new.disposed!r}, not one entry `<date> Y plan (mandate #<id>)` (Rule-3: implicit "
+                     f"mode is authorized by one mandate and takes no disposition of its own)")
+    return fails
+
 def check_disposed(root: Path, base: str, head: str) -> list[str]:
     """`disposed_problems` over every row file base..head changes, as a whole diff (a branch)."""
     prefix = f"{os.environ.get('DYAD_INSTANCE', 'agent-corpus')}/d-work/rows/"
@@ -141,6 +182,7 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
             if not dyadlib.allowed(before.state, after.state):
                 how = "leaves the table" if after.state not in dyadlib.STATES else "regresses"
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
+            fails += mode_changed(path, before, after, label)
             fails += disposed_problems(path, before.disposed, after.disposed, label)
         elif st.startswith("A"):
             try:
@@ -149,6 +191,7 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} that does not parse"); continue
             if new.state not in dyadlib.NEW_STATES:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} in state {new.state} (not one of {' '.join(sorted(dyadlib.NEW_STATES))})")
+            fails += born_implicit_problems(path, new, label)
             fails += disposed_problems(path, "", new.disposed, label)
     return fails
 
@@ -207,6 +250,8 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: merge {label} changes id or title of row file {path}")
             elif before.state != after.state and not dyadlib.allowed(before.state, after.state):
                 fails.append(f"FAIL [main-fence]: merge {label} row file {path} state regresses {before.state}\u2192{after.state} against parent {par[:9]}")
+            elif before.mode != after.mode:   # #290: a mode rewritten while resolving a merge is the same hole #191 closed for state
+                fails.append(f"FAIL [main-fence]: merge {label} changes mode of row file {path} {before.mode}\u2192{after.mode} against parent {par[:9]}")
     return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
@@ -252,8 +297,12 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
                "state": f"{' | '.join(sorted(dyadlib.STATES))}; new rows: {' | '.join(sorted(dyadlib.NEW_STATES))}",
                "disposed": "`<date> <Y|N> <plan|done|merge #n|reason>` entries joined by `;` (Rule-3)", "refs": "`#<id>`, `parent #<id>`, `children #a–#b`, `PR #n` (Rule-3)"}
     rel = dyadlib.rows_dir(root); rel = rel.relative_to(root) if rel.is_relative_to(root) else rel
+    # #290: the card lists FIELDS only. `mode` (dyadlib.OPTIONAL_FIELDS) is named in the note instead, because
+    # the entities projector's contract reads field names out of parser constants it knows and the sysarch
+    # craft's tests pin this card to `dyadlib.FIELDS`; giving OPTIONAL_FIELDS a card is that craft's own d-work.
     return {"store": f"{rel}/<id>.md", "parser": "`dyadlib.parse_row_file` / `read_rows`", "observed": len(rows),
-            "note": f"append-only; id and title immutable; transitions (`dyadlib.TRANSITIONS`): {trans}",
+            "note": f"append-only; id, title and mode immutable; optional `mode` ({' | '.join(sorted(dyadlib.MODES))}, "
+                    f"written only when not `{dyadlib.DEFAULT_MODE}`); transitions (`dyadlib.TRANSITIONS`): {trans}",
             "fields": [(f, types[f], allowed.get(f, ""), True, str(getattr(ex, f)) if ex else "", "dyadlib.FIELDS") for f in FIELDS]}
 
 def main(argv):

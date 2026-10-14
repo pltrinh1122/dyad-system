@@ -27,10 +27,16 @@ files and almost never merge.
   (id, title, opened, state, disposed, refs). `LEDGER.md` is a rendered view
   (`package.py ledger`), untracked. The pattern this instantiates: `crafts/sysarch/rules/stores.md`.
 - State never regresses. Transitions are exactly: open → planned, blocked, done;
-  planned → open, blocked, done; blocked → open; backlog → open; done → archived; archived → none
-  (`dyadlib.TRANSITIONS`; a new row starts `open` or `backlog`, `dyadlib.NEW_STATES`). The
-  fence refuses any other transition on `main`, `package.py dwork state` locally; a done
-  d-work is never reopened — a new row refs it; `archived` (Rule-3) is its one further step, itself terminal (#37).
+  planned → open, blocked, done; blocked → open; backlog → open, archived; done → archived;
+  archived → none (`dyadlib.TRANSITIONS`; a new row starts `open` or `backlog`,
+  `dyadlib.NEW_STATES`). The fence refuses any other transition on `main`,
+  `package.py dwork state` locally; a done d-work is never reopened — a new row refs it;
+  `archived` (Rule-3) is its one further step, itself terminal (#37). `backlog → archived` is the
+  board's only other exit: a row the Operator never asked for is retired by the disposition that
+  names it (Rule-3's retirement form) instead of being worked to `done` first (#290).
+- A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
+  Scope). Optional means absent is `explicit`, so every row written before the field existed reads
+  correctly and nothing is migrated; a row that carries it never loses it.
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,
@@ -56,6 +62,14 @@ files and almost never merge.
   session past the stale window, or one that ended without a clean write, is never a guard
   failure — a reader judges freshness from `seen`, and may cross-check the harness's own live
   session directory for whether the name is still active.
+- **A plan-less row is invisible to the `files` union.** `sessions.touch_from_open_rows`
+  (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of this session's
+  `open` and `planned` rows; an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
+  phase 2), so it appears in `rows` and contributes nothing to `files`. That is a reduction in
+  exactly the coverage this store was built for — two sessions on *different* rows about the *same
+  file* — and it is stated, not fixed here: those files are named in the mandate's own plan file,
+  and reading a child's files through its `refs: parent #N` is the follow-on #290's plan names,
+  not a mechanism this Rule yet has.
 - Before writing a *new* plan file, the Agent reads every other session's presence file and, if
   its `files` set overlaps the new plan's own touched files, states the overlap in the plan's
   falsification section as a finding — never a guard FAIL; the judgment of whether it matters
@@ -75,5 +89,9 @@ Store bullets on id allocation, hand edits, the append-only fence and phase-orde
 2026-09-14 (#185): a live cross-session near-miss — two sessions' rows both touching one guard
 module, caught only because a peer chose to message first — falsified the claim that a session can
 tell, from the corpus alone, what another concurrent session is currently working; survivor above.
+Store gains `backlog → archived` and the optional `mode` field, and Presence the plan-less-row
+sentence, 2026-10-14 (d-work #290): `archived` had been used 0 times in 280 rows while 75 sat in
+`backlog` with one successor each, a 5.4% drain, and a row accreted under another row's mandate
+carries no plan file for the `files` union to read; see the same record, amendment #290.
 
 Set: System Requirements.
