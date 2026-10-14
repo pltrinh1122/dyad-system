@@ -12,12 +12,13 @@ defines what each value means.
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | plan-and-execute | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
-| batch-disposition-mode | on-ignore | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
+| batch-disposition-mode | always | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | agent | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case, #23) |
 | concise-mode | on | `off` \| `on` | Rule-10 (reply form), Rule-3 (what the reply carries) |
 | host-path | workstation-corpus | a repo-relative directory | Rule-1 (host row of the zone table), Rule-14 (instance contribution) |
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
+| accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -26,7 +27,14 @@ defines what each value means.
   - `with-done` — the completion counter-prompt names the d-work's unmerged PR(s). The
     Done-`Y` is the Operator's verification that the output matches intent; the Agent then
     merges as clerical execution. Two `Y`s per d-work: plan and Done. A PR whose d-work is
-    *not* yet done still needs its own merge `Y`.
+    *not* yet done **waits for that d-work's Done-`Y`**, which names it: the Agent holds it,
+    rebases it as `main` moves, never merges `main` into it, and reports the wait and the rebase
+    count in the completion evidence. The Operator is not asked about a merge — the Done-`Y`
+    verifies the output as it stands in the PR, before merge, which is what Rule-3's completion
+    clause exists for. The hold has a price, and the protocol for it is the play-book's: a PR
+    touching a tail-append file is cut narrow and landed first. Decided in d-work #290 after two
+    live instances of the price — PR #355, a merge ratified on 2026-10-08 that never ran, and
+    PR #371, clean for two days and conflicted by a concurrent session's merge within the hour.
 
 - `import-licenses` — licenses under which code may be imported into the package (it is
   redistributed under Rule-11). Tools merely invoked are not subject to it (Rule-14 rows).
@@ -75,6 +83,25 @@ defines what each value means.
     answered in the same reply under the batch queue. Determined in d-work #113: delegation
     detects nothing sooner — it fences execution from the plan-`Y` structurally and frees the
     Agent; that is what is bought.
+- `accretion` — whether a row the Agent opens *while executing another row* needs its own
+  dispositions, or inherits them. An **accreted row** is one the Agent brought into being
+  mid-execution rather than one the Operator prompted for; 117 of this instance's 280 rows are
+  such rows (d-work #290's audit).
+  - `explicit` — as before this preference: the accreted row needs its own opening disposition,
+    its own plan-`Y`, and its own Done-`Y`.
+  - `implicit` — a row whose existence the **authorized plan already describes**, inside the
+    *mandate scope* that plan states, is born `open` under that plan-`Y` and takes no disposition
+    of its own; its Done rides the mandate's Done-`Y`, which names it, and the completion evidence
+    lists every row accreted under it. Anything the mandate scope does not name returns to
+    `explicit` and is asked: a destructive host action (Rule-8 keeps its own counter-prompt), a
+    release (Rule-11), a Rule-3 Intake (its words are another Operator's, Rule-7 property 4), a
+    preference change, or any mutation outside the plan. This is `crafts/countersign/`'s
+    **implicit mode** countersigned by a **mandate**, adopted rather than coined (Rule-13
+    property 1); in that craft's own classification (`crafts/countersign/rules/interaction.md` §5)
+    it is an **authority preference** — a standing countersignature that authorizes a class of act
+    — where `concise-mode`, `batch-disposition-mode`, `merge-disposition` and `delegation` are
+    **form preferences**, which authorize nothing.
+
 - `host-path` — where this system keeps its host and operating records (change log, ops scripts,
   run-books, its own operating manifest rows `INFRASTRUCTURE.md`); the host row of the zone table
   is `<host-path>/*` (Rule-1). dyad-system: `workstation-corpus` (d-work #175).
