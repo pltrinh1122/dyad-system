@@ -8,7 +8,8 @@ referenced, never defined, here. Craft terms are defined in `crafts/<craft>/voca
 and referenced here by craft name (the sysarch craft's: `projection`, `projector`, `surface`,
 `library`, `reference`, `resolver`, `guard contract`, #160; the sysadmin craft's: `read-only`, `reversible`, `destructive`,
 `change log`, `undo`, `ops script`, `postcondition`, `supervisor`, `run-book`, `health command`,
-`run-book command`, `event`, `role`, `scope`; #155).
+`run-book command`, `event`, `role`, `scope`; #155; the countersign craft's: `mandate`,
+`implicit mode`, `explicit mode`, `basis`, `delegate edge`, `escalate edge`, `amend`, #290).
 
 | term | definition | owner | used by |
 |------|------------|-------|---------|
@@ -36,6 +37,8 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | Done-Y | the Operator's `Y` to a completion counter-prompt; verifies the output against intent and, under `with-done`, ratifies the named merges | 3 | 2 3 |
 | counter-prompt | a one-line `Y/N:` question the Agent asks; the Operator's answer is a disposition | 3 | 2 3 |
 | intake | a candidate d-work carried by another agent's message — a defect as an observation with evidence, or an enhancement with its Operator's verbatim prompt behind it; opens nothing until the Operator disposes | 3 | 3 7 |
+| accreted row | a row the Agent opens while executing another, inside the mandate scope its authorized plan states: born `open` under that plan-`Y`, carrying no disposition of its own, its Done riding the mandate's Done-`Y`, which names it; the countersign craft's implicit mode under a mandate, adopted rather than coined | 3 | 2 3 7 15 16 |
+| mandate scope | what a plan states if it is to accrete at all: a rule for the class of row it will open and a ceiling on how many; a plan stating none accretes nothing, and a row outside it returns to explicit mode and is asked | 3 | 2 3 |
 | batch counter-prompt | a plan or completion counter-prompt (Rule-3) naming several d-works in one question, under `batch-disposition-mode` | 3 | 2 3 |
 | pending queue | the conversational set of plan-ready and done-ready d-works not yet named in a batch counter-prompt; reported each reply while non-empty, never a corpus file | 3 | 3 |
 | disposition | an Operator answer to a counter-prompt (`Y` or `N`, optionally with text) | 3 | 2 3 7 |
@@ -48,7 +51,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan file | `agent-corpus/d-work/plans/<id>.md`: the stored plan a plan-Y binds to — intent as read, mutation, files touched, base commit | 15 | 7 15 |
 | base commit | the `main` commit a plan file was written against; execution re-plans if `main` moved past a touched file | 15 | 15 |
 | done | ledger state: the Operator answered `Y` to the completion counter-prompt | 3 | 3 |
-| archived | ledger state: a done d-work retired from the working board by an Operator disposition naming it; terminal; its files stay where they are | 3 | 3 16 |
+| archived | ledger state: a `done` or `backlog` d-work retired from the working board by an Operator disposition naming it; terminal; its files stay where they are | 3 | 3 16 |
 | coherent | of Rules: no two instruct differently on the same trigger, and every cross-reference resolves to an existing Rule and heading | 5 | 5 6 |
 | orthogonal | of Rules: every concern has exactly one owning Rule; a Rule names a neighbour in its Boundaries only for what it does not own; ownership is never shared | 5 | 5 |
 | sweep | a pairwise coherence and orthogonality check of the Agent Rules, recorded in `agent-corpus/audits/` | 5 | 5 |

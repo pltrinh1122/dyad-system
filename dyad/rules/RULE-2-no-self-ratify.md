@@ -60,6 +60,19 @@ not edited when they are added (G5).
 - A batch counter-prompt (Rule-3, Batch disposition) names several d-works, PRs, or both in one
   question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked
   against its own evidence and its own heads-unchanged condition.
+- A plan counter-prompt whose plan states a **mandate scope** (Rule-3, Plan) binds wider than one
+  action and no wider than that scope: the plan-`Y` authorizes the mutation *and* the class of row
+  the scope names, so an **accreted row** inside it carries that `Y` as its own authorization and
+  is never asked for separately, while the Done-`Y` ratifies the accreted set exactly as the
+  completion evidence listed it (Rule-3) — the delivered set, never the promised one. A row the
+  stated rule does not cover, or one past the stated ceiling, was not named by the question and so
+  is not bound by the `Y`: it returns to explicit mode and is asked. Never accretable, whatever a
+  plan says: a destructive host action (Rule-8 keeps its own counter-prompt), a release (Rule-11:
+  it publishes to the world), a Rule-3 Intake (its words are another Operator's, Rule-7 property
+  4), a change to a preference value (*Not ratification*, above: the operator disposes that as its
+  own PR), and any mutation the plan did not describe, which Rule-3 already calls a new plan. The
+  preference `accretion` (`preferences-corpus/PREFERENCES.md`) selects between the two: under
+  `explicit` a plan-`Y` authorizes the mutation alone and every accreted row is asked for.
 
 ## Enforcement
 Inference-only, with one mechanical fence: `dyad/guards/agent/rows.py` (the main fence, owned by
@@ -73,5 +86,11 @@ workflow wrapper in the infra zone — a dependency on Rule-1, not an overlap (A
 Craft invariant `bond:no-self-ratify` (dyad-bond). Falsified 2026-09-12; see
 `../falsification/rules/rule-2-no-self-ratify.md`. Binding gains one sentence on the batch
 counter-prompt (Rule-3) 2026-09-15 (d-work #17); see `../falsification/rules/rules-2-3-batch-disposition.md`.
+Binding gains the mandate clause 2026-10-14 (d-work #290): a batch `Y` had been found to compress
+73 questions and remove no authorizations at all, so the Operator asked for a disposition that
+supersedes the individual ones — which Binding's first sentence forbade in so many words, since a
+row accreted after the question was asked is named by no question; the clause states what a plan-`Y`
+may bind to instead, and the list of what it may never bind to; see
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #290.
 
 Set: System Requirements.

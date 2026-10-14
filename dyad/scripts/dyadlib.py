@@ -416,6 +416,7 @@ class Row:
     state: str
     disposed: str
     refs: str
+    mode: str = "explicit"   # countersign mode, adopted (crafts/countersign/vocabulary/CRAFT.md); optional and last, d-work #290
 
 _ROW = re.compile(r"^\|\s*(\d+)\s*\|")
 
@@ -437,6 +438,14 @@ def ledger_rows(text: str) -> list[Row]:
     return rows
 
 FIELDS = ("id", "title", "opened", "state", "disposed", "refs")
+# d-work #290: `mode` is read when its line is present and defaulted when it is absent, and it is *not* in
+# FIELDS. It cannot be: `parse_row_file` raises on a missing FIELDS key, and the plan gate parses rows at
+# historical commits (`guards/agent/prs.py`, `read_rows(root, at=base)`), none of which carry the line — a
+# required `mode` would make every past commit unparseable and the gate unrunnable. The fence reads `mode`
+# off the parsed Row, never off FIELDS, so `rows.FIELDS is dyadlib.FIELDS` stays true.
+OPTIONAL_FIELDS = ("mode",)
+MODES = frozenset({"explicit", "implicit"})   # the countersign mode of a row; a disposition's coverage is `basis`, not this
+DEFAULT_MODE = Row.mode                       # the dataclass's own default: one source of truth for an absent line
 
 # d-work states and the one transition table (Rule-16 Store cites this; Rule-3 defines the states).
 STATES = frozenset({"open", "planned", "blocked", "backlog", "done", "archived"})   # archived: retired from the board, terminal (d-work #37)
@@ -445,7 +454,7 @@ TRANSITIONS: dict[str, frozenset[str]] = {
     "open": frozenset({"planned", "blocked", "done"}),
     "planned": frozenset({"open", "blocked", "done"}),
     "blocked": frozenset({"open"}),
-    "backlog": frozenset({"open"}),
+    "backlog": frozenset({"open", "archived"}),   # #290: the board had no exit from where 75 of its 280 rows sit (`archived`, 0 uses)
     "done": frozenset({"archived"}),   # done never reopens; archived is one further step the same way (#37)
     "archived": frozenset(),
 }
@@ -530,19 +539,31 @@ def write_row(root: Path, row: Row, before: str | None, first: Callable[[], obje
     return path
 
 def parse_row_file(text: str) -> Row:
-    """One row file: `key: value` lines in FIELDS order (Rule-16)."""
+    """One row file: `key: value` lines in FIELDS order, then any of OPTIONAL_FIELDS (Rule-16). A missing
+    FIELDS key raises; an absent OPTIONAL_FIELDS line takes the Row's own default, so a row file written
+    before the field existed — every row at every past commit the plan gate parses — reads unchanged
+    (d-work #290). A `mode` outside MODES raises, so a hand-edited row file is a parse failure the package
+    check reports rather than a silent third mode."""
     d = {}
     for line in text.splitlines():
         k, sep, v = line.partition(":")
-        if sep and k.strip() in FIELDS:
+        if sep and k.strip() in FIELDS + OPTIONAL_FIELDS:
             d[k.strip()] = v.strip()
     missing = [f for f in FIELDS if f not in d]
     if missing:
         raise ValueError(f"row file missing {missing}")
-    return Row(int(d["id"]), d["title"], d["opened"], d["state"], d["disposed"], d["refs"])
+    mode = d.get("mode", DEFAULT_MODE)
+    if mode not in MODES:
+        raise ValueError(f"row file mode {mode!r} not one of {' '.join(sorted(MODES))}")
+    return Row(int(d["id"]), d["title"], d["opened"], d["state"], d["disposed"], d["refs"], mode)
 
 def format_row_file(r: Row) -> str:
-    return "".join(f"{k}: {getattr(r, k)}\n" for k in FIELDS)
+    """Every FIELDS line, then an OPTIONAL_FIELDS line only where the value differs from the dataclass
+    default: `mode: implicit` is written and `mode: explicit` is not. So reading any of the 280 rows that
+    predate the field and writing it back is byte-identical, which is why no migration of the store is
+    needed — a ledger commit's diff still shows only what the disposition changed (d-work #290)."""
+    return ("".join(f"{k}: {getattr(r, k)}\n" for k in FIELDS)
+            + "".join(f"{k}: {getattr(r, k)}\n" for k in OPTIONAL_FIELDS if getattr(r, k) != getattr(Row, k)))
 
 def read_rows(root: Path | None = None, at: str | None = None) -> list[Row]:
     """All rows from rows_dir(); with `at`, from that git commit (Rule-16)."""
@@ -597,7 +618,10 @@ INVARIANTS: list[Invariant] = [
     ("archived-is-terminal", lambda: not TRANSITIONS["archived"]),
     ("done-never-reopens", lambda: TRANSITIONS["done"] == frozenset({"archived"})),   # its one step is archived (#37)
     ("no-self-transition", lambda: all(s not in t for s, t in TRANSITIONS.items())),   # same state is `allowed`'s edit, never a table entry (#203)
-    ("row-fields-match-dataclass", lambda: FIELDS == tuple(f.name for f in fields(Row))),
+    ("row-fields-match-dataclass", lambda: FIELDS + OPTIONAL_FIELDS == tuple(f.name for f in fields(Row))),
+    ("row-optional-fields-disjoint", lambda: not (set(FIELDS) & set(OPTIONAL_FIELDS))),   # #290: a key in both would be required and optional at once
+    ("row-mode-default-is-a-mode", lambda: DEFAULT_MODE in MODES and len(MODES) == 2),    # #290: the value an absent line takes is a legal mode
+    ("backlog-exits-to-archived", lambda: TRANSITIONS["backlog"] == frozenset({"open", "archived"})),   # #290: the board's drain
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),

@@ -279,3 +279,98 @@ hand-listed. **3–12**: it carries `INVARIANTS` and a mapped test. **3–13, 3�
 register row, resolved by the new guard. Coherent, orthogonal.
 
 Disposition: see ledger #227.
+
+## Amendment — d-work #290 (2026-10-14, the mandate: an accreted row in implicit mode, and the board's one exit)
+**Claim (Operator, 2026-10-14, refusing revision 4 of plan #290):** "batch is a solution **if**
+individual dispositions can be superseded with a 'meta-disposition'." Read with the prompt that
+opened the row — "as the cos session, you primary objective is to ensure that operator's attention
+is scaled in the way that Operator chooses", and "asking me to disposition a merge is indicative of
+a failure mode of the `d-work` workflow" — the claim is that one d-work's dispositions may stand for
+the rows it spawns, so that a tree of any size costs the Operator two acts: one plan-`Y` and one
+Done-`Y`.
+
+The design is **adopted, not coined** (Rule-13 property 1). `crafts/countersign/` already models it:
+`countersign:implicit mode` ("countersigned in advance by a standing mandate"), the
+`countersign:mandate` that countersigns it, `countersign:basis` for a disposition's kind of cover,
+the `countersign:delegate edge` and `countersign:escalate edge` for the two mode changes, and
+`countersign:amend` for the `N`-with-text this amendment answers
+(`crafts/countersign/vocabulary/CRAFT.md`). That craft's `rules/interaction.md` §4 writes the
+implicit lifecycle — "is it covered by a mandate? If yes: execute within the mandate's scope, then a
+countersign report. If no: escalation → explicit" — and its §7 lists three of this amendment's four
+pieces as owed to dyad-system and **not yet adopted**: `amend` in the answer grammar (I2), a mandate
+record rather than preference prose (I7), and a `mode` field on rows (I7). An **accreted row** — one
+the Agent opens while executing another — is **117 of this instance's 280 rows**, measured in
+`agent-corpus/audits/2026-10-14-operator-attention.md`; the preference that switches the mode is
+`accretion` (`preferences-corpus/PREFERENCES.md`, an **authority preference** in that craft's §5
+classification, where `concise-mode`, `batch-disposition-mode`, `merge-disposition` and `delegation`
+are form preferences that authorize nothing).
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | **This record's own `#137` amendment forbids the design.** Survivor **3–15** reads "each mode's child d-work stores its own plan before its plan-`Y`", disposed by the Operator's Done-`Y` on 2026-09-23. Rule-9's Form implements only survivors, so either 3–15 is refuted by name or this whole amendment is a Rule-9 breach. | **Refuted by name, 21 days later, by the ledger 3–15 was written about.** 3–15 was the Rule-5 *pairwise* answer to a coherence question — does the hardening exercise add a phase to Rule-15? — and the half that answers it is "its phases planned in that d-work's own plan file first … no phase added". The per-child plan-`Y` rode along as a by-product, asserted of rows none of which existed. Both exercises that have since run it refute it. #116: 9 children (#117–#125), all `done`, **exactly 2 disposed entries each, 18 dispositions for one exercise**. #259: 23 children (#262–#284) opened 2026-10-10, **23 of 23 `backlog`, no plan file for any of them** (`ls agent-corpus/d-work/plans/` holds none of 262–284), so the parent gate — "asked only when every child is `done` or `blocked`" — makes #259's own Done question **unaskable**, and `dyadlib.TRANSITIONS` (`dyad/scripts/dyadlib.py:448`) gives `backlog` exactly one successor, `open`. And the only four rows in 280 that ever reached `done` on **one** disposition — #162–#165, under #199 — hold no `Y plan` entry and have **no plan file at all**: one shared batch Done-`Y` closed all four (`rows/162.md`–`rows/165.md`). 3–15 is false of every child row this ledger has. | **3–15 is narrowed, not deleted.** Its coherence half stands verbatim: the exercise runs inside the d-work the prompt opened, its phases are planned in that d-work's own plan file first, and Rule-15 gains no phase. Its plan half is replaced: **a child row whose existence the authorized plan describes, inside the mandate scope that plan states, stores no plan of its own — the mandate's plan file is its plan (Rule-15 phase 2, amendment #290), and the mandate's Done-`Y`, which names it in the accreted list, is its verification. A child whose work departs from the mandate scope leaves implicit mode by the escalate edge and is then planned and disposed exactly as 3–15 said.** So 3–15 survives for every escalated row and for every child of a plan that states no mandate scope — which is every plan written before this amendment, #137's own included. |
+| 2 | Scope has no clause for a row the Agent opens: "Every Operator prompt opens a d-work. There are no exemptions." A third origin is self-initiation, which `interaction.md`'s **I6** forbids by name and which this ledger already shows the cost of — **14 rows born with no Operator act whatsoever (#38, #70, #129–#132, #134, #136, #170–#173, #177, #181), every one still `backlog`, not one ever moved.** | **Confirmed, and it removed half the design.** The "park a row with nothing" option is dropped: `provenance.py:254-258` refuses a row whose record gains no entry, `:259-261` a `backlog` row with no disposition entry, and `package.py:946` refuses `dwork new` without the Operator's words. The refusals are right, and I6 says why. | Scope names accretion as a **third thing that opens a row**, beside a prompt and a disposition, and in the same breath says what it is not: it **opens no d-work** in the sense of Scope's first bullet — no Operator prompt was sent, so nothing is suspended and nothing stacks. I6 holds because the row is not self-initiated: its record's entry 1 is the **mandate's own Operator words**, copied verbatim with the note `mandate #<id>, <the mandate's own date>` (Rule-7 property 4, amendment #290), so its initiation is a prompt the Operator did write, on another row, disclosed as such. |
+| 3 | Plan's "No exemptions: a plan may be one line … but the question is asked" gains its first exemption, and the Agent writes the plan that bounds what it may accrete. | **Confirmed, answered structurally.** Three fences, each an artefact rather than an argument: the **mandate scope** is a stated rule and a stated ceiling the Operator reads *before* disposing; the **escalate edge** returns anything outside it to explicit mode; and the **completion evidence lists every row actually accreted** — id, mode, what it holds, what it cost — so the Done-`Y` sees the delivered set, not the promised one. | The exemption is to the *question*, never to the plan: the mutation of an accreted row is authorized by the mandate's plan-`Y` only while the plan describes it. A plan stating no mandate scope accretes nothing. |
+| 4 | Never-accretable classes are a judgment call the Agent makes at speed. | **Survives, scoped — and the list is Rule-2's, not this Rule's.** What a `Y` may bind to is Rule-2's concern, so Binding of approval holds the list and Scope defers to it in one sentence. Four of its items are mechanical to recognise: a destructive host action (Rule-8 keeps its own counter-prompt), a release (Rule-11 — it publishes to the world), a **Rule-3 Intake** (its words are another Operator's, Rule-7 property 4), and a preference change. The fifth — "any mutation outside the plan" — is the escalate edge and is inference, as "work that departs from the plan is a new plan" already is. | The list is in Rule-2's Binding, read before the plan states a scope, not consulted at the moment of accreting. 28 of the 117 accreted rows are Intakes, so the exclusion is load-bearing rather than decorative. |
+| 5 | The Done-`Y` becomes a rubber stamp: one `Y` over a parent and 23 children, on a plan of four revisions. | **Confirmed and conceded.** #259 is the live case, and it is worse than heavy today — the question cannot lawfully be asked at all. A single `Y` is verification only while the reply is readable in one sitting. | **No cap is proposed**: how many rows one plan-`Y` may stand for is the Operator's number, and the Rule requires only that the ceiling be *stated*. What makes refusal possible is the accreted list, which is why its omission is a breach of this Rule as every other omission in the completion evidence already is. |
+| 6 | The Operator uses an accreted row's plan-`Y` as a veto, so inheritance removes a power in use. | **Confirmed, by two rows.** #249 reads `2026-10-08 Y backlog` then `Y shape (…)` then `2026-10-08 N plan` — opened by the Operator and its plan then refused. #175 holds two `N plan` entries. Inheritance would have authorized what the Operator declined. | The escalate edge is in the mutation because of this, and #249 is named in it: its plan stands refused and no mandate reaches it. |
+| 7 | The parent gate should stay strict: accepting a `backlog` child lets a parent close over work it never delivered. | **Survives, scoped.** It is why the amendment changes only whether the question may be *asked*. Rule-3 already accepts `blocked`, which is equally undelivered, and the table refuses `blocked → done` as well, so the escape admitted here is no wider than the one the gate already names. | "The parent completes only on its own Done-`Y`" is unchanged; the completion evidence lists every deferred child by id and state, so closing the parent loses nothing a reader could have had. |
+| 8 | The board needs no exit: `archived` is unused because nothing needs archiving. | **Refuted, measured.** `archived` has **0 uses in 280 rows**; **75 rows sit in `backlog`**, median age **21 days**, 44 of them ≥14 days, the oldest 30; of the 37 rows ever born with a `Y backlog` first entry, **35 are still `backlog` — a 5.4% drain**. Rule-3's own `archived` bullet already *defines* the act ("retired from the working board by an Operator disposition naming the row(s)"); only `dyadlib.TRANSITIONS` forbade it from where 75 of the rows are. | `backlog → archived` and a **retirement form**, `Y/N: archive #a, #b, … #k?` — one Operator question over k rows, clerically executed by `dyad dwork state <id> archived` (`dyad/rules/RULE-3-d-work.md`, the `archived` bullet) — no new verb, one new legal source state. Cheapening the inflow without opening the drain makes the board worse, which is why the drain is item (1) of the mutation and not an extra. |
+| 9 | `amend` is already covered by "any other response", so naming it is vocabulary for its own sake. | **Refuted.** "Any other response" says what an answer does *not* authorize and nothing about a refusal that asks for a revision in the same words — the disposition this very amendment answers, and the one the Operator has given twice (#175, #249). `interaction.md` §2 maps it as the third answer of the grammar and §7 lists its absence as an I2 gap. | Rule-3 gains an `## Answer grammar` section naming all three answers as the craft defines them — `Y`, bare `N`, and `N` with text as **amend**: the proposal refused and its revision asked for in the same words, a linked re-entry whose text is entered as a `prompt` entry of the refused d-work's own record and which opens no second row when what it asks for is that same proposal revised. Silence is not consent is stated there too (I8). No new behaviour: the practice is already this, and this amendment is its own live instance. |
+| 10 | A mandate carried in `disposed` is a pointer, and `rows.ENTRY` (`dyad/guards/agent/rows.py:40`) admits only a dated `Y` or `N`, so there is nowhere to put it. | **Confirmed, and it fixed the entry shape.** A mandate is carried by **replication plus a note**, never by a bare reference: `disposed: <date> Y plan (mandate #<id>)`, beside the `(batch #a,#b,#c)` shape the column already admits. Verified live during planning against the kernel itself, by calling `prs.check` on synthetic rows: `open` + `Y plan (mandate #259)` **passes** the plan gate; `open` with an empty `disposed`, `open` with `Y mandate #259`, and `backlog` + `Y plan (mandate #259)` all fail. | An implicit-mode row is born **`open`** — never `backlog`, which `provenance.py:262-264` and `package.py:971-972` can only open on the Operator's own prompt — carrying that entry, with the mandate's words as record entry 1. No code change is needed to make it lawful. |
+| 11 | `'Y plan' in row.disposed` is a substring test on free text (`prs.py:46`), so an inherited authorization inherits that unreliability. | **Confirmed, and not fixed here.** `Y plan; N plan (withdrawn)` passes the gate, and the 2026-10-08 audit's L2-1 lists five strings that pass it while meaning the opposite. A mandate makes that string load-bearing for more rows than before. | Named as the follow-on it already is (that audit's candidate row 2, *parse `disposed` into kinded entries*), and as the condition under which the `mode` field is data rather than prose. The audit records it; this amendment does not build it. |
+| 12 | The completion evidence is already the largest thing the Operator is handed, and the accreted list makes it longer. | **Confirmed.** ~217 lines × the 190 `Y done` dispositions this ledger holds. The list grows it by one line per accreted row. | Accepted, and stated: moving the evidence block to the PR body with its `evidence-sha256` in the reply is the larger reduction, a Rule-2 and Rule-14 property 3 change with its own d-work, named in the plan and not taken here. |
+
+**Pairwise (Rule-5).** The amendment touches Scope, Plan, Ledger, Completion, Batch disposition and
+the answer grammar, and the neighbours it could have collided with are these. **3–1** — no zone
+moves: rows, plan files, provenance records and traces are all `<instance>/d-work/` (agent zone),
+the preference is its own zone's PR, and a retirement is a ledger-only commit the fence already
+admits. **3–2** — Rule-2 owns the events and gains the mandate clause in its own Binding (its
+record, amendment #290): a plan-`Y` also authorizes the class its mandate scope names, and the
+Done-`Y` ratifies the accreted set *as the evidence listed it*. Rule-2 also keeps the list of what is **never** accretable, since that is a
+statement about what a `Y` may bind to; Rule-3 keeps only what the question looks like and what the
+reply must carry; **no ratification event is removed and none is added** —
+an accreted row is a ledger artefact, which Rule-2 already classes clerical. **3–4** — the block is
+unchanged: one Intent, one Target, and no Boundary or Condition count moves, so the counts
+`rules.py` checks are as before. **3–5** — concerns stay put: Rule-15 owns the phases (it gains the
+accreted row's want of a base commit, in its own record), Rule-16 the store and the transition table
+(it gains `backlog → archived`), Rule-7 the words (it gains the mandate note), Rule-2 the binding.
+Nothing is owned twice. **3–6** — two terms are defined, `accreted row` and `mandate scope`,
+owner 3; seven are **referenced** as `countersign:<term>` in the header — `mandate`,
+`implicit mode`, `explicit mode`, `basis`, `delegate edge`, `escalate edge`, `amend` — exactly as
+the `sysarch:` and `sysadmin:` terms are, never redefined (Rule-6, Master record). One term
+*changes*: `archived` now reads "a `done` or `backlog` d-work retired …", and Rule-6's trigger
+requires every Rule in its `used by` to be named and still read correctly — 3 (the state's bullet
+and the retirement form) and 16 (the table and the Store sentence), both of which this d-work edits
+in the same PR. **3–7** — Rule-7 stores the mandate's
+words with their note and keeps property 5's per-commit count, which the replicated entry satisfies
+by construction; Rule-3 decides which rows a mandate may reach. **3–8** — a destructive host action
+is never accretable and keeps its own counter-prompt, unconditionally and unbatched, as this
+record's `#106` amendment already settled. **3–9** — this table is Rule-9's form, and survivor 3–15
+is refuted here rather than worked around. **3–10** — one `Y/N`, last line, per reply; a mandate
+changes how many questions exist, never how one is framed. **3–11** — a release is never accretable
+("a release publishes to the world"), and Rule-11's own release batch form is untouched; the
+play-book, the run-book and the CLI verbs are core-craft files, the rows and traces instance.
+**3–12** — `dyadlib.TRANSITIONS`, `dyadlib.FIELDS`, the row fence and the `retire` verb each carry
+their mapped test, and `dyad/tests/test_dyadlib_rows.py:17-28` already parses Rule-16's
+transition sentence and asserts it equals the table, so the Rule and the code move in one commit. **3–13** —
+property 1 discharged twice over: the vocabulary and the lifecycle are imported from a craft already
+in the tree rather than authored, and **owed** once: 27 rows already carry an inherited
+authorization in two ad-hoc note shapes — #96 and #97 as `Y plan (named in plan 94.md, deferred)`,
+#240, #257 and #262–#284 as `Y backlog (… from #N's plan-Y)` — so the recurrence proposes a
+`dwork new --mandate <id>` that writes the entry and copies the mandate's words, which the plan
+names and the Operator may decline (property 1's own last sentence). Until it exists the entry is
+hand-written in the one shape this amendment fixes. **3–14** — kernel only: no import, no World row, and the mandate's own
+check runs on the kernel-only path with every other guard. **3–15** — attack 1: the coherence half
+of 3–15 stands and Rule-15 still gains no phase; its plan half is narrowed, and Rule-15's own record
+carries the phase-2 sentence. **3–16** — the store gains one transition and one **optional** field,
+`mode` (absent reads `explicit`, so no row is migrated and a row that carries it never loses it);
+rows stay one file per id, and a retirement touches exactly the rows it names. Rule-16 also records
+what the design costs its own store: a plan-less row contributes nothing to the presence `files`
+union. **3–18** — no
+Operator-executed command: 0 ops scripts exist on this instance. **3–19** — no server instance, and
+the digest play-book's steps are a core run-book with its own section set (Rule-19 Boundaries).
+**3–20** — the mandate id in a row's `disposed` is read by the same free-text column Rule-20 already
+declines to resolve (`row.disposed->pr` is a `world` kind); no reference kind is added here, and the
+unresolved-kind gap is the audit's finding, not a new one. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #290.

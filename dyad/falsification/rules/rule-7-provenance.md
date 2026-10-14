@@ -132,3 +132,32 @@ Pairwise (Rule-5), for what the amendment changes:
 | 20 referential integrity | yes: `provenance.legacy->row` registered (attack 36) | yes: Rule-20 owns that the target exists |
 
 Disposition: see ledger #191.
+
+## Amendment — d-work #290 (2026-10-14, a mandate entry: the Operator's earlier words, disclosed as such)
+Property 4 gains one sentence, parallel to the relayed-prompt sentence #34 added: the words that
+open an **accreted row** under a `countersign:mandate` (Rule-3 Scope and Plan, amendment #290) are
+the mandate's own Operator words, entered verbatim with the note `mandate #<id>, <the mandate's own
+date>`, so the record discloses that the text predates the row it opens. Nothing else in this Rule
+moves: the store, the entry form, the guard and property 5's count are as they were.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 50 | Copying an Operator prompt into a record of a d-work the Operator never wrote it for is fabrication — exactly what property 4 exists to forbid. | **Refuted, by this Rule's own precedent and by the ledger.** Rule-3's Batch disposition already says of one `Y` over many rows: "the Operator's one `Y` is written as the same entry into every named d-work's own record", and **110 of this ledger's 509 `disposed` entries are batch entries written that way**. The 23 records of #262–#284 each already hold one shared disposition's words. A mandate extends the same act from a named set to a stated class, and the note is what keeps it honest. | The entry is the Operator's words and nothing else (property 4 unchanged); the **note** carries the Agent's disclosure — which mandate, and when the words were given. A reader who distrusts it reads the mandate's own record, which the note names. |
+| 51 | `append_provenance` (`dyad/scripts/package.py:878`) stamps today's date in every heading unconditionally, so a mandate entry misdates the Operator. | **Confirmed, and it fixed the note's shape.** The heading date is the date the entry was *written*, which the store's own parser requires and which nothing should rewrite. | The mandate's own date lives in the note — `mandate #<id>, <date>` — so heading and note together say "written today, said then". Without the note the record would assert the Operator spoke on a day it did not. |
+| 52 | Property 5's count breaks: the row gains a `Y plan (mandate #<id>)` entry whose disposition the Operator never gave to *this* row. | **Refuted, per commit, and verified against the live checks.** The row gains one `disposed` entry and the record gains one `disposition` entry in the same clerical commit, so `check_transaction`'s `k == dk` holds (`dyad/guards/agent/provenance.py:265-269`) and the state check's count is exact. A row born `open` with that entry needs no exemption: `:254-258` is satisfied by the entry, and `:259-261` applies only to a row born `backlog`. | No guard changes, and no row joins `<instance>/provenance_legacy.local.txt`: an accreted row's words exist, which is the whole reason the "park a row with nothing" option was dropped (14 rows born with no Operator act, every one still `backlog`). |
+| 53 | An **Intake**'s words could ride a mandate the same way, so this amendment reaches another Operator's prompts. | **Confirmed as a risk if unstated, refuted as written.** Property 4's relayed-prompt sentence binds an intake's words to their own Operator and their own note (`relayed via <session>`), and **28 of the 117 accreted rows are Intakes**. No mandate of this Operator can stand for them. | Rule-3's Plan lists Intake among the never-accretable classes, and this property's two sentences now sit side by side: relayed words name their relay, mandate words name their mandate. Neither is ever the Agent's. |
+| 54 | The transcription is still the Agent's, so a mandate note can name a mandate whose words say something else. | **Survives, scoped — the same inference every clerical write already is** (`../../agent-corpus/falsification/e3-plan-gate.md`, and attack 11 above). What is new is that one text now appears in two records, so a divergence is visible by comparison rather than only by the Operator's own copy of the chat. | Stated in Enforcement's existing sentence, unchanged. The mechanical fence stays property 5's count; the comparison between a mandate's record and its children's is a reading, not a guard, and the audit says so. |
+
+**Pairwise (Rule-5), for the one sentence property 4 gains.**
+
+| Rule | coherent | orthogonal |
+|------|----------|------------|
+| 2 no-self-ratify | yes: Binding gains the mandate clause in its own record (#290); writing the entry stays clerical and declares no event | yes: Rule-2 owns what a `Y` covers, Rule-7 the words it was given in |
+| 3 d-work | yes: Rule-3 Scope and Plan decide which rows a mandate may reach and Rule-3 Ledger the entry's shape in `disposed`; this Rule stores the text and checks it against that column | yes: Rule-3 owns the chain as data, Rule-7 the words; property 5 reads `disposed` and never writes it |
+| 15 d-work phases | yes: an accreted row's plan is the mandate's plan file, which is the Agent's text and still not a provenance record | yes: Rule-15 owns the plan file |
+| 16 concurrent sessions | yes: one record per id, unchanged; a mandate adds entries, never files or fields | yes: Rule-16 owns the store's shape and concurrency |
+| 6 vocabulary | yes: no term defined here — `mandate` and `implicit mode` are referenced as `countersign:<term>` by the Agent vocabulary | yes: Rule-6 owns definitions |
+| 4, 5 | yes: the block is unchanged — no Intent, Target, Boundary or Condition count moves; this section is Rule-5's form | yes |
+| 1, 8, 9, 10, 11, 12, 13, 14, 18, 19, 20 | yes: agent zone as before, no host action, no new import or World row, no guard registry or reference-kind change, tests unchanged | yes: each keeps its own concern — the amendment is one sentence about whose words an entry holds |
+
+Disposition: see ledger #290.
