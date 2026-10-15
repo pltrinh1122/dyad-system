@@ -129,6 +129,10 @@ its revision 5.
     holds and why it is proposed for retirement. A `Y` archives exactly the named rows; anything
     else archives none of them (Rule-2, Binding). It is not a plan or Done batch and does not
     enter the pending queue: nothing is planned and nothing is delivered by it.
+- The machine whole — which input moves a row along each transition, whose act that input is, and
+  which record the move writes — is stated once, as data beside the table (`dyadlib.INPUTS`) and as the
+  d-work play-book (`dyad/playbooks/d-work.md`), which also lists every record a d-work is made of; read
+  here, never a Rule (#299).
 - The Agent may decompose a d-work into child rows (`refs: parent #N`). The parent's
   counter-prompt is asked only when every child is `done`, `blocked` or `backlog`; the parent
   completes only on its own Done-`Y`, and the completion evidence names each child's state, so an
@@ -343,6 +347,9 @@ successor, so the one parent ever gated on `backlog` children could not be asked
 at all. The vocabulary is `crafts/countersign/`'s — mandate, implicit mode, escalate edge, amend —
 adopted rather than coined (Rule-13 property 1), and `amend` is the first of the four refactors
 `crafts/countersign/rules/interaction.md` §7 lists as owed by this system. See the same record,
-amendment #290.
+amendment #290. Ledger gains the d-work play-book 2026-10-15 (d-work #299): the lifecycle was spread over
+five Rules, two play-books and the CLI help, and the transition table named no inputs — a successor relation,
+not a machine; the input alphabet is now `dyadlib.INPUTS` with its invariants, and the play-book's tables are
+pinned to it and to the guards; see the same record, amendment #299.
 
 Set: System Requirements.

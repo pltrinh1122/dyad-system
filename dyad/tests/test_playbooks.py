@@ -165,5 +165,69 @@ class AuditPlaybookTests(unittest.TestCase):
         self.assertTrue(re.search(r"^\| play-book \|.*\| 3 \| 3 \|$", voc, re.M))
         self.assertTrue(re.search(r"^\| audit \|.*\| frame \|", voc, re.M))
 
+DWORK_PLAYBOOK = PKG / "playbooks" / "d-work.md"
+DWORK_RUNBOOK = PKG / "runbooks" / "d-work.md"
+DWORK_STEPS = ("open", "plan", "authorize", "execute", "evidence", "complete", "defer", "resume")
+DWORK_GUARDS = ("rows", "plans", "provenance", "sessions", "traces")   # the agent guards whose stores lie under <instance>/d-work/
+
+def _ticks(cell: str) -> list[str]:
+    return re.findall(r"`([^`]+)`", cell)
+
+class DworkPlaybookTests(unittest.TestCase):
+    """The d-work play-book and its run-book (#299): headings, steps, and the two tables pinned to the code and the
+    guards — the entity table's fields to each guard's FIELDS, the machine table to dyadlib.INPUTS edge by edge."""
+    def test_playbook_sections(self):
+        text = DWORK_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Entity records", "The machine", "The lifecycle", "Reading", "Evidence", "Conduct"])
+        self.assertIn("dyad/runbooks/d-work.md", text)
+        for s in DWORK_STEPS:
+            self.assertIn(f"`{s}`", text, s)
+        for name in ("dyadlib.INPUTS", "dyadlib.INPUT_KINDS", "dyadlib.TRANSITIONS", "dyadlib.NEW_STATES", "dyadlib.STATES"):
+            self.assertIn(f"`{name}`", text, name)
+    def test_entity_table_is_the_guards_fields(self):
+        entities = next(t for h, t in dyadlib.tables(DWORK_PLAYBOOK.read_text()) if h[0] == "entity")
+        self.assertEqual([_ticks(r[2])[0] for r in entities], list(DWORK_GUARDS))
+        for row in entities:
+            guard = dyadlib.load_guard("agent", _ticks(row[2])[0])
+            want = list(guard.FIELDS) + (list(dyadlib.OPTIONAL_FIELDS) if guard.FIELDS is dyadlib.FIELDS else [])
+            self.assertEqual(_ticks(row[3]), want, row[0])
+            self.assertTrue(row[1].startswith("`"), row[0])                   # a store path, in the d-work store
+    def test_machine_table_is_dyadlib_inputs(self):
+        machine = next(t for h, t in dyadlib.tables(DWORK_PLAYBOOK.read_text()) if h[:2] == ["from", "to"])
+        table = {}
+        for row in machine:
+            src = None if row[0] == "\u2014" else row[0]
+            table[(src, row[1])] = frozenset(k.strip() for k in row[3].split("\u00b7"))
+        self.assertEqual(set(table), set(dyadlib.INPUTS))
+        for edge, kinds in table.items():
+            self.assertEqual(kinds, dyadlib.INPUTS[edge][1], edge)
+        self.assertEqual(len(machine), len({(a, b) for a, t in dyadlib.TRANSITIONS.items() for b in t}) + len(dyadlib.NEW_STATES))
+    def test_runbook_parses_into_the_steps(self):
+        text = DWORK_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], list(DWORK_STEPS))
+        self.assertEqual(rb.declared_sections(text), ["Open", "Plan", "Authorize", "Execute", "Evidence", "Complete", "Defer", "Resume"])
+        self.assertEqual({c.section for c in cmds}, set(rb.declared_sections(text)))
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual({c.name for c in cmds if c.cls == "read-only"}, {"plan", "execute", "evidence"})
+        for c in cmds:
+            self.assertTrue(c.cmd, c.name); self.assertEqual(c.role, "any", c.name)
+            if c.cls != "read-only":
+                self.assertNotIn(c.undo, ("", rb.NONE), c.name); self.assertNotIn(c.postcondition, ("", rb.NONE), c.name)
+                self.assertIn("DWORK", c.cmd + c.postcondition, c.name) if c.name != "open" else self.assertIn("TITLE", c.cmd)
+        self.assertIn("d-work", rb.core_runbooks(PKG.parent))
+    def test_runbook_passes_the_craft_check_when_present(self):
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        guard = dyadlib.find_guard("workstation", "runbooks")
+        if guard is None or not hasattr(guard, "declared_sections"):
+            self.skipTest("no craft provides a run-book check that reads `# sections:`")
+        self.assertEqual([m for m in guard.check_runbook(DWORK_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
+    def test_rule_3_reads_the_playbook(self):
+        rule = (PKG / "rules" / "RULE-3-d-work.md").read_text()
+        self.assertIn("dyad/playbooks/d-work.md", rule); self.assertIn("`dyadlib.INPUTS`", rule)
+        voc = (PKG / "vocabulary" / "VOCABULARY.md").read_text()
+        self.assertTrue(re.search(r"^\| play-book \|.*\| 3 \| 3 \|$", voc, re.M))
+
 if __name__ == "__main__":
     unittest.main()

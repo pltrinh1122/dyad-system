@@ -130,7 +130,7 @@ class PackageTests(livetest.LiveCase):
                             "dyad.tests.test_playbooks"], capture_output=True, text=True,
                            env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 13 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 5 (#223)
+        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 19 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 5 (#223) + the d-work play-book's 6 (#299)
         # the target only, never the whole root: `cmd_tests` prints one `[Rule-12] … Ran` line for one
         # dotted target, where a rootful run prints one per test root (six as this repo stands). #186
         # replaced `assertNotIn("Ran 479", …)`: 479 was a whole-root total from an older tree, and the
@@ -1116,7 +1116,7 @@ class InvariantPassTests(unittest.TestCase):
             with self.subTest(argv=argv):
                 r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), *argv], capture_output=True, text=True, env=env(), cwd=d)
                 self.assertNotEqual(r.returncode, 0)
-                self.assertEqual(r.stderr.strip().splitlines(), ["InvariantError: dyadlib: invariant(s) failed: archived-is-terminal"])   # one line, no traceback
+                self.assertEqual(r.stderr.strip().splitlines(), ["InvariantError: dyadlib: invariant(s) failed: archived-is-terminal, inputs-cover-the-machine, terminal-states-stay-terminal"])   # one line, no traceback; the two #299 invariants over the same table fail with it
         self.assertEqual(list((d / "agent-corpus" / "d-work" / "rows").glob("[0-9]*.md")), [])
 
 class PrePushTests(unittest.TestCase):
