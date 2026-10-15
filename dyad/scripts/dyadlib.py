@@ -459,6 +459,31 @@ TRANSITIONS: dict[str, frozenset[str]] = {
     "archived": frozenset(),
 }
 
+# d-work #309: the machine's input alphabet. TRANSITIONS is a successor relation — which state may follow which;
+# a finite-state machine needs the input that moves a row along each edge and whose act it is. One entry per
+# edge of TRANSITIONS and per birth (from None into a NEW_STATES state): the input as the d-work play-book names
+# it (`dyad/playbooks/d-work.md`, whose machine table is pinned to this by dyad/tests/test_playbooks.py), and the
+# kinds it may be — `prompt` (an Operator prompt: a `prompt` entry of the provenance record), `disposition` (an
+# Operator answer: a `disposed` entry and its `disposition` record entry, Rule-7 property 5), `clerical` (an
+# Agent act a disposition already covers: no entry of its own, Rule-2). Data, not a decision: nothing reads it to
+# refuse a write yet (`dwork state`'s refusals stay hand-written branches in package.py).
+INPUT_KINDS = frozenset({"prompt", "disposition", "clerical"})
+TERMINAL_STATES = frozenset({"done", "archived"})   # exit only to `archived` or nowhere; only the Operator closes (Rule-2)
+INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
+    (None, "open"):          ("an Operator prompt; the Y that admits an intake; a mandate's plan-Y for an accreted row", frozenset({"prompt", "disposition"})),
+    (None, "backlog"):       ("an Operator disposition opening it (Y backlog)", frozenset({"disposition"})),
+    ("open", "planned"):     ("the plan-Y", frozenset({"disposition"})),
+    ("open", "blocked"):     ("a deferral naming the blocking d-work", frozenset({"disposition"})),
+    ("open", "done"):        ("the Done-Y", frozenset({"disposition"})),
+    ("planned", "open"):     ("re-planning: main moved past a touched file (Rule-15 phase 2), or the Operator's amend of the plan", frozenset({"clerical", "disposition"})),
+    ("planned", "blocked"):  ("a deferral naming the blocking d-work", frozenset({"disposition"})),
+    ("planned", "done"):     ("the Done-Y", frozenset({"disposition"})),
+    ("blocked", "open"):     ("the blocking d-work reaching done", frozenset({"clerical"})),
+    ("backlog", "open"):     ("an Operator prompt for it", frozenset({"prompt"})),
+    ("backlog", "archived"): ("the retirement Y over the named set", frozenset({"disposition"})),
+    ("done", "archived"):    ("the retirement Y over the named set", frozenset({"disposition"})),
+}
+
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
 PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification")
@@ -622,6 +647,12 @@ INVARIANTS: list[Invariant] = [
     ("row-optional-fields-disjoint", lambda: not (set(FIELDS) & set(OPTIONAL_FIELDS))),   # #290: a key in both would be required and optional at once
     ("row-mode-default-is-a-mode", lambda: DEFAULT_MODE in MODES and len(MODES) == 2),    # #290: the value an absent line takes is a legal mode
     ("backlog-exits-to-archived", lambda: TRANSITIONS["backlog"] == frozenset({"open", "archived"})),   # #290: the board's drain
+    ("inputs-cover-the-machine", lambda: set(INPUTS) == {(a, b) for a, t in TRANSITIONS.items() for b in t} | {(None, s) for s in NEW_STATES}),   # #309: one input per edge and per birth
+    ("input-kinds-known", lambda: all(k and k <= INPUT_KINDS for _, k in INPUTS.values())),
+    ("terminal-states-stay-terminal", lambda: TERMINAL_STATES <= STATES and all(TRANSITIONS[s] <= {"archived"} for s in TERMINAL_STATES)),
+    ("only-the-operator-closes", lambda: all(k == {"disposition"} for (_, to), (_, k) in INPUTS.items() if to in TERMINAL_STATES)),   # #309: Rule-2 — Done-Y and the retirement form
+    ("no-self-initiation", lambda: all("clerical" not in INPUTS[(None, s)][1] for s in NEW_STATES)),   # #309: countersign I6 — a row is born on the Operator's words
+    ("backlog-opens-on-a-prompt", lambda: INPUTS[("backlog", "open")][1] == {"prompt"}),   # #309: Rule-7's transaction check binds the edge to a `prompt` entry
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),

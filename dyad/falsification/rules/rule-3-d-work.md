@@ -374,3 +374,46 @@ declines to resolve (`row.disposed->pr` is a `world` kind); no reference kind is
 unresolved-kind gap is the audit's finding, not a new one. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #290.
+
+## Amendment — d-work #309 (2026-10-15, the d-work play-book: entity records and the machine's inputs)
+Claim: the d-work framework can be stated whole, as a play-book and as data, without a second text on any
+trigger a Rule owns. The Operator's prompt (relayed via cos, #296): formalize the architecture of the d-work
+framework — play-book and entity records — and d-work as a finite-state machine that carries state to
+complete a countersigned work session. Plan `agent-corpus/d-work/plans/309.md` (asked and answered as #298;
+re-allocated after an id collision, the plan's revision note).
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | The architecture already exists across Rules 3, 7, 15 and 16; a play-book restating it is a second text on one trigger, a Rule-5 hazard. | survives, scoped | A play-book is not a Rule and instructs on no trigger (Rule-4 Boundaries; the vocabulary: read by a Rule, never a Rule). It cites every state, form and store to its owner and adds only what no Rule holds — the input and the record per edge — as data pinned by a test; on divergence the Rule wins and the test turns red, the arrangement `test_dyadlib_rows.py` already keeps between Rule-16 and `TRANSITIONS`. |
+| 2 | A play-book is for a recurring decision; a lifecycle is a process. | survives, scoped | The decision recurs at every state change — which transition is legal, what input, what record — and was made by inference against the CLI help and four Rules (Rule-13's trigger). |
+| 3 | `TRANSITIONS` already is the machine; `INPUTS` is dead data. | refuted | A successor relation cannot say `planned → open` is an Agent act and `open → done` the Operator's. `INPUTS` has a consumer on day one (the pinning test) and its invariants encode Rule-2 and countersign I6 at import. Driving `dwork state`'s refusals from it is a named follow-on, not claimed. |
+| 4 | A core change needs a `VERSION` bump with no landable bundle order (#230). | refuted here | `VERSION` 0.10.2 is already past `dyad-operator-v0.10.1`; the drift guard fails only an unchanged `VERSION`; the bundle guard already warns on this state (#170's shape). |
+| 5 | The countersign mapping is the craft's (D1–D8); restating it breaches the craft/core boundary. | survives, scoped | The play-book names the craft's terms by craft name and cites §4 and D1–D8; it adds the mapping of inputs — which answer moves which state — which is core process. The craft's own drift (D1 derives `explicit` for every row although rows carry `mode` since #290) is named in the plan, not fixed here. |
+| 6 | Easy agreement. | pushed | Attacks 1 and 5 landed and bound the text: cite, never redefine; data where the Rule has none; the craft's drift left to the craft. |
+| 7 | "Entity records" means the records of the play-book entity (its run-book's events). | survives, stated | The run-book supplies those too; the entity table would then be over-delivery. The Operator's `Y` to the plan as read disposes the reading. |
+| 8 | The one Rule-3 sentence is unnecessary: `disposition-digest.md` says "read by Rule-3" and Rule-3 does not name it, so the precedent is to cite nothing. | refuted | Three of the five play-books are named by Rule-3 where it reads them, and `test_playbooks.py` asserts the citation for each; the digest's missing sentence is a gap the plan names, not a precedent to extend. |
+
+Pairwise (Rule-5), this edit against every other Rule. **3–1** — the play-book, run-book, data, test and
+record are one tree, `dyad/*`, agent zone; one PR. **3–2** — the invariant *only the Operator closes* is
+Rule-2's Binding restated as data, not a new ratification event; Rule-2 is not edited. **3–4** — one
+bullet under Ledger; the block (Intent, Target, Boundaries, Conditions) is unchanged. **3–5** — this
+statement. **3–6** — no term is added or redefined: `play-book`, `transition`, `disposition`, `plan-Y`,
+`Done-Y`, `accreted row` are used in their vocabulary sense; the countersign terms are cited by craft
+name, as #290 already does. **3–7** — the machine's `prompt` and `disposition` kinds are Rule-7's two entry
+kinds; the `backlog → open` invariant is its transaction check as data; Rule-7 is not edited. **3–8** — no
+host action; the run-book's classes are read-only or reversible, none destructive. **3–9** — this record.
+**3–10** — the play-book's lifecycle step 2 cites Rule-10's form; no form changes. **3–11** — `VERSION`
+unchanged (attack 4); the play-book and run-book are core-craft files; the instance's rows are untouched.
+**3–12** — `INPUTS` carries six invariants enforced at import and a mapped test; the run-book is checked by
+the sysadmin craft's guard where present, as the other core run-books are. **3–13** — property 1 discharged:
+the inference at every row write becomes data; the criteria are untouched. **3–14** — kernel only: stdlib,
+no World row; the invariants run on the kernel-only path. **3–15** — the play-book cites Rule-15's phases and
+the accreted-row bullet; no phase is added; `planned → open` names Rule-15 phase 2 as the clerical input.
+**3–16** — `TRANSITIONS`, `NEW_STATES` and the store are unchanged; `INPUTS` is derived over them and its
+first invariant holds them equal; Rule-16's bullet still parses to the same table. **3–18** — no
+Operator-executed command. **3–19** — the run-book is a core run-book with its own section set (Rule-19
+Boundaries), its events the sysadmin craft's where recorded. **3–20** — no reference kind is added; the
+entity table lists the register's existing kinds per record, read from `references.REFERENCES`, and the
+play-book's path is resolved by `rule.text->path`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #309.
