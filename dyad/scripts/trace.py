@@ -41,8 +41,8 @@ MEANING = {
     "operator": "a reply ending in a `Y/N:` line, to the Operator's next message",
     "idle": "a reply with no `Y/N:` line, to the Operator's next message",
     "inference": "a tool result or message, to the Agent's next tool call or reply (wall gap)",
-    "suite": "a Bash call running the push gate, `check --evidence` or `--tests` whose result shows a test run (`Ran N tests`)",
-    "guards": "a `git push` whose gate ran guards only (a ledger-only or empty range: no `Ran N tests` in its result)",
+    "suite": "a Bash call whose gate ran Rule-12's suite, by what it ran and never by duration: `check --evidence` or `--tests` always; a `git push` whose pushed range (git) touches anything outside `<instance>/d-work/` with no skip line, or whose result shows `Ran N tests`; a hand-run `unittest` showing `Ran N tests`",
+    "guards": "a `git push` whose gate ran guards only: the gate's own `skip [guards] Rule-12 suite:` line, else a ledger-only or empty pushed range (read from git, not from the result text; #216)",
     "github": "a GitHub tool call, or a Bash `gh api` call",
     "git/local": "any other Bash call",
     "subagent": "an Agent, Task or Workflow call, launch to result",
@@ -50,6 +50,9 @@ MEANING = {
     "other": "any other tool call (Read, Edit, Write, Grep, …)"}
 SUITE_TOKENS = ("git push", "check --evidence", "--tests")
 SUITE_RAN = re.compile(r"\bRan \d+ tests?\b")     # a result that ran a suite; only this flag is kept, never the text
+SUITE_SKIP = re.compile(r"skip \[guards\] Rule-12 suite:")   # the gate's own skip line (`package.py` `suite_memo_clause`, `suite_gate`; #216)
+PUSH = re.compile(r"\bgit push\b")                # a push-gate call: its kind is decided by what the gate ran (#216)
+HAND_RUN = re.compile(r"\bunittest\b")            # a measure-only run by hand (Rule-12 p2): `suite` only with `Ran N tests` (#216)
 SUBAGENT_TOOLS = ("Agent", "Task", "Workflow")
 HARNESS_PREFIXES = ("<task-notification", "<local-command", "<command-", "<system-reminder", "Caveat:")
 LEDGER_HEAD = "ledger-"                    # a ledger PR's head branch (Rule-3 Ledger: clerical commits)
@@ -154,9 +157,10 @@ def tool_kind(name: str, inp: dict) -> str:
         return "github" if re.search(r"\bgh api\b", cmd) else "git/local"
     return "other"
 
-def load(paths: list[Path]) -> tuple[list[dict], list[str]]:
+def load(paths: list[Path], commits: list[dict] | None = None) -> tuple[list[dict], list[str]]:
     """Main-thread records of every transcript, time-sorted, as derived dicts; text is kept only on an
-    Operator message, for anchoring, and never leaves this module. Returns (records, problems)."""
+    Operator message, for anchoring, and never leaves this module. `commits` (`git_events`'s, each with its
+    `ledger` flag) is the range a push's kind is read from (`push_kinds`). Returns (records, problems)."""
     recs, seen, problems = [], set(), []
     for p in paths:
         try:
@@ -180,11 +184,39 @@ def load(paths: list[Path]) -> tuple[list[dict], list[str]]:
         if bad:
             problems.append(f"transcript {p.name}: {bad} line(s) not JSON, skipped")
     recs.sort(key=lambda r: (r["ts"], r["seq"]))
-    ran = {r["tool"]: r.get("ran") for r in recs if r["kind"] == "tool_result" and r.get("tool")}
-    for r in recs:   # a push gate that ran no suite is a guards-only gate (ledger-only or empty range, Rule-12 p2)
-        if r["kind"] == "tool_use" and r.get("tkind") == "suite" and r.get("tool") in ran and not ran[r["tool"]]:
-            r["tkind"] = "guards"
+    push_kinds(recs, commits)
     return recs, problems
+
+def push_kinds(recs: list[dict], commits: list[dict] | None) -> None:
+    """d-work #216: the `suite`/`guards` kind of a gate call by **what the gate ran**, never by duration. A
+    `git push` is `guards` when its result carries the gate's own skip line (the suite memo or a ledger-only
+    range, `SUITE_SKIP`); else `suite` when it shows `Ran N tests` (corroboration only); else by the pushed
+    range read from git — the commits between the same session's previous push (its first record, before
+    one) and this call: any touching anything outside `<instance>/d-work/` → `suite` (Rule-12 p2: the gate
+    runs the suite on such a range), all ledger-only or none → `guards`. A range-booked push is flagged
+    `ranged` (a Limits line); a range the timeline did not capture reads as empty. `check --evidence` and
+    `--tests` are `suite` always (never skipped). A hand-run `unittest` (`hand`) is `suite` only when its
+    result shows `Ran N tests`, else it stays `git/local`."""
+    res = {r["tool"]: r for r in recs if r["kind"] == "tool_result" and r.get("tool")}
+    first, last_push = {}, {}
+    for r in recs:
+        first.setdefault(r["session"], r["ts"])
+        if r["kind"] != "tool_use":
+            continue
+        got = res.get(r.get("tool"), {})
+        if r.get("push"):
+            prev = last_push.get(r["session"], first[r["session"]])
+            last_push[r["session"]] = r["ts"]
+            if got.get("skipped"):
+                r["tkind"] = "guards"
+            elif got.get("ran"):
+                r["tkind"] = "suite"
+            else:
+                rng = [c for c in commits or [] if prev <= c["ts"] <= r["ts"]]
+                r["tkind"] = "suite" if any(not c["ledger"] for c in rng) else "guards"
+                r["ranged"] = True
+        elif r.get("hand") and got.get("ran"):
+            r["tkind"] = "suite"
 
 def _flat(c) -> str:
     """A tool result's text, for the one suite-ran test above; never stored."""
@@ -215,7 +247,8 @@ def _derive(o: dict) -> list[dict]:
     if typ == "user":
         content = msg.get("content")
         if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
-            return [_rec("tool_result", t, sess, tool=b.get("tool_use_id"), ran=bool(SUITE_RAN.search(_flat(b.get("content")))))
+            return [_rec("tool_result", t, sess, tool=b.get("tool_use_id"), ran=bool(SUITE_RAN.search(_flat(b.get("content")))),
+                         skipped=bool(SUITE_SKIP.search(_flat(b.get("content")))))   # two flags, never the text (#216)
                     for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
         if o.get("isMeta"):
             return []
@@ -231,7 +264,10 @@ def _derive(o: dict) -> list[dict]:
             if b.get("type") == "tool_use":
                 inp = b.get("input") if isinstance(b.get("input"), dict) else {}
                 name = str(b.get("name", ""))
-                out.append(_rec("tool_use", t, sess, tool=b.get("id"), name=name, tkind=tool_kind(name, inp),
+                cmd = str(inp.get("command", "")) if name == "Bash" else ""
+                kind = tool_kind(name, inp)
+                out.append(_rec("tool_use", t, sess, tool=b.get("id"), name=name, tkind=kind,
+                                push=bool(PUSH.search(cmd)), hand=kind == "git/local" and bool(HAND_RUN.search(cmd)),   # #216
                                 background=bool(inp.get("run_in_background")),
                                 pr=("ledger" if str(inp.get("head", "")).startswith(LEDGER_HEAD) else "work")
                                 if "create_pull_request" in name else None,
@@ -423,7 +459,7 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
     plan = inst / "d-work" / "plans" / f"{rid}.md"
     commits, merges = git_events(rid, root)
     paths = transcripts if transcripts is not None else default_transcripts(root)
-    recs, problems = load(paths) if paths else ([], [])
+    recs, problems = load(paths, commits) if paths else ([], [])
     anchors = anchor(entries, recs, rid) if recs else []
     limits: list[str] = list(problems)
     home = str(Path.home())
@@ -537,10 +573,19 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
         gates = [r for r in tools if r["tkind"] == "guards"]
         lines += [f"| PRs created in the window | ledger {prs.count('ledger')}, work {prs.count('work')} | transcript |",
                   f"| PRs merged in the window | {sum(bool(r.get('merge')) for r in tools)} | transcript |",
-                  f"| full-suite runs (push gate, evidence, `--tests`) | {len(bash)} | transcript |",
+                  f"| full-suite runs (push gate, evidence, `--tests`, a hand-run `unittest` that ran) | {len(bash)} | transcript |",
                   f"| guards-only push gates | {len(gates)} | transcript |",
                   f"| tool calls | {len(tools)} | transcript |",
                   f"| output tokens | {sum(tokens.values())} | transcript |"]
+        ranged = [r for r in tools if r.get("ranged")]   # #216: pushes booked from the pushed range, not the result text
+        if ranged:
+            limits.append(f"{len(ranged)} push gate(s) booked from the pushed range read from git (no skip line and no `Ran N tests` "
+                          f"in the result — filtered or absent output): {sum(r['tkind'] == 'suite' for r in ranged)} suite, "
+                          f"{sum(r['tkind'] == 'guards' for r in ranged)} guards; a range the timeline did not capture reads as guards")
+        hand = [r for r in tools if r.get("hand")]
+        if hand:
+            limits.append(f"{len(hand)} hand-run `unittest` call(s): `suite` only when the result shows `Ran N tests` "
+                          f"({sum(r['tkind'] == 'suite' for r in hand)} did), else `git/local` — never by duration")
     else:
         lines.append("| tool calls, tokens, PRs created | absent | no transcript window |")
     if sub_ms is not None:   # d-work #254: the `subagent` bucket over the agent partition, beside the tokens it
@@ -560,6 +605,15 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
         med, n = median_agent_side(root, rid)
         lines += [f"**Agent-side:** {agent_side} s ({100 * agent_ms / total:.0f}% of the window; the Operator's wait excluded); "
                   + (f"median of {n} traced d-work(s): {round(med)} s." if med is not None else "no other traced d-work to compare."), ""]
+        # #216: the agent partition as a table under that line (not a sixth section: SECTIONS and the store are untouched),
+        # then test execution (suite + guards) against inference — the kinds by what the gate ran, never by duration.
+        lines += ["| agent bucket | seconds | share of agent-side |", "|--------------|---------|---------------------|"]
+        for b in PARTITIONS["agent"]:
+            lines.append(f"| {b} | {round(got[b] / 1000)} | {(100 * got[b] / agent_ms if agent_ms else 0.0):.1f}% |")
+        tests_ms, inf_ms = got["suite"] + got["guards"], got["inference"]
+        lines += [f"| **suite + guards** | {round(tests_ms / 1000)} | {(100 * tests_ms / agent_ms if agent_ms else 0.0):.1f}% |", "",
+                  f"**Test execution:** suite + guards {round(tests_ms / 1000)} s against inference {round(inf_ms / 1000)} s; "
+                  f"test execution / inference = {f'{tests_ms / inf_ms:.1f}' if inf_ms else 'n/a'}.", ""]
     # limits
     limits += ["inference is a wall-clock gap between transcript records: it includes harness and network latency and overstates the model's own time",
                "the trace stops at the Done-`Y`: the Done ledger commit that carries it and the merge are clerical and appear only as git events after the window"]

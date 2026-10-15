@@ -83,10 +83,17 @@ counts of each), then five sections in this order:
      **idle** — a reply with no `Y/N:` line, to the Operator's next message.
    - Agent partition: **inference** — a tool result or a message, to the Agent's next tool call or reply;
      **background** — a finished turn, to a background task's notification; and the mechanical kinds by
-     tool-call duration (call to result): **suite** (a Bash call running `git push`, `check --evidence` or
-     `--tests` whose result shows a test run, `Ran N tests`), **guards** (a `git push` whose gate ran guards
-     only — a ledger-only or empty range, Rule-12 p2), **github** (a GitHub tool, or Bash `gh api`), **git/local** (any other Bash), **subagent**
-     (Agent, Task or Workflow), **other** (any other tool).
+     tool-call duration (call to result): **suite** (a Bash call whose gate ran Rule-12's suite) and **guards**
+     (a `git push` whose gate ran guards only), **github** (a GitHub tool, or Bash `gh api`), **git/local** (any
+     other Bash), **subagent** (Agent, Task or Workflow), **other** (any other tool).
+   - Suite or guards is decided by **what the gate ran, never by duration** (#216): `check --evidence` and
+     `--tests` are suite always; a `git push` is guards when its result carries the gate's own skip line
+     (`skip [guards] Rule-12 suite:` — the suite memo or a ledger-only range), suite when it shows `Ran N
+     tests`, and otherwise by the pushed range read from git — the timeline's commits since the same session's
+     previous push: any outside `<instance>/d-work/` is suite (Rule-12 p2), all ledger-only or none is guards.
+     So a push whose output the Agent filtered is still booked right; a range the timeline did not capture
+     reads as guards, and Limits names every range-booked push. A hand-run `unittest` (a measure-only run) is
+     suite only when its result shows `Ran N tests`, else git/local, said under Limits.
    - Overlap is counted once: calls made together take the first kind of the order suite, guards, github,
      git/local, subagent, other; a background launch is counted for its launch only and listed under the
      table, its run never summed a second time.
@@ -98,12 +105,17 @@ counts of each), then five sections in this order:
    concise-mode clause), which is what leaves a turn open long enough for a lost segment to cost it (#254).
 4. **Bottleneck.** The top three buckets by share; then `**Agent-side:** <n> s` — inference plus every
    mechanical kind, the Operator's partition excluded, because only that is what a change to the system can
-   move — beside the median of every other trace in the store.
+   move — beside the median of every other trace in the store; then, under that line and not as a sixth
+   section (#216), the agent partition as a table — each agent bucket's seconds and share of agent-side
+   seconds, `suite + guards` last — and one line of test execution against inference: `suite + guards` and
+   `inference` in seconds and their ratio (`n/a` on zero inference), so the cost of the gates reads beside
+   the model's turns by the same measure, never by a duration rule.
 5. **Limits.** Every provenance entry left unmatched or ambiguous; a preview, said as one; shared turns (a
    `Y/N:` naming this d-work with others: counted whole, split evenly only in the line that names them);
    turns asking only about other d-works; agent-side segments of fifteen minutes or more (a restart, a sleep
-   or a lost turn reads as its bucket); more than one harness session in the window; and always: inference
-   is a wall gap and overstates the model's own time, and the trace stops at the Done-`Y`.
+   or a lost turn reads as its bucket); more than one harness session in the window; pushes booked from the
+   pushed range and hand-run `unittest` calls (#216); and always: inference is a wall gap and overstates
+   the model's own time, and the trace stops at the Done-`Y`.
 
 **Anchors.** Each provenance entry (Rule-7) is matched to the Operator message that carried it —
 whitespace-normalized, equal, or contained when the entry is twenty characters or longer — in record order,

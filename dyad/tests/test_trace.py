@@ -4,7 +4,9 @@ Anchoring is exact and in order, a disposition answers only a `Y/N:` naming its 
 window to the millisecond, overlapping tool calls and a background launch are counted once, the no-transcript
 path degrades to the git and ledger timeline, an unmatched or ambiguous entry is reported and never guessed,
 the window runs through the Done-`Y` (to the Done question in a preview, before one), `--out` writes
-`<instance>/d-work/traces/<id>.md`, the store is well-formed, and no transcript text reaches the output."""
+`<instance>/d-work/traces/<id>.md`, the store is well-formed, and no transcript text reaches the output. #216: a
+push's suite/guards kind is read from the gate's skip line, `Ran N tests` or the pushed range in git — never from
+its duration — a hand-run `unittest` is suite only when it ran, and the Bottleneck's agent-side table renders."""
 import datetime, json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -71,9 +73,10 @@ ENTRIES = [("prompt", "2026-10-05", "", PROMPT), ("disposition", "2026-10-05", "
 def git(root, *a):
     subprocess.run(["git", *a], cwd=root, check=True, capture_output=True, env=dyadlib.git_env())
 
-def fixture(entries=ENTRIES, lines=None):
+def fixture(entries=ENTRIES, lines=None, dates=None):
     """(root, transcript path): a git repository with row 7, its record and plan, one ledger commit and one
-    work commit citing `d-work #7`; and the transcript, in the scratch directory and never in the repo."""
+    work commit citing `d-work #7`; and the transcript, in the scratch directory and never in the repo.
+    `dates` (#216): the two commits' author dates as transcript seconds, else now — after any window."""
     root = Path(tempfile.mkdtemp())
     git(root, "init", "-q"); git(root, "config", "user.email", "t@example.org"); git(root, "config", "user.name", "t")
     dw = root / "agent-corpus" / "d-work"
@@ -82,9 +85,10 @@ def fixture(entries=ENTRIES, lines=None):
     (dw / "rows" / "7.md").write_text("id: 7\ntitle: widget\nopened: 2026-10-05\nstate: planned\ndisposed: 2026-10-05 Y plan\nrefs: \n")
     (dw / "plans" / "7.md").write_text("# Plan #7\n")
     (dw / "provenance" / "7.md").write_text(record(entries))
-    git(root, "add", "-A"); git(root, "commit", "-qm", "ledger: open #7")
+    when = lambda i: [f"--date={ts(dates[i])}"] if dates else []
+    git(root, "add", "-A"); git(root, "commit", "-qm", "ledger: open #7", *when(0))
     (root / "code.py").write_text("x = 1\n")
-    git(root, "add", "-A"); git(root, "commit", "-qm", "the widget (d-work #7)")
+    git(root, "add", "-A"); git(root, "commit", "-qm", "the widget (d-work #7)", *when(1))
     tdir = Path(tempfile.mkdtemp())
     path = tdir / "session.jsonl"
     path.write_text("".join(json.dumps(o) + "\n" for o in (transcript() if lines is None else lines)) + "not json\n")
@@ -125,6 +129,100 @@ class TraceTests(unittest.TestCase):
         path.write_text("".join(json.dumps(l) + "\n" for l in lines))
         recs, _ = tr.load([path])
         self.assertEqual([r["tkind"] for r in recs if r["kind"] == "tool_use"], ["guards", "suite"])
+
+    def test_a_push_is_booked_by_what_the_gate_ran_never_by_duration(self):
+        """#216: a `git push` whose result the Agent filtered (`| grep -v`) is booked from the pushed range read
+        from git — the commits since the same session's previous push, its first record before one — never from
+        the result text or its duration: a non-ledger range is `suite` at 2 s, a ledger-only one `guards` at
+        300 s, an empty one `guards`; the gate's own skip line is `guards` whatever the range; `Ran N tests`
+        corroborates `suite`; `check --evidence` is `suite` always."""
+        commit = lambda s, sha, ledger: {"sha": sha, "ts": tr.ms(ts(s)), "subject": sha, "ledger": ledger}
+        filtered = "To origin\n   abc..def  work-7 -> work-7"              # the gate's lines removed by `| grep -v`
+        lines = [user(0, PROMPT, "u0"),
+                 tool(10, "p1", "Bash", "g0", "n0", command="git push -u origin work-7 2>&1 | grep -v '^ok'"),
+                 result(12, "p1", "g1", content=filtered),                   # 2 s; range holds a work commit: suite
+                 tool(20, "p2", "Bash", "g2", "n1", command="git push origin ledger-7 | grep -v '^ok'"),
+                 result(320, "p2", "g3", content=filtered),                  # 300 s; range ledger-only: guards
+                 tool(330, "p3", "Bash", "g4", "n2", command="git push origin work-7"),
+                 result(340, "p3", "g5", content="skip [guards] Rule-12 suite: tree abc already passed on this checkout (d-work #162)"),
+                 tool(350, "p4", "Bash", "g6", "n3", command="git push origin work-7"),
+                 result(360, "p4", "g7", content="     [Rule-12] dyad/tests: Ran 585 tests OK"),
+                 tool(370, "p5", "Bash", "g8", "n4", command="dyad/bin/dyad check --evidence | grep -v '^ok'"),
+                 result(372, "p5", "g9", content=filtered),                  # evidence: suite always, 2 s or not
+                 tool(380, "p6", "Bash", "g10", "n5", command="git push origin work-7 | grep -v '^ok'"),
+                 result(390, "p6", "g11", content=filtered)]                 # empty range: guards
+        path = Path(tempfile.mkdtemp()) / "t.jsonl"
+        path.write_text("".join(json.dumps(l) + "\n" for l in lines))
+        commits = [commit(-50, "a", True), commit(5, "b", False), commit(15, "c", True), commit(335, "d", False)]
+        recs, _ = tr.load([path], commits)                                   # `a` predates the session: in no range
+        uses = [r for r in recs if r["kind"] == "tool_use"]
+        self.assertEqual([r["tkind"] for r in uses], ["suite", "guards", "guards", "suite", "suite", "guards"])
+        self.assertEqual([bool(r.get("ranged")) for r in uses], [True, True, False, False, False, True])
+
+    def test_a_filtered_push_is_booked_from_the_repository_range(self):
+        """#216, end to end: the range is `git_events`'s commits with their ledger flag. The ledger commit is dated
+        before the session, the work commit inside it; the filtered push after the work commit is `suite` (4 s),
+        the filtered ledger push with nothing new is `guards` (120 s), and Limits names the range booking."""
+        lines = [user(0, PROMPT, "u0"),
+                 tool(10, "p1", "Bash", "u1", "m1", command="git push -u origin work-7 | grep -v '^ok'"),
+                 result(14, "p1", "u2", content="To origin"),
+                 tool(20, "p2", "Bash", "u3", "m2", command="git push origin ledger-7 | grep -v '^ok'"),
+                 result(140, "p2", "u4", content="To origin"),
+                 text(150, f"{SECRET}\nY/N: Done with #7 widget?", "u5", "m3"),
+                 user(200, "Y", "u6")]
+        root, path = fixture(entries=ENTRIES[:1] + [("disposition", "2026-10-05", "Y done", "Y")], lines=lines, dates=(-30, 5))
+        out = tr.trace(7, root, [path])
+        self.assertIn("| full-suite runs (push gate, evidence, `--tests`, a hand-run `unittest` that ran) | 1 | transcript |", out)
+        self.assertIn("| guards-only push gates | 1 | transcript |", out)
+        self.assertIn("| suite | agent | 4 |", out)
+        self.assertIn("| guards | agent | 120 |", out)
+        self.assertIn("- 2 push gate(s) booked from the pushed range read from git (no skip line and no `Ran N tests` in the "
+                      "result — filtered or absent output): 1 suite, 1 guards; a range the timeline did not capture reads as guards", out)
+
+    def test_a_hand_run_unittest_is_suite_only_when_it_ran(self):
+        """#216 (measure-only runs): a Bash call running `unittest` by hand is `suite` when its result shows
+        `Ran N tests`, else `git/local` whatever its length — stated under Limits when one occurred in the window."""
+        lines = [user(0, PROMPT, "u0"),
+                 tool(10, "h1", "Bash", "u1", "m1", command="python3 -m unittest dyad.tests.test_trace"),
+                 result(40, "h1", "u2", content="Ran 14 tests\n\nOK"),
+                 tool(50, "h2", "Bash", "u3", "m2", command="python3 -m unittest dyad.tests.test_trace 2>/dev/null"),
+                 result(55, "h2", "u4", content=""),
+                 text(80, f"{SECRET}\nY/N: Done with #7 widget?", "u5", "m3"),
+                 user(100, "Y", "u6")]
+        root, path = fixture(entries=ENTRIES[:1] + [("disposition", "2026-10-05", "Y done", "Y")], lines=lines)
+        recs, _ = tr.load([path])
+        self.assertEqual([r["tkind"] for r in recs if r["kind"] == "tool_use"], ["suite", "git/local"])
+        out = tr.trace(7, root, [path])
+        self.assertIn("| suite | agent | 30 |", out)
+        self.assertIn("| git/local | agent | 5 |", out)
+        self.assertIn("- 2 hand-run `unittest` call(s): `suite` only when the result shows `Ran N tests` (1 did), "
+                      "else `git/local` — never by duration", out)
+
+    def test_agent_side_table_and_test_execution_ratio(self):
+        """#216: under the `**Agent-side:**` line, the agent partition as a table (each bucket's share of agent-side
+        seconds) and suite + guards against inference as seconds and a ratio, `n/a` on zero inference. Not a sixth
+        section: the store check still sees five, and the Compare median still reads the line above the table."""
+        root, path = fixture()
+        out = tr.trace(7, root, [path])
+        self.assertIn("| agent bucket | seconds | share of agent-side |", out)
+        self.assertIn("| inference | 44 | 40.0% |", out)
+        self.assertIn("| suite | 60 | 54.5% |", out)
+        self.assertIn("| **suite + guards** | 60 | 54.5% |", out)
+        self.assertIn("**Test execution:** suite + guards 60 s against inference 44 s; test execution / inference = 1.4.", out)
+        lines = [user(0, PROMPT, "u0"),
+                 tool(0, "a1", "Bash", "u1", "m1", command="dyad/bin/dyad check --evidence"),
+                 result(60, "a1", "u2", content="Ran 5 tests OK"),
+                 text(60, f"{SECRET}\nY/N: Done with #7 widget?", "u3", "m2"),
+                 user(100, "Y", "u4")]
+        root2, path2 = fixture(entries=ENTRIES[:1] + [("disposition", "2026-10-05", "Y done", "Y")], lines=lines)
+        out2 = tr.trace(7, root2, [path2])
+        self.assertIn("| inference | 0 | 0.0% |", out2)
+        self.assertIn("| suite | 60 | 100.0% |", out2)
+        self.assertIn("test execution / inference = n/a.", out2)
+        store = root2 / "agent-corpus" / "d-work" / "traces"; store.mkdir()
+        (store / "7.md").write_text(out2)
+        self.assertEqual(tr.check_store(root2), [])
+        self.assertEqual(tr.median_agent_side(root2, 8), (60, 1))
 
     def test_report_window_counts_and_no_transcript_text(self):
         root, path = fixture()
