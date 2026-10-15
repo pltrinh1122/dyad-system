@@ -1,8 +1,8 @@
 session: ds-cabinet-cloud-2
-seen: 2026-10-15T02:08:36+00:00
+seen: 2026-10-15T02:38:12+00:00
 root: /home/user/dyad-system
-rows: 249 301
+rows: 216 301
 files: 
-writer: d96709f99e3f
+writer: dd67be1ff09b
 host: cloud linux x86_64
 holder: 92e3d665-dcb6-5cc9-a071-8afcbc37314b
