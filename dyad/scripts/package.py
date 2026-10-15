@@ -119,7 +119,7 @@ if __name__ == "__main__":
         else:
             _previous(kind, exc, tb)
     sys.excepthook = _invariant_error_one_line
-import os, re, subprocess, functools, fnmatch, hashlib, json, datetime
+import os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
 
@@ -245,13 +245,14 @@ def check_rule_12():
     _SUITE_RAN = True
     memo = suite_memo_parts()   # read before the run, compared after it: a tree that moved mid-run is never memoized
     for suite in test_suites():
-        r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(suite), "-q"],
-                           capture_output=True, text=True, timeout=600,
-                           env=suite_env())
-        summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]  # no timing: the evidence block must be deterministic (#138)
+        # #326: through `run_suite`, the one child, so the temp-root sweep covers the push gate and the
+        # evidence run too. This loop used to spawn its own `unittest` with no sweep, which is why the
+        # docstring's claim that `run_suite` spawns it "the way `check_rule_12` spawns it" was two code
+        # paths rather than one, and why the leak survived a fix applied to only the other.
+        code, summary, err = run_suite(suite)   # no timing in `summary`: the evidence block is deterministic (#138)
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
-        if r.returncode != 0:
-            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + r.stderr.strip().splitlines()[-1])
+        if code != 0:
+            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + err.strip().splitlines()[-1])
     if not msgs and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)   # a full, all-roots pass on a clean tree (d-work #162)
     return msgs
@@ -414,8 +415,10 @@ def installed_roots(base, head):
             run.append(root)
     return run, lines
 
-def suite_env() -> dict[str, str]:
-    """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped.
+def suite_env(tmp: str | None = None) -> dict[str, str]:
+    """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped,
+    and — given `tmp` — `TMPDIR`/`TMP`/`TEMP` pointed at it, so every fixture the child creates lands
+    where `run_suite` can sweep it (#326). All three names, because a grandchild may read any of them.
     A git hook exports an absolute `GIT_DIR` when it runs in a linked worktree; a suite that inherits
     it points every scratch-repo git call at the real repository (#152: `core.bare`, a `feature`
     branch and a tag written into the live repo by the pre-push hook's run). Fixture commits are never
@@ -425,15 +428,38 @@ def suite_env() -> dict[str, str]:
     env = {**dyadlib.git_env(), "DYAD_NO_NESTED_TESTS": "1"}
     n = int(env.get("GIT_CONFIG_COUNT") or 0)
     env.update({"GIT_CONFIG_COUNT": str(n + 1), f"GIT_CONFIG_KEY_{n}": "commit.gpgsign", f"GIT_CONFIG_VALUE_{n}": "false"})
+    if tmp:
+        env.update({"TMPDIR": tmp, "TMP": tmp, "TEMP": tmp})
     return env
 
 def run_suite(suite, target=None):
-    """One `unittest` child, the way `check_rule_12` spawns it — always with `DYAD_NO_NESTED_TESTS`,
-    which is what makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run
-    their own suites). Returns (rc, summary lines)."""
+    """The one `unittest` child — `check_rule_12` and `cmd_tests` both come here, which is what makes
+    "the way the runner runs it" one thing rather than two (#326). Always `DYAD_NO_NESTED_TESTS`, which
+    is what makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run their own
+    suites), and always inside a temp root this function removes. Returns (rc, summary lines, stderr).
+
+    The root is made here, in the parent, and swept in `finally`, because the child is killed outright
+    at the `timeout` below and runs no cleanup of its own — which is how 24,876 fixture directories
+    accumulated and took `/tmp` to 100% of its 1,048,576 inodes, after which `unittest discover` died
+    with `OSError: Errno 28` and no push could leave any clone, the pre-push gate running the suite.
+    The fixtures still call `tempfile.mkdtemp()` without cleanup — 102 call sites over 42 files and two
+    zones — so the sweep sits at the one place every sanctioned run passes through (Rule-12 property 2:
+    the suite is run by the runner, not by hand); a hand-typed `unittest` is outside it and still leaks.
+    A run that fails, or never returns, keeps its root and prints the path, because that is the tree
+    worth reading; a run that passes leaves nothing. No environment variable gates this: a new `DYAD_*`
+    name would have to be declared in the syseng craft's naming table, which is a second zone and a
+    craft release (Rule-1, Rule-11 property 7), and the return code already says which runs matter."""
     argv = ["-m", "unittest", target, "-q"] if target else ["-m", "unittest", "discover", "-s", str(suite), "-q"]
-    r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
-                       env=suite_env())
+    tmp, keep = tempfile.mkdtemp(prefix="dyad-suite-"), True   # a child that never returns is worth reading
+    try:
+        r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
+                           env=suite_env(tmp))
+        keep = r.returncode != 0
+    finally:
+        if keep:
+            print(f"     [Rule-12] temp root kept for reading: {tmp}")
+        else:
+            shutil.rmtree(tmp, ignore_errors=True)
     summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
     return r.returncode, summary, r.stderr
 
