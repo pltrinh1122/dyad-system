@@ -19,7 +19,15 @@ whether the name is still live. An optional `writer` field (outside FIELDS, chec
 present) is this process's own id, written by `touch()`: two *processes* configured with the same
 `DYAD_SESSION` collide on one file despite the "only that session writes it" promise above (F1,
 d-work #32) — `touch()` detects a different, still-live `writer` already in the file and warns
-loudly instead of silently unioning the other process's rows and files into its own.
+loudly instead of silently unioning the other process's rows and files into its own. Two more optional lines, written by `touch()`
+from the environment and checked only when present (d-work #294): `host: <kernel> <os> <arch>`
+— kernel `cloud` when the harness reports `CLAUDE_CODE_REMOTE=true`, else `terminal` (the token is
+what the harness says, `terminal` when it says nothing — one harness's variable, Rule-14 property
+2); os from `platform.system()` lower-cased (`darwin` → `macos`); arch `platform.machine()` — and
+`holder: <harness session id>` from `CLAUDE_CODE_SESSION_ID`, absent when that is unset. Together
+they say who holds the seat now; the seat is the file's name
+(`agent-corpus/falsification/seat-vs-harness-session.md`, #295). Both are code-written, never
+typed: a hand-added key does not survive the next `touch()`.
   sessions.py [repo-root]              check every presence file
   sessions.py touch [-r <row>]... [-f <file>]...   write/refresh this session's file
   sessions.py list                     print every file, flag one older than the stale window
@@ -27,7 +35,7 @@ loudly instead of silently unioning the other process's rows and files into its 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("sessions.py: Python 3.12+ required")
-import datetime, os, re, uuid
+import datetime, os, platform, re, uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -40,6 +48,7 @@ _SESSION_ID = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 _WRITER = uuid.uuid4().hex[:12]   # this process's own id (F1, d-work #32): computed once at import,
                                   # so it is stable for the process's life — a session re-touching
                                   # its own file always matches its own writer and stays silent.
+_KERNELS = frozenset({"terminal", "cloud"})   # the `host` line's first token (d-work #294)
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
               ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
@@ -56,6 +65,24 @@ def session_id() -> str:
     name, is `_WRITER` instead (F1, d-work #32), computed once at import."""
     v = os.environ.get("DYAD_SESSION", "")
     return v if _SESSION_ID.match(v) else f"unnamed-{uuid.uuid4().hex[:12]}"
+
+def host_line() -> str:
+    """`<kernel> <os> <arch>` as the environment says it (d-work #294): `cloud` when the harness
+    sets `CLAUDE_CODE_REMOTE=true`, else `terminal` — what the harness reports, `terminal` when it
+    reports nothing (Rule-14 property 2: one harness's variable, never the dyad's); the OS and
+    arch come from Python and hold on any kernel. Spaces in a token are collapsed so the line
+    always parses back to exactly three tokens."""
+    kernel = "cloud" if os.environ.get("CLAUDE_CODE_REMOTE", "").lower() == "true" else "terminal"
+    system = platform.system().lower() or "unknown"
+    system = {"darwin": "macos"}.get(system, system)
+    machine = platform.machine() or "unknown"
+    return " ".join(t.replace(" ", "_") for t in (kernel, system, machine))
+
+def holder() -> str | None:
+    """The harness session id holding this seat now (`CLAUDE_CODE_SESSION_ID`), or None when the
+    harness sets none — then no `holder` line is written (d-work #294, #295)."""
+    v = os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    return v if _SESSION_ID.match(v) else None
 
 def parse(text: str) -> dict[str, str]:
     return dict(line.split(": ", 1) for line in text.splitlines() if ": " in line)
@@ -112,7 +139,9 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
                  f"root: {Path(root).resolve()}\n"
                  f"rows: {' '.join(row_set)}\n"
                  f"files: {' '.join(file_set)}\n"
-                 f"writer: {_WRITER}\n")
+                 f"writer: {_WRITER}\n"
+                 f"host: {host_line()}\n"
+                 + (f"holder: {h}\n" if (h := holder()) else ""))
     return p
 
 def touch_from_open_rows(root: Path | None = None) -> Path:
@@ -182,6 +211,15 @@ def check_record(p: Path, text: str | None = None) -> list[str]:
             datetime.datetime.fromisoformat(fields["seen"])
         except ValueError:
             msgs.append(f"{p.name}: 'seen' is not an ISO-8601 timestamp ({fields['seen']!r})")
+    # optional lines, checked only when present — never failing an absent one (d-work #294)
+    if "host" in fields:
+        toks = fields["host"].split()
+        if len(toks) != 3:
+            msgs.append(f"{p.name}: 'host' is not three tokens <kernel> <os> <arch> ({fields['host']!r})")
+        elif toks[0] not in _KERNELS:
+            msgs.append(f"{p.name}: 'host' kernel {toks[0]!r} is not one of {sorted(_KERNELS)}")
+    if "holder" in fields and not _SESSION_ID.match(fields["holder"]):
+        msgs.append(f"{p.name}: 'holder' is not a path-segment token ({fields['holder']!r})")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
@@ -229,7 +267,8 @@ def main(a: list[str]) -> int:
         for s in rows:
             flag = "stale" if is_stale(s.get("seen", "")) else "live"
             same_flag = " [SAME ROOT AS YOU]" if (s.get("root") == str(Path(root).resolve()) and s.get("session") != session_id()) else ""
-            print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{same_flag}")
+            where = (f" host={s['host']}" if s.get("host") else "") + (f" holder={s['holder']}" if s.get("holder") else "")
+            print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{same_flag}")
         return 0
     msgs = check_package(Path(a[0]) if a else None)
     for m in msgs:

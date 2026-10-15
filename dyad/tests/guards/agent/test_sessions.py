@@ -1,6 +1,7 @@
 """Session presence guard tests (agent/sessions.py, Rule-16): the store shape check (missing
 fields, an unparseable `seen`), touch's write/refresh/dedup behaviour, the `DYAD_SESSION` id vs
-the random fallback, staleness, file-overlap detection, and files_touched's plan-line parser."""
+the random fallback, staleness, file-overlap detection, the optional `host`/`holder` lines (#294),
+and files_touched's plan-line parser."""
 import os, sys, tempfile, unittest
 from unittest import mock
 from pathlib import Path
@@ -220,6 +221,64 @@ class SameRootTests(unittest.TestCase):
             self.assertEqual(sv.parse(p.read_text())["root"], str(root.resolve()))
         finally:
             del os.environ["DYAD_SESSION"]
+
+class HostAndHolderTests(unittest.TestCase):
+    """d-work #294: `touch()` writes `host: <kernel> <os> <arch>` from the environment and
+    `holder: <harness session id>` when `CLAUDE_CODE_SESSION_ID` is set; the check judges both
+    only when present — exactly as the optional `writer` field — and never fails an absent one."""
+    def _touch(self, env: dict[str, str]) -> dict[str, str]:
+        root = repo()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "host-test", **env}):
+            for k in ("CLAUDE_CODE_REMOTE", "CLAUDE_CODE_SESSION_ID"):
+                if k not in env:
+                    os.environ.pop(k, None)
+            p = sv.touch(root, [], [])
+        return sv.parse(p.read_text())
+    def test_touch_writes_host_cloud_when_harness_reports_remote(self):
+        f = self._touch({"CLAUDE_CODE_REMOTE": "true"})
+        toks = f["host"].split()
+        self.assertEqual(len(toks), 3)
+        self.assertEqual(toks[0], "cloud")
+    def test_touch_writes_host_terminal_when_harness_reports_nothing(self):
+        f = self._touch({})
+        toks = f["host"].split()
+        self.assertEqual(len(toks), 3)
+        self.assertEqual(toks[0], "terminal")
+        self.assertEqual(toks[1], sv.host_line().split()[1])   # os and arch come from Python, whatever the kernel
+    def test_darwin_reads_macos(self):
+        with mock.patch.object(sv.platform, "system", return_value="Darwin"):
+            self.assertEqual(sv.host_line().split()[1], "macos")
+    def test_touch_writes_holder_when_harness_session_id_set(self):
+        f = self._touch({"CLAUDE_CODE_SESSION_ID": "session_01ABC"})
+        self.assertEqual(f["holder"], "session_01ABC")
+    def test_touch_omits_holder_when_unset(self):
+        f = self._touch({})
+        self.assertNotIn("holder", f)
+    def test_absent_host_and_holder_pass(self):
+        root = repo()
+        (root / "agent-corpus" / "d-work" / "sessions" / "s1.md").write_text(
+            "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\nwriter: deadbeef0000\n")
+        self.assertEqual(sv.check_package(root), [])
+    def test_well_formed_host_and_holder_pass(self):
+        root = repo()
+        (root / "agent-corpus" / "d-work" / "sessions" / "s1.md").write_text(
+            "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\n"
+            "host: cloud linux x86_64\nholder: session_01ABC\n")
+        self.assertEqual(sv.check_package(root), [])
+    def test_malformed_host_fails(self):
+        root = repo()
+        store = root / "agent-corpus" / "d-work" / "sessions"
+        base = "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\n"
+        (store / "two.md").write_text(base + "host: cloud linux\n")
+        (store / "kernel.md").write_text(base + "host: laptop linux x86_64\n")
+        msgs = sv.check_package(root)
+        self.assertTrue(any("two.md" in m and "three tokens" in m for m in msgs), msgs)
+        self.assertTrue(any("kernel.md" in m and "kernel 'laptop'" in m for m in msgs), msgs)
+    def test_malformed_holder_fails(self):
+        root = repo()
+        (root / "agent-corpus" / "d-work" / "sessions" / "s1.md").write_text(
+            "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\nholder: has a space/slash\n")
+        self.assertIn("'holder' is not a path-segment token", " ".join(sv.check_package(root)))
 
 class FilesTouchedTests(unittest.TestCase):
     def test_parses_the_plan_line(self):

@@ -48,6 +48,12 @@ files and almost never merge.
   planned), `files` (the deduplicated union of every `files touched:` line from those rows'
   stored plan files, Rule-15 — one signal that matters: two sessions on *different* rows about
   the *same file*, the near-miss this store was built to catch, d-work #185).
+  Two optional lines follow, written by `touch()` from the environment and checked only when
+  present (never failing an absent one, as `writer` is handled): `host` (`<kernel> <os> <arch>`,
+  the kernel token what the harness reports — `cloud` when it reports `CLAUDE_CODE_REMOTE=true`,
+  `terminal` when it reports nothing — and the OS and arch from Python) and `holder` (the harness
+  session id, `CLAUDE_CODE_SESSION_ID`, absent when unset): who holds the seat now, where the file's
+  name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable
   checkout: a raw git command from either can clobber the other's uncommitted state regardless
   of which files either is editing — verified live during #185's own execution, when a peer
@@ -93,5 +99,8 @@ Store gains `backlog → archived` and the optional `mode` field, and Presence t
 sentence, 2026-10-14 (d-work #290): `archived` had been used 0 times in 280 rows while 75 sat in
 `backlog` with one successor each, a 5.4% drain, and a row accreted under another row's mandate
 carries no plan file for the `files` union to read; see the same record, amendment #290.
+Presence gains the optional `host` and `holder` lines 2026-10-15 (d-work #294): the Operator asked
+that every registration record carry host information, and a seat's record names its current
+holder (#295); see the same record, amendment #294.
 
 Set: System Requirements.
