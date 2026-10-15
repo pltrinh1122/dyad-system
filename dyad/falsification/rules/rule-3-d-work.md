@@ -417,3 +417,90 @@ entity table lists the register's existing kinds per record, read from `referenc
 play-book's path is resolved by `rule.text->path`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #309.
+
+## Amendment — d-work #202 (2026-10-15, the Done state follows the merge)
+
+Claim: *recording the Done-`Y` should set the row `done`.* Four Rules are each correct and jointly
+leave a ratified merge that still needs one push with no admissible sequence — Rule-3 orders the record
+before the merge, the record's command sets the state, `done` is terminal (Rule-16), and the plan gate
+refuses every commit citing a terminal row (`prs.py:43-45`). Twelve rows of
+`agent-corpus/audits/INCIDENTS.md` between 2026-09-30 and 2026-10-15 are that one mechanism (`:89`,
+`:91`, `:123`, `:136`, `:156`, `:170`, `:175`, `:176`, `:178`, `:180`, `:181`, `:182`) — eleven distinct
+instances, since `:175` and `:176` are the two rows of one event (#243) — four recovery
+rows were paid for it (#196, #200, #246, #245→#239), three rows exist only because of it (#321, #322,
+#323), and 164 rows' `disposed` claims `merges PR #n` where nothing reads the claim — five of those
+claims are false, one of them (#309 / PR #394) found while planning this and not in the log at all.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A1 | This weakens Rule-2: the record no longer precedes the merge. | refuted | The record is the `disposed` entry plus the provenance entry — what `dwork state … -d --said` writes and what Rule-3's own sentence calls "the ledger's own record of the `Y`". It still precedes the merge, by one commit. Rule-2 is not edited; its #138 hosting-unreachable sentence ("the row's `disposed` and the completion reply record it") becomes exactly right. |
+| A2 | The order cannot be declared: making the `→ done` edge honest about being traversed by a clerical act falsifies `only-the-operator-closes` (`dyadlib.py:653`), false for `{clerical}` and for `{disposition, clerical}` alike. | refuted | The input does not change: it is the Operator's `Y`. The landing is a precondition on a clerical write, exactly as the merge is clerical execution of that same `Y` (Rule-2, Binding). Only the two `INPUTS` description strings change, so the invariant holds unweakened and no new state is needed to keep it true. |
+| A3 | A row that never reaches `done` is invisible — `dwork list` prints `[planned]` either way — and the second commit is an obligation no mechanism reads. | survives, scoped | `rows.done_recorded_not_closed` is the witness, read where it cannot be missed: every push and every `check --evidence`, inside the block the completion reply pastes and inside its sha256. A warn and not a FAIL, because a FAIL would refuse exactly the pushes the interval exists to permit. Zero rows were in that state when this shipped. |
+| A4 | During the interval the row is a live citation target, so a branch citing it can carry content the Done-`Y` never verified. | survives, scoped, wider than first written | **Unbounded by mechanism, bounded by conduct.** The first draft of this survivor said Rule-2's heads-unchanged clause bounds it; the adversarial pass refuted that — the clause bounds re-*executing* the old `Y` on a moved head, and says nothing about the plan gate admitting a *second* branch citing the same row. Demonstrated: after the Done record, a second branch citing the row is admitted, both PRs merge, and the closing commit still passes, because `landing_problems` asks only whether the operative entry's head is reachable, never whether anything else landed. What remains is the warn (the interval is visible in every evidence block) and the Agent's conduct. The tight mechanical bound — admit a range only when its non-ledger tree equals `git merge-tree`'s resolution of the ratified head against `main` — is named and declined: it would refuse a legitimate resolution that differs mechanically from the predicted one, and a false refusal is a new closure of the same kind. |
+| A5 | It does not save the second Done-`Y`: a rebase changes the head, so the `Y` is voided and the question re-asked (`disposition-digest.md` step 3). | confirmed | Stated in the Rule text. What goes is the recovery row — three dispositions, a new plan, reworded commit messages — not the re-prompt, which is one. The interval gives the mandatory re-prompt a live row to land on; it is not a licence to execute the old `Y`. |
+| A6 | A named state (`verified`) is the better design: the board shows it, the parent clause and the retirement form can admit it, and its exit is exact. | survives, scoped | Its exactness is the head sha plus `merge-base --is-ancestor`, adopted here whole. What it adds beyond that is visibility, at the price of four PRs across three zones in a fixed order (a craft projector's `columns-are-states` equality relaxed first, Rule-16's table, a vocabulary row, a run-book `land` step), which is the version/zone family of this same failure mode (#170): a fence whose landing needs the ordering discipline it supplies. Named as the follow-on if the warn proves too quiet. |
+| A7 | "Every merge the `Y` named has landed" is decidable from git, so the warn should be a FAIL. | refuted as message-scanning, confirmed as ancestor-testing, and scoped: what is decided is the *head's* reachability, never that PR #n merged | Scanning merge subjects is unsound both ways: the live subject `Merge pull request #401: d-work #239 bank the file PR #355 never landed` reads as a merge of PR #355, the one PR this instance documents as never merged, and a tight `^Merge pull request #(\d+)` misses 34 of this repo's own conventions. Testing an ancestor is sound — hence `at <sha>` in the entry, and hence `landing_problems` may FAIL where `done_recorded_not_closed` only warns. |
+| A8 | Easy agreement (Rule-9's trigger): mode M recurred within a day of every earlier warn-window mitigation. | pushed | The mechanical half those lacked is here: the order fence and the ancestor check FAIL, and only the interval's visibility warns. The refutation test is stated in advance — a thirteenth gate-after-Done row after this ships refutes the design, not the diagnosis. |
+| A9 | The 164 rows already claiming `merges PR #n` should be migrated or re-judged. | refuted | Rows are append-only and the fence judges only commits in a pushed range, so nothing migrates and the false claims stay false — which is what an append-only store means. `references.py`'s `row.disposed->pr` extractor is `merge #(\d+)` and matches 2 tokens against 413 claims: a latent Rule-20 gap, named and left to Rule-20's own row. |
+| A10 | One PR is too big: cut the three incident rows out and land them first, as the hold protocol's item 1 prescribes for a tail-append file. | refuted | Two PRs under one Done-`Y` must merge in sequence, and the second merge is the deadlock this amendment exists to fix — row #200's title is that finding ("one PR, one merge, nothing to push after it"). One PR, one merge. |
+
+Pairwise (Rule-5), this edit against every other Rule. **3–1** — every path is one tree in the agent
+zone (`dyad/*`, `agent-corpus/*`); one PR, one merge. **3–2** — no edit: Binding never mentions the row
+state, it binds a `Y` to named PRs, to the guards' observed passes, to the evidence block and to
+unchanged heads; the sentence it relies on stays literally true because the record is the entry, not the
+state. One mechanical consequence, found by the adversarial pass and answered: the 2026-10-08
+chain-of-authority audit's row C2 recorded that *nothing couples a state transition to a disposition* —
+`dwork state <id> done` with no `-d/--said` writes the state with no entry behind it, and only conduct
+(180 `done` rows, 0 without a done entry) stood in the way. This amendment makes that dispositionless
+write the prescribed closing act, so the conduct regularity is deliberately broken; `landing_problems`
+therefore refuses a commit that sets `done` on a row carrying no `Y done` entry, which restores the
+coupling mechanically at the moment this change moves it. **3–4** — the block is untouched; the edits sit inside Ledger, Completion counter-prompt and
+Mechanisms. **3–5** — this statement. **3–6** — one definition changes (`done`) and no term is coined;
+"the Done record commit" is a description, so `vocabulary.py`'s checks are unaffected. **3–7** — property
+3 is what the record act obeys (the entry is written in the commit of the event it records) and property
+5's one-to-one count holds per commit: the record commit adds one `disposed` entry and one `disposition`
+entry, the closing commit adds neither. **3–8** — no host action; the interval makes a post-merge
+change-log row physically possible, which is Rule-8's record inside Rule-3's window, ownership unchanged.
+**3–9** — this record, with the easy-agreement attack pushed and a refutation test named in advance.
+**3–10** — the plan carried one path, the `verified` state as its counter, and one `Y/N`. **3–11** — every
+changed file is core-craft content under `dyad/` with no instance string; no `VERSION` or `BUNDLE.md`
+change is implied by a guard edit and none is made, which keeps the version/zone closure out of this PR.
+**3–12** — the new clauses carry their mechanical check as tests (`test_rows.py`, eight cases); no new
+`rows.INVARIANTS` entry, because `crafts/sysarch/tests/test_project_entities.py:319` pins that list to one
+name and a second would redden a craft test inside an agent PR. **3–13** — property 1 discharged: the
+reading of a row's `Y done` against its state becomes code. **3–14** — kernel only, Python and git
+(`cat-file`, `merge-base --is-ancestor`), running at `check --guards --pre-push` and inside
+`check --evidence`; the hosting stays a library adapter and is deliberately not consulted, which is why
+the interval warns. **3–15** — no phase changes; phase 2 now spans three acts instead of one. **3–16** —
+`TRANSITIONS`, `STATES`, `NEW_STATES` and `TERMINAL_STATES` are untouched: the order moves *when* the
+terminal edge is taken and adds no way back, so "state never regresses" and "a done d-work is never
+reopened" are unweakened. The interval's states are therefore `open` and `planned` only: the first draft
+of the completion clause also named `blocked`, which the table gives no edge to `done`, so the close
+would have been refused by the pre-existing state clause — corrected before the push, and the lesson is
+that an interval sentence must be read against the table rather than against the plan gate's admissible
+set. A row in the interval stays in its session's presence `rows` for longer, which
+is more disclosure, not less. **3–18** — no Operator-executed command. **3–19** — the core run-book's
+`Complete` splits into `Record` + `Complete`, keeping its own declared section set (Rule-19 Boundaries).
+**3–20** — a commit sha enters a parsed store field for the first time (`HEAD_AT` over `row.disposed`,
+which the register already reads as `row.disposed->pr`, resolver `world`). The structurally identical kind
+exists for the other store — `plan.base->commit`, resolver `commit_exists` — so `row.disposed->commit`
+is a kind with a resolver already written, and it is **deliberately left unregistered**: Rule-20 property 2
+makes an unresolved reference *fail*, and a PR head resolves in the clone that pushed it and in no other,
+so registering it would reproduce the sixteen-minute cross-clone push block of `INCIDENTS.md:184` on every
+clone that had not fetched the branch. `landing_problems` makes the same judgment itself and skips rather
+than fails. Named as the open edge it is, for Rule-20's own row to take or refuse. A second interaction,
+accepted rather than fixed: `references.base_commit` skips a plan's base commit only for a `done` or
+`archived` row, so a row in this interval keeps that check live, where before the amendment the Done
+record quieted it at once — one more reading in every clone for as long as the interval lasts, and the
+asymmetry #321's I7 already recorded. Others unchanged. Coherent, orthogonal.
+
+**Not delivered, and said here rather than in the completion reply alone.** The authorized plan's item 4
+promised `--landed <sha>` as an explicit override for a hosting that squashes or rebases. It is not
+shipped and the sentence that described it is gone from the Rule: the entry is written *before* the merge,
+so a squash's sha cannot be in it, and the only routes to adding one afterwards are a second disposition
+entry (which would read as a second Done-`Y` in Rule-7's chain) or an in-place rewrite of an entry the
+fence judges only on append. What takes its place is the route the Rule already has: ask the Done again on
+the head that did land, and the later entry governs. An instance whose hosting never produces the ratified
+head as an ancestor therefore pays one extra Done question per merge, which is stated and not fenced.
+
+Disposition: see ledger #202.

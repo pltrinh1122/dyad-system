@@ -67,7 +67,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 and --backlog, and refuses a target that is no row or carries no
                                 `Y plan`. refs defaults to `parent #<id>`
   dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p> [--relayed-via <session>]] [-r refs]
-                                change state / append a disposition to the row and its words to
+                                change state. A Done-`Y` that ratifies a merge is recorded with the
+                                state unchanged and the head it was given on (`-d 'Y done (merges PR
+                                #n at <head>)'`); the row reaches `done` by a second, dispositionless
+                                call once that head is on `main` (Rule-3 Completion, #202) / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191)
   dyad dwork retire <id>... -d text --said[-file] <s>
                                 the retirement form (Rule-3 `archived`, d-work #290): backlog or done
@@ -88,7 +91,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 #213): timeline, buckets, counts and bottleneck line from the row, its
                                 provenance and plan, git and the harness transcript (read in place, never
                                 copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
-                                at the Done-Y, in the Done ledger commit; without it, a preview to stdout
+                                at the Done-Y, in the commit that records it; without it, a preview to stdout
   dyad session touch [-r <row>]... [-f <file>]... | list
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
@@ -1031,6 +1034,37 @@ def cmd_dwork(a):
         r = rows[rid]; disposed, refs = r.disposed, r.refs
         if r.state == "backlog" and state == "open" and prompt is None:
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
+        # #202: the Done state follows the merge. Every refusal here precedes the first write (Rule-7 p3),
+        # and each is the fence's own clause said earlier, where it costs a line instead of a push.
+        rg = dyadlib.load_guard("agent", "rows")
+        if d is not None and rg.DONE_MERGES.search(f"{today} {d}"):
+            heads, prs = rg.HEAD_AT.findall(d), re.findall(r"#(\d+)", d.split("merge", 1)[1] if "merge" in d else "")
+            if len(heads) < max(1, len(prs)):
+                sys.exit(f"refused: a `Y done` that ratifies a merge names each PR and the head its `Y` was "
+                         f"given on — -d 'Y done (merges PR #n at <head-n>)' (Rule-3 Completion, #202): "
+                         f"{len(prs) or 1} named, {len(heads)} head(s) given, and the fence tests every one "
+                         f"of them before the row may reach done")
+            if state == "done":
+                sys.exit("refused: the state follows the merge (Rule-3 Completion, #202). Record this entry "
+                         f"with the state unchanged (`dwork state {rid} {r.state} -d …`), merge, then "
+                         f"`dwork state {rid} done`")
+        if state == "done" and r.state != "done":
+            done_entries = [e for e in rg.entries(disposed) + ([f"{today} {d}"] if d else []) if rg.DONE_Y.search(e)]
+            if not done_entries:
+                sys.exit(f"refused: row {rid} carries no `Y done` entry, so there is no Done-`Y` for this "
+                         f"state to execute (Rule-3 Completion: only the Operator closes a d-work)")
+            for e in done_entries[-1:]:     # the operative record only (rows.landing_problems' own rule)
+                for sha in rg.HEAD_AT.findall(e):
+                    try:
+                        subprocess.check_output(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=REPO, stderr=subprocess.DEVNULL)
+                    except subprocess.CalledProcessError:
+                        print(f"warning: head {sha}, which {e!r} names, is unknown in this clone: not checked (#202)", file=sys.stderr); continue
+                    refs = [r_ for r_ in ("origin/main", "main", "HEAD")
+                            if subprocess.run(["git", "rev-parse", "--verify", "-q", r_], cwd=REPO, capture_output=True).returncode == 0]
+                    if all(subprocess.run(["git", "merge-base", "--is-ancestor", sha, r_], cwd=REPO, capture_output=True).returncode for r_ in refs):
+                        sys.exit(f"refused: head {sha}, which {e!r} names, is on none of {' '.join(refs)}: the "
+                                 f"merge that `Y` ratified has not landed (Rule-3 Completion, #202). Merge it, "
+                                 f"or ask the Done again on the head that did land — the later entry governs")
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten

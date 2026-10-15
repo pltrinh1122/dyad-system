@@ -118,7 +118,9 @@ its revision 5.
   - `backlog` — opened by an Operator disposition rather than worked immediately; not
     started. Becomes `open` when the Operator prompts for it, or `archived` when an Operator
     disposition retires it (the retirement form, below).
-  - `done` — the Operator answered `Y` to the completion counter-prompt.
+  - `done` — the Operator answered `Y` to the completion counter-prompt *and* every merge that `Y`
+    named has landed. Between the two the row keeps the state it had, and its `disposed` carries the
+    recorded `Y`; the state guard reads that interval as one warning per row (Mechanisms).
   - `archived` — retired from the working board by an Operator disposition naming the row(s);
     terminal like `done` (a new row refs it, never reopens it), and reached from `done` or from
     `backlog` (Rule-16's table). Nothing moves: its row, plan and provenance stay where they are
@@ -134,15 +136,19 @@ its revision 5.
   d-work play-book (`dyad/playbooks/d-work.md`), which also lists every record a d-work is made of; read
   here, never a Rule (#309).
 - The Agent may decompose a d-work into child rows (`refs: parent #N`). The parent's
-  counter-prompt is asked only when every child is `done`, `blocked` or `backlog`; the parent
+  counter-prompt is asked only when every child is `done`, `blocked`, `backlog`, or carrying its own
+  recorded Done-`Y` and waiting on the merge it ratified (Completion counter-prompt, below: a child in
+  that interval has been verified and its output is landing, so it no longer owes the parent anything);
+  the parent
   completes only on its own Done-`Y`, and the completion evidence names each child's state, so an
   undelivered child is something the Operator sees rather than something the Done-`Y` is read as
   claiming. `backlog` is admitted for the reason `blocked` already was — a child the Operator has
   not asked for is not work the parent owes — and because a `backlog` child could otherwise make
   the parent's question unaskable: one parent of this instance sat on 23 `backlog` children whose
   only transition was back to `open` (#290).
-- The Agent appends a row when a d-work starts and sets `done` only after the Operator's
-  `Y` to the completion counter-prompt (clerical execution, Rule-2).
+- The Agent appends a row when a d-work starts, records the Operator's `Y` to the completion
+  counter-prompt when it is given, and sets `done` only once the merges that `Y` named have landed
+  (both clerical execution, Rule-2; Completion counter-prompt, below).
 - Ledger-only commits (touching nothing outside `agent-corpus/d-work/`; row and plan files) are clerical and
   go directly to `main` without a PR. `dyad/guards/agent/rows.py` (the main fence) fails any direct
   commit to `main` that touches anything else.
@@ -170,6 +176,18 @@ its revision 5.
   its commits as they would on `main` (#191).
 
 ## Mechanisms
+The fence keeps the Done order of the completion clause, on a direct commit to `main`, on each commit
+of a ledger-only branch and in a merge commit's resolution against each parent: one commit may not both
+record a `Y done` that names a merge and set the row `done` (`rows.done_order_problems`), since the
+state follows the merge; the commit that does set `done` must find a `Y done` entry already on the row —
+the `Y` it executes — and must show every head the operative entry names as an ancestor of the base
+branch or of itself (`rows.landing_problems`), a sha this clone cannot resolve printing one line rather
+than failing, because a hard failure on an unresolvable sha is a cross-clone denial of service (#321);
+and the interval between the two is read by the state check as one warning per row
+(`rows.done_recorded_not_closed`), carried in every evidence block and its sha256. Whether a merge ran
+is not decidable from git at the moment of the record — a merge subject naming a PR is no merge of it —
+so only the closing commit is fenced, and only against the head its own entry names (#202).
+
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
 live in `dyad/guards/agent/` (agent zone, Rule-1; placed per Rule-11 property 1) and run on the kernel-only path
 as transaction guards (`package.py check --guards`); their workflow wrapper
@@ -193,10 +211,30 @@ first-parent walk never looks. Rule-2 references `rows.py` by name; it does not 
   delivered in alignment with the Operator's expectation of the output. It is asked on the
   output as it stands in the PR(s), before merge, so `main` never carries unverified output.
 - Always the last line of the Agent's reply that believes the d-work is done.
-- The reply that asks does not merge. The reply that receives the Done-`Y` merges, as clerical
-  execution, after recording the disposition (`dyad dwork state <id> done`) — so the ledger's own
-  record of the `Y` precedes every merge it ratifies. A merge before the `Y` is self-ratification
-  (Rule-2) and an incident whatever the outcome (#47, #58, #67).
+- The reply that asks does not merge. The reply that receives the Done-`Y` records it, merges, and
+  only then closes the row — three acts in that order, so the ledger's own record of the `Y` precedes
+  every merge it ratifies and the row stays pushable until the merges have run. (1) **Record.** The
+  disposition is written with the state left as it is: the `disposed` entry and its provenance entry
+  in one clerical ledger commit, the commit that carries the trace, the entry naming each PR and the
+  head its `Y` was given on — `-d 'Y done (merges PR #a at <head-a>)'`. That entry *is* the ledger's
+  record of the `Y`; the state never was. (2) **Merge**, as clerical execution of it. (3) **Close.**
+  A second, dispositionless ledger commit sets `done`, once git shows the head the **operative**
+  entry names — the last `Y done`, since a resolution that changes a head voids the `Y` given against it
+  (Rule-2, Binding) and the question is asked again — on `main` — the hosting's merge, or the local merge of Rule-14 property 3; where a hosting squashes or
+  rebases, the entry records `landed <sha>` instead. A Done-`Y` that names no merge is recorded `done`
+  at once, so nothing costs a second commit where nothing is in flight. A merge before the `Y` is
+  self-ratification (Rule-2) and an incident whatever the outcome (#47, #58, #67); `done` written
+  while the head the operative entry names is not yet on `main` is the converse breach, and the fence
+  refuses the commit that writes it (Mechanisms). What the fence can decide is that head's reachability,
+  not that PR #n merged: no resolver maps a PR number to a commit on the kernel-only path, and a merge
+  subject naming a PR is no merge of it. The state is what the merge moves, because `done` is terminal
+  (Rule-16) and the plan gate refuses every commit citing a terminal row: while a ratified merge
+  still owes a push — a rebase onto a moved `main`, a conflict resolved, the second PR of a sequenced
+  set — the row is still `open` or `planned`, and its own plan-`Y` carries that push (not `blocked`:
+  Rule-16's table has no edge from it to `done`, and a row deferred on another d-work has no `Y` to
+  execute). What
+  the interval does not do is re-bind the `Y`: a resolution that changes a head voids it (Rule-2,
+  Binding), the question is asked again, and its answer is a further entry on the same live row.
 - The completion reply carries the evidence the verification needs (E8): every PR of the
   d-work by number and zone; each check's result as observed, never assumed, or "CI absent"
   with the local guard results (Rule-2, Binding); every host
@@ -210,8 +248,9 @@ first-parent walk never looks. Rule-2 references `rows.py` by name; it does not 
   evidence cites the d-work trace of the d-work it completes (play-book `dyad/playbooks/dwork-trace.md`);
   under `on-demand`, only when the Operator has prompted for one. The completion reply prints its
   preview, from the prompt to the Done question; the reply that receives the Done-`Y` writes it to
-  `<instance>/d-work/traces/<id>.md` before the Done ledger commit, which carries it, so it covers the
-  Done-`Y` and stays ledger-only; the merge after it is not in it. A trace with no transcript is still
+  `<instance>/d-work/traces/<id>.md` before the Done **record** commit — the first of the two above —
+  which carries it, so it covers the Done-`Y` and stays ledger-only; the merges after it, and the
+  commit that closes the row, are not in it. A trace with no transcript is still
   cited, its buckets marked absent (#213).
 - Form: `Y/N: Done with #<ledger id> <title>?` — one d-work per counter-prompt, or the batch
   form (Batch disposition, below) under `batch-disposition-mode`. A d-work that accreted rows
@@ -265,7 +304,9 @@ interfering: a done batch naming several d-works names each one's accreted set i
 The queue drains as its items are named in a batch question and disposed. Under `on-ignore`,
 engagement lapses back to singly-asking once both queues are empty; under `always` it never
 lapses. Each disposed row's ledger entry names the full set it was batched with —
-`<date> Y plan (batch #a,#b,#c)` / `<date> Y done (batch #a,#b, merges PR #w,#x,#y)` — so the
+`<date> Y plan (batch #a,#b,#c)` / `<date> Y done (batch #a,#b, merges PR #w at <head-w>, PR #x at
+<head-x>)`, every PR with the head its `Y` was given on, as the completion clause requires of any Done
+entry that ratifies a merge — so the
 chain is reconstructible from any one row alone (D4, Ledger above). Provenance (Rule-7) is
 unaffected: the Operator's one `Y` is written as the same entry into every named d-work's own
 record.
@@ -347,7 +388,15 @@ successor, so the one parent ever gated on `backlog` children could not be asked
 at all. The vocabulary is `crafts/countersign/`'s — mandate, implicit mode, escalate edge, amend —
 adopted rather than coined (Rule-13 property 1), and `amend` is the first of the four refactors
 `crafts/countersign/rules/interaction.md` §7 lists as owed by this system. See the same record,
-amendment #290. Ledger gains the d-work play-book 2026-10-15 (d-work #309): the lifecycle was spread over
+amendment #290. Completion counter-prompt, Ledger and Mechanisms gain the three-act Done order 2026-10-15 (d-work
+#202): recording the Done-`Y` set the row `done`, `done` is terminal, and the plan gate refuses every
+commit citing a terminal row, so a ratified merge that still needed one push — a rebase onto a moved
+`main`, a conflict resolved, the second PR of a sequenced set — had no admissible sequence at all.
+Twelve rows of `agent-corpus/audits/INCIDENTS.md` between 2026-09-30 and 2026-10-15 are that one
+mechanism — eleven distinct instances, two of them recorded as one event's two rows, four recovery rows were paid for it, and 164 rows' `disposed` claims a merge that nothing
+reads — five of those claims are known false. The record of the `Y` is now the `disposed` entry and
+its provenance entry, which still precede the merge; the state follows it. See the same record,
+amendment #202. Ledger gains the d-work play-book 2026-10-15 (d-work #309): the lifecycle was spread over
 five Rules, two play-books and the CLI help, and the transition table named no inputs — a successor relation,
 not a machine; the input alphabet is now `dyadlib.INPUTS` with its invariants, and the play-book's tables are
 pinned to it and to the guards; see the same record, amendment #309.

@@ -7,7 +7,7 @@ decision Rule-3, Rule-7, Rule-15 and Rule-16 each own one part of, and that the 
 against the CLI help at every row write (Rule-13 property 1: the recurrence proposes code — the machine's
 input alphabet is `dyadlib.INPUTS`, and this play-book's two tables are pinned to it and to the guards by
 `dyad/tests/test_playbooks.py`). Read by Rule-3's Ledger clause. Steps: `dyad/runbooks/d-work.md` —
-`open`, `plan`, `authorize`, `execute`, `evidence`, `complete`, `defer`, `resume` — run through
+`open`, `plan`, `authorize`, `execute`, `evidence`, `record`, `complete`, `defer`, `resume` — run through
 `DWORK=<id> dyad runbook run d-work <step>`, the core runner, so each step leaves an event. The native
 commands stay the default for a ledger commit, for the reason `dwork-trace.md` records (#247: a runner
 event is a workstation-zone file the ledger commit cannot carry).
@@ -45,7 +45,7 @@ prose parts are `dyadlib.PLAN_PARTS` (intent as read, mutation, files touched, b
 | plan | `plans/<id>.md` | `plans` | `id` `title` `base commit` `intent` | the Agent, before the plan counter-prompt (Rule-15 phase 1) | once; revised in place on an amend; absent for an accreted row | `plan.id->row`, `plan.base->commit` |
 | provenance | `provenance/<id>.md` | `provenance` | `n` `kind` `date` `note` `text` | `dyad dwork new`, `dyad dwork state`, `dyad dwork retire`, with the row, in the same clerical commit | at every prompt received and every disposition given (Rule-7 property 3) | `provenance.id->row`, `provenance.legacy->row` |
 | presence | `sessions/<seat>.md` | `sessions` | `session` `seen` `root` `rows` `files` | `dyad session touch`, by the seat alone | at session start and at every plan-Y (Rule-16) | a leaf (`crafts/sysarch/rules/references.md`) |
-| trace | `traces/<id>.md` | `traces` | `Timeline` `Buckets` `Counts` `Bottleneck` `Limits` | `dyad dwork trace <id> --out` | at the Done-Y, before the Done ledger commit (`dwork-trace.md`) | `trace.id->row` |
+| trace | `traces/<id>.md` | `traces` | `Timeline` `Buckets` `Counts` `Bottleneck` `Limits` | `dyad dwork trace <id> --out` | at the Done-Y, before the Done record commit (`dwork-trace.md`) | `trace.id->row` |
 
 Records a d-work references but does not own, each with its owning Rule: the **incident row**
 (`<instance>/audits/INCIDENTS.md`, Rule-3 Incidents; `incident.dwork->row`), the **falsification record**
@@ -69,7 +69,7 @@ own, Rule-2). δ(state, input) → state:
 | — | backlog | an Operator disposition opening it (`Y backlog`) | disposition | the row, record entry 1 (`disposition`) | countersignature `yes`, basis `per-act` |
 | open | planned | the plan-`Y` | disposition | a `disposed` entry, a record entry, the presence touch; the plan file already exists and is now bound (Rule-15) | countersignature `yes`, basis `per-act`; the countersign proposal is the plan file |
 | open | blocked | a deferral naming the blocking d-work | disposition | a `disposed` entry, a record entry, `refs` | countersignature |
-| open | done | the Done-`Y` | disposition | a `disposed` entry, a record entry, the trace; then the merges it ratifies | countersignature `yes`; the countersign report (the completion evidence) precedes it |
+| open | done | the Done-`Y` | disposition | a `disposed` entry naming each PR and the head its `Y` was given on, a record entry, the trace — all in the record commit, the state unchanged; then the merges; then the state, in a second dispositionless commit (#202) | countersignature `yes`; the countersign report (the completion evidence) precedes it |
 | planned | open | re-planning: `main` moved past a touched file (Rule-15 phase 2), or the Operator's amend of the plan | clerical · disposition | a plan revision in place; an `N` entry when the Operator gave one | none, or `amend` |
 | planned | blocked | a deferral naming the blocking d-work | disposition | as open → blocked | countersignature |
 | planned | done | the Done-`Y` | disposition | as open → done | countersignature `yes` |
@@ -86,7 +86,8 @@ moves nothing (countersign I8: silence is not consent).
 
 Invariants, each enforced at `dyadlib`'s import and run again by the runner's pass (Rule-12 property 1):
 - **inputs cover the machine** — `INPUTS` has one entry per edge of `TRANSITIONS` and per birth, no more;
-- **only the Operator closes** — every edge into `done` or `archived` is a disposition and nothing else
+- **only the Operator closes** — every edge into `done` or `archived` is a disposition and nothing else;
+  the clerical write that follows the merges executes that disposition, exactly as the merges do (#202)
   (Rule-2: the Done-`Y` and the retirement form are ratification events);
 - **no self-initiation** — no birth is a clerical act (countersign I6; Rule-3 Scope: a row opens on an
   Operator prompt or disposition, never on the Agent's finding; an accreted row's input is the mandate's own
@@ -114,9 +115,12 @@ report + proposal (done) → countersignature — realized as, in order:
    checks as observed, the evidence block, host actions, accreted rows, departures, the trace preview) — a
    countersign report, which asks nothing — then the Done question as the last line, naming the accreted rows
    and, under `merge-disposition: with-done`, the held PRs.
-6. **Countersignature.** `Y`: `dyad dwork state <id> done`, the trace written, the Done ledger commit, then
-   the merges as clerical execution (the ledger's record of the `Y` precedes every merge it ratifies).
-   Anything else: the d-work stays as it was.
+6. **Countersignature.** `Y`, in three acts (Rule-3 Completion, #202): `dyad dwork state <id> <the state
+   it is in> -d 'Y done (merges PR #a at <head-a>)'`, the trace written, the Done record commit; then
+   the merges as clerical execution (the ledger's record of the `Y` — the `disposed` entry and the
+   provenance entry — precedes every merge it ratifies); then `dyad dwork state <id> done`, a second
+   commit with no disposition, once git shows every head those entries name on `main`. A Done-`Y` that
+   names no merge is recorded `done` at once. Anything else: the d-work stays as it was.
 
 Branches. An **accreted row** (implicit mode) skips 2 and 3: born `open` carrying the mandate's plan-`Y`, no
 plan file of its own (Rule-15), its Done riding the mandate's Done-`Y`, which names it. A **`backlog`** row is

@@ -44,8 +44,12 @@ class FenceTests(unittest.TestCase):
     # d-work #112: state transitions (Rule-16, dyadlib.TRANSITIONS)
     def transition(self, a, b):
         """Row 1 goes a -> b in two commits; return the fence output for the second."""
-        self.r.write(self.R, row(1, "one", a, "2026-01-01 Y seed")); base = self.r.commit("to a")  # disposed differs from root so the commit is never empty
-        self.r.write(self.R, row(1, "one", b)); h = self.r.commit("to b")
+        seed = f"2026-01-01 Y seed {a} to {b}"   # unique per case, so neither commit is ever empty
+        self.r.write(self.R, row(1, "one", a, seed)); base = self.r.commit("to a")
+        # #202: a row reaches `done` only with a `Y done` entry already on it, so the fixture carries one
+        # wherever `done` is the target; the transition under test is still the only thing that changes.
+        d = f"{seed}; 2026-01-02 Y done" if b == "done" else seed
+        self.r.write(self.R, row(1, "one", b, d)); h = self.r.commit("to b")
         return self.fails(base, h)
     def test_allowed_transition_per_source_state(self):
         for a, b in [("open", "planned"), ("planned", "done"), ("blocked", "open"), ("backlog", "open"), ("open", "done"),
@@ -219,7 +223,9 @@ class DisposedShapeTests(unittest.TestCase):
         out = m.check_range(self.base, h, cwd=self.r.d)
         self.assertEqual(len(out), 1, out); self.assertIn("opened by", out[0])
     def test_well_formed_append_passes(self):
-        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #1, #2)")); h = self.r.commit()
+        # #202: a Done that names a merge may not be the commit that sets `done` (DoneOrderTests), so this
+        # shape test uses a Done that names none — the entry shape is what it is about.
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done")); h = self.r.commit()
         self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
     def test_existing_malformed_entry_not_rejudged(self):
         self.r.write(self.R, row(1, "one", "open", "legacy")); legacy = self.r.commit("legacy")
@@ -230,6 +236,115 @@ class DisposedShapeTests(unittest.TestCase):
         self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y (a; b)")); h = self.r.commit()
         out = m.check_transaction(self.r.d, self.base, h)
         self.assertEqual(len(out), 2, out); self.assertTrue(all("[disposed]" in o for o in out), out)
+
+class DoneOrderTests(unittest.TestCase):
+    """d-work #202: the Done state follows the merge. One commit may not both record a `Y done` that names
+    a merge and set the row `done`; the commit that does set `done` must show every head those entries name
+    as an ancestor of itself; and the package check reads the interval between them as one warning."""
+    R = "agent-corpus/d-work/rows/1.md"
+    def setUp(self):
+        self.r = Repo(); self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan"))
+        self.base = self.r.commit("root")
+        os.environ.pop("DYAD_INSTANCE", None)
+    def test_the_old_order_fails(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9)"))
+        h = self.r.commit()
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("the state follows the merge", out[0])
+    def test_the_two_commit_order_passes(self):
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9)"))
+        rec = self.r.commit("record")                      # 1: the disposition, state unchanged
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9)"))
+        h = self.r.commit("close")                         # 2: the state, no entry
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [], )
+        self.assertEqual(m.check_commit(rec, self.r.d, "agent-corpus"), [])
+    def test_a_done_naming_no_merge_still_closes_in_one_commit(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done")); h = self.r.commit()
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+    def test_a_head_that_has_not_landed_fails(self):
+        side = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); unlanded = self.r.commit("not on main")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {unlanded})"))
+        self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {unlanded})"))
+        h = self.r.commit("close")
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("the merge that `Y` ratified has not landed", out[0])
+        self.assertEqual(side, side)
+    def test_a_head_that_landed_passes(self):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); landed = self.r.commit("landed")
+        self.r.write(self.R, row(1, "one", "planned", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {landed})"))
+        self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {landed})"))
+        h = self.r.commit("close")
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+    def test_a_sha_unknown_to_this_clone_is_skipped_not_failed(self):
+        ghost = "0" * 40
+        self.r.write(self.R, row(1, "one", "planned", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {ghost})"))
+        self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {ghost})"))
+        h = self.r.commit("close")
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+    def test_every_head_the_operative_entry_names_is_checked(self):
+        # a multi-PR Done is the normal case under `batch-disposition-mode: always`, so one head landing
+        # must not excuse another that did not
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); landed = self.r.commit("landed")
+        sh("git", "checkout", "-q", "-b", "side2", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three")); unlanded = self.r.commit("not on main")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        e = f"2026-01-02 Y done (merges PR #9 at {landed}, PR #10 at {unlanded})"
+        self.r.write(self.R, row(1, "one", "planned", f"2026-01-01 Y plan; {e}")); self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", f"2026-01-01 Y plan; {e}")); h = self.r.commit("close")
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn(unlanded, out[0])
+    def test_an_N_done_after_the_operative_Y_does_not_cancel_the_check(self):
+        sh("git", "checkout", "-q", "-b", "side3", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/4.md", row(4, "four")); unlanded = self.r.commit("not on main")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        es = f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {unlanded}); 2026-01-03 N done (re-asked)"
+        self.r.write(self.R, row(1, "one", "planned", es)); self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", es)); h = self.r.commit("close")
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("has not landed", out[0])
+    def test_an_N_done_on_a_live_row_warns_nothing(self):
+        d = self.r.d / "agent-corpus/d-work/rows"
+        (d / "1.md").write_text(row(1, "one", "open", "2026-01-01 Y plan; 2026-01-02 N done (the answer did not establish it)"))
+        self.assertEqual([x for x in m.check_package(self.r.d) if x.startswith("warning:")], [])
+    def test_done_with_no_Y_done_entry_fails(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan")); h = self.r.commit("close")
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("no `Y done` entry", out[0])
+    def test_a_head_on_the_base_but_not_on_the_commit_passes(self):
+        # the ledger-only-branch shape: the merge is on `main`, the record and close travel on a branch
+        self.r.write("agent-corpus/d-work/rows/5.md", row(5, "five")); merged = self.r.commit("the merge, on main")
+        sh("git", "checkout", "-q", "-b", "ledger", self.base, cwd=self.r.d)
+        es = f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {merged})"
+        self.r.write(self.R, row(1, "one", "planned", es)); self.r.commit("record")
+        self.r.write(self.R, row(1, "one", "done", es)); h = self.r.commit("close")
+        self.assertEqual(m.check_commit(h, self.r.d, "agent-corpus", merged), [])     # judged against the base
+        out = m.check_commit(h, self.r.d, "agent-corpus", self.base)                  # a base without the merge
+        self.assertEqual(len(out), 1, out); self.assertIn("has not landed", out[0])
+    def test_a_superseded_entry_is_history_not_an_obligation(self):
+        # Rule-2 Binding: a resolution that changes the head voids the `Y` given against it, so the Done is
+        # asked again and the later entry is the operative one (#202, attack A5).
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); landed = self.r.commit("landed")
+        ghost = "0" * 39 + "1"
+        es = (f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {ghost}); "
+              f"2026-01-03 Y done (merges PR #9 at {landed})")
+        self.r.write(self.R, row(1, "one", "planned", es)); self.r.commit("record again")
+        self.r.write(self.R, row(1, "one", "done", es)); h = self.r.commit("close")
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+    def test_the_interval_is_one_warning_in_the_package_check(self):
+        d = self.r.d / "agent-corpus/d-work/rows"
+        (d / "1.md").write_text(row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9)"))
+        (d / "2.md").write_text(row(2, "two", "done", "2026-01-01 Y plan; 2026-01-02 Y done"))
+        msgs = m.check_package(self.r.d)
+        self.assertEqual([x for x in msgs if not x.startswith("warning:")], [], msgs)
+        warns = [x for x in msgs if x.startswith("warning:")]
+        self.assertEqual(len(warns), 1, warns); self.assertIn("row #1 is planned", warns[0])
+        self.assertIn("merges are still owed", warns[0])
 
 class LedgerBranchFenceTests(unittest.TestCase):
     """#191: a ledger-only branch skips the plan gate because `main` would admit its commits — so the fence

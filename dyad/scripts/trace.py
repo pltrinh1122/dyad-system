@@ -19,7 +19,7 @@ equal, or contained when the entry is at least SHORT characters long), in record
 previous anchor. A disposition is anchored only to a message that answers a `Y/N:` line naming `#<id>`; a
 prompt that matches more than one message is ambiguous. An unmatched or ambiguous entry is reported under
 Limits and never guessed.
-The store `<instance>/d-work/traces/<id>.md` (written by `--out`, in the Done ledger commit; plan #213 revision 2)
+The store `<instance>/d-work/traces/<id>.md` (written by `--out`, in the commit that records the Done-`Y`; plan #213 revision 2, #202)
 is checked by `check_store`: one `<id>.md` per existing row, headed `# Trace #<id> — <title>`, its five sections.
   trace.py <id> [--transcript <path>]... [--out]     (reached as `dyad dwork trace`)
 """
@@ -529,7 +529,7 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
         got, segs = buckets(ivs, start, end)
         total = end - start
         lines += [f"Window: {utc(start)} → {utc(end)} UTC, {secs(total)} — the first anchored prompt to "
-                  + ("the Done-`Y`; its ledger commit and the merge are the clerical tail, not in it." if done_ts
+                  + ("the Done-`Y`; its record commit, the merges and the commit that sets `done` are the clerical tail, not in it." if done_ts
                      else "the transcript's last record (a preview)." if preview else "the last d-work event."), "",
                   "| bucket | partition | seconds | share | what it measures |", "|--------|-----------|---------|-------|------------------|"]
         part = {b: p for p, bs in PARTITIONS.items() for b in bs}
@@ -616,7 +616,7 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
                   f"test execution / inference = {f'{tests_ms / inf_ms:.1f}' if inf_ms else 'n/a'}.", ""]
     # limits
     limits += ["inference is a wall-clock gap between transcript records: it includes harness and network latency and overstates the model's own time",
-               "the trace stops at the Done-`Y`: the Done ledger commit that carries it and the merge are clerical and appear only as git events after the window"]
+               "the trace stops at the Done-`Y`: the Done record commit that carries it, the merges and the commit that sets `done` are clerical and appear only as git events after the window"]
     lines += ["## Limits", ""] + [f"- {l}" for l in limits] + [""]
     return "\n".join(lines)
 

@@ -33,9 +33,11 @@ I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; for k in rows prove
 ```
 
 ## Trace
-The trace itself, written to the trace store at the Done-`Y` — after `dyad dwork state <DWORK> done` has
-written the row and its provenance entry, before the Done ledger commit, which then carries all three (the
-store lies under `<instance>/d-work/`, so that commit stays ledger-only). Timeline, buckets, counts,
+The trace itself, written to the trace store at the Done-`Y` — after the record act has written the row
+and its provenance entry with the state left as it is (`dyad dwork state <DWORK> <that state> -d 'Y done
+(merges PR #n at <head>)' --said-file …`, Rule-3 Completion, #202), and before the Done record commit,
+which then carries all three (the store lies under `<instance>/d-work/`, so that commit stays
+ledger-only). Timeline, buckets, counts,
 bottleneck line and limits, in the play-book's format, from the row, its provenance and plan, git and the
 newest transcript of this working tree's harness project directory (read in place, never copied, never
 quoted). The completion reply's preview is the native command without `--out`, which writes nothing; a

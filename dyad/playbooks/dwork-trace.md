@@ -8,7 +8,7 @@ Rule-3's Completion counter-prompt clause: the completion evidence cites the d-w
 stored and when it is written: plan #213, revision 2. Steps: `dyad/runbooks/dwork-trace.md` — `locate`,
 `trace`, `compare` — each one a call of `dyad dwork trace` (`dyad/scripts/trace.py`). The Agent runs that
 command **directly**, not through the core runner (Default, below; d-work #247): the runner appends an event
-to a workstation-zone file that the Done ledger commit cannot carry. The run-book stays, for a trace run
+to a workstation-zone file that the Done record commit cannot carry. The run-book stays, for a trace run
 through the runner by choice (`DWORK=<id> dyad runbook run dwork-trace <step>`), which then leaves an event.
 
 ## Parameter
@@ -36,12 +36,14 @@ moments, both inside it:
    `dyad dwork trace <id>`, without `--out`, prints a **preview**: the window runs from the first anchored
    prompt to the transcript's last record — the Done question being asked. Nothing is written.
 2. **Done-`Y` received.** The reply that receives it records the disposition first (`dyad dwork state <id>
-   done -d … --said …`, which writes the row and its provenance entry in the working tree), then runs
-   `dyad dwork trace <id> --out` — the command the run-book's `trace` step calls — before the clerical Done ledger commit, so that commit carries the
-   trace with the row and the record. The window now runs through the Done-`Y`: it covers the work PR's
-   push, its evidence run and the Operator's wait on the Done question. The merge comes after that commit
-   (Rule-3: the record of the `Y` precedes every merge it ratifies), so it is the clerical tail, visible in
-   git and never in the trace (plan #213, attack 3).
+   <the state it is in> -d 'Y done (merges PR #a at <head-a>)' --said …`, which writes the row and its
+   provenance entry in the working tree with the state unchanged, Rule-3 Completion), then runs
+   `dyad dwork trace <id> --out` — the command the run-book's `record` step calls — before the clerical Done
+   **record** commit, so that commit carries the trace with the row and the record. The window now runs
+   through the Done-`Y`: it covers the work PR's push, its evidence run and the Operator's wait on the Done
+   question. The merges come after that commit (Rule-3: the record of the `Y` precedes every merge it
+   ratifies), and so does the second commit that sets the row `done`; both are the clerical tail, visible in
+   git and never in the trace (plan #213, attack 3; #202).
 
 A d-work traced later, on the Operator's word, is traced the same way: the window is set by the anchors,
 never by when the command runs.
@@ -50,7 +52,7 @@ never by when the command runs.
 Under `always`, trace it, at both moments. The completion reply prints the preview's bottleneck line and agent-side seconds
 beside the median of the traced d-works, so the Operator reads them before answering. At the Done-`Y` the
 command `dyad dwork trace <id> --out` writes `<instance>/d-work/traces/<id>.md`, the **trace store**: it lies under
-`<instance>/d-work/`, so the Done ledger commit stays ledger-only (Rule-3 Ledger: clerical) — no extra PR,
+`<instance>/d-work/`, so the Done record commit stays ledger-only (Rule-3 Ledger: clerical) — no extra PR,
 push or suite run — and the main fence and the plan gate's ledger-only exemption admit it as they admit the
 row. A d-work whose transcript is absent — another kernel, a session whose harness keeps none (Rule-14: Claude
 Code is one kernel row, "another CLI inferencing agent" its replacement) — is still traced: the trace holds
@@ -59,7 +61,7 @@ the step.
 
 **Why the command, not the runner (d-work #247).** Run through the runner, the `trace` step also appends a
 592-byte event to `<runbooks>/events/dwork-trace.jsonl`, a workstation-zone file (Rule-1): it cannot ride the
-agent-zone Done ledger commit, left in the tree it makes the pre-push gate refuse the push, and banking it
+agent-zone Done record commit, left in the tree it makes the pre-push gate refuse the push, and banking it
 takes a d-work, a PR and two `Y`s per event — whose own Done-`Y` makes the next event, so the unbanked set
 never reaches zero. Nothing requires the event (no Rule, no guard, not Rule-3 or the preference): the trace
 file is the record, and every field of the event but `duration_ms` is a function of git. The two paths write
@@ -150,6 +152,6 @@ and `dyad/tests/test_trace.py` runs it over the live store with Rule-12's suite 
 ## Evidence
 For a traced d-work (Trigger: the preference `dwork-trace`), the completion reply (Rule-3) prints the preview's bottleneck line and agent-side seconds with the median,
 every unmatched or ambiguous anchor from its Limits, and the transcript paths when they are not the default.
-The reply that receives the Done-`Y` names the trace file its Done ledger commit carries. A trace run through
+The reply that receives the Done-`Y` names the trace file its Done record commit carries. A trace run through
 the runner is stated as such and names its event id (`<runbooks>/events/dwork-trace.jsonl`), which is not part of
 the Done commit; a trace made by the native command needs no such statement, and is the default.
