@@ -1,8 +1,8 @@
 session: cos
-seen: 2026-10-15T17:29:21+00:00
+seen: 2026-10-15T17:29:42+00:00
 root: /home/user/dyad-system
-rows: 202 259 296 299 308
-files: (PR-1 (PR-2 (PR-3 (ledger-only 4 PR) PR-4 `-q`/`-r` `2026-10-09`-dated `agent-corpus/audits/2026-10-10-incident-failure-modes.md` `agent-corpus/audits/2026-10-10-incident-mode-<a..w>.md` `agent-corpus/audits/INCIDENTS.md` `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` `workstation-corpus/CHANGELOG.md` adds agent agent-corpus/audits/INCIDENTS.md agent-corpus/d-work/plans/202.md agent-corpus/d-work/provenance/202.md agent-corpus/d-work/rows/202.md amends carried children crafts/countersign/MANIFEST.md crafts/countersign/README.md crafts/countersign/VERSION crafts/countersign/falsification/self-diagnostic.md crafts/countersign/guards/levels.py crafts/countersign/projectors/project_countersign.py crafts/countersign/rules/self-diagnostic.md crafts/countersign/scripts/levels.py crafts/countersign/templates/commands/diagnose.md crafts/countersign/templates/countersign-core.json crafts/countersign/templates/runbooks/self-diagnostic.md crafts/countersign/templates/self-diagnostic-levels.txt crafts/countersign/tests/guards/__init__.py crafts/countersign/tests/guards/test_levels.py crafts/countersign/tests/test_levels.py crafts/countersign/vocabulary/CRAFT.md created delivered dyad/falsification/rules/rule-3-d-work.md dyad/guards/agent/rows.py dyad/playbooks/d-work.md dyad/playbooks/disposition-digest.md dyad/playbooks/dwork-trace.md dyad/rules/RULE-3-d-work.md dyad/runbooks/d-work.md dyad/scripts/dyadlib.py dyad/scripts/package.py dyad/scripts/trace.py dyad/tests/guards/agent/test_rows.py dyad/tests/test_package.py dyad/tests/test_playbooks.py dyad/vocabulary/VOCABULARY.md first for it) its line names never no nothing provenance records) revision row the this three to twenty-three until were workstation zone zone)
-writer: ee3a8f1cbc13
+rows: 
+files: 
+writer: 87b92eb4557d
 host: cloud linux x86_64
 holder: 59cec502-8c78-5e74-ae6a-66a4f0271c17
