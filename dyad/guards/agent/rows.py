@@ -24,7 +24,12 @@ two, and nothing judged the shape before (#67, #100). Entries already present ar
 `mode` (dyadlib.OPTIONAL_FIELDS, d-work #290) is append-only in the same way: it never changes after the
 commit that adds the row, in either direction, so a mandate is neither revoked nor granted by an edit; and a
 row born `implicit` is born `open` carrying exactly one `disposed` entry `<date> Y plan (mandate #<id>)`,
-since implicit mode takes no disposition of its own and a `backlog` row can carry no PR. The append-only rule of the run-book event store
+since implicit mode takes no disposition of its own and a `backlog` row can carry no PR. Two clauses keep the Done order Rule-3's completion clause prescribes (d-work #202): one commit may not
+both record a `Y done` that names a merge and set the row `done` (`done_order_problems`), since the state
+follows the merge; and the commit that does set `done` must show every head those entries name as an
+ancestor of itself (`landing_problems`), an unresolvable sha printing one line rather than failing. The
+interval between the two is read by the package check as one warning per row (`done_recorded_not_closed`).
+The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
   rows.py <before> <after>          the main fence over a pushed range (rows and events)
@@ -47,6 +52,9 @@ INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]  
 # (`row-fields-match-dataclass`, `row-optional-fields-disjoint`), which the runner's pass runs all the same.
 ENTRY = re.compile(r"\d{4}-\d{2}-\d{2} [YN](?: |$)")   # Rule-3 Ledger: `<date> <Y|N> <plan|done|merge #n|reason>`
 MANDATE = re.compile(r"\d{4}-\d{2}-\d{2} Y plan \(mandate #\d+\)$")   # the one entry an implicit-mode row is born with (Rule-3, #290)
+DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")                    # a *given* completion disposition (Rule-3 Completion, #202)
+DONE_MERGES = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b[^;]*\bmerge[sd]?\b[^;]*#\d+")   # one that ratifies a merge: the state waits for it
+HEAD_AT = re.compile(r"\bat ([0-9a-f]{7,40})\b")                       # the head the `Y` was given on
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 def git(*a, cwd, stderr=None): return subprocess.check_output(["git", *a], cwd=cwd, text=True, stderr=stderr)
@@ -64,7 +72,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     d = dyadlib.rows_dir(root)
     if not d.is_dir():
         return []
-    fails, seen = [], set()
+    fails, seen, parsed = [], set(), []
     for p in sorted(d.glob("*.md"), key=lambda p: int(p.stem) if p.stem.isdigit() else -1):
         if not p.stem.isdigit():
             continue
@@ -79,8 +87,8 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             fails.append(f"{rel}: state '{r.state}' not one of {' '.join(sorted(dyadlib.STATES))}")
         if r.id in seen:
             fails.append(f"{rel}: duplicate id {r.id}")
-        seen.add(r.id)
-    return fails
+        seen.add(r.id); parsed.append(r)
+    return fails + done_recorded_not_closed(parsed)
 
 def summary(root: Path | None = None) -> str:
     root = root or dyadlib.repo_root()
@@ -91,14 +99,96 @@ def summary(root: Path | None = None) -> str:
 def entries(disposed: str) -> list[str]:
     return [e.strip() for e in disposed.split(";") if e.strip()]
 
+def added_entries(before: str, after: str) -> list[str]:
+    """The entries `after` holds beyond `before`'s — a prefix append, or whatever is new if the
+    prefix was rewritten (which `disposed_problems` then judges on shape)."""
+    old = entries(before); new = entries(after)
+    return new[len(old):] if new[:len(old)] == old else [e for e in new if e not in old]
+
 def disposed_problems(path: str, before: str, after: str, label: str) -> list[str]:
     """Every entry `after` holds beyond `before`'s must be one well-shaped entry: a `;` inside a
     disposition's text leaves a fragment (`falsify extensibility first)`, #100) that fails here."""
-    old = entries(before); new = entries(after)
-    added = new[len(old):] if new[:len(old)] == old else [e for e in new if e not in old]
     return [f"FAIL [disposed]: {label} {path} adds entry {e!r}: not `<YYYY-MM-DD> <Y|N> <text>` with balanced "
             f"parentheses — a `;` inside disposition text splits one entry in two (Rule-3 Ledger)"
-            for e in added if not ENTRY.match(e) or e.count("(") != e.count(")")]
+            for e in added_entries(before, after) if not ENTRY.match(e) or e.count("(") != e.count(")")]
+
+# ---- the Done state follows the merge (d-work #202)
+def done_order_problems(path: str, before, after, label: str) -> list[str]:
+    """Rule-3 Completion: a Done-`Y` that ratifies a merge is recorded with the state left as it is, the
+    merges execute, and a second commit sets `done`. One commit that does both is the old order, and it is
+    what closed every route to the pushes a refused merge needs — `done` is terminal (Rule-16) and the plan
+    gate refuses every commit citing a terminal row, so the rebase, the conflict resolution or the second
+    PR of a ratified set had nowhere legal to go (eleven rows between 2026-09-30 and 2026-10-15; #202).
+    The cure is to split the commit, and it is always available: both halves are ledger-only, which the
+    plan gate skips (#191)."""
+    if after.state != "done" or before.state == "done":
+        return []
+    return [f"FAIL [main-fence]: {label} row file {path} is set done by the commit that records {e!r} "
+            f"(Rule-3 Completion: the state follows the merge — record the entry with the state unchanged, "
+            f"merge, then `dyad dwork state <id> done`)"
+            for e in added_entries(before.disposed, after.disposed) if DONE_MERGES.search(e)]
+
+def landing_problems(path: str, before, after, label: str, sha: str, cwd, base: str | None = None) -> list[str]:
+    """The commit that sets `done` asserts two things. That a Done-`Y` was given at all: a row reaches
+    `done` only with a `Y done` entry already on it — the coupling the 2026-10-08 chain-of-authority audit
+    found missing (C2: a dispositionless `dwork state <id> done` wrote the state with nothing behind it),
+    which matters more now that the dispositionless write is the prescribed closing act. And that every
+    head the operative entry names (`Y done (merges PR #402 at 0fa99a7)`) is reachable: an ancestor of the
+    base branch this range is pushed to, or of this commit itself where the merge and the close travel
+    together. A sha unknown to this clone
+    prints one line and is not checked — a hard failure on an unresolvable sha is the cross-clone wedge of
+    #321's I7, where one seat's local commit refused every other seat's push for sixteen minutes. Only the
+    last `Y done` entry governs: a resolution that changes a head voids the `Y` given against it (Rule-2,
+    Binding), so the question is asked again and the head of a superseded entry is history, not an
+    obligation (#202, attack A5)."""
+    if after.state != "done" or before.state == "done":
+        return []
+    done = [e for e in entries(after.disposed) if DONE_Y.search(e)]
+    if not done:
+        return [f"FAIL [main-fence]: {label} sets row file {path} done with no `Y done` entry on the row "
+                f"(Rule-3 Completion: only the Operator closes a d-work, and the state executes that `Y`)"]
+    fails = []
+    for e in done[-1:]:     # the operative record only: see the docstring
+        for s in HEAD_AT.findall(e):
+            try:
+                git("cat-file", "-e", f"{s}^{{commit}}", cwd=cwd, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                print(f"skip [main-fence]: {label} row file {path} names head {s}, which this clone "
+                      f"cannot resolve: not checked (#202)")
+                continue
+            if any(reachable(s, ref, cwd) for ref in (base, sha) if ref):
+                continue
+            fails.append(f"FAIL [main-fence]: {label} sets row file {path} done while head {s}, which "
+                         f"{e!r} names, is on neither {base or 'the base'} nor this commit: the merge that "
+                         f"`Y` ratified has not landed (Rule-3 Completion, #202)")
+    return fails
+
+def reachable(sha: str, ref: str, cwd) -> bool:
+    """`sha` is an ancestor of `ref`; a ref that does not resolve here decides nothing."""
+    try:
+        git("merge-base", "--is-ancestor", sha, ref, cwd=cwd, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def done_recorded_not_closed(rows: list) -> list[str]:
+    """The reading of the interval the order above opens: a row that records a completion disposition while
+    its state is not terminal is a Done-`Y` whose merges are still owed. One warning line, never a failure —
+    a failure here would refuse exactly the pushes the interval exists to permit — and it is read where it
+    cannot be missed, since every push and every `check --evidence` runs this check and the evidence block
+    the completion reply pastes carries its lines and their sha256. Whether the merge has run is not
+    decidable from git alone at this moment (a merge subject naming a PR is not a merge of it: `Merge pull
+    request #401: … PR #355 never landed`), which is why only the commit that writes `done` is fenced."""
+    out = []
+    for r in rows:
+        if r.state in dyadlib.TERMINAL_STATES:
+            continue
+        done = [e for e in entries(r.disposed) if DONE_Y.search(e)]
+        for e in done[-1:]:     # one line per row: the operative entry, as `landing_problems` reads it
+            out.append(f"warning: row #{r.id} is {r.state} and records {e!r}: a Done-`Y` recorded whose "
+                       f"merges are still owed — merge what it names, then `dyad dwork state {r.id} done` "
+                       f"(Rule-3 Completion, #202)")
+    return out
 
 # ---- countersign mode (d-work #290)
 def mode_changed(path: str, before, after, label: str) -> list[str]:
@@ -144,18 +234,21 @@ def check_disposed(root: Path, base: str, head: str) -> list[str]:
         if not Path(path).stem.isdigit():
             continue
         try:
-            after = dyadlib.parse_row_file(git("show", f"{head}:{path}", cwd=root, stderr=subprocess.DEVNULL)).disposed
+            after_row = dyadlib.parse_row_file(git("show", f"{head}:{path}", cwd=root, stderr=subprocess.DEVNULL))
+            after = after_row.disposed
         except (subprocess.CalledProcessError, ValueError):
             continue   # a malformed row file is check_package's report
         try:
-            before = dyadlib.parse_row_file(git("show", f"{base}:{path}", cwd=root, stderr=subprocess.DEVNULL)).disposed
+            before_row = dyadlib.parse_row_file(git("show", f"{base}:{path}", cwd=root, stderr=subprocess.DEVNULL))
+            before = before_row.disposed
         except (subprocess.CalledProcessError, ValueError):
-            before = ""
+            before_row, before = dyadlib.Row(after_row.id, after_row.title, after_row.opened, "open", "", ""), ""
         fails += disposed_problems(path, before, after, "range")
+        fails += done_order_problems(path, before_row, after_row, "range")   # #202: the order, on a work branch too
     return fails
 
 # ---- transaction check (the main fence)
-def check_commit(sha: str, cwd, instance: str) -> list[str]:
+def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[str]:
     label = sha[:9]
     paths = git("diff-tree", "--root", "--no-commit-id", "-r", "--name-only", sha, cwd=cwd).split()
     bad = [p for p in paths if not p.startswith(f"{instance}/d-work/")]
@@ -184,6 +277,8 @@ def check_commit(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
             fails += mode_changed(path, before, after, label)
             fails += disposed_problems(path, before.disposed, after.disposed, label)
+            fails += done_order_problems(path, before, after, label)
+            fails += landing_problems(path, before, after, label, sha, cwd, base)
         elif st.startswith("A"):
             try:
                 new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
@@ -201,7 +296,7 @@ def check_range(before: str, after: str, cwd=None) -> list[str]:
     instance = os.environ.get("DYAD_INSTANCE", "agent-corpus")
     fails = []
     for sha in git("rev-list", "--first-parent", "--no-merges", f"{before}..{after}", cwd=cwd).split():
-        fails += check_commit(sha, cwd, instance)
+        fails += check_commit(sha, cwd, instance, before)
     return fails
 
 def check_transaction(root: Path, base: str, head: str) -> list[str]:
@@ -225,7 +320,7 @@ def check_ledger_branch(root: Path, base: str, head: str) -> list[str]:
     rel = dyadlib.instance_rel(root) or os.environ.get("DYAD_INSTANCE", "agent-corpus")
     fails = []
     for sha in dyadlib.range_commits(root, base, head) or []:
-        fails += check_commit(sha, root, rel)
+        fails += check_commit(sha, root, rel, base)
     for sha in dyadlib.range_commits(root, base, head, merges=True) or []:
         fails += check_merge(sha, root, rel)
     return fails
@@ -252,6 +347,10 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: merge {label} row file {path} state regresses {before.state}\u2192{after.state} against parent {par[:9]}")
             elif before.mode != after.mode:   # #290: a mode rewritten while resolving a merge is the same hole #191 closed for state
                 fails.append(f"FAIL [main-fence]: merge {label} changes mode of row file {path} {before.mode}\u2192{after.mode} against parent {par[:9]}")
+            # #202: the Done order is a property of the row edit, not of which commit carries it — a merge
+            # resolution is where the per-commit walk never looks (the hole #191 closed for state).
+            fails += done_order_problems(path, before, after, f"merge {label}")
+            fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
     return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:

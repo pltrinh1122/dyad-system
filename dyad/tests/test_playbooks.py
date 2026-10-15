@@ -167,7 +167,7 @@ class AuditPlaybookTests(unittest.TestCase):
 
 DWORK_PLAYBOOK = PKG / "playbooks" / "d-work.md"
 DWORK_RUNBOOK = PKG / "runbooks" / "d-work.md"
-DWORK_STEPS = ("open", "plan", "authorize", "execute", "evidence", "complete", "defer", "resume")
+DWORK_STEPS = ("open", "plan", "authorize", "execute", "evidence", "record", "complete", "defer", "resume")
 DWORK_GUARDS = ("rows", "plans", "provenance", "sessions", "traces")   # the agent guards whose stores lie under <instance>/d-work/
 
 def _ticks(cell: str) -> list[str]:
@@ -207,7 +207,7 @@ class DworkPlaybookTests(unittest.TestCase):
         text = DWORK_RUNBOOK.read_text()
         cmds = rb.parse_text(text)
         self.assertEqual([c.name for c in cmds], list(DWORK_STEPS))
-        self.assertEqual(rb.declared_sections(text), ["Open", "Plan", "Authorize", "Execute", "Evidence", "Complete", "Defer", "Resume"])
+        self.assertEqual(rb.declared_sections(text), ["Open", "Plan", "Authorize", "Execute", "Evidence", "Record", "Complete", "Defer", "Resume"])
         self.assertEqual({c.section for c in cmds}, set(rb.declared_sections(text)))
         self.assertEqual(rb.prose_blocks(text), [])
         self.assertEqual({c.name for c in cmds if c.cls == "read-only"}, {"plan", "execute", "evidence"})

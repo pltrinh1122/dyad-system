@@ -192,6 +192,16 @@ gate survives intact and the question disappears. The price is the wait, and thi
    the question being asked. Where a d-work still cannot reach Done, the hold is reported as the
    incident it is and the PR is not left to rot.
 
+6. **The Done record opens an interval, not a closure.** Rule-3's completion clause records the Done-`Y`
+   with the state left as it is, and sets `done` only once every merge that `Y` named has landed (#202).
+   Inside that interval the row is still citable at the plan gate, so a refused merge is rebased and
+   re-pushed under the row's own plan-`Y` — no recovery row, no reworded commit messages, no local merge
+   through `prs.check_transaction`'s `main`-checkout return. Two things the interval does not buy: a rebase
+   still changes the head and so voids the `Y` (step 3 above), which costs one fresh Done question on a live
+   row instead of a recovery row's three dispositions; and nothing on the kernel-only path can tell a merge
+   still pending from a state never written, so `rows.py`'s one warning per row — carried in every evidence
+   block — is the reading, and this section's `held` step is the other.
+
 The two prices are measured, not hypothesized. **PR #355**: a merge the Operator ratified on 2026-10-08
 (`2026-10-08 Y done merges PR #355` on row #245) and that never ran — still open, `CONFLICTING`,
 +423/−0, untouched since 2026-10-08T13:57Z, and the plan gate now refuses it against its own `done` row.

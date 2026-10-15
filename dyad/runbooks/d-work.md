@@ -1,5 +1,5 @@
 # Run-book: d-work (one d-work from its prompt to its Done-Y) — play-book `dyad/playbooks/d-work.md`, #309
-# sections: Open, Plan, Authorize, Execute, Evidence, Complete, Defer, Resume
+# sections: Open, Plan, Authorize, Execute, Evidence, Record, Complete, Defer, Resume
 
 A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the d-work play-book as `dyad-cmd`
 blocks, run by either party through the core runner, which prints the native line, records an event in the
@@ -91,18 +91,35 @@ scope: the working tree at HEAD (read; runs every check and guard)
 dyad/bin/dyad check --evidence
 ```
 
+## Record
+The Done-`Y` recorded, with the state left as it is (#202): the row and the record first, then the trace, so
+the Done record commit carries all three (`dwork-trace.md`); the merges come after that commit and are not in
+this step, and neither is the state. `DISPOSED` is the entry — `Y done (merges PR #a at <head-a>)`, naming
+every PR the question named and the head its `Y` was given on, or plain `Y done` where the question named no
+merge:
+```dyad-cmd
+name: record
+class: reversible
+role: any
+undo: I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; git restore --source=HEAD --worktree -- "$I/d-work/rows/$D.md" "$I/d-work/provenance/$D.md"; rm -f "$I/d-work/traces/$D.md"
+postcondition: grep -q '^disposed:.*Y done' "${DYAD_INSTANCE:-agent-corpus}/d-work/rows/${DWORK:?d-work id}.md"
+scope: <instance>/d-work/{rows,provenance,traces}/<DWORK>.md
+
+D="${DWORK:?d-work id}"; I="${DYAD_INSTANCE:-agent-corpus}"; S="$(sed -n 's/^state: //p' "$I/d-work/rows/$D.md")"; dyad/bin/dyad dwork state "$D" "$S" -d "${DISPOSED:?the entry, e.g. 'Y done (merges PR #9 at <head>)'}" --said-file "${SAID:?disposition file}" && dyad/bin/dyad dwork trace "$D" --out
+```
+
 ## Complete
-The Done-`Y` (open or planned → done): the row and the record first, then the trace, so the Done ledger
-commit carries all three (`dwork-trace.md`); the merges come after that commit and are not in this step:
+The state, once every head the recorded entry names is on `main` (#202): a second ledger commit with no
+disposition, which the fence checks against those heads:
 ```dyad-cmd
 name: complete
 class: reversible
 role: any
-undo: I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; git restore --source=HEAD --worktree -- "$I/d-work/rows/$D.md" "$I/d-work/provenance/$D.md"; rm -f "$I/d-work/traces/$D.md"
+undo: I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; git restore --source=HEAD --worktree -- "$I/d-work/rows/$D.md"
 postcondition: grep -qx 'state: done' "${DYAD_INSTANCE:-agent-corpus}/d-work/rows/${DWORK:?d-work id}.md"
-scope: <instance>/d-work/{rows,provenance,traces}/<DWORK>.md
+scope: <instance>/d-work/rows/<DWORK>.md
 
-D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" done -d "Y done" --said-file "${SAID:?disposition file}" && dyad/bin/dyad dwork trace "$D" --out
+D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" done
 ```
 
 ## Defer

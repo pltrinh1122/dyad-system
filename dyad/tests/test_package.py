@@ -693,6 +693,42 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("state: backlog", rows.joinpath("5.md").read_text())
         r = self.dwork_state(d, "5", "open", "--prompt", "work five")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: open", rows.joinpath("5.md").read_text())
+    def test_dwork_done_state_follows_the_merge(self):
+        """#202: a `Y done` that ratifies a merge names the head it was given on, is recorded with the state
+        unchanged, and the row reaches `done` by a second dispositionless call once that head is on `main`."""
+        d, rows = self.dwork_repo()
+        r = self.dwork_state(d, "1", "planned", "-d", "Y done (merges PR #9)", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("the head its `Y` was given on", r.stderr)
+        r = self.dwork_state(d, "1", "done", "-d", "Y done (merges PR #9 at 0123abc)", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("the state follows the merge", r.stderr)
+        self.assertIn("state: open", rows.joinpath("1.md").read_text(), "nothing written")
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d, capture_output=True, text=True).stdout.strip()
+        r = self.dwork_state(d, "1", "open", "-d", f"Y done (merges PR #9 at {head})", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)                       # the record, state unchanged
+        self.assertIn("state: open", rows.joinpath("1.md").read_text())
+        self.assertIn("Y done (merges PR #9", rows.joinpath("1.md").read_text())
+        r = self.dwork_state(d, "1", "done")                              # the close: the head is HEAD itself
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("1.md").read_text())
+    def test_dwork_refuses_a_done_with_no_disposition_behind_it(self):
+        """#202: the closing act writes no disposition, so the `Y` it executes must already be on the row —
+        the coupling the 2026-10-08 chain-of-authority audit (C2) found missing. The landing test itself is
+        the fence's (`dyad/tests/guards/agent/test_rows.py`), which owns a repository to judge."""
+        d, rows = self.dwork_repo()
+        r = self.dwork_state(d, "1", "done")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("carries no `Y done` entry", r.stderr)
+        self.assertIn("state: open", rows.joinpath("1.md").read_text())
+        ghost = "0" * 40
+        r = self.dwork_state(d, "1", "open", "-d", f"Y done (merges PR #9 at {ghost})", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "1", "done")                              # a sha no clone resolves is noted, not fatal
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("is unknown in this clone", r.stderr)
+        self.assertIn("state: done", rows.joinpath("1.md").read_text())
+    def test_dwork_requires_a_head_per_PR_the_done_names(self):
+        d, rows = self.dwork_repo()
+        r = self.dwork_state(d, "1", "open", "-d", "Y done (batch #1,#2, merges PR #9,#10 at 0123abcd)", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("2 named, 1 head(s) given", r.stderr)
+        r = self.dwork_state(d, "1", "open", "-d", "Y done (merges PR #9 at 0123abcd, PR #10 at 4567bcde)", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
     def test_dwork_record_entries_are_verbatim_and_complete(self):
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         pv = dyadlib.load_guard("agent", "provenance")
