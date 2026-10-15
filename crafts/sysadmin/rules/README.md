@@ -4,13 +4,17 @@ Operator-tended rules of the system-administration craft: what the dyad *does* o
 opposed to how the dyad runs itself. Any form. They are not Agent Rules (Rule-4 classifies): no
 block, no coherence sweep, no Agent-vocabulary discipline; their terms are `../vocabulary/CRAFT.md`.
 Each opens with one line naming the core Rule whose kernel reads it; the kernel binds the Agent's
-process, the craft rule the craft's practice (#155, attack 3).
+process, the craft rule the craft's practice (#155, attack 3). A craft-owned rule that no core
+kernel reads opens instead by saying so and naming the core Rules it borders; its `read by` cell is
+`—` and the adjacency is stated in its place (#81, attack A7).
 
 | rule | read by | what it holds |
 |------|---------|---------------|
 | `host-mutation.md` | Rule-8 | the three host-action classes with their examples, the read-before-act procedure, the change log's columns and its guard |
 | `ops-scripts.md` | Rule-18 | the form of an Operator-executed command: file name, header, body, provenance, check, idempotence, run-time confirmation (mechanics move to `crafts/syseng/` on #162) |
 | `server-instances.md` | Rule-19 | the run-book's form: supervisor, sections, commands, health, telemetry, one execution path, contained mutation; the guards' check list; the reference deployment |
+| `host-install.md` | — (adjacent: Rule-11 p2, Rule-8) | host-side packaging and installation: the prerequisites a host must provide, their verification before the act, the act's class, authorization and seven-column change-log row, its postcondition; the bundled-craft fact stated descriptively (#81) |
+| `host-platform.md` | — (adjacent: Rule-11 p2, Rule-8) | the host infrastructure abstraction: the platform set with a status per platform (Linux verified; macOS and Windows in scope, unmet), what a platform contract states, where a divergence is recorded; the seam with the syseng `host-facts.md` (#81) |
 
 Host-specific Tended Rules (this workstation's constraints) live in `workstation-corpus/rules/`,
 outside the craft; Rule-8 reads both before any reversible or destructive host action. A rule here
