@@ -1,0 +1,815 @@
+# ADR: architecture for disposition under a chief-of-staff — alternative architectures, falsified
+
+*d-work #252. Opened 2026-10-08 on the Operator's prompt; the ADR is plan
+`agent-corpus/d-work/plans/252.md` as its eight revisions left it (plan-`Y` 2026-10-09, batch
+#251,#252,#253; revision 9, the execution notes, plan-`Y` 2026-10-15, batch #301,#252). Landed by the
+cabinet seat `ds-cabinet-cloud-2` under d-work #301. Standing at execution: `main` at `2b0a603`,
+301 rows, 50 tags. The plan file stays where it is (Rule-16); this audit is the ADR's record in the
+place the corpus keeps design records, verbatim below from the plan's first line to the end of
+revision 8.*
+
+---
+
+# Plan #252 — ADR: architecture for disposition under a chief-of-staff
+
+*Rule-15 phase 1. Base commit of `main`: 7e780b4 (2026-10-08). refs: 221 251 249 202 185 99.*
+*This plan **is** the ADR the Operator asked for — the precedent is plan #247, "this plan is the
+decision record the Operator asked for; the plan-`Y` is the disposition." The architecture is
+disposed by the `Y` at the end, not by a later artifact.*
+
+## Intent as read
+The Operator needs concurrency: breadth is theirs, depth is the Agent's, and today every strand of
+depth has to come back through one chat in one session. The ask is a single `cos` (chief-of-staff)
+agent that (1) delegates to `cabinet` sessions in this same repo, (2) consolidates their reporting
+so the Operator's attention is spent once rather than per session, (3) leaves no actor idle — the
+Operator included, when a disposition is what everything is waiting on. Pub/sub is *suggested*, with
+a stated reason: sessions start on any host, so addressing must be a tune-in filter, not a point-to-
+point address. The deliverable asked for is an ADR proposing **alternative** architecture. So this
+record's job is to take the suggestion seriously, say exactly where it holds and where it cannot, and
+put one path up for disposition.
+
+## The finding that organises everything below
+**This system has already decided, in code, that a prompt may be relayed and a disposition may not.**
+
+`dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p> [--relayed-via <session>]]`
+(`dyad/scripts/package.py:60`): `--relayed-via` attaches to `--prompt`. It does not attach to
+`--said`, which is the disposition's words. Rule-7 property 4 says the same in prose — "An Operator
+prompt relayed by another agent (Rule-3, Intake) is still an Operator's words … the entry note
+`relayed via <session>`" — and names no relayed disposition. Rule-3 Intake admits two inbound shapes
+from another agent, a defect-with-evidence and an enhancement carrying its Operator's verbatim
+*prompt*; a disposition is neither.
+
+The reason is not fastidiousness. It is that **this system cannot authenticate a session.**
+- Every session pushes on the Operator's one credential; of the last 300 commits on `main`, 170 are
+  authored `Claude <noreply@anthropic.com>` and 130 by the Operator
+  (`agent-corpus/falsification/message-bus-handover.md`, C7). Git authenticates the dyad, not a seat.
+- `CLAUDE_CODE_SESSION_ID` is stable across boot, compaction and three days — but it is *inherited by
+  subagents* (`CLAUDE_CODE_CHILD_SESSION=1` is set in a subagent and was observed set in a main
+  Agent), so it cannot distinguish two processes in one conversation.
+- `DYAD_SESSION` is set by nothing in the repo. 58 presence files exist, 52 named `unnamed-*`, over
+  3 distinct roots, because `sessions.py:50-58` mints a fresh uuid *per call* when it is unset.
+- In the reference implementation the same hole is explicit: the envelope's `from` is self-asserted
+  and nothing verifies it (`bus.py:296-297`).
+
+A disposition whose author cannot be proven is not a disposition; it is a claim that one was given.
+Rule-2's whole intent — "Keep the proposer and the disposer of every ratification event distinct" —
+rests on being able to tell which party acted. **So: authority does not travel. Attention does.**
+Every option below is judged first on whether it respects that split.
+
+## What the ask actually decomposes into
+| the Operator's words | what it needs | is that a message, or state? |
+|---|---|---|
+| "consolidate reporting across cabinets to preserve my attention" | one view over every session's rows, plans, dispositions and presence | **state** — already in one git repo both hosts have |
+| "ensures no idleness in actors" | staleness of each session, age of each unanswered question | **state** + a clock |
+| "including the operator if operator disposition is required" | the set of counter-prompts outstanding, across sessions | **state that does not exist today** (see below) |
+| "delegate to cabinet sessions" | work claimed by a named seat, and seats that can be started anywhere | **state** (a row, a claim) |
+| "tune-in filter, not point-to-point addressing" | a read-side predicate over a shared log | a filtered **read** — which is what pub/sub's filter is |
+| "matters disposed" | the Operator's `Y` reaching the session that asked | **authority — must not travel** |
+
+Five of six are state. One is authority and is excluded by construction. **Nothing in the ask
+requires a message to move between two agents.** That is the ADR's central claim, and the options
+are ranked by it.
+
+## The hole the cos would fall into immediately
+The one row above marked *does not exist today*: **there is no record anywhere that a counter-prompt
+is outstanding.**
+- Rule-3 Batch disposition, verbatim: "The queue is conversational, derived from the ledger and the
+  stored plan files — **not a corpus file, nothing here is mechanically checked**." The vocabulary
+  repeats it: "never a corpus file".
+- Row fields are frozen — `dyadlib.FIELDS = ("id","title","opened","state","disposed","refs")`,
+  enforced at import by `row-fields-match-dataclass`; `disposed` records dispositions *given*, and
+  there is no "asked" column. Presence fields are frozen the same way (`fields-are-five`).
+- No ledger state lies between "plan written" and "planned".
+- Searched: no tracked path in `agent-corpus/` records an outstanding question; no guard looks for one.
+- It has already cost. `INCIDENTS.md:76` (#183): the `on-ignore` engagement signal was missed and
+  "four replies carry no queue counts … so an unintended engagement was invisible for four turns."
+
+A cos whose job is "no idleness, Operator included" cannot do that job from a store that does not
+record what anyone is waiting for. **This is the load-bearing gap, and it is not a transport gap.**
+
+Two more facts bound the design:
+- **No idleness detector exists at all** — not row age, not an unanswered question, not a live alarm.
+  The only clock-based mechanism is `STALE_AFTER = 6h` in `sessions.py:38`, advisory, never a failure.
+  And a *projector may not read the clock*: `crafts/syseng/rules/determinism.md` property 3 requires
+  byte-identical output, which refused exactly this in #226 attack C8. **So idleness must be computed
+  by a runner command, not by a surface.**
+- **Harness-native session-to-session messaging was tried and failed here.** #222 planned a direct
+  peer message, scored "the peer is unreachable" as *refuted* on the peer's advertised
+  `cross_session_inbound: available`, and execution refuted the refutation: `SendMessage` returned
+  `No agent named 'session_01C2f3bXQLLBHetBwtvFFCgX' is reachable` (`INCIDENTS.md:112`). What worked
+  was a hand-carry through the Operator. A cos must not be designed on an edge that has failed once
+  in this system's own record.
+
+## Options
+
+### A. Broker bus — a real pub/sub service (NATS, Redis, MQTT) as a server instance
+**Refuted.** Three independent costs, any one sufficient.
+- Rule-14 property 2, verbatim: "**A hosted git service is never kernel**", and property 3: "CI,
+  hosting and any runner are library adapters; the package must not depend on them to enforce a
+  Rule." A broker is a library adapter, so nothing a guard enforces may route through it — and
+  "matters disposed" is exactly guard-enforced territory.
+- Rule-19 + `crafts/sysadmin/rules/server-instances.md` price a new service at: a run-book with ten
+  sections, every command a `dyad-cmd` block with a six-field header, a health command with a stated
+  pass criterion, a supervisor surviving reboot, a `CHANGELOG.md` row, append-only committed events,
+  and manifest rows for the software *and* its supervisor — across at least two Rule-1 zones, so two
+  PRs minimum before a single message moves. (Docker 29.1.3 and systemd 259 are both live on this
+  host, so the capability is there; the governance is the cost.)
+- It still cannot authenticate a publisher. It buys delivery, which was never the missing piece.
+
+### B. A second git repo as the bus — the reference implementation, verbatim
+The Operator's own `dsys-repo` already does this, and it works: `tax-prep/taxprep/bus.py`, 688 lines,
+51 tests including a real two-clone/bare-origin round trip, wired into a CLI, an MCP tool and a
+read-only operator console. Transport is a **separate** repo (`dsys-store`): publish writes
+`<store>/bus/<topic>/<ts>-<msg_id>.json`, broadcast is commit+push, listen is `git pull` + read.
+Topics are directories; the tune-in filter is a never-committed local TOML (`topics = ["*"]`); there
+is no `to` field anywhere — broadcast by construction. Cursor per session, full replay on cursor
+loss, no acks, no retention, poll at 30 s, and `COLLABORATION.md`: "The Architect and Workstation
+sessions **no longer relay through Peter**."
+
+**Survives as a transport, and it is the honest rival to the recommendation.** Costs, priced:
+- A second store of truth that sits outside every fence this system has: no Rule-7 provenance, no
+  Rule-20 resolver, no guard, no zone. Nothing it carries can be corpus, by design.
+- Credentials for a private repo on every host, and in the reference the broadcast push is gated by a
+  single-use GitHub device flow a human must complete in a browser — a *new* human-in-the-loop in the
+  delivery path, which is the opposite of the ask.
+- No authorization of any kind: "whoever holds the token can publish anything on any topic", and
+  nothing reads a `{decision: "ratified"}` message as an authorization. So it cannot carry the `Y`.
+- Its own design notes admit no backlog, lag, unread-count or heartbeat metric — so it does not, as
+  shipped, answer "no idleness" either.
+
+### C. An in-corpus message store — `<instance>/d-work/bus/`
+**Deferred, not refuted.** It would gain everything B lacks: provenance, referential integrity, a
+guard, a zone, one store of truth. It is blocked on two already-recorded facts
+(`message-bus-handover.md`): `provenance.py` fails **any** tracked `*.jsonl` under the d-work store
+(C4), and — the real price — "Rule-2 grants the exemption for what a ledger-only commit *is* — 'they
+record a prompt received or a disposition already given, never a decision' — and an agent's message
+is neither. Placing messages under `d-work/` takes the path exemption without its justification: it
+needs a **Rule-2/Rule-3 amendment**, not only a directory." Rule-19's event store cannot be reused
+instead: it is workstation zone, so every broadcast would be a PR (C3).
+
+### D. No transport. A disposition board: one store, one surface, one runner. **(recommended)**
+Three parts, in dependency order, each landable alone:
+
+**D1 — the `cos` surface and runner (no Rule change, buildable today).**
+A projector `cos` over what the corpus already parses — rows, plan files, provenance records,
+presence files — rendering one page: per cabinet, what it holds, what phase each row is in, which
+dispositions it has, and what it is waiting for. The mechanism exists and is proven: eight surfaces
+ship today (`dyad project --list`), `project_kanban.py` already draws a per-row phase strip and
+*flags phases out of order*, and `project_erd.py` already renders entity relationships from the
+guards' own parsers. Surface naming is collision-free since #99's remedy landed (`craft/surface`
+keying, `crafts/sysarch/rules/projection.md`), so `cos` as a surface name is free — the collision
+that opened row #99 cannot recur. Beside it, `dyad cos` as a **runner command**, not a projector,
+because it reads the clock: session staleness from `seen`, and the age of anything outstanding. This
+is the "consolidate reporting" half of the ask, delivered with no amendment to anything.
+
+**D2 — the question store (one Rule-3 amendment).**
+Make the pending queue durable: one file per asked counter-prompt, written in the same clerical
+commit that asks it, closed in the clerical commit that records the disposition. This is what turns
+D1 from a status page into "no idleness": the cos can then say *three questions are outstanding, the
+oldest for two hours, here they are in one list*, from any host, without being in those sessions.
+The amendment is small and specific — Rule-3's own sentence "the queue is conversational … not a
+corpus file" becomes a store — and it is cheaper than C's, because what is recorded is **the Agent's
+own clerical note that it asked**, not a message between agents: it needs no new claim about what a
+ledger-only commit *is*. It is still an amendment, with a falsification record and a Rule-5 sweep,
+and it is its own d-work.
+
+**D3 — the cos's standing rules (no new mechanism, a frame/Rule-10 discipline).**
+The cos is an Agent like any other. It **may**: aggregate and project, propose, rank what to look at
+next, relay a *prompt* (verbatim, noted `relayed via <session>`, Rule-7 property 4), surface an
+intake, and open rows on the Operator's `Y`. It **may not**: dispose; relay a disposition; ask a
+counter-prompt on another session's behalf; answer one; or merge on a `Y` it did not itself receive
+against evidence it itself observed on the exact head (Rule-2 Binding). Cabinets ask their own
+questions, on their own heads, and the Operator answers in the session that asked — the cos tells
+them where to look, never stands between them.
+
+**Why D meets the ask as stated.** "Tune-in filter, not point-to-point addressing" is satisfied by a
+filtered *read* of a shared store — which is what a subscription filter is, minus the broker;
+`dyad dwork list --craft <c>` is already one. "Delegate to cabinets" is a row and a claim, not a
+message. "Across hosts" is satisfied by the one substrate the hosts provably share: `origin/main`
+(verified — both hosts' presence files are in this repo, which is how one host can read the other's
+roots at all). And polling it is cheap at this volume: `git fetch` measured 1.2–9.2 s, the whole
+ledger store is 1.64 MB over 731 files, and `main` takes ~45 commits/day with a 123/day peak.
+
+### E. The hosting as the notification edge — GitHub issues, PR comments
+**Kept as an optional edge, not an architecture.** Its one real advantage is decisive where it
+applies: GitHub *does* authenticate the Operator, so a `Y` typed there is attributable in a way a
+bus message never is. But Rule-14 forbids any guard depending on it, it duplicates the ledger, and it
+puts the Operator's attention in a second place rather than one. Worth revisiting only as a way to
+*notify* (an @-mention when the question store is non-empty), never as where dispositions live.
+
+## Recommended path
+**D, phased: D1 now as its own d-work, D2 as its own d-work with its own amendment and sweep, D3
+written into the frame alongside D1. A and C stay refused and deferred respectively. B is adopted
+only on a named trigger (below), and if it is adopted it is adopted as the reference wrote it.**
+
+The trigger for B, stated in advance so the decision is not re-litigated by mood: **if cabinets need
+to exchange content that is not corpus state** — free-form text, a draft for another seat to react
+to, anything whose meaning does not survive being written down as a row, a plan or an observation —
+then D has no answer and B is the answer. Until then, every message a cabinet would publish is
+either state (which D stores and surfaces) or an intake (which Rule-3 already shapes).
+
+## Mutation proposed (on this plan's `Y`)
+1. One agent-zone PR landing this ADR as a tracked record at
+   `agent-corpus/audits/2026-10-08-adr-disposition-architecture.md` — an audit by the vocabulary's
+   own definition ("an agent-authored review elevating gaps for Operator disposition"), so the
+   decision is reachable without reading a plan file, and citable by the rows below.
+2. Rows opened, not started, each `backlog` unless the Operator prompts otherwise:
+   - **the `cos` surface and `dyad cos` runner** (D1), refs 252 221 251;
+   - **the question store** (D2) — the Rule-3 amendment, its falsification record and its Rule-5
+     sweep, refs 252 202 183;
+   - **the cos's standing rules** (D3), refs 252 251.
+3. `#221` gains a disposition entry recording that this ADR answers its standing architecture ask,
+   and stays `open` until the Operator disposes it — its last live disposition asked for a Message
+   Bus Architecture as an HTML surface with two ERDs and a three-actor sequence diagram, which D1's
+   surface would render from parsed data rather than by hand (the conflict plan #221 revision 3
+   recorded against itself: "there is nothing to parse, so any rendering of these entities is
+   hand-drawn by construction" — D1 removes that objection by making the entities parsed).
+4. No Rule, guard, hook, workflow or preference value is edited by this d-work.
+
+### Files touched
+files touched: agent-corpus/audits/2026-10-08-adr-disposition-architecture.md
+agent-corpus/d-work/rows/252.md agent-corpus/d-work/plans/252.md
+agent-corpus/d-work/provenance/252.md agent-corpus/d-work/traces/252.md
+agent-corpus/d-work/rows/221.md agent-corpus/d-work/provenance/221.md
+
+### Host actions (Rule-8)
+None. The cabinet read; nothing was written outside the ledger, and no service was started.
+
+## Falsification (Rule-9)
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| F1 | The Operator suggested pub/sub. Answering "you do not need a bus" is the Agent substituting its own design for the Operator's, dressed as analysis. | **survives — and is the reason the ADR is shaped as it is** | The suggestion came with its reason (any host, no point-to-point addressing), and that reason is honoured: D's filter is read-side, its substrate is reachable from any host, and no seat is addressed. What is refused is not pub/sub but *routing authority*, and that refusal is the corpus's own, already encoded in `--relayed-via` and Rule-7 property 4 — not the Agent's preference. B is kept live with a stated trigger rather than argued away. |
+| F2 | B is running, tested code that already achieved the exact outcome asked for — "no longer relay through Peter". D is a design with nothing built. Choosing D re-derives slowly what is proven. | **survives, scoped — the strongest counter** | What B proves is that a git-backed, poll-based, file-per-message store works; D keeps that and drops only the second repo, because dyad-system already has a governed git store on both hosts and dsys-repo did not. Conceded without hedging: if the first week of D1 shows cabinets needing free-form exchange, B is adopted as written, and F2 is why the trigger is named now rather than later. |
+| F3 | D2 is an amendment to Rule-3, and #221 was already twice refused for proposing less than that. This will be refused too. | refuted as stated | #221's two refusals were not about amendment cost: the first `N` narrowed it to an architecture rendered for review, the second said "wrap up current work as is for a hand-over" (both verbatim in `provenance/221.md`). Neither rejected a store. And D2 is separable — D1 lands with no amendment at all, so a refusal of D2 leaves consolidated reporting standing. |
+| F4 | The queue has been conversational for the system's whole life and the system works. Making it a store is ceremony. | refuted | It has already failed once in the record: `INCIDENTS.md:76` (#183), four consecutive replies with no queue counts because the engagement signal is conversational and nothing raises it. With one session that is an annoyance; with a cos over several cabinets it is the whole job, since "what is the Operator blocking" is precisely what no file holds. |
+| F5 | "No idleness in actors" can be read as the Agent pressing the Operator — a mechanism that nags its own disposer. | survives — binds D1 | Idleness is reported, never enforced: the runner prints the outstanding set and its age, and nothing escalates, retries or re-asks. Rule-10's "one `Y/N`, last line, one per reply" is untouched, and `interaction.md` I8 — "Silence is not consent. An unanswered question authorizes nothing" — stays inference. The Operator's attention is surfaced, not managed. |
+| F6 | A `cos` surface will collide with the `cos` craft name that opened row #99, which is still `open`. | refuted | #99's remedy shipped: surfaces are keyed `craft/surface`, "collision-free by construction" (`crafts/sysarch/rules/projection.md`), and there is no `crafts/cos/` in this tree. The row being open is a clerical omission — its completion was written into plan #100 and never executed — and this ADR names it so the Operator can close it, which is a finding, not a blocker. |
+| F7 | Easy agreement: the Operator asked for alternatives and got a table of five, which is what any plan does. | pushed to a verdict | One finding does the work and it was not known before this turn: `--relayed-via` attaches to `--prompt` and not to `--said`, so the prompt/disposition asymmetry is already mechanical, not merely prosaic. Everything else follows from it. Had it gone the other way — had the CLI admitted a relayed disposition — option A would be live and this ADR would recommend differently. |
+| F8 | The cabinet that produced this ADR is itself the thing being designed, so its own findings are self-serving. | survives as a finding | Four seats read; none wrote, committed, or asked anything (Rule-3 Scope). Their value here is evidence this plan could not have gathered in one pass — 13 counter-prompt forms classified, 58 presence files counted, the reference bus read at a named commit, `git fetch` timed. The conflict is real and is why every claim above carries a path, a line or an observed number for the Operator to re-check. |
+| F9 | Rule-16 overlap. | survives as a finding | One presence file carries today's date and it is this session's; `dyad session list` reports 57 of 58 stale and 31 claiming this same root. The store cannot discriminate — `touch_from_open_rows` sets `rows` repo-wide — which is itself a datum for D1. |
+
+## The finding this ADR does not resolve, and should be read beside it
+Of the 13 counter-prompt forms the Rules define, **exactly one is mechanically gated**: the plan-`Y`,
+by `prs.py:46` — and by a bare substring search over the whole `disposed` column, which is open row
+#250. One act is mechanically foreclosed: a non-ledger direct commit to `main` (`rows.py:120`).
+**Everything else — the Done-`Y`, every merge, every release, every destructive host action, a
+verdict's finalisation, and both batch forms — is inference.** Adding a cos and several cabinets
+multiplies the actors on that chain without strengthening a single fence. That is #251's subject, and
+it is the reason D3 is part of this proposal rather than an afterthought.
+
+## Rule-10 block
+- **Path:** D, phased — D1 now, D2 as its own amendment, D3 with D1; A refused, C deferred, B on a
+  named trigger.
+- **Counter:** F2 — B is proven, running, and already produced the outcome the Operator wants.
+- **Reconciliation:** D keeps B's one real discovery (a git-backed, file-per-message, polled store)
+  and spends it on the store this system already governs on both hosts, instead of a second one
+  outside every fence; and no option, B included, may carry the `Y`, because this system cannot prove
+  who sent anything. If cabinets turn out to need non-corpus exchange, B is adopted as written.
+
+---
+
+# Revision 2 (2026-10-08) — the Operator's two claims, falsified
+
+Disposition 2 on this row, verbatim in `provenance/252.md`: *"N: with a second git repo, we may be
+able to have any dyad-system from anywhere to use it, not just those that are specific to a git repo
+as a message transport.  D - a disposition board may still be required independent of the messages.
+falsify."*
+
+Rule-3's Plan clause makes an `N` the revise path ("the Agent revises the plan"), and the precedent
+for an `N` carrying its own revision instruction is #221 revisions 2 and 3 — recorded as
+dispositions on that row, not as new rows. Same here: no new row, this plan revised.
+
+## What revision 1 got wrong, structurally
+Revision 1 put B and D in **one slot on one axis** and made B contingent on a trigger. Both claims
+below say that is the wrong shape, and both survive their attacks. There are **two axes**:
+- **transport, between dyad systems** — whose answer is B;
+- **disposition state, inside one dyad system** — whose answer is D.
+They share a motivation (concurrency) and no mechanism. The "named trigger" for B is **withdrawn**:
+it framed as contingent something that is independently justified.
+
+One weighting error of revision 1 is named precisely, because the correction turns on it. Revision 1
+used *"it cannot authenticate a publisher"* as a cost against B **as such**. That is only a cost
+against B carrying a **disposition**. For the one content B needs to carry it is not a cost at all:
+Rule-3 Intake is *built* for an untrusted sender — a defect is admissible only "as an observation
+with evidence … the mechanism the sender verified — never a verdict, never a required fix", and
+#226's own survivor says it outright: "a message must mean the same whoever sent it — an observation
+with evidence the reader re-checks, as Rule-3 Intake already requires." A transport that cannot
+prove who sent a message is sufficient for messages whose meaning does not depend on who sent them.
+Not an incident: every fact revision 1 cited is true and still stands, and a plan revised on an `N`
+is the Rule's own path, not a departure from it. The error was in what the facts were made to carry.
+
+## Claim 1 — a second git repo serves *any* dyad system from anywhere
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| G1 | The claim assumes D's substrate is narrower. It is not: `origin/main` is reachable from any host, as this repo proves — two hosts' presence files are both in it. | **refuted** | Reachable from any *host*, yes; usable by any *system*, no. D's substrate is this repo's `main`, so it can carry nothing between dyad-system and a different dyad system, whose corpus is a different repo. The axis the claim names is systems, not hosts, and on that axis D has no reach at all. |
+| G2 | Cross-system traffic is hypothetical — a design for a correspondent that does not exist. | **refuted, and this is the decisive measurement** | It is the busiest channel this system has. **29 rows in this ledger were opened by an intake from another dyad system** — 23 `workstation`, 2 `surfacer` — and **30 rows carry a `workstation-NNN` ref**. `countersign-system` is named 77 times in the corpus and `dsys-repo` 55. Rule-3's own Conditions already name the sender: "A message from another agent — a peer session, **an installed system's Agent** — proposes work" (`RULE-3:27`). The Rule has anticipated this sender since #34 and **no mechanism has ever existed to reach one**: every one of those 29 intakes crossed by the Operator carrying it by hand. That is the attention cost the prompt asks to remove, and revision 1 did not even count it. |
+| G3 | The virtue claimed is "not specific to a git repo", but a second git repo is still a git repo — the claim refutes itself. | refuted as worded, confirmed as meant | The property is not non-git-ness, it is **neutrality**: a store that is nobody's corpus, so no participant's Rule-1 zones, Rule-2 ratification events or Rule-7 provenance apply to it. That is simultaneously why it generalises across systems and why it can never carry authority. Stated that way the claim is exact. |
+| G4 | "Any dyad system from anywhere" is free only in slogan: each participant needs the bus *code*, a clone, and a credential. | **survives — the shape of the answer, not an objection to it** | Three named conditions. (i) The code must be a **craft** to be distributable at all (Rule-11 property 5, one code path, installed idempotently) — the reference is `tax-prep/taxprep/bus.py`, a module in a product tree, so adopting it means re-homing it as `crafts/bus/` with a `VERSION`, a guard, tests and a `MANIFEST.md`. (ii) The store must be granted: `dsys-store` is private, so every participant needs a credential, and in the reference the broadcast push is a single-use device flow a human completes — which must be replaced for an unattended publisher, or the new human-in-the-loop is worse than the one removed. (iii) A **public** store is feasible only with the publish-side content guard the reference already ships (seven PII regexes), which dyad-system's own provenance guard mirrors for credential shapes. |
+| G5 | A neutral store loses provenance: nothing on it is corpus for anyone. | refuted | Nothing is lost that was ever held. An intake was never trusted: Rule-7 property 4 enters the relaying agent's words **nowhere** — "the relaying agent's own words are never entered — a defect's observation stays in the plan file" — and the receiving Operator's own `Y` is the record's first entry. The transport was always meant to be outside the corpus. |
+| G6 | It accretes forever: the reference has no prune, expire, TTL or compaction, and the store is described as "the append-only accretion medium". | **survives, scoped** | A real operational cost, unpriced in the reference. At intake volume it is small — 29 messages in three weeks would be kilobytes — but it is an open question the adopting d-work must answer, not wave at: retention, or a shallow clone, or a dated topic partition. |
+| G7 | Rule-14: a hosted git service is never kernel, so a bus on one cannot be depended on. | **refuted as an objection, confirmed as a constraint** | Correct and harmless. The bus is a library adapter in every participant, so no guard may route through it — which is exactly the design: it carries intakes, never authority. Rule-14 forbids depending on it to *enforce a Rule*; nothing here does. |
+
+**Verdict: claim 1 confirmed**, with its shape named — the value is cross-*system* reach and
+neutrality, it requires the bus to become a craft and the store to be granted, and the
+authentication objection of revision 1 collapses for the only content it carries.
+
+## Claim 2 — the disposition board is required independent of the messages
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| H1 | B subsumes D: let every session publish "I asked a question" to a topic, and the cos renders the board from the bus log. One mechanism, not two. | **refuted** | A question's record belongs where its row is. Rule-7 property 3 requires the entry "appended in the clerical commit of the event it records", and property 5 counts a record's dispositions against **its own row's** `disposed`. A board living on neutral ground would hold the Operator's pending dispositions outside the system whose rows they bind, and no guard anywhere could check it. The bus can *notify* that a question exists; it cannot be where it is recorded. |
+| H2 | D is derivable today and needs no store: a plan file plus a row not yet `planned` already implies a pending plan question. | **refuted, and the refutation sharpens the design** | The union is derivable; the distinction is not. Two states matter and today's corpus collapses them: **the Agent owes a question** (plan written, not yet asked) and **the Operator owes an answer** (asked, unanswered). "No idleness in actors" needs exactly that split — one is the Agent idling, the other the Operator blocking — and nothing in the corpus can tell them apart, because what distinguishes them happened only in a reply. The board therefore needs two columns and the store is what fills the second. |
+| H3 | Read the harness instead: the transcript holds every question asked. | refuted | Rule-7 property 2 forbids reading a harness file to write a record, and transcripts are per-host (`~/.claude/projects/…`), so a board built on them fails the one requirement the prompt states — reachable from anywhere. The trace play-book reads a transcript *in place* and commits none of it; a board cannot work that way for a store other hosts must read. |
+| H4 | The board is needed only because there are many cabinets, so it is not independent of the messages — same cause, same project. | **refuted on need, conceded on motivation** | Same cause, different mechanism, and the need is already demonstrated at **one** session: `INCIDENTS.md:76` (#183) records four consecutive replies with no queue counts, with no bus and no cabinet anywhere in sight. The queue was lost in the simplest possible configuration. |
+| H5 | D2 still costs a Rule-3 amendment, and there is a cheaper partial: add an `asked:` line to the plan file, which is already an admitted store under the ledger path. | **survives — adopted as a named partial, not as the answer** | Call it **D2′**. It is genuinely cheap and needs no amendment, but it reaches only plan questions: 43 of 175 plan files already carry a `Y/N:` line, while the Done-`Y`, every merge, every release and every destructive counter-prompt have no file to annotate. D2′ is worth landing first as the one-line down payment; the store is still what makes the board whole. |
+| H6 | Easy agreement: the Operator asserted D may still be required and the Agent agrees. | pushed to a verdict | H1 and H2 are both refutations of positions revision 1 could have taken, and H2 changed the design — the board gained a second column that revision 1 did not have. The claim is not merely accepted; it is sharper than when it arrived. |
+
+**Verdict: claim 2 confirmed** — and the board is now specified as two columns, *the Agent owes a
+question* and *the Operator owes an answer*, which is the one distinction no existing file can
+compute.
+
+## The revised architecture — two axes
+**Axis 1 — transport between dyad systems. Answer: B, as a craft plus a neutral store.**
+A `bus` craft (Rule-11: own root, `VERSION`, guard, tests, `MANIFEST.md`, installed by the one code
+path) carrying **Intake-shaped messages only** — a defect as an observation with evidence, an
+enhancement with its Operator's verbatim prompt — over a neutral git store, topics as directories,
+the tune-in filter a local untracked list, no acks, no authority. It replaces the Operator's hand
+for the 29-and-counting intakes, and nothing else. A refused, C **withdrawn**: with B on this axis
+there is no message left for an in-corpus store to carry, so its Rule-2/Rule-3 amendment buys
+nothing.
+
+**Axis 2 — disposition state inside one dyad system. Answer: D, phased, unchanged except in detail.**
+D1 the `cos` surface and `dyad cos` runner (no amendment); **D2′** the plan-file `asked:` line (no
+amendment, partial); D2 the question store, two columns (one Rule-3 amendment); D3 the cos's
+standing rules. Independent of axis 1 and landable without it.
+
+**What still cannot cross either axis:** the `Y`. Unchanged and unchallenged — `--relayed-via`
+attaches to `--prompt` and not to `--said`, and no option proposes otherwise.
+
+## Mutation proposed (revision 2, on this plan's `Y`)
+1. One agent-zone PR landing this ADR, both revisions, as
+   `agent-corpus/audits/2026-10-08-adr-disposition-architecture.md`.
+2. Rows opened `backlog`, not started: **the `bus` craft and its neutral store** (axis 1), refs
+   252 221 34; **the `cos` surface and runner** (D1), refs 252 221 251; **the question store, two
+   columns** (D2, with D2′ named as its first step), refs 252 202 183; **the cos's standing rules**
+   (D3), refs 252 251.
+3. `#221` gains a disposition entry recording that this ADR answers its standing architecture ask.
+4. No Rule, guard, hook, workflow or preference value edited.
+
+## Rule-10 block (revision 2)
+- **Path:** two axes, both adopted — B as a craft for cross-system intake, D phased for disposition
+  state. A refused, C withdrawn, the trigger withdrawn.
+- **Counter:** this is now a bigger programme than revision 1 proposed — four rows and one new craft
+  where the Operator asked for an architecture — and the system already has 58 rows not `done`.
+- **Reconciliation:** nothing here is started by this `Y`. The four rows are opened `backlog` so the
+  sequence is visible and the Operator picks the first; D1 and D2′ are each landable alone with no
+  amendment, which is the smallest useful step on the axis that already failed once (#183), and the
+  `bus` craft is the axis with 29 hand-carried messages behind it.
+
+---
+
+# Revision 3 (2026-10-08) — disposition travels a directed graph, not a broadcast
+
+Prompt 3 on this row, received on the open row while its counter-prompt stood unanswered, verbatim
+in `provenance/252.md`: *"It's an expanded programme but I hadn't thought through the implications
+since I'd conflated both the message and the implied disposition that it carries which is problematic
+because disposition travels a directed graph and not a broadcast"*.
+
+This is the principle the first two revisions were circling without naming. It replaces the axis
+split of revision 2 with something that **derives** it, and it adds one mechanical requirement.
+
+## The principle, stated as a rule of shape
+A **broadcast** is one-to-many, undirected, order-indifferent and sender-anonymous by design. A
+**disposition** is none of those. It answers exactly one question, asked by exactly one asker, and
+binds exactly the set that question named — Rule-2 Binding, verbatim: "A \"Y\" binds only to the
+PR(s) or action(s) named in the question it answers."
+
+So the carrier of a disposition is not an address and not a topic. **The question is the edge.**
+Asking a counter-prompt creates a directed edge from the asking session to the Operator; the `Y`
+traverses it back. A broadcast has no edge, so there is nothing for the `Y` to bind to — which is
+not a policy about buses, it is what a broadcast *is*.
+
+Three things that were observed facts in revisions 1 and 2 now fall out of this as consequences:
+
+- **Why `--relayed-via` attaches to `--prompt` and not to `--said`.** A prompt *creates a node* — it
+  opens a d-work — so it can arrive from anywhere, by any carrier, and still be recorded verbatim. A
+  disposition *traverses an existing edge*, so it must arrive at that edge's tail. Revision 1 read
+  the asymmetry off the CLI; it is derivable.
+- **Why Rule-2 needs "a new PR, including one created to recover from an error, needs a fresh Y"
+  and the heads-unchanged condition.** Both say the same thing in graph terms: changing the bound set
+  destroys the edge, and a token cannot traverse an edge that no longer exists.
+- **Why Rule-3 Intake admits exactly the two shapes it admits.** "Never a verdict, never a required
+  fix" is not fastidiousness about tone — a verdict and a required fix are edges, and broadcast
+  cannot carry an edge. An enhancement needs its Operator's *verbatim prompt* because a prompt is
+  node-creating. **Intake's admissible set is precisely the broadcast-admissible subset**, and it has
+  been since #34. The architecture below is not new law; it is the law already written.
+
+## What this changes
+
+**1. The two planes replace the two axes, and they are typed by graph shape rather than by reach.**
+- **Broadcast plane** — undirected, many readers, content that means the same whoever sent it:
+  intakes, observations, state announcements. Transport: option B, the `bus` craft over a neutral
+  store. Reach across systems is a *property* of this plane, not its definition.
+- **Directed plane** — edges: counter-prompts and the dispositions that answer them. Transport:
+  **none, ever.** The edge is the session that asked.
+
+**2. D is re-specified, and the name improves: the board is an edge register, not a message board.**
+It does not carry dispositions and never could. It **projects the edge set**: which edges exist,
+which way each is waiting, and how long it has waited. Revision 2's two columns are now exactly the
+two orientations of a pending edge — *the Agent owes a question* (edge not yet created) and *the
+Operator owes an answer* (edge created, not yet traversed). "No idleness in actors" is, precisely,
+no edge left standing.
+
+**3. The cos is a directory, not a courier.** It may see every edge and say which to walk first; it
+may never walk one. D3's standing rules follow from the principle instead of being asserted beside
+it: aggregate, rank, project, relay a *prompt* (node-creating, carriable), surface an intake
+(broadcast-admissible) — and never ask, answer, carry or stand on an edge that is not its own.
+
+**4. One new mechanical requirement, and it is the one the conflation makes necessary.**
+The reference implementation has the conflation built into its topic list: `tax-prep.review` is
+documented as "human -> all: decisions / approvals, e.g. `{decision: \"ratified\", subject}\"`" — a
+**broadcast topic for ratifications** — with nothing restricting who publishes to it. It is harmless
+there only because no code consumes it: seat 1 verified that "nothing in `bus.py` ever reads
+`correlation_id`" and that no code reads `decision` or `ratified` off a bus message anywhere. An
+accident of non-implementation is not a fence. So:
+
+> the `bus` craft's own guard **refuses a disposition-shaped payload at publish**, the way the
+> reference's guard refuses PII shapes (seven regexes, `bus.py:81-133`, called at `:310`) — a
+> publish-side content refusal, mechanical, no principal and no privilege needed. A message asserting
+> a ratification, an approval, a `Y`, a `decision`, or a named counter-prompt answered is refused
+> before it is written, and no `review`-style topic exists to put one on.
+
+This is the only addition revision 3 makes to the programme. **No fifth row**: it is a requirement
+inside the `bus` craft row that row did not previously carry. Two of the other rows become
+derivations of one principle rather than independent assertions, which is a reduction in what has to
+be believed, not an increase in what has to be built.
+
+## The limit this principle exposes, which no option removes
+Every edge terminates at one human. The graph is directed and its sink is the Operator, so **no
+number of cabinets parallelises disposition.** A cos can reduce the *cost* of an edge (one ranked
+view instead of hunting through sessions) and the *number* of edges that should never have existed
+(#251's "friction" class — and of 13 counter-prompt forms only one is mechanically gated at all).
+It cannot raise the Operator's throughput. "No idleness in actors" is therefore asymmetric by
+construction: agents can be kept busy by the register, and the Operator's own idleness is not a
+scheduling problem but an edge-count problem. That is the honest reading of "preserve my attention",
+and it makes #251 — the audit of which counter-prompts add authority and which are friction — the
+higher-value half of this programme rather than its companion.
+
+## Falsification of the principle itself (Rule-9: no easy agreement)
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| J1 | A directed edge is just a broadcast with a filter: publish the `Y` with `in_reply_to: <question id>`, and only the asking session matches. The distinction is addressing sugar. | **refuted** | The matching session can tell the message is *for* it; it cannot tell the message is *from the Operator*. One shared credential, a self-asserted `from`, `CLAUDE_CODE_SESSION_ID` inherited by subagents, `DYAD_SESSION` set by nothing. A filter reconstructs the edge's head and not its tail, and the tail is the half that carries the authority. |
+| J2 | Then sign the messages and the edge becomes carriable — the problem is key management, not graph shape. | **survives, scoped** | Conceded as a fact: a signing key held only by the Operator would make a disposition verifiable off-session, and nothing in the Rules forbids inventing one. It is refused here on cost and on Rule-14 — a key, its distribution and its rotation are a new World dependency and a new kernel claim, to replace a channel (the chat) where the Operator is already authenticated and already present. Named as the one path that could carry an edge, and not recommended. |
+| J3 | The graph framing is decoration: Rule-2's Binding already says everything operationally, and renaming it "edges" changes no code. | refuted | It changed this plan. It withdrew the axis split, derived the `--relayed-via` asymmetry instead of observing it, re-specified D's two columns as one concept, and produced the publish-side refusal in point 4 — a mechanical fence that neither earlier revision contained and that the reference implementation lacks. A framing that yields a fence is not decoration. |
+| J4 | Easy agreement: the Operator supplied the principle and the Agent elaborated it. | pushed to a verdict | J1 and J2 are attacks on the principle, not on its presentation, and J2 **survives** — there exists a construction (Operator-held signing) under which a disposition *could* travel, so the principle is contingent on this system's identity facts rather than absolute. That contingency is stated, not hidden, and it is the thing to re-examine if those facts ever change. |
+
+## Mutation proposed (revision 3, on this plan's `Y`) — unchanged in count
+1. One agent-zone PR landing this ADR, all three revisions, as
+   `agent-corpus/audits/2026-10-08-adr-disposition-architecture.md`.
+2. Four rows opened `backlog`, not started: the **`bus` craft** over a neutral store, *now including
+   the publish-side refusal of disposition-shaped payloads* (refs 252 221 34); the **`cos` surface
+   and runner** (refs 252 221 251); the **edge register**, two orientations, with the plan-file
+   `asked:` line as its first step (refs 252 202 183); the **cos's standing rules** (refs 252 251).
+3. `#221` gains a disposition entry recording that this ADR answers its standing architecture ask.
+4. No Rule, guard, hook, workflow or preference value edited.
+
+## Rule-10 block (revision 3)
+- **Path:** two planes typed by graph shape — broadcast carries observations over the `bus` craft,
+  whose guard refuses anything disposition-shaped; the directed plane carries nothing, and the edge
+  register projects it. A refused, C withdrawn, J2's signing path named and declined.
+- **Counter:** the principle makes the Operator the explicit serialization point of the whole
+  system, so the programme's honest headline is not "more concurrency" — it is "cheaper and fewer
+  edges", and three of the four rows do not touch edge count at all.
+- **Reconciliation:** cheaper and fewer is what "preserve my attention" asks for, and the one row
+  that attacks edge count directly is #251, already planned and waiting in the same batch. The three
+  that do not are what make the count *visible* — today nothing records that an edge exists, which
+  is why #183 lost four of them without noticing.
+
+---
+
+# Revision 4 (2026-10-08) — disposition has forms: one-time and standing
+
+Prompt 4, received on the open row: *"i'd also learned from working with the ASG dyad that
+disposition has multiple forms: standing disposition that carries forward with conditions for
+revocation, one-time disposition"*.
+
+## This system already has both, and only one of them is named
+**One-time** is every counter-prompt in the Rules. Rule-2 Binding makes it so by definition: "A
+\"Y\" binds only to the PR(s) or action(s) named in the question it answers", plus "A new PR,
+including one created to recover from an error, needs a fresh Y" and the heads-unchanged condition.
+In the graph of revision 3: the edge is consumed by traversal.
+
+**Standing** is the **preferences corpus**, and nothing else. Rule-2's own *Not ratification* list:
+"Reading `preferences-corpus/`. Changing a value there is a preferences-zone PR the operator
+disposes; the agent acts on the value on `main`." A preference is exactly an Operator disposition
+that carries forward, with its revocation path stated (another preferences-zone PR the Operator
+disposes). Eleven of them are in force today.
+
+**The existence proof that a standing disposition can carry a machine-checked condition is already
+running: `ledger-pr-merge: agent`.** Verbatim from `preferences-corpus/PREFERENCES.md`:
+> `agent` — the Agent merges it without a counter-prompt, provided its *entire* diff is
+> ledger-only. Scope is the path prefix, not the zone and not authorship … The Agent checks the
+> whole diff mechanically before each such merge, and the merge commit cites this preference and the
+> file list, so `git log` alone shows why no counter-prompt preceded it.
+
+That has all three parts a standing disposition needs — a **scope** (ledger-only paths), a
+**predicate checked before every use** (the whole diff, mechanically), and an **audit trail that
+says why no edge was created** (the merge commit cites the preference and the files). It is the one
+place in this system where an authorization carries forward and removes edges rather than creating
+them.
+
+## What that gives the architecture, and what is missing
+**In graph terms a standing disposition is a pre-authorized edge class**: for events matching its
+predicate, no edge is created at all. Revision 3's counter said the Operator is the graph's sink and
+that three of four rows do not touch edge *count*. This is the lever that does — and it needs no new
+mechanism, because the store exists.
+
+Three gaps, stated as gaps rather than as proposals:
+1. **No conditions for revocation beyond a human act.** Every preference is revoked only by another
+   preferences-zone PR. "Carries forward with conditions for revocation" implies a condition that
+   can fire on its own — an expiry, a named incident class, a failed check — and nothing in the
+   schema or in any guard can express one. A standing `Y` here is therefore unbounded in time.
+2. **A loose predicate is an authority leak, and there is one in force.** `ledger-pr-merge`'s
+   predicate is an exact path prefix. The plan gate's is `"Y plan" not in row.disposed` —
+   a **substring search over free text** (`prs.py:46`, row #250). The one mechanically gated
+   counter-prompt in the whole system is gated by a predicate a typo can satisfy, which is precisely
+   the failure mode this form is prone to. #250 is not hygiene; it is a standing authorization with
+   a predicate that does not hold.
+3. **A standing disposition must live in the corpus, never in a reply.** This follows from Rule-2
+   Binding: a chat `Y` is one-time by construction, so a standing authorization given in a reply
+   would be unrecorded, unrevocable and scoped to a conversation that ends. Worth writing down
+   because this session produced one: `2026-10-08 Y shape (one d-work, three PRs in order)` on row
+   #249 carries forward inside that row and was consumed by nothing — recorded in `disposed`, where
+   every other entry is one-time. Either that is a third, row-scoped form worth naming, or it should
+   not have been written. The Agent's own anomaly, surfaced rather than normalised.
+
+---
+
+# Revision 5 (2026-10-08) — the chain-of-authority edge-case register
+
+Prompt 5, received on the open row: *"the full chain-of-authority graph needs to be fully explored
+and fleshed out for the different edge-cases.  present the edge-cases for me to disposition as
+in-scope or out-of-scope since i'm living through this with the ASG dyads."*
+
+**What "in scope" means here**, so the disposition is unambiguous: in scope = **this ADR must model
+the case and state what the architecture does about it**. It does not mean the fix is built in this
+d-work; every fix remains its own row with its own plan-`Y`. Out of scope = the ADR names it and
+stops.
+
+The graph being explored: **nodes** — the Operator, each session's main Agent, its subagents, peer
+sessions, another dyad system's Agent, the corpus stores, the local git repo, the hosting, CI, the
+host, a released artifact. **Edges** — a prompt (creates a node), a counter-prompt (creates an
+edge), a disposition (traverses one), clerical execution (acts on a traversed edge), and a guard
+(checks that some of this happened).
+
+### Group 1 — binding: when a `Y` binds, and to what
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E1 | A bare `Y` arrives with **no outstanding counter-prompt**. Binds to nothing; the Agent must not read it as answering the most likely question. | Observed this session: a bare `Y` arrived mid-turn with nothing outstanding and was correctly bound to nothing. Rule-2 Binding covers it; no mechanism does. | **in** |
+| E2 | A `Y`/`N` **with text**: a disposal and a prompt in one message. Does the text revise the same row, or open a new one? | Three occurrences today, each resolved by judgment. Rule-3 Scope says text with a disposal "is a prompt and opens a d-work"; #221's revisions 2–3 and this plan's revisions 2–5 instead record it on the open row. The two readings are both defensible, which is the problem. | **in** |
+| E3 | A counter-prompt is **left outstanding** and a prompt arrives instead → `batch-disposition-mode: on-ignore` engages. Conversational, unrecorded. | `INCIDENTS.md:76` (#183): four consecutive replies with no queue counts. Fired twice in this d-work alone. | **in** |
+| E4 | A `Y` arrives after the **head moved** since the question was asked. Rule-2: "only if their heads are unchanged since it was asked; otherwise the agent stops and re-prompts." | No mechanism compares the asked head with the head at merge. Inference every time. | **in** |
+| E5 | A **batch** `Y` where one member's evidence changed after the question. Rule-2: "each still checked against its own evidence and its own heads-unchanged condition." | Same absence as E4, multiplied by set size. | **in** |
+| E6 | A disposition that **carries forward inside one row** — neither one-time nor standing. | `2026-10-08 Y shape (…)` on row #249, written by this Agent this session (revision 4, gap 3). | **in** |
+
+### Group 2 — identity and direction
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E7 | **No per-session identity exists**, so a disposition's author is unprovable off-session. | One shared credential (170 of the last 300 `main` commits authored `Claude`, 130 the Operator); `CLAUDE_CODE_SESSION_ID` inherited by subagents; `DYAD_SESSION` set by nothing; 58 presence files, 52 `unnamed-*`. | **in** |
+| E8 | The Operator answers, **in one session, a question another session asked** — which a cos makes the normal case, not an exception. | The architecture itself creates this edge-case; nothing in the Rules contemplates it. Rule-2 binds the `Y` to the question *and* to evidence "run by the main Agent on the exact head being merged". | **in — highest value** |
+| E9 | A **relayed prompt is admitted but unverifiable**: Rule-3 Intake wants "a row id in the sender's ledger whose provenance record holds that prompt", readable only if that ledger is reachable. | 29 intakes have arrived; none was verified against a sender's ledger, because no mechanism can read one. | **in** |
+| E10 | A **subagent asks or answers** a counter-prompt (forbidden, Rule-3 Scope). | Prohibition is inference-only; no instance in the record, including the four seats run this turn. | out |
+| E11 | **Authority across systems**: a disposition in system A that would authorize work in system B. Today it degrades to an intake needing *this* Operator's `Y`. | Rule-3 Intake + Rule-7 property 4 already imply it; it is nowhere stated as the rule that stops authority leaking between systems. Cheap to write down. | **in** |
+
+### Group 3 — standing versus one-time
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E12 | The **preferences corpus is the standing-disposition store**, and the form is unnamed in any Rule. | Rule-2 *Not ratification*; 11 values in force; `ledger-pr-merge: agent` is the one with a mechanical predicate and an audit trail. | **in** |
+| E13 | A **loose predicate** on a standing authorization. | `prs.py:46` gates the one mechanically-gated counter-prompt by substring over free text (row #250). | **in** |
+| E14 | **No revocation condition can be expressed** — only a human act revokes a preference. | Nothing in the schema or any guard admits an expiry, an incident trigger or a failed-check trigger. | **in** |
+| E15 | A **preferences-zone PR is a meta-edge**: an edge whose traversal changes the rules for all other edges, merged like any ordinary PR. | No Rule distinguishes it; `merge-disposition` governs it like any other merge. | **in** |
+
+### Group 4 — clerical execution: the git and hosting leg
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E16 | **Twelve of thirteen counter-prompt forms are gated by nothing.** Only the plan-`Y` is checked at a transaction; the Done-`Y`, every merge, every release, every destructive action, a verdict's finalisation and both batch forms are inference. | Seat 3's sweep of `dyad/rules/*.md` against the guard set. #251 audits the chain as it stands; #252 must say what the architecture does about it. | **in** |
+| E17 | **No mechanical link from a tag to the `Y` that authorized it.** | Row #70 records three tags with no release disposition at all. Five tags were cut today and the link is prose in the tag message. | **in** |
+| E18 | **Every local fence is opt-in**: `--no-verify`, an unset `core.hooksPath`, a lost exec bit. | #23's incident; Rule-1 states the hooks are the only blocking enforcement. This is the floor the whole chain stands on. | **in** |
+| E19 | **The hosting checks nothing**: no required status checks, CI detecting-only and never before a merge, and whoever holds the token can merge in the web UI leaving no trace that no disposition authorized it. | Rule-14 property 3 (#168); rows #11/#24's intent never landed. | **in** |
+| E20 | **Host actions**: class and change-log row are inference, and a long-running service exists on this host with no run-book, no manifest row and no change-log row (`dyad-surfacer`, port 3100, 23 h uptime). | Found by seat 4. `crafts/sysadmin/rules/server-instances.md` property 6 already says an untouched service is out of scope until a d-work touches it. | out — own row |
+
+### Group 5 — revocation and termination
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E21 | **Revoking a disposition already given but not yet executed.** Nothing records that it was given and is pending, so nothing can withdraw it. | The queue is conversational; the register (D) is what would make this expressible. | **in** |
+| E22 | An **`N` mid-sequence**, after part of a multi-PR plan has merged. | #249's `N` arrived before anything executed. #202 is the adjacent gap (a ratified set whose members must merge in sequence). | **in** |
+| E23 | **Reopening a terminal row.** Settled: `done → archived` only, `archived` terminal, fenced by `TRANSITIONS`. | `dyadlib.TRANSITIONS`, invariants `done-never-reopens` and `archived-is-terminal`. | out — no gap |
+
+**Recommended partition: 20 in scope, 3 out (E10, E20, E23).** E20 gets its own row rather than
+being dropped.
+
+## Falsification of the register (Rule-9)
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| K1 | Twenty in-scope cases is not a scoping, it is "yes to everything" with a table. | **survives — answered by what in-scope means** | In scope means the ADR *models* the case, which costs paragraphs, not PRs. The fixes stay separate rows and the ADR's own mutation list is unchanged at four rows plus E20's. If the Operator wants a smaller ADR, the natural cut is Group 4, which #251 already audits — named here so the cut is available. |
+| K2 | Groups 1 and 2 are mostly this session's own near-misses, so the register is a transcript of recent events rather than an exploration of the graph. | **survives, scoped** | Five of the twenty-three were observed in this d-work (E1, E2, E3, E6, E8). That is evidence of frequency, not of bias — a case that fires three times in one afternoon is load-bearing. Conceded: the graph may hold cases no session has hit, and the register cannot claim completeness. It claims to be the complete set *derivable from the Rules and the record as they stand*, which is a weaker and honest claim. |
+| K3 | E8 is invented: nobody has answered one session's question in another, so the architecture is being credited with a problem it also created. | refuted as an objection | It created it deliberately and says so. A cos whose purpose is to consolidate the Operator's attention makes "the question was asked over there" the normal case on day one; naming it before building is the point of an ADR. It is marked highest value for exactly this reason. |
+| K4 | Easy agreement: the Operator asked for the edge-cases and got a list. | pushed to a verdict | Two entries are the Agent's own faults rather than the system's — E6 (a disposition form this Agent invented on #249 this session) and E2 (an ambiguity this Agent resolved by judgment three times without flagging it until now). A register that only indicted the Rules would be the easy version. |
+
+## Rule-10 block (revision 5)
+- **Path:** the partition above — 20 in, 3 out, E20 to its own row.
+- **Counter:** Group 4 duplicates #251, which is planned and waiting in the same batch, so five of
+  the twenty in-scope cases will be examined twice.
+- **Reconciliation:** the two look at the same cases from opposite ends — #251 asks what today's
+  chain fails to check, #252 asks what an orchestrated chain must therefore guarantee — and the
+  overlap is the handoff between them. If the Operator prefers no overlap, Group 4 moves out of
+  #252 wholesale and the ADR cites #251's findings instead, which is a one-line change to this plan.
+
+---
+
+# Revision 6 (2026-10-08) — sovereignty, and intervention: the two directions of supersession
+
+Prompts 6 and 7, received on the open row:
+> *"additionally, the chain of command has `cos` nodes that have their own set of standing authority
+> (soveriegnty) that can be superseded only under special circumstances."*
+> *"additionally, each node session can have direct intervention from operator - this means that
+> statuses and interruption in chain-of-commands need to be accounted for as well."*
+
+They are one relation read from both ends: a node holds a band of standing authority, and the
+Operator may reach past it into any node at any time. Taken together they turn the graph from a
+shape into a **chain of command with a sovereign at each node and an override on every edge**.
+
+## Sovereignty is Rule-2-compatible, in exactly one construction
+A node cannot hold authority of its own: Rule-2's intent is "Keep the proposer and the disposer of
+every ratification event distinct", and an Agent is the proposer by definition. What a node *can*
+hold is **the Operator's standing disposition over a class of edges** — so sovereignty is not the cos
+disposing, it is the Operator having pre-authorized an edge class and named who exercises it. The
+disposer never changes. Revision 4's form is the vehicle: a standing disposition with a scope, a
+predicate checked before every use, and a revocation path.
+
+**The precedent is already running and it is content-scoped, not identity-scoped.**
+`ledger-pr-merge: agent` names its subject as *the Agent* — any session — and gates on **what the
+diff touches**, an exact path prefix checked before every use. It does not ask *who* is acting.
+
+That distinction is now load-bearing, because of E7: **a band predicated on which node is acting
+cannot be checked in this system.** There is no per-session identity — one shared credential,
+`CLAUDE_CODE_SESSION_ID` inherited by subagents, `DYAD_SESSION` set by nothing, 52 of 58 presence
+files `unnamed-*`. An identity-gated band would be the first authorization here whose predicate is
+exactly the one thing nothing can verify. So:
+
+> **Bands are scoped by content, not by node.** A band says *what* may be done without an edge —
+> paths, zones, states, classes of change — and a role name labels who is expected to exercise it,
+> for the audit trail and for the Operator's reading, never as the gate. This keeps every band
+> checkable by the same kind of predicate `ledger-pr-merge` already uses, and it degrades safely: a
+> band exercised by the wrong node still produced a change the predicate admitted.
+
+## The ceiling: what no band may ever contain
+The Rules already fix this set, and sovereignty must be stated as bounded by it rather than as
+bounded by taste:
+- every Rule-2 **base event** — merging into `main`, a direct non-ledger push, declaring a verdict
+  final;
+- every Rule-8 **destructive host action** ("needs its own counter-prompt naming the action, even
+  inside a planned d-work");
+- every Rule-11 **release** ("A release publishes to the world, so it is the Operator's to ratify
+  however few d-works it gathers").
+
+These are the "special circumstances" read from the other side: the circumstances in which the
+Operator always acts. A band that covered one of them would not be a delegation, it would be a
+repeal — and the one-way ratchet matters: a band may always be *narrower* than the ceiling and never
+wider, so a proposal to widen one is itself a preferences- or Rule-level change the Operator
+disposes.
+
+## Intervention: what breaks is status, not authority
+Direct intervention needs no new authority — the Operator may prompt any session now, and Rule-3
+Scope already says what happens: "A new prompt while a d-work is open suspends it and opens another.
+d-works stack." Authority is fine. **Three things break, and all three are records that do not
+exist.**
+
+1. **Nothing records that a d-work was suspended.** A row sits `open` whether its session is
+   actively working it, blocked behind a newer prompt, or gone. So an interrupted d-work and an
+   abandoned one are indistinguishable from the corpus — and a cos's whole value is telling them
+   apart.
+2. **Status is not representable, and the blocker is mechanical.** The presence store's
+   `FIELDS = ("session","seen","root","rows","files")` is frozen by an import-time invariant,
+   `fields-are-five`, enforced by `dyadlib.enforce` — a fail-loud check with no off-switch. No
+   `waiting-on`, `suspended-by` or `interrupted-at` field can be added without changing that
+   invariant, which is a deliberate fence, not an oversight. Any status design starts by paying that.
+3. **An intervention is invisible to every other node.** If the Operator prompts a cabinet directly,
+   the cos's model of that cabinet goes stale with nothing to signal it — and if the intervention
+   *contradicts* an authorization already given, as a mid-turn `N` does, the cos may still be acting
+   on the superseded plan. This d-work contains five instances of exactly that shape, all benign
+   only because one session held both ends.
+
+## Register additions (Groups 6 and 7)
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E24 | **Sovereignty as a band**: the Operator's standing disposition over an edge class, exercised by a named role, disposer unchanged. | Rule-2 intent + *Not ratification*; `ledger-pr-merge: agent` as the running instance. | **in** |
+| E25 | **The non-delegable ceiling**: no band may contain a Rule-2 base event, a Rule-8 destructive action or a Rule-11 release, and bands narrow but never widen. | The three Rules' own words, quoted above. | **in** |
+| E26 | **An identity-gated band is uncheckable here**; only content-scoped bands are. | E7's identity facts; `ledger-pr-merge`'s path-prefix predicate as the checkable form. | **in** |
+| E27 | **Supersession of a band**: who may do it, on what evidence, and whether the superseding act is recorded. | Nothing records a band's exercise today except `ledger-pr-merge`'s merge-commit citation — the only audit trail of a band in the system. | **in** |
+| E28 | **Overlapping bands**: two nodes whose bands admit the same artifact. | Rule-16's same-root warning is the concrete version — 31 of 58 presence files claim this checkout, and a raw git command from either clobbers the other. | **in** |
+| E29 | **Direct intervention into a node** while another node tracks it: the tracker's model goes stale with no signal. | Five mid-turn prompts in this d-work, benign only because one session held both ends. | **in** |
+| E30 | **Status is not representable**: the presence store's five fields are frozen by the import-time invariant `fields-are-five`. | `sessions.py:37,43`, `dyadlib.enforce` at `:240`. A mechanical blocker, priced before any status design. | **in** |
+| E31 | **Suspension is unrecorded**: an interrupted d-work and an abandoned one look identical in the ledger. | Rule-3 Scope stacks d-works; no state, field or file records the stack. | **in** |
+| E32 | **An intervention that contradicts an authorization already given** (a mid-turn `N`, a changed plan) while a node may still be acting on it. | Three plan `N`s with revision instructions in this session; #202 is the adjacent gap for a half-executed ratified set. | **in** |
+
+**Revised partition: 29 in scope, 3 out (E10, E20, E23).**
+
+## Falsification of revision 6
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| L1 | "Sovereignty" is a renaming of delegation, and Rule-3's subagent clause already covers it — subagents act under the Agent's plan-`Y`. | refuted | A subagent acts inside *one* d-work's plan-`Y`, which is a one-time disposition; it may not write a row, push, merge or ask. A band is standing, survives the d-work and the session, and is what lets a node act on work nobody authorized individually. Different form, different lifetime, different ceiling. |
+| L2 | Content-scoped bands defeat the purpose: the Operator wants to trust *this cos*, not *any agent that happens to match a predicate*. | **survives — the concession is real** | Conceded, and it is the price of E7. What a content-scoped band loses is the ability to grant one node more than another; what it buys is a predicate that can actually be checked, and safe degradation when the wrong node acts. If per-node identity ever becomes provable — J2's Operator-held key is the only named path — identity-gated bands become possible and this clause should be revisited. Named so it is not re-litigated by mood. |
+| L3 | Intervention needs no design at all: the Operator prompts, the d-work stacks, the Rules already say so. | refuted as stated, confirmed in part | Authority genuinely needs no design — that is revision 6's own finding. What needs design is the record: suspension (E31), status (E30) and the stale-tracker signal (E29). None of those is an authority question, which is why they are cheap and why they are the parts a cos cannot work without. |
+| L4 | Easy agreement: the Operator named sovereignty and intervention, and the Agent agreed twice. | pushed to a verdict | Both arrived with a correction attached. Sovereignty-as-held-by-the-node is **refused** — a node holds no authority, only a band the Operator pre-authorized, or Rule-2's intent fails. And intervention's own framing is narrowed: it is not an authority gap at all, only a records gap. Agreement on the shape, dissent on two substantive points. |
+
+## Note on the register's growth
+Prompts 5, 6 and 7 took the register from 23 cases to 32 in one turn. That is a finding in itself:
+the chain-of-authority graph is larger than the architecture proposal it started as, and the
+scoping question below is where the Operator decides whether it stays one d-work. If it should not,
+the natural split is the register as its own d-work (the model) with the architecture depending on
+it — one line in this plan, and the ADR becomes its first consumer rather than its container.
+
+---
+
+# Revision 7 (2026-10-08) — the control channel: not one channel, and not two
+
+Prompt 8, received on the open row: *"also factor in a control channel - or is the control channel
+the same as the primary message channel?"*
+
+**Answer: no — and the split is not control-versus-data. It is the same graph test as everything
+else, and it yields three planes, only one of which is a transport.**
+
+Apply revision 3's test — is the thing undirected and sender-indifferent, or is it an edge? — to
+each kind of control traffic, and control divides against itself:
+
+| traffic | shape | plane | carrier |
+|---|---|---|---|
+| intake: a defect, an enhancement with its Operator's prompt | undirected, means the same whoever sent it | **announcement** | the `bus` craft over a neutral store |
+| **status**: what a node holds, what it waits on, when last seen | undirected, many readers | **announcement** | the presence store — status *is* broadcast-shaped |
+| counter-prompt, disposition, supersession of a band, "stop this" | **directed**; authority or preemption | **command** | none. The edge is the session; the carrier is its chat |
+| the Operator reaching into a busy node mid-turn | directed **and** must preempt | **interrupt** | the harness's own mid-turn mechanism |
+| bus tuning: which topics a node reads | node-local, nobody else's business | *not a channel* | an untracked local file |
+
+So the control channel is **the same as the primary message channel for status, and never for
+commands.** Status belongs on the shared store precisely because it is an announcement; a command
+does not, for the reason a disposition does not — a broadcast has no edge for it to bind to.
+
+Three consequences, each sharper than the question that produced them:
+
+**1. Agent-to-agent control is excluded outright.** A control channel on which one node commands
+another is authority routing wearing a different name: the commanded node would act on an
+instruction no Operator edge authorized. Control flows Operator → node only. What a cos sends a
+cabinet is an *announcement* (here is the state, here is what I would do next) or a relayed
+**prompt** (node-creating, carriable, Rule-7 property 4) — never an order.
+
+**2. The interrupt plane already exists and it is not ours.** It is the harness's mid-turn message
+mechanism, and it worked eight times in this d-work alone. **A polled store cannot be an interrupt
+channel**: the reference polls at 30 s by default, and a node in the middle of a turn is not polling
+at all. So "stop" and "I am superseding you" cannot travel on the bus, at any latency — not because
+of latency, but because preemption is not a thing a reader discovers later. This is the one plane
+with no corpus record whatsoever: an intervention leaves no trace, which is E29 and E31 read from
+the channel side.
+
+**3. The cos reduces channels watched, not channels used.** Watching is broadcast — one surface over
+one store, which is what D1 builds. Using is directed — one chat per node, because that is where the
+edge terminates. So a cos genuinely collapses N surfaces into one and genuinely cannot collapse N
+chats into one. Stated plainly because it bears directly on "preserve my attention": attention spent
+*reading* is reducible to one place, attention spent *deciding* is not reducible below the number of
+edges, and only #251's friction class reduces that.
+
+### Register additions (Group 8 — channels)
+| # | edge-case | evidence | rec. |
+|---|---|---|---|
+| E33 | **Control divides by shape, not by name**: status is broadcast-shaped and belongs on the shared store, commands are edge-shaped and have no transport. | Revision 3's test applied to each traffic kind, table above. | **in** |
+| E34 | **Agent-to-agent control is excluded**: a node commanding a node routes authority. Control flows Operator → node only. | Rule-2 intent; Rule-3 Intake's admissible shapes; Rule-7 property 4's prompt-only relay. | **in** |
+| E35 | **The interrupt plane is the harness's and leaves no corpus record**, and no polled store can serve it — a busy node does not poll. | Eight mid-turn prompts in this d-work; the reference's 30 s default poll; nothing in the corpus records an intervention. | **in** |
+| E36 | **Tuning never travels**: subscription state is node-local and untracked by design, so no node can know another's tuning, and "who is listening" is not computable. | The reference keeps `[tuning] topics` in `~/.config/taxprep/bus.toml`, never committed. | **in** |
+
+**Revised partition: 33 in scope, 3 out (E10, E20, E23).**
+
+## Falsification of revision 7
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| M1 | Separating planes is premature: one store with a `kind` field carries status, intake and commands, and the reader decides. Fewer mechanisms. | refuted | A command in a store is a command nobody is obliged to read, and an unread command is indistinguishable from a refused one. The reason to separate is not tidiness: it is that two of the three planes have *no* delivery guarantee and the command plane needs one, which only the chat provides today. |
+| M2 | Then the interrupt plane is a harness dependency the Rules may not lean on — Rule-14 says the package must not depend on a library adapter to enforce a Rule. | **survives — and it is the real cost** | Correct, and it is already true of the whole dyad: the chat is the harness. The honest statement is that the command and interrupt planes are *outside* the corpus by construction, which is why the architecture's job is to make their **effects** recordable (suspension, status, an edge register) rather than to carry them. No guard may depend on an interrupt arriving. |
+| M3 | Easy agreement: the Operator asked a question and got a taxonomy. | pushed to a verdict | The question admitted "yes, the same channel" as an answer, and for **status** that is the answer given — status goes on the primary store, against the instinct that control is one thing. The taxonomy splits control against itself rather than splitting control from data, which is not the shape the question anticipated. |
+
+
+## Revision 8 — one claim of revision 6 refuted
+
+Revision 6 recorded, under intervention, that **status is unrepresentable** because
+`fields-are-five` is an import-time invariant of `dyad/guards/agent/sessions.py`. That is wrong,
+and the file says so in its own header: an optional `writer` field already sits **outside**
+`FIELDS` and is checked only when present (`sessions.py:18`, `touch()`'s collision warning, F1 of
+d-work #32). `fields-are-five` pins the five fields that are *required*; it forbids nothing
+optional beside them.
+
+What the error cost: E30 was carried as an unrepresentable case needing a new store, when the
+presence store already admits the shape. The specification (plan #253, R14) therefore keeps status
+within one system in the presence store and uses the shared store only for the reach a presence
+file in one repo does not have — across systems. The store is still required, for that reach and
+for intake; it is no longer required for status within a system.
+
+E30 stands as a gap — the fields are not written today — but not as an impossibility. The incident
+row is owed to the next agent-zone PR.
+
