@@ -34,3 +34,11 @@ no duplicate, every `rule` an existing craft rule file, no term equal to an Agen
 namespacing (referenced as `<craft>:term`, never defined twice). Terms added elsewhere: `export`, `craft registry`
 (owner 11). Pairwise: 6–11 as in `rule-11-distribution-structure.md`; the craft guard invokes the check, Rule-6
 owns it. Coherent, orthogonal.
+## Amendment — d-work #302 (2026-10-15, seat, holder, relayed prompt)
+Three rows added, no Rule edited: `seat` and `holder` (owner 16, used by 16) — in Rule-16 Presence since
+#294 and defined nowhere — and `relayed prompt` (owner 3, used by 3) — in Rule-3 Intake since #34, likewise.
+Each named Rule still reads correctly (the term check: `ok [rule-6] 98 terms, owners and used-by resolve`); the statements per term are in
+`agent-corpus/falsification/communication-planes.md`. Rule-7 property 4 describes the relayed prompt without
+the phrase and is not listed. Four further terms the same synthesis proposed — `announcement`, `carrier`,
+`relay`, `report by state` — are #253 §0's and enter with the bus craft as `bus:` references (Master record),
+never as orphans now. Pairwise: 6–16, 6–3 as the record states. Coherent, orthogonal.
