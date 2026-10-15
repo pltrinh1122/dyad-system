@@ -47,7 +47,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | backlog | ledger state: opened by a disposition, not started; opens when the Operator prompts for it | 3 | 3 |
 | planned | ledger state: the plan file is authorized by plan-Y; execution may start in any session | 15 | 3 15 |
 | transition | a change of a row's state; legal only if in Rule-16's table (`dyadlib.TRANSITIONS`) | 16 | 3 16 |
-| presence file | `<instance>/d-work/sessions/<id>.md`: one session's claim of what it is currently working — its working tree's root, the d-work ids and the files their stored plans touch; touched at session start and plan-Y, read before a new plan; advisory, never a lock | 16 | 3 16 |
+| presence file | `<instance>/d-work/sessions/<id>.md`: one session's claim of what it is currently working — its working tree's root, the d-work ids and the files their stored plans touch and, when written, its holder's host and harness session id; touched at session start and plan-Y, read before a new plan; advisory, never a lock | 16 | 3 16 |
 | plan file | `agent-corpus/d-work/plans/<id>.md`: the stored plan a plan-Y binds to — intent as read, mutation, files touched, base commit | 15 | 7 15 |
 | base commit | the `main` commit a plan file was written against; execution re-plans if `main` moved past a touched file | 15 | 15 |
 | done | ledger state: the Operator answered `Y` to the completion counter-prompt | 3 | 3 |

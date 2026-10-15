@@ -99,3 +99,33 @@ with no change. **16–12**: the table's test couples the Rule's sentence to the
 so every reference resolves as before. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #290.
+
+## Amendment — d-work #294 (2026-10-15, the optional `host` and `holder` lines of the presence file)
+**Claim (Operator, 2026-10-14, extending #293 mid-turn; plan #294 revisions 1–2):** every session
+registration record carries host information — terminal vs. cloud, the OS — and, per #295's survivor,
+names who holds the seat now. The record is the presence file (the one per-session store there is);
+`touch()` (`dyad/guards/agent/sessions.py`) writes `host: <kernel> <os> <arch>` and, when
+`CLAUDE_CODE_SESSION_ID` is set, `holder: <harness session id>`; `check_record` judges both only when
+present; `FIELDS` and its invariant `fields-are-five` are untouched.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 14 | The kernel token is one harness's word: `CLAUDE_CODE_REMOTE` is Claude Code's variable, and Rule-14 property 2 says a kernel's own facts are never the dyad's. Another CLI agent never sets it and every session it runs reads `terminal`. | **Survives, scoped.** The Rule sentence says whose word it is — *what the harness reports*, `terminal` when it reports nothing — so a wrong token is visible on the board and is the harness row's defect, not the store's. The OS and arch come from `platform`, which holds on any kernel. | The field states what the environment says, never what the host is; the guard checks shape (three tokens, kernel in {`terminal`, `cloud`}), never truth. |
+| 15 | Make `host` and `holder` required fields: cleaner than two more "when present" clauses. | **Refuted.** 66 presence files on `main` lack them and would redden `check` in every session until each re-touched — and a `holder` cannot be required at all, since a harness that sets no session id has nothing to write. `writer` set the precedent (#32): optional, checked only when present. | Both optional; `FIELDS` and `fields-are-five` unchanged. Promotion later is a one-line change once every live file carries `host`. |
+| 16 | A typed line in the row title, or a hand-added key, lands today with no code. | **Refuted.** A title is immutable prose the Agent typed about itself, and #293's plan already found that a hand-added key does not survive the next `touch()`, which rewrites the whole file. A session cannot be trusted to describe its own host; code reading the environment is the Rule-12/Rule-13 path, and the test pins the kernel token under a patched environment. | Code-written at every touch, never typed; the Rule sentence says so. |
+| 17 | `holder` duplicates `writer`. | **Refuted.** `writer` is this *process's* random id, computed at import to detect two processes sharing one `DYAD_SESSION` (#32); `holder` is the *harness's* session id, the thing a reader can cross-check against the harness's own session directory (this record, amendment #185 attack 2). One is for collision detection, the other for naming the seat's current occupant. | Both kept, each with its one job. |
+| 18 | `platform.machine()` or `platform.system()` can return an empty string or a value with spaces, breaking the three-token shape the guard requires. | **Confirmed, and it chose the writer's shape.** `host_line()` substitutes `unknown` for an empty value and collapses a space inside a token to `_`, so a line it writes always parses back to exactly three tokens. | The writer guarantees what the check demands; `test_touch_writes_host_*` asserts the token count. |
+
+**Pairwise (Rule-5).** **16–3**: Rule-3 reads the presence file at session start as before; nothing in
+what it reports changes. **16–7**: no prompt or disposition is written here — the presence file is not
+a provenance record. **16–14**: the kernel token is read from a harness variable but the manifest gains
+no row and nothing is pinned — Rule-14 property 2 is what scopes attack 14, not what it edits. **16–15**:
+the plan file is untouched; `files` is built as before. **16–12**: the guard's new branches carry their
+tests (`dyad/tests/guards/agent/test_sessions.py`, `HostAndHolderTests`). **16–1**: agent zone, one PR.
+Others unchanged. Coherent, orthogonal.
+
+**Rule-6 term check.** No term added. `presence file` (owner 16) gains "and, when written, its holder's
+host and harness session id"; its users, Rules 3 and 16, still read correctly — Rule-3 names the file at
+session start, Rule-16 defines it. `dyad/guards/agent/vocabulary.py` passes.
+
+Disposition: see ledger #294.
