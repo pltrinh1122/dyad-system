@@ -1,8 +1,8 @@
 session: ds-cabinet-cloud-2
-seen: 2026-10-15T14:07:03+00:00
+seen: 2026-10-15T14:22:29+00:00
 root: /home/user/dyad-system
-rows: 239 301 81
-files: 
-writer: a719acddcfb8
+rows: 259 296 299 308 321
+files: (PR-1 (PR-2 (PR-3 (ledger-only 4 PR) PR-4 `-q`/`-r` `2026-10-09`-dated `agent-corpus/audits/2026-10-10-incident-failure-modes.md` `agent-corpus/audits/2026-10-10-incident-mode-<a..w>.md` `agent-corpus/audits/INCIDENTS.md` `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` `workstation-corpus/CHANGELOG.md` adds agent agent-corpus/d-work/plans/296.md agent-corpus/d-work/plans/299.md agent-corpus/d-work/provenance/296.md agent-corpus/d-work/provenance/299.md agent-corpus/d-work/rows/296.md agent-corpus/d-work/rows/299.md agent-corpus/d-work/sessions/cos.md agent-corpus/d-work/sessions/unnamed-b04e526aeab2.md amends carried children crafts/countersign/MANIFEST.md crafts/countersign/README.md crafts/countersign/VERSION crafts/countersign/falsification/self-diagnostic.md crafts/countersign/guards/levels.py crafts/countersign/projectors/project_countersign.py crafts/countersign/rules/self-diagnostic.md crafts/countersign/scripts/levels.py crafts/countersign/templates/commands/diagnose.md crafts/countersign/templates/countersign-core.json crafts/countersign/templates/runbooks/self-diagnostic.md crafts/countersign/templates/self-diagnostic-levels.txt crafts/countersign/tests/guards/__init__.py crafts/countersign/tests/guards/test_levels.py crafts/countersign/tests/test_levels.py crafts/countersign/vocabulary/CRAFT.md created delivered first for it) its line names never no nothing provenance records) revision row the this three to twenty-three until were workstation zone zone)
+writer: 5e56a100d255
 host: cloud linux x86_64
 holder: 92e3d665-dcb6-5cc9-a071-8afcbc37314b
