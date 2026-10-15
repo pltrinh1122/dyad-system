@@ -115,6 +115,33 @@ class PackageTests(livetest.LiveCase):
         for g in named:
             self.assertTrue(any(l.startswith(("ok   [guards] " + g, "FAIL [guards] " + g)) for l in out.splitlines()), g)
         self.assertRegex(out, r"\[guards\] agent/rules \(\d+ Rules\)")
+    def test_suite_env_points_the_child_at_a_given_temp_root(self):
+        """#326: the sweep's half in the environment — all three names, and none of them without a root."""
+        pkg = load_package()
+        names = ("TMPDIR", "TMP", "TEMP")
+        # given a root, all three names point at it, whatever the ambient environment said — and given
+        # none, the function adds nothing of its own (it inherits, as it does inside a suite child).
+        self.assertEqual({k: pkg.suite_env("/x/y").get(k) for k in names}, {k: "/x/y" for k in names})
+        self.assertEqual({k: pkg.suite_env().get(k) for k in names}, {k: os.environ.get(k) for k in names})
+        self.assertEqual(pkg.suite_env("/x/y")["DYAD_NO_NESTED_TESTS"], "1")   # the root is added, nothing else changes
+    def test_run_suite_sweeps_its_temp_root_and_keeps_a_failing_one(self):
+        """#326: the fixtures leak ~13,300 inodes a run and clean up nothing, so the one child every
+        sanctioned run goes through makes a temp root and removes it — unless the run failed, which is
+        the tree worth reading. Before this, 24,876 orphaned fixture directories took /tmp to 100% of
+        its inodes and no push could leave any clone."""
+        import glob, shutil as sh
+        pkg = load_package()
+        before = set(glob.glob("/tmp/dyad-suite-*") + glob.glob(str(Path(tempfile.gettempdir()) / "dyad-suite-*")))
+        code, summary, _ = pkg.run_suite(None, "dyad.tests.test_incidents")
+        self.assertEqual(code, 0, summary)
+        self.assertEqual(set(glob.glob(str(Path(tempfile.gettempdir()) / "dyad-suite-*"))) - before, set(),
+                         "a passing run leaves no temp root")
+        code, _, _ = pkg.run_suite(None, "dyad.tests.no_such_module_326")
+        self.assertNotEqual(code, 0)
+        kept = set(glob.glob(str(Path(tempfile.gettempdir()) / "dyad-suite-*"))) - before
+        self.assertEqual(len(kept), 1, "a failing run keeps exactly its own root")
+        for d in kept:
+            sh.rmtree(d, ignore_errors=True)
     def test_rule_12_runs_the_suites_and_maps_nothing(self):
         """#162: the mapping is the syseng craft's guard (`syseng/tests`); the runner keeps the suites."""
         pkg = load_package(); crafts = dyadlib.crafts_dir(PKG)
@@ -1351,7 +1378,9 @@ class SpawnSiteTests(unittest.TestCase):
             else:
                 problems.append(f"l.{line} {fn}: unclassified spawn {ast.unparse(call)[:80]}")
         self.assertEqual(problems, [])
-        self.assertGreaterEqual(len(python), 2, "check_rule_12 and run_suite spawn the suite")
+        # #326: one spawn site, not two — `check_rule_12` now goes through `run_suite`, which is what
+        # lets the temp-root sweep cover the push gate and the evidence run as well as `--tests`.
+        self.assertGreaterEqual(len(python), 1, "run_suite spawns the suite")
         self.assertEqual(set(self.GIT_ALLOWED) - git_fns, set(), "stale GIT_ALLOWED entry")
 
 class SuiteMemoTests(unittest.TestCase):
