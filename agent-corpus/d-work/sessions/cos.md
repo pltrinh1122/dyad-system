@@ -1,6 +1,8 @@
 session: cos
-seen: 2026-10-15T01:16:44+00:00
-root: /tmp/claude-0/wt-293
-rows: 293 294 296
-files: agent-corpus/d-work/sessions/cos.md
-writer: 2d17a61e7a22
+seen: 2026-10-15T01:24:18+00:00
+root: /home/user/dyad-system
+rows: 293 296 299 300
+files: 
+writer: 1a57c88ed426
+host: cloud linux x86_64
+holder: 59cec502-8c78-5e74-ae6a-66a4f0271c17
