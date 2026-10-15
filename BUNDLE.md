@@ -9,14 +9,14 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
-version: 0.13.0
+version: 0.14.0
 
 | component | version |
 |-----------|---------|
 | dyad-operator | 0.11.0 |
 | sysarch | 0.3.0 |
 | syseng | 0.4.0 |
-| sysadmin | 0.2.1 |
+| sysadmin | 0.3.0 |
 
 `countersign` and `disclosure` are in the tree and deliberately absent from the table: the Operator
 disposed that they are not meant for release yet and are held until ready (d-work #232). Rule-11
