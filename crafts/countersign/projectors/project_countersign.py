@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts")
 import dyadlib
 import runbook
 
-SCHEMA_VERSION = "0.2.0"
+SCHEMA_VERSION = "0.3.0"
 SYSTEM = "dyad-system"                                          # the profile name this projection declares
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "templates" / "countersign-core.json"
 ENTITIES = ("parties", "acts", "proposals", "countersignatures", "mandates", "releases", "events", "escalations")
