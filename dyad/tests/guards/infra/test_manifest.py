@@ -101,8 +101,17 @@ class ImportScanTests(unittest.TestCase):
             (pkg / d / "__pycache__" / "a.cpython-313.pyc").write_bytes(b"\x00")
         self.assertEqual([str(d) for d in inf.python_dirs(pkg) if d.name in distribute.SKIP_DIRS], [])
         self.assertEqual(inf.python_imports(pkg), {"import:__pycache__": ["scripts/a.py"]})
-    def test_live_package_has_no_third_party_import(self):
-        self.assertEqual(inf.python_imports(dyadlib.PKG), {})
+    def test_live_package_imports_only_declared_rows(self):
+        """#336: the core's own directories import nothing third-party; the ledgerd component imports exactly its
+        library rows (plus pydantic, the kernel row it adopts), every one mapped in manifest_rules.txt, and every
+        importing file is the component's own — never a script, guard or core test."""
+        found = inf.python_imports(dyadlib.PKG)
+        self.assertEqual(set(found), {"import:fastapi", "import:uvicorn", "import:sqlalchemy", "import:jinja2", "import:pydantic"})
+        for tok, files in found.items():
+            self.assertTrue(all(f.startswith("server/ledgerd/") for f in files), (tok, files))
+        rules = inf.load_rules(inf.RULES_FILE)
+        mapped = {t for toks in rules.values() for t in toks}
+        self.assertTrue(set(found) <= mapped, set(found) - mapped)
         self.assertIn("import:", inf.RULES_FILE.read_text())
         n, m, msgs = inf.check_manifest()
         self.assertEqual([x for x in msgs if not x.startswith("warning:")], [])
@@ -314,3 +323,37 @@ class InstanceContributionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ComponentScanTests(unittest.TestCase):
+    """#336 (audit 2026-10-17-dyad-taxonomy M15): a packaged component — `dyad/<kind>/<component>/` holding its own
+    tests/ — is scanned like the core's directories, sub-packages and tests included, so its third-party imports
+    fail undeclared and its own names are internal."""
+    def test_component_dirs_and_imports(self):
+        pkg = fixture({"scripts/a.py": "import os\n", "scripts/dyadlib.py": "X = 1\n"})
+        comp = pkg / "server" / "ld"
+        (comp / "ld" / "sub").mkdir(parents=True); (comp / "tests").mkdir()
+        (comp / "ld" / "core.py").write_text("import dyadlib\nimport fastapi\nfrom ld import sub\n")
+        (comp / "ld" / "sub" / "deep.py").write_text("import sqlalchemy.orm\nfrom ld.core import x\n")
+        (comp / "tests" / "test_core.py").write_text("import support\nfrom ld import core\n")
+        (comp / "tests" / "support.py").write_text("import unittest\n")
+        (pkg / "server" / "notacomp" / "x").mkdir(parents=True)   # no tests/: not a component, not scanned
+        (pkg / "server" / "notacomp" / "x" / "y.py").write_text("import requests\n")
+        self.assertEqual(inf.component_dirs(pkg), [comp])
+        dirs = inf.component_python_dirs(pkg)
+        self.assertEqual(dirs, [comp / "ld", comp / "ld" / "sub", comp / "tests"])
+        self.assertEqual(inf.python_imports(pkg), {"import:fastapi": ["server/ld/ld/core.py"], "import:sqlalchemy": ["server/ld/ld/sub/deep.py"]})
+    def test_generated_dirs_inside_a_component_are_skipped(self):
+        pkg = fixture({"scripts/dyadlib.py": "X = 1\n"})
+        comp = pkg / "server" / "ld"; (comp / "ld" / "__pycache__").mkdir(parents=True); (comp / "tests").mkdir()
+        (comp / "ld" / "__pycache__" / "a.py").write_text("import requests\n")
+        (comp / "ld" / "a.py").write_text("import os\n")
+        self.assertEqual(inf.python_imports(pkg), {})
+        self.assertNotIn(comp / "ld" / "__pycache__", inf.component_python_dirs(pkg))
+    def test_live_component_is_scanned(self):
+        comp = dyadlib.PKG / "server" / "ledgerd"
+        self.assertIn(comp, inf.component_dirs(dyadlib.PKG))
+        self.assertIn(comp / "ledgerd" / "schemas", inf.component_python_dirs(dyadlib.PKG))
+        self.assertIn(comp / "tests", inf.component_python_dirs(dyadlib.PKG))
+        tokens = inf.scan(dyadlib.PKG)
+        self.assertIn("server/ledgerd/ledgerd/store.py", tokens.get("git", []))   # the component's subprocess calls are scanned too

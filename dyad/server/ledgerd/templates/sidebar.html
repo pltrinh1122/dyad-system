@@ -1,0 +1,28 @@
+<h1>ledgerd: {{ schema_name }}</h1>
+<div class="meta">asof {{ pin }}<br>{{ health.store }}<br>supervisor: {{ health.supervisor or "-" }}; auth: {{ health.auth }}</div>
+<h2>views</h2>
+<ul>
+  {% for v in views %}
+  <li {% if v == view %}class="active"{% endif %}><a href="/?view={{ v | urlencode }}">{{ v }}</a>{% if v in rendered %}<span><a href="/views/{{ v }}.md" class="meta">md</a> <a href="/views/{{ v }}.txt" class="meta">txt</a></span>{% endif %}</li>
+  {% endfor %}
+</ul>
+<h2>saved views</h2>
+<ul>
+  {% for v in saved %}
+  <li><a href="/?view={{ v | urlencode }}">{{ v }}</a>
+    <form class="inline" hx-post="/ui/views/{{ v }}/delete" hx-target="#sidebar" hx-swap="innerHTML"><button type="submit" class="small" title="delete">x</button></form></li>
+  {% endfor %}
+  {% if not saved %}<li class="empty">none yet</li>{% endif %}
+</ul>
+<h2>save current as</h2>
+<form class="save" hx-post="/ui/views" hx-target="#sidebar" hx-swap="innerHTML" hx-include="#sql-box">
+  <input type="text" name="name" placeholder="name" required pattern="[A-Za-z0-9][A-Za-z0-9_-]*">
+  <button type="submit" class="small">save</button>
+</form>
+{% if message %}<p class="message">{{ message }}</p>{% endif %}
+<h2>api</h2>
+<ul class="meta">
+  <li><a href="/health">/health</a></li>
+  <li><a href="/board">/board</a></li>
+  <li><a href="/schema">/schema</a></li>
+</ul>

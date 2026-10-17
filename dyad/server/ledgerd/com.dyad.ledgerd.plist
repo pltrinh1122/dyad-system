@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- dyad ledgerd: launchd user agent template (dyad/server/ledgerd/; plan #336 revision 7). `dyad ledger install`
+     fills {python}, {runner}, {state} and {log} with the host's real paths and writes the result to the user's
+     LaunchAgents directory; this tracked file holds no host path. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dyad.ledgerd</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{python}</string>
+    <string>{runner}</string>
+    <string>ledger</string>
+    <string>serve</string>
+    <string>--state</string>
+    <string>{state}</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>{log}</string>
+  <key>StandardErrorPath</key>
+  <string>{log}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+</dict>
+</plist>

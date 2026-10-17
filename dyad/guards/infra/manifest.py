@@ -12,7 +12,9 @@ a declared component. An unmapped token FAILs; a declared component with no toke
 file (and no `-` marking it never invoked) warns. Imports are classified stdlib
 (`sys.stdlib_module_names`, covered by the kernel row Python) / package-internal (a `<name>.py`
 in scripts/, guards/*/ or tests/**, or a relative import — The Dyad System, not The World) /
-third-party; only third-party needs a row. Whether a row's version, license or replacement is
+third-party; only third-party needs a row. A packaged component (`dyad/<kind>/<component>/` holding
+its own `tests/`, the syseng component clause; `dyad/server/ledgerd/` first, #336) is scanned like the
+core's directories, every sub-package included. Whether a row's version, license or replacement is
 *right* is inference (Rule-13 criteria).
   manifest.py
 """
@@ -176,12 +178,33 @@ def _code_dir(d: Path) -> bool:
     (#187, #185)."""
     return d.is_dir() and d.name not in distribute.SKIP_DIRS
 
+def component_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
+    """Every packaged component (the syseng component clause, #336): `dyad/<kind>/<component>/` or
+    `crafts/<craft>/<kind>/<component>/` holding its own `tests/`, `<kind>` never `tests` or `guards`.
+    Before this, a module under such a directory was in no scan at all, so its third-party imports
+    passed undeclared — Rule-14's one mechanical fence silent (audit 2026-10-17-dyad-taxonomy M15)."""
+    found = []
+    for root, depth in ((pkg, "*/*"), (dyadlib.crafts_dir(pkg), "*/*/*")):
+        if root.is_dir():
+            found += sorted(t.parent for t in root.glob(f"{depth}/tests") if t.is_dir() and t.parent.parent.name not in ("tests", "guards"))
+    return [c for c in found if _code_dir(c)]
+
+def component_python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
+    """Every directory under a component that holds Python (the package, its sub-packages, its tests), so the
+    component's own names are internal and its imports are scanned like the core's."""
+    dirs = []
+    for c in component_dirs(pkg):
+        dirs += [c] + sorted(d for d in c.rglob("*") if d.is_dir() and _code_dir(d) and not any(part in distribute.SKIP_DIRS for part in d.relative_to(c).parts))
+    return [d for d in dirs if any(p.suffix == ".py" for p in d.iterdir())]
+
 def python_dirs(pkg: Path = dyadlib.PKG) -> list[Path]:
     """scripts/, every guards/<corpus>/, tests/ and every tests/guards/<corpus>/ that exists (core),
-    plus every installed craft's own (craft_python_dirs). Generated directories are not code
-    directories and never enter the result (`_code_dir`)."""
+    every packaged component's directories (component_python_dirs), plus every installed craft's own
+    (craft_python_dirs). Generated directories are not code directories and never enter the result
+    (`_code_dir`)."""
     dirs = [pkg / "scripts"] + sorted(d for d in (pkg / "guards").glob("*") if _code_dir(d)) + [pkg / "tests"]
     dirs += sorted(d for d in (pkg / "tests" / "guards").glob("*") if _code_dir(d)) + [pkg / "tests" / "guards"]
+    dirs += component_python_dirs(pkg)
     dirs += craft_python_dirs(pkg)
     return [d for d in dirs if _code_dir(d)]
 
@@ -226,6 +249,7 @@ def scan(pkg: Path = dyadlib.PKG, workflows_dir: Path | None = None) -> dict[str
         if tok:
             found.setdefault(tok, []).append(where)
     files = sorted((pkg / "scripts").glob("*")) + sorted((pkg / "guards").glob("*/*")) + sorted((pkg / "hooks").glob("*")) + sorted(pkg.rglob("*.sh"))
+    files += [p for d in component_python_dirs(pkg) for p in sorted(d.glob("*.py"))]   # a component's subprocess calls (M15)
     for c in dyadlib.craft_dirs(pkg):
         files += sorted((c / "guards").glob("*")) if (c / "guards").is_dir() else []
         files += sorted((c / "scripts").glob("*")) if (c / "scripts").is_dir() else []

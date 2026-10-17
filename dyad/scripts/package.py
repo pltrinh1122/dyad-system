@@ -32,7 +32,13 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
   dyad check --tests [<target>]
                           Rule-12's suites the way the runner runs them (d-work #155): every test root,
                                 or one root by path, or one dotted module/class/method — always with
-                                DYAD_NO_NESTED_TESTS set, which is what makes it ~39 s and not ~120 s
+                                DYAD_NO_NESTED_TESTS set, which is what makes it ~39 s and not ~120 s;
+                                a test root is dyad/tests/, every packaged component's own tests/
+                                (dyad/<kind>/<component>/tests/, crafts/<craft>/<kind>/<component>/tests/)
+                                and every crafts/<craft>/tests/; when this host's ledgerd instance
+                                names a venv (hostadapter.state_dir("ledgerd")/ledgerd.conf `venv:`),
+                                its site-packages join the test child's PYTHONPATH so the component's
+                                tests run rather than skip
   dyad check --evidence   the evidence block (Rule-14 property 3): head=, tree=, dirty=,
                                 every line `check` and `check --guards` print, then
                                 evidence-sha256= of those lines; non-zero if any check fails
@@ -51,6 +57,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 export one as <craft>-<version>.tar.gz, install one from an archive or
                                 a tree (writes crafts/<craft>/ and its crafts/REGISTRY.md row only)
   dyad ledger             render <instance>/d-work/LEDGER.md from rows/ (Rule-16)
+  dyad ledger init | serve | build | query | view | board | schema | install | uninstall | start | stop | restart | status | logs | auth ...
+                                the core's server component ledgerd (dyad/server/ledgerd/, d-work #336): a
+                                daemon keeping a queryable SQLite projection of a ledger current, with
+                                store adapters (git, dir, module), ledger schemas (dwork first), supervisor
+                                adapters (systemd, launchd, proc), GitHub OAuth device-flow auth and an
+                                htmx navigator; dispatch only to dyad/server/ledgerd/ledgerd/cli.py (S4),
+                                whose usage `dyad ledger help` prints. Its library rows live in an
+                                instance's <state>/venv (`dyad ledger install`), never on the kernel path
   dyad dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] <p> | --said[-file] <s>)
                                 allocate the next id, write its row file (state open, or
                                 backlog with --backlog; -d records the creating disposition) and
@@ -226,9 +240,27 @@ def check_generated(repo, patterns):
             fails.append(f"{rel}: generated file tracked (pattern '{g}', property 6)")
     return fails
 
+def component_dirs(pkg=None):
+    """Every packaged component (the syseng component clause, #336): `dyad/<kind>/<component>/` then
+    `crafts/<craft>/<kind>/<component>/`, each holding its own `tests/`; `<kind>` never `tests` or `guards`.
+    The one discovery the runner makes of a component: its test root (`test_suites`) and its model modules
+    (`component_invariant_modules`) both come from here, never from a hand-list."""
+    pkg = pkg or PKG
+    out = []
+    for root, depth in ((pkg, "*/*"), (dyadlib.crafts_dir(pkg), "*/*/*")):
+        if root.is_dir():
+            out += sorted(t.parent for t in root.glob(f"{depth}/tests") if t.is_dir() and t.parent.parent.name not in ("tests", "guards")
+                          and not any(part in distribute.SKIP_DIRS for part in t.parent.parts))
+    return out
+
 def test_suites():
-    """The test roots `unittest discover` runs: the core `dyad/tests/`, then every `crafts/<craft>/tests/` present."""
-    return [PKG / "tests"] + dyadlib.craft_glob("tests", PKG)
+    """The test roots `unittest discover` runs: the core `dyad/tests/`, every core component's `tests/`
+    (`dyad/<kind>/<component>/tests/`, #336), then every `crafts/<craft>/tests/` present and every craft
+    component's `tests/`."""
+    comps = component_dirs()
+    core_comps = [c / "tests" for c in comps if c.is_relative_to(PKG)]
+    craft_comps = [c / "tests" for c in comps if not c.is_relative_to(PKG)]
+    return [PKG / "tests"] + core_comps + dyadlib.craft_glob("tests", PKG) + craft_comps
 
 _SUITE_RAN = False   # d-work #155: the suite runs at most once per process — `cmd_evidence` calls
                      # both `cmd_check` and `cmd_guards`, and without this the evidence block paid
@@ -407,7 +439,7 @@ def installed_roots(base, head):
     run, lines = [], []
     for root in roots:
         rel = Path(os.path.relpath(root, REPO)).as_posix()
-        name = craft.CORE_NAME if rel == f"{craft.CORE_ROOT}/tests" else rel.split("/")[1] if rel.startswith("crafts/") else None
+        name = craft.CORE_NAME if rel.startswith(f"{craft.CORE_ROOT}/") else rel.split("/")[1] if rel.startswith("crafts/") else None   # a nested root (a component's tests/) is its craft's (#336)
         row = (core if name == craft.CORE_NAME else craft.unmodified(REPO, name, rows) if core and name else None)
         if row:
             lines.append(f"skip [guards] Rule-12 suite: {rel} — {name} {row['version']} installed unmodified ({craft.REGISTRY})")
@@ -426,11 +458,28 @@ def suite_env(tmp: str | None = None) -> dict[str, str]:
     scratch-repo commit for signatures nothing reads; appended as one more `GIT_CONFIG_*` entry, so an
     entry the caller already set survives."""
     env = {**dyadlib.git_env(), "DYAD_NO_NESTED_TESTS": "1"}
+    site = ledger_venv_site()
+    if site:   # this host's ledgerd venv (its conf names it): the component's tests run instead of skipping (#336)
+        env["PYTHONPATH"] = str(site) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
     n = int(env.get("GIT_CONFIG_COUNT") or 0)
     env.update({"GIT_CONFIG_COUNT": str(n + 1), f"GIT_CONFIG_KEY_{n}": "commit.gpgsign", f"GIT_CONFIG_VALUE_{n}": "false"})
     if tmp:
         env.update({"TMPDIR": tmp, "TMP": tmp, "TEMP": tmp})
     return env
+
+def ledger_venv_site(state=None):
+    """The site-packages of the venv this host's ledgerd instance names — `<state>/ledgerd.conf` `venv:` under
+    `hostadapter.state_dir("ledgerd")` — or None. The one place the runner learns of it: the test child's
+    PYTHONPATH (`suite_env`) and the invariant pass (`component_invariant_modules`) both read this, so the
+    component's modules and tests are checked on a host that serves a ledger and skipped, with a printed
+    line, on one that does not. Never guessed: no conf, no venv (plan #336 revision 9)."""
+    conf = Path(state) / "ledgerd.conf" if state else hostadapter.state_dir("ledgerd") / "ledgerd.conf"
+    try:
+        venv = dyadlib.parse_kv(conf.read_text()).get("venv", "") if conf.is_file() else ""
+    except OSError:
+        return None
+    sites = sorted((Path(venv) / "lib").glob("python*/site-packages")) if venv else []
+    return sites[-1] if sites and sites[-1].is_dir() else None
 
 def run_suite(suite, target=None):
     """The one `unittest` child — `check_rule_12` and `cmd_tests` both come here, which is what makes
@@ -541,14 +590,17 @@ CHECKS = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
 CHECKS.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
 
 # ---- the invariant pass (crafts/syseng/rules/invariants.md p1, p4): before any check, over every model module
-def invariant_modules(failures: list | None = None):
+def invariant_modules(failures: list | None = None, skips: list | None = None):
     """[(label, module, extra invariants)] in pass order: dyadlib, this runner, every guard in registry order
     (each with the four contract invariants appended, dyadlib.contract_invariants), every projector in
-    PROJECTORS order, then the run-book runner, the craft CLI and the distribution path. A module that does not
+    PROJECTORS order, then the run-book runner, the craft CLI and the distribution path, then every packaged
+    component's model modules (`component_invariant_modules`, discovered; #336). A module that does not
     load — a guard (the registry's own failure too) or any other, whose import-time `enforce` raised (#203) — is
-    left out and, when `failures` is a list, appended to it as (label, problem), so one module never aborts the pass."""
+    left out and, when `failures` is a list, appended to it as (label, problem), so one module never aborts the pass;
+    a component module whose library rows this interpreter lacks goes to `skips` instead (one printed line)."""
     out = [("dyadlib", dyadlib, ()), ("package", sys.modules[__name__], ())]
     failures = [] if failures is None else failures
+    skips = [] if skips is None else skips
     zones = None
     for group, entity, rel, tx, mod, problem in registry():
         if mod is None:
@@ -566,13 +618,57 @@ def invariant_modules(failures: list | None = None):
             out.append((label, dyadlib.load_module(path, label), ()))
         except Exception as e:
             failures.append((label, f"does not load: {type(e).__name__}: {e}"))
+    out += component_invariant_modules(failures, skips)
+    return out
+
+def component_invariant_modules(failures: list | None = None, skips: list | None = None):
+    """[(label, module, ())] for every model module of every packaged component (`component_dirs`): a `*.py`
+    outside `tests/` whose source binds `INVARIANTS` or `TREE_INVARIANTS` at module level (read by `ast`, so
+    nothing is imported to find it), labelled by its path inside the component with `/` as `.` and no `.py`
+    (`ledgerd.core`, `ledgerd.schemas.dwork` — dotted, so never a guard's `<group>/<entity>` label). Discovered,
+    never hand-listed: the hand-list above held the pass's modules by name, and a component's would have
+    appeared in no `[invariant]` line (audit 2026-10-17-dyad-taxonomy M6). A module that needs a package this
+    interpreter lacks — its import raised ModuleNotFoundError for a name no `find_spec` resolves, the library
+    rows of a component installed per instance (`<state>/venv`) — is a `skips` entry, one printed line, never a
+    failure: the kernel-only path stays green on a host that serves no ledger. Any other import failure is a
+    failure like a guard's. The instance's venv site-packages (`ledger_venv_site`) is appended to sys.path
+    first when it exists, so the pass and the test child agree on what is importable."""
+    import ast, importlib.util
+    failures = [] if failures is None else failures
+    skips = [] if skips is None else skips
+    site = ledger_venv_site()
+    if site and str(site) not in sys.path:
+        sys.path.append(str(site))
+    out = []
+    for comp in component_dirs():
+        for py in sorted(comp.rglob("*.py")):
+            rel = py.relative_to(comp)
+            if "tests" in rel.parts or py.name.startswith("_") or any(part in distribute.SKIP_DIRS for part in rel.parts):
+                continue
+            try:
+                tree = ast.parse(py.read_text(errors="ignore"))
+            except SyntaxError as e:
+                failures.append((rel.as_posix(), f"does not parse: {e.msg}, line {e.lineno}")); continue
+            if not any(isinstance(n, (ast.Assign, ast.AnnAssign)) and any(isinstance(t, ast.Name) and t.id in dyadlib.LISTS
+                       for t in (n.targets if isinstance(n, ast.Assign) else [n.target])) for n in tree.body):
+                continue
+            label = rel.with_suffix("").as_posix().replace("/", ".")
+            try:
+                out.append((label, dyadlib.load_module(py, label), ()))
+            except ModuleNotFoundError as e:
+                if e.name and importlib.util.find_spec(e.name.split(".")[0]) is None and not (comp / (e.name.split(".")[0])).exists():
+                    skips.append((label, f"needs {e.name}, not installed for this interpreter (a component's library row: `dyad ledger install` makes <state>/venv)"))
+                else:
+                    failures.append((label, f"does not load: ModuleNotFoundError: {e}"))
+            except Exception as e:
+                failures.append((label, f"does not load: {type(e).__name__}: {e}"))
     return out
 
 def cmd_invariants():
     """Print one line per module over both lists; rc 1 when any invariant is false or a module does not load (its
     import-time `enforce` raised). Run by `check`, `check --guards`, `--pr` and `--evidence`, never by --list/--help."""
-    rc, failures = 0, []
-    for label, mod, extra in invariant_modules(failures):
+    rc, failures, skips = 0, [], []
+    for label, mod, extra in invariant_modules(failures, skips):
         try:
             n = dyadlib.check_invariants(mod, extra, label)
             print(f"ok   [invariant] {label} ({n})")
@@ -580,6 +676,8 @@ def cmd_invariants():
             for name in e.failed:
                 print(f"FAIL [invariant] {label}: {name}")
             rc = 1
+    for label, problem in skips:
+        print(f"skip [invariant] {label}: {problem}")
     for label, problem in failures:
         print(f"FAIL [invariant] {label}: {problem}")
         rc = 1
@@ -862,8 +960,17 @@ def cmd_bundle(a):
     print(f"bundled v{version}: {len(rows)} components -> {out_dir}")
     return 0
 
-def cmd_ledger():
-    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+LEDGERD_CLI = PKG / "server" / "ledgerd" / "ledgerd" / "cli.py"   # the component's command line (dyad/server/ledgerd/, #336)
+
+def cmd_ledger(a=()):
+    """`dyad ledger` renders the view (Rule-16); `dyad ledger <verb> ...` is ledgerd's command line, dispatch only
+    (S4): the verbs, their flags and their refusals are `ledgerd.cli`'s. An unknown verb prints that usage."""
+    a = list(a)
+    if a:
+        cli = dyadlib.load_module(LEDGERD_CLI, "ledgerd.cli")
+        if a[0] in ("help", "--help", "-h"):
+            print(cli.usage()); return 0
+        return cli.main(a)
     rows = dyadlib.read_rows(REPO)
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
@@ -1216,7 +1323,7 @@ if __name__ == "__main__":
     if a and a[0] == "session":
         sys.exit(cmd_session(a[1:]))
     if a and a[0] == "ledger":
-        sys.exit(cmd_ledger())
+        sys.exit(cmd_ledger(a[1:]))
     if a and a[0] == "dwork":
         sys.exit(cmd_dwork(a[1:]))
     if a and a[0] == "project":

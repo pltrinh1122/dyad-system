@@ -1,0 +1,16 @@
+# dyad ledgerd: systemd user unit template (dyad/server/ledgerd/; plan #336 revision 7).
+# `dyad ledger install` fills {python}, {runner}, {state} and {log} with the host's real paths and writes
+# the result to the user's systemd directory; this tracked file holds no host path.
+[Unit]
+Description=dyad ledgerd ({state})
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={python} {runner} ledger serve --state {state}
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

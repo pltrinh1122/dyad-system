@@ -3,8 +3,9 @@ real one, built here — the one host fact this Linux kernel can exercise direct
 the macOS /var -> /private/var case G5 was actually about) and is otherwise a plain passthrough to
 Path.resolve(); `ignore_patterns` derives from package_rules.txt's generated: entries, never a
 hand-copied list, and its gitignore translation is checked against all three pattern shapes;
-`write_gitignore` seeds once and never overwrites."""
-import shutil, sys, tempfile, unittest
+`write_gitignore` seeds once and never overwrites; `supervisor` and `state_dir` (d-work #336, plan revision 7) answer
+from injected platform, environment and probe, every branch without the host."""
+import shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -78,6 +79,44 @@ class WriteGitignoreTests(unittest.TestCase):
         self.assertFalse(hostadapter.write_gitignore(d))
         self.assertFalse((d / ".gitignore").exists())
         shutil.rmtree(d, ignore_errors=True)
+
+
+class SupervisorTests(unittest.TestCase):
+    def test_darwin_is_launchd(self):
+        self.assertEqual(hostadapter.supervisor(system="Darwin", which=lambda n: None, run=None), "launchd")
+    def test_linux_with_a_user_manager_is_systemd(self):
+        calls = []
+        def run(argv, **kw):
+            calls.append(argv); return subprocess.CompletedProcess(argv, 0, "Version=255\n", "")
+        self.assertEqual(hostadapter.supervisor(system="Linux", which=lambda n: "/usr/bin/systemctl", run=run), "systemd")
+        self.assertEqual(calls, [["systemctl", "--user", "show", "--property=Version"]])   # the probe runs it, never only looks for it
+    def test_linux_whose_user_manager_does_not_answer_is_proc(self):
+        run = lambda argv, **kw: subprocess.CompletedProcess(argv, 1, "", "Failed to connect to bus")
+        self.assertEqual(hostadapter.supervisor(system="Linux", which=lambda n: "/usr/bin/systemctl", run=run), "proc")
+        def raises(argv, **kw):
+            raise OSError("no such file")
+        self.assertEqual(hostadapter.supervisor(system="Linux", which=lambda n: "/usr/bin/systemctl", run=raises), "proc")
+    def test_linux_without_systemctl_and_other_systems_are_proc(self):
+        self.assertEqual(hostadapter.supervisor(system="Linux", which=lambda n: None, run=None), "proc")
+        self.assertEqual(hostadapter.supervisor(system="FreeBSD", which=lambda n: "/x", run=None), "proc")
+    def test_live_answer_is_one_of_the_three(self):
+        self.assertIn(hostadapter.supervisor(), hostadapter.SUPERVISORS)
+
+
+class StateDirTests(unittest.TestCase):
+    def test_linux_default_and_xdg(self):
+        self.assertEqual(hostadapter.state_dir("ledgerd", system="Linux", env={}, home="/h"), Path("/h/.local/state/dyad/ledgerd"))
+        self.assertEqual(hostadapter.state_dir("ledgerd", system="Linux", env={"XDG_STATE_HOME": "/s"}, home="/h"), Path("/s/dyad/ledgerd"))
+        self.assertEqual(hostadapter.state_dir("ledgerd", system="Linux", env={"XDG_STATE_HOME": ""}, home="/h"), Path("/h/.local/state/dyad/ledgerd"))
+    def test_darwin_application_support(self):
+        self.assertEqual(hostadapter.state_dir("ledgerd", system="Darwin", env={"XDG_STATE_HOME": "/s"}, home="/u"), Path("/u/Library/Application Support/dyad/ledgerd"))
+    def test_never_created(self):
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        p = hostadapter.state_dir("x", system="Linux", env={}, home=d)
+        self.assertFalse(p.exists())
+    def test_reads_no_dyad_variable(self):
+        src = Path(hostadapter.__file__).read_text()
+        self.assertNotIn('environ.get("DYAD_', src); self.assertNotIn("environ[\"DYAD_", src)
 
 
 if __name__ == "__main__":
