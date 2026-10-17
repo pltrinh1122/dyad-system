@@ -1,0 +1,42 @@
+{% if error %}
+<p class="error">{{ error }}</p>
+{% else %}
+<div class="chooser">
+  <form hx-get="/ui/results" hx-target="#results" hx-swap="innerHTML" hx-trigger="change" class="chooser">
+    <input type="hidden" name="sql" value="{{ sql }}">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="dir" value="{{ dir }}">
+    <span class="meta">columns:</span>
+    {% for c in all_columns %}
+    <label><input type="checkbox" name="cols" value="{{ c }}" {% if not cols or c in cols %}checked{% endif %}> {{ c }}</label>
+    {% endfor %}
+  </form>
+</div>
+<table class="results">
+  <thead><tr>
+    {% for c in columns %}
+    <th><a href="#" hx-get="/ui/results?{{ {'sql': sql, 'sort': c, 'dir': ('desc' if sort == c and dir == 'asc' else 'asc')} | urlencode }}{% for k in cols %}&amp;cols={{ k | urlencode }}{% endfor %}" hx-target="#results" hx-swap="innerHTML">{{ c }}{% if sort == c %} {{ "v" if dir == "desc" else "^" }}{% endif %}</a></th>
+    {% endfor %}
+  </tr></thead>
+  <tbody>
+    {% set keycol = namespace(name="") %}
+    {% for c in columns %}{% if not keycol.name and c in detail_keys %}{% set keycol.name = c %}{% endif %}{% endfor %}
+    {% for r in rows %}
+    <tr {% if keycol.name %}class="record" hx-get="/ui/detail?value={{ r[columns.index(keycol.name)] | string | urlencode }}" hx-target="#detail" hx-swap="innerHTML"{% endif %}>
+      {% for v in r %}<td>{{ "" if v is none else v }}</td>{% endfor %}
+    </tr>
+    {% endfor %}
+    {% if not rows %}<tr><td colspan="{{ columns | length or 1 }}" class="empty">no rows</td></tr>{% endif %}
+  </tbody>
+</table>
+<div class="footer">
+  <span>{{ rows | length }} of {{ total }}</span>
+  <span>asof {{ pin }}</span>
+  <a href="/ui/export?format=md&amp;{{ {'sql': sql, 'sort': sort, 'dir': dir} | urlencode }}{% for k in cols %}&amp;cols={{ k | urlencode }}{% endfor %}">export Markdown</a>
+  <a href="/ui/export?format=csv&amp;{{ {'sql': sql, 'sort': sort, 'dir': dir} | urlencode }}{% for k in cols %}&amp;cols={{ k | urlencode }}{% endfor %}">export CSV</a>
+  <a href="{{ state_url }}">link to this view</a>
+</div>
+{% endif %}
+{% if shown_sql is not none %}
+<pre class="sql" id="sql-shown" hx-swap-oob="true">{{ shown_sql }}</pre>
+{% endif %}

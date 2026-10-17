@@ -145,7 +145,10 @@ class PackageTests(livetest.LiveCase):
     def test_rule_12_runs_the_suites_and_maps_nothing(self):
         """#162: the mapping is the syseng craft's guard (`syseng/tests`); the runner keeps the suites."""
         pkg = load_package(); crafts = dyadlib.crafts_dir(PKG)
-        self.assertEqual(pkg.test_suites(), [PKG / "tests"] + [c / "tests" for c in dyadlib.craft_dirs()])
+        comps = pkg.component_dirs()   # every packaged component's own tests/ is a root (#336): dyad/server/ledgerd/tests first
+        self.assertEqual(pkg.test_suites(), [PKG / "tests"] + [c / "tests" for c in comps if c.is_relative_to(PKG)] + [c / "tests" for c in dyadlib.craft_dirs()]
+                         + [c / "tests" for c in comps if not c.is_relative_to(PKG)])
+        self.assertIn(PKG / "server" / "ledgerd" / "tests", pkg.test_suites())
         self.assertEqual(crafts / "sysarch" / "tests" in pkg.test_suites(), "sysarch" in CRAFTS)   # a core-only install runs the core suite alone (#171)
         self.assertEqual(pkg.check_rule_12(), [])   # under DYAD_NO_NESTED_TESTS: no mapping, no failure
     # d-work #155: the local gate never ran the suite (the pre-push hook is `check --guards`, 61
@@ -1133,7 +1136,9 @@ class InvariantPassTests(unittest.TestCase):
         labels = [l for l, _, _ in pkg.invariant_modules()]
         guards = [f"{dyadlib.guard_key(py)[1]}/{py.stem}" for py in dyadlib.guard_files()]
         projectors = [f"project_{s.replace('/', '_')}" for s in sorted(pkg.PROJECTORS)]
-        self.assertEqual(labels, ["dyadlib", "package"] + guards + projectors + ["runbook", "craft", "distribute"])
+        components = [l for l, _, _ in pkg.component_invariant_modules()]   # discovered, dotted, last (#336)
+        self.assertEqual(labels, ["dyadlib", "package"] + guards + projectors + ["runbook", "craft", "distribute"] + components)
+        self.assertTrue(components and all("." in c and "/" not in c for c in components), components)
         self.assertEqual(len(set(labels)), len(labels))
         for label, mod, extra in pkg.invariant_modules():
             self.assertEqual([n for n, _ in extra], ["entity-non-empty", "corpus-matches-directory", "fields-unique-strings", "transaction-implies-check_transaction"] if "/" in label else [])
@@ -1734,3 +1739,80 @@ class InstalledRootTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ComponentTests(unittest.TestCase):
+    """d-work #336: a packaged component (`dyad/<kind>/<component>/` holding its own tests/) is discovered by the
+    runner four ways — its test root, its model modules in the invariant pass (by their INVARIANTS declarations,
+    never a hand-list; a module whose library rows this interpreter lacks is one `skip [invariant]` line, never red),
+    the nested root's craft for `installed_roots`, and `dyad ledger <verb>` dispatching to its CLI."""
+    def run_py(self, *a):
+        return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), *a], capture_output=True, text=True, env=env())
+    def test_component_dirs_and_roots_are_discovered(self):
+        pkg = load_package()
+        self.assertIn(PKG / "server" / "ledgerd", pkg.component_dirs())
+        for c in pkg.component_dirs():
+            self.assertTrue((c / "tests").is_dir()); self.assertNotIn(c.parent.name, ("tests", "guards"))
+    def test_ledgerd_modules_are_in_the_pass_or_skipped_with_a_line(self):
+        """Every ledgerd module that declares INVARIANTS is either in the pass (its label `ledgerd.<stem>`) or named by one
+        skip line saying which package it needs — never absent silently (audit 2026-10-17-dyad-taxonomy M6)."""
+        pkg = load_package()
+        failures, skips = [], []
+        labels = [l for l, _, _ in pkg.component_invariant_modules(failures, skips)]
+        comp = PKG / "server" / "ledgerd"
+        expected = sorted(p.relative_to(comp).with_suffix("").as_posix().replace("/", ".") for p in comp.rglob("*.py")
+                          if "tests" not in p.relative_to(comp).parts and not p.name.startswith("_") and "__pycache__" not in p.parts
+                          and "INVARIANTS" in p.read_text())
+        self.assertEqual(sorted(labels + [l for l, _ in skips]), expected)
+        self.assertEqual(failures, [])
+        for label, reason in skips:
+            self.assertRegex(reason, r"^needs (fastapi|uvicorn|sqlalchemy|jinja2|pydantic)")
+        out = self.run_py("check", "--guards").stdout
+        for label in labels:
+            self.assertIn(f"ok   [invariant] {label} (", out)
+        for label, _ in skips:
+            self.assertIn(f"skip [invariant] {label}: needs ", out)
+    def test_a_component_needing_an_absent_package_is_a_skip_line_not_a_failure(self):
+        d = scratch_install(with_craft=False)
+        self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        comp = d / "dyad" / "server" / "zz"
+        (comp / "zz").mkdir(parents=True); (comp / "tests").mkdir()
+        (comp / "zz" / "needs.py").write_text("import sys\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))\n"
+                                              "import dyadlib\nimport zz_no_such_package_anywhere\nINVARIANTS = [('holds', lambda: True)]\ndyadlib.enforce(INVARIANTS, __name__)\n")
+        (comp / "zz" / "plain.py").write_text("import sys\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))\n"
+                                              "import dyadlib\nTOKENS = ('a',)\nINVARIANTS = [('one-token', lambda: len(TOKENS) == 1)]\ndyadlib.enforce(INVARIANTS, __name__)\n")
+        (comp / "zz" / "broken.py").write_text("import sys\nfrom pathlib import Path\nsys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'scripts'))\n"
+                                               "import dyadlib\nINVARIANTS = [('never', lambda: False)]\ndyadlib.enforce(INVARIANTS, __name__)\n")
+        (comp / "tests" / "test_plain.py").write_text("import unittest\nclass T(unittest.TestCase):\n    def test_x(self): pass\n")
+        r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--guards"], capture_output=True, text=True, env=env(), cwd=d)
+        self.assertIn("skip [invariant] zz.needs: needs zz_no_such_package_anywhere, not installed", r.stdout)
+        self.assertIn("ok   [invariant] zz.plain (1)", r.stdout)
+        self.assertIn("FAIL [invariant] zz.broken: does not load: InvariantError", r.stdout)   # a false pure invariant is red, not skipped
+        self.assertNotIn("zz.needs: does not load", r.stdout)
+    def test_installed_roots_names_the_core_for_a_nested_root(self):
+        pkg = load_package(); craft = pkg.craft_cli()
+        rel = "dyad/server/ledgerd/tests"
+        name = craft.CORE_NAME if rel.startswith(f"{craft.CORE_ROOT}/") else None
+        self.assertEqual(name, craft.CORE_NAME)
+        self.assertIn("rel.startswith(f\"{craft.CORE_ROOT}/\")", inspect.getsource(pkg.installed_roots))
+    def test_ledger_dispatch(self):
+        pkg = load_package()
+        self.assertTrue(pkg.LEDGERD_CLI.is_file())
+        r = self.run_py("ledger", "no-such-verb")
+        self.assertEqual(r.returncode, 2); self.assertIn("dyad ledger init --state", r.stdout)
+        r = self.run_py("ledger", "help"); self.assertEqual(r.returncode, 0); self.assertIn("dyad ledger serve --state", r.stdout)
+        r = self.run_py("ledger", "schema"); self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("schema dwork 1", r.stdout); self.assertIn("view board [rendered] [default]", r.stdout)
+        self.assertIn("ledger init | serve | build | query", pkg.__doc__)
+    def test_ledger_venv_site_reads_only_a_named_venv(self):
+        pkg = load_package()
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        self.assertIsNone(pkg.ledger_venv_site(d))                        # no conf
+        (d / "ledgerd.conf").write_text("schema: x\n"); self.assertIsNone(pkg.ledger_venv_site(d))   # no venv line
+        site = d / "venv" / "lib" / "python3.99" / "site-packages"; site.mkdir(parents=True)
+        (d / "ledgerd.conf").write_text(f"schema: x\nvenv: {d / 'venv'}\n")
+        self.assertEqual(pkg.ledger_venv_site(d), site)
+        with unittest.mock.patch.object(pkg, "ledger_venv_site", lambda state=None: site):
+            self.assertTrue(pkg.suite_env()["PYTHONPATH"].startswith(str(site)))
+        with unittest.mock.patch.object(pkg, "ledger_venv_site", lambda state=None: None):
+            self.assertFalse(pkg.suite_env().get("PYTHONPATH", "").startswith(str(site)))

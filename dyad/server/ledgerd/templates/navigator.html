@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="layout">
+  <aside class="sidebar" id="sidebar" hx-get="/ui/sidebar" hx-trigger="ledgerd:views from:body" hx-swap="innerHTML">
+    {% include "sidebar.html" %}
+  </aside>
+  <main class="main">
+    {% if filter_view %}
+    <details class="mode" open>
+      <summary>Basic: filter <code>{{ filter_view }}</code></summary>
+      <div>
+        <form class="bar" hx-get="/ui/filter" hx-target="#results" hx-swap="innerHTML" hx-trigger="change, submit">
+          <input type="hidden" name="view" value="{{ filter_view }}">
+          {% for f in filters %}
+          <label>{{ f.name }}
+            {% if f.kind == "select" %}
+            <select name="f_{{ f.name }}" multiple>
+              {% for v in f["values"] %}<option value="{{ v }}">{{ v if v != "" else "(blank)" }}</option>{% endfor %}
+            </select>
+            {% else %}
+            <input type="text" name="c_{{ f.name }}" placeholder="contains">
+            {% endif %}
+          </label>
+          {% endfor %}
+          <label>search all columns <input type="search" name="q" placeholder="text"></label>
+          <button type="submit" class="primary">Apply</button>
+        </form>
+        <pre class="sql" id="sql-shown">{{ shown_sql }}</pre>
+      </div>
+    </details>
+    {% endif %}
+    <details class="mode" {% if not view %}open{% endif %}>
+      <summary>Advanced: SQL</summary>
+      <div>
+        <form hx-get="/ui/results" hx-target="#results" hx-swap="innerHTML">
+          <textarea name="sql" id="sql-box">{{ sql }}</textarea>
+          <div class="bar">
+            <button type="submit" class="primary">Run</button>
+            <a href="/schema">schema (JSON)</a>
+            <a href="/docs">API docs</a>
+            <span class="meta">one SELECT or WITH statement; the projection refuses every write</span>
+          </div>
+        </form>
+      </div>
+    </details>
+    <div id="results">
+      {% include "results.html" %}
+    </div>
+    <div id="detail" class="detail"></div>
+  </main>
+</div>
+{% endblock %}

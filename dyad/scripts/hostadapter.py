@@ -15,10 +15,27 @@ that this kernel's `/tmp` is not itself a symlink). `ignore_patterns` derives th
 gitignore syntax, and `write_gitignore` seeds it once (G9: a fresh install's first `dyad` command
 writes `dyad/scripts/__pycache__/`, and `git add -A` then tracks it). A third host fact either fits
 one of these two functions or earns its own, justified in the plan that adds it — never a generic
-hook (`host-facts.md` property 2)."""
+hook (`host-facts.md` property 2). Two more, each justified in plan #336 revision 7: `supervisor` —
+which service manager keeps a per-user daemon alive on this host (`systemd` on Linux with a working
+`systemctl --user`, `launchd` on macOS, else `proc`, a detached process that says it is not persistent)
+— and `state_dir` — where a per-user service keeps its state (`$XDG_STATE_HOME/dyad/<name>`, default
+`~/.local/state/dyad/<name>`, on Linux; `~/Library/Application Support/dyad/<name>` on macOS). Both are
+facts of The World, observed once here; every call site sees the same answer. Each takes its inputs as
+arguments (the platform, the environment, the probe) so a test exercises every branch without the host.
+No `DYAD_*` variable is read here (the naming table's `env:` line is unchanged)."""
+import os, platform, shutil, subprocess, sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dyadlib
 
 HEADER = "# seeded by dyad install (hostadapter.write_gitignore) from dyad/scripts/package_rules.txt\n"
+SUPERVISORS = ("systemd", "launchd", "proc")             # what `supervisor()` answers; the adapters are ledgerd's (dyad/server/ledgerd/ledgerd/supervisor.py)
+STATE_HOME_VAR = "XDG_STATE_HOME"                        # the XDG base directory for state (Linux); not a DYAD_ variable
+STATE_SUBDIR = "dyad"                                    # `<state home>/dyad/<name>`
+INVARIANTS: list[dyadlib.Invariant] = [   # crafts/syseng/rules/invariants.md: pure, enforced at import
+    ("supervisors-are-three-distinct", lambda: len(set(SUPERVISORS)) == 3 and SUPERVISORS[-1] == "proc"),
+    ("state-home-is-not-a-dyad-variable", lambda: not STATE_HOME_VAR.startswith("DYAD_") and bool(STATE_SUBDIR)),
+]
 
 
 def resolve(path) -> Path:
@@ -81,3 +98,37 @@ def write_gitignore(dest) -> bool:
         return False
     f.write_text(HEADER + "\n".join(patterns) + "\n")
     return True
+
+
+def supervisor(system: str | None = None, which=shutil.which, run=subprocess.run) -> str:
+    """The service manager that keeps a per-user daemon alive here: `launchd` on Darwin; `systemd` on a host
+    where `systemctl --user` answers (a container whose PID 1 is not systemd has the binary and no user
+    manager, so the probe runs it rather than looking for it); else `proc`. `system`, `which` and `run` are
+    injectable so every branch is tested without the host."""
+    system = system or platform.system()
+    if system == "Darwin":
+        return "launchd"
+    if system == "Linux" and which("systemctl"):
+        try:
+            r = run(["systemctl", "--user", "show", "--property=Version"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                return "systemd"
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return "proc"
+
+
+def state_dir(name: str, system: str | None = None, env=None, home: Path | None = None) -> Path:
+    """Where the per-user service `name` keeps its state: `$XDG_STATE_HOME/dyad/<name>` (default
+    `~/.local/state/dyad/<name>`) on Linux and anything else; `~/Library/Application Support/dyad/<name>`
+    on Darwin. Never created here."""
+    system = system or platform.system()
+    env = os.environ if env is None else env
+    home = Path(home) if home is not None else Path.home()
+    if system == "Darwin":
+        return home / "Library" / "Application Support" / STATE_SUBDIR / name
+    base = env.get(STATE_HOME_VAR) or ""
+    return (Path(base) if base else home / ".local" / "state") / STATE_SUBDIR / name
+
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding

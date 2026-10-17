@@ -18,3 +18,12 @@ actions/setup-python@v5: actions/setup-python@v5
 gh: gh
 jq: jq
 Linux (OS): -
+
+# ledgerd's library rows (dyad/server/ledgerd/, #336): importable only in an instance's <state>/venv; the
+# token map is what makes an import outside this set fail (crafts/syseng/rules/imports.md p2, p4)
+FastAPI: import:fastapi
+uvicorn: import:uvicorn
+SQLAlchemy: import:sqlalchemy
+Jinja2: import:jinja2
+pydantic: import:pydantic
+htmx: -
