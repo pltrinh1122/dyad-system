@@ -48,17 +48,19 @@ entities, stores, states and boundaries), **framework** answers *how* (the proce
 produce and move instances of the architecture). A statement that names an alternative is design, one a
 projector could draw is architecture, one with a verb a party performs is framework.[^330][^row330]
 
-**Pin.** Written against `main` at commit `7aee667` (2026-10-17), whose tree holds bundle 0.14.0,
+**Pin.** Written against `main` at commit `bd453ea` (2026-10-17), whose tree holds bundle 0.14.0,
 `dyad-operator` 0.11.0, `sysarch` 0.3.0, `syseng` 0.4.0, `sysadmin` 0.3.0, `countersign` 0.3.0 and
 `disclosure` 0.1.0.[^versions] The newest release tags on `main` — `v0.12.1`, `dyad-operator-v0.10.1`,
 `sysarch-v0.3.0`, `syseng-v0.4.0`, `sysadmin-v0.2.1` — all name one commit, `74180d5` (2026-10-07), so
 the live tree is ahead of every release and a tag alone cannot pin what this section describes. Each
-footnote therefore gives the cited path and its **blob** at the pin (`git rev-parse 7aee667:<path>`;
+footnote therefore gives the cited path and its **blob** at the pin (`git rev-parse bd453ea:<path>`;
 `git show <blob>` returns the exact text cited whatever `main` does later), followed by `(v0.12.1)` when
 that blob is the one the release tags hold and `(unreleased at the pin)` when it is not. A `#N` is a
 ledger row, resolved at `agent-corpus/d-work/rows/N.md`; a PR number resolves on the hosting, a
 reference into The World that no guard checks. Re-pinning is a later d-work on this file; until then the
-commit above says what the reader holds.
+commit above says what the reader holds. Re-pinned once so far: #335 wrote this section against `7aee667`;
+#342 moved the pin to `bd453ea`, re-verified every footnote by script, and found one blob moved
+(`agent-corpus/audits/INCIDENTS.md`) — the drift the convention expects, made visible.
 
 ### Architecture (WHAT)
 
@@ -82,6 +84,26 @@ commit above says what the reader holds.
   `sysarch`, `syseng`, and `countersign` and `disclosure`, which the Operator holds back from the bundle
   until ready (#232).[^bundlemd][^versions] The instance — ledger, provenance, audits, falsification
   records, preference values, host corpus — is never inside a craft.[^rule11][^dyadreadme]
+- **Crafts compose the system.** In the Operator's framing, a Dyad System is a set of craft components
+  working together to achieve the Operator's goals in The World. In the vocabulary's terms: the crafts are
+  what the system is *composed of* — its reusable practice, each one a contained, versioned tree installable
+  into any dyad system — operated by the two parties, the Operator and the Agent, on one instance, toward
+  the Operator's goals in The World, which is everything that is not The Dyad System.[^vocab][^rule14][^rule11]
+  The audit of #341 classifies the crafts in the tree into four **layers** by what each does for the
+  Operator — a classification proposed there (its L1), re-run against the tree and disposed by #341's
+  Done-`Y`, whose layer names are not yet Agent terms:[^craftlayers][^craftlayersrec][^plan341][^row341]
+
+  | craft | layer | does, for the Operator | bundled with the core | released |
+  |---|---|---|---|---|
+  | `dyad-operator` (`dyad/`) | **base** | makes a craft exist, checks, exports and installs it; runs the d-work process; the only carrier of Agent Rules | is the core | yes |
+  | `sysarch` | **system** | how infrastructure and guards are built, run and deployed | no | yes |
+  | `syseng` | **system** | how code is written so it stays verifiable | no | yes |
+  | `sysadmin` | **admin** | host actions, ops scripts, server instances, host install and platform | yes | yes |
+  | `countersign` | adopted process (the audit's claim 7: belongs to **base**) | the interaction model three systems adopt; a self-diagnostic | no | no (held, #232) |
+  | `disclosure` | **practice** | an anonymized, redacted incident report for a third party | no | no (held, #232) |
+
+  The `practice` layer is defined by one test: a Tended craft no core Rule cites by path — optional, never
+  bundled, never required for the base to run.[^craftlayers]
 - **Two sets of rules, three homes.** *System Requirements* are the core craft's Agent Rules
   (`dyad/rules/`: 1–16 and 18–20; 17 and 21 retired into the sysarch craft), each with the countable
   block Intent, Target, Boundaries, Conditions.[^rule4][^rule5] *System Architecture* is the sysarch
@@ -266,6 +288,10 @@ commit above says what the reader holds.
 [^interaction]: `crafts/countersign/rules/interaction.md` @ `41f1566` (v0.12.1) — the interaction model: five primitives, eight imperatives, one lifecycle per mode, the answer grammar (§2), the escalate edge (§4), preferences classed as form or authority (§5), the four refactors owed by dyad-system (§7); it binds no system's agent by itself.
 [^projector]: `crafts/countersign/projectors/project_countersign.py` @ `0bd735c` (unreleased at the pin) — the projector that derives the core from the d-work stores under derivation rules D1–D8; `validate` and `check` are the countersign side's mechanical check.
 [^row334]: `agent-corpus/d-work/rows/334.md` @ `14d5c41` (unreleased at the pin) — row #334, `planned` at the pin, seat `ds-cabinet-cloud-1`: falsify "the core = countersign" and "d-work is an instance of countersign"; its record will be `agent-corpus/falsification/core-vs-countersign.md`.
+[^craftlayers]: `agent-corpus/audits/2026-10-17-craft-layers.md` @ `64bbbea` (unreleased at the pin) — the craft-layer audit (#341): §1 the Operator's eight-claim chain re-run against the tree, §2 the layer table (craft, layer, what it does for the Operator, citing Rules, bundled, released, Operator profile), §3 the proposals L1–L6 in Rule-10 form, none executed.
+[^craftlayersrec]: `agent-corpus/falsification/2026-10-17-craft-layers.md` @ `229f640` (unreleased at the pin) — the record behind the audit: one attack per claim and per proposal; disposed by #341's Done-`Y`.
+[^plan341]: `agent-corpus/d-work/plans/341.md` @ `cb3867c` (unreleased at the pin) — plan #341: what was re-run before planning (`BUNDLED_WITH_CORE` declared once; which core Rules cite each craft; `disclosure` cited by no Rule; change rates of `sysarch` and `syseng` alike).
+[^row341]: `agent-corpus/d-work/rows/341.md` @ `feeb926` (unreleased at the pin) — the row: plan-`Y` 2026-10-17, Done-`Y` merging PR #420 at 7c71a55; `done`.
 [^rule2]: `dyad/rules/RULE-2-no-self-ratify.md` @ `61ef282` (unreleased at the pin) — disposer ≠ proposer; the ratification events; what is not ratification; the binding of a `Y` to the action named, the kernel-only evidence, the mandate clause; provenance `bond:no-self-ratify`.
 [^rec2]: `dyad/falsification/rules/rule-2-no-self-ratify.md` @ `ea92605` (unreleased at the pin) — the record behind Rule-2: the attacks on inference-only enforcement, the batch-binding amendment (#17) and the mandate amendment (#290).
 [^rule3]: `dyad/rules/RULE-3-d-work.md` @ `a55e935` (unreleased at the pin) — the d-work: scope, the answer grammar, the plan gate, the ledger states, mechanisms (the fence), the completion counter-prompt and its three-act Done order (#202), batch disposition, intake, incidents, ratification events; provenance of every amendment.
@@ -277,7 +303,7 @@ commit above says what the reader holds.
 [^workflows]: `.github/workflows/dyad-containment.yml` @ `372d5b8`, `.github/workflows/dyad-d-work.yml` @ `d2a461d`, `.github/workflows/dyad-package.yml` @ `f7e8d15` (v0.12.1) — the CI wrappers: `on: push: branches: [main]` with `agent-corpus/d-work/**` ignored, and `workflow_dispatch`; no PR trigger (removed by #168).
 [^rec7]: `dyad/falsification/rules/rule-7-provenance.md` @ `f49aa6f` (unreleased at the pin) — the record behind Rule-7: why the transcript is never committed, the transaction/state split (#191), the mandate note (#290).
 [^plan202]: `agent-corpus/d-work/plans/202.md` @ `469c5c6` (unreleased at the pin) — the plan that moved `done` after the merge: the mechanism, the eleven instances, the three-act order.
-[^incidents]: `agent-corpus/audits/INCIDENTS.md` @ `147e937` (unreleased at the pin) — the incident log (date, d-work, what, cause, consequence), the ledger the incident-hardening play-book groups into failure modes.
+[^incidents]: `agent-corpus/audits/INCIDENTS.md` @ `57352c7` (unreleased at the pin) — the incident log (date, d-work, what, cause, consequence), the ledger the incident-hardening play-book groups into failure modes.
 [^rec11]: `dyad/falsification/rules/rule-11-distribution-structure.md` @ `1b75139` (v0.12.1) — the record behind Rule-11: the craft reframing (#153, #154), one code path (#156), the tag prefixes (#196), the drift guard (#91), the bundled craft (#114), the bundle's released-craft sentence (#230).
 [^plan290]: `agent-corpus/d-work/plans/290.md` @ `ce3fa3d` (unreleased at the pin) — the plan that introduced the mandate and the `accretion` preference: the audit numbers (117 of 280 rows accreted, mean 2.65 dispositions against 2.15, `archived` used 0 times, 75 rows in `backlog`) and the five revisions.
 [^rule13]: `dyad/rules/RULE-13-reuse-over-inference.md` @ `fb3d5aa` (v0.12.1) — recurrence proposes code; the import criteria are the Operator's preferences.
