@@ -64,7 +64,7 @@ revision 16 can be drafted from. Every count is a `git grep` or a script the rec
 | hooks, entrypoint, workflows, tests that pin paths | `dyad/hooks/pre-commit`, `pre-push`, `dyad/bin/dyad`, `dyad-python`; `.github/workflows/dyad-*.yml` (6); `dyad/tests/test_entrypoint.py`, `test_playbooks.py` | `git grep -n 'dyad/scripts\|dyad/guards\|dyad/bin' .github` |
 | the `dyad/scripts` literal | every tracked occurrence, by location | `for p in …; do git grep -o dyad/scripts -- $p \| wc -l; done` (the counts of §3 M16 and §4 A) |
 | inputs the brief names | `agent-corpus/audits/2026-10-17-token-efficiency.md` (#333) §§3–5; `2026-10-15-messaging-architecture.md` (#253 R4, R29); `agent-corpus/falsification/seat-vs-harness-session.md` (#295) | — |
-| what the plan said and the tree showed | plan #340 said 134 files and 31 modules; `git ls-files dyad` says 128, and the literal count by module class is 37 (M16) — both plan numbers came from a first pass and are corrected here, not carried | `git ls-files dyad \| wc -l`; the M16 command |
+| what the plan said and the tree showed | plan #340 said 134 files and 31 modules; `git ls-files dyad` says 128 — the runner's own `package: 134 files` line counts the six `.github/workflows/dyad-*.yml` with the tree (`CORE_ROOTS` + `core_extra()`, M11), which is the number the plan carried; the literal count by module class is 37 (M16). Both plan numbers are corrected here, not carried | `git ls-files dyad \| wc -l`; `dyad check \| grep '^package:'`; the M16 command |
 
 Not an input: the content of `ledgerd` (revisions 4–9 of plan #336), which the Operator settled; `#336`'s own
 host actions; any running system.
