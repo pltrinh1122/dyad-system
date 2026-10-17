@@ -21,6 +21,7 @@
 kind: dyad/rules/RULE-<n>-<slug>.md = dyad/rules/* = dyad/rules/RULE-(?P<id>\d+)-[a-z0-9-]+\.md
 kind: crafts/<craft>/rules/<slug>.md = crafts/*/rules/* = crafts/[a-z][a-z0-9-]*/rules/([a-z0-9-]+|README)\.md
 kind: crafts/<craft>/ = crafts/*/** = crafts/[a-z][a-z0-9-]*/(VERSION|README\.md|MANIFEST\.md|(rules|vocabulary|templates|guards|tests|falsification|docs|projectors|scripts|server)/.+)
+kind: dyad/server/<component>/ = dyad/server/** = dyad/server/(?P<component>[a-z][a-z0-9-]*)/(README\.md|[a-z_][a-z0-9_]*\.py|(?P=component)(/[a-z_][a-z0-9_]*)+(\.[a-z0-9]+)?|templates/.+|static/.+|tests/.+|[a-z][a-z0-9.-]*\.(service|plist))
 kind: <instance>/d-work/rows/<id>.md = <instance>/d-work/rows/* = <instance>/d-work/rows/((?P<id>\d+)|README)\.md
 kind: <instance>/d-work/plans/<id>.md = <instance>/d-work/plans/* = <instance>/d-work/plans/(?P<id>\d+)\.md
 kind: <instance>/d-work/sessions/<id>.md = <instance>/d-work/sessions/* = <instance>/d-work/sessions/[A-Za-z0-9._-]+\.md

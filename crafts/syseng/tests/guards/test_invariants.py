@@ -36,6 +36,15 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(self.scan({"dyad/scripts/a.py": "x = 1\n"}, [("crafts/*/server/*.py", "r")]), ["warning: invariants_rules.txt: exempt crafts/*/server/*.py matches no file here (a craft not installed); not checked"])
         self.assertEqual(self.scan({"crafts/c/server/plain.py": "x = 1\n"}, [("crafts/*/server/*.py", "r")]), ["invariants_rules.txt: exempt crafts/*/server/*.py matches no module that needs it (stale)"])
         self.assertEqual(self.scan({"dyad/scripts/a.py": "x = 1\n"}, [("dyad/scripts/gone.py", "r")]), ["invariants_rules.txt: exempt dyad/scripts/gone.py matches no module that needs it (stale)"])
+    def test_component_modules_are_enumerated_and_their_tests_skipped(self):
+        # the component clause (#336): no enumeration change was needed — python_files rglobs both roots — stated here so it stays so
+        files = {"dyad/server/ledgerd/ledgerd/core.py": "FIELDS = ('a',)\n", "dyad/server/ledgerd/ledgerd/schemas/dwork.py": "KINDS = ('x',)\nINVARIANTS = []\n",
+                 "dyad/server/ledgerd/tests/test_core.py": "assert True\nX = (1,)\n", "crafts/c/server/relay/relay/main.py": "def f():\n    assert 1\n"}
+        root, pkg = tree(files); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        self.assertEqual([str(p.relative_to(root)) for p in inv.python_files(root, pkg)],
+                         ["crafts/c/server/relay/relay/main.py", "dyad/server/ledgerd/ledgerd/core.py", "dyad/server/ledgerd/ledgerd/schemas/dwork.py", "dyad/server/ledgerd/tests/test_core.py"])
+        self.assertEqual(inv.scan(root, pkg, [])[0], ["crafts/c/server/relay/relay/main.py:2: `assert` in craft code (invariants.md p3: an invariant, never assert)",
+                                                      "dyad/server/ledgerd/ledgerd/core.py: defines FIELDS but no INVARIANTS (invariants.md p1)"])
     def test_syntax_error_reported(self):
         self.assertTrue(self.scan({"dyad/scripts/a.py": "def (\n"})[0].startswith("dyad/scripts/a.py: does not parse"))
     def test_model_constants_and_declares(self):
