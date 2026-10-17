@@ -20,7 +20,12 @@ Terms (`implementation path`, `mechanical check`, arriving from the core vocabul
    the #155/#160 widening to a Tended craft: `crafts/<craft>/guards/<entity>.py` →
    `crafts/<craft>/tests/guards/test_<entity>.py`; `crafts/<craft>/projectors/<name>.py` and
    `crafts/<craft>/scripts/<name>.py` → `crafts/<craft>/tests/test_<name>.py`. `package.py` and
-   `_`-prefixed modules are exempt. The mapping is one-way: a test without a module of that name
+   `_`-prefixed modules are exempt. A packaged **component** — `dyad/<kind>/<component>/` or
+   `crafts/<craft>/<kind>/<component>/` holding its own `tests/`, `<kind>` never `tests` — maps every
+   `*.py` under it outside `tests/`, sub-packages included, to `<component>/tests/test_<stem>.py`, and
+   two of its modules sharing a stem fail, since their tests could not be told apart (the component
+   clause, #336; the kind's shape is `naming.md`'s row, `dyad/server/<component>/` the first). The
+   mapping is one-way: a test without a module of that name
    is legal (`dyad/tests/test_dyadlib_rows.py`). The runner's `check_rule_12` keeps "run the tests"
    (discovery of the test roots stays the runner's); this craft's `tests.py` keeps "every module
    has its test at the mapped path" — two predicates, two owners (plan #162 attack 7).

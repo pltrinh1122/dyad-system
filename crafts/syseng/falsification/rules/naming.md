@@ -62,4 +62,26 @@ three crafts where 3 `kind:` rows would have said it once.
 
 Disposition: see ledger #100.
 
+## Amendment — d-work #336 (2026-10-17, the `dyad/server/<component>/` kind and the component clause)
+**Claim:** a packaged component of the core — `ledgerd`, a server at `dyad/server/ledgerd/` — can be named
+by one `kind:` row and mapped to its own `tests/` by one generic clause of `tests.py`, so that no module of
+it escapes the test mapping, and the same clause serves every later component under any kind.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 336.1 | A packaged component escapes the flat globs silently: `tests.modules()` reads `dyad/scripts/*.py`, the guard roots and `crafts/*/{scripts,projectors}/*.py`, so every module under `dyad/server/ledgerd/` needs no test and the guard stays green (plan #336 revision 14 Y4; audit `2026-10-17-dyad-taxonomy.md` M4). | **Confirmed** | The component clause: a directory `dyad/<kind>/<component>/` or `crafts/<craft>/<kind>/<component>/` holding its own `tests/` is a component (`tests.components`), every `*.py` under it outside `tests/` — sub-packages included, `_`-prefixed and so `__init__.py` dropped — maps to `<component>/tests/test_<stem>.py` (`component_of`, `test_for`), and `modules()` lists them; `test_component_is_discovered_and_its_modules_map_to_its_own_tests`, over a fixture with two modules, a nested sub-package and one missing test. |
+| 336.2 | Write it as a `server` clause: `dyad/server/<name>/**/*.py` ↔ `dyad/server/<name>/tests/`, the row revision 15 named. | Refuted (the audit's §4.5) | A `server` clause is one more flat glob with the same blind spot one directory over: `dyad/tools/<x>/`, `crafts/<craft>/server/<x>/` or any later packaged component would each need its own clause and its own syseng release. The generic clause reads the one thing that makes a directory a component — it holds its own `tests/` — and a new kind costs a `kind:` row only (`test_craft_component_maps_the_same_way` proves the craft side with no craft-specific code). |
+| 336.3 | Two modules of one component may share a stem across sub-packages (`ledgerd/core.py`, `ledgerd/schemas/core.py`); both map to `tests/test_core.py`, and one test file silently covers two modules. | **Confirmed** | `tests.collisions` fails the component naming both modules and the one test path they share; `test_stem_collision_across_sub_packages_fails_clearly`. Renaming a module is the fix; the mapping stays by stem so a test file name says which module it tests without a path encoded in it. |
+| 336.4 | The core root is open while a craft's is closed: `crafts/<craft>/` enumerates its allowed children, but `dyad/` has no such row (M1), so `dyad/server/` — or any directory at the core root — is selected by no kind and checked by nothing until its own row exists. | Survives, stated | True before and after this amendment; it is why the `dyad/server/<component>/` row is a `kind:` of its own rather than a child of a core catch-all. Closing the core root is the audit's P1, a separate program; this row closes `server/` only, and a component whose directory has no `tests/` is likewise still unmapped (`test_a_directory_without_tests_is_not_a_component_and_a_tests_tree_never_is`): PR A's own test asserts the mapping names every `ledgerd` module, and the four live modules the mapping does not cover today are the two crafts' skeleton templates (`crafts/{sysarch,syseng}/templates/*.py`), which an "every module is mapped" fence would have to exempt — named here for that follow-on, not taken. |
+| 336.5 | The invariants guard enumerates by its own glob, so a component's modules need a second clause there. | Refuted, tested | `invariants.python_files` already `rglob`s `dyad/` and `crafts/` (M5, layout-independent): checks (i), (ii) and (iv) see a component's modules and skip its `tests/` with no change — `test_component_modules_are_enumerated_and_their_tests_skipped` states it so it stays so. Checks (iii) and (v) read the runner's pass (M6), which is PR A's to extend. The `exempt: crafts/*/server/*.py` line stays: it names a reference deployment's container code, never loaded by the pass, and the component clause makes it replaceable later, not now. |
+| 336.6 | Easy agreement: the kind row is the one revision 15 asked for and the audit confirmed. | Pushed | 336.2 refutes revision 15's own `server` clause; 336.4 states what the row does not close. |
+
+The `kind:` regex names the component's allowed contents (`README.md`, `*.py`, the package `<component>/`
+of snake-case segments — a back-reference, so the package is named like the component — `templates/`,
+`static/`, `tests/`, `*.service`, `*.plist`) and carries no `id` group: a directory holds many files, and
+`id` is unique per path. `VERSION` 0.4.0 → 0.5.0; `BUNDLE.md`'s row (infra zone) warns until the tag
+(Rule-11 p7, by design).
+
+Disposition: see ledger #336.
+
 Disposition: see ledger #162.
