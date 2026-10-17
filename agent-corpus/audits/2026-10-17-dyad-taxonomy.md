@@ -557,6 +557,59 @@ reader (the runner), which is the placement rule for guard data; consistent, sta
 (`dyad/runbooks/`) are checked by a Tended craft's guard (sysadmin), which is bundled, so a core-only
 install still checks them — consistent with Rule-11 p2, stated.
 
+**P10 — `countersign`: a craft the core's Rules cite by path, neither bundled nor released.** (From a claim chain
+the Operator carried in from a side thread on this row, 2026-10-17; every claim re-run against the tree at
+`1eb21a3`, the results in the record, C7–C10.)
+- *What the tree shows.* `crafts/countersign/` (0.3.0, 23 tracked files: 3 Tended rules — `interaction.md`,
+  `schema.md`, `self-diagnostic.md` — 3 records, a 38-term vocabulary, `scripts/levels.py`,
+  `projectors/project_countersign.py`, 8 templates — 5 command adapters, a core schema JSON, a run-book, a
+  levels file — and 2 tests) has **no `guards/` directory**; its `MANIFEST.md` says so on purpose (the levels
+  check is a script, not a guard, #308 D20) and names `requires: dyad-operator>=0.10.1`. No `countersign-v*`
+  tag exists; `BUNDLE.md` holds it out of the table under #232. The dependency arrow runs one way:
+  `levels.py` and the projector insert `dyad/scripts` and import `dyadlib`; nothing under `dyad/` imports from
+  the craft (`dyadlib.MODES`, the row field `mode` and one invariant *adopt* its terms; `rows.py` and
+  `dyadlib.py` name it in comments only). **Rule-3 cites it by path five times** (`crafts/countersign/`,
+  `rules/interaction.md` ×3, `vocabulary/CRAFT.md`), resolved by `rule.text->path` (M12); the preferences
+  table's `accretion` entry and two core play-books (`d-work.md`, `disposition-digest.md`) cite it too. Rule-11
+  property 2 says a core Rule that cites a craft by path is *the* reason to bundle one, "what the core ships
+  and what its own Rules depend on must not disagree" — and `sysadmin` is bundled on exactly that ground
+  (#114). `countersign` is cited and not bundled. On a receiving system without it, the citation is not red:
+  `references.craft_state` returns `warn` (absent, not in the registry) or `skip` (no registry), per craft
+  since #167 — so the disagreement shows as a permanent `warn` line in every evidence block of such a system,
+  never as the #114 failure.
+- *The chain's claims, as re-run.* (1) `dyad/` is the base craft by structural similarity — **held with the
+  refinements §2.1 states** (partial in both directions; a craft's tree closed, the core's open). (2) `dyad`
+  *contains* `countersign` — **refuted**: sibling trees, zones `agent` and `craft`, the core build excludes
+  `crafts/` unless bundled (M11), the arrow runs craft → core; survives only as the citation above. (3) `dyad`
+  is an *instance* of `countersign` — **refuted** in the vocabulary (`dyad/` meets every test of *craft* and
+  none of *instance*; `countersign` cannot run without `dyad`); survives as *adoption*: Rule-3's Scope and
+  Answer grammar take four terms and cite §2, §4, §5 and §7 of `interaction.md`, whose own first paragraph
+  says it "binds no system's agent by itself — in dyad-system only its Agent Rules do". (4) Consolidate
+  `countersign` into `dyad` — **not refuted; repriced below**.
+- *Path (bundle).* The craft gains the guard module it must have to declare `BUNDLED_WITH_CORE` (one
+  `guards/<entity>.py` meeting the contract, with its test — the craft today has none by design, so this
+  reverses #308 D20 for one declaration), the core release then carries it as it carries `sysadmin`, and
+  Rule-3's citations become citations of a tree every install has. Zones: craft (countersign, `VERSION`
+  bump; its first release adds a `BUNDLE.md` row — infra), no core edit. The craft stays what its rule says
+  it is: one interaction model adopted by three systems (dyad-system, dsys, countersign-system), with the
+  adapters and the self-diagnostic those other systems use. The held-content decision of #232 is reopened,
+  because bundling ships with the next core tag (Rule-11's release form, not only a plan-`Y`).
+- *Counter (consolidate).* Move what the core adopts into the core — the four terms defined in the Agent
+  vocabulary (today referenced by craft name, which Rule-6 permits only for a term defined elsewhere), the
+  answer grammar and the two lifecycles into Rule-3 — and drop the five path citations. Then `schema.md`,
+  `self-diagnostic.md`, `levels.py`, the projector and the command adapters have no home in the core: Rule-4
+  keeps Tended rules out of `dyad/rules/`, #160 moved every projector out of the core, and the adapters serve
+  systems that are not this one. They are retired or re-homed, and the craft ceases to exist. The simpler
+  tree; the larger Rule-set change (Rule-3 and Rule-6 edits with records and a Rule-5 sweep statement); and
+  the same release consequence, since the moved text ships with the next core tag.
+- *Reconciliation.* Rule-11 property 2 already states the invariant both paths restore: a core Rule may not
+  depend on a tree the core does not ship. Bundling restores it by one guard module and keeps a model three
+  systems share where it is; consolidation restores it by absorbing one system's adoption and discarding the
+  other two's adapters. The audit prices both and recommends neither over the other: which content the
+  Operator wants released, and whether `countersign` is a cross-system craft or dyad-system's own vocabulary
+  wearing a craft's form, is the Operator's to say. Either is a d-work of its own, outside #340 and #336; the
+  Rule-11 release form applies to both.
+
 ## 6. Not observed
 
 - No shape was prototyped: no file was moved, no guard edited, no clause written. Every cost is a count of
