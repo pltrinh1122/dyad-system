@@ -2,7 +2,9 @@
 """Invariants guard (entity `invariant`, corpus `craft`; the syseng craft's `rules/invariants.md` owns the check;
 placed per crafts/sysarch/rules/guards.md under the craft's root; d-work #162, amended #203). Kernel: Python 3.12+.
 (i) No `assert` statement outside `tests/` under `dyad/` and `crafts/` — `ast.Assert` nodes, never grep, so strings,
-comments and prose cannot false-positive (fail). (ii) Every module that defines a data-model constant — an
+comments and prose cannot false-positive (fail). Checks (i), (ii) and (iv) enumerate by `rglob` over both roots, so a packaged
+component's modules (`dyad/<kind>/<component>/**.py`, the component clause of `tests.py`, #336) are judged like any other and
+its own `tests/` skipped like any other; (iii) and (v) cover what the runner's pass lists, which is the runner's to extend. (ii) Every module that defines a data-model constant — an
 upper-case module-level name bound to a tuple, list, dict, set or frozenset literal — exposes `INVARIANTS` (or
 `TREE_INVARIANTS`), unless an `exempt: <path glob> # <reason>` line of `invariants_rules.txt` names it (fail; a stale
 exempt line fails too). (iii) Every `INVARIANTS` and `TREE_INVARIANTS` entry of every module the runner's pass covers
