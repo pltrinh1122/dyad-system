@@ -78,7 +78,15 @@ class TouchTests(unittest.TestCase):
 class WriterCollisionTests(unittest.TestCase):
     """F1 (d-work #32): two processes configured with the same DYAD_SESSION collide on one file
     despite the "only that session writes it" promise; `touch()` now detects a different, still-
-    live `writer` already in the file and warns instead of silently unioning."""
+    live `writer` already in the file and warns instead of silently unioning. Since d-work #350 the
+    writer is the harness holder's stable id, so the comparison means a different *holder* and not a
+    different `dyad` invocation."""
+    def setUp(self):
+        self._env = mock.patch.dict(os.environ)
+        self._env.start()
+        os.environ.pop("CLAUDE_CODE_SESSION_ID", None)   # the fallback path unless a test sets a holder
+    def tearDown(self):
+        self._env.stop()
     def test_different_live_writer_warns_and_does_not_union(self):
         root = repo()
         os.environ["DYAD_SESSION"] = "shared-name"
@@ -93,7 +101,7 @@ class WriterCollisionTests(unittest.TestCase):
             fields = sv.parse(p.read_text())
             self.assertEqual(fields["rows"], "1")     # not unioned with the other writer's "9"
             self.assertEqual(fields["files"], "mine.py")
-            self.assertEqual(fields["writer"], sv._WRITER)
+            self.assertEqual(fields["writer"], sv.writer())
             self.assertIn("different, still-live process", stderr.getvalue())
         finally:
             del os.environ["DYAD_SESSION"]
@@ -105,7 +113,7 @@ class WriterCollisionTests(unittest.TestCase):
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
                 sv.touch(root, ["1"], ["a.py"])
-                p = sv.touch(root, ["2"], ["b.py"])   # same process: same _WRITER, must not warn
+                p = sv.touch(root, ["2"], ["b.py"])   # same process: same writer, must not warn
             fields = sv.parse(p.read_text())
             self.assertEqual(fields["rows"], "1 2")
             self.assertEqual(fields["files"], "a.py b.py")
@@ -133,9 +141,52 @@ class WriterCollisionTests(unittest.TestCase):
         os.environ["DYAD_SESSION"] = "writer-field-test"
         try:
             p = sv.touch(root, [], [])
-            self.assertEqual(sv.parse(p.read_text())["writer"], sv._WRITER)
+            self.assertEqual(sv.parse(p.read_text())["writer"], sv._PROCESS)
         finally:
             del os.environ["DYAD_SESSION"]
+
+    def test_writer_is_the_holders_stable_id_when_the_harness_names_one(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "holder-writer"; os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-A"
+        try:
+            self.assertEqual(sv.writer(), "sess-A")
+            self.assertEqual(sv.parse(sv.touch(root, [], []).read_text())["writer"], "sess-A")
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_same_holder_in_a_different_process_is_silent(self):
+        # d-work #350: the case the per-process uuid got wrong — a session's own next `dyad` command
+        root = repo()
+        os.environ["DYAD_SESSION"] = "same-holder"; os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-A"
+        try:
+            import io, contextlib
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                with mock.patch.object(sv, "_PROCESS", "aaaaaaaaaaaa"):
+                    sv.touch(root, ["1"], ["a.py"])
+                with mock.patch.object(sv, "_PROCESS", "bbbbbbbbbbbb"):   # another process, same holder
+                    p = sv.touch(root, ["2"], ["b.py"])
+            self.assertEqual(stderr.getvalue(), "")
+            self.assertEqual(sv.parse(p.read_text())["rows"], "1 2")
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_a_different_holder_warns_and_is_not_unioned(self):
+        root = repo()
+        os.environ["DYAD_SESSION"] = "two-holders"; os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-B"
+        try:
+            (root / "agent-corpus" / "d-work" / "sessions" / "two-holders.md").write_text(
+                f"session: two-holders\nseen: {_now()}\nroot: /tmp/x\nrows: 9\nfiles: other.py\nwriter: sess-A\n")
+            import io, contextlib
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                p = sv.touch(root, ["1"], ["mine.py"])
+            self.assertIn("different, still-live process", stderr.getvalue())
+            self.assertIn("sess-A", stderr.getvalue())
+            self.assertEqual(sv.parse(p.read_text())["rows"], "1")
+        finally:
+            del os.environ["DYAD_SESSION"]
+    def test_without_a_holder_the_writer_falls_back_to_the_process_id(self):
+        self.assertNotIn("CLAUDE_CODE_SESSION_ID", os.environ)
+        self.assertEqual(sv.writer(), sv._PROCESS)
 
 class SelfExclusionCLITests(unittest.TestCase):
     def test_touch_cli_never_warns_about_its_own_file(self):
@@ -280,6 +331,38 @@ class HostAndHolderTests(unittest.TestCase):
             "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\nholder: has a space/slash\n")
         self.assertIn("'holder' is not a path-segment token", " ".join(sv.check_package(root)))
 
+class TitleTests(unittest.TestCase):
+    """d-work #350: `touch()` writes `title: <the Operator's own name for the session>` when the host
+    adapter finds one, absent otherwise; the check judges it only when present."""
+    def _touch(self, found):
+        root = repo()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "title-test", "CLAUDE_CODE_SESSION_ID": "sess-T"}):
+            with mock.patch.object(sv.hostadapter, "session_title", return_value=found) as m:
+                p = sv.touch(root, [], [])
+        return root, sv.parse(p.read_text()), m
+    def test_touch_writes_the_title_beside_host_and_holder(self):
+        _, f, m = self._touch("cab-1-e2c6869c: terminal (ds)")
+        self.assertEqual(f["title"], "cab-1-e2c6869c: terminal (ds)")   # a colon in the value survives the parse
+        m.assert_called_once_with("sess-T")
+    def test_touch_omits_the_title_when_none_is_found(self):
+        _, f, _ = self._touch(None)
+        self.assertNotIn("title", f)
+    def test_no_holder_means_no_lookup(self):
+        root = repo()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "title-test2"}):
+            os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+            with mock.patch.object(sv.hostadapter, "session_title") as m:
+                self.assertIsNone(sv.title())
+        m.assert_not_called()
+    def test_absent_title_passes_and_oversize_fails(self):
+        root = repo()
+        store = root / "agent-corpus" / "d-work" / "sessions"
+        base = "session: s1\nseen: 2026-09-14T10:00:00+00:00\nroot: /tmp/x\nrows: 1\nfiles: a.py\n"
+        (store / "ok.md").write_text(base + "title: cab-1: terminal (ds)\n")
+        self.assertEqual(sv.check_package(root), [])
+        (store / "big.md").write_text(base + "title: " + "x" * (sv.hostadapter.TITLE_MAX + 1) + "\n")
+        self.assertTrue(any("big.md" in m and "'title'" in m for m in sv.check_package(root)))
+
 class FilesTouchedTests(unittest.TestCase):
     def test_parses_the_plan_line(self):
         text = "# Plan #7\n\nsome prose\n\nfiles touched: dyad/scripts/a.py, dyad/tests/test_a.py\n"
@@ -295,6 +378,25 @@ class FilesTouchedTests(unittest.TestCase):
         self.assertTrue(all("{" not in t and "}" not in t for t in out))
     def test_no_line_yields_nothing(self):
         self.assertEqual(sv.files_touched("# Plan #7\n\nno such line here\n"), [])
+    def test_prose_after_a_real_list_is_not_read_as_paths(self):
+        # d-work #350: the union on main held `amends`, `children`, `twenty-three`, `were`
+        text = ("files touched: dyad/a.py dyad/tests/test_a.py\n"
+                "amends as carried children core craft's twenty-three (PR-4) were `-q`/`-r` #1\n"
+                "\nfiles touched here is a phrase in a sentence, then more prose\n")
+        self.assertEqual(sv.files_touched(text), ["dyad/a.py", "dyad/tests/test_a.py"])
+    def test_a_line_that_begins_with_the_phrase_but_names_no_path_takes_no_continuation(self):
+        text = "files touched: nothing else changed this turn, honestly\nagent-corpus/not/a/list.md\n"
+        self.assertEqual(sv.files_touched(text), [])
+    def test_an_empty_first_line_still_reads_its_continuation(self):
+        self.assertEqual(sv.files_touched("files touched:\ndyad/a.py\ncrafts/x/b.py\n"), ["dyad/a.py", "crafts/x/b.py"])
+    def test_backticks_parens_and_extensionless_dirs(self):
+        text = "files touched: `dyad/a.py` (new), crafts/ledgerd/ README.md Makefile\n"
+        self.assertEqual(sv.files_touched(text), ["dyad/a.py", "crafts/ledgerd/", "README.md"])
+    def test_every_plan_on_this_instance_yields_only_path_shaped_tokens(self):
+        plans = Path(dyadlib.repo_root()) / "agent-corpus" / "d-work" / "plans"
+        for f in sorted(plans.glob("*.md")):
+            for tok in sv.files_touched(f.read_text(errors="ignore")):
+                self.assertTrue(sv._is_path(tok), (f.name, tok))
 
 class ListCLITests(unittest.TestCase):
     def test_list_runs(self):

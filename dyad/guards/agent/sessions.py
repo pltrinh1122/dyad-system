@@ -38,20 +38,28 @@ if sys.version_info < (3, 12):
 import datetime, os, platform, re, uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-import dyadlib
+import dyadlib, hostadapter
 
 ENTITY, CORPUS, TRANSACTION = "presence", "agent", False
 NAME, OWNER = "session presence file", "Rule-16"
 FIELDS = ("session", "seen", "root", "rows", "files")
 STALE_AFTER = datetime.timedelta(hours=6)   # advisory only (#185 falsification attack 3)
 _SESSION_ID = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
-_WRITER = uuid.uuid4().hex[:12]   # this process's own id (F1, d-work #32): computed once at import,
-                                  # so it is stable for the process's life — a session re-touching
-                                  # its own file always matches its own writer and stays silent.
+_PROCESS = uuid.uuid4().hex[:12]   # this process's own id, computed once at import: the fallback
+                                   # writer when the harness names no holder (F1, d-work #32)
+
+def writer() -> str:
+    """Who is writing: the harness session id when the harness reports one — the same value the
+    `holder` line carries, stable across every `dyad` invocation that session makes, so a session
+    re-touching its own file matches itself and stays silent and only a *different* holder under
+    the same `DYAD_SESSION` warns (d-work #350). The fence of #32 compared a uuid computed per
+    process, and every `dyad` command is its own process, so it warned on a session's own previous
+    command every time; with no harness id the per-process uuid is all there is, as before."""
+    return holder() or _PROCESS
 _KERNELS = frozenset({"terminal", "cloud"})   # the `host` line's first token (d-work #294)
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
-              ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
+              ("process-id-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _PROCESS)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
     return dyadlib.instance(root) / "d-work" / "sessions"
@@ -87,6 +95,17 @@ def holder() -> str | None:
 def parse(text: str) -> dict[str, str]:
     return dict(line.split(": ", 1) for line in text.splitlines() if ": " in line)
 
+_PATH_TOKEN = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.*-]*(?:/[A-Za-z0-9_.*-]+)*/?")
+_EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,8}$")
+
+def _is_path(tok: str) -> bool:
+    """A token that can be a repo path: made of path characters, and either has a directory
+    separator or ends in an extension. `amends`, `twenty-three`, `PR-4` and `(ledger-only` are
+    prose, not paths (d-work #350: plan 336 mentions the phrase `files touched` 17 times in running
+    text and the union held every word after it). Under-reports a bare top-level name with no
+    extension (`Makefile`) — advisory, so a missed signal costs nothing a corruption would."""
+    return bool(_PATH_TOKEN.fullmatch(tok)) and ("/" in tok or bool(_EXTENSION.search(tok)))
+
 def files_touched(plan_text: str) -> list[str]:
     """A stored plan's own `files touched:` line (Rule-15) and any continuation lines that
     follow it up to a blank line or a heading — real plans wrap a long list across several
@@ -94,27 +113,45 @@ def files_touched(plan_text: str) -> list[str]:
     trailing `(...)` annotation and punctuation stripped. A `{a,b}`-brace shorthand group is
     dropped whole rather than split on the comma inside it, which produced a garbled fragment
     the first time this ran over a real plan (#185, this d-work's own plan file) — advisory,
-    so a plan using brace shorthand under-reports rather than corrupts. Not attempted here: the
-    `## files touched` heading form some plans use (#174, #181) is not this pattern and is not
-    read; a stated limitation, not a crash."""
+    so a plan using brace shorthand under-reports rather than corrupts. A token is kept only if
+    it is path-shaped (`_is_path`), and a matched line that names text but no path at all is
+    prose that happens to begin with the phrase: it contributes nothing and takes no continuation
+    lines (#350). Not attempted here: the `## files touched` heading form some plans use (#174,
+    #181) is not this pattern and is not read; a stated limitation, not a crash."""
     lines, out, i = plan_text.splitlines(), [], 0
     while i < len(lines):
         m = re.match(r"^\s*files touched(?: \([^)]*\))?:\s*(.*)$", lines[i], re.I)
         if not m:
             i += 1; continue
-        chunk = [m.group(1)]; i += 1
+        first = _path_tokens(m.group(1)); i += 1
+        if m.group(1).strip() and not first:
+            continue                     # prose that begins with the phrase: no paths, no continuation
+        out += first
+        chunk = []
         while i < len(lines) and lines[i].strip() and not lines[i].lstrip().startswith("#"):
             chunk.append(lines[i]); i += 1
-        for tok in re.split(r"[,\s]+", " ".join(chunk).strip()):
-            tok = tok.strip().rstrip(".,;")
-            # splitting on the comma inside a `{a,b}` group breaks it into two brace-bearing
-            # fragments (`x/{a` and `b}*.md`); both, and any other brace fragment, are dropped
-            # whole rather than partially parsed (#185: a real plan's own shorthand corrupted
-            # the store the first time this ran).
-            if (tok and tok not in ("and", "—", "-") and "{" not in tok and "}" not in tok
-                    and not re.fullmatch(r"\([^()]*\)", tok)):   # a bare "(new)"-style annotation
-                out.append(tok)
+        out += _path_tokens(" ".join(chunk))
     return out
+
+def _path_tokens(text: str) -> list[str]:
+    out = []
+    for tok in re.split(r"[,\s]+", text.strip()):
+        tok = tok.strip().strip("`'\"()").rstrip(".,;:")
+        # splitting on the comma inside a `{a,b}` group breaks it into two brace-bearing
+        # fragments (`x/{a` and `b}*.md`); both, and any other brace fragment, are dropped
+        # whole rather than partially parsed (#185: a real plan's own shorthand corrupted
+        # the store the first time this ran).
+        if tok and "{" not in tok and "}" not in tok and _is_path(tok):
+            out.append(tok)
+    return out
+
+def title() -> str | None:
+    """The Operator's own name for this session in the hosting (d-work #350): read where the
+    harness records it, through `hostadapter.session_title` (the one place a host fact is read,
+    `crafts/syseng/rules/host-facts.md`), keyed by the holder's id; None when there is no holder or
+    the harness keeps no such record — then no `title` line is written and nothing fails."""
+    h = holder()
+    return hostadapter.session_title(h) if h else None
 
 def touch(root: Path, rows: list[str], files: list[str]) -> Path:
     root = root or dyadlib.repo_root()
@@ -122,10 +159,10 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
     sid = session_id()   # resolved once (F4, d-work #32): the path and the body must agree
     p = d / f"{sid}.md"
     prev = parse(p.read_text()) if p.exists() else {}
-    prev_writer = prev.get("writer")
-    if prev_writer and prev_writer != _WRITER and not is_stale(prev.get("seen", "")):
+    prev_writer, me = prev.get("writer"), writer()
+    if prev_writer and prev_writer != me and not is_stale(prev.get("seen", "")):
         print(f"warning: {p.name} was last written by a different, still-live process "
-              f"(writer {prev_writer}) under this same session id {sid!r} — two sessions "
+              f"(writer {prev_writer}, this one is {me}) under this same session id {sid!r} — two sessions "
               f"configured with the same DYAD_SESSION silently merge their presence otherwise "
               f"(F1, d-work #32); recording only this process's rows and files, not unioning "
               f"the other's", file=sys.stderr)
@@ -139,9 +176,10 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
                  f"root: {Path(root).resolve()}\n"
                  f"rows: {' '.join(row_set)}\n"
                  f"files: {' '.join(file_set)}\n"
-                 f"writer: {_WRITER}\n"
+                 f"writer: {me}\n"
                  f"host: {host_line()}\n"
-                 + (f"holder: {h}\n" if (h := holder()) else ""))
+                 + (f"holder: {h}\n" if (h := holder()) else "")
+                 + (f"title: {ti}\n" if (ti := title()) else ""))
     return p
 
 def touch_from_open_rows(root: Path | None = None) -> Path:
@@ -220,6 +258,8 @@ def check_record(p: Path, text: str | None = None) -> list[str]:
             msgs.append(f"{p.name}: 'host' kernel {toks[0]!r} is not one of {sorted(_KERNELS)}")
     if "holder" in fields and not _SESSION_ID.match(fields["holder"]):
         msgs.append(f"{p.name}: 'holder' is not a path-segment token ({fields['holder']!r})")
+    if "title" in fields and not 0 < len(fields["title"].strip()) <= hostadapter.TITLE_MAX:
+        msgs.append(f"{p.name}: 'title' is empty or over {hostadapter.TITLE_MAX} characters")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:

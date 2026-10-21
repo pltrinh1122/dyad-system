@@ -4,7 +4,8 @@ the macOS /var -> /private/var case G5 was actually about) and is otherwise a pl
 Path.resolve(); `ignore_patterns` derives from package_rules.txt's generated: entries, never a
 hand-copied list, and its gitignore translation is checked against all three pattern shapes;
 `write_gitignore` seeds once and never overwrites."""
-import shutil, sys, tempfile, unittest
+import json, os, shutil, sys, tempfile, unittest
+from unittest import mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -78,6 +79,61 @@ class WriteGitignoreTests(unittest.TestCase):
         self.assertFalse(hostadapter.write_gitignore(d))
         self.assertFalse((d / ".gitignore").exists())
         shutil.rmtree(d, ignore_errors=True)
+
+
+
+
+class SessionTitleTests(unittest.TestCase):
+    """d-work #350: the Operator's own name for a harness session, read where the harness records it."""
+    def _config(self, td, sessions=(), titles=()):
+        base = Path(td)
+        (base / "sessions").mkdir()
+        for name, rec in sessions:
+            (base / "sessions" / name).write_text(rec if isinstance(rec, str) else json.dumps(rec))
+        for holder, rec in titles:
+            d = base / "projects" / "slug" / holder
+            d.mkdir(parents=True)
+            (d / "custom-title.json").write_text(json.dumps(rec))
+        return base
+    def test_reads_the_user_named_pid_record(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, sessions=[("1.json", {"sessionId": "S", "name": "cab-1: terminal (ds)", "nameSource": "user", "nameSince": 5})])
+            self.assertEqual(hostadapter.session_title("S", base), "cab-1: terminal (ds)")
+    def test_a_name_the_harness_generated_is_not_the_operators(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, sessions=[("1.json", {"sessionId": "S", "name": "fix the bug", "nameSource": "auto", "nameSince": 5})])
+            self.assertIsNone(hostadapter.session_title("S", base))
+    def test_the_latest_rename_across_pids_wins(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, sessions=[
+                ("1.json", {"sessionId": "S", "name": "old", "nameSource": "user", "nameSince": 5}),
+                ("2.json", {"sessionId": "S", "name": "new", "nameSource": "user", "nameSince": 9}),
+                ("3.json", {"sessionId": "OTHER", "name": "other", "nameSource": "user", "nameSince": 99})])
+            self.assertEqual(hostadapter.session_title("S", base), "new")
+    def test_falls_back_to_custom_title(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, titles=[("S", {"customTitle": "from the file"})])
+            self.assertEqual(hostadapter.session_title("S", base), "from the file")
+    def test_malformed_missing_and_unsafe_give_none_not_an_error(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, sessions=[("1.json", "{not json")])
+            self.assertIsNone(hostadapter.session_title("S", base))
+            self.assertIsNone(hostadapter.session_title("", base))
+            self.assertIsNone(hostadapter.session_title("../x", base))
+            self.assertIsNone(hostadapter.session_title(".hidden", base))
+        self.assertIsNone(hostadapter.session_title("S", Path(td) / "does-not-exist"))
+    def test_a_title_is_one_bounded_line(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, sessions=[("1.json", {"sessionId": "S", "name": "a\nb: c\n" + "z" * 500, "nameSource": "user"})])
+            got = hostadapter.session_title("S", base)
+            self.assertNotIn("\n", got)
+            self.assertLessEqual(len(got), hostadapter.TITLE_MAX)
+            self.assertTrue(got.startswith("a b: c "))
+    def test_environment_selects_the_config_dir(self):
+        with tempfile.TemporaryDirectory() as td:
+            base = self._config(td, titles=[("S", {"customTitle": "via env"})])
+            with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(base)}):
+                self.assertEqual(hostadapter.session_title("S"), "via env")
 
 
 if __name__ == "__main__":
