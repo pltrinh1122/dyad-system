@@ -19,9 +19,20 @@ code path with the core craft's build/install: scripts/distribute.py. Kernel: Py
                                            installed craft's MANIFEST.md declares `seeds:` (#180) and a seed's
                                            destination is absent, prints a reminder naming the `cp` to run by
                                            hand — advisory only, never copied (Rule-11 p2: host-side hooks are
-                                           the core craft's only).
+                                           the core craft's only). The row's `source`, unless --source names it,
+                                           is what the archive or tree was: `<file>.tar.gz`, `<dir>@<tag>` for a
+                                           clone at an exact tag, `<dir>@<sha12>` otherwise (#353).
+  dyad craft diff <craft> --against <src> [--patch]
+                                           the by-path diff of an installed tree — crafts/<craft>/, or dyad/ when
+                                           <craft> is `dyad-operator` — against a source: a release archive or a
+                                           tree (an authoring clone at its tag, a `…/crafts/<name>` directory).
+                                           One line per path, `added | removed | modified | mode`, read from the
+                                           installed side (added = here, not in the source), then a summary;
+                                           --patch appends a unified diff of the text files, source -> installed,
+                                           which is a back-port's patch (the port play-book,
+                                           dyad/playbooks/port.md; #353). Exit 0 unchanged, 1 differing, 2 refused.
 """
-import re, shutil, sys, tempfile
+import difflib, filecmp, re, shutil, sys, tempfile
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -222,7 +233,7 @@ def cmd_install(repo: Path, a) -> int:
             if row is None or row["sha256"] != tree_sha(repo, name):
                 print(f"refused: crafts/{name} is locally modified or authored here; `--force` overwrites, or export it first", file=sys.stderr); return 1
         changed = distribute.install(root, repo, [f"crafts/{name}"], prune=True, hooks=None)
-        new = {"craft": name, "version": ver, "source": source or src.name, "sha256": tree_sha(repo, name), "d-work": f"#{dwork}" if dwork else (rows.get(name, {}).get("d-work", ""))}
+        new = {"craft": name, "version": ver, "source": source or distribute.source_name(src), "sha256": tree_sha(repo, name), "d-work": f"#{dwork}" if dwork else (rows.get(name, {}).get("d-work", ""))}
         if rows.get(name) != new:
             rows[name] = new; write_registry(repo, rows); changed += 1
         print(f"installed crafts/{name} {ver}: {changed} changes")
@@ -232,13 +243,92 @@ def cmd_install(repo: Path, a) -> int:
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+def source_root(src: Path, root: str, tmp: Path) -> Path:
+    """The source of a diff as a tree root holding `root`: an archive extracted under `tmp`; a directory that already
+    holds `root` (a clone, a repo root) as it is; a bare `…/crafts/<name>` directory staged under `tmp` (`stage`)."""
+    src = Path(src)
+    if src.is_file():
+        return distribute.extract(src, tmp)
+    if not src.is_dir():
+        raise FileNotFoundError(f"no such source {src}")
+    if (src / root).is_dir():
+        return src
+    if root != CORE_ROOT and (src / "VERSION").exists() and src.name == Path(root).name:
+        return stage(src, None, tmp)
+    raise ValueError(f"{src} holds no {root}/")
+
+def tree_diff(repo: Path, root: str, sroot: Path, src_modes: dict[str, int]) -> list[tuple[str, str, str]]:
+    """(kind, path, detail) for every path under `root` that differs between the installed tree on disk (`repo`,
+    untracked files included — an install is not yet committed, `tree_sha`) and the source tree `sroot`, read with
+    the install's own readers (`distribute.files`, the index or archive modes). Kinds, from the installed side:
+    `added` (here, not in the source), `removed` (in the source, not here), `modified` (bytes differ), `mode`
+    (same bytes, the executable bit differs). Sorted by path."""
+    here = distribute.files(repo, [root], tracked=False); there = distribute.files(sroot, [root])
+    dmodes = distribute.git_modes(repo, [root])
+    out = []
+    for rel in sorted(set(here) | set(there)):
+        if rel not in there:
+            out.append(("added", rel, "")); continue
+        if rel not in here:
+            out.append(("removed", rel, "")); continue
+        a, b = sroot / rel, Path(repo) / rel
+        if not filecmp.cmp(a, b, shallow=False):
+            out.append(("modified", rel, "")); continue
+        ma, mb = src_modes.get(rel, distribute._mode(a)), dmodes.get(rel, distribute._mode(b))
+        if ma != mb:
+            out.append(("mode", rel, f"{ma:o}->{mb:o}"))
+    return out
+
+def patch_text(repo: Path, sroot: Path, diffs) -> str:
+    """A unified diff, source -> installed, of every added, removed or modified text file (`difflib`, stdlib);
+    a file either side cannot decode as UTF-8 is named on one line instead. Applying it to the source
+    reproduces the installed tree's change: the back-port's patch (dyad/playbooks/port.md)."""
+    out = []
+    for kind, rel, _ in diffs:
+        if kind == "mode":
+            continue
+        a, b = sroot / rel, Path(repo) / rel
+        try:
+            sa = a.read_text(encoding="utf-8").splitlines(keepends=True) if kind != "added" else []
+            sb = b.read_text(encoding="utf-8").splitlines(keepends=True) if kind != "removed" else []
+        except UnicodeDecodeError:
+            out.append(f"Binary files differ: {rel}\n"); continue
+        out += difflib.unified_diff(sa, sb, fromfile="/dev/null" if kind == "added" else f"a/{rel}", tofile="/dev/null" if kind == "removed" else f"b/{rel}")
+    return "".join(l if l.endswith("\n") else l + "\n\\ No newline at end of file\n" for l in out)
+
+def cmd_diff(repo: Path, a) -> int:
+    """`dyad craft diff <craft> --against <src> [--patch]` (module docstring; d-work #353). Reads only."""
+    if not a or "--against" not in a or a.index("--against") + 1 >= len(a):
+        print("usage: dyad craft diff <craft> --against <archive|tree> [--patch]", file=sys.stderr); return 2
+    name, src, patch = a[0], Path(a[a.index("--against") + 1]), "--patch" in a
+    root = craft_root(name)
+    if not (repo / root).is_dir():
+        print(f"refused: no {root}/ here (installed crafts: `dyad craft list`)", file=sys.stderr); return 2
+    tmp = Path(tempfile.mkdtemp(prefix="dyad-diff-"))
+    try:
+        try:
+            sroot = source_root(src, root, tmp)
+        except (FileNotFoundError, ValueError) as e:
+            print(f"refused: {e}", file=sys.stderr); return 2
+        src_modes = distribute.archive_modes(src) if src.is_file() else distribute.git_modes(sroot, [root])
+        diffs = tree_diff(repo, root, sroot, src_modes)
+        for kind, rel, detail in diffs:
+            print(f"{kind} {rel}" + (f" {detail}" if detail else ""))
+        counts = {k: sum(1 for d in diffs if d[0] == k) for k in ("added", "removed", "modified", "mode")}
+        print(f"{root} vs {src}: " + (", ".join(f"{n} {k}" for k, n in counts.items() if n) if diffs else "unchanged"))
+        if patch and diffs:
+            sys.stdout.write(patch_text(repo, sroot, diffs))
+        return 1 if diffs else 0
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
 def main(a=None) -> int:
     a = sys.argv[1:] if a is None else list(a)
     repo = dyadlib.repo_root()
-    if not a or a[0] not in ("new", "list", "check", "export", "install"):
+    if not a or a[0] not in ("new", "list", "check", "export", "install", "diff"):
         print(__doc__, file=sys.stderr); return 2
     return {"new": lambda: cmd_new(repo, a[1:]), "list": lambda: cmd_list(repo), "check": lambda: cmd_check(repo, a[1:]), "export": lambda: cmd_export(repo, a[1:]),
-            "install": lambda: cmd_install(repo, a[1:])}[a[0]]()
+            "install": lambda: cmd_install(repo, a[1:]), "diff": lambda: cmd_diff(repo, a[1:])}[a[0]]()
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
 

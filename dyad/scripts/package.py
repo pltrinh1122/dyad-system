@@ -38,8 +38,13 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 evidence-sha256= of those lines; non-zero if any check fails
   dyad build [out.tar.gz] deterministic archive of the core craft (scripts/distribute.py, the one
                                 distribution code path every craft uses; #156)
-  dyad install <repo>     idempotent install of the core craft into another repo (same code path), with its
-                                `dyad-operator` row in crafts/REGISTRY.md (#199)
+  dyad install <repo> [--from <src>]
+                          idempotent install of the core craft into another repo (same code path), with its
+                                `dyad-operator` row in crafts/REGISTRY.md (#199). By default this checkout's tree;
+                                with --from, a release archive (`dyad-<version>.tar.gz`, bundled crafts inside) or a
+                                tree (an authoring clone at its tag) — VERSION, roots and bundled crafts read from
+                                it, nothing from here (#353). The row's `source` names what was installed from:
+                                the archive's file name, `<dir>@<tag>` or `<dir>@<sha12>` (distribute.source_name)
   dyad bundle check | build [dir]
                                 Rule-11 p7 (guards/infra/bundle.py): check BUNDLE.md against the tree's
                                 craft VERSIONs (both directions; a missing BUNDLE.md skips), or build every
@@ -154,7 +159,12 @@ def bundled_crafts(pkg=None):
         corpus, craft = dyadlib.guard_key(py, pkg)[:2]
         if corpus != "craft" or craft in out:
             continue
-        if getattr(dyadlib.load_guard_file(py, pkg), "BUNDLED_WITH_CORE", False):
+        # another tree's guards (`dyad install --from`, #353) are read, never executed: `load_module` caches by
+        # name, so importing them would answer with this tree's module of the same name, and an archive's code
+        # runs nowhere before it is installed. The declaration is one assignment line, read as text there.
+        declared = (re.search(r"^BUNDLED_WITH_CORE\s*=\s*True\b", py.read_text(), re.M) is not None if pkg != dyadlib.PKG
+                    else getattr(dyadlib.load_guard_file(py, pkg), "BUNDLED_WITH_CORE", False))
+        if declared:
             out.add(craft)
     return sorted(out)
 
@@ -167,9 +177,10 @@ def release_roots(pkg=None):
     return CORE_ROOTS + [f"crafts/{c}" for c in bundled_crafts(pkg)]
 
 
-def core_extra():
-    """The `dyad-*` workflow files: the core craft's host-side hooks that ship in its archive (p2)."""
-    out = subprocess.check_output(["git", "ls-files", ".github/workflows"], cwd=REPO, text=True).split()
+def core_extra(repo=None):
+    """The `dyad-*` workflow files: the core craft's host-side hooks that ship in its archive (p2) — this repo's
+    tracked ones, or any source tree's (an extracted release, an authoring clone; `--from`, #353)."""
+    out = distribute.files(repo or REPO, [".github/workflows"])
     return [p for p in out if Path(p).name.startswith(WORKFLOW_PREFIX)]
 
 def package_files():
@@ -777,7 +788,7 @@ def cmd_build(out=None):
     print(f"built {out} (version {version()})" + (f"; bundled: {', '.join(bundled)}" if bundled else ""))
     return 0
 
-def cmd_install(target):
+def cmd_install(target, src=None):
     """The core craft's install: the same code path, with the core's hooks (templates, import line; p2).
     `prune=True` (#178): the core is one tree (CORE_ROOTS), so a file the new version dropped (a
     retired Rule, a relocated script) must not survive an upgrade — an unpruned stale file can
@@ -786,19 +797,32 @@ def cmd_install(target):
     pre-#160 -> current upgrade unpruned). Destination path resolution goes through the host
     adapter (#179), not a bare `.resolve()` call at the site."""
     target = hostadapter.resolve(target)
-    bundled = bundled_crafts()
-    changed = distribute.install(REPO, target, release_roots(), prune=True, hooks=CORE_HOOKS, extra=core_extra())
-    cc = craft_cli()
-    rows = [(cc.CORE_NAME, version(), REPO.name)]                      # the core's registry row (Rule-11 p2, d-work #199)
-    # and one per bundled craft (#228 for #201), but only where the installed tree is not already
-    # recorded unmodified: `dyad craft install` of that same craft writes a richer row (its archive as
-    # `source`, its d-work), and re-asserting this one would clobber it on the next core install — the
-    # two commands would then ping-pong and neither install would be `0 changes` (Rule-11 p5).
-    rows += [(c, cc.guard().version(REPO / "crafts" / c), REPO.name) for c in bundled if cc.unmodified(target, c) is None]
-    changed += cc.record_install(target, rows)
-    print(f"installed into {target}: {changed} changes" + (f"; bundled: {', '.join(bundled)}" if bundled else "")
-          + f"; run: git -C {target} config core.hooksPath dyad/hooks")
-    return 0
+    tmp = tempfile.mkdtemp(prefix="dyad-install-") if src is not None else None
+    try:
+        # --from (#353): the source is a release archive or a tree, and everything the install reads about the
+        # core — VERSION, the bundled crafts, the release roots, the workflow hooks — is read from *that* tree, so
+        # the version installed is the version doing the describing; the default stays this checkout (REPO, PKG).
+        root = distribute.source_tree(Path(src), tmp) if src is not None else REPO
+        pkg = root / "dyad"
+        if not (pkg / "VERSION").exists():
+            print(f"refused: {src} holds no dyad/VERSION; not a core craft release or tree", file=sys.stderr); return 2
+        bundled, roots, extra = bundled_crafts(pkg), release_roots(pkg), core_extra(root)
+        ver, source = (pkg / "VERSION").read_text().strip(), distribute.source_name(Path(src) if src is not None else REPO)
+        changed = distribute.install(Path(src) if src is not None and not Path(src).is_dir() else root, target, roots, prune=True, hooks=CORE_HOOKS, extra=extra)
+        cc = craft_cli()
+        rows = [(cc.CORE_NAME, ver, source)]                          # the core's registry row (Rule-11 p2, d-work #199)
+        # and one per bundled craft (#228 for #201), but only where the installed tree is not already
+        # recorded unmodified: `dyad craft install` of that same craft writes a richer row (its archive as
+        # `source`, its d-work), and re-asserting this one would clobber it on the next core install — the
+        # two commands would then ping-pong and neither install would be `0 changes` (Rule-11 p5).
+        rows += [(c, cc.guard().version(root / "crafts" / c), source) for c in bundled if cc.unmodified(target, c) is None]
+        changed += cc.record_install(target, rows)
+        print(f"installed into {target}: {changed} changes" + (f"; bundled: {', '.join(bundled)}" if bundled else "")
+              + (f"; from {source}" if src is not None else "") + f"; run: git -C {target} config core.hooksPath dyad/hooks")
+        return 0
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 def craft_cli():
     """scripts/craft.py, the craft registry's one reader and writer (Rule-11 p2)."""
@@ -1233,4 +1257,7 @@ if __name__ == "__main__":
         sys.exit(cmd_list())
     if a[0] == "check" and "--tests" in a:
         i = a.index("--tests"); sys.exit(cmd_tests(*a[i + 1:i + 2]))
+    if a[0] == "install" and "--from" in a:                              # dyad install <repo> --from <src> (#353)
+        i = a.index("--from"); rest = a[1:i] + a[i + 2:]
+        sys.exit(cmd_install(rest[0], a[i + 1]) if rest and i + 1 < len(a) else __doc__)
     sys.exit({"check": lambda: cmd_check(), "build": lambda: cmd_build(*a[1:2]), "install": lambda: cmd_install(*a[1:2])}[a[0]]())

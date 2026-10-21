@@ -248,5 +248,85 @@ class BundledRowTests(unittest.TestCase):
             arch.unlink(missing_ok=True); shutil.rmtree(d, ignore_errors=True)
 
 
+class DiffTests(unittest.TestCase):
+    """`dyad craft diff <craft> --against <src> [--patch]` (d-work #353, A1): the by-path diff of an installed tree
+    against its source — the release archive, the `…/crafts/<name>` directory, the repo root — read from the installed
+    side; the core (`dyad-operator`) against the authoring tree; the `--patch` output applies to the source and
+    reproduces the change (a back-port's patch, dyad/playbooks/port.md); refusals exit 2 and write nothing."""
+    @classmethod
+    def setUpClass(cls):
+        cls.src = scratch(); author(cls.src)
+        r = dyad(cls.src, "export", "fx", str(cls.src / "fx.tar.gz")); assert r.returncode == 0, r.stdout + r.stderr
+        cls.archive = cls.src / "fx.tar.gz"
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.src, ignore_errors=True)
+    def setUp(self):
+        self.dst = scratch(); r = dyad(self.dst, "install", str(self.archive)); self.assertEqual(r.returncode, 0, r.stderr)
+    def tearDown(self):
+        shutil.rmtree(self.dst, ignore_errors=True)
+    def edit(self):
+        (self.dst / "crafts/fx/docs/d.md").write_text("# local edit\n"); (self.dst / "crafts/fx/local.md").write_text("mine\n")
+    def test_unchanged_then_every_kind(self):
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.archive))
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, f"crafts/fx vs {self.archive}: unchanged"), r.stderr)
+        self.edit(); (self.dst / "crafts/fx/templates/t.md").unlink(); git(self.dst, "update-index", "--chmod=+x", "crafts/fx/rules/r.md")
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.archive)); self.assertEqual(r.returncode, 1, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[:-1], ["modified crafts/fx/docs/d.md", "added crafts/fx/local.md", "mode crafts/fx/rules/r.md 644->755", "removed crafts/fx/templates/t.md"])
+        self.assertEqual(lines[-1], f"crafts/fx vs {self.archive}: 1 added, 1 removed, 1 modified, 1 mode")
+        self.assertIn("(modified)", dyad(self.dst, "list").stdout)                                   # the registry says so too; the diff says where
+    def test_patch_is_source_to_installed_and_applies(self):
+        self.edit()
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.archive), "--patch"); self.assertEqual(r.returncode, 1, r.stderr)
+        head, patch = r.stdout.split(f"crafts/fx vs {self.archive}: 1 added, 1 modified\n", 1)
+        self.assertEqual(head.splitlines(), ["modified crafts/fx/docs/d.md", "added crafts/fx/local.md"])
+        self.assertIn("--- a/crafts/fx/docs/d.md\n+++ b/crafts/fx/docs/d.md\n", patch); self.assertIn("-# d\n+# local edit\n", patch)
+        self.assertIn("--- /dev/null\n+++ b/crafts/fx/local.md\n", patch); self.assertIn("+mine\n", patch)
+        other = scratch(); author(other)                                                              # the authoring tree at the source's version
+        pf = other / "fx.patch"; pf.write_text(patch)
+        git(other, "apply", str(pf))
+        self.assertEqual((other / "crafts/fx/docs/d.md").read_text(), "# local edit\n"); self.assertEqual((other / "crafts/fx/local.md").read_text(), "mine\n")
+        shutil.rmtree(other, ignore_errors=True)
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.archive)); self.assertNotIn("---", r.stdout)   # no --patch: no patch
+    def test_against_directory_repo_root_and_the_core(self):
+        for src in (self.src / "crafts" / "fx", self.src):
+            r = dyad(self.dst, "diff", "fx", "--against", str(src)); self.assertEqual((r.returncode, r.stdout.strip()), (0, f"crafts/fx vs {src}: unchanged"), r.stderr)
+        r = dyad(self.dst, "diff", "dyad-operator", "--against", str(PKG.parent))                        # the scratch core is this tree's install
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, f"dyad vs {PKG.parent}: unchanged"), r.stderr)
+        (self.dst / "dyad" / "VERSION").write_text("9.9.9\n")
+        r = dyad(self.dst, "diff", "dyad-operator", "--against", str(PKG.parent)); self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.stdout.splitlines(), ["modified dyad/VERSION", f"dyad vs {PKG.parent}: 1 modified"])
+    def test_refusals(self):
+        before = snapshot(self.dst)
+        r = dyad(self.dst, "diff", "fx"); self.assertEqual(r.returncode, 2); self.assertIn("usage: dyad craft diff", r.stderr)
+        r = dyad(self.dst, "diff", "fx", "--against"); self.assertEqual(r.returncode, 2)
+        r = dyad(self.dst, "diff", "nope", "--against", str(self.archive)); self.assertEqual(r.returncode, 2); self.assertIn("no crafts/nope/ here", r.stderr)
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.src / "missing")); self.assertEqual(r.returncode, 2); self.assertIn("no such source", r.stderr)
+        r = dyad(self.dst, "diff", "fx", "--against", str(self.src / "dyad")); self.assertEqual(r.returncode, 2); self.assertIn("holds no crafts/fx/", r.stderr)
+        self.assertEqual(snapshot(self.dst), before)
+
+class SourceNameTests(unittest.TestCase):
+    """`distribute.source_name` (d-work #353, A2) and the registry `source` an install records with it: an archive by
+    file name; a git tree `<dir>@<tag>` at an exact tag, else `<dir>@<sha12>`; any other directory by name; stable, so
+    a second install is still 0 changes."""
+    def test_shapes(self):
+        distribute = dyadlib.load_module(PKG / "scripts" / "distribute.py", "distribute")
+        d = scratch(); author(d)
+        sha = subprocess.check_output(["git", "-C", str(d), "rev-parse", "--short=12", "HEAD"], text=True).strip()
+        self.assertEqual(distribute.source_name(d), f"{d.name}@{sha}")
+        git(d, "tag", "fx-v0.2.0"); self.assertEqual(distribute.source_name(d), f"{d.name}@fx-v0.2.0")
+        self.assertEqual(distribute.source_name(d / "crafts" / "fx"), "fx")                            # a subdirectory is not the work tree
+        (d / "fx-0.2.0.tar.gz").write_bytes(b""); self.assertEqual(distribute.source_name(d / "fx-0.2.0.tar.gz"), "fx-0.2.0.tar.gz")
+        plain = Path(SCRATCH.mkdtemp()); self.assertEqual(distribute.source_name(plain), plain.name)
+        shutil.rmtree(d, ignore_errors=True)
+    def test_install_records_the_source_it_was_given(self):
+        src = scratch(); author(src); git(src, "tag", "fx-v0.2.0"); dst = scratch()
+        r = dyad(dst, "install", str(src), "--craft", "fx"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(f"| fx | 0.2.0 | {src.name}@fx-v0.2.0 |", (dst / "crafts/REGISTRY.md").read_text())
+        r = dyad(dst, "install", str(src), "--craft", "fx"); self.assertEqual(r.stdout.strip(), "installed crafts/fx 0.2.0: 0 changes")
+        r = dyad(dst, "install", str(src), "--craft", "fx", "--source", "named"); self.assertIn("| fx | 0.2.0 | named |", (dst / "crafts/REGISTRY.md").read_text())   # --source still overrides
+        shutil.rmtree(src, ignore_errors=True); shutil.rmtree(dst, ignore_errors=True)
+
 if __name__ == "__main__":
     unittest.main()

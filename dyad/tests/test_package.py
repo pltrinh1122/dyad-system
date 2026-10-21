@@ -157,7 +157,7 @@ class PackageTests(livetest.LiveCase):
                             "dyad.tests.test_playbooks"], capture_output=True, text=True,
                            env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 19 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 5 (#223) + the d-work play-book's 6 (#309)
+        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 22 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 5 (#223) + the d-work play-book's 6 (#309) + the port play-book's 3 (#353)
         # the target only, never the whole root: `cmd_tests` prints one `[Rule-12] … Ran` line for one
         # dotted target, where a rootful run prints one per test root (six as this repo stands). #186
         # replaced `assertNotIn("Ran 479", …)`: 479 was a whole-root total from an older tree, and the
@@ -1336,9 +1336,8 @@ class SpawnSiteTests(unittest.TestCase):
     listed here with why it may inherit `os.environ` — so a new spawn site fails until it is judged."""
     SPAWN = {"run", "Popen", "check_output", "check_call", "call", "system", "popen", "execv", "execve", "execvp",
              "execvpe", "execl", "execle", "execlp", "execlpe", "spawnv", "spawnve", "spawnl", "spawnle", "posix_spawn"}
-    GIT_ALLOWED = {   # enclosing function -> why its git call(s) run with the parent's environment
+    GIT_ALLOWED = {   # enclosing function -> why its git call(s) run with the parent's environment (core_extra left it in #353: it reads through distribute.files)
         "<module>": "REPO discovery; strips the hook's GIT_DIR itself (#142) so --show-toplevel finds the true root",
-        "core_extra": "ls-files of the repo the runner judges; a hook's GIT_DIR names that same repo",
         "tracked_files": "ls-files of the repo the runner judges; a hook's GIT_DIR names that same repo",
         "pushed_refs": "reads the refs the hook is pushing, in the repo the hook runs for (#194)",
         "cmd_guards": "rev-parse of base and HEAD in the repo being pushed; no write",
@@ -1731,6 +1730,39 @@ class InstalledRootTests(unittest.TestCase):
             self.assertEqual(self.pkg.cmd_tests(), 0)                                  # the control: a full run writes one
         self.assertIn("dyad/tests", ran)
         self.assertEqual(memo(), [self.pkg.suite_memo_key(self.pkg.suite_memo_parts())])
+
+class InstallFromTests(unittest.TestCase):
+    """`dyad install <repo> --from <src>` (d-work #353, A3): the core craft from a release archive or a tree, VERSION, roots,
+    hooks and bundled crafts read from the source, through the one install path; idempotent; the registry `source` names
+    what was installed from (`distribute.source_name`); a source without `dyad/VERSION` is refused."""
+    def run_py(self, *a):
+        return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), *a], capture_output=True, text=True)
+    def test_from_archive_then_from_tree(self):
+        pkg = load_package(); craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft")
+        d = SCRATCH.mkdtemp(); subprocess.run(["git", "init", "-q", str(d)], check=True)
+        arch = SCRATCH.mkdtemp() / "dyad-x.tar.gz"; r = self.run_py("build", str(arch)); self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.run_py("install", str(d), "--from", str(arch)); self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("; from dyad-x.tar.gz; run: git -C", r.stdout, r.stdout)
+        row = craft.registry_rows(d)[craft.CORE_NAME]
+        self.assertEqual((row["source"], row["version"], row["sha256"]), ("dyad-x.tar.gz", pkg.version(), craft.tree_sha(d, craft.CORE_NAME)))
+        self.assertEqual((d / "dyad" / "VERSION").read_text(), (PKG / "VERSION").read_text())
+        self.assertIn(pkg.IMPORT_LINE, (d / "CLAUDE.md").read_text().splitlines())                      # the core's hooks, from the archive's templates
+        for c in pkg.bundled_crafts():
+            self.assertTrue((d / "crafts" / c / "VERSION").exists(), c); self.assertIsNotNone(craft.unmodified(d, c), c)
+        r = self.run_py("install", str(d), "--from", str(arch)); self.assertIn(": 0 changes;", r.stdout, r.stdout)   # idempotent
+        r = self.run_py("install", str(d), "--from", str(PKG.parent)); self.assertEqual(r.returncode, 0, r.stderr)    # the same tree as a clone: only the row moves
+        src = pkg.distribute.source_name(PKG.parent); self.assertRegex(src, r"^.+@.+$")
+        self.assertEqual(craft.registry_rows(d)[craft.CORE_NAME]["source"], src); self.assertIn(f"; from {src}; run:", r.stdout)
+        r = self.run_py("install", str(d), "--from", str(PKG.parent)); self.assertIn(": 0 changes;", r.stdout, r.stdout)
+        r = self.run_py("install", str(d), "--from", str(SCRATCH.mkdtemp())); self.assertEqual(r.returncode, 2); self.assertIn("holds no dyad/VERSION", r.stderr)
+        r = self.run_py("install", "--from"); self.assertNotEqual(r.returncode, 0)
+        shutil.rmtree(d, ignore_errors=True)
+    def test_core_extra_reads_any_tree(self):
+        pkg = load_package()
+        self.assertEqual(pkg.core_extra(), pkg.core_extra(pkg.REPO)); self.assertTrue(all(Path(p).name.startswith("dyad-") for p in pkg.core_extra()))
+        arch = SCRATCH.mkdtemp() / "a.tar.gz"; self.run_py("build", str(arch)); root = pkg.distribute.extract(arch, SCRATCH.mkdtemp())
+        self.assertEqual(pkg.core_extra(root), pkg.core_extra())                                          # an extracted release: the same hooks, by walk
+        self.assertEqual(pkg.bundled_crafts(root / "dyad"), pkg.bundled_crafts())                        # read as text there, never executed
 
 if __name__ == "__main__":
     unittest.main()

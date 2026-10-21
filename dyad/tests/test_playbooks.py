@@ -229,5 +229,45 @@ class DworkPlaybookTests(unittest.TestCase):
         voc = (PKG / "vocabulary" / "VOCABULARY.md").read_text()
         self.assertTrue(re.search(r"^\| play-book \|.*\| 3 \| 3 \|$", voc, re.M))
 
+PORT_PLAYBOOK = PKG / "playbooks" / "port.md"
+PORT_RUNBOOK = PKG / "runbooks" / "port.md"
+PORT_STEPS = ("install", "crafts", "guards", "diff", "patch", "port")
+
+class PortPlaybookTests(unittest.TestCase):
+    """The port play-book and its run-book (#353): headings, the three procedures, the steps pinned to the run-book's
+    blocks, the bar on a mirror (Rule-2) and the citations the play-book rests on instead of restating them."""
+    def test_playbook_sections_procedures_and_citations(self):
+        text = PORT_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Default", "Procedures", "Steps", "Evidence"])
+        self.assertEqual([l[4:].split(" (")[0] for l in text.splitlines() if l.startswith("### ")], ["Forward", "Diff", "Back"])
+        for s in PORT_STEPS:
+            self.assertIn(f"`{s}`", text, s)
+        for cite in ("dyad/runbooks/port.md", "crafts/sysarch/rules/distribution.md", "crafts/sysadmin/rules/host-install.md",
+                     "dyad/rules/RULE-2-no-self-ratify.md", "dyad/rules/RULE-11-distribution-structure.md", "dyad craft diff", "--from", "--relayed-via"):
+            self.assertIn(cite, text, cite)
+        self.assertIn("nothing is mirrored", text); self.assertIn("never a sync", text)
+    def test_runbook_parses_into_the_steps(self):
+        text = PORT_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], list(PORT_STEPS))
+        self.assertEqual(rb.declared_sections(text), ["Install", "Crafts", "Guards", "Diff", "Patch", "Port"])
+        self.assertEqual({c.section for c in cmds}, set(rb.declared_sections(text)))
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual({c.name for c in cmds if c.cls == "read-only"}, {"guards", "diff", "patch"})
+        for c in cmds:
+            self.assertTrue(c.cmd, c.name); self.assertEqual(c.role, "any", c.name)
+            if c.cls != "read-only":
+                self.assertNotIn(c.undo, ("", rb.NONE), c.name); self.assertNotIn(c.postcondition, ("", rb.NONE), c.name)
+        self.assertIn("SRC", next(c.cmd for c in cmds if c.name == "install")); self.assertIn("--from", next(c.cmd for c in cmds if c.name == "install"))
+        self.assertIn("--patch", next(c.cmd for c in cmds if c.name == "patch"))
+        self.assertIn("port", rb.core_runbooks(PKG.parent))
+    def test_runbook_passes_the_craft_check_when_present(self):
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        guard = dyadlib.find_guard("workstation", "runbooks")
+        if guard is None or not hasattr(guard, "declared_sections"):
+            self.skipTest("no craft provides a run-book check that reads `# sections:`")
+        self.assertEqual([m for m in guard.check_runbook(PORT_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
+
 if __name__ == "__main__":
     unittest.main()
