@@ -72,6 +72,12 @@ which is why this paragraph is inference, stated, not a new guard (#178 falsific
 `crafts_absent` would make the subset case green too, but is a separate, unscoped change to
 `references.py`'s design).
 
+The procedure that runs this order in a receiving system — the forward-port — and its two converses, the
+by-path diff of an installed tree against its registered source and the back-port of a downstream change as
+a PR to the authoring repo with its provenance, are the core craft's port play-book
+(`dyad/playbooks/port.md`; steps `dyad/runbooks/port.md`; d-work #353). This paragraph owns the order; the
+play-book runs it and never restates it.
+
 ## What stays elsewhere
 The scripted, idempotent, tested install and the generated-file refusal are implementation
 (Rule-11 properties 5 and 6, `syseng`, #162). The guard layout inside a craft is `guards.md`.
