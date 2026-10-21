@@ -168,6 +168,22 @@ class Hooks:
     gitignore: bool = False
 
 
+def source_name(src: Path) -> str:
+    """What an install records as the registry `source` (Rule-11 property 2; d-work #353): an archive by its file
+    name; a git work tree as `<dir name>@<tag>` when HEAD is exactly a tag (`git describe --tags --exact-match`),
+    else `<dir name>@<sha12>` — so a release and `main` at the same VERSION are told apart downstream, where the
+    authoring repo's drift guard never runs (Rule-11 property 4); any other directory by its name. A function of
+    the source alone, so a second install of one source still writes 0 changes (property 5)."""
+    src = Path(src)
+    if not src.is_dir() or not _is_work_tree(src):
+        return src.name
+    for args in (["describe", "--tags", "--exact-match", "HEAD"], ["rev-parse", "--short=12", "HEAD"]):
+        r = subprocess.run(["git", *args], cwd=src, capture_output=True, text=True, env=_git_env())
+        if r.returncode == 0 and r.stdout.strip():
+            return f"{src.name}@{r.stdout.strip()}"
+    return src.name
+
+
 def source_tree(src: Path, tmp: str | None = None) -> Path:
     """`src` as a directory: itself when a directory, else the archive extracted under a temp dir."""
     src = Path(src)
