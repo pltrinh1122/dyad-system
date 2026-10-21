@@ -40,20 +40,27 @@ files and almost never merge.
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,
-  never as a lock: `<instance>/d-work/sessions/<id>.md`, one file per session, only that
-  session ever writes it — zero cross-session write conflict by construction, since no row
-  file's append-only fence is needed here. `key: value` lines: `session`, `seen` (an
+  never as a lock: `<instance>/d-work/sessions/<id>.md`, one file per `DYAD_SESSION` value, written by whichever
+  harness session holds that value — so two sessions never conflict on a file unless they were
+  configured with the same value, which nothing prevents and `touch()` warns of: it compares the
+  `writer` line (the holder's harness session id when the harness reports one, a per-process id
+  otherwise) with its own and, on a different live writer, records only its own rows and files
+  instead of unioning the other's (F1, d-work #32, #350). Advisory, as the rest of the store: a
+  warning, never a refusal. `key: value` lines: `session`, `seen` (an
   ISO-8601 UTC timestamp), `root` (the resolved filesystem path of the working tree this
   session runs `dyad` from), `rows` (the space-list of d-work ids this session has open or
-  planned), `files` (the deduplicated union of every `files touched:` line from those rows'
-  stored plan files, Rule-15 — one signal that matters: two sessions on *different* rows about
+  planned), `files` (the deduplicated union of the path-shaped tokens of every `files touched:` line from those
+  rows' stored plan files, Rule-15 — one signal that matters: two sessions on *different* rows about
   the *same file*, the near-miss this store was built to catch, d-work #185).
-  Two optional lines follow, written by `touch()` from the environment and checked only when
+  Three optional lines follow, written by `touch()` from the environment and checked only when
   present (never failing an absent one, as `writer` is handled): `host` (`<kernel> <os> <arch>`,
   the kernel token what the harness reports — `cloud` when it reports `CLAUDE_CODE_REMOTE=true`,
   `terminal` when it reports nothing — and the OS and arch from Python) and `holder` (the harness
   session id, `CLAUDE_CODE_SESSION_ID`, absent when unset): who holds the seat now, where the file's
-  name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
+  name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295); and `title`
+  (the Operator's own name for the holder's session in the hosting, read from the harness's own
+  record of it through the host adapter and written only when the Operator named the session
+  personally — absent otherwise; one line, bounded), which joins that name to the seat (#350).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable
   checkout: a raw git command from either can clobber the other's uncommitted state regardless
   of which files either is editing — verified live during #185's own execution, when a peer
@@ -102,5 +109,10 @@ carries no plan file for the `files` union to read; see the same record, amendme
 Presence gains the optional `host` and `holder` lines 2026-10-15 (d-work #294): the Operator asked
 that every registration record carry host information, and a seat's record names its current
 holder (#295); see the same record, amendment #294.
+Presence says what a presence file's single writer means and gains the optional `title` line
+2026-10-20 (d-work #350): "zero cross-session write conflict by construction" held per `DYAD_SESSION`
+value and not per session, and the fence that warned of the exception compared a per-invocation id,
+so it warned on a session's own previous command; the `files` union was reading prose as paths; see
+the same record, amendment #350.
 
 Set: System Requirements.

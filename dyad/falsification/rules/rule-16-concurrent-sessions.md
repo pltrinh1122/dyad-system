@@ -129,3 +129,39 @@ host and harness session id"; its users, Rules 3 and 16, still read correctly �
 session start, Rule-16 defines it. `dyad/guards/agent/vocabulary.py` passes.
 
 Disposition: see ledger #294.
+
+## Amendment — d-work #350 (2026-10-20, the single writer, the `title` line, and the `files` union)
+**Claim (Operator, 2026-10-20, twice: the session's two renames; plan #350 revisions 1–3):** the
+presence file should carry the Operator's own name for the session (`cab-1-e2c6869c: terminal (ds)`).
+Reaching for it exposed that Presence's "only that session ever writes it — zero cross-session write
+conflict by construction" is not what the code enforces, and that the fence of #32 which stands in
+for it is vacuous. `sessions.py`: `writer()` is the holder's harness session id (a per-process id when
+there is none), `title()` reads the Operator's name through `hostadapter.session_title`,
+`files_touched` keeps path-shaped tokens only.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 19 | The F1 warning of #32 means what it says: a different live process wrote this file under this name. | **Confirmed false, by test.** `_WRITER` was a `uuid4` computed at import and every `dyad` command is its own process, so two consecutive touches by one session each warned about the other (writers `e2b37e29ddf8` then `025f27666309`, file left `c1355aee99dc`). The fence could not tell a second holder from the same holder's next command. | `writer` is the holder's stable id (`CLAUDE_CODE_SESSION_ID`), the per-process id only as the fallback. Same holder across processes: silent. Different holder: warns. |
+| 20 | Make a different live writer a refusal rather than a warning. | **Refuted.** The store is advisory (this Rule, Enforcement: a stale or unclean presence file is never a guard failure), a refusal on a wrong signal refuses every touch, and a seat must stay takeable from any terminal (#297). | Stays a warning that records only its own rows and files. |
+| 21 | `holder` duplicates `writer` — re-attack of #294 attack 17. | **Survives, scoped; attack 17's refutation is superseded.** With a harness id the two lines are equal; they differ when none is reported (no `holder` line, `writer` a per-process id). `holder` is the displayed fact and `writer` the comparison key, and collapsing them would leave the warning with no key at all on a kernel that names no session. | Both stay; attack 17 stands only for the no-harness-id case. |
+| 22 | Read the title from the harness's files: a path of one kernel in the core craft (Rule-14 property 2). | **Survives, scoped.** One named function in `hostadapter.py` — the one place a host fact is read — taking the pid record's `name` only when `nameSource` is `user`, then `custom-title.json`; a kernel with neither writes no line and nothing fails. The precedent is `host`, which already reads what the harness reports. | `hostadapter.session_title`, absent-silent. |
+| 23 | Take the title from an exported variable. | **Refuted for this case.** An exported name is the per-terminal trap that made the seat ambiguous (#297), needs a declaration in the syseng naming table (the craft zone), and records what was typed in a shell, not what the hosting shows. | The harness's own record. |
+| 24 | A path-shape filter drops a real path with no `/` and no extension. | **Survives, scoped.** A bare top-level name (`Makefile`) is under-reported; none appears in any stored plan's list (the test over every plan on this instance asserts every kept token is path-shaped), and the field is advisory — an under-report costs a signal, never a corruption, as the brace-group rule already holds. | `_is_path`; a matched line naming text but no path is prose and takes no continuation. |
+| 25 | Easy agreement with the rename: just append `title:` to the file. | **Refuted.** `touch()` rewrites the file whole and a hand-added key does not survive it (#293, #294 attack 16); written by hand it would also be a hand edit of a store. | Written by `touch()`. |
+| 26 | The `rows` line naming seven foreign rows is an overwrite by a second holder. | **Refuted by the same test as 19.** `touch_from_open_rows` is written to list "every row this instance's own store lists as open or planned", which is every session's rows, while Presence says `rows` are "this session's". The code and the Rule disagree; the overlap signal reads every open row of the instance. | **Not fixed here.** Named as the follow-on this row owes: a notion of this session's rows, fed by the ids `dwork new` and `dwork state` write. |
+
+**Pairwise (Rule-5).** **16–2**: advisory store, no ratification event touched. **16–3**: session
+start still touches and reads the files; the warning is rarer and means what it says. **16–7**: the
+presence file is not a provenance record; the title is not written to one. **16–11**: no craft/instance
+change; `hostadapter.py` gains a function in the core craft's scripts. **16–12**: every new branch
+carries a test (`dyad/tests/guards/agent/test_sessions.py` `WriterCollisionTests`, `TitleTests`,
+`FilesTouchedTests`; `dyad/tests/test_hostadapter.py` `SessionTitleTests`). **16–14**: a harness
+file is read, nothing is pinned or added to the manifest — The World is observed (property 4).
+**16–15**: plan files are read by a stricter parser, not changed. **16–1**: agent zone, one PR.
+Others unchanged. Coherent, orthogonal.
+
+**Rule-6 term check.** No term added or defined. `presence file` (owner 16) still reads correctly for
+its users, Rules 3 and 16; its vocabulary row lists the file's contents up to `host` and `holder`
+and does not yet mention `title`, which the plan did not name (stated, not fixed here).
+
+Disposition: see ledger #350.

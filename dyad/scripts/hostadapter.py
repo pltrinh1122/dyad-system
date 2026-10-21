@@ -15,8 +15,13 @@ that this kernel's `/tmp` is not itself a symlink). `ignore_patterns` derives th
 gitignore syntax, and `write_gitignore` seeds it once (G9: a fresh install's first `dyad` command
 writes `dyad/scripts/__pycache__/`, and `git add -A` then tracks it). A third host fact either fits
 one of these two functions or earns its own, justified in the plan that adds it — never a generic
-hook (`host-facts.md` property 2)."""
+hook (`host-facts.md` property 2). `session_title` is that third fact (d-work #350, plan item A6):
+the Operator's own name for a harness session, which only the harness records.
+"""
+import json, os, re
 from pathlib import Path
+
+TITLE_MAX = 120   # the presence file's `title` line is bounded; `sessions.check_record` enforces it
 
 HEADER = "# seeded by dyad install (hostadapter.write_gitignore) from dyad/scripts/package_rules.txt\n"
 
@@ -81,3 +86,51 @@ def write_gitignore(dest) -> bool:
         return False
     f.write_text(HEADER + "\n".join(patterns) + "\n")
     return True
+
+
+def _clean_title(value) -> str | None:
+    """One line, bounded, or None: whitespace (newlines included) collapses to single spaces so a
+    title can never become a second `key: value` line of the file that stores it."""
+    if not isinstance(value, str):
+        return None
+    s = " ".join(value.split())[:TITLE_MAX].strip()
+    return s or None
+
+
+def session_title(holder: str, config_dir=None) -> str | None:
+    """The Operator's own name for harness session `holder`, as the harness records it, or None.
+
+    Read, in order, from the harness's per-process record `<config>/sessions/<pid>.json` — its
+    `name`, taken only when `nameSource` is `user`, so a name the harness generated never passes
+    as the Operator's; where several pids have held the session the latest `nameSince` wins — and
+    then from `<config>/projects/<slug>/<holder>/custom-title.json` (`customTitle`). `<config>` is
+    `config_dir`, else `CLAUDE_CONFIG_DIR`, else `~/.claude`. A kernel that keeps neither file, an
+    unreadable or malformed one, or a `holder` that is not a plain path segment gives None, never
+    an error: the title is a convenience that joins the Operator's name for a session to the seat,
+    and nothing depends on it."""
+    if not holder or "/" in holder or holder.startswith("."):
+        return None
+    base = Path(config_dir) if config_dir else Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    best = None   # (nameSince, name)
+    for f in sorted(base.glob("sessions/*.json")):
+        try:
+            rec = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(rec, dict) or rec.get("sessionId") != holder or rec.get("nameSource") != "user":
+            continue
+        name, since = _clean_title(rec.get("name")), rec.get("nameSince")
+        since = since if isinstance(since, (int, float)) else 0
+        if name and (best is None or since >= best[0]):
+            best = (since, name)
+    if best:
+        return best[1]
+    for f in sorted(base.glob(f"projects/*/{holder}/custom-title.json")):
+        try:
+            rec = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        name = _clean_title(rec.get("customTitle")) if isinstance(rec, dict) else None
+        if name:
+            return name
+    return None
