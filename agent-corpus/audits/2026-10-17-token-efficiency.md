@@ -175,8 +175,8 @@ calls, and #230 and #156 already reshaped it.
   survivor; pushing less often is not.
 
 ## 6. Reproducing the numbers
-The mining scripts lived in the session's scratchpad and are not committed; this d-work adds no code
-(plan #333). Each figure above can be re-derived with:
+The mining reports, scripts and the per-session usage table are banked as stored text in
+`2026-10-17-token-efficiency-data.md` (d-work #338); this d-work adds no code (plan #333). Each figure above can be re-derived with:
 - sessions: `list_sessions` (mine, paged), filter `session_context.sources[].git_repository.url`
   containing `dyad-system`, sum `external_metadata.usage`; price as in §2.
 - commits: `git log origin/main --numstat --no-renames --format='%H|%P|%aI|%s'`; ledger-only = every
