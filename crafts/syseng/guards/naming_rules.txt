@@ -37,11 +37,13 @@ kind: dyad/tests/test_<name>.py = dyad/tests/*.py = dyad/tests/(test_[a-z0-9_]+|
 kind: dyad/tests/guards/<corpus>/test_<entity>.py = dyad/tests/guards/**.py = dyad/tests/guards(/[a-z]+)?/(test_[a-z0-9_]+|__init__)\.py
 kind: crafts/<craft>/tests/guards/test_<entity>.py = crafts/*/tests/**.py = crafts/[a-z][a-z0-9-]*/tests(/guards)?/(test_[a-z0-9_]+|__init__)\.py
 kind: crafts/<craft>/projectors/project_<surface>.py = crafts/*/projectors/* = crafts/[a-z][a-z0-9-]*/projectors/project_[a-z]+\.py
+kind: dyad/scripts/project_<surface>.py = dyad/scripts/project_*.py = dyad/scripts/project_[a-z]+\.py
 kind: .github/workflows/dyad-<slug>.yml = .github/workflows/* = \.github/workflows/dyad-[a-z0-9-]+\.yml
 kind: <ops>/<d-work>-<hN>-<slug>.sh = <host>/ops/* = <host>/ops/(\d+-h\d+-[a-z0-9-]+(-undo)?\.sh|README\.md)
 kind: <runbooks>/<instance>.md = <host>/runbooks/* = <host>/runbooks/([a-z][a-z0-9-]*|README)\.md
 kind: <runbooks>/events/<instance>.jsonl = <host>/runbooks/events/* = <host>/runbooks/events/([a-z][a-z0-9-]*\.jsonl|README\.md)
-kind: dyad/templates/<Name> = dyad/templates/* = dyad/templates/(VERSION|[A-Za-z-]+\.md)
+kind: dyad/templates/<Name> = dyad/templates/* = dyad/templates/(VERSION|[A-Za-z-]+\.(md|txt))
+kind: dyad/templates/commands/<command>.md = dyad/templates/commands/* = dyad/templates/commands/[a-z][a-z0-9-]*\.md
 
 # files the host executes by name: the entrypoint, the hooks an install points core.hooksPath at, and the shell files a craft ships
 mode: dyad/bin/<name> = dyad/bin/* = 100755
