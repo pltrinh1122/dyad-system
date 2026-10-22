@@ -202,3 +202,22 @@ earlier (at import) rather than at its explicit call, which stays. 12–6 one te
 check`, owner 12, used by 12) and `invariant` redefined; Rule-11 and Rule-12, its users, still read
 correctly. 12–4 the block is unchanged. 12–1, 12–5, 12–7, 12–8, 12–9, 12–10, 12–13, 12–15, 12–18,
 12–19, 12–20 untouched. Coherent, orthogonal. Disposition: see ledger #203.
+
+## Amendment — d-work #381 (2026-10-22, the two kinds of check; #369 C3)
+Boundaries gain one bullet: the audit play-book (`dyad/playbooks/audit.md`) runs the self-diagnostic, two kinds of
+check at two scopes — a **coded check** and a **prose claim** read against a written attack — which the countersign
+craft's `rules/self-diagnostic.md` described and the craft's retirement (#369) moves into the core. The terms are
+adopted into the vocabulary with this child (the C2 table, rows 36 and 37, owner 12).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | The bullet makes Rule-12 own the diagnostic. | **Refuted** | It is a Boundaries bullet: it names the play-book for what Rule-12 does not own (levels, gate, budget) and keeps only the two names, because property 1's "mechanical check" *is* a coded check and the Rule's "inference stated" *is* a prose claim; the play-book binds nothing (its own first paragraph). |
+| 2 | Two more terms before their rows land (Rule-6). | **Survives, scoped** | As Rule-3's amendment #381 attack 2: the rows are written and held by the collision fence; the words appear in the play-book's glossary meanwhile. |
+| 3 | The self-diagnostic's run-book under `dyad/runbooks/` is code without a check (property 1). | **Refuted** | `dyad runbook check` (the sysadmin craft's guard, through Rule-11's runner) checks every core run-book's form and declared sections; the live run-book test reads core run-books too. The steps' commands are the ones the system already has. |
+
+Pairwise (Rule-5): 12–3 Rule-3 cites the countersign model in the same child; Rule-12 cites the audit play-book;
+neither restates the other. 12–6 two terms, defined once when their rows land. 12–11 the runner is unchanged.
+12–19 a core run-book is checked with its own section set, as Rule-19's Boundaries already say. Others untouched.
+Coherent, orthogonal.
+
+Disposition: see ledger #381 (accreted under #369; its Done rides that mandate's Done-`Y`).

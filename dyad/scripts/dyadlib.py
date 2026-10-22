@@ -416,7 +416,7 @@ class Row:
     state: str
     disposed: str
     refs: str
-    mode: str = "explicit"   # countersign mode, adopted (crafts/countersign/vocabulary/CRAFT.md); optional and last, d-work #290
+    mode: str = "explicit"   # mode: the countersign model's countersign mode (dyad/playbooks/countersign-model.md); optional and last, d-work #290
 
 _ROW = re.compile(r"^\|\s*(\d+)\s*\|")
 

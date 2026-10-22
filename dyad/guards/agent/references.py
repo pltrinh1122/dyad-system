@@ -136,11 +136,12 @@ class Corpus:
         ops = ops_scripts.ops_dir(root) if ops_scripts else None
         self.ops = {p: p.read_text(errors="ignore") for p in sorted(ops.glob("*.sh"))} if ops and ops.is_dir() else {}
         recs = []
-        for d in (pkg / "falsification" / "rules", self.inst / "falsification", self.inst / "audits"):
+        for d in (pkg / "falsification" / "rules", pkg / "falsification", self.inst / "falsification", self.inst / "audits"):
             if d.is_dir():
-                recs += sorted(d.glob("*.md"))
+                recs += sorted(d.glob("*.md"))   # `pkg / "falsification"` flat: the countersign model's records (#381), package too
         recs += dyadlib.craft_glob("falsification/rules/*.md", pkg)   # a Tended craft's own Rule records: package-shipped too (#177)
         self.records = {p: p.read_text(errors="ignore") for p in recs}
+        self.package_records = {p for p in recs if p.parent.name == "rules" or p.parent == pkg / "falsification"}   # historical provenance, never resolved against this instance's rows (#177, #381)
         self.craft_rules = {p: p.read_text(errors="ignore") for p in dyadlib.craft_glob("rules/*.md", pkg)}   # a Tended craft's own rule text (#177); never `workstation-corpus/rules/` (the host's, genuinely instance-side)
         self.runbooks = {n: runbook_core.parse(p) for n, p in runbook_core.all_runbooks(root).items()}   # {instance: [Command]}: core run-books (#165) + instance ones, no craft needed (#213 d-work #46)
         self.events = events.all_events(root) if events else {}                                              # {instance: [event dict]}
@@ -320,14 +321,15 @@ def record_ledger(c: Corpus):
     `rules/` directory (vocabulary `falsification record`: "a Rule's record lives in `rules/` and
     is package, any other is instance"). A real reference, checked against this install's own row
     store — an instance's own record citing its own missing row is a real bug (#177)."""
-    return [(c.rel(p), m) for p, text in c.records.items() if p.parent.name != "rules" for m in _LEDGER.findall(text)]
+    return [(c.rel(p), m) for p, text in c.records.items() if p not in c.package_records for m in _LEDGER.findall(text)]
 
 def record_ledger_world(c: Corpus):
     """A Rule's own falsification record — package (`dyad/falsification/rules/`) or a Tended
-    craft's (`crafts/*/falsification/rules/`), under a `rules/` directory: ships with every
+    craft's (`crafts/*/falsification/rules/`), under a `rules/` directory — or the countersign model's,
+    flat under `dyad/falsification/` (#381): ships with every
     install that carries it. Its `ledger #N` citations are the authoring instance's historical
     provenance, not a reference a receiving instance can or should resolve (#177; Q2, plan #142)."""
-    return [(c.rel(p), m) for p, text in c.records.items() if p.parent.name == "rules" for m in _LEDGER.findall(text)]
+    return [(c.rel(p), m) for p, text in c.records.items() if p in c.package_records for m in _LEDGER.findall(text)]
 
 def craft_rule_ledger(c: Corpus):
     """A Tended craft rule's own text (`crafts/*/rules/*.md`, e.g. `crafts/sysadmin/rules/host-mutation.md`

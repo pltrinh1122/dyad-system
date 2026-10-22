@@ -105,8 +105,11 @@ class AuditPlaybookTests(unittest.TestCase):
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
         self.assertEqual(heads, ["Trigger", "Phase 0 \u2014 Survey (the idempotence gate)", "Phase 1 \u2014 Regression",
                                  "Phase 2 \u2014 Fences (ungated)", "Phase 3 \u2014 Drift (detect only)", "Phase 3b \u2014 Incidents",
-                                 "Phase 4 \u2014 Record", "Conduct"])
+                                 "Phase 4 \u2014 Record", "Conduct",
+                                 "The self-diagnostic \u2014 four levels, coded checks before prose claims"])   # #381: the countersign craft's self-diagnostic, carried here
         self.assertIn("dyad/runbooks/audit.md", text)
+        self.assertIn("dyad/runbooks/self-diagnostic.md", text)
+        self.assertIn("self-diagnostic", rb.core_runbooks(PKG.parent))   # its steps are a core run-book, checked with its own section set
         self.assertIn("**Audited:** tree <hash> \u00b7 python <v> \u00b7 git <v> \u00b7 covered through <sha>, <YYYY-MM-DD>", text)
         self.assertIn("**Fences:** registry <n> lines", text)
         self.assertIn("dyad check --evidence", text)

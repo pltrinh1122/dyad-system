@@ -46,12 +46,13 @@ Any other response leaves it incomplete, to be resumed later.
   rides the mandate's Done-`Y`, which names it (Completion counter-prompt, below). It opens no
   d-work in the sense of this section's first bullet: no Operator prompt was sent, so nothing is
   suspended and nothing stacks. Under `accretion: explicit` it is asked for like any other row.
-  The terms are the countersign craft's, adopted rather than coined (Rule-13 property 1): a
-  **mandate** is the standing countersignature of **implicit mode**, and an accreted row whose
-  work departs from the mandate scope returns to explicit mode by the **escalate edge** — the
-  Agent reports it and asks (`crafts/countersign/vocabulary/CRAFT.md`;
-  `crafts/countersign/rules/interaction.md` §4). Which acts are never accretable, whatever a plan
-  says, is Rule-2's list (Binding of approval): what a `Y` may bind to is that Rule's concern.
+  The terms are the countersign model's (`dyad/playbooks/countersign-model.md`), adopted rather
+  than coined (Rule-13 property 1) and defined in the vocabulary (Rule-6): a **mandate** is the
+  standing countersignature of **implicit mode**; the plan-`Y` that creates one is the **delegate
+  edge**; and an accreted row whose work departs from the mandate scope returns to explicit mode by
+  the **escalate edge** — the Agent reports it and asks — the implicit **mode lifecycle** of that
+  play-book's Part II §4. Which acts are never accretable, whatever a plan says, is Rule-2's list
+  (Binding of approval): what a `Y` may bind to is that Rule's concern.
 - A subagent's actions are the Agent's actions, bound by the same plan and Rules. Subagents
   read, search and draft. With the preference `delegation: plan-and-execute`
   (`preferences-corpus/PREFERENCES.md`), drafting includes the plan file (Rule-15) and an
@@ -62,8 +63,8 @@ Any other response leaves it incomplete, to be resumed later.
   (Rule-8); those stay with the main Agent, the party the Operator disposes to. (E7, #107)
 
 ## Answer grammar
-Three answers to a counter-prompt, not two — the countersign craft's **answer grammar**
-(`crafts/countersign/rules/interaction.md` §2), adopted rather than coined (Rule-13 property 1):
+Three answers to a counter-prompt, not two — the countersign model's **answer grammar**
+(`dyad/playbooks/countersign-model.md` Part II §2), adopted rather than coined (Rule-13 property 1):
 - `Y` — the disposition asked for is given, bound as Rule-2's Binding of approval binds it.
 - `N`, bare — nothing is authorized. The d-work stays as it was and the Agent revises.
 - `N` with text — **amend**: the proposal is refused *and* its revision is asked for in the same
@@ -385,10 +386,10 @@ disposed entries against 2.15, with not one closing on a single disposition exce
 four handled as a mandate under #199; meanwhile `archived` had been used 0 times in 280 rows, 75
 rows sat in `backlog` at a median age of 21 days, and the transition table gave `backlog` one
 successor, so the one parent ever gated on `backlog` children could not be asked its Done question
-at all. The vocabulary is `crafts/countersign/`'s — mandate, implicit mode, escalate edge, amend —
-adopted rather than coined (Rule-13 property 1), and `amend` is the first of the four refactors
-`crafts/countersign/rules/interaction.md` §7 lists as owed by this system. See the same record,
-amendment #290. Completion counter-prompt, Ledger and Mechanisms gain the three-act Done order 2026-10-15 (d-work
+at all. The vocabulary is the countersign model's (then the Tended craft countersign, since #381
+`dyad/playbooks/countersign-model.md`) — mandate, implicit mode, escalate edge, amend — adopted rather
+than coined (Rule-13 property 1), and `amend` is the first of the four refactors that model's Part II
+§7 lists as owed by this system. See the same record, amendment #290. Completion counter-prompt, Ledger and Mechanisms gain the three-act Done order 2026-10-15 (d-work
 #202): recording the Done-`Y` set the row `done`, `done` is terminal, and the plan gate refuses every
 commit citing a terminal row, so a ratified merge that still needed one push — a rebase onto a moved
 `main`, a conflict resolved, the second PR of a sequenced set — had no admissible sequence at all.
@@ -399,6 +400,9 @@ its provenance entry, which still precede the merge; the state follows it. See t
 amendment #202. Ledger gains the d-work play-book 2026-10-15 (d-work #309): the lifecycle was spread over
 five Rules, two play-books and the CLI help, and the transition table named no inputs — a successor relation,
 not a machine; the input alphabet is now `dyadlib.INPUTS` with its invariants, and the play-book's tables are
-pinned to it and to the guards; see the same record, amendment #309.
+pinned to it and to the guards; see the same record, amendment #309. Scope and Answer grammar cite the countersign
+model by its core path, and Scope names the delegate edge and the mode lifecycle beside the escalate edge it already
+named, 2026-10-22 (d-work #381, child C3 of #369): the countersign craft is retired and its model carried by the core
+as a play-book; see the same record, amendment #381.
 
 Set: System Requirements.
