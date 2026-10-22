@@ -94,9 +94,13 @@ craft is absent, and checks nothing).
   the leader wrote a Corrections section into the plan on `main`, announced it to every seat, and ordered nothing.
   Each seat read it at its next push. The cost was one ledger commit and one message; the alternative — a plan
   revision needing your `Y` — would have cost you a question for a fact.
-- **Stacked PRs are the price of a shared record.** Two children of one seat edit one record (C1 writes it, C2
-  appends); the second PR stacks on the first and rebases when it lands. You see two PRs; you dispose both in one
-  Done over the set.
+- **Stacked PRs are the price of a shared record — and the rule for dependent children.** Two children of one
+  seat edit one record (C1 writes it, C2 appends); the second PR stacks on the first and rebases when it lands.
+  The program made it the rule (plan #385, revision 2): within one mandate, a child that depends on another
+  child's output stacks on that child's branch, with the predecessor's branch as its PR base; merge order is
+  stack order; a head that moves is re-asked. You see two PRs; you dispose both in one Done over the set. What
+  it cost before the rule: a stacked copy of a commit beside its merged original is an add/add conflict at the
+  merge (the C2 case), paid once.
 - **Names are rewritten until they carry the model.** Four falsifications of the seat names in one day (`cos-1`,
   `cos-counsel`, `cos-engineering`, `build` for the machine's seat) ended at `program, counsel, audit, engineer,
   distribute, operate`; each rename cost the leader a presence file and the Operator one question. The names you
