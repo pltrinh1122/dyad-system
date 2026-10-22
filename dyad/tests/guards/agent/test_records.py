@@ -30,6 +30,14 @@ class RecordTests(unittest.TestCase):
     def test_missing_disposition_fails(self):
         root, pkg = fixture({"rule-1-x.md": GOOD.replace("Disposition: see ledger #7.\n", "")}, {"gap.md": GOOD})
         msgs = rc.check_package(root, pkg); self.assertEqual(len(msgs), 1); self.assertIn("rule-1-x.md: no `Disposition:` line", msgs[0])
+    def test_flat_package_records_are_read(self):
+        # #381: the countersign model's records live flat under `dyad/falsification/`, package like a Rule's
+        root, pkg = fixture({"rule-1-x.md": GOOD})
+        (pkg / "falsification" / "countersign-x.md").write_text(GOOD)
+        self.assertEqual([f.name for f in rc.record_files(root, pkg)], ["rule-1-x.md", "countersign-x.md"])
+        self.assertEqual(rc.check_package(root, pkg), [])
+        (pkg / "falsification" / "countersign-x.md").write_text(GOOD.replace("Disposition: see ledger #7.\n", ""))
+        msgs = rc.check_package(root, pkg); self.assertEqual(len(msgs), 1); self.assertIn("countersign-x.md: no `Disposition:` line", msgs[0])
     def test_no_instance_dir_passes(self):
         root, pkg = fixture({"rule-1-x.md": GOOD}); self.assertEqual(rc.check_package(root, pkg), [])
     def test_live_records_pass(self):

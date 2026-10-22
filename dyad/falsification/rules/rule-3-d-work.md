@@ -504,3 +504,26 @@ the head that did land, and the later entry governs. An instance whose hosting n
 head as an ancestor therefore pays one extra Done question per merge, which is stated and not fenced.
 
 Disposition: see ledger #202.
+
+## Amendment — d-work #381 (2026-10-22, the countersign model carried by the core; #369 C3)
+Scope and Answer grammar cited the countersign craft by path five times (`crafts/countersign/vocabulary/CRAFT.md`,
+`rules/interaction.md` ×3, `crafts/countersign/`), and the craft is retired by #369 (direction (c) of the #330
+audit's D-10, `agent-corpus/falsification/countersign-consolidation.md`). The citations now name the core
+play-book `dyad/playbooks/countersign-model.md`; Scope also names the **delegate edge** (the plan-`Y` that creates
+a mandate) and the **mode lifecycle**, two of the five terms the reconciliation table (C2) adopts with this child.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A citation of a path the craft's retirement deletes turns `rule.text->path` red at C5 if any Rule still names it. | **Confirmed; closed here** | `grep -rn crafts/countersign dyad/rules/` is empty after this amendment; the one remaining mention of the craft is Provenance's history, by name and not by path. |
+| 2 | Naming the delegate edge and the mode lifecycle adds two terms with no vocabulary row, breaking Rule-6's "defined once" at the push. | **Survives, scoped** | The rows are written (the C2 table) and held by the collision fence C1's attack 6 found: they enter `VOCABULARY.md` the moment `crafts/countersign/vocabulary/CRAFT.md` stops defining them, in the same d-work (#369), which is what Rule-6's condition asks; until then the words are prose a reader finds in the play-book's glossary. The orphan check is unaffected (it reads the vocabulary's rows, not the Rule's words). |
+| 3 | A play-book is "an executable procedure … whose steps are a run-book" (the vocabulary); the model has no steps, so citing it as a play-book misuses the term. | **Survives as a concession** | The play-book says so in its second paragraph: it is the model the d-work play-book's steps realize, and it has no run-book. Rule-3's Ledger clause already reads one play-book (`d-work.md`); this citation adds a second file under the same directory, not a second kind. Whether the vocabulary's `play-book` row should widen is a C9-era question, not this child's. |
+| 4 | Easy agreement: the edit is a path change. | **Pushed to 2 and 3** | Both change what the sentence commits to. |
+
+Pairwise (Rule-5): 3–2 unchanged — Binding still owns what a plan-`Y` binds to and Scope still cites it. 3–6 two
+terms named before their rows land, scoped by attack 2; the vocabulary stays the only definition. 3–12 Rule-12's
+Boundaries gain the audit play-book's two kinds of check in the same child; neither Rule restates the other's.
+3–13 "adopted rather than coined" still cites property 1, now of a core play-book. 3–15, 3–16 the accreted-row
+bullets are untouched. 3–7, 3–9, 3–10, 3–11, 3–14, 3–18, 3–19, 3–20, 3–1, 3–4, 3–5, 3–8 untouched. Coherent,
+orthogonal.
+
+Disposition: see ledger #381 (accreted under #369; its Done rides that mandate's Done-`Y`).

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Falsification-record guard (entity `record`, agent corpus; Rule-9 owns the form, placed per Rule-11 property 1). Kernel: Python 3.12+.
-Every record — a Rule's in `dyad/falsification/rules/` (package, Rule-11 A6), any other in
-`<instance>/falsification/` — holds at least one attack table whose header names `attack`,
+Every record — a Rule's in `dyad/falsification/rules/` (package, Rule-11 A6), the countersign model's
+in `dyad/falsification/` itself (package too, since #381), any other in `<instance>/falsification/` — holds at least one attack table whose header names `attack`,
 `result` and `survivor` (any case; a leading `#` column is usual) and a `Disposition:` line
 (Rule-9 Form: disposed by the Done-Y of its d-work, by reference). Whether an attack is fair,
 a result right or a survivor implemented stays inference; the `ledger #N` reference is resolved
@@ -25,9 +25,10 @@ INVARIANTS = [("required-in-fields", lambda: set(REQUIRED) <= {f.lower() for f i
 DISPOSITION = re.compile(r"\bDisposition:")
 
 def record_files(root: Path, pkg: Path = dyadlib.PKG) -> list[Path]:
-    """Package records first, then instance records, each sorted."""
+    """Package records first — a Rule's under `falsification/rules/`, the model's flat under `falsification/`
+    (#381) — then instance records, each sorted."""
     out = []
-    for d in (pkg / "falsification" / "rules", dyadlib.instance(root) / "falsification"):
+    for d in (pkg / "falsification" / "rules", pkg / "falsification", dyadlib.instance(root) / "falsification"):
         if d.is_dir():
             out += sorted(d.glob("*.md"))
     return out

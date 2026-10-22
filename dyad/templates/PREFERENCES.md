@@ -91,9 +91,9 @@ defines what each value means.
   destructive host action (Rule-8 keeps its own counter-prompt), a release (Rule-11), a Rule-3
   Intake (its words are another Operator's, Rule-7 property 4), a preference change, or any
   mutation outside the plan — the escalate-edge test of
-  `dyad/playbooks/disposition-digest.md`. This is `crafts/countersign/`'s **implicit mode**
+  `dyad/playbooks/disposition-digest.md`. This is the countersign model's **implicit mode**
   countersigned by a **mandate**, adopted rather than coined (Rule-13 property 1); in that
-  craft's own classification (`crafts/countersign/rules/interaction.md` §5) it is an **authority
+  model's own classification (`dyad/playbooks/countersign-model.md` Part II §5) it is an **authority
   preference** — a standing countersignature that authorizes a class of act — where
   `concise-mode`, `batch-disposition-mode`, `merge-disposition` and `delegation` are **form
   preferences**, which authorize nothing. Seeded `explicit`: an authority preference is a

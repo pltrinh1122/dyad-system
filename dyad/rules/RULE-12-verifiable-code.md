@@ -16,6 +16,11 @@ behind reusable code carrying a mechanical check.
 - How the code is written so it stays verifiable — code over inference, the chosen path and its
   reuse yield, the test mapping, the invariant protocol's form and the `assert` ban: the syseng
   craft's `crafts/syseng/rules/verifiable-code.md` and `crafts/syseng/rules/invariants.md` (#162).
+- Which checks the whole system is read against, and in what order — the audit play-book
+  (`dyad/playbooks/audit.md`), whose self-diagnostic runs two kinds of check at two scopes: a **coded
+  check** (a test, a guard or an invariant — what property 1 requires every module to carry) and a
+  **prose claim**, read against a written attack — the inference this Rule says is stated where code
+  cannot run. Rule-12 keeps the two names; the play-book keeps the levels, the gate and the budget (#381).
 
 ## Conditions (triggers)
 - A plan admits more than one realization.
@@ -81,6 +86,8 @@ installs the crafts ran their authoring suites on every push (countersign-system
 see the same record, amendment #199 (N5). Property 1 gains the fail-loud check 2026-10-02 (d-work
 #203): the Operator asked for checks in the code itself, at import or on every use, at strategic
 points, in place of the tests that only exercise them; pure `INVARIANTS` are enforced at import and
-`TREE_INVARIANTS` stay in the runner's pass; see the same record, amendment #203.
+`TREE_INVARIANTS` stay in the runner's pass; see the same record, amendment #203. Boundaries gain the audit
+play-book's two kinds of check, coded check and prose claim, 2026-10-22 (d-work #381, child C3 of #369): the
+countersign craft's self-diagnostic is carried by the core's audit play-book; see the same record, amendment #381.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).
