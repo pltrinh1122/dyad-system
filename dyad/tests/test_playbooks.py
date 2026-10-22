@@ -247,6 +247,7 @@ class PortPlaybookTests(unittest.TestCase):
                      "dyad/rules/RULE-2-no-self-ratify.md", "dyad/rules/RULE-11-distribution-structure.md", "dyad craft diff", "--from", "--relayed-via"):
             self.assertIn(cite, text, cite)
         self.assertIn("nothing is mirrored", text); self.assertIn("never a sync", text)
+        self.assertIn("retired craft", text); self.assertIn("never removes it", text)   # #369 C8: retirement ports nothing
     def test_runbook_parses_into_the_steps(self):
         text = PORT_RUNBOOK.read_text()
         cmds = rb.parse_text(text)
