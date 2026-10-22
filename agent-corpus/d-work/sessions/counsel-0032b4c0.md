@@ -1,8 +1,8 @@
 session: counsel-0032b4c0
-seen: 2026-10-22T22:50:12+00:00
+seen: 2026-10-22T22:57:54+00:00
 root: /home/user/dyad-system
-rows: 372 374 380 381 382 383 390 391
-files: agent-corpus/audits/2026-10-17-dwork-countersign-mapping.md agent-corpus/audits/INCIDENTS.md agent-corpus/falsification/countersign-consolidation.md crafts/cos crafts/cos/VERSION crafts/cos/docs/operating-guide.md crafts/countersign crafts/syseng/VERSION crafts/syseng/guards/naming_rules.txt dyad/guards/agent/records.py dyad/guards/agent/references.py dyad/playbooks/audit.md dyad/playbooks/countersign-model.md dyad/playbooks/d-work.md dyad/playbooks/disposition-digest.md dyad/rules/RULE-12-verifiable-code.md dyad/rules/RULE-3-d-work.md dyad/runbooks/self-diagnostic.md dyad/templates/PREFERENCES.md dyad/vocabulary/VOCABULARY.md
-writer: aae773d2114d
+rows: 382 390 391 392
+files: agent-corpus/audits/INCIDENTS.md crafts/cos/VERSION crafts/cos/docs/operating-guide.md crafts/cos/rules/organization.md crafts/countersign dyad/vocabulary/VOCABULARY.md
+writer: 3d09a1e01f3f
 host: cloud linux x86_64
 holder: 0032b4c0-1c5b-5779-bdb8-e2280d00681c
