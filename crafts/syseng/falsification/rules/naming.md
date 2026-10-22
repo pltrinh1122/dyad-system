@@ -63,3 +63,22 @@ three crafts where 3 `kind:` rows would have said it once.
 Disposition: see ledger #100.
 
 Disposition: see ledger #162.
+
+## Amendment — d-work #378 (2026-10-22, #369 C4: three core kinds)
+
+**Finding:** the code the countersign craft consolidates into the core (plan #369 revision 3, C4) lands
+at paths no native kind classified or one rejected: `dyad/scripts/project_<surface>.py` (no kind; the
+sysarch `projection.md` names the slot), `dyad/templates/commands/<command>.md` (the templates glob
+selects one segment, so the subtree escaped classification), and the levels seed
+`dyad/templates/self-diagnostic-levels.txt`, which `dyad/templates/<Name>` selected and refused (`VERSION`
+or `.md` only).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | Widening `<Name>` to `.txt` admits any text file as a seed. | Survives, scoped | A seed is what `templates/` holds by definition (Rule-11; `instance_state` exempts the directory as seeds); the kind states shape, not aptness, as every row of this table does. |
+| 2 | A contributed `kind:` (the #100 mechanism) would do without touching the native table. | Refuted | Contribution is a craft's widening of a shape *it* needs; these are core paths, and the core contributes nothing to a craft's table — the native rows are the honest place. |
+| 3 | Three kinds selecting no path until C4's agent PR lands. | Refuted | A `kind:` that selects nothing fails nothing (only an `allow:` naming no path warns); referent before referrer (Rule-1) is exactly this order. |
+
+Three `kind:` rows in `naming_rules.txt` and the matching rows of the table. `VERSION` 0.4.0 → 0.4.1.
+
+Disposition: see ledger #378 (accreted under mandate #369; Done rides its Done-`Y`).

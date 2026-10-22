@@ -22,15 +22,19 @@ a check.
    carries `crafts/<craft>/tests/test_project_<surface>.py` (Rule-12): tests over fixture data,
    plus a live run over the instance that must produce valid output. A projector lives in the
    craft whose data it renders (the events surface is the sysadmin craft's, #160 D5); this rule is
-   the discipline every craft's projector follows.
+   the discipline every craft's projector follows. The core craft is a craft here too: a projector
+   that renders the core's own stores — the d-work rows, provenance, preferences — is
+   `dyad/scripts/project_<surface>.py` with `dyad/tests/test_project_<surface>.py` (the countersign
+   projector, consolidated into the core by #369 C4, d-work #378).
 3. **Output form: the syseng craft's.** Self-contained, generated, never committed, byte-identical
    on the same corpus state — `crafts/syseng/rules/determinism.md` (properties 1–3; lifted from
    here by #162). The Operator views a projection by opening the file or through the harness's
    artifact surface.
-4. **A registry, discovered, keyed by craft.** The core runner discovers
-   `crafts/*/projectors/project_<surface>.py` (sorted by craft, then surface), keyed
-   `craft/surface` (D3, #100/#99): one craft per **qualified** surface, collision-free by
-   construction. `dyad project craft/surface` loads the module and calls its `main`; a bare
+4. **A registry, discovered, keyed by craft.** The core runner discovers the core craft's own
+   `dyad/scripts/project_<surface>.py` first, keyed `dyad-operator/<surface>` (the core craft's name,
+   as its registry row spells it), then `crafts/*/projectors/project_<surface>.py` (sorted by craft,
+   then surface), keyed `craft/surface` (D3, #100/#99): one craft per **qualified** surface,
+   collision-free by construction. `dyad project craft/surface` loads the module and calls its `main`; a bare
    `dyad project surface` is a convenience that resolves when exactly one craft provides it, else
    lists the qualified candidates and exits 2 — the same convention `dyad check --list`'s
    `<group>/<entity>` already uses, no new pattern. `dyad project --list` prints `<craft/surface>

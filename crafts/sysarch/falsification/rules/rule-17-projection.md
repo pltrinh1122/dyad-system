@@ -87,3 +87,21 @@ p4 gains one sentence: the `--list` line is a compatibility surface for tooling 
 a further change to its columns or separator is falsified with that cost in view.
 
 Disposition: see ledger #104.
+
+## Amendment — d-work #378 (2026-10-22, #369 C4: the core craft's projector)
+
+**Finding:** the countersign projector renders core stores (rows, provenance, preferences, events,
+incidents) and is consolidated into the core by #369 (D-10 (c) carried to its end, plan #369 revision
+3); the runner discovered projectors under `crafts/*/projectors/` only, so a core projector was
+undiscoverable and `dyad project countersign` would have died with the craft tree (C5).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | p2 says a projector lives in the craft whose data it renders; a core projector contradicts the craft-only wording. | Refuted | The wording was the gap, not the principle: the core craft *is* the craft whose data this one renders. p2 names the core's slot, `dyad/scripts/project_<surface>.py` ↔ `dyad/tests/test_project_<surface>.py` (the syseng test mapping already covers it). |
+| 2 | A second discovery root re-opens the collision class D3 closed (#99). | Refuted | The key stays qualified: `dyad-operator/<surface>`, the core craft's registry name; a craft and the core naming one surface coexist, and the bare form exits 2 naming both (p4 unchanged). |
+| 3 | The sysarch registry guard "checks the craft's artifacts, never the core's" and now sees a core projector. | Survives, scoped | It checks what discovery returns (test present, `main` defined): true of the core's too; no code change, its summary counts `dyad` as one more craft. Stated. |
+| 4 | Between the core copy landing (C4) and the craft tree's deletion (C5) the surface exists twice. | Survives, scoped | Transient, by construction harmless (attack 2); the bare `dyad project countersign` is refused with both keys until C5 lands. |
+
+p2 and p4 gain the core slot and the discovery order above. `VERSION` 0.3.1 → 0.3.2.
+
+Disposition: see ledger #378 (accreted under mandate #369; Done rides its Done-`Y`).
