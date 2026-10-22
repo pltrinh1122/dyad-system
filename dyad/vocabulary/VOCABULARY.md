@@ -8,8 +8,12 @@ referenced, never defined, here. Craft terms are defined in `crafts/<craft>/voca
 and referenced here by craft name (the sysarch craft's: `projection`, `projector`, `surface`,
 `library`, `reference`, `resolver`, `guard contract`, #160; the sysadmin craft's: `read-only`, `reversible`, `destructive`,
 `change log`, `undo`, `ops script`, `postcondition`, `supervisor`, `run-book`, `health command`,
-`run-book command`, `event`, `role`, `scope`; #155; the countersign craft's: `mandate`,
-`implicit mode`, `explicit mode`, `basis`, `delegate edge`, `escalate edge`, `amend`, #290).
+`run-book command`, `event`, `role`, `scope`; #155; the cos craft's: `charter`, `leader-cos`,
+`member-cabinet`, `roll-up`, `function`, `topic`, #383). The countersign model's terms are no longer a
+craft's: the ones an Agent Rule uses are rows below (`mandate`, `mode`, `explicit mode`, `implicit mode`,
+`escalate edge`, `escalation`, `answer grammar`, `amend`, `party`, adopted by #369 C2), the rest are the
+glossary of `dyad/playbooks/countersign-model.md`, five more rows below entering with C3's Rule sentences (`countersign`, `delegate edge`, `mode lifecycle`, `coded check`, `prose claim`; #369 C3; the reconciliation table:
+`agent-corpus/falsification/countersign-consolidation.md`).
 
 | term | definition | owner | used by |
 |------|------------|-------|---------|
@@ -111,3 +115,17 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | seat | a role name (`cos`, `ds-cabinet-term-1`) bound to one presence file, `<instance>/d-work/sessions/<id>.md`, its `id` the `DYAD_SESSION` the holder runs `dyad` under; held by one harness session at a time and by many over time, never verifiable by the dyad; `cos` and `cabinet` are roles a seat plays (`agent-corpus/falsification/seat-vs-harness-session.md`, #295) | 16 | 16 |
 | holder | the harness session that holds a seat now, as the presence file's optional `holder` line records it from `CLAUDE_CODE_SESSION_ID` beside `host`, written by `touch()` and never typed; what the process says, never proven; holder history is git's (#294, #295) | 16 | 16 |
 | relayed prompt | an Operator prompt carried to a session by another agent and entered verbatim as the receiving row's `prompt` entry with the note `relayed via <session>` (`--relayed-via`, which attaches to `--prompt` and never to `--said`): the Operator's words, carrying no disposition; within one dyad system it opens a row as a prompt does, across systems it is an intake's enhancement shape (#34, #253 R29) | 3 | 3 |
+| party | who acts in the dyad: the Operator (the human party, the sole disposer) or the Agent (the sole proposer); the countersign model's third kind, an executor, the dyad has none of | 2 | 2 3 18 19 |
+| mode | the way a row obtains its disposition and who processes it: `explicit` (asked live, per row) or `implicit` (under a mandate); the row's optional field (Rule-16), absent meaning explicit; the countersign model's countersign mode, whose third value, automatic, the dyad does not realize | 3 | 3 16 |
+| explicit mode | asked live: the row's plan and completion each take the Operator's own disposition | 3 | 2 3 |
+| implicit mode | disposed in advance by a mandate: an accreted row born under the mandate's plan-`Y`, its Done riding the mandate's Done-`Y` | 3 | 3 |
+| mandate | a standing disposition for one class of row: the plan-`Y` of a plan that states a mandate scope (Rule-3), or an authority preference (`accretion: implicit`, `ledger-pr-merge: agent`); the countersign model's standing countersignature of implicit mode | 3 | 2 3 7 15 16 |
+| escalation | the unexpected returned to the Operator for a live disposition: an accreted row returned to explicit mode by the escalate edge, an incident, or an intake's origin; opens an explicit row or none | 3 | 3 |
+| escalate edge | the mode change implicit → explicit: the row's work departs from the mandate scope, so the Agent reports it and asks | 3 | 3 |
+| answer grammar | the three answers to a counter-prompt — `Y`, bare `N`, `N` with text (amend) — and what each authorizes (Rule-3) | 3 | 3 |
+| amend | the third answer: the proposal refused and its revision asked for in the same words; `N` with text, entered as a `prompt` entry of the refused d-work's own record | 3 | 3 |
+| countersign | to answer, as the second and independent party, what the first party proposed, without which nothing moves: in the dyad the Operator's disposition of the Agent's proposal; the name of the model the d-work framework is checked against (`dyad/playbooks/countersign-model.md`) | 3 | 3 |
+| delegate edge | the mode change explicit → implicit: a live disposition becomes a mandate — the plan-`Y` of a plan that states a mandate scope (Rule-3) | 3 | 3 |
+| mode lifecycle | the sequence of exchanges one mode's row passes through: explicit — prompt, plan, disposition, execution, completion evidence and Done question, disposition; implicit — a row born under a mandate, executed within its scope, reported, or returned to explicit mode by the escalate edge (`dyad/playbooks/countersign-model.md` Part II §4) | 3 | 3 |
+| coded check | a check code runs — a test, a guard or an invariant: mechanical, re-runnable, cheap; one of the two kinds of check the audit play-book's self-diagnostic runs, named for how it checks and never for what it examines | 12 | 12 |
+| prose claim | a sentence a system asserts about itself, checked by reading it against a written attack that names what would make it false; a claim with no attack is no check; the other kind the self-diagnostic runs, which may examine code | 12 | 12 |
