@@ -247,6 +247,15 @@ class FixtureTests(Fixtured):
         n, k, msgs = self.check()
         self.assertEqual(fail_kinds(msgs), set(), msgs)
         self.assertIn("warn record.ledger->provenance: 4 reference(s) to row; unresolvable (The World), inference", msgs)
+    def test_flat_package_record_is_world_never_fails(self):
+        # #381: the countersign model's records sit flat under `dyad/falsification/` (not `rules/`), package-shipped,
+        # so their `ledger #N` citations are the authoring instance's history, never resolved here
+        (self.pkg / "falsification" / "countersign-x.md").write_text(RECORD.format(n=200))
+        n, k, msgs = self.check()
+        self.assertEqual(fail_kinds(msgs), set(), msgs)
+        c = refint.Corpus(self.root, self.pkg)
+        self.assertIn("200", {t for _, t in refint.record_ledger_world(c)})
+        self.assertNotIn("200", {t for _, t in refint.record_ledger(c)})
     def test_record_ledger_instance_vs_package_split_by_source_path(self):
         # the two kinds partition the same `ledger #` field by the citing file's own path, never by
         # whether the number happens to exist (attack 2, plan #177: quoting content never reclassifies)

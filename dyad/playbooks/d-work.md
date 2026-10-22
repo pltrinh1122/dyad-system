@@ -14,9 +14,9 @@ event is a workstation-zone file the ledger commit cannot carry).
 
 It states the **architecture of the d-work framework**: the records a d-work is made of (Entity records),
 the finite-state machine those records carry (The machine), and the lifecycle by which one d-work completes
-a countersigned work session (The lifecycle) — the countersign craft's explicit-mode lifecycle
-(`crafts/countersign/rules/interaction.md` §4), whose terms are adopted rather than coined (Rule-13
-property 1) and named by craft name (Rule-6): initiation, countersign proposal, countersignature,
+a countersigned work session (The lifecycle) — the countersign model's explicit-mode lifecycle
+(`dyad/playbooks/countersign-model.md` Part II §4), whose terms are adopted rather than coined (Rule-13
+property 1): Agent vocabulary rows where a Rule uses them, that play-book's glossary and aliases otherwise (Rule-6): initiation, countersign proposal, countersignature,
 countersign report, escalation; mandate, implicit mode, amend. It redefines nothing: every state, form and
 store is cited to the Rule that owns it, and on divergence the Rule wins and the test turns red.
 
@@ -96,7 +96,7 @@ Invariants, each enforced at `dyadlib`'s import and run again by the runner's pa
 - **terminal states stay terminal** — `done` and `archived` exit only to `archived` or nowhere (Rule-16; #37).
 
 ## The lifecycle
-A d-work **completes a countersigned work session** when it reaches `done`: the countersign craft's
+A d-work **completes a countersigned work session** when it reaches `done`: the countersign model's
 explicit-mode lifecycle — initiation → countersign proposal → countersignature → execute → countersign
 report + proposal (done) → countersignature — realized as, in order:
 1. **Initiation.** An Operator prompt; the row is born `open` and the record holds the words (Rule-7). An

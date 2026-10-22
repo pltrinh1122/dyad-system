@@ -190,7 +190,7 @@ def done_recorded_not_closed(rows: list) -> list[str]:
                        f"(Rule-3 Completion, #202)")
     return out
 
-# ---- countersign mode (d-work #290)
+# ---- the row's mode (the countersign model's term, `dyad/playbooks/countersign-model.md`; d-work #290)
 def mode_changed(path: str, before, after, label: str) -> list[str]:
     """A row's `mode` never changes after the commit that adds the row. `implicit`→`explicit` would revoke a
     mandate by an edit — the escalate edge is a disposition on the row, not a rewrite of this field — and

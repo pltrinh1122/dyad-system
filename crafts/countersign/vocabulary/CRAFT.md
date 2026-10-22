@@ -9,27 +9,29 @@ carries it too, so the Agent Rules' ordinary verb *report* is not bound to the p
 Checked by the craft guard (`dyad craft check countersign`: well-formed, namespaced, every `rule`
 exists).
 
+**Adopted by the core (dyad-system #369 C2, row #380; the reconciliation table in
+`agent-corpus/falsification/countersign-consolidation.md`).** Fourteen of this table's terms are now Agent
+vocabulary rows (`dyad/vocabulary/VOCABULARY.md`) or enter it with C3's Rule sentences, and are therefore no
+longer defined here — `vocabulary.py` `check_craft` fails a craft term equal to an Agent term, so the
+definition moves before the citation (plan #369 revision 11, (i)): `countersign`, `party`, `countersign mode`
+(adopted as `mode`, the row field's own name), `explicit mode`, `implicit mode`, `mandate`, `escalation`,
+`escalate edge`, `answer grammar`, `amend`, `delegate edge`, `mode lifecycle`, `coded check`, `prose claim`.
+The rules of this craft still use them in the core's sense; the core play-book
+`dyad/playbooks/countersign-model.md` (C3) carries the model whole, and this tree is retired by C5. The
+remaining rows are the model-only terms (kept there as the play-book's glossary) and the seven aliases.
+
 | term | definition | rule |
 |------|------------|------|
-| countersign | to sign as the second, independent party an instrument the first party authored, without which the instrument is void; in a dyad, the human's answer to what the agent proposes | schema |
 | countersignature | one human act covering one act: a signer (always a human party), an answer (`yes`, `no`, `amend`), a basis, the verbatim text, a bound hash when the subject carries one, and a time; an interaction primitive | schema interaction |
 | Countersign core | the eight entities — party, act, countersign proposal, countersignature, mandate, countersign release, countersign event, escalation — and the check attribute, as `../templates/countersign-core.json`; logical, reached by projection, never a storage format | schema |
-| party | who acts in a Countersign system, of one kind: `human`, `agent` or `executor`; only a human countersigns | schema |
 | act | one consequential unit of work, in exactly one countersign mode at a time, processed by one party; a dyad-system d-work row projects to one | schema |
-| countersign mode | the way one act obtains its countersignature and who processes it: explicit, implicit or automatic; a mode of an act, never of the architecture and never a sub-system (#153) | schema |
-| explicit mode | countersigned live by a human, per act; an agent processes | schema |
-| implicit mode | countersigned in advance by a standing mandate; an agent processes | schema |
 | automatic mode | countersigned beforehand by a countersigned release; a non-inferring executor processes | schema |
 | executor | the non-inferring party that processes automatic acts; the one mode-exclusive sub-system | schema |
 | basis | how a countersignature covers its act: `per-act`, `mandate` or `release`; what dsys calls a disposition's mode, renamed here so the word `mode` keeps one sense | schema |
-| mandate | a standing countersignature for one class of act (scope: event class, plan template, budget, rights); the countersignature of implicit mode; in dyad-system, the preference `ledger-pr-merge: agent` (an authority preference) | schema interaction |
 | countersign proposal | what is put up for countersignature: one act's plan or question, authored by an agent party, with its body and, when it has one, its artifact hash; as an interaction primitive, one path, its strongest counter, a reconciliation and exactly one question, last | schema interaction |
 | countersign release | a countersigned, versioned, hashed definition (run-book, flow, craft tree) an executor runs; in dyad-system, a release tag | schema |
 | countersign event | one append-only execution record of an act, numbered by its position; in dyad-system, a run-book event | schema |
-| escalation | the unexpected returned to a human: from an act (or one outside the document), with a reason, opening an explicit act or none; in dyad-system, an intake origin or an incident; an interaction primitive, which becomes a countersign proposal in explicit mode | schema interaction |
-| delegate edge | the mode change explicit → implicit: a live countersignature becomes a mandate | schema |
 | codify edge | the mode change explicit or implicit → automatic: a practice becomes a countersigned release | schema |
-| escalate edge | the mode change automatic or implicit → explicit: the unexpected is returned for a live countersignature | schema |
 | check timing | when a check judges its target: `before` (it blocks, as dyad-system's guards do) or `after` (it judges, as dsys's referee does); a policy attribute, not a structure | schema |
 | system profile | the entities and fields a system keeps outside the Countersign core, carried in an instance's `profile` object; never mapped into the core | schema |
 | derivation rule | a stated rule by which a projector fills a core field a system does not store (dyad-system's D1–D8, `../rules/schema.md` §4 and `../rules/interaction.md` §3) | schema |
@@ -39,15 +41,10 @@ exists).
 | signal | an initiation from a registered source rather than a human: in implicit mode, what a mandate may cover; in dyad-system, an intake the Operator's `Y` admitted | interaction |
 | release trigger | the initiation of an automatic act: the occasion on which the executor runs a countersigned release | interaction |
 | countersign report | agent or executor → human: evidence (an evidence block, event ids, counts) that never asks; what it surfaces unsigned becomes an escalation | interaction |
-| answer grammar | the three answers of a countersignature — `yes`, `no`, `amend` — and each system's words mapped onto them at its boundary (dyad-system `Y` / `N` / `N` with text; dsys yes / no / counter) | interaction |
-| amend | the third answer: the proposal refused and its revision asked for in the same words, a linked re-entry; dyad-system's `N` with text, dsys's `counter` | interaction |
 | interaction imperative | one of I1–I8, binding in all three modes: only a human countersigns; one question, last; falsify before proposing; detect, don't dispose; words verbatim; no self-initiation; every act carries its mode and a countersignature reference; silence is not consent | interaction |
-| mode lifecycle | the sequence of interaction primitives one mode's act passes through (explicit: initiation, proposal, countersignature, report and done proposal; implicit: signal, mandate or escalation; automatic: release, trigger, events or escalation) | interaction |
 | form preference | a standing countersignature that shapes how countersign proposals and reports look and authorizes nothing (dyad-system: `concise-mode`, `batch-disposition-mode`, `merge-disposition`, `delegation`) | interaction |
 | authority preference | a standing countersignature that authorizes one class of act in advance: a mandate (dyad-system: `ledger-pr-merge`) | interaction |
 | command adapter | a slash-command file that invokes a procedure (a play-book, a run-book, a Rule's form) by reading it, never the procedure itself (#115); one kernel's way to offer it (`../templates/commands/`) | interaction |
-| coded check | a check code runs — a test, a guard or an invariant: mechanical, re-runnable, cheap; one of the two kinds of check a self-diagnostic needs, named for how it checks and never for what it examines (a coded check may read prose, as a Rule's block count does) | self-diagnostic |
-| prose claim | a sentence a system asserts about itself, checked by reading it against a written attack that names what would make it false; a claim with no attack is no check; the other kind a self-diagnostic needs, which may examine code; one whose attack fails on successive runs by a reading that could be written down is a candidate for code | self-diagnostic |
 | diagnostic level | one cell of the self-diagnostic's grid, a scope (unit or system) by a kind of check (coded check or prose claim): L1 unit × coded, L2 system × coded, L3 unit × prose, L4 system × prose; run in that order, each passing before the next runs | self-diagnostic |
 | self-diagnostic | the four diagnostic levels a system runs on itself on the head of `main`, one at a time, every command read-only, with K units and P samples of inference per run in rotation, writing two things in two zones: the runner's events (`<host>/runbooks/events/self-diagnostic.jsonl`, the host path's zone), committed first, and one record (`<instance>/audits/<YYYY-MM-DD>-self-diagnostic.md`) citing them; a countersign report, whose findings are escalations | self-diagnostic |
 

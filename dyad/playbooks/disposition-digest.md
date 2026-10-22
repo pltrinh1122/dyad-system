@@ -12,11 +12,10 @@ Rule-2's Binding of approval, and by the preferences `accretion`, `batch-disposi
 — `board`, `budget`, `accrete`, `held`, `sweep`, `retire`, one per section — run through
 `dyad runbook run disposition-digest <step>`, the core runner, so each step leaves an event.
 
-The vocabulary is `crafts/countersign/`'s, adopted rather than coined (Rule-13 property 1):
-**mandate**, **implicit mode**, **explicit mode**, **basis**, **delegate edge**, **escalate edge**,
-**amend** are that craft's terms (`crafts/countersign/vocabulary/CRAFT.md`), referenced by craft name
-and never redefined here (Rule-6, Master record). The lifecycle this play-book runs is written out in
-`crafts/countersign/rules/interaction.md` §4: "**implicit:** Initiation (signal) → is it covered by a
+The vocabulary is the countersign model's (`dyad/playbooks/countersign-model.md`), adopted rather than
+coined (Rule-13 property 1): **mandate**, **implicit mode**, **explicit mode**, **delegate edge**, **escalate
+edge**, **amend** are Agent vocabulary rows, **basis** that play-book's glossary term, none redefined here
+(Rule-6, Master record). The lifecycle this play-book runs is written out in that play-book's Part II §4: "**implicit:** Initiation (signal) → is it covered by a
 mandate? If yes: execute within the mandate's scope, then a countersign report. If no: escalation →
 explicit."
 
@@ -91,7 +90,7 @@ entries, mean 2.25, of which 109 cost exactly two and 51 cost more, 77 entries a
 figure.
 
 The budget is a **declaration measured against the row**, never a cap on the Operator's right to answer
-`N`. An `N` with text is an **amend** (`countersign:amend`: "the proposal refused and its revision asked
+`N`. An `N` with text is an **amend** (the vocabulary: "the proposal refused and its revision asked
 for in the same words, a linked re-entry") and costs a third disposition; the overrun is then stated in
 the next revision's own budget line — declared, not absorbed. That is the whole mechanism: the plan
 file holds a number, the row's `disposed` column holds a count, both are corpus, and the completion
@@ -107,7 +106,7 @@ row** is one the Agent opens while executing another; under `accretion: implicit
 born in **implicit mode** — `open`, `disposed: <date> Y plan (mandate #<id>)`, its provenance entry 1
 the mandate's own Operator words copied verbatim with the note `mandate #<id>, <the mandate's own
 date>` (Rule-7 property 4) — and takes no disposition of its own. Five questions, every one of which
-must pass. Any failure is the **escalate edge** (`countersign:escalate edge`: "the unexpected returned
+must pass. Any failure is the **escalate edge** (the vocabulary: "the unexpected returned
 for a live countersignature"): the row returns to **explicit mode** and is asked for.
 
 | # | question | failing means |
@@ -126,7 +125,7 @@ for a live countersignature"): the row returns to **explicit mode** and is asked
 - a **Rule-3 Intake** — its words are another Operator's, and Rule-7 property 4 binds them; no mandate
   of this Operator can stand for them. 28 of this instance's 117 accreted rows are intakes;
 - a **preference change** — the Agent never changes a value on its own (Rule-2, Not ratification), and
-  an authority preference is itself a mandate (`crafts/countersign/rules/interaction.md` §5), so
+  an authority preference is itself a mandate (`dyad/playbooks/countersign-model.md` Part II §5), so
   accreting one would be the Agent widening its own authorization;
 - **any mutation the plan did not describe** — which Rule-3 already calls a new plan.
 

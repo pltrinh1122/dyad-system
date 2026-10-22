@@ -1,0 +1,12 @@
+# seats.py data (the cos craft; rules/naming.md). One `form:` regex — the seat-name form, with the named groups
+# function, topic and hp — and one `function:` line per standing function of the default organization
+# (rules/organization.md; plan #369 revisions 8–10: program, counsel, audit, engineer, distribute, operate).
+# Read by guards/seats.py and by the core's `dyad session name` when this craft is installed (dyad-operator,
+# #369 C7); absent craft, the core prints the bare form and checks nothing. `#` comments, blank lines ignored.
+form: ^(?P<function>[a-z]+)(?:-(?P<topic>[a-z0-9]+(?:-[a-z0-9]+)*))?-(?P<hp>[0-9a-f]{8})$
+function: program
+function: counsel
+function: audit
+function: engineer
+function: distribute
+function: operate
