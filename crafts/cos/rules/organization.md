@@ -1,0 +1,117 @@
+# Organization (cos craft, Tended rule)
+
+Read by Rule-3's Ledger clause through the Operating Guide it cites (`../docs/operating-guide.md`, #369 C7) and
+by the preference `organization` (`preferences-corpus/PREFERENCES.md`, the Operator's; its template row is the
+core's). A Tended rule: any form, no Rule-4 block, no sweep, no Agent-vocabulary row. It holds the *practice* —
+how the seats beside one or many Operators are organized — and never the process: what a row is, who disposes,
+what a mandate binds and what may never be accreted stay the core's Rules (2, 3, 7, 15, 16) and are cited, not
+restated. Terms: `../vocabulary/CRAFT.md`; the core's `seat`, `holder`, `presence file`, `mandate`, `mandate scope`,
+`accreted row`, `mode`, `escalation` (`dyad/vocabulary/VOCABULARY.md`). Record: `../falsification/rules/organization.md`.
+Source: dyad-system #366 (M1–M4, stress-tested for a solo and an enterprise Operator), #367 (M4 against
+organizational-design practice), #368 (the tree and the charters), #369 revisions 4–10 (this craft, the seats and
+their names), #253 §6–§7 (the bands and the cos), #285 and #306 (the standing conduct) — the Operator's words in
+those rows' provenance records.
+
+## Intent
+State one organization every dyad system runs under unless its Operator says otherwise — **M4**: a tree of
+Operator–seat pairs in which every cos keeps a cos-board, authority is granted by content-scoped charters and
+never by identity, and every pair reads and writes the same ledgers — so that one Operator's attention scales to
+five to seven seats, and one seat's to five to seven cabinets, without a second disposer anywhere.
+
+## 1. The tree
+- **One pair is the whole organization until it is not.** A dyad system with one seat beside its Operator runs M4
+  already: that seat is its leader-cos, its board is the ledger, and no charter is needed — the core's Rules are the
+  charter. Nothing in this rule asks a one-pair system to open a second seat (the core's `d-work` play-book and
+  Rule-16 cover the one-pair case without this craft installed).
+- **The leader-cos** sits beside the Operator and keeps the board of programs: every parent row and its children
+  across the member seats. It relays the Operator's words to a seat verbatim (the core's relayed prompt, Rule-7
+  property 4), writes no row for a seat, answers no seat's question, merges nothing — it holds attention, not
+  authority (#253 R28). What it reads: one roll-up line per member seat, at most seven.
+- **A member-cos** holds one function — what the Operator watches on its board — under a charter of the mandates
+  table. It keeps its own cos-board of the rows it holds and the cabinets on it, reports by state on `main` and in
+  its presence file, announces and never orders, and asks nothing of the leader: every question is the Operator's.
+- **A member-cabinet** holds one topic of a member's function under that member's charter (a narrower fence, never
+  a wider one); it sits on the member's board. The tree is as deep as the fences nest and never deeper.
+- **Span of control.** A reader keeps five to seven lines: the Operator reads the leader's board, the leader reads
+  one line per member, a member one line per cabinet. A board longer than seven is the signal to consolidate (a
+  cabinet retired or re-homed by its own row) or to split a function — proposed to the Operator, never done by a
+  seat.
+
+## 2. The precondition: the same ledgers
+Every pair of the tree reads and writes **the same ledgers** — one row store, one provenance store, one presence
+store, one incident log (`<instance>/d-work/`, `<instance>/audits/`), on one `main` in the default case of one
+repository; in the enterprise case of several repositories, every pair's ledgers are the same set and `main` is
+each repository's own (#368, revisions 4–5). What this buys is that a seat's state is readable by every other seat
+and by every Operator from the corpus alone, with no message anyone has to have received: a row's `state`, its
+`disposed` column, its record and its presence file are the report. A seat whose ledger another seat cannot read
+is not in the tree; it is another system, and work for it is an intake (Rule-3 Intake).
+
+## 3. Charters: the mandates table
+Authority in M4 is a standing mandate in the Operator's hand, written as one row per seat of the **mandates
+table** (`preferences-corpus/MANDATES.md`, preferences zone — the Operator's, by the ordinary preferences-zone PR;
+seeded from `../templates/mandates.md`). A charter is a band in #253's sense (R23–R27) and keeps its properties:
+- **content-scoped, never identity-scoped** (R24): the fence is over paths and kinds of act, because identity is
+  the one thing this system cannot check — a seat is a presence file and a holder is what the process says;
+- **mechanically checkable where it can be** (R25): the fence names paths the zone guard and the plan gate already
+  read; what no guard reads is stated as inference in the charter's own row;
+- **under the ceiling** (R26): no charter contains what the core never lets a plan accrete — a merge to `main`, a
+  direct push to `main`, a destructive host action, a release, a preference value, an intake's words, a mutation
+  no plan described (Rule-2 Binding, Rule-3 Scope); charters narrow and never widen;
+- **superseded only by the Operator** (R27): a charter ends by the revocation its row names, which is always a
+  preferences-zone change; no seat revokes another's.
+The columns: `seat` (the name, or the name's form for a seat not yet opened), `function`, `domain` (what it owns,
+in the words the Operator watches), `fence` (the paths and act kinds its rows may touch), `ceiling` (how many rows
+one plan of that seat may accrete), `escalations` (what returns to the Operator as an explicit question whatever
+the plan says), `revocation` (the change that ends the charter). `guards/seats.py` reads the table's shape and the
+function column; what a charter *permits* is the Operator's reading, never a guard's.
+
+## 4. The default organization
+Six functions, one leader and five members (plan #369 revisions 8–10, falsified there), each named by what the
+Operator watches on its board — verbs for flows, a noun for the portfolio:
+
+| function | kind | domain | the seam it keeps |
+|---|---|---|---|
+| `program` | leader-cos | the board of programs: every parent row and its children, across the members; relay, roll-up, nothing of its own | accretes nothing; owns no domain |
+| `counsel` | member-cos | the Rules, the vocabulary, the model (`dyad/playbooks/countersign-model.md`), the crafts' governance and shape | Rule text and craft shape, never the machine's code |
+| `audit` | member-cos | the standing audit and the self-diagnostic, the incident ledger's hardening, the sweeps | delegates nothing and accretes nothing: the one member whose rows are findings, never fixes (Three Lines) |
+| `engineer` | member-cos | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb) | the machine, never its shipping |
+| `distribute` | member-cos | the shipping of every craft: install, port, release, bundle, registry, their tests (`dyad build`, `install`, `export` are its verbs) | the seam `package.py` already draws between `check` and `build/install` |
+| `operate` | member-cos | the host: read-before-act, classes, ops scripts the Operator runs, run-books, change-log rows, the services behind boards | the sysadmin craft's whole practice, delivered by the seat and executed by the Operator |
+
+A system adopts the six by copying the template; it renames, drops or adds a function by editing its own table —
+the craft ships the default, never the instance.
+
+## 5. The standing conduct of every cos
+What a cos does and never does, as the Operator tends it (#285, #306; the process residue — what a row is,
+who disposes — stays the core's):
+- **Relay verbatim.** The Operator's words reach a seat as the Operator gave them, with the row and date they were
+  given on (the core's relayed prompt and the mandate note of Rule-7 property 4); a cos adds its own words beside
+  them, never inside them.
+- **Announce, never order.** A seat reports by state — the row on `main`, its presence file, the PR — and by one
+  roll-up line; it asks the Operator and never another seat; it tells another seat what it found and never what
+  to do.
+- **Hold the question.** The leader relays each seat's completion evidence into the parent's own completion reply;
+  the Operator disposes once, over the set the evidence lists (Rule-3's Completion clause, the mandate
+  form). No seat merges on another seat's reading, and no cos reads silence as consent.
+- **Keep the board short.** A roll-up line is children held, open questions, the oldest, the stale — and nothing a
+  reader could get from the row itself.
+- **Escalate at the fence.** A row whose work leaves the charter's fence, or that the charter's ceiling does not
+  cover, returns to explicit mode and is asked (the escalate edge, Rule-3 Scope) — the escalation is the seat's own
+  line in its evidence, never a quiet widening.
+- **Never:** merge to `main` without the Operator's Done disposition, cut a release tag, write a preference value,
+  touch another seat's presence file, act on the host outside an ops script or a run-book the Operator runs
+  (Rule-8), or open a seat the mandates table does not name (a fourth seat is a new plan, plan #369 revision 5).
+
+## When
+- A seat is opened, renamed, re-homed or retired: a row of its own, under the Operator's disposition; the mandates
+  table changes by the Operator's preferences-zone PR, before the seat acts under the new row.
+- A function is added or a charter widened: the Operator's table change first; a seat never acts on a charter that
+  is not yet on `main`.
+- The tree gains a second Operator: each member pair's leader is named `program-<operator>-<hp>` (`naming.md`),
+  its ledgers the same set as the tree's (§2), its charters rows of the same table.
+
+## Inference, stated
+Whether a seat stayed inside its fence is read from its PRs' paths (the zone guard reads the zone, never the
+charter); whether a roll-up line was honest is read against the rows it summarizes; whether a holder is the seat it
+claims is never verifiable (the core's `holder`, `agent-corpus/falsification/seat-vs-harness-session.md`). The
+guard counts names and columns and nothing more.
