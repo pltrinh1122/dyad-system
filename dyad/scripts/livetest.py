@@ -39,7 +39,9 @@ if sys.version_info < (3, 12):
     sys.exit(f"livetest.py: Python 3.12+ required (kernel pin), found {sys.version.split()[0]}")
 import atexit, shutil, subprocess, tempfile, unittest
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent)); import dyadlib
+if str(Path(__file__).resolve().parent) not in sys.path:   # as runbook.py: a caller's path order stands (#378)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dyadlib
 
 EMPTY = "empty instance"       # every empty-store skip reason begins with this
 ABSENT = "absent craft"        # every craft-absent skip reason begins with this

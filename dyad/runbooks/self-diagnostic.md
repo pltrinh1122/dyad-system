@@ -7,8 +7,7 @@ its own L4 claims in a run-book copies it to `<host>/runbooks/self-diagnostic.md
 preference `host-path`), which the runner then finds first (`runbook.all_runbooks`: an instance run-book of the
 same name wins), and from then on that copy is the system's own. The
 levels file it reads is instance data: `<host>/self-diagnostic-levels.txt`, seeded by hand from
-`crafts/countersign/templates/self-diagnostic-levels.txt` (C4 of #369 moves the seed and the levels script,
-`crafts/countersign/scripts/levels.py`, into the core; until then the paths below name the craft's). Its section set is its own (the `# sections:` line above), one section per diagnostic level in the
+`dyad/templates/self-diagnostic-levels.txt` and the levels script `dyad/scripts/levels.py` (the core's since C4 of #369, d-work #378, which re-pointed the paths below from the craft's). Its section set is its own (the `# sections:` line above), one section per diagnostic level in the
 model's order — L1 unit × coded check, L2 system × coded check, L3 unit × prose claim, L4 system × prose claim
 (the play-book §2) — so the sysadmin craft's run-book guard checks it against these four and not
 against a server's ten. Each step is a `dyad-cmd` block run by either party through the core runner, which prints
@@ -51,7 +50,7 @@ evidence block's plan gate judges the checked-out ref's own range rather than th
 ## Level 1 (unit × coded check)
 `health` first: whether the diagnostic can run here at all. It prints the head and the branch, the budget, the
 newest previous record's `**Diagnosed:**` and `**Cursor:**` lines (none: the first run, and every rotation starts at
-its first item) and the levels file's own check (`crafts/countersign/scripts/levels.py`, play-book §6 — a script, not a
+its first item) and the levels file's own check (`dyad/scripts/levels.py`, play-book §6 — a script, not a
 guard, so this step and the `list` calls below are the only places it runs, never a push); its pass criterion, the
 postcondition, is that `main` is checked out and the levels file exists and passes that check, so a run off `main`,
 or a file that is absent, classifies too little or names what is gone, is red before any test runs. It is named
@@ -64,7 +63,7 @@ name: health
 class: read-only
 role: any
 undo: none
-postcondition: [ "$(git symbolic-ref -q --short HEAD)" = main ] && dyad/bin/dyad-python crafts/countersign/scripts/levels.py list unit >/dev/null 2>&1
+postcondition: [ "$(git symbolic-ref -q --short HEAD)" = main ] && dyad/bin/dyad-python dyad/scripts/levels.py list unit >/dev/null 2>&1
 scope: HEAD and its branch, <host>/self-diagnostic-levels.txt and <instance>/audits/ (read)
 
 I="${DYAD_INSTANCE:-agent-corpus}"; R="$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)"; T="$I/audits/$(date -u +%F)-self-diagnostic.md"; B="$(git symbolic-ref -q --short HEAD || echo 'a detached HEAD')"
@@ -72,7 +71,7 @@ printf 'head %s on %s · K %s · P %s · today %s\n' "$(git rev-parse --short HE
 [ "$B" = main ] || echo "not on main: the evidence block would judge this ref's own range, not the system (play-book §2, L2)"
 printf 'last record: %s\n' "${R:-none: the first run, every rotation starts at its first item}"; [ -z "$R" ] || grep -h '^\*\*Diagnosed:\*\*\|^\*\*Cursor:\*\*' "$R"
 [ ! -f "$T" ] || echo "a record already carries today's date: $T"
-dyad/bin/dyad-python crafts/countersign/scripts/levels.py
+dyad/bin/dyad-python dyad/scripts/levels.py
 ```
 
 `unit` runs every module the levels file classifies `unit`, one at a time through the runner's one-target path
@@ -89,7 +88,7 @@ undo: none
 postcondition: none
 scope: the test modules classified unit (read; a test writes only its own temporary directories)
 
-L="$(dyad/bin/dyad-python crafts/countersign/scripts/levels.py list unit)" || exit
+L="$(dyad/bin/dyad-python dyad/scripts/levels.py list unit)" || exit
 n=0; f=0; bad=""; for m in $L; do n=$((n+1)); dyad/bin/dyad check --tests "$m" || { f=$((f+1)); bad="$bad $m"; }; done
 printf 'L1 unit: %s modules, %s failed%s\n' "$n" "$f" "${bad:+:$bad}"; [ "$f" -eq 0 ]
 ```
@@ -106,7 +105,7 @@ postcondition: none
 scope: the test modules classified integration (read; scratch repos and installs live in their own temporary directories)
 
 dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit || exit
-L="$(dyad/bin/dyad-python crafts/countersign/scripts/levels.py list integration)" || exit
+L="$(dyad/bin/dyad-python dyad/scripts/levels.py list integration)" || exit
 n=0; f=0; bad=""; for m in $L; do n=$((n+1)); dyad/bin/dyad check --tests "$m" || { f=$((f+1)); bad="$bad $m"; }; done
 printf 'L2 integration: %s modules, %s failed%s\n' "$n" "$f" "${bad:+:$bad}"; [ "$f" -eq 0 ]
 ```
@@ -222,7 +221,7 @@ postcondition: test -d "${DYAD_INSTANCE:-agent-corpus}/d-work/rows"
 scope: <instance>/d-work/ and <instance>/audits/ (read; the projection is computed, not written)
 
 dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence invariants || exit
-dyad/bin/dyad-python -c 'import sys;sys.path[:0]=["dyad/scripts","crafts/countersign/projectors"];import dyadlib,project_countersign as pc;d=pc.collect(dyadlib.repo_root(),dyadlib.PKG);p=pc.check(d);[print("FAIL [project] countersign:",x) for x in p];print(("ok  " if not p else "FAIL")+" [project] countersign: "+pc.counts(d));print(pc.interaction_line(pc.interaction(d)));sys.exit(1 if p else 0)'; rc=$?
+dyad/bin/dyad-python -c 'import sys;sys.path[:0]=["dyad/scripts"];import dyadlib,project_countersign as pc;d=pc.collect(dyadlib.repo_root(),dyadlib.PKG);p=pc.check(d);[print("FAIL [project] countersign:",x) for x in p];print(("ok  " if not p else "FAIL")+" [project] countersign: "+pc.counts(d));print(pc.interaction_line(pc.interaction(d)));sys.exit(1 if p else 0)'; rc=$?
 I="${DYAD_INSTANCE:-agent-corpus}"; C="$(grep -h '^\*\*Cursor:\*\*' "$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)" 2>/dev/null | sed -n '$p')"
 dyad/bin/dyad-python - "${P:-3}" "$C" "$I" <<'PY'
 import re, sys

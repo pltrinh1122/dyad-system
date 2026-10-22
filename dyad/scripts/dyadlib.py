@@ -202,8 +202,16 @@ def runner_module(pkg: Path = PKG):
     return load_module(p, "package")
 
 def projector_files(pkg: Path = PKG) -> list[Path]:
-    """Every `crafts/<craft>/projectors/project_<surface>.py`, sorted by craft then surface (the registry's discovery order)."""
-    return craft_glob("projectors/project_*.py", pkg)
+    """The core craft's own `dyad/scripts/project_<surface>.py` first (sorted by surface), then every
+    `crafts/<craft>/projectors/project_<surface>.py`, sorted by craft then surface (the registry's discovery order;
+    crafts/sysarch/rules/projection.md p4, #378)."""
+    return sorted((pkg / "scripts").glob("project_*.py")) + craft_glob("projectors/project_*.py", pkg)
+
+CORE_CRAFT = "dyad-operator"   # the core craft's name (Rule-11 p1; its registry row, p2): the key a core projector is discovered under
+
+def projector_craft(py: Path, pkg: Path = PKG) -> str:
+    """The craft a projector file belongs to: `dyad-operator` for one under the core's `scripts/`, else the craft directory's name."""
+    return CORE_CRAFT if Path(py).resolve().parent == (pkg / "scripts").resolve() else Path(py).parents[1].name
 
 def parse_kv(text: str) -> dict[str, str]:
     """`key: value` lines (the row-file form; a craft's MANIFEST.md too, #156); blank and `#` lines skipped."""
@@ -416,7 +424,7 @@ class Row:
     state: str
     disposed: str
     refs: str
-    mode: str = "explicit"   # mode: the countersign model's countersign mode (dyad/playbooks/countersign-model.md); optional and last, d-work #290
+    mode: str = "explicit"   # mode: the countersign model's countersign mode, adopted (Rule-3 Scope; dyad/playbooks/countersign-model.md); optional and last, d-work #290
 
 _ROW = re.compile(r"^\|\s*(\d+)\s*\|")
 
@@ -444,7 +452,7 @@ FIELDS = ("id", "title", "opened", "state", "disposed", "refs")
 # required `mode` would make every past commit unparseable and the gate unrunnable. The fence reads `mode`
 # off the parsed Row, never off FIELDS, so `rows.FIELDS is dyadlib.FIELDS` stays true.
 OPTIONAL_FIELDS = ("mode",)
-MODES = frozenset({"explicit", "implicit"})   # the countersign mode of a row; a disposition's coverage is `basis`, not this
+MODES = frozenset({"explicit", "implicit"})   # the mode of a row (the countersign model's term); a disposition's coverage is `basis`, not this
 DEFAULT_MODE = Row.mode                       # the dataclass's own default: one source of truth for an absent line
 
 # d-work states and the one transition table (Rule-16 Store cites this; Rule-3 defines the states).

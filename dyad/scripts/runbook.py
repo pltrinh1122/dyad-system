@@ -30,7 +30,8 @@ if sys.version_info < (3, 12):
 import datetime, hashlib, json, os, re, shutil, subprocess, time
 from dataclasses import dataclass, asdict, fields
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+if str(Path(__file__).resolve().parent) not in sys.path:   # never reorder a caller's path: a craft test that puts its own
+    sys.path.insert(0, str(Path(__file__).resolve().parent))   # scripts/ first must keep them first (#378: a core `levels.py` shadowed the craft's)
 import dyadlib
 
 # ---- the run-book command: constants (the craft guard re-exports them; Rule-19 property 8)
