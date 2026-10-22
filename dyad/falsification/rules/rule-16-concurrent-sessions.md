@@ -157,3 +157,23 @@ path is written by the core. **16–12**: every branch carries a test (`test_ses
 read correctly for Rules 3 and 16. `dyad/guards/agent/vocabulary.py` passes.
 
 Disposition: see ledger #379 (accreted under mandate #369; Done rides its Done-`Y`).
+
+## Amendment — d-work #393 (2026-10-22, children 1–3 of #388: attendance, mode and route, derived)
+**Claim (plan #388, the Operator's `Y` of 2026-10-22, batch #385,#388):** whether an Operator sits at a seat is
+derived from the provenance records — a disposition given in the seat, within a window — never declared; over
+the live seats it reads as M3, M4 or hybrid; a seat's counter-prompt is routed by it.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 33 | A declared line (`attended: yes`) is simpler. | Refuted, as plan #388 refuted it: a declared line is a claim nobody verifies (#295); a disposition in the seat's own record is the one act that proves an Operator was there, and Rule-7 already records it. | Derived on every read; nothing written. |
+| 34 | "The leader is attended by definition while any seat is" is circular when no seat is. | Scoped: with no attended seat the reading is M3, the degenerate one-pair case (a leader alone, relaying to no one); `attendance()` says so. | Stated in the docstring. |
+| 35 | A seat whose rows were opened without `DYAD_SESSION` has records with no `session:` line and reads unattended whatever the Operator did there. | Confirmed as a cost, and true of this seat: its own rows (#377–#379, #393) carry no `session:` line. The reading is honest — no Operator has disposed in this seat's chat — but a seat that wants its attendance read must open rows under its `DYAD_SESSION`. Stated here and in the Guide (counsel's child 4). | Kept; the `dwork new` path already writes the line when the variable is set. |
+| 36 | The WHO column of a board gains `attended`/`relayed` (child 2), but the core has no board verb: `dyad dwork board` does not exist; the boards are the sysarch kanban projector and ledgerd (#336). | Confirmed; survivor: the functions a board reads (`attendance`, `attended`, `route`) are the core's here; the column lands in whichever board exists, under that board's own row — the kanban projector is sysarch's (craft zone), ledgerd's is #336's. A departure from plan #388's wording, stated. | `dyad session list` carries the reading meanwhile. |
+| 37 | The window slides, so hybrid flips. | Conceded as plan #388 conceded: the mode is a reading, the route is decided per question from the records as they stand. | — |
+
+**Pairwise (Rule-5).** **16–7**: the records are read, never written or re-shaped; Rule-7 owns them. **16–3**: where a
+question is asked is Rule-3's counter-prompt forms unchanged; this says only which chat, by the record. **16–2**: a
+relayed answer is still the Operator's `Y`, bound as Rule-2 binds it. **16–6**: one term, `attended`, owner 16.
+**16–12**: `AttendanceTests`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #393 (accreted under mandate #388; Done rides its Done-`Y`).

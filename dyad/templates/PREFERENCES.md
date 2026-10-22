@@ -20,6 +20,7 @@ defines what each value means.
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
+| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, derived from the records) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -121,3 +122,11 @@ defines what each value means.
   read. Seeded `m4`, the Operator's default: it authorizes nothing by itself — a charter is a
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cos/docs/operating-guide.md` §6).
+- `attendance-window` — how many days a disposition the Operator gave in a seat's own record keeps that
+  seat *attended* (d-work #388): a seat is attended when a provenance record whose `session:` line
+  names it holds a disposition noted neither `mandate #<id>` nor `relayed via` within the window;
+  derived by `dyad session list` on every read, never written anywhere (the record is the proof, #295).
+  Over the live seats the reading is a mode — every seat attended (M4), only the leader (M3), some
+  (hybrid) — and a seat's counter-prompt is asked in its own chat when attended and relayed through the
+  leader otherwise. Seeded `7`: a week of silence in a seat's chat reads as the Operator having left
+  it, which is what a sliding window can say; a longer or shorter window is the Operator's number.

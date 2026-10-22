@@ -59,11 +59,21 @@ DEFAULT_ORGANIZATION = "m4"                     # the Operator's default (#369: 
 SEAT_FORM = re.compile(r"^(?P<function>[a-z]+)(?:-(?P<topic>[a-z0-9]+(?:-[a-z0-9]+)*))?-(?P<hp>[0-9a-f]{8})$")   # plan #369 revision 10
 HP_LEN = 8                                      # `<hp>`: the first eight hex of the holder's harness session id
 LEADER_FUNCTION = "program"                     # the function whose bare seat is the leader (revision 10)
+# Attendance (Rule-16 Presence; d-work #388, children 1–3 as #393): whether an Operator sits at a seat is derived from
+# the provenance records, never declared — a seat is attended when a record whose `session:` line names it holds a
+# disposition given there (noted neither `mandate #<id>` nor `relayed via`) within the `attendance-window` preference.
+ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days (the template seeds 7)
+DEFAULT_ATTENDANCE_DAYS = 7
+ATTENDANCE_MODES = ("M3", "M4", "hybrid")       # only the leader attended | every live seat | some (#366, #388)
+ROUTES = ("chat", "relayed")                    # where a seat's counter-prompt is asked: its own chat, or through the leader (R29)
+_RECORD_SESSION = re.compile(r"^session:\s*(\S+)\s*$", re.M)
+_MANDATE_NOTE, _RELAYED_NOTE = "mandate #", "relayed via"
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
               ("organizations-hold-the-default", lambda: DEFAULT_ORGANIZATION in ORGANIZATIONS and len(set(ORGANIZATIONS)) == 2),
               ("seat-form-names-its-three-groups", lambda: set(SEAT_FORM.groupindex) == {"function", "topic", "hp"} and bool(SEAT_FORM.match("engineer-ledgerd-1537d8fb")) and not SEAT_FORM.match("cos-1")),
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
+              ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed") and DEFAULT_ATTENDANCE_DAYS > 0),
               ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
@@ -212,6 +222,89 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
     for w in name_problems(sid, root):   # advisory (Rule-16 Presence): the seat name against the organization's form
         print(f"warning: {w}", file=sys.stderr)
     return p
+
+def attendance_window(root: Path | None = None) -> datetime.timedelta:
+    """The `attendance-window` preference as days (a positive integer), DEFAULT_ATTENDANCE_DAYS when absent or malformed."""
+    v = dyadlib.preference(ATTENDANCE_WINDOW, root)
+    try:
+        days = int(str(v).split()[0]) if v else DEFAULT_ATTENDANCE_DAYS
+    except ValueError:
+        days = DEFAULT_ATTENDANCE_DAYS
+    return datetime.timedelta(days=days if days > 0 else DEFAULT_ATTENDANCE_DAYS)
+
+def own_disposition(note: str) -> bool:
+    """A disposition the Operator gave in the seat whose record holds it: noted neither as a mandate's words copied
+    onto an accreted row (`mandate #<id>, <date>`, Rule-7 property 4) nor as relayed through another seat."""
+    n = note.strip()
+    return not n.startswith(_MANDATE_NOTE) and _RELAYED_NOTE not in n
+
+def attendance_index(root: Path | None = None, now: datetime.date | None = None) -> dict[str, str]:
+    """{seat: latest date} over every provenance record whose `session:` line names a seat: the latest own disposition
+    within the window (`attendance_window`). Derived on every call from the store, never cached in a file (#295: the
+    record is the proof); a store that is absent gives {}."""
+    root = root or dyadlib.repo_root()
+    prov = dyadlib.load_guard("agent", "provenance")
+    d = prov.store(root)
+    if not d.is_dir():
+        return {}
+    today = now or datetime.datetime.now(datetime.UTC).date()
+    window, out = attendance_window(root), {}
+    for p in sorted(d.glob("*.md")):
+        text = p.read_text(errors="ignore")
+        m = _RECORD_SESSION.search(text)
+        if not m:
+            continue
+        seat = m.group(1)
+        for e in prov.parse(text):
+            if e["kind"] != "disposition" or not own_disposition(e["note"]):
+                continue
+            try:
+                given = datetime.date.fromisoformat(e["date"])
+            except ValueError:
+                continue
+            if datetime.timedelta(0) <= today - given <= window and e["date"] > out.get(seat, ""):
+                out[seat] = e["date"]
+    return out
+
+def attended(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str | None:
+    """The date of the latest disposition the Operator gave in `seat` within the window, or None: the seat is attended
+    when it is not None. Plan #388 child 1."""
+    return attendance_index(root, now).get(seat)
+
+def live_seats(root: Path | None = None) -> list[dict[str, str]]:
+    """Every presence file whose `seen` is within the stale window, as `read_all` parses it."""
+    return [s for s in read_all(root) if not is_stale(s.get("seen", ""))]
+
+def is_leader(seat: str, form: re.Pattern | None = None, functions: list[str] | None = None) -> bool:
+    parsed = parse_seat(seat, form)
+    return parsed is not None and seat_kind(parsed, functions) == "leader"
+
+def attendance(root: Path | None = None, now: datetime.date | None = None) -> dict:
+    """Plan #388 child 2, the mode read over the live seats: {mode, attended: {seat: date}, relayed: [seat], leaders:
+    [seat], window_days}. Every live seat attended → M4; none, or only leaders → M3; otherwise hybrid. The leader is
+    attended by definition while any seat is (plan #388 §1): an Operator disposing anywhere is present at the leader's
+    board. With no live seat the reading is M3, the degenerate one-pair case."""
+    root = root or dyadlib.repo_root()
+    form, functions, _ = seat_form()
+    index, live = attendance_index(root, now), [s.get("session", s["_path"].removesuffix(".md")) for s in live_seats(root)]
+    leaders = [s for s in live if is_leader(s, form, functions)]
+    att = {s: index[s] for s in live if s in index}
+    if att:
+        for l in leaders:
+            att.setdefault(l, max(att.values()))
+    relayed = [s for s in live if s not in att]
+    mode = "M4" if live and not relayed else ("M3" if set(att) <= set(leaders) else "hybrid")
+    return {"mode": mode, "attended": att, "relayed": relayed, "leaders": leaders, "window_days": attendance_window(root).days}
+
+def route(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str:
+    """Plan #388 child 3: where a counter-prompt this seat owes the Operator is asked — `chat` (its own) when the seat is
+    attended, `relayed` (through the leader, verbatim both ways, R29) otherwise."""
+    return ROUTES[0] if seat in attendance(root, now)["attended"] else ROUTES[1]
+
+def attendance_line(a: dict) -> str:
+    n_live = len(a["attended"]) + len(a["relayed"])
+    return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live seat(s) attended within {a['window_days']} day(s) "
+            f"(attendance is a disposition given in the seat's own record, Rule-16 Presence; the others' questions are relayed through the leader)")
 
 def system_handle(root: Path) -> str:
     """The system's short handle in a session title, `(ds)` for dyad-system: the initials of the repository
@@ -378,11 +471,15 @@ def main(a: list[str]) -> int:
         rows = read_all(root)
         if not rows:
             print("no session presence files"); return 0
+        a = attendance(root)
+        print(attendance_line(a))
         for s in rows:
             flag = "stale" if is_stale(s.get("seen", "")) else "live"
+            name = s.get("session", s["_path"].removesuffix(".md"))
+            att = f" attended={a['attended'][name]}" if name in a["attended"] else (" relayed" if name in a["relayed"] else "")
             same_flag = " [SAME ROOT AS YOU]" if (s.get("root") == str(Path(root).resolve()) and s.get("session") != session_id()) else ""
             where = (f" host={s['host']}" if s.get("host") else "") + (f" holder={s['holder']}" if s.get("holder") else "")
-            print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{same_flag}")
+            print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{att}{same_flag}")
         return 0
     msgs = check_package(Path(a[0]) if a else None)
     for m in msgs:
