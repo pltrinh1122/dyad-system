@@ -8,7 +8,7 @@ the **Operating Guide for Operators** (`docs/operating-guide.md`). Authored in d
 #383) after the countersign craft was retired into the core (C1–C5), so it requires the core only
 (`MANIFEST.md`: `dyad-operator>=0.11.0`) and defines no term the core or another craft defines. Scaffolded by
 `dyad craft new cos` through the craft run-book (`dyad/playbooks/craft-instantiation.md`; events
-`craft-20261022T011829Z-new`, `craft-20261022T011831Z-check`); version `VERSION` (0.1.0). Not bundled with the core:
+`craft-20261022T011829Z-new`, `craft-20261022T011831Z-check`); version `VERSION` (0.1.1: the Operating Guide carries #384's invariant, #385 G). Not bundled with the core:
 a one-pair system needs nothing here (`docs/operating-guide.md` §6), and no core Rule cites this craft by path —
 Rule-16 names the form's existence and reads the installed organization craft for its check (#369 C7).
 
