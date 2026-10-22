@@ -25,7 +25,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | proposer | the party that authors a proposal, PR, verdict or record — always the Agent | 2 | 2 |
 | disposer | the party that answers a counter-prompt — always the Operator | 2 | 2 |
 | clerical | execution of a decision already disposed; not a ratification event | 2 | 2 3 7 |
-| d-work | a unit of work opened by an Operator prompt and closed only by Done-Y | 3 | 2 3 4 6 7 |
+| d-work | a unit of work opened by an Operator prompt and closed only by Done-Y; the countersign model's `act` (one row projects to one act) | 3 | 2 3 4 6 7 |
 | ledger | the row-file store `agent-corpus/d-work/rows/` (Rule-16), one row per d-work, append-only; `LEDGER.md` is its rendered view | 3 | 2 3 4 5 16 |
 | row file | `<instance>/d-work/rows/<id>.md`: one d-work's id, title, opened, state, disposed, refs; never deleted, id and title immutable | 16 | 16 |
 | rendered view | `LEDGER.md` produced by `package.py ledger` from the row files; untracked | 16 | 16 |
@@ -36,12 +36,12 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | plan-Y | the Operator's `Y` to a plan; authorizes the mutation and binds every PR of the d-work to the plan | 3 | 3 |
 | Done-Y | the Operator's `Y` to a completion counter-prompt; verifies the output against intent and, under `with-done`, ratifies the named merges | 3 | 2 3 |
 | counter-prompt | a one-line `Y/N:` question the Agent asks; the Operator's answer is a disposition | 3 | 2 3 |
-| intake | a candidate d-work carried by another agent's message — a defect as an observation with evidence, or an enhancement with its Operator's verbatim prompt behind it; opens nothing until the Operator disposes | 3 | 3 7 |
+| intake | a candidate d-work carried by another agent's message — a defect as an observation with evidence, or an enhancement with its Operator's verbatim prompt behind it; opens nothing until the Operator disposes; the countersign model's `signal` | 3 | 3 7 |
 | accreted row | a row the Agent opens while executing another, inside the mandate scope its authorized plan states: born `open` under that plan-`Y`, carrying no disposition of its own, its Done riding the mandate's Done-`Y`, which names it; the countersign craft's implicit mode under a mandate, adopted rather than coined | 3 | 2 3 7 15 16 |
 | mandate scope | what a plan states if it is to accrete at all: a rule for the class of row it will open and a ceiling on how many; a plan stating none accretes nothing, and a row outside it returns to explicit mode and is asked | 3 | 2 3 |
 | batch counter-prompt | a plan or completion counter-prompt (Rule-3) naming several d-works in one question, under `batch-disposition-mode` | 3 | 2 3 |
 | pending queue | the conversational set of plan-ready and done-ready d-works not yet named in a batch counter-prompt; reported each reply while non-empty, never a corpus file | 3 | 3 |
-| disposition | an Operator answer to a counter-prompt (`Y` or `N`, optionally with text) | 3 | 2 3 7 |
+| disposition | an Operator answer to a counter-prompt (`Y` or `N`, optionally with text); the countersign model's `countersignature` | 3 | 2 3 7 |
 | open | ledger state: started; being worked or suspended by a newer prompt | 3 | 3 |
 | blocked | ledger state: the Operator deferred it naming another d-work; reopens when that one is done | 3 | 3 |
 | backlog | ledger state: opened by a disposition, not started; opens when the Operator prompts for it | 3 | 3 |
@@ -65,7 +65,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | mutation | a change to the repo or the host that a plan proposes and a plan-Y authorizes; the unit the plan binds to | 3 | 3 8 |
 | blocking question | a question the Agent must have answered by the Operator before continuing; the Agent never resolves it | 8 | 8 |
 | plan gate | the check that a PR's cited d-work carries a `Y plan` disposition (`dyad/guards/agent/prs.py`) | 3 | 3 |
-| completion reply | the Agent's reply that ends with a completion counter-prompt; carries the evidence the Operator's verification needs | 3 | 3 |
+| completion reply | the Agent's reply that ends with a completion counter-prompt; carries the evidence the Operator's verification needs — the countersign model's `countersign report`, which is that evidence and asks nothing — before its last line | 3 | 3 |
 | incident | an action or outcome the plan did not name, or a plan item not achieved as the plan said; reported at once and recorded | 3 | 3 |
 | failure mode | the mechanism by which an incident happened — the thing that would have to change for it not to recur; never the Rule breached and never the harm caused | 3 | 3 |
 | claim | anything a Rule, plan, preference or verdict would encode; falsified before it is | 9 | 9 |
@@ -73,7 +73,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | provenance store | `<instance>/d-work/provenance/`: the set of provenance records, one file per d-work id, written clerically beside the rows; raw session transcripts never enter it | 7 | 7 |
 | attack | a test that could refute a claim; recorded with its result | 9 | 9 |
 | survivor | the form of a claim that outlives its attacks; the only form implemented | 9 | 9 |
-| proposal | anything the Agent asks a disposition on | 10 | 10 |
+| proposal | anything the Agent asks a disposition on; the countersign model's `countersign proposal` (a plan file is the proposal its plan-Y answers) | 10 | 10 |
 | counter | the strongest case against the proposed path, stated fairly | 10 | 10 |
 | reconciliation | why the path holds despite the counter, or what it concedes | 10 | 10 |
 | sentinel | the phrase in `dyad/CLAUDE.md` whose report at session start proves the frame loaded; never cached | 3 | 3 |
@@ -89,7 +89,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 | export | the deterministic archive of one craft's tracked tree at HEAD, `<craft>-<version>.tar.gz` (entries under `crafts/<craft>/`), produced by the one distribution code path (`dyad/scripts/distribute.py`); the core craft's export is `dyad build` | 11 | 11 |
 | craft registry | `crafts/REGISTRY.md`: one row per installed craft — every Tended craft `dyad craft install` writes, and the core craft (`dyad-operator`) `dyad install` writes — craft, version, source, sha256 (the installed tree's identity, `distribute.archive_sha256`), d-work; instance state in the craft zone; never written by hand | 11 | 11 12 |
 | craft corpus | the tree of one craft as a Rule-1 unit: the core craft's `dyad/` in the agent zone, a Tended craft's `crafts/<craft>/` in the craft zone | 11 | 1 11 |
-| release | a git tag marking a craft's published version with its VERSION file and exported archive, or a bundle's (property 7) — `dyad-operator-vMAJOR.MINOR.PATCH` for the core craft, `<craft>-vMAJOR.MINOR.PATCH` for a Tended craft, `vMAJOR.MINOR.PATCH` for a bundle; cut only on the Operator's `Y` to `Y/N: release <tag>?` | 11 | 11 |
+| release | a git tag marking a craft's published version with its VERSION file and exported archive, or a bundle's (property 7) — `dyad-operator-vMAJOR.MINOR.PATCH` for the core craft, `<craft>-vMAJOR.MINOR.PATCH` for a Tended craft, `vMAJOR.MINOR.PATCH` for a bundle; cut only on the Operator's `Y` to `Y/N: release <tag>?`; the countersign model's `countersign release` | 11 | 11 |
 | bundle | the whole distribution one repo authors, named at pinned versions in one `BUNDLE.md`: the core craft plus every Tended craft in the tree, each row's version equal to that craft's live `VERSION`; its own version, independent of the core's; released as the unprefixed `vMAJOR.MINOR.PATCH` tag | 11 | 11 |
 | install | writing the package into another session's repo under its root plus documented prefixed hooks and its craft registry row, never overwriting a host file | 11 | 11 |
 | invariant | a named predicate over a module's data model, in one of two lists: `INVARIANTS`, pure (the module's own literals only; no filesystem, version control, module loading or environment), enforced at import by the module itself (a fail-loud check); `TREE_INVARIANTS`, which read the package tree or load modules, never run at import; the runner's pass runs both lists before any check and reports each module as `[invariant]`; a false one is an incident | 12 | 11 12 |
