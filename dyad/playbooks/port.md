@@ -32,6 +32,17 @@ a message from another system's agent opens nothing — Intake):
   `(modified)`): what changed, by path, is to be read before it is overwritten or carried upstream.
 - **back** — a change made in a receiving system's tree is to reach the authoring system: a port owed.
 
+Not a trigger: a **retired craft** — one the authoring tree no longer holds (the instance: `crafts/countersign/`,
+which #369 C5 retires once its model and code are the core's, C3–C4). Retirement is no release (Rule-11 property
+4), so it ports nothing: a receiving system holding `countersign` ≤0.3.0 keeps it until its own Operator prompts
+for the port that replaces it, and a forward port of a later core release never removes it — an install writes
+only under the installed craft's root and rewrites only that craft's registry row (Rule-11 property 2), so the
+retired craft's row stays `installed` against the source it names. That source is the authoring clone at the
+last commit that touched the craft (`346a9a2`, 0.3.0): no `countersign-v*` tag was ever cut, so a diff or a
+patch of it names that commit as `SRC`, never a tag. The authoring Agent may tell the receiving system this — a
+notice carrying its Operator's verbatim words, sent on that Operator's `Y` — and nothing more: the port is the
+receiving Operator's own prompt (Rule-3 Intake; Rule-2), never this play-book's step.
+
 ## Default
 **Every port is a PR its receiving repository's Operator disposes; nothing is mirrored.** A sync that
 merges without a disposer is self-ratification by machine (`dyad/rules/RULE-2-no-self-ratify.md`), so no
