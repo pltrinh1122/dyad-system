@@ -1,0 +1,64 @@
+# Self-diagnostic test levels (seed; the core craft's, `dyad/templates/`, since #369 C4, d-work #378 — born the countersign
+# craft's; the classification: the audit play-book `dyad/playbooks/audit.md`, its self-diagnostic section; the check:
+# `dyad/scripts/levels.py`). Copied by hand to <host>/self-diagnostic-levels.txt, the instance file levels.py checks
+# (<host> is the host path, preference `host-path`): `cp dyad/templates/self-diagnostic-levels.txt <host>/`.
+#
+# One `<level> <path>` per line: level `unit` (L1, run in-process) or `integration` (L2); path a repo-relative
+# test module, run one at a time as `dyad/bin/dyad check --tests <path>`. `#` starts a comment, here or after a
+# line's fields. The granularity is the module: a module any of whose tests builds a scratch repo, runs git,
+# installs or spawns the runner is `integration`, however many of its other tests are not.
+#
+# This seed covers the core (`dyad/tests/`) and the bundled sysadmin craft (`crafts/sysadmin/tests/`). A system adds a
+# line for every test module of every other craft it installs, and revises a line whenever a module it names is
+# added, moved, removed or changes level: the check fails on a module present but unclassified and on a line naming
+# no module, in that system's own tree, and the run-book's `health` step, which runs it, stops the diagnostic there
+# (a script, not a guard: it runs on no push). A system whose core predates a module named here deletes that line on
+# copying it. The levels below are this tree's, and a receiving system re-observes its own core's modules before
+# trusting a `unit` line: on an older core, a test that runs its guard over the live repo through
+# `dyadlib.repo_root` starts `git rev-parse` there and is `integration` by the criterion below.
+#
+# Observed, not judged, in dyad-system at bdd74b3 (core 0.11.0, 2026-10-15): each module was run alone under an
+# audit hook on `subprocess.Popen`. A module that started no child process is `unit`; one that started any — git,
+# an interpreter, a shell, the runner — is `integration`, and the comment names what it started. Reading the
+# package's own files in-process (a Rule, a data file) starts nothing and stays `unit`. A module edited since
+# can move; re-observing it is the classification's only test. The two modules the core gained from the countersign
+# craft (#378) keep the levels observed there: test_levels.py started no child process; test_project_countersign.py
+# builds scratch repos and runs git log and tags.
+
+unit        dyad/tests/guards/agent/test_frame.py
+unit        dyad/tests/guards/agent/test_plans.py
+integration dyad/tests/guards/agent/test_provenance.py     # scratch repos
+integration dyad/tests/guards/agent/test_prs.py            # scratch repos
+integration dyad/tests/guards/agent/test_records.py        # git: locates the live repo (repo_root)
+integration dyad/tests/guards/agent/test_references.py     # git over scratch trees; the guard's CLI as a child
+integration dyad/tests/guards/agent/test_rows.py           # scratch repos
+unit        dyad/tests/guards/agent/test_rules.py
+integration dyad/tests/guards/agent/test_sessions.py       # git: the live repo; the guard's CLI as a child
+unit        dyad/tests/guards/agent/test_traces.py
+unit        dyad/tests/guards/agent/test_vocabulary.py
+integration dyad/tests/guards/craft/test_crafts.py         # scratch repos, git archive; the floor check's child
+integration dyad/tests/guards/infra/test_bundle.py         # scratch repos, tags; the guard's CLI as a child
+integration dyad/tests/guards/infra/test_containment.py    # scratch repos
+integration dyad/tests/guards/infra/test_manifest.py       # scratch repos
+unit        dyad/tests/guards/preferences/test_preferences.py
+integration dyad/tests/test_concurrency.py                 # scratch repos, push
+integration dyad/tests/test_craft.py                       # the runner (craft export|install, install, check)
+integration dyad/tests/test_distribute.py                  # scratch repos, installs
+integration dyad/tests/test_dyadlib.py                     # scratch repos
+integration dyad/tests/test_dyadlib_rows.py                # git: locates the live repo (repo_root)
+integration dyad/tests/test_entrypoint.py                  # the interpreter resolver dyad/bin/dyad-python
+unit        dyad/tests/test_hostadapter.py
+integration dyad/tests/test_incidents.py                   # git: locates the live repo (repo_root)
+unit        dyad/tests/test_levels.py
+integration dyad/tests/test_livetest.py                    # the runner (install); git
+integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
+integration dyad/tests/test_playbooks.py                   # git, bash
+integration dyad/tests/test_project_countersign.py         # scratch repos, git log and tags
+integration dyad/tests/test_runbook.py                     # scratch repos, the run-book runner, bash
+integration dyad/tests/test_trace.py                       # scratch repos
+
+integration crafts/sysadmin/tests/guards/test_changelog.py     # git: locates the live repo (the live change log)
+integration crafts/sysadmin/tests/guards/test_events.py        # scratch repos
+integration crafts/sysadmin/tests/guards/test_ops_scripts.py   # scratch repos, bash
+integration crafts/sysadmin/tests/guards/test_runbooks.py      # scratch repos; the guard's CLI as a child
+integration crafts/sysadmin/tests/test_project_events.py       # git: the live repo; the projector as a child

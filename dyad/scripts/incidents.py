@@ -3,7 +3,7 @@
 The incident log `<instance>/audits/INCIDENTS.md` (Rule-3 Incidents) as one parsed entity: one row per
 incident — date, d-work, what, cause, consequence — so that the log has **one** parser instead of the
 four independent readers that grew without one (`references.py` `incident_ids`, the sysarch
-`instances` and `erd` projectors, the countersign projector; d-work #166 plan, attack A5). Those four
+`instances` and `erd` projectors, the core's countersign projector; d-work #166 plan, attack A5). Those four
 are left exactly as they are; this is the home a fifth reader uses, and the one they move to in their
 own d-work.
 The check is shape only: the table is present and headed as FIELDS says, every row has five cells, the

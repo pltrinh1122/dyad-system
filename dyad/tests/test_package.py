@@ -924,7 +924,8 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("1: planned", r.stdout)
         text = rows.joinpath("1.md").read_text()
         self.assertIn("state: planned", text); self.assertIn("Y plan", text)
-    # projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over crafts/*/projectors/, the generated projections/ pattern
+    # projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over the core's dyad/scripts/project_*.py
+    # (keyed dyad-operator/<surface>, #378) and crafts/*/projectors/, the generated projections/ pattern
     def test_project_list_prints_discovered_registry(self):
         self.require_craft("sysadmin", "sysarch")   # the surfaces below are theirs; the core-only case is its own test
         r = self.run_py("project", "--list")
@@ -935,14 +936,18 @@ class PackageTests(livetest.LiveCase):
         # Registry derived from the tree, not a literal set (#156 I1, the #46/#98 class): any craft may ship
         # a projector. The known surfaces above stay asserted, so one silently dropped still fails.
         on_disk = {f"{p.parents[1].name}/{p.stem.removeprefix('project_')}" for p in (PKG.parent / "crafts").glob("*/projectors/project_*.py")}
+        on_disk |= {f"{dyadlib.CORE_CRAFT}/{p.stem.removeprefix('project_')}" for p in (PKG / "scripts").glob("project_*.py")}   # the core's own (#378)
+        self.assertIn(f"{dyadlib.CORE_CRAFT}/countersign", on_disk)
+        self.assertRegex(r.stdout, rf"(?m)^{dyadlib.CORE_CRAFT}/countersign\s+dyad/scripts/project_countersign\.py$")
         self.assertEqual(set(reg), on_disk)
         self.assertLessEqual({f"{c}/{s}" for c, s in (("sysarch", "entities"), ("sysarch", "erd"), ("sysadmin", "events"), ("sysarch", "schema"), ("sysarch", "kanban"), ("sysarch", "instances"))}, set(reg))
         import re
-        listed = {m.group(1) for m in re.finditer(r"(?m)^(\S+/\S+)\s+crafts/\S+/projectors/project_\S+\.py$", r.stdout)}
+        listed = {m.group(1) for m in re.finditer(r"(?m)^(\S+/\S+)\s+(?:crafts/\S+/projectors|dyad/scripts)/project_\S+\.py$", r.stdout)}
         self.assertEqual(listed, on_disk, "--list prints exactly the discovered registry")
         self.assertEqual(pkg.PROJECTORS, {k: rel for k, (c, rel) in reg.items()})
         for key, (craft, rel) in reg.items():
-            self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(rel.split("/")[1], craft); self.assertEqual(key, f"{craft}/{key.split('/', 1)[1]}")
+            self.assertTrue((pkg.REPO / rel).exists(), rel); self.assertEqual(dyadlib.projector_craft(pkg.REPO / rel), craft)
+            self.assertEqual(rel.split("/")[1] if rel.startswith("crafts/") else dyadlib.CORE_CRAFT, craft); self.assertEqual(key, f"{craft}/{key.split('/', 1)[1]}")
     def test_project_unknown_surface_fails(self):
         self.require_craft("sysarch")   # with no projector the line names the install instead (test below)
         r = self.run_py("project", "nope")
@@ -959,7 +964,8 @@ class PackageTests(livetest.LiveCase):
         self.addCleanup(shutil.rmtree, d)
         bundled = pkg.bundled_crafts()
         self.assertEqual(livetest.crafts_installed(d / "dyad"), bundled, "a core install carries exactly the bundled crafts")
-        reg = sorted(k for k, (craft, _rel) in pkg.projectors().items() if craft in bundled)
+        reg = sorted(k for k, (craft, _rel) in pkg.projectors().items() if craft in bundled or craft == dyadlib.CORE_CRAFT)   # the core's own ship with every install (#378)
+        self.assertIn(f"{dyadlib.CORE_CRAFT}/countersign", reg)
         surface = "no-such-surface"   # named by no craft in this tree, bundled or not
         self.assertNotIn(surface, {k.split("/", 1)[1] for k in pkg.projectors()})
         self.assertIn("dyad craft install", pkg.NO_PROJECTOR, "the empty-registry line names the remedy")
@@ -1111,7 +1117,7 @@ class BundleWarningTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in out.iterdir()), [])
     def test_messages_split_where_the_runner_splits_them(self):
         pkg = load_package()
-        warn = "warning: 'countersign' is in the tree but unreleased (no countersign-v* tag): not yet bundled"
+        warn = "warning: 'disclosure' is in the tree but unreleased (no disclosure-v* tag): not yet bundled"   # a craft that stays unreleased (#369 C5 retires countersign)
         hard = "'sysarch': bundle names 0.1.0, the tree has 0.2.0"
         buf, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err):

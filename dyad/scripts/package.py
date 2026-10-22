@@ -102,7 +102,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
                                 files from this session's own open/planned rows' stored plans;
                                 list prints every session's file, flagging one past the stale window
-  dyad project <surface> | --list   run a projector discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
+  dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
   dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
                                 Rule-19 run-books (scripts/runbook.py, the core runner; the check is the
@@ -1175,7 +1175,8 @@ def cmd_dwork(a):
         return 0
     sys.exit(__doc__)
 
-# Projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over every
+# Projector registry (crafts/sysarch/rules/projection.md p4; #160): discovered over the core craft's own
+# dyad/scripts/project_<surface>.py (keyed `dyad-operator/<surface>`, #378) and every
 # crafts/<craft>/projectors/project_<surface>.py, sorted by craft then surface, never hand-listed. The runner
 # loads the module and calls main() — every model and rendering decision is the projector's (S4).
 # D3 (#100, #99): keyed `craft/surface` — qualified by construction, so two crafts naming the same
@@ -1187,8 +1188,9 @@ REGISTRY_FIELDS = ("surface", "craft", "module")
 NO_PROJECTOR = "no installed craft provides projectors (dyad craft install crafts/sysarch)"
 
 def projectors() -> dict[str, tuple[str, str]]:
-    """{craft/surface: (craft, repo-relative module path)}: one entry per craft's own projector file."""
-    return {f"{py.parents[1].name}/{py.stem.removeprefix('project_')}": (py.parents[1].name, str(py.relative_to(REPO)))
+    """{craft/surface: (craft, repo-relative module path)}: one entry per craft's own projector file, the core craft's
+    under its own name (`dyadlib.projector_craft`)."""
+    return {f"{dyadlib.projector_craft(py, PKG)}/{py.stem.removeprefix('project_')}": (dyadlib.projector_craft(py, PKG), str(py.relative_to(REPO)))
             for py in dyadlib.projector_files(PKG)}
 
 PROJECTORS = {k: rel for k, (c, rel) in projectors().items()}   # craft/surface -> module path (the reference guard reads it)
