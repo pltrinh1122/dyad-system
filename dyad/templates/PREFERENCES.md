@@ -19,6 +19,7 @@ defines what each value means.
 | host-path | workstation-corpus | a repo-relative directory | Rule-1 (host row of the zone table), Rule-14 (instance contribution) |
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
+| organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -111,3 +112,12 @@ defines what each value means.
   and the ledger only (d-work #215). Seeded `always`: it authorizes nothing, and a d-work whose
   harness keeps no transcript is still traced from git and the ledger with its buckets marked
   absent, so the value costs a fresh install nothing it cannot produce.
+- `organization` — the shape of the system's seats (d-work #369). `m4`: a tree of operator–agent pairs,
+  each seat a cos keeping a cos-board, authority granted by content-scoped mandates (the `mandates`
+  table the organization craft's template seeds, `crafts/cos/templates/mandates.md`), every pair
+  sharing the same ledgers; a presence file's name is a seat name in the form
+  `<function>[-<topic>]-<hp>` (Rule-16 Presence), checked advisorily by the installed organization
+  craft and printed by `dyad session name`. `flat`: one pair, one board, cabinets by row; no seat form is
+  read. Seeded `m4`, the Operator's default: it authorizes nothing by itself — a charter is a
+  preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
+  Guide's one-pair case (`crafts/cos/docs/operating-guide.md` §6).

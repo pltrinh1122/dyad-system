@@ -54,6 +54,16 @@ files and almost never merge.
   `terminal` when it reports nothing — and the OS and arch from Python) and `holder` (the harness
   session id, `CLAUDE_CODE_SESSION_ID`, absent when unset): who holds the seat now, where the file's
   name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
+  That name is the **seat name**, and under `organization: m4` (`preferences-corpus/PREFERENCES.md`; `flat`
+  is one pair and reads no form) it has a form, `<function>[-<topic>]-<hp>`: the installed organization
+  craft's data where one is installed (`crafts/cos/guards/seats_rules.txt`, its `seat` guard the check)
+  and the bare form of `sessions.py` otherwise; `touch()` prints one advisory line when a name is outside
+  it, names a function the craft does not list, or carries an `<hp>` that is not the holder's, and
+  `dyad session name` prints the name and the harness session title from the environment, setting
+  nothing (#369 C7). What the names describe — the leader's board of programs and each **member-cos**'s
+  **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
+  (`crafts/cos/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
+  advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable
   checkout: a raw git command from either can clobber the other's uncommitted state regardless
   of which files either is editing — verified live during #185's own execution, when a peer
@@ -101,6 +111,9 @@ sentence, 2026-10-14 (d-work #290): `archived` had been used 0 times in 280 rows
 carries no plan file for the `files` union to read; see the same record, amendment #290.
 Presence gains the optional `host` and `holder` lines 2026-10-15 (d-work #294): the Operator asked
 that every registration record carry host information, and a seat's record names its current
-holder (#295); see the same record, amendment #294.
+holder (#295); see the same record, amendment #294. Presence gains the seat name and its form
+2026-10-22 (d-work #379, #369 C7): thirteen live seats carried four naming conventions and two name
+collisions (#368 §1), and a Rule reads a preference only if it names it; the form's table is the
+organization craft's data and its reading stays advisory; see the same record, amendment #379.
 
 Set: System Requirements.

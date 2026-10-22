@@ -1,7 +1,7 @@
 """Session presence guard tests (agent/sessions.py, Rule-16): the store shape check (missing
 fields, an unparseable `seen`), touch's write/refresh/dedup behaviour, the `DYAD_SESSION` id vs
 the random fallback, staleness, file-overlap detection, the optional `host`/`holder` lines (#294),
-and files_touched's plan-line parser."""
+and files_touched's plan-line parser; the seat name and its form under `organization` (#369 C7, d-work #379)."""
 import os, sys, tempfile, unittest
 from unittest import mock
 from pathlib import Path
@@ -295,6 +295,120 @@ class FilesTouchedTests(unittest.TestCase):
         self.assertTrue(all("{" not in t and "}" not in t for t in out))
     def test_no_line_yields_nothing(self):
         self.assertEqual(sv.files_touched("# Plan #7\n\nno such line here\n"), [])
+
+class SeatNameTests(unittest.TestCase):
+    """#369 C7 (d-work #379): the seat-name form, its advisory reading in `touch()` under `organization: m4`,
+    silence under `flat`, and the `name` verb's report."""
+    PREFS = ("# Operator preferences\n\n| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+             "| organization | {v} | `flat` \\| `m4` | Rule-16 |\n")
+    def _root(self, org=None):
+        root = repo()
+        if org:
+            (root / "preferences-corpus").mkdir(); (root / "preferences-corpus" / "PREFERENCES.md").write_text(self.PREFS.format(v=org))
+        return root
+    def _touch(self, root, sid, holder="1537d8fb-d96b-5c89-933a-d3ee36793d70"):
+        import io, contextlib
+        env = {"DYAD_SESSION": sid}
+        if holder: env["CLAUDE_CODE_SESSION_ID"] = holder
+        with mock.patch.dict(os.environ, env):
+            if not holder: os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                sv.touch(root, ["1"], [])
+        return err.getvalue()
+    def test_bare_form_parses_the_three_shapes_and_refuses_the_old_names(self):
+        self.assertEqual(sv.parse_seat("engineer-1537d8fb"), {"function": "engineer", "topic": None, "hp": "1537d8fb"})
+        self.assertEqual(sv.parse_seat("engineer-ledgerd-1537d8fb")["topic"], "ledgerd")
+        self.assertEqual(sv.parse_seat("program-alice-59cec502")["topic"], "alice")
+        for old in ("cos-1", "cos", "unnamed-c0af8891f0a0", "ds-cabinet-term-1", "Engineer-1537d8fb"):   # `cab-2-8c27a6fd` happens to fit (function cab, topic 2): the craft's list is what refuses it
+            self.assertIsNone(sv.parse_seat(old), old)
+    def test_kind_reads_the_tokens_alone(self):
+        fns = ["program", "counsel", "engineer"]
+        self.assertEqual(sv.seat_kind(sv.parse_seat("program-59cec502"), fns), "leader")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-1537d8fb"), fns), "member-cos")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-ledgerd-1537d8fb"), fns), "cabinet")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("ops-1537d8fb"), fns), "unknown-function")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("ops-1537d8fb"), None), "member-cos")   # no craft: no list to be outside
+    def test_organization_defaults_to_m4_and_reads_flat(self):
+        self.assertEqual(sv.organization(self._root()), "flat")        # no preferences corpus at all: one pair, no form read
+        self.assertEqual(sv.organization(self._root("flat")), "flat")
+        self.assertEqual(sv.organization(self._root("m4")), "m4")
+        self.assertEqual(sv.organization(self._root("tree")), "m4")   # a value outside the enumeration reads as the default
+        root = repo(); (root / "preferences-corpus").mkdir()
+        (root / "preferences-corpus" / "PREFERENCES.md").write_text(self.PREFS.format(v="x").replace("organization", "concise-mode"))
+        self.assertEqual(sv.organization(root), "m4")                   # a corpus without the key: the seeded default
+    def test_seat_form_falls_back_to_the_bare_form_without_the_craft(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            form, functions, source = sv.seat_form()
+        self.assertEqual((form, functions, source), (sv.SEAT_FORM, None, "core"))
+    def test_seat_form_reads_the_installed_crafts_data(self):
+        import re
+        craft = mock.Mock(); craft.rules = lambda: (re.compile(r"^(?P<function>[a-z]+)(?:-(?P<topic>[a-z]+))?-(?P<hp>[0-9a-f]{8})$"), ("program", "engineer"))
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=craft):
+            form, functions, source = sv.seat_form()
+        self.assertEqual((functions, source), (["program", "engineer"], "craft"))
+        self.assertIsNotNone(form.match("engineer-1537d8fb"))
+    def test_touch_warns_once_on_a_name_outside_the_form_under_m4(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            err = self._touch(self._root("m4"), "cos-1")
+        self.assertIn("outside the form", err); self.assertEqual(err.count("warning:"), 1)
+    def test_touch_warns_on_a_foreign_hp_and_is_silent_on_the_holders(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            self.assertIn("is not this holder's", self._touch(self._root("m4"), "engineer-deadbeef"))
+            self.assertEqual(self._touch(self._root("m4"), "engineer-1537d8fb"), "")
+            self.assertEqual(self._touch(self._root("m4"), "engineer-deadbeef", holder=None), "")   # no holder reported: nothing to compare
+    def test_touch_is_silent_under_flat(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            self.assertEqual(self._touch(self._root("flat"), "cos-1"), "")
+    def test_touch_names_a_function_the_craft_does_not_list(self):
+        import re
+        craft = mock.Mock(); craft.rules = lambda: (sv.SEAT_FORM, ("program", "engineer"))
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=craft):
+            self.assertIn("function 'ops' is none of program, engineer", self._touch(self._root("m4"), "ops-1537d8fb"))
+    def test_name_verb_prints_the_seat_and_the_title_from_the_environment(self):
+        root = self._root()
+        with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "1537d8fb-d96b-5c89-933a-d3ee36793d70", "CLAUDE_CODE_REMOTE": "true", "DYAD_SESSION": "engineer-1537d8fb"}):
+            with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+                rc, lines = sv.seat_name_report(root, ["--system", "ds", "--on", "#369 C4 C7"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(lines[0], "seat:   engineer-1537d8fb (member-cos; form: core)")
+        self.assertEqual(lines[2], "title:  engineer-1537d8fb: cloud (ds) - #369 C4 C7")
+        self.assertEqual(len(lines), 3)   # DYAD_SESSION equals the seat: no note
+    def test_name_verb_takes_the_function_and_topic_from_flags_and_notes_a_differing_dyad_session(self):
+        root = self._root()
+        with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "23d654aa-0000-0000-0000-000000000000", "DYAD_SESSION": "cab-8-23d654aa"}):
+            os.environ.pop("CLAUDE_CODE_REMOTE", None)
+            with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+                rc, lines = sv.seat_name_report(root, ["--function", "operate", "--topic", "host"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(lines[0], "seat:   operate-host-23d654aa (cabinet; form: core)")
+        self.assertTrue(lines[2].startswith("title:  operate-host-23d654aa: terminal (") and lines[2].endswith(") - host"))
+        self.assertIn("DYAD_SESSION is 'cab-8-23d654aa'", lines[3])
+    def test_name_verb_refuses_without_a_function_or_a_holder(self):
+        root = self._root()
+        with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "1537d8fb-d96b-5c89-933a-d3ee36793d70"}):
+            os.environ.pop("DYAD_SESSION", None)
+            with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+                rc, lines = sv.seat_name_report(root, [])
+        self.assertEqual(rc, 2); self.assertIn("no function", lines[0])
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "engineer-1537d8fb"}):
+            os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+            with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+                rc, lines = sv.seat_name_report(root, [])
+        self.assertEqual(rc, 2); self.assertIn("no <hp>", lines[0])
+        rc, lines = sv.seat_name_report(root, ["--bogus"])
+        self.assertEqual(rc, 2); self.assertIn("usage:", lines[0])
+    def test_system_handle_is_the_directorys_initials(self):
+        self.assertEqual(sv.system_handle(Path("/tmp/x/dyad-system")), "ds")
+        self.assertEqual(sv.system_handle(Path("/tmp/x/countersign")), "c")
+    def test_name_verb_through_main(self):
+        import io, contextlib
+        with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "1537d8fb-d96b-5c89-933a-d3ee36793d70", "DYAD_SESSION": "engineer-1537d8fb"}):
+            with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    rc = sv.main(["name"])
+        self.assertEqual(rc, 0); self.assertIn("seat:   engineer-1537d8fb", out.getvalue())
 
 class ListCLITests(unittest.TestCase):
     def test_list_runs(self):
