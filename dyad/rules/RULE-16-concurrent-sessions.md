@@ -64,6 +64,14 @@ files and almost never merge.
   **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
   (`crafts/cos/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
+  Whether an Operator sits at a seat is likewise derived, never declared: a seat is **attended** when a
+  provenance record whose `session:` line names it holds a disposition given there — noted neither
+  `mandate #<id>` nor `relayed via` — within the `attendance-window` preference
+  (`preferences-corpus/PREFERENCES.md`, default 7 days), the leader by definition while any seat is;
+  read over the live seats this is a mode — every seat attended, only the leader, or some — which
+  `dyad session list` prints with each seat's route, since a counter-prompt is asked in an attended
+  seat's own chat and relayed through the leader otherwise (#253 R29; #388). No line is written for it:
+  the record is the proof (#295).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable
   checkout: a raw git command from either can clobber the other's uncommitted state regardless
   of which files either is editing — verified live during #185's own execution, when a peer
@@ -114,6 +122,9 @@ that every registration record carry host information, and a seat's record names
 holder (#295); see the same record, amendment #294. Presence gains the seat name and its form
 2026-10-22 (d-work #379, #369 C7): thirteen live seats carried four naming conventions and two name
 collisions (#368 §1), and a Rule reads a preference only if it names it; the form's table is the
-organization craft's data and its reading stays advisory; see the same record, amendment #379.
+organization craft's data and its reading stays advisory; see the same record, amendment #379. Presence gains
+attendance, derived from the provenance records, and the mode it reads 2026-10-22 (d-work #393, children 1–3 of
+#388): the relay between seats had been found to fit one attended pair at the leader with every other seat
+unattended (#386), and nothing said which; see the same record, amendment #393.
 
 Set: System Requirements.

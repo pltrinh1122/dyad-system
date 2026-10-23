@@ -105,7 +105,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
                                 files from this session's own open/planned rows' stored plans;
-                                list prints every session's file, flagging one past the stale window
+                                list prints every session's file, flagging one past the stale window, with the
+                                attendance mode over the live seats (M3 | M4 | hybrid) and each seat's attended
+                                date or `relayed` (a disposition given in the seat's own record within the
+                                `attendance-window` preference; Rule-16 Presence, #388)
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
   dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>

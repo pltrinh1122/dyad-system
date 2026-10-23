@@ -410,6 +410,83 @@ class SeatNameTests(unittest.TestCase):
                     rc = sv.main(["name"])
         self.assertEqual(rc, 0); self.assertIn("seat:   engineer-1537d8fb", out.getvalue())
 
+class AttendanceTests(unittest.TestCase):
+    """d-work #393 (children 1–3 of #388): attendance derived from the provenance records, the mode over the live
+    seats, the route of a seat's counter-prompt."""
+    TODAY = __import__("datetime").date(2026, 10, 22)
+    def _repo(self, prefs=None):
+        root = repo()
+        (root / "agent-corpus" / "d-work" / "provenance").mkdir()
+        if prefs is not None:
+            (root / "preferences-corpus").mkdir()
+            (root / "preferences-corpus" / "PREFERENCES.md").write_text(
+                "# Operator preferences\n\n| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+                f"| attendance-window | {prefs} | days | Rule-16 |\n")
+        return root
+    def _record(self, root, rid, seat, entries):
+        body = f"# Provenance #{rid}\n\n" + (f"session: {seat}\n\n" if seat else "")
+        for n, (kind, date, note) in enumerate(entries, 1):
+            body += f"## {n} {kind} {date}{(' ' + note) if note else ''}\n\n```\nY\n```\n\n"
+        (root / "agent-corpus" / "d-work" / "provenance" / f"{rid}.md").write_text(body)
+    def _presence(self, root, seat, live=True):
+        seen = _now() if live else "2026-01-01T00:00:00+00:00"
+        (root / "agent-corpus" / "d-work" / "sessions" / f"{seat}.md").write_text(f"session: {seat}\nseen: {seen}\nroot: /x\nrows: 1\nfiles: \n")
+    def test_own_disposition_excludes_mandate_and_relayed_notes(self):
+        self.assertTrue(sv.own_disposition("plan")); self.assertTrue(sv.own_disposition("")); self.assertTrue(sv.own_disposition("done (merges PR #3)"))
+        self.assertFalse(sv.own_disposition("mandate #369, 2026-10-21")); self.assertFalse(sv.own_disposition("plan, relayed via program-59cec502"))
+    def test_attended_reads_the_latest_own_disposition_within_the_window(self):
+        root = self._repo()
+        self._record(root, 1, "counsel-0032b4c0", [("prompt", "2026-10-20", ""), ("disposition", "2026-10-20", "plan"), ("disposition", "2026-10-21", "done")])
+        self._record(root, 2, "engineer-1537d8fb", [("disposition", "2026-10-22", "mandate #369, 2026-10-21")])     # an accreted row's copied words
+        self._record(root, 3, "audit-aaaaaaaa", [("disposition", "2026-10-21", "plan, relayed via program-59cec502")])
+        self._record(root, 4, "operate-bbbbbbbb", [("disposition", "2026-10-01", "plan")])                            # outside the window
+        self._record(root, 5, None, [("disposition", "2026-10-22", "plan")])                                           # no session line: no seat
+        self.assertEqual(sv.attended("counsel-0032b4c0", root, self.TODAY), "2026-10-21")
+        for seat in ("engineer-1537d8fb", "audit-aaaaaaaa", "operate-bbbbbbbb", "nobody"):
+            self.assertIsNone(sv.attended(seat, root, self.TODAY), seat)
+        self.assertEqual(sv.attendance_index(root, self.TODAY), {"counsel-0032b4c0": "2026-10-21"})
+    def test_window_is_the_preference_default_seven(self):
+        root = self._repo()
+        self.assertEqual(sv.attendance_window(root).days, 7)
+        self.assertEqual(sv.attendance_window(self._repo("30")).days, 30)
+        self.assertEqual(sv.attendance_window(self._repo("none")).days, 7)      # malformed: the default
+        self.assertEqual(sv.attendance_window(self._repo("-2")).days, 7)        # not positive: the default
+        root = self._repo("1"); self._record(root, 1, "counsel-0032b4c0", [("disposition", "2026-10-20", "plan")])
+        self.assertIsNone(sv.attended("counsel-0032b4c0", root, self.TODAY))
+    def test_mode_m4_when_every_live_seat_is_attended(self):
+        root = self._repo()
+        for s in ("program-59cec502", "counsel-0032b4c0"):
+            self._presence(root, s); self._record(root, hash(s) % 1000 + 10, s, [("disposition", "2026-10-22", "plan")])
+        self._presence(root, "operate-bbbbbbbb", live=False)                      # stale: not a live seat
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            a = sv.attendance(root, self.TODAY)
+        self.assertEqual((a["mode"], a["relayed"], a["leaders"]), ("M4", [], ["program-59cec502"]))
+        self.assertEqual(sv.route("counsel-0032b4c0", root, self.TODAY), "chat")
+    def test_mode_m3_when_only_the_leader_is_attended_and_the_leader_counts_by_definition(self):
+        root = self._repo()
+        for s in ("program-59cec502", "counsel-0032b4c0", "engineer-1537d8fb"):
+            self._presence(root, s)
+        self._record(root, 11, "program-59cec502", [("disposition", "2026-10-22", "plan")])
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            a = sv.attendance(root, self.TODAY)
+        self.assertEqual((a["mode"], sorted(a["relayed"])), ("M3", ["counsel-0032b4c0", "engineer-1537d8fb"]))
+        self.assertEqual(sv.route("engineer-1537d8fb", root, self.TODAY), "relayed")
+        root2 = self._repo()                                                       # the Operator disposed in a member seat only
+        for s in ("program-59cec502", "counsel-0032b4c0", "engineer-1537d8fb"):
+            self._presence(root2, s)
+        self._record(root2, 12, "counsel-0032b4c0", [("disposition", "2026-10-22", "plan")])
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            a = sv.attendance(root2, self.TODAY)
+        self.assertEqual((a["mode"], sorted(a["attended"]), a["relayed"]), ("hybrid", ["counsel-0032b4c0", "program-59cec502"], ["engineer-1537d8fb"]))
+    def test_no_live_seat_reads_m3(self):
+        root = self._repo()
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            a = sv.attendance(root, self.TODAY)
+        self.assertEqual((a["mode"], a["attended"], a["relayed"]), ("M3", {}, []))
+        self.assertIn("mode: M3 — 0 of 0 live seat(s) attended within 7 day(s)", sv.attendance_line(a))
+    def test_absent_store_gives_no_attendance(self):
+        self.assertEqual(sv.attendance_index(repo(), self.TODAY), {})
+
 class ListCLITests(unittest.TestCase):
     def test_list_runs(self):
         # `sessions.py`'s repo root comes from the script's own location (dyadlib.repo_root),
@@ -421,6 +498,8 @@ class ListCLITests(unittest.TestCase):
                             capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue("no session presence files" in r.stdout or "live" in r.stdout or "stale" in r.stdout)
+        if "no session presence files" not in r.stdout:
+            self.assertRegex(r.stdout, r"^mode: (M3|M4|hybrid) — \d+ of \d+ live seat\(s\) attended within \d+ day\(s\)")   # #393
 
 if __name__ == "__main__":
     unittest.main()
