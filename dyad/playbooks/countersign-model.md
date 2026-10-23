@@ -3,7 +3,7 @@
 The model the d-work framework is checked against: a core schema of eight entities and one attribute that every
 countersigning system maps to **by projection** (Part I), and one interaction model — five primitives, eight
 imperatives, one lifecycle per mode — that is the same in every mode and every system (Part II). It was
-authored here as the Tended craft `crafts/countersign/` (0.1.0 #156, 0.2.0 #152, 0.3.0 #308), projected from the
+authored here as the Tended craft countersign (0.1.0 #156, 0.2.0 #152, 0.3.0 #308; its tree retired by #369 C5, last authored commit 346a9a2), projected from the
 core's own countersigning spine (`agent-corpus/falsification/core-vs-countersign.md`, #334), and is carried by the
 core since #369 (direction (c) of the #330 audit's D-10, carried to its end: `agent-corpus/falsification/countersign-consolidation.md`),
 its words adopted rather than coined (Rule-13 property 1). Its records travel with it:
@@ -16,13 +16,12 @@ Where a Rule and this model differ, the Rule is what the Agent obeys and the dif
 It is not a procedure and has no run-book of its own: the d-work play-book (`dyad/playbooks/d-work.md`) is the
 procedure that realizes Part II's explicit-mode lifecycle, and the audit play-book's self-diagnostic reads I1–I8
 as its L4 claims. The projector that maps this system onto Part I and the levels check are code with tests
-(`crafts/countersign/projectors/project_countersign.py`, `crafts/countersign/scripts/levels.py`, until C4 of
-#369 moves them into `dyad/scripts/`).
+(`dyad/scripts/project_countersign.py`, `dyad/scripts/levels.py`; moved into the core by #369 C4).
 
 ## Part I — the Countersign core schema (eight entities, one attribute)
 Read by the projector and by any system that projects its own stores onto the core — dyad-system here, dsys by
-its own mapping module (plan #156, PR-C). Schema file: `crafts/countersign/templates/countersign-core.json` (JSON
-Schema, draft 2020-12; C4 moves it to `dyad/templates/`). Record: `dyad/falsification/countersign-schema.md` (F1–F7).
+its own mapping module (plan #156, PR-C). Schema file: `dyad/scripts/countersign-core.json` (JSON
+Schema, draft 2020-12; beside the projector since #369 C4). Record: `dyad/falsification/countersign-schema.md` (F1–F7).
 
 ### Intent
 State one core schema of the Countersign Architecture — eight entities and one attribute — that
@@ -49,7 +48,7 @@ One instance document holds `schema_version`, `system` (the profile name) and on
 object: the projecting system's own fields, outside the core (F5). A reference names another
 instance's `id` in the same document; `ext:` is the one form that names something outside it.
 
-What a JSON Schema cannot say, a projection must still hold (the projector's `check`; the projector is `crafts/countersign/projectors/project_countersign.py` until C4 of #369 moves it to `dyad/scripts/`):
+What a JSON Schema cannot say, a projection must still hold (the projector's `check`; the projector is `dyad/scripts/project_countersign.py`):
 1. every `id` unique in the document, every reference resolves to an instance of the named entity;
 2. a countersignature's `signer` is a `human` party; a proposal's `author` is an `agent` party;
 3. an act's `processor` has the kind its mode requires (below);
@@ -250,7 +249,7 @@ is an I7 gap (its covered acts would carry no countersignature reference).
 ### 6. Command adapters
 A slash command is an **adapter** that invokes a procedure, never the procedure (#115's survivor: "the adapter,
 never the artifact"). The procedure stays a play-book, a run-book or a Rule, versioned with its craft and working
-under any kernel; the command is one kernel's way to *offer* it. Templates: `crafts/countersign/templates/commands/` (C4 of #369 moves them to `dyad/templates/commands/`).
+under any kernel; the command is one kernel's way to *offer* it. Templates: `dyad/templates/commands/`.
 
 | command | invokes | origin |
 |---|---|---|

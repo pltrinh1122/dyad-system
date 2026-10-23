@@ -284,7 +284,7 @@ Which test module is L1's and which L2's is instance data: the system that runs 
 inventory, and a list in the core would couple the core's suite to every craft's tests (D8). The file is
 `<host>/self-diagnostic-levels.txt`, `<host>` the host path (`dyadlib.host_path`; dyad-system preference
 `host-path`, default `workstation-corpus`; countersign-system `infrastructure`). It is seeded from
-`crafts/countersign/templates/self-diagnostic-levels.txt` (C4 moves the seed to `dyad/templates/`), by hand — the
+`dyad/templates/self-diagnostic-levels.txt`, by hand — the
 run-book's header gives the command; an install never copies it (Rule-11 property 2).
 - **Form:** one entry per line, `<level> <path>` — `level` is `unit` or `integration`, `path` a repo-relative test
   module (`dyad/tests/test_dyadlib_rows.py`, `crafts/sysadmin/tests/guards/test_runbooks.py`); `#` comments and blank
@@ -296,7 +296,7 @@ run-book's header gives the command; an install never copies it (Rule-11 propert
   unlisted and a module it never runs must still be placed (the levels script).
 - **Granularity: the module** (D16). A module that mixes kinds is `integration` when any one of its tests builds a
   scratch repo, runs git, installs, or spawns the runner; otherwise it is `unit`.
-- **Check:** `crafts/countersign/scripts/levels.py` (C4 of #369 moves it to `dyad/scripts/levels.py`), a script and not a guard (D20), checks that the file is complete
+- **Check:** `dyad/scripts/levels.py`, a script and not a guard (D20), checks that the file is complete
   and names what exists, never that it is right. It fails on a test module present but unclassified, an entry
   whose path names no test module of the tree, a malformed line, or a path listed twice. It runs where the
   classification is used: the run-book's `health` step runs it, and the `unit` and `integration` steps read the
@@ -349,7 +349,7 @@ the evidence block never sees them, being computed in a clean clone (§2, L2); a
 refuses a push from a tree that holds them (Rule-14 property 3). A record committed without its events could not be
 read back against them from the history (D22). The audit run-book (`dyad/runbooks/audit.md`) likewise leaves its record
 to the party and reads it back last.
-`/diagnose [level]` (`crafts/countersign/templates/commands/diagnose.md`, C4) is a command adapter (`countersign-model.md` Part II §6) whose argument
+`/diagnose [level]` (`dyad/templates/commands/diagnose.md`) is a command adapter (`countersign-model.md` Part II §6) whose argument
 is the last level to run (§3); it reads this section and the run-book and follows them, and is never the
 procedure.
 
