@@ -18,8 +18,8 @@ version: 0.14.0
 | syseng | 0.4.0 |
 | sysadmin | 0.3.0 |
 
-`countersign` and `disclosure` are in the tree and deliberately absent from the table: the Operator
-disposed that they are not meant for release yet and are held until ready (d-work #232). Rule-11
-property 7 permits an unreleased craft to have no row, and `dyad bundle build` builds once per row,
-so nothing here publishes them. The two `not yet bundled` warnings the guard prints for them describe
-that decision, not an unfinished chore. Their first release adds their rows.
+`disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
+not meant for release yet and is held until ready (d-work #232). Rule-11 property 7 permits an
+unreleased craft to have no row, and `dyad bundle build` builds once per row, so nothing here publishes
+it. The `not yet bundled` warning the guard prints for it describes that decision, not an unfinished
+chore. Its first release adds its row.
