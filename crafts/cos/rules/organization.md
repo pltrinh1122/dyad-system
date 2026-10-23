@@ -102,6 +102,19 @@ who disposes — stays the core's):
   touch another seat's presence file, act on the host outside an ops script or a run-book the Operator runs
   (Rule-8), or open a seat the mandates table does not name (a fourth seat is a new plan, plan #369 revision 5).
 
+## 6. Attendance, derived — never declared
+Whether an Operator is present at a seat is read from the record, never written as a claim: a seat is
+**attended** when its provenance record holds a disposition given in that seat's own chat — not a mandate's
+inherited one, not a relayed one — within the attendance window (the preference `attendance-window`, the
+Operator's); the leader is attended by definition while any seat is. Over the live seats this yields the
+organization's **mode** — pure M3 (only the leader attended), pure M4 (every seat), hybrid — and from the mode
+the **route** of every question a seat owes the Operator: asked in the seat's own chat when attended, relayed
+through the leader verbatim and answered verbatim otherwise (#253 R17, R29). No presence file carries an
+attendance line, because a declared line is a claim nobody verifies (#295) and a disposition is the one act
+that proves an Operator was there, already recorded by Rule-7. The derivation is the core's (#388: `dyad
+session list`, the board's WHO column); this rule states what it means and the Guide (`../docs/operating-guide.md`
+§8) what the Operator does with it.
+
 ## When
 - A seat is opened, renamed, re-homed or retired: a row of its own, under the Operator's disposition; the mandates
   table changes by the Operator's preferences-zone PR, before the seat acts under the new row.

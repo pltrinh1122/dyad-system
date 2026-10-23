@@ -94,9 +94,13 @@ craft is absent, and checks nothing).
   the leader wrote a Corrections section into the plan on `main`, announced it to every seat, and ordered nothing.
   Each seat read it at its next push. The cost was one ledger commit and one message; the alternative — a plan
   revision needing your `Y` — would have cost you a question for a fact.
-- **Stacked PRs are the price of a shared record.** Two children of one seat edit one record (C1 writes it, C2
-  appends); the second PR stacks on the first and rebases when it lands. You see two PRs; you dispose both in one
-  Done over the set.
+- **Stacked PRs are the price of a shared record — and the rule for dependent children.** Two children of one
+  seat edit one record (C1 writes it, C2 appends); the second PR stacks on the first and rebases when it lands.
+  The program made it the rule (plan #385, revision 2): within one mandate, a child that depends on another
+  child's output stacks on that child's branch, with the predecessor's branch as its PR base; merge order is
+  stack order; a head that moves is re-asked. You see two PRs; you dispose both in one Done over the set. What
+  it cost before the rule: a stacked copy of a commit beside its merged original is an add/add conflict at the
+  merge (the C2 case), paid once.
 - **Names are rewritten until they carry the model.** Four falsifications of the seat names in one day (`cos-1`,
   `cos-counsel`, `cos-engineering`, `build` for the machine's seat) ended at `program, counsel, audit, engineer,
   distribute, operate`; each rename cost the leader a presence file and the Operator one question. The names you
@@ -104,3 +108,36 @@ craft is absent, and checks nothing).
 - **What a seat never did.** No seat merged, released, wrote a preference, touched another's presence file, or
   acted on the host. Every row of the program was accreted under the one plan-`Y` you gave on revision 10, and
   every one is named in the Done question you will be asked.
+
+## 8. The three modes of attendance, and where a question is asked
+You are not at every seat at once. The organization has three **modes**, read from what you did and never from
+what anyone declared (#388; the rule's own sentence: `../rules/organization.md` §6):
+- **pure M3** — only the program seat is attended: every member seat's question comes to you through the
+  leader;
+- **pure M4** — every live seat is attended: each seat asks you in its own chat;
+- **hybrid** — the program seat and some of the others are attended: the attended ones ask you directly, the
+  rest through the leader.
+
+**Attendance is earned, not claimed.** A seat is *attended* when a disposition you gave in that seat's own chat
+— not a mandate's inherited `Y`, not a relayed one — is in its provenance record within the **attendance
+window** (the preference `attendance-window`, default 7 days, yours to set). The leader seat is attended by
+definition while any seat is. Nothing is written to earn it: the record of your own answer is the proof (#295:
+a holder is what the process says; attendance is what you did). Attendance is **lost** when the window passes
+with no disposition of yours in that seat, and regained by the next one. The mode is derived over the live
+seats (presence files within the stale window): all attended → M4; only the leader → M3; otherwise hybrid.
+`dyad session list` prints the mode and each seat's attendance, and the board's WHO column reads `attended` or
+`relayed` (#388's children 1–3, the engineer's).
+
+**The route table.** An escalation — a counter-prompt a seat owes you (a plan, a Done, a fence it cannot cross,
+a release or destructive action that is always its own question) — is asked where you will see it:
+
+| the seat is | the question is asked | the answer travels | the record |
+|---|---|---|---|
+| attended | in the seat's own chat, by the seat | directly: your words in that seat's provenance | the seat's provenance record (Rule-7) |
+| not attended | in the leader's chat, by the leader, verbatim, with the seat named | relayed back to the seat verbatim (R29: a cos relays, never answers) | the seat's plan file quotes the question; the leader's provenance carries your answer; the seat's row cites it (#314's shape, until the bus of #303 lands) |
+| the leader itself | in the leader's chat | — | the leader's provenance |
+
+The board lists every outstanding question with its route (R17), so you see in one place what to answer and
+where. What never changes with the mode: who disposes (you), what a seat may do without asking (its charter,
+§4), and what is never accretable (§5). What changes is only the chat a question reaches you in — and the
+seats never guess it: the route is derived from the same records the mode is.
