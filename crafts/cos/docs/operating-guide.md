@@ -24,10 +24,16 @@ cannot check.
 - **A seat's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
   of your answers), `dyad session list` (every presence file: who holds what, how fresh). A PR number in a row's
   `disposed` entry names the head you said `Y` on.
-- **The leader relays, you dispose.** When a member seat believes a child is done, its evidence travels through
-  the leader into the parent's completion reply, and you answer once over the set that reply lists (the mandate
-  form of Rule-3: `Y/N: Done with #<id> … (accreted #a, #b, …)?`). A `Y` ratifies exactly that set; a child left
-  out of the list is left out of the `Y`.
+- **The leader relays, you dispose acts, never merges.** Your own invariant (#384): you dispose the plan review and
+  the execution review, never an individual merge, push or pull. Under a mandate the execution review is one
+  question: when the member seats' children are done, their evidence travels through the leader into the
+  parent's completion reply, and you answer once over the set that reply lists (the mandate form of Rule-3:
+  `Y/N: Done with #<id> … (accreted #a, #b, …, merges PR #w, #x, …)?`). A `Y` ratifies exactly that set — the rows
+  and the PRs — and a child or a PR left out of the list is left out of the `Y`. After it, each seat executes its
+  own merges clerically, referent before referrer (Rule-2: execution is clerical, never disposal), and the leader
+  closes the parent once every named head is on `main` (Rule-3's three acts, #202). No seat asks you a Done of its
+  own, and no merge is asked separately; a release (Rule-11) and a destructive host action (Rule-8) stay their own
+  questions whatever the mandate says. How the Rules' text is reconciled with that invariant is #384's work.
 
 ## 3. Opening a seat
 1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a cabinet, the topic.
@@ -59,10 +65,11 @@ seat. Revoke by removing or rewriting the row; a seat acts on the table as it st
 else.
 
 ## 5. What only you dispose
-Every plan (`Y/N: proceed with #<id> as planned?`), every completion, every merge, every release tag, every
-destructive host action, every preference value, every seat opened or retired, every intake's admission. A
-leader or member may *execute* what you ratified — a merge after your Done-`Y` is clerical — and may never decide
-it. When a seat finds that the plan it holds cannot be done as written (the first run found three such cases,
+Every plan (`Y/N: proceed with #<id> as planned?`), every completion — the execution review, which under a
+mandate names every accreted row and every PR of the program at once (§2) — every release tag, every destructive
+host action, every preference value, every seat opened or retired, every intake's admission. Not the merges,
+pushes and pulls themselves (#384): a leader or member *executes* what you ratified — a merge after your Done-`Y`
+is clerical — and may never decide it. When a seat finds that the plan it holds cannot be done as written (the first run found three such cases,
 §7), it does not improvise: it records the finding, states the shapes that would work, and waits for your word,
 while doing everything the finding does not block.
 
