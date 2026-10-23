@@ -97,6 +97,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 provenance and plan, git and the harness transcript (read in place, never
                                 copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
                                 at the Done-Y, in the commit that records it; without it, a preview to stdout
+  dyad session name [--function <f>] [--topic <t>] [--hp <h>] [--system <s>] [--on <text>]
+                                print this seat's name, <function>[-<topic>]-<hp>, and the harness session
+                                title to set, from the environment (Rule-16 Presence; the organization
+                                craft's form when installed, #369 C7); prints only, sets nothing
   dyad session touch [-r <row>]... [-f <file>]... | list
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the

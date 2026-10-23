@@ -129,3 +129,31 @@ host and harness session id"; its users, Rules 3 and 16, still read correctly �
 session start, Rule-16 defines it. `dyad/guards/agent/vocabulary.py` passes.
 
 Disposition: see ledger #294.
+
+## Amendment — d-work #379 (2026-10-22, #369 C7: the seat name and its form)
+**Claim (plan #369, revisions 1, 4, 10, 12; the Operator's prompts of 2026-10-21):** a presence file's
+name is a seat name with a form, `<function>[-<topic>]-<hp>`, read under the `organization` preference;
+the form's table is the organization craft's data, the core keeps the form's existence and an advisory
+reading, and `dyad session name` prints the name and the harness session title from the environment.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 27 | A form in the core for a craft's organization re-opens the Rule-11 p2 overlap revision 2 refuted: a core-only install names a form it cannot check. | Refuted, as revision 4 attack 2 was: Rule-19's precedent — the core keeps existence and the advisory line, the craft's `seat` guard the check; `seat_form()` reads the craft's data when installed and the bare regex otherwise, and a craft whose data does not load falls back too. | Kept. |
+| 28 | `touch()` warning on every historical name (`cos.md`, `cab-2-8c27a6fd.md`, 75 files) makes the warning noise. | Refuted: `touch()` judges the name it writes, never the store; the store's state check stays well-formedness only (Enforcement), and the craft's guard counts the old names in one line. | Kept: one line, on this session's own name. |
+| 29 | Under `flat` the form is meaningless, so the preference has one value. | Survives, scoped, as revision 1 scoped it: `flat` reads no form and warns on nothing; `m4` reads it. Two behaviours, two values; the default is the Operator's `m4`. | Kept. |
+| 30 | `dyad session name` derives the system handle `(ds)` from the repository directory's initials — a guess. | Conceded as a convenience: `--system` overrides it, the line is printed for the Operator to paste, and nothing reads it back. | Stated in the help. |
+| 31 | The `<hp>` check compares the name to `holder()`, which is what the process says (#295). | Conceded, as #295 conceded: the mismatch it catches is the honest one — a renamed session, a reused file — never a lie. | Kept. |
+| 32 | #350 (PR #425) changes `touch()` and adds `title()` in the same file. | Survives as a sequencing fact: the additions here are three functions and one loop after the write; whichever lands second rebases, stated in the completion evidence. | — |
+
+**Pairwise (Rule-5).** **16–2**: advisory, no ratification event. **16–3**: Rule-3 reads the preference for
+what a session reads at start and cites the Guide; Rule-16 for the name — one owner each. **16–6**: three
+terms added (`seat name`, `cos-board`, `member-cos`, owner 16, used by 3 and 16); the craft's six are
+referenced by craft name. **16–11**: the form's table is craft data, the core keeps a bare regex; no craft
+path is written by the core. **16–12**: every branch carries a test (`test_sessions.py` `SeatNameTests`).
+**16–14**: `CLAUDE_CODE_SESSION_ID` and `CLAUDE_CODE_REMOTE` are read as #294 reads them; nothing pinned.
+**16–19**: the existence-plus-advisory split is Rule-19's own. Others unchanged. Coherent, orthogonal.
+
+**Rule-6 term check.** `seat name`, `cos-board`, `member-cos` added; `seat`, `holder`, `presence file` still
+read correctly for Rules 3 and 16. `dyad/guards/agent/vocabulary.py` passes.
+
+Disposition: see ledger #379 (accreted under mandate #369; Done rides its Done-`Y`).

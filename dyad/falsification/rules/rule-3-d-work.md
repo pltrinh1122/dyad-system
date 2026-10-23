@@ -527,3 +527,18 @@ bullets are untouched. 3–7, 3–9, 3–10, 3–11, 3–14, 3–18, 3–19, 3�
 orthogonal.
 
 Disposition: see ledger #381 (accreted under #369; its Done rides that mandate's Done-`Y`).
+## Amendment — d-work #379 (2026-10-22, #369 C7: what a session reads at start under `organization: m4`)
+**Claim (plan #369):** under `m4` a session reads and reports its seat's board — the leader the cos-board of
+programs, a member-cos the cos-board of its charter's domain — and how a board is read is the organization
+craft's Operating Guide, never a Rule.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 1 | The session-start bullet already says "reports every row that is not `done`"; a board is a narrower read and the two conflict. | Refuted: the sentence scopes the read by seat under `m4` and leaves it whole under `flat`; the leader's board of programs is every parent row and its children, which is the whole working board for one pair. | Kept, with `flat` unchanged. |
+| 2 | A core Rule citing a craft's Guide binds the Agent's process through a Tended document (Rule-4). | Refuted by the Rule-8/sysadmin precedent (revision 4 attack 1): the sentence keeps the process residue — read a board, report by seat — and cites the Guide for the practice. | Kept. |
+| 3 | Three vocabulary terms for one sentence. | Survives as the price Rule-6 sets: a Rule uses a term only if the vocabulary defines it, and the terms are Rule-16's (owner 16). | Kept. |
+
+**Pairwise (Rule-5).** **3–16**: Rule-16 owns the seat name and the form, Rule-3 what a session reads;
+one owner each. **3–2**: nothing ratified. **3–6**: the three terms, owner 16, used by 3. Others unchanged.
+
+Disposition: see ledger #379 (accreted under mandate #369; Done rides its Done-`Y`).

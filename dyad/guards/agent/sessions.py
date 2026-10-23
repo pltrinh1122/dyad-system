@@ -49,8 +49,21 @@ _WRITER = uuid.uuid4().hex[:12]   # this process's own id (F1, d-work #32): comp
                                   # so it is stable for the process's life — a session re-touching
                                   # its own file always matches its own writer and stays silent.
 _KERNELS = frozenset({"terminal", "cloud"})   # the `host` line's first token (d-work #294)
+# The seat name (Rule-16 Presence; #369 C7, d-work #379): under `organization: m4` a presence file's name has a form,
+# `<function>[-<topic>]-<hp>` — the installed organization craft's data where one is installed (its `seat` guard,
+# `crafts/cos/guards/seats_rules.txt`), this bare form otherwise. Read advisorily: `touch()` prints one line, never
+# fails (the store is advisory); `dyad session name` prints the name and the session title from the environment.
+ORGANIZATION = "organization"                   # the preference key (`preferences-corpus/PREFERENCES.md`; the template seeds it)
+ORGANIZATIONS = ("flat", "m4")                  # one pair, one board, no form read | the tree of cos-boards (plan #369)
+DEFAULT_ORGANIZATION = "m4"                     # the Operator's default (#369: "codify M4 as the default organizational preference")
+SEAT_FORM = re.compile(r"^(?P<function>[a-z]+)(?:-(?P<topic>[a-z0-9]+(?:-[a-z0-9]+)*))?-(?P<hp>[0-9a-f]{8})$")   # plan #369 revision 10
+HP_LEN = 8                                      # `<hp>`: the first eight hex of the holder's harness session id
+LEADER_FUNCTION = "program"                     # the function whose bare seat is the leader (revision 10)
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
+              ("organizations-hold-the-default", lambda: DEFAULT_ORGANIZATION in ORGANIZATIONS and len(set(ORGANIZATIONS)) == 2),
+              ("seat-form-names-its-three-groups", lambda: set(SEAT_FORM.groupindex) == {"function", "topic", "hp"} and bool(SEAT_FORM.match("engineer-ledgerd-1537d8fb")) and not SEAT_FORM.match("cos-1")),
+              ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
               ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
@@ -86,6 +99,60 @@ def holder() -> str | None:
 
 def parse(text: str) -> dict[str, str]:
     return dict(line.split(": ", 1) for line in text.splitlines() if ": " in line)
+
+def organization(root: Path | None = None) -> str:
+    """The `organization` preference: `m4` when the preferences corpus exists and the key is absent or holds a value
+    outside ORGANIZATIONS (the default the Operator set, #369; the template seeds it); `flat` — one pair, no seat
+    form read — when the system keeps no preferences corpus at all (a tree that is not yet a seeded instance, as
+    the preference guard reads a missing live corpus)."""
+    if not ((root or dyadlib.repo_root()) / dyadlib.PREFERENCES_REL).is_file():
+        return "flat"
+    v = dyadlib.preference(ORGANIZATION, root)
+    return v if v in ORGANIZATIONS else DEFAULT_ORGANIZATION
+
+def seat_form(pkg: Path = dyadlib.PKG) -> tuple[re.Pattern, list[str] | None, str]:
+    """(form, functions, source): the installed organization craft's seat form and its standing functions (its `seat`
+    guard's `rules()`, corpus `agent`), source `craft`; else the bare SEAT_FORM, no function list, source `core`. A
+    craft whose data does not load gives the bare form too — the reading is advisory, so nothing here may fail."""
+    g = dyadlib.find_guard("agent", "seat", pkg)
+    if g is not None and callable(getattr(g, "rules", None)):
+        try:
+            form, functions = g.rules()
+            return form, list(functions), "craft"
+        except (OSError, ValueError, TypeError, AttributeError, re.error):
+            pass
+    return SEAT_FORM, None, "core"
+
+def parse_seat(name: str, form: re.Pattern | None = None) -> dict[str, str | None] | None:
+    """{function, topic, hp} when `name` is in the form, else None."""
+    m = (form or SEAT_FORM).match(name)
+    return {"function": m.group("function"), "topic": m.group("topic"), "hp": m.group("hp")} if m else None
+
+def seat_kind(seat: dict[str, str | None], functions: list[str] | None) -> str:
+    """The reading rule of the form: `leader` (the leader function, bare), `member-cos` (another function, bare),
+    `cabinet` (a function and a topic); `unknown-function` when the craft's list is known and does not hold it."""
+    if functions is not None and seat["function"] not in functions:
+        return "unknown-function"
+    if seat["topic"]:
+        return "cabinet"
+    return "leader" if seat["function"] == LEADER_FUNCTION else "member-cos"
+
+def name_problems(sid: str, root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
+    """Advisory lines about a seat name under `organization: m4`: outside the form, or a function the installed
+    craft does not list, or an `<hp>` that is not the holder's. Empty under `flat`, and never a guard failure."""
+    if organization(root) != "m4":
+        return []
+    form, functions, source = seat_form(pkg)
+    seat = parse_seat(sid, form)
+    if seat is None:
+        return [f"seat name {sid!r} is outside the form <function>[-<topic>]-<hp> ({source}; Rule-16 Presence, organization m4) — `dyad session name` prints one"]
+    out = []
+    if seat_kind(seat, functions) == "unknown-function":
+        out.append(f"seat name {sid!r}: function {seat['function']!r} is none of {', '.join(functions or [])} (the organization craft's data)")
+    h = holder()
+    if h and seat["hp"] != h[:HP_LEN]:
+        out.append(f"seat name {sid!r}: <hp> {seat['hp']} is not this holder's ({h[:HP_LEN]}…) — a renamed session or a reused file")
+    return out
 
 def files_touched(plan_text: str) -> list[str]:
     """A stored plan's own `files touched:` line (Rule-15) and any continuation lines that
@@ -142,7 +209,49 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
                  f"writer: {_WRITER}\n"
                  f"host: {host_line()}\n"
                  + (f"holder: {h}\n" if (h := holder()) else ""))
+    for w in name_problems(sid, root):   # advisory (Rule-16 Presence): the seat name against the organization's form
+        print(f"warning: {w}", file=sys.stderr)
     return p
+
+def system_handle(root: Path) -> str:
+    """The system's short handle in a session title, `(ds)` for dyad-system: the initials of the repository
+    directory's hyphenated name, or `--system` on the command line."""
+    return "".join(part[0] for part in Path(root).resolve().name.split("-") if part) or "system"
+
+def seat_name_report(root: Path, args: list[str]) -> tuple[int, list[str]]:
+    """`dyad session name [--function f] [--topic t] [--hp h] [--system s] [--on text]`: (exit code, lines). The seat
+    name from the environment — the function and topic from the flags, else from `DYAD_SESSION` when it is in the
+    form; the `<hp>` from the holder's id — and the harness session title to set, `<seat>: <kernel> (<system>) -
+    <on>`, for the Operator to paste or compare (the organization craft's `rules/naming.md` §3). Prints only; the
+    hosting is The World (Rule-14) and nothing here sets a title."""
+    opts, i = {}, 0
+    while i < len(args):
+        if args[i].startswith("--") and i + 1 < len(args):
+            opts[args[i][2:]] = args[i + 1]; i += 2
+        else:
+            return 2, [f"usage: dyad session name [--function <f>] [--topic <t>] [--hp <8 hex>] [--system <handle>] [--on <text>] (got {args[i]!r})"]
+    form, functions, source = seat_form()
+    current = parse_seat(session_id(), form) if os.environ.get("DYAD_SESSION") else None
+    function = opts.get("function") or (current or {}).get("function")
+    topic = opts.get("topic") or (current or {}).get("topic")
+    h = holder()
+    hp = opts.get("hp") or (h[:HP_LEN] if h else None)
+    if not function:
+        return 2, ["no function: pass --function <f>" + (f" (one of {', '.join(functions)})" if functions else "") + " or set DYAD_SESSION to a name in the form"]
+    if not hp:
+        return 2, ["no <hp>: the harness reports no CLAUDE_CODE_SESSION_ID; pass --hp <the first 8 hex of the holder's id>"]
+    seat = "-".join(t for t in (function, topic, hp) if t)
+    parsed = parse_seat(seat, form)
+    if parsed is None:
+        return 2, [f"{seat!r} is outside the form <function>[-<topic>]-<hp> ({source})"]
+    kernel = host_line().split()[0]
+    on = opts.get("on") or topic or function
+    lines = [f"seat:   {seat} ({seat_kind(parsed, functions)}; form: {source})",
+             f"holder: {h or '(none reported)'}",
+             f"title:  {seat}: {kernel} ({opts.get('system') or system_handle(root)}) - {on}"]
+    if os.environ.get("DYAD_SESSION") and os.environ["DYAD_SESSION"] != seat:
+        lines.append(f"note:   DYAD_SESSION is {os.environ['DYAD_SESSION']!r}; the presence file keeps that name until the seat is retaken")
+    return 0, lines
 
 def touch_from_open_rows(root: Path | None = None) -> Path:
     """Session start / plan-Y (Rule-16): every row this instance's own store lists as open or
@@ -260,6 +369,11 @@ def main(a: list[str]) -> int:
                   f"can clobber the other's uncommitted state; work through a worktree, not this checkout, "
                   f"while both are active")
         return 0
+    if a and a[0] == "name":
+        rc, lines = seat_name_report(root, a[1:])
+        for line in lines:
+            print(line, file=sys.stderr if rc else sys.stdout)
+        return rc
     if a and a[0] == "list":
         rows = read_all(root)
         if not rows:
