@@ -19,6 +19,8 @@ defines what each value means.
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
+| organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
+| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, derived from the records) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -95,9 +97,10 @@ defines what each value means.
     lists every row accreted under it. Anything the mandate scope does not name returns to
     `explicit` and is asked: a destructive host action (Rule-8 keeps its own counter-prompt), a
     release (Rule-11), a Rule-3 Intake (its words are another Operator's, Rule-7 property 4), a
-    preference change, or any mutation outside the plan. This is `crafts/countersign/`'s
+    preference change, or any mutation outside the plan. This is the countersign model's
     **implicit mode** countersigned by a **mandate**, adopted rather than coined (Rule-13
-    property 1); in that craft's own classification (`crafts/countersign/rules/interaction.md` §5)
+    property 1; the model is the core play-book `dyad/playbooks/countersign-model.md` since #369 C3);
+    in that model's own classification (`dyad/playbooks/countersign-model.md`, Part II §5)
     it is an **authority preference** — a standing countersignature that authorizes a class of act
     — where `concise-mode`, `batch-disposition-mode`, `merge-disposition` and `delegation` are
     **form preferences**, which authorize nothing.
@@ -112,3 +115,16 @@ defines what each value means.
   baseline exists before anyone optimizes and no d-work's timing is lost when an ephemeral session ends
   (its transcript is never committed, Rule-7). `on-demand`: a trace only when the Operator prompts for one;
   a d-work whose session has ended can then be traced from git and the ledger only (d-work #215).
+- `organization` — the shape of this system's seats (d-work #369, plan revisions 1–13; #385 PR-B). `m4`: a
+  tree of operator–agent pairs, each seat a cos keeping a cos-board, authority granted by the content-scoped
+  charters of `MANDATES.md` beside this file (seeded from `crafts/cos/templates/mandates.md`), every pair
+  sharing the same ledgers; a presence file's name is a seat name, `<function>[-<topic>]-<hp>` (Rule-16
+  Presence; the cos craft's `rules/naming.md`), read advisorily by the cos craft's `seat` guard and printed
+  by `dyad session name`. `flat`: one pair, one board, cabinets by row; no seat form is read. dyad-system:
+  `m4`, the Operator's default since 2026-10-21 ("codify M4 as the default organizational preference").
+- `attendance-window` — how many days a disposition the Operator gave in a seat's own record keeps that seat
+  *attended* (d-work #388): a seat is attended when a provenance record whose `session:` line names it holds a
+  disposition noted neither `mandate #<id>` nor `relayed via` within the window; `dyad session list` reads
+  the mode over the live seats — every seat attended (M4), only the leader (M3), some (hybrid) — and a seat's
+  counter-prompt is asked in its own chat when attended and relayed through the leader otherwise. dyad-system:
+  `7`, plan #388's default.
