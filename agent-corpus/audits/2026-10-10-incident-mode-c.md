@@ -204,3 +204,23 @@ rows 4, 8, 27, 63, 71, 92, 113, 114, 130 and 131, hold none of the three exits: 
 shipped mechanical mitigation that reaches it (`bundle.py:149`), and the other nine have inference,
 stated, and nothing else. The mode therefore stays **open** in the index whatever this record
 proposes, and the Agent neither closes it nor asserts it addressed (play-book Conduct, Rule-2).
+
+## Delta 2026-10-24 (#259 revision 5; 13 → 20 rows)
+**Rows added:** 158 (#252: `fields-are-five` read as a scope from its name), 161 (#241: the `requires:`
+floor's two readers conflated from a name), 186 (#326: a count repeated from the previous reply into an
+immutable title), 193 (#356: an id read from memory, overwriting another seat's plan file), 195 (#369: a
+tag written from `VERSION` without reading `git tag`), 199 (#378: the gate's suite run reported in words
+as the evidence), 200 (#378: a hosting behaviour assumed, never verified). Seven rows in twelve days —
+the ledger's largest mode, and the one whose delta is the most even across seats (five seats, two
+hosts).
+**Mitigations re-read from the code.** No mitigation of this mode shipped since 2026-10-10: the
+2026-10-10 inventory's eleven items stand as read (`bundle.py` version comparison the only one at a
+fault's own moment; `cmd_evidence` the block that is read, never typed). Row 199 is the one the
+evidence block was built against and it recurred in the relay shape — the block existed and words
+travelled instead; row 193 is the one the id allocator's own print exists against (`dwork new` prints
+the id) and the print was not read. Candidate from the 2026-10-10 record (the plan-file identity case
+beside `check_id_collisions`) would have reached 193's second half (the overwritten `plans/339.md`).
+**Recurrence after a mitigation shipped:** every row post-dates every shipped item; none of the seven
+is in any item's reach.
+**Exit after the delta:** open, as before; #264 `backlog`, nothing built. Measured: 7 rows in 12 days
+against 13 in 28.

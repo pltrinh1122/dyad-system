@@ -161,3 +161,29 @@ Proposed to the Operator, not taken: two `backlog` rows that would make this exi
 
 Rows 121 and 126 (no verb) are proposed as a third, smaller row only if the Operator wants a
 `dyad dwork renumber` verb; nothing in this audit argues they are worth package code on their own.
+
+## Delta 2026-10-24 (#259 revision 5; 11 → 16 rows)
+**Rows added:** 149 (#245/#290: `done` with `merges PR #355` never merged, six days), 169 (#243: `done`
+with `merges PR #349`, closed unmerged), 154 (#290: no entry form for an inherited authorization — the
+no-verb face), 188 (#326: a `DYAD_*` name needing the craft zone, the version/zone face), 207
+(#369/#385/#388/#395: seventeen accreted rows closed by a hand-composed `Y done (mandate …)` entry, no
+`--mandate` form on `dwork state` — the no-verb face). Secondary member of 173, 174, 175, 183 (X).
+**Mitigations re-read from the code — one shipped, the first fence of this mode at a named moment.**
+#202 (`0a4060e`, 2026-10-15): `rows.done_order_problems` refuses one commit that both records a merge-
+ratifying `Y done` and sets `done`; `rows.landing_problems` refuses the commit that sets `done` while the
+head the operative entry names is not an ancestor of `main`; `rows.done_recorded_not_closed` warns per
+row in the interval; `cmd_dwork state` refuses the same before the first write (`package.py:1095-1125`).
+Moment: the CLI call, and every push per commit (`check_transaction`, including a ledger-only branch's
+commits and a merge commit against each parent). Reaches: the gate-after-Done face — rows 82, 116, 129
+of the 2026-10-10 population and 149, 169 of this delta would be refused at the close, and the
+recovery push would be legal because the row is still live. **Recurrence after it shipped:** none of
+that face in nine days with five to seven seats live; row 194 (2026-10-21), the first conflicted Done
+after the fence, shows the new shape — re-recorded `Y`, rebase, no deadlock. The hand-write face:
+#290 shipped the accreted row's plan entry (`dwork new --mandate`) for row 154's shape; row 207 shows
+the Done half still has no verb. The version/zone face: #170 is `archived` after #230's Rule-11 p7
+sentence; row 188 (2026-10-15) post-dates it, on the `DYAD_*` naming table rather than `BUNDLE.md`.
+**Exit after the delta:** split. The gate-after-Done cluster (rows 82, 116, 129, 149, 169 and the
+secondary four) — **exit 1, fenced at a named moment** by #202, re-verified in the code today, zero
+recurrence since. The no-verb face (121, 126, 154, 207) and the version/zone face (60, 61, 115, 188) —
+open; #274 `backlog`. One candidate the delta adds, stated for the engineer seat: `dwork state <id> done
+--mandate <id>`, copying the mandate's operative `Y done` entry with its heads (row 207).

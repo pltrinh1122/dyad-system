@@ -153,3 +153,8 @@ Proposed to the Operator, not taken:
 - The consequence half (rows 6, 23, 87) recorded as the Rule-5-Enforcement shape: no script decides
   which question a plan failed to ask. Stated here as a finding for the Operator's disposition, not
   asserted as this mode's closure.
+
+## Delta 2026-10-24 (#259 revision 5; 8 → 9 rows)
+**Row added:** 181 (#321: the plan's path said "opened and landed in one reply" against the merge
+sequencing the same plan's own row I4 records).
+**Mitigations re-read:** unchanged; `plans.py` checks part existence only. **Exit:** open, as before.

@@ -191,3 +191,15 @@ eight, rows 72, 100, 101, 104, 105, 117, 118 and 125, hold none of the three exi
 sentence about a mechanism, and `dyad/guards/agent/plans.py:5-6` and Rule-5's Enforcement both say
 in terms that no script decides whether a sentence names the right object. The mode stays **open**
 in the index, and the Agent neither closes it nor asserts it addressed (play-book Conduct, Rule-2).
+
+## Delta 2026-10-24 (#259 revision 5; 9 → 12 rows)
+**Rows added:** 156 (#290: the row's write format read, not the readers that apply it at other commits),
+184 (#202: a live row written where the test fixture was the object), 191 (#363: Rule-16's text read for
+what `touch -r` does, the code not run). All three read a real object that did not govern the question.
+**Mitigations re-read from the code.** `dyad/guards/agent/plans.py` still checks part existence only
+(`:5-6`); nothing reads whether a sentence names the right object (Rule-5 Enforcement, inference). Row
+184's probe is now refused by the fence it was probing (`cmd_dwork state … done` without a `Y done`
+entry, `package.py:1110-1112`), which is a fence for its *consequence*, not for choosing the live row.
+**Recurrence after a mitigation shipped:** n/a — no mitigation fires at the moment of reading.
+**Exit after the delta:** open; #265 `backlog`. The drift-warning candidate (plan base vs touched files)
+would have reached none of the three.

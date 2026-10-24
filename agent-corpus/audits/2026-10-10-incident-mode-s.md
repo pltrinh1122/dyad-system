@@ -209,3 +209,9 @@ fences is a check after the fact, each fired, and the most recent row (140, 2026
 exercise's own day and records the same fault twice within two turns. Row 140's consequence cell
 states the gap in the play-book's terms and is the reason this mode's exit is a row rather than a
 closure.
+
+## Delta 2026-10-24 (#259 revision 5; 4 → 6 rows)
+**Rows added:** 164 (#297: a date typed into `-d` text the CLI dates itself), 211 (`-r "a b"` as one
+token, against a usage line that says one id per flag). **Mitigations re-read:** `cmd_dwork` refuses `;`
+and a line break in `-d` and not a leading date; `touch` validates no `-r` token. Both are write-time
+refusals one line each. **Exit:** exit 2 as proposed (#280 `backlog`).

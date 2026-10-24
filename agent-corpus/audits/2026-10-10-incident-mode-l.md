@@ -185,3 +185,10 @@ days — so this would be the second row naming a fence for this mode, and the h
 first one is that a row prevents nothing. Second, by attack 2 the part is a prompt and not a fence:
 if the Operator wants exit 1 for this mode, the fence has to be something that reads the relation
 between steps, and I did not find a shape for that which Rule-5's Enforcement would admit.
+
+## Delta 2026-10-24 (#259 revision 5; 5 → 6 rows)
+**Row added:** 163 (#249: a re-check clause the plan gate cannot pass after the Done record; the #202
+gap from the gate's side). **Mitigations re-read:** #202 shipped 2026-10-15 — the Done record leaves the
+state live, so the specific step row 163 could not take (a `check --pr` after the record) is now legal;
+the mode's mechanism (a plan not falsified against its authorization sequence) is untouched.
+**Exit:** exit 2 as proposed (#273 `backlog`); the `authorization` plan part is still unbuilt.

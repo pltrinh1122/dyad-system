@@ -111,3 +111,9 @@ evidence will ever cite it. Neither exit-3 Rule applies — the fault is not in 
 (Rule-14 property 2) and is not a judgment no script can decide (Rule-5 Enforcement), since string
 containment decides both halves. The Agent proposes the row; only an Operator prompt opens it
 (Rule-3, Scope). Proposed only — the mode is not closed here.
+
+## Delta 2026-10-24 (#259 revision 5; 3 → 4 rows)
+**Row added:** 179 (#297: `check --tests test_incidents`, an under-qualified target loaded as a failing
+test, the identifying stderr line never printed). **Mitigations re-read:** none; `cmd_tests` prints the
+child's last stderr line only. **Exit:** exit 2 as proposed (#275 `backlog`); row 179's own reach is one
+refusal in `cmd_tests`, which is `package.py`'s row rather than a host deny rule.

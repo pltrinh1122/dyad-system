@@ -158,3 +158,20 @@ still lacks, and it carries the two-way disposition attack 4 names.
 Where verification stopped: I could not establish row 123's cause either. I read the memo key and
 confirmed the absence of any pre-push discriminator, but I did not reproduce the 29-error run — a
 push is outside a subagent's limits, and no transcript of those three runs is in the tree.
+
+## Delta 2026-10-24 (#259 revision 5; 4 → 8 rows)
+**Rows added:** 147 (second half, #287), 160 (#301), 162 (#302), 189 (#333) — the shallow, tagless
+cloud clone, on which `agent/references` `plan.base->commit` and `infra/bundle` fail a healthy tree:
+the guards were written against a full clone and the clone's depth is an input nothing names. Four
+seats, 2026-10-13 to 2026-10-17; the advice "unshallow before the first push" was written into rows
+160 and 162 and row 189 followed it by two days. This seat's own session unshallowed first on the
+relay's instruction and met nothing.
+**Mitigations re-read from the code.** `references.base_commit` (`references.py:251-262`) resolves
+against the local object store; `bundle.check_drift` skips with one line where a tag does not resolve
+(`infra/bundle skip … no tag … here`, observed on this seat's push) but the version row comparison does
+not. Nothing detects `git rev-parse --is-shallow-repository` = true. #315 (`backlog`, 2026-10-15) names
+the fence: the pre-push path prints the unshallow advice on a shallow clone, and the relayed mechanics
+carry the fetch line — the second half has since been done by hand in every relay.
+**Recurrence after a mitigation shipped:** none shipped; four recurrences after the advice was written.
+**Exit after the delta:** exit 2 is now available for this sub-shape — #315 stands and names the fence
+(it did not exist on 2026-10-10); row 123's sub-shape stays open as before.
