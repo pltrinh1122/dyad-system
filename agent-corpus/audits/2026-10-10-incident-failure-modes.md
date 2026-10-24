@@ -4,7 +4,7 @@
 twenty-three per-mode records #262–#284. Detects and counts; disposes nothing (frame: detect,
 don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
-**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 144 rows, latest 2026-10-10
+**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 213 rows, latest 2026-10-24 (the 2026-10-10 derivation covered 144; rows 145–213 were grouped by the delta derivation of 2026-10-24 below, d-work #259 revision 5)
 
 ## Phase 0 — the survey that made this a full derivation
 
@@ -281,3 +281,240 @@ a survivor — is excluded from #259's plan-`Y` by that plan's own text and belo
 own plan-`Y`.
 
 *Disposition: see the Done-`Y` of d-work #259 (Rule-2, Rule-9 Form).*
+
+## Delta 2026-10-24 — rows 145–213, grouped against the 23 modes (d-work #259 revision 5, seat audit-89a934d6)
+
+Phase 0's third outcome: the ledger held 200 rows against the watermark 144, and 213 after this
+PR's own thirteen (five owed by the 2026-10-12 Done turn, eight for this week). Only the new rows are
+classified here; the 140 rows of the 2026-10-10 derivation keep their modes. The method is the
+2026-10-10 one: two subagents, forbidden the 2026-10-10 records and this index, grouped rows 145–200
+independently — view 1 derived 24 modes reading `cause` first, view 2 derived 15 reading `what` first
+and the moment a check could meet it — and this seat mapped each row to one of the 23, or to none.
+Both views assigned all 56 rows with none in two modes; the reconciliation below was verified
+mechanically (56 + 13 rows, each in exactly one mode, counts summing). The thirteen rows this PR
+appends (201–213) were written by this derivation and carry their mode in their own cells.
+
+### Rows 145–213 by mode
+
+| mode | delta rows (145–200) | rows 201–213 | delta | was | now |
+|------|----------------------|--------------|-------|-----|-----|
+| A | 198 | — | 1 | 13 | 14 |
+| B | — | — | 0 | 3 | 3 |
+| C | 158, 161, 186, 193, 195, 199, 200 | — | 7 | 13 | 20 |
+| D | 156, 184, 191 | — | 3 | 9 | 12 |
+| E | 157, 165, 172, 187, 197 | 209, 212 | 7 | 4 | 11 |
+| F | 166 | — | 1 | 3 | 4 |
+| G | 159, 182, 196 | 213 | 4 | 5 | 9 |
+| H | — | — | 0 | 6 | 6 |
+| I | 147, 160, 162, 189 | — | 4 | 4 | 8 |
+| J | — | — | 0 | 3 | 3 |
+| K | 181 | — | 1 | 8 | 9 |
+| L | 163 | — | 1 | 5 | 6 |
+| M | 149, 154, 169, 188 | 207 | 5 | 11 | 16 |
+| N | 179 | — | 1 | 3 | 4 |
+| O | 190 | — | 1 | 3 | 4 |
+| P | — | — | 0 | 4 | 4 |
+| Q | 151, 171 | 202, 204, 206, 210 | 6 | 12 | 18 |
+| R | 145, 146, 152, 153, 155, 167, 180, 192 | 201, 203, 205, 208 | 12 | 7 | 19 |
+| S | 164 | 211 | 2 | 4 | 6 |
+| T | 148, 168, 170, 178 | — | 4 | 10 | 14 |
+| U | — | — | 0 | 6 | 6 |
+| V | 176 | — | 1 | 2 | 3 |
+| W | — | — | 0 | 2 | 2 |
+| **X** (new) | 150, 173, 174, 175, 183, 194 | — | 6 | — | 6 |
+| **Y** (new) | 177, 185 | — | 2 | — | 2 |
+| | | | **69** | **140** | **209** |
+
+### Two mechanisms no existing mode names
+
+Both were seen by both views as modes of their own, and the 2026-10-10 definitions were read against
+each row before either was admitted (the test throughout: does one sentence name a change that stops
+every row of the candidate at one moment, and is that sentence already some mode's).
+
+**X — tail-append contention under a held PR.** A PR held across a counter-prompt carries an append to
+`agent-corpus/audits/INCIDENTS.md`, the one file every seat's PR appends to at the same place; a peer
+lands first inside the hold window, the hosting refuses the merge, and the rebase that resolves it
+changes the head the `Y` was given on (Rule-2, Binding) so the question is asked again. Rows 150, 173,
+174, 175, 183, 194. Not T: T's change (refresh the view at the moment of the act) does not stop a
+conflict that arises *during* a hold, however fresh the view was when the question was asked (row 183:
+mergeability re-read in the asking reply, conflicted 28 s before the record). Not M: M's deadlock
+followed four of these six and is fenced since #202 (below); row 194, after that fence, shows what X
+is without M — two re-asked Done questions and no deadlock. The 2026-10-10 derivation filed row 123
+(#242), the same peer-append cause, under M because the deadlock was what it cost; on a full
+re-derivation 123 and the #355 rows (149, 171) would be read against X. What would have to change:
+an incident row never rides a held PR — it lands first in its own narrow PR (the protocol
+`merge-disposition`'s own note and `dyad/playbooks/disposition-digest.md` already state, breached in
+five of six rows after it was written), or the log becomes a per-row store with no shared tail
+(`<instance>/audits/incidents/<n>.md`, the shape `rows/` already takes for the same reason, Rule-16).
+
+**Y — the gate starved of a host resource by the system's own process.** The pre-push suite died at its
+600 s ceiling because a foreground spin-wait of the Agent's own took a core it needed (177), and died on
+`ENOSPC` because 24,876 of the suite's own orphaned fixture directories had exhausted `/tmp`'s inodes
+(185); in both the push could not leave any clone. Both rows say in their own cells that no mode of
+A–W fits. Not U: U's fault is The World's (a hosting, an account, another process's load), observed
+and never pinned; here the consumer was the dyad's own process. Not J or W: nothing was spawned
+without its guard and nothing leaked *into* the repository. What would have to change: every process
+the gate runs must bound the host resources it consumes and release them — the suite sweeps its own
+temp root per child (shipped by #326, 2026-10-15, `9c3daec`), and a wait sleeps, never spins (conduct,
+row 177's own rule; no mechanism reads the Agent's shell).
+
+The play-book's Phase 0 says a full re-derivation happens on the Operator's word or when a new row's
+mechanism is named by no existing mode. This exercise asked and ran the delta only (plan #259 revision
+5); the two new modes are recorded with their delta rows and proposed as child rows, and whether the
+whole 213 are re-derived against 25 modes is stated as the Operator's question, not taken.
+
+### What the reconciliation decided, and against what
+
+1. **The presence store's eleven rows are R and G, not a mode of their own.** View 1 made four modes of
+   them (bare touch, minted id, writer scope, `-r` token) and view 2 one (`session touch` writes before
+   it parses). Under the 2026-10-10 definitions they divide on one test — was a flag misread (G: 159,
+   182, 196, 213) or a key derived that does not identify (R: 145, 152, 153, 155, 180, 192, 201, 203,
+   205, 208)? — because the fence differs: a dispatch reader for the first, a key shown to identify at
+   its definition for the second. The store is where R now concentrates: twelve of its nineteen rows.
+2. **The shallow clone is I, not a mode.** Views 1 and 2 both carved rows 147, 160, 162 and 189 out as
+   "guard verdict depends on clone depth". The 2026-10-10 definition of I — a verdict observed in one
+   environment and asserted of another that differs in an input nothing had named — holds: the guards
+   were written against a full clone, the clone's depth is the unnamed input, and the change I names
+   (make the difference an explicit input of the assertion) is the fix: skip with one line on a shallow
+   clone, as Rule-20 property 2 does for an absent store. Row 147's first refusal (open and planned in
+   one commit) is a fence working as designed on a clerical slip and is not a mode; its second half is I.
+3. **The `dbfe778` wedge is T; the swallowed push that started it is E.** Rows 170 and 178 are two clones
+   receiving one event and stay in T as their authors placed them. Row 172, the writer's side, started
+   with a `grep` over `git push`'s output hiding the refusal (E, the row 123 class) and then read `HEAD` as
+   pushed (T, secondary). Row 197's lost push is the same instrument (a loop reading ` -> main`) and is E.
+4. **Gate-after-Done stays M and its rows go to X where the conflict started them.** Rows 173, 174, 175
+   and 183 each ran: a peer append conflicted the held PR, then the Done record made the row terminal and
+   the gate refused the recovery. The conflict is the mechanism that started each; M is secondary. Rows
+   149 and 169 (PR #349, PR #355: merges never attempted, no conflict first) stay M. Row 154's missing
+   entry form and row 188's version/zone pair are M's other two faces (no verb, no legal order), and
+   row 207 (the hand-composed `Y done (mandate …)` entries) is the no-verb face again.
+5. **Stated-not-read divides C from D by whether anything was read.** View 1 put ten rows in one
+   "behaviour stated instead of read" mode and view 2 thirteen. The 2026-10-10 boundary holds: no source
+   consulted → C (158, 161, 186, 193, 195, 199, 200: a `VERSION` file, an invariant's name, a remembered
+   count, an assumption about GitHub); a real object read that did not govern → D (156 read the write
+   format and not the readers; 191 read Rule-16's text and not the code; 184 wrote the live row where the
+   fixture was the object). Row 165 (an attack disposed on a correlation that could not discriminate) is
+   E: the instrument, not the object.
+6. **Row 198 is A.** A push to a PR already named in a pending Done question is an act whose
+   authorization was pending; that the two parties were two seats (the M4 relay delay) is the condition
+   that made it likely, not the mechanism. Row 199 (evidence in words, not the block) is C, as the Part A
+   row for cited-by-digest blocks was.
+7. **Row 151 is Q**, fenced since 2026-10-14 by removal — `batch-disposition-mode: always` — which is a
+   preference value and not a check; it is recorded as such in Q's record rather than counted as exit 1.
+
+### Phase 2 over the affected modes — what shipped, what recurred
+
+Read from the code on 2026-10-24 at `97e9cf7`, never from the 2026-10-10 prose; each affected record
+carries the detail in its own `## Delta 2026-10-24` section. In twelve days three mechanisms shipped that
+reach a mode of this ledger, and none of them was built *as* a mode's fence by a child row:
+- **#202 (`0a4060e`, 2026-10-15) — the Done state follows the merge.** `rows.done_order_problems`,
+  `rows.landing_problems`, `rows.done_recorded_not_closed`, and the matching `cmd_dwork state` refusals
+  before the first write. Moment: the CLI call and every push, per commit. Reaches M's gate-after-Done
+  cluster (rows 82, 116, 129, 149, 169, and 173, 174, 175, 183 as their secondary) and Q's row 171. Zero
+  recurrence of that shape since; row 194 (2026-10-21) is the first conflicted Done after it and shows a
+  rebase and a re-asked `Y` where the nine earlier rows show a deadlock.
+- **#290 (`7e8a405`, 2026-10-14) — the accreted row's entry form** (`dwork new --mandate`), `backlog →
+  archived`, the parent gate admitting `backlog`. Reaches M's row 154 (fixed) and this d-work's own
+  revision 3 obstacle (lifted). Row 207 shows the Done half of the same form still has no verb.
+- **#326 (`9c3daec`, 2026-10-15) — the suite sweeps its own temp root per child.** Reaches Y's row 185
+  at the gate; nothing reaches 177.
+Preference changes that removed a signal rather than fencing it: `batch-disposition-mode: always`
+(Q, row 151). Additions that touched a mode's store without changing its key: #294's `host`/`holder`
+lines and #393's attendance (R: `same_root` and liveness read neither; row 208, row 209).
+
+**Recurrence, the measurement.** Of the seventeen modes the delta touched, two (F, W) are fenced and
+F's one new row was caught by its fence; one (M) gained a fence for its largest cluster after the fact
+and that cluster has not recurred; the other fourteen recurred with no mitigation at the fault's moment
+— R twelve times, C seven, E seven, Q six, G four, I four, T four. Fifteen `backlog` rows (#262–#284
+less the fenced two) have stood since 2026-10-10 naming a fence to build, and not one has been built:
+69 new rows against zero fences from this exercise's own children is plan #137's attack 3 confirmed a
+second time, at a larger population.
+
+### Falsification — is each affected mode still addressed as the 2026-10-10 record said?
+
+Written here, not in `agent-corpus/falsification/`, because the audit seat's charter forbids it that
+directory (plan #259 revision 5, fence item 1); the amendment of
+`agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` is proposed to the counsel seat below.
+One attack per affected mode and two on the exercise; each pushed to confirmed, refuted or
+survives-scoped; Rule-9's easy-agreement trigger fired on F and W (agreement on first reading) and both
+were attacked by reading the fence's code and its reach today.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | A is addressed as the record said (open; exit 2 for one face) | **confirmed as open.** Row 198 is a third face — a seat pushing to a branch named in a pending Done — reached by nothing | open; the proposed row stands; the new face is conduct unless branch protection, which is not kernel |
+| 2 | C is addressed (open, exit 2 for 3 of 13) | **refuted, and worse than the record said.** Seven recurrences, none in any shipped item's reach; the id-print and the evidence block both existed and were not read | open; the plan-file identity case would reach 193's second half only |
+| 3 | D is addressed (open) | **confirmed as open.** Three recurrences; the one fence that fired (184) fires on the consequence, not the choice of object | open |
+| 4 | E is addressed (open, exit 2 for 1 of 4) | **refuted, and the mode is in shipped code twice over.** `pushed_refs`'s empty-stdin line (212) and the attendance liveness read (209) are instruments narrower than their questions, and five more rows are filters the Agent typed | open; two code-reachable rows stated for the engineer seat |
+| 5 | F is addressed (fenced) | **confirmed.** `prs.check_transaction` unchanged; row 166 met it; four of four | exit 1 holds |
+| 6 | G is addressed (exit 2 proposed) | **refuted as "addressed", confirmed as "named".** Four recurrences on the verbs #133 did not cover, three of them one command; #268 names the fence and nothing is built | exit 2 stands; the measurement attack 7 asked for is in |
+| 7 | I is addressed (open) | **survives, scoped.** The shallow-clone sub-shape now has a `backlog` row naming its fence (#315), which it lacked on 2026-10-10; row 123's sub-shape is unchanged | exit 2 reachable for one sub-shape, open for the other |
+| 8 | K, L, N, O, S, V are addressed as their records said | **confirmed as the records said**, one recurrence each, no mitigation reached any; L's row 163 is the one whose specific step #202 since made legal | as proposed |
+| 9 | M is addressed (open) | **refuted as a single claim; the mode splits.** The gate-after-Done cluster is fenced at a named moment by #202 and has not recurred; the no-verb face (154, 207) and the version/zone face (188) recurred and have no fence | exit 1 for the cluster; open for the two faces; one candidate stated (`dwork state … done --mandate`) |
+| 10 | Q is addressed (exit 2 proposed) | **refuted.** Six recurrences; two of its shapes gained fences from other d-works (#202, `always`) and four new obligations no mechanism reads were added by the organization work itself (charter ceiling, ops-script delivery, preview traces, trace evidence lines) | open; the register candidate stands; two candidates added |
+| 11 | R is addressed (exit 2 proposed) | **refuted, and the mode nearly tripled.** Twelve recurrences; four fences named by rows that already exist (#311, #312, #313, #286), zero built; the store this record measured at 64 files holds 88 | open; the honest statement is that R's fences are the cheapest in the ledger and the least built |
+| 12 | T is addressed (open, split recommended) | **confirmed as open, and a third family added.** Unpushed state published as shared (170, 172, 178) joins the id races and the unfetched views | open; the split stands with three halves |
+| 13 | W is addressed (fenced) | **confirmed.** Both test classes present, `suite_env` at both spawns, zero rows of the shape in 69 | exit 1 holds |
+| 14 | the 23 modes are still the right 23 | **refuted.** Two mechanisms no mode names, each seen by both views: X (tail-append contention under a held PR, six rows) and Y (the gate starved by the system's own process, two rows). The record X is written; Y's record is owed (plan #259 revision 5 bounded new records to one) and its definition stands in this index | 24 recorded, 25 derived; the full re-derivation the play-book names for this case is the Operator's word |
+| 15 | this exercise produced fences, not paragraphs (plan #137's attack 3) | **refuted a second time.** Every fence that reached this ledger in twelve days came from a d-work opened for another reason (#202, #290, #326); the exercise's own 23 children produced none. The exercise is now a measuring instrument and not yet a hardening one | the finding is stated for the Operator: the children are `backlog` and open on a prompt; the ones with the highest recurrence per fence named are R (#311–#313, #286), G (#268), M's no-verb face |
+
+### Phase 4 — every mode after the delta
+
+| mode | rows | exit on 2026-10-10 | re-verified 2026-10-24 | status |
+|------|------|--------------------|------------------------|--------|
+| A | 14 | 2 proposed (one face) | #262 `backlog`, nothing built; +1 new face | open |
+| B | 3 | 3, Rule-7 Enforcement | sentence unchanged; 0 recurrence | exit 3 proposed |
+| C | 20 | 2 proposed (3 of 13) | #264 `backlog`; +7 | open |
+| D | 12 | 2 proposed (1 of 9) | #265 `backlog`; +3 | open |
+| E | 11 | 2 proposed (1 of 4) | #266 `backlog`; +7, two in shipped code | open |
+| F | 4 | 1, `prs.check_transaction` | code unchanged, row 166 caught | **exit 1 holds** |
+| G | 9 | 2 proposed | #268 `backlog`; +4 on uncovered verbs | exit 2 named, unbuilt |
+| H | 6 | 2 proposed | #269 `backlog`; 0 recurrence | exit 2 named, unbuilt |
+| I | 8 | open | #270 `backlog`; +4, and #315 now names the sub-shape's fence | open; exit 2 reachable |
+| J | 3 | 2 proposed | #271 `backlog`; 0 recurrence | exit 2 named, unbuilt |
+| K | 9 | open | #272 `backlog`; +1 | open |
+| L | 6 | 2 proposed | #273 `backlog`; +1 | exit 2 named, unbuilt |
+| M | 16 | open | #202 fences the gate-after-Done cluster (0 recurrence since 2026-10-15); no-verb and version/zone faces +3 | **split: exit 1 for the cluster, open otherwise** |
+| N | 4 | 2 proposed | #275 `backlog`; +1 | exit 2 named, unbuilt |
+| O | 4 | 2 proposed | #276 `backlog`; +1 | exit 2 named, unbuilt |
+| P | 4 | 2 proposed | #277 `backlog`; 0 recurrence | exit 2 named, unbuilt |
+| Q | 18 | 2 proposed | #278 `backlog`; +6; rows 7, 75 fenced (#191), 171's shape fenced (#202), 151 removed (`always`) | open |
+| R | 19 | 2 proposed | #279 `backlog`; +12; four fences named by #311, #312, #313, #286, none built | open |
+| S | 6 | 2 proposed | #280 `backlog`; +2 | exit 2 named, unbuilt |
+| T | 14 | open, split recommended | #281 `backlog`; +4; a third family | open |
+| U | 6 | 3, Rule-14 p2 | sentence unchanged; 0 recurrence | exit 3 proposed |
+| V | 3 | 2 proposed | #283 `backlog`; +1 of the row-47 shape the proposal does not reach | open |
+| W | 2 | 1, `SpawnSiteTests`, `SuiteEnvWorktreeTests` | both present, `suite_env` at both spawns; 0 recurrence | **exit 1 holds** |
+| X | 6 | — | new; the protocol is prose and was breached five times after it was written | open; child row proposed |
+| Y | 2 | — | new; #326 fences 185 at the gate; 177 is conduct | open; record and child row proposed |
+
+"Exit 2 named, unbuilt" is the play-book's exit 2 read literally — the row exists and names the fence —
+and is reported with that qualifier because fifteen such rows in fourteen days have fenced nothing; the
+Operator reads the qualifier, the Agent closes no mode (play-book Conduct).
+
+### Proposed, opened by nobody here (the audit charter: proposes rows, opens none)
+
+Each is a row for the Operator to open by prompt, or for the program under a mandate the Operator
+grants; the mode and the rows it would reach are stated so the Operator can price it.
+1. **Child row for mode X** (`refs: parent #259`): the tail-append contention record's exits — the
+   protocol as a check (a PR guard warning when a held PR's diff touches `INCIDENTS.md` beside other
+   paths) or the per-row incident store. Reaches 150, 173, 174, 175, 183, 194 and, on re-derivation, 123,
+   149, 171.
+2. **Child row for mode Y** and its record file: the gate's host-resource bound. Reaches 177, 185.
+3. **Counsel seat:** amend `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` with
+   attacks 1–15 above (its directory is counsel's fence, not audit's).
+4. **Engineer seat, one line each, the cheapest reaches in the ledger:** `session touch` refuses an
+   unknown word (G: 159, 182, 196 — three of four); `session_id()` refuses to write under no
+   `DYAD_SESSION` (R: 145, 205); `cmd_guards` prints its own line for an empty pre-push stdin (E: 212);
+   `touch` validates each `-r` token (S: 211); `dwork state -d` refuses text beginning with a date (S: 164).
+5. **Engineer seat:** `dwork state <id> done --mandate <id>`, copying the mandate's operative `Y done`
+   entry with its heads, so the fence's landing check reads an accreted row's close (M: 207).
+6. **Engineer seat:** `plan.base->commit` must be an ancestor of `origin/main` at the writer's push
+   (T: 170, 172, 178); the shallow-clone advice at the pre-push path is #315 already.
+7. **Engineer seat:** the attendance liveness read uses `holder` against the live sessions or a window
+   of its own, not `STALE_AFTER` (E: 209); `trace.check_store` refuses a `- preview:` line on a `done`
+   row (Q: 204, ten files today).
+8. **Operator:** the program charter's `ceiling 0` against the four plans' mandate scopes (Q: 210) — a
+   preference question, not a row, unless the Operator wants the ceiling read by `seats.py`.
+9. **Operator's word:** whether the 213 rows are re-derived against 25 modes (the play-book's full
+   re-derivation on a new mode), or the delta method stands until the next exercise.
+Each of the 23 children #262–#284 stays `backlog`; none is closed, re-opened or archived here.

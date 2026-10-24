@@ -124,3 +124,9 @@ apply to row 47: `--no-verify` is in Git, which Rule-14 property 2 places *in* t
 in a hosted service, and the question "was this line produced on a non-empty index" is decidable, so
 Rule-5's Enforcement does not cover it either. The Operator may therefore judge V still open on row
 47 even with the proposed row opened. Proposed only — nothing closed here.
+
+## Delta 2026-10-24 (#259 revision 5; 2 → 3 rows)
+**Row added:** 176 (#297: `core.hooksPath=/dev/null` by reflex in a scratch worktree; re-made with the
+hook). **Mitigations re-read:** unchanged; no path to a commit passes a check the Agent cannot skip
+(Rule-1 Enforcement names the hosting's required checks). **Exit:** as proposed (#283 `backlog`); row
+176 is the row-47 shape, which the proposed detector does not reach.

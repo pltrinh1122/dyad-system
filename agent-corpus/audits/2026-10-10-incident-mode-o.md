@@ -117,3 +117,9 @@ applies — the fault is not in a hosted service (Rule-14 property 2) and is not
 could decide (Rule-5 Enforcement), since the command form is a string match; what the corpus lacks
 is a moment at which to run one, not the ability to decide. Proposed only — the mode is not closed
 here, and row 62 is unreached by anything above.
+
+## Delta 2026-10-24 (#259 revision 5; 3 → 4 rows)
+**Row added:** 190 (#331: `git reset --soft origin/main` as a sync, which assigned the pre-merge index
+over a peer's three files). **Mitigations re-read:** none in the tree. **Exit:** exit 2 as proposed
+(#276 `backlog`); the row's own rule — `merge --ff-only` or `reset --keep`, never `--soft` — would join
+the deny-rule candidate's list.

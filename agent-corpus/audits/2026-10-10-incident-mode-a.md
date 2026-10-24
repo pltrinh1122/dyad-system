@@ -222,3 +222,20 @@ inference; and the agent-side face (row 136, a fork launched on a disposition's 
 inside a reply, which no mechanism in this system observes. Whether that second face is fenceable at
 all on this kernel is a question for its own derivation — it looks like Rule-5 Enforcement territory,
 a judgement no script can decide — and I do not propose closing it here on that basis.
+
+## Delta 2026-10-24 (d-work #259 revision 5, seat audit-89a934d6; 13 → 14 rows)
+**Row added:** 198 (2026-10-22, #383) — a push to PR #445 after the Done-`Y` had been given on its head
+be4391d and before the relay reached the seat; the amendment pushed needed its own `Y` and was pushed
+while that `Y` was unasked. The agent-side face of the mode (an act inside a turn), now with the M4 relay
+as the condition that widened the window between the question and the seat's reading of it.
+**Mitigations re-read from the code.** Nothing new reaches this mode since 2026-10-10. #202's fence
+(`rows.py` `done_order_problems`, `landing_problems`; `cmd_dwork state` refusals) governs the order of
+record, merge and close, not an act before a question. The Operating Guide (`crafts/cos/docs/operating-guide.md`
+§2, §7: "a head that moves is re-asked", "a seat whose predecessor has not landed waits by state") is
+prose, inference only.
+**Recurrence after a mitigation shipped:** row 198 post-dates every shipped mitigation and is outside
+their reach by construction, as rows 111 and 136 were.
+**Exit after the delta:** unchanged — exit 2 proposed for the `Y done` without `Y plan` face (#262 still
+`backlog`, nothing built); the agent-side face stays open. One more candidate, stated: a seat holds a
+branch once its head is reported, which is conduct unless the hosting's branch protection enforces it
+(Rule-14 property 2: not kernel).

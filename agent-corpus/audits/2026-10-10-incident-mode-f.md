@@ -99,3 +99,13 @@ measurement of that, and the candidate above is offered as a cost reduction, not
 this exit. Second, the fence does not reach a ledger-only range or a commit made on `main`
 (`prs.py:62-65`); no row of this mode is in either class, so the gap is a finding about the fence's
 reach and not an uncaught incident. Proposed only — the mode is not closed here.
+
+## Delta 2026-10-24 (#259 revision 5; 3 → 4 rows)
+**Row added:** 166 (#297: `d-work #1` in a commit message's prose, caught by `dyad check --pr` before
+the push).
+**Fence re-verified (phase 4):** `prs.check_transaction` (`dyad/guards/agent/prs.py:59-67`) on any
+branch but `main`, over a non-ledger-only range, at `dyad check --guards --pre-push` and `check --pr`.
+Row 166 met it exactly as rows 36, 86 and 137 did — four of four. A fault of this shape presented today
+meets the same fence; read from the code on 2026-10-24, unchanged since 2026-10-10.
+**Exit after the delta:** exit 1 holds (fenced at a named moment; catches, does not prevent — the
+recurrence is the measurement, now four).

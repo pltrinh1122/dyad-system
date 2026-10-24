@@ -228,3 +228,21 @@ push both live in a hosted service that Rule-14 property 2 keeps observed and ne
 (`dyad/rules/RULE-14-system-infrastructure.md:37,56`); no check the kernel can run reaches them. The
 remaining six are what the candidate addresses, and only as visibility. Nothing here closes the mode,
 and I assert nothing about it being addressed.
+
+## Delta 2026-10-24 (#259 revision 5; 12 → 18 rows)
+**Rows added:** 151 (#290: the `on-ignore` signal, an absence no mechanism reads), 171 (#239: a
+`Y done (merges PR #355)` entry nothing reconciled for seven days), 202 (the trace evidence lines the
+play-book names, omitted from a completion reply), 204 (ten persisted previews in the trace store,
+`check_store` blind to them), 206 (#395: a command the Operator ran, delivered inline against Rule-18
+and no mechanism reading that it was), 210 (#400 et al.: the charter's `ceiling 0` read by nothing).
+**Mitigations re-read from the code.** Row 151: fenced by removal — `batch-disposition-mode` is `always`
+since 2026-10-14 (a preference value, not a check; recorded, not counted as exit 1). Row 171: #202's
+`landing_problems` now refuses the close while the named head is not on `main`, so a `done` row with an
+unlanded merge cannot be written again; an unspent `Y` standing on a live row is still read by nothing
+but `done_recorded_not_closed`'s warning, which does reach it (one line per push). Rows 202, 204:
+`trace.check_store` unchanged (name, row, header, five headings). Row 206: `sysadmin/ops_scripts` checks
+the files that exist (0). Row 210: `crafts/cos/guards/seats.py` reads the `ceiling` column's name only.
+**Recurrence after a mitigation shipped:** 171's shape — none since #202; 151's — none since `always`.
+**Exit after the delta:** open as before, with two of the eighteen now fenced (7, 75 by #191; 171's
+shape by #202) and one removed (151). #278 `backlog`. Candidates the delta adds, stated: a ceiling
+reader in `seats.py` (210); `check_store` refusing a `- preview:` line on a `done` row (204).

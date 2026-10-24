@@ -164,3 +164,20 @@ here, because Rule-14 property 2 bounds what the *kernel* contains and says noth
 Agent types — the honest statement is that no fence has been found, not that none can exist. The
 mode therefore stays **open** in the index, and the Agent neither closes it nor asserts it addressed
 (play-book Conduct, Rule-2).
+
+## Delta 2026-10-24 (#259 revision 5; 4 → 11 rows)
+**Rows added:** 157 (#295: a `set -e` script whose restore step was allowed to fail), 165 (#297: an
+attack disposed on a correlation that could not discriminate), 172 (#310: `git push`'s refusal hidden by
+a `grep` over its output — the row 123 class), 187 (#326: a `&&` chain short-circuited at a count), 197
+(#387: a push loop reading ` -> main` as success), 209 (#393/#388: the attendance mode read over the
+6 h stale window), 212 (#401: the pre-push hook's line for an empty stdin).
+**Mitigations re-read from the code.** The 2026-10-10 inventory stands: the only mitigation at the
+fault's moment is inference. One new instrument is itself of this mode: `pushed_refs`
+(`package.py:614-646`) reads only the refs git hands it and `cmd_guards:661` prints a disjunction for
+the empty case (row 212). `sessions.attendance` (`:282-296`) reads liveness through `STALE_AFTER`
+(row 209). Row 172 and 197 are the same shape as row 123 — success read from a filter over `git`'s
+text — and the candidate the 2026-10-10 record scoped to the suite (keep the child's stderr) does not
+reach a filter the Agent types in its own shell.
+**Recurrence after a mitigation shipped:** n/a; no shipped mitigation reaches any row.
+**Exit after the delta:** open; #266 `backlog`. Two of the seven (209, 212) are in shipped code and
+reachable by a code change each — stated for the owning seat (engineer), proposed below in the index.

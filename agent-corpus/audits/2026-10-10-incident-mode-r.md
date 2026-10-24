@@ -220,3 +220,24 @@ warns" about; row 96 has an available mitigation (`DYAD_SESSION`) that no mechan
 store measured 64 files, 57 unnamed, today; row 139 is one day old and unmitigated. The mode stays
 **open** in the index, and the Agent neither closes it nor asserts it addressed (play-book Conduct,
 Rule-2).
+
+## Delta 2026-10-24 (#259 revision 5; 7 → 19 rows)
+**Rows added:** 145 (#285: two files shed by one touch), 146 (#261: `check --evidence` judging the
+entrypoint's tree, not the head), 152 (#290: `rows` derived from the whole store), 153 (#290: `_WRITER`
+per process where the check needs per session), 155 (#290: `parent-46`, a form `hash_ids` cannot
+match), 167 (#297: a local date against a UTC comparison), 180 (#301) and 192 (#341) (bare touch claims
+the board), 201 (the trace window's end branch), 203 (a comparison line computed over a transient
+store), 205 (a third stray on `main`), 208 (`same_root` on the path alone). Twelve rows in twelve
+days: the mode has nearly tripled, and twelve of its nineteen rows are the presence store or the trace.
+**Mitigations re-read from the code.** Shipped since 2026-10-10 and reaching this mode: nothing that
+changes a key. #294 (`e146b29`) added `host` and `holder` to the file and `same_root` does not read
+them (`sessions.py:396-404`); #393 added attendance, which reads `holder` for nothing either. The
+`backlog` rows #311, #312, #313 (2026-10-15, under #310's mandate) each name one fence of this mode —
+`-r` reads plan files, `same_root` compares `holder`, `list` flags one holder behind two seats — and
+none is built. Row 167's two frames (`package.py` local date, `trace.py` UTC) unchanged. Row 155's
+regex unchanged.
+**Recurrence after a mitigation shipped:** every row post-dates #294 or is the store the 2026-10-10
+record measured at 64 files (88 today, 58 `unnamed-*`).
+**Exit after the delta:** open; #279 `backlog`. Exit 2 is reachable for four sub-shapes by rows that
+already exist (#311, #312, #313, #286), which is the measurement: four named fences, zero built, twelve
+recurrences.

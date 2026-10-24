@@ -163,3 +163,16 @@ The two families reach two different exits, which is why:
 The recommendation to the Operator is therefore to split T at the next exercise and let each half
 take its own exit; until that is disposed, T stays open in the index whatever this record says about
 it, which is the play-book's own rule. Proposed only — nothing closed here.
+
+## Delta 2026-10-24 (#259 revision 5; 10 → 14 rows)
+**Rows added:** 148 (#291: an id allocated by a branch-fenced session against an `origin/main` it cannot
+advance), 168 (#243: PR #349's id collision), 170 and 178 (#301, #297: the `dbfe778` wedge — a plan's
+base commit taken from an unpushed local `HEAD`, failing every other clone's pre-push for 19–40
+minutes). Secondary member of 172 (the writer's side) and 197.
+**Mitigations re-read from the code.** The id half: `dwork new`'s fetch-then-allocate and
+`check_id_collisions` (`rows.py:356`) unchanged; both rows are the branch-fenced or in-review case the
+2026-10-10 record said neither reaches. The base-commit half is new to the mode: `references.base_commit`
+checks existence in the local object store and not ancestry of `origin/main`; no row names that fence.
+**Exit after the delta:** open, and the 2026-10-10 recommendation to split T stands with a third family
+added — unpushed state published as if shared (170, 172, 178). Candidate stated: `plan.base->commit`
+must be an ancestor of `origin/main`, checked at the writer's push.

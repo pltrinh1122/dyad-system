@@ -177,3 +177,18 @@ surfaces read above (`check`, `craft export`, `build`, `install`, `bundle build`
 existing `backlog` row names this fence — the candidate has lived in
 `agent-corpus/audits/2026-09-22-incident-mode-g.md` (#123) as prose since 2026-09-22 and recurred
 once since, which is the failure the hardening play-book's Conduct section names.
+
+## Delta 2026-10-24 (#259 revision 5; 5 → 9 rows)
+**Rows added:** 159 (#301, `session touch --help`, cloud), 182 (#321, `session touch --help`, terminal,
+hours later), 196 (#372, `session touch --help`, counsel's registration), 213 (#401, `session --help`
+read as a root path). Four recurrences on one command family across four seats and three weeks, with
+#268 `backlog` against the mode throughout.
+**Mitigations re-read from the code.** `sessions.main` (`sessions.py:449-488`): the `touch` loop skips
+any word it does not recognize (`:456`) and falls through to `touch_from_open_rows` when no `-r`/`-f`
+survived; the verb-less path takes `a[0]` as a root (`:484`). `dwork` alone has the flag table
+(`DWORK_VALUE_FLAGS`, `package.py:902-904`). Unchanged since 2026-10-10 except `name` added (#379).
+**Recurrence after a mitigation shipped:** all four post-date #133's per-command fix and are on the
+verbs it did not cover — the measurement attack 7 of the 2026-10-10 record asked for, answered: yes,
+four times.
+**Exit after the delta:** exit 2 as proposed (one dispatch-level reader); #268 `backlog`, nothing
+built. The cheapest reach for three of the four rows is one line: `touch` refuses an unknown word.

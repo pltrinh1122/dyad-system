@@ -174,3 +174,9 @@ Where verification stopped: I did not push from a linked worktree to observe the
 variables live; the hook variables I relied on are the ones
 `dyad/tests/test_package.py:1153` records as observed under git 2.43.0, and the claim that
 `dyad/hooks/pre-push` strips nothing is read from its four lines, not from a live run.
+
+## Delta 2026-10-24 (#259 revision 5; 2 rows, no delta)
+**Fence re-verified (phase 4):** `SpawnSiteTests` (`dyad/tests/test_package.py:1339`) and
+`SuiteEnvWorktreeTests` (`:1294`) present; `suite_env` (`package.py:436`) still passed at both suite
+spawns; the suite runs at `check --guards --pre-push` and `check --evidence`. Zero rows of this shape in
+69 new rows. **Exit:** exit 1 holds.
