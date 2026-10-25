@@ -257,3 +257,32 @@ the command's existence. **16–14**: the harness is The World, read through the
 no incident is raised by a reading; the remedy is the writer's. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #434.
+
+## Amendment — d-work #350 (2026-10-25, ported by #453 from PR #425: the single writer and the `files` union)
+**Claim (Operator, 2026-10-20, plan #350 revisions 1–3; ported onto `main` by #453):** Presence's "only that
+session ever writes it — zero cross-session write conflict by construction" is not what the code enforces, and
+the fence of #32 which stands in for it was vacuous. `sessions.py`: `writer()` is the holder's harness session
+id (a per-process id, `_PROCESS`, when there is none), and `files_touched` keeps path-shaped tokens only. PR
+#425's `title` line is not ported: the session title is read by `dyad session reconcile` (#434) instead, and
+PR #425's attacks 22, 23 and 25, which judged that line, are left with it.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 55 | The F1 warning of #32 means what it says: a different live process wrote this file under this name. | **Confirmed false, by test** (PR #425's attack 19). `_WRITER` was a `uuid4` computed at import and every `dyad` command is its own process, so two consecutive touches by one session each warned about the other (writers `e2b37e29ddf8` then `025f27666309`, file left `c1355aee99dc`). The fence could not tell a second holder from the same holder's next command. | `writer` is the holder's stable id (`CLAUDE_CODE_SESSION_ID`), the per-process id only as the fallback. Same holder across processes: silent. Different holder: warns. `WriterCollisionTests`. |
+| 56 | Make a different live writer a refusal rather than a warning. | **Refuted** (PR #425's attack 20). The store is advisory (this Rule, Enforcement: a stale or unclean presence file is never a guard failure), a refusal on a wrong signal refuses every touch, and a seat must stay takeable from any terminal (#297). | Stays a warning that records only its own rows and files. |
+| 57 | `holder` duplicates `writer` — re-attack of attack 17. | **Survives, scoped; attack 17's refutation is superseded** (PR #425's attack 21). With a harness id the two lines are equal; they differ when none is reported (no `holder` line, `writer` a per-process id). `holder` is the displayed fact and `writer` the comparison key, and collapsing them would leave the warning with no key at all on a kernel that names no session. | Both stay; attack 17 stands only for the no-harness-id case. |
+| 58 | The `writer` line may now hold a 36-character harness uuid where it held 12 hex, so a check of its shape breaks. | **Refuted by reading.** No check reads the line's shape: `check_record` never validates `writer`, `parse` takes any value, and the cabinet craft names the line only in prose (`crafts/cabinet/falsification/rules/naming.md` attack 3). The invariant that judged the 12 hex judges `_PROCESS`, the fallback, as `process-id-is-well-formed`. | No validator; the invariant renamed. |
+| 59 | A path-shape filter drops a real path with no `/` and no extension. | **Survives, scoped** (PR #425's attack 24). A bare top-level name (`Makefile`) is under-reported; the test over every plan on this instance asserts every kept token is path-shaped, and the field is advisory — an under-report costs a signal, never a corruption, as the brace-group rule already holds. The brace-group rule is kept. | `_is_path`, `_path_tokens`; a matched line naming text but no path is prose and takes no continuation. `FilesTouchedTests`. |
+
+**Pairwise (Rule-5).** **16–2**: advisory store, no ratification event touched. **16–3**: session start still
+touches and reads the files; the warning is rarer and means what it says. **16–7**: the presence file is not a
+provenance record. **16–11**: no craft/instance change. **16–12**: every new branch carries a test
+(`dyad/tests/guards/agent/test_sessions.py` `WriterCollisionTests`, `FilesTouchedTests`); the invariant is
+renamed, not removed. **16–14**: one harness variable already read (`holder`), nothing pinned or added.
+**16–15**: plan files are read by a stricter parser, not changed. **16–1**: agent zone, one PR. Others
+unchanged. Coherent, orthogonal.
+
+**Rule-6 term check.** No term added or defined. `presence file` (owner 16) still reads correctly for its
+users, Rules 3 and 16; its row does not list `writer`, as it did not before.
+
+Disposition: see ledger #350.

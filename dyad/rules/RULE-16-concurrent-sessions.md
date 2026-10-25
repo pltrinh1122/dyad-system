@@ -48,6 +48,11 @@ files and almost never merge.
   planned), `files` (the deduplicated union of every `files touched:` line from those rows'
   stored plan files, Rule-15 — one signal that matters: two sessions on *different* rows about
   the *same file*, the near-miss this store was built to catch, d-work #185).
+  An optional `writer` line, written by `touch()`, is the holder's harness session id when the harness
+  reports one and a per-process id otherwise, so a session's own later `dyad` process matches it and
+  only a different holder under the same `DYAD_SESSION` — the one way two sessions share a file, which
+  nothing prevents — makes `touch()` warn and record only its own rows and files instead of unioning
+  the other's: a warning, never a refusal (F1, d-work #32, #350).
   Two optional lines follow, written by `touch()` from the environment and checked only when
   present (never failing an absent one, as `writer` is handled): `host` (`<kernel> <os> <arch>`,
   the kernel token what the harness reports — `cloud` when it reports `CLAUDE_CODE_REMOTE=true`,
@@ -144,6 +149,9 @@ record, amendment #419. Presence's own-disposition clause reads the note's whole
 accreted row's close had been noted `Y done (mandate #<id>, <date>)`, which the reading took for a disposition given in
 the closing seat; see the same record, amendment #422. Presence gains `dyad session reconcile` 2026-10-25 (d-work
 #434, child C1 of #431): the harness's list of sessions and the presence store had drifted apart with nothing to say
-where, and the operate seat owns the check while the writer owns the fix; see the same record, amendment #434.
+where, and the operate seat owns the check while the writer owns the fix; see the same record, amendment #434. Presence's
+writer sentence 2026-10-25 (d-work #350, ported by #453 from PR #425): the F1 fence of #32 compared a uuid
+computed per `dyad` invocation, so it warned on a session's own previous command and could not tell a second
+holder from the same one; see the same record, amendment #350.
 
 Set: System Requirements.
