@@ -121,12 +121,15 @@ def live_components(pkg: Path = dyadlib.PKG) -> dict[str, str]:
     return out
 
 def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], released: set[str] | None = None,
-          tagged: set[tuple[str, str]] | None = None) -> list[str]:
+          tagged: set[tuple[str, str]] | None = None, departed: set[str] | None = None) -> list[str]:
     """`released`: the components with a release tag of their own; None treats every one as released
     (the strict form). A released craft with no row fails; an unreleased one warns (Rule-11 p7, #156).
     `tagged`: the (component, version) pairs with a release tag; None is the strict form, where every
     version mismatch fails. Given, a row behind an untagged live version that names a tagged one warns
-    (#170): the craft-zone bump lands first and the row follows."""
+    (#170): the craft-zone bump lands first and the row follows. `departed`: the row components absent from
+    the tree that hold a release tag of their own; such a row warns (#423) — the craft-zone PR that removes or
+    renames a released craft lands first and the infra-zone PR removing the row follows. None, or a component
+    never released, keeps the strict form: a row naming a craft not in the tree fails."""
     released = set(live) if released is None else released
     msgs: list[str] = []
     if not version:
@@ -139,7 +142,10 @@ def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], relea
             msgs.append(f"'{comp}': declared twice")
         seen.add(comp)
         if comp not in live:
-            msgs.append(f"'{comp}': not a craft in this tree")
+            if departed is not None and comp in departed:
+                msgs.append(f"warning: '{comp}' has left the tree but holds a release tag ({tag_pattern(comp)}): the row is removed by an infra-zone PR (#423)")
+            else:
+                msgs.append(f"'{comp}': not a craft in this tree")
         elif ver != live[comp]:
             row_v, live_v = _semver(ver), _semver(live[comp])
             behind = row_v is not None and live_v is not None and row_v < live_v
@@ -164,7 +170,9 @@ def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str
         return "", [], []
     version, rows = parse(p.read_text())
     live = live_components(pkg)
-    return version, rows, check(version, rows, live, released_components(root, live), tagged_versions(root, live))
+    gone = {c for c, _ in rows if c and c not in live}
+    return version, rows, check(version, rows, live, released_components(root, live), tagged_versions(root, live),
+                                released_components(root, gone))
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
