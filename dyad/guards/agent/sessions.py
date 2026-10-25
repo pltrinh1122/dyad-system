@@ -31,6 +31,7 @@ typed: a hand-added key does not survive the next `touch()`.
   sessions.py [repo-root]              check every presence file
   sessions.py touch [-r <row>]... [-f <file>]...   write/refresh this session's file
   sessions.py list                     print every file, flag one older than the stale window
+  sessions.py reconcile                compare the live presence files with the harness's session list (#434)
 """
 import sys
 if sys.version_info < (3, 12):
@@ -38,7 +39,7 @@ if sys.version_info < (3, 12):
 import datetime, os, platform, re, uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-import dyadlib
+import dyadlib, hostadapter
 
 ENTITY, CORPUS, TRANSACTION = "presence", "agent", False
 NAME, OWNER = "session presence file", "Rule-16"
@@ -72,6 +73,12 @@ ATTENDANCE_MODES = ("M3", "M4", "hybrid")       # only the leader attended | eve
 ROUTES = ("chat", "relayed")                    # where a seat's counter-prompt is asked: its own chat, or through the leader (R29)
 _RECORD_SESSION = re.compile(r"^session:\s*(\S+)\s*$", re.M)
 _MANDATE_NOTE, _RELAYED_NOTE = "mandate #", "relayed via"
+# Reconcile (d-work #434, child C1 of #431): the live presence files against the harness's own session list
+# (`hostadapter.harness_sessions`), one line per mismatch — the operate seat's run-book health command, advisory, never
+# a guard failure. A title in the seat form begins with the prefix `dyad session name` prints, `<seat>: <kernel> (<system>)`,
+# followed by the end or a separator and any text — ` - <on>`, or a suffix the harness appends (observed: ` - operate`).
+TITLE_FORM = re.compile(r"^(?P<seat>\S+): (?P<kernel>\S+) \((?P<system>[^()]*)\)(?:\s*[-–—|:·,]\s*(?P<on>.*))?$")
+READINGS = ("no harness session", "no presence", "title differs", "stale while titled")
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
               ("organizations-hold-the-default", lambda: DEFAULT_ORGANIZATION in ORGANIZATIONS and len(set(ORGANIZATIONS)) == 2),
@@ -79,6 +86,7 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
               ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed") and DEFAULT_ATTENDANCE_DAYS > 0),
               ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
+              ("reconcile-readings-are-four", lambda: len(set(READINGS)) == 4 and bool(TITLE_FORM.match("engineer-1537d8fb: cloud (ds) - ledger")) and not TITLE_FORM.match("dyad-system-ea")),
               ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
@@ -409,14 +417,14 @@ def read_all(root: Path | None = None) -> list[dict[str, str]]:
         out.append(fields)
     return out
 
-def is_stale(seen: str) -> bool:
+def is_stale(seen: str, now: datetime.datetime | None = None) -> bool:
     try:
         t = datetime.datetime.fromisoformat(seen)
     except ValueError:
         return True
     if t.tzinfo is None:
         t = t.replace(tzinfo=datetime.UTC)
-    return datetime.datetime.now(datetime.UTC) - t > STALE_AFTER
+    return (now or datetime.datetime.now(datetime.UTC)) - t > STALE_AFTER
 
 def overlaps(root: Path, my_files: set[str], exclude: str | None = None) -> list[tuple[str, set[str]]]:
     """Other sessions' presence files whose `files` set intersects `my_files` — the finding a new
@@ -441,7 +449,100 @@ def same_root(root: Path, exclude: str | None = None) -> list[str]:
     stated, not enforced."""
     here = str(Path(root).resolve())
     return [s.get("session", s["_path"]) for s in read_all(root)
-            if s.get("session") != exclude and s.get("root") == here and not is_stale(s.get("seen", ""))]
+            if s.get("session") != exclude and shares_checkout(s, here) and not is_stale(s.get("seen", ""))]
+
+def shares_checkout(s: dict[str, str], here: str, me_host: str | None = None, me_holder: str | None = None) -> bool:
+    """True when presence file `s` may share this process's checkout: the same `root`, and — when both sides record
+    them — the same `host` line, and not two different holders on a `cloud` kernel: separate cloud containers have the
+    same path and never one filesystem (#434, the operate seat's report). A side that records no
+    host or no holder cannot be told apart, so it still counts: the signal errs toward warning."""
+    if s.get("root") != here:
+        return False
+    me_host = me_host if me_host is not None else host_line()
+    me_holder = me_holder if me_holder is not None else holder()
+    other_host, other_holder = s.get("host"), s.get("holder")
+    if other_host and me_host and other_host != me_host:
+        return False
+    cloud = "cloud" in (me_host.split()[:1] + (other_host or "").split()[:1])
+    if cloud and other_holder and me_holder and other_holder != me_holder:
+        return False
+    return True
+
+def title_seat(title: str, form: re.Pattern | None = None) -> dict[str, str] | None:
+    """{seat, kernel, system, on} when a harness session title is in the seat form `dyad session name` prints — its
+    seat a name in the organization's form — else None."""
+    m = TITLE_FORM.match(title or "")
+    if not m or parse_seat(m.group("seat"), form) is None:
+        return None
+    return {k: m.group(k) or "" for k in ("seat", "kernel", "system", "on")}
+
+def _holder_match(h: str, ids: list[str]) -> str | None:
+    """The harness session id a presence `holder` names: the full id, or its first HP_LEN hex as a seat's `<hp>`."""
+    if h in ids:
+        return h
+    return next((i for i in ids if len(h) == HP_LEN and i[:HP_LEN] == h), None)
+
+def reconcile(root: Path | None = None, harness: list[dict] | None = None, now: datetime.datetime | None = None) -> list[str]:
+    """The live presence files against the harness's own session list (d-work #434, child C1 of #431), one line per
+    mismatch, [] when they align or when the harness reports no session at all (a kernel that keeps no store — the
+    caller is itself a session, so an empty list is the kernel's silence, never a finding):
+      `no harness session: <seat>` — a live presence file whose holder (its `holder` line, else the seat name's `<hp>`)
+        matches no harness session;
+      `no presence: <title>` — a harness session titled in the seat form whose seat has no live presence file and
+        which no live presence file holds;
+      `title differs: <seat> (<title>)` — the holder's harness session title does not begin with the prefix
+        `dyad session name` prints, `<seat>: <kernel> (<system>)` — the kernel compared when the presence file records
+        its host, the system the main checkout's handle (`system_handle`) — followed by the end or a separator; what
+        follows the separator (`- <on>`, a harness suffix) is never compared;
+      `stale while titled: <seat>` — a presence file past the stale window whose holder's harness session still
+        carries the seat's own seat-form title.
+    Advisory: the remedy is the writer's (the seat touches; the program retitles or closes), never this reading's."""
+    root = root or dyadlib.repo_root()
+    harness = hostadapter.harness_sessions(root) if harness is None else harness
+    if not harness:
+        return []
+    now = now or datetime.datetime.now(datetime.UTC)
+    form, _, _ = seat_form()
+    system = system_handle(hostadapter.checkouts(root)[-1])   # a worktree's titles name the repo's main checkout
+    titles = {h["id"]: h.get("title") or "" for h in harness}
+    ids = sorted(titles)
+    out, claimed_ids, live_names = [], set(), set()
+    for s in read_all(root):
+        name = s.get("session") or s["_path"].removesuffix(".md")
+        h = s.get("holder") or (parse_seat(name, form) or {}).get("hp")
+        hid = _holder_match(h, ids) if h else None
+        t = title_seat(titles.get(hid, ""), form) if hid else None
+        if is_stale(s.get("seen", ""), now):
+            if t and t["seat"] == name:
+                out.append(f"stale while titled: {name}"); claimed_ids.add(hid)
+            continue
+        live_names.add(name)
+        if hid is None:
+            out.append(f"no harness session: {name}" + ("" if h else " (no holder line)"))
+            continue
+        claimed_ids.add(hid)
+        kernel = (s.get("host") or "").split()[:1]
+        if t is None or t["seat"] != name or t["system"] != system or (kernel and t["kernel"] != kernel[0]):
+            out.append(f"title differs: {name} ({titles[hid] or 'no title recorded'})")
+    for hid in ids:
+        t = title_seat(titles[hid], form)
+        if t and hid not in claimed_ids and t["seat"] not in live_names:
+            out.append(f"no presence: {titles[hid]}")
+    return out
+
+def reconcile_report(root: Path | None = None, harness: list[dict] | None = None,
+                     now: datetime.datetime | None = None) -> tuple[int, list[str]]:
+    """`dyad session reconcile`: (exit code, lines) — the mismatch lines and exit 1, or one `ok` line and exit 0. A
+    health command (the operate seat's run-book), never a guard: `check_package` does not call it."""
+    root = root or dyadlib.repo_root()
+    harness = hostadapter.harness_sessions(root) if harness is None else harness
+    if not harness:
+        return 0, [f"ok   [reconcile] the harness reports no session for this repo ({hostadapter.harness_dir()}); nothing to compare"]
+    lines = reconcile(root, harness, now)
+    live = len([s for s in read_all(root) if not is_stale(s.get("seen", ""), now)])
+    if lines:
+        return 1, lines + [f"{len(lines)} mismatch(es) — {live} live presence file(s), {len(harness)} harness session(s) (Rule-16 Presence; the writer remedies)"]
+    return 0, [f"ok   [reconcile] {live} live presence file(s), {len(harness)} harness session(s) aligned"]
 
 def check_record(p: Path, text: str | None = None) -> list[str]:
     text = p.read_text(errors="ignore") if text is None else text
@@ -506,6 +607,11 @@ def main(a: list[str]) -> int:
         for line in lines:
             print(line, file=sys.stderr if rc else sys.stdout)
         return rc
+    if a and a[0] == "reconcile":
+        rc, lines = reconcile_report(root)
+        for line in lines:
+            print(line)
+        return rc
     if a and a[0] == "list":
         rows = read_all(root)
         if not rows:
@@ -519,7 +625,7 @@ def main(a: list[str]) -> int:
             name = s.get("session", s["_path"].removesuffix(".md"))
             att = ((f" attended={a['attended'][name]}" if a["attended"][name] else " attended") if name in a["attended"]
                    else (" relayed" if name in a["relayed"] else ""))
-            same_flag = " [SAME ROOT AS YOU]" if (s.get("root") == str(Path(root).resolve()) and s.get("session") != session_id()) else ""
+            same_flag = " [SAME ROOT AS YOU]" if (shares_checkout(s, str(Path(root).resolve())) and s.get("session") != session_id()) else ""
             where = (f" host={s['host']}" if s.get("host") else "") + (f" holder={s['holder']}" if s.get("holder") else "")
             print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{att}{same_flag}")
         return 0

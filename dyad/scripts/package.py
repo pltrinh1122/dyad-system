@@ -120,6 +120,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 check of the declaration: `undeclared` for an own disposition in an undeclared
                                 live seat, `warn` for a declared seat with none within `attendance-window`
                                 (Rule-16 Presence, #388, #412)
+  dyad session reconcile        the live presence files against the harness's own session list
+                                (scripts/hostadapter.py harness_sessions; #434, child C1 of #431): one line per
+                                mismatch — `no harness session`, `no presence`, `title differs`, `stale while
+                                titled` — exit 1, else one `ok` line; the operate seat's run-book health command,
+                                advisory, never a guard (Rule-16 Presence); the remedy is the writer's
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
   dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
