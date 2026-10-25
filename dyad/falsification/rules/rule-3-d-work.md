@@ -557,3 +557,24 @@ new path. A term rename, no change of what a session reads.
 `member-cos` → `secretary`, owner 16, used by 3 and 16; `cos-board` reworded. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #419 (accreted under mandate #417; Done rides its Done-`Y`).
+
+## Amendment — d-work #424 (2026-10-25, the form of a Done question relayed to the Operator)
+**Claim (plan #424, the Operator's `Y` of 2026-10-25, batch #422,#423,#424):** a Done question the cos relays to the
+Operator for a seat that is not attended is presented in the form the preference `relay-form` names — under `brief`
+WHAT, WHY and HOW at the Operator's altitude — with the seat's evidence block quoted verbatim and the seat's own
+question its last line; Rule-2's Binding is unchanged.
+
+| # | attack | result |
+|---|---|---|
+| 1 | R29 ("a cos relays verbatim, never answers") and the Guide's "relay the words, not a summary" say the opposite. | Confirmed, and scoped: both bind the words that reach a *seat* — the Operator's prompt and disposition, which the seat acts on (Rule-7 property 4, the relayed prompt). Nothing bound the form in which a seat's question reaches the Operator; the two directions had been conflated. The sentence binds only the Operator-bound one; the vocabulary row `relayed prompt` (the seat-bound one) is unchanged. |
+| 2 | Rule-10 already requires path, counter, reconciliation and one `Y/N` of every proposal. | Confirmed, partial: Rule-10 shapes the Agent's own proposal; a relayed one arrives in the seat's shape (#423's question did, and was passed through). WHAT/WHY/HOW is Rule-10's form applied by the cos to a seat's question, the seat's text quoted as evidence — Rule-10 still owns the form, this sentence only says it is applied on relay. |
+| 3 | A preference is needed only if two values are wanted. | Survives: `verbatim` (the seat's question and evidence passed through, its last line the question) and `brief` (the cos's WHAT/WHY/HOW, the seat's words quoted); both keep the seat's question text as the `Y/N` line, so the `Y` binds to what the seat asked and Binding needs no edit. |
+
+**Pairwise (Rule-5).** **3–2**: Binding untouched — the last line is the seat's own question, so the `Y` names what
+the question named; a summary never stands in for the evidence block. **3–10**: Rule-10 owns the form of a proposal;
+this sentence names where the cos applies it, owning no part of it. **3–7**: the seat-bound relay (verbatim, the
+relayed prompt) is untouched; the Operator's answer is still entered verbatim. **3–16**: Rule-16 owns attendance and
+the route; Rule-3 states only what a relayed Done question carries. **3–6**: no new Agent term — `relay-form` is a
+preference key, defined in `preferences-corpus/`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #424.

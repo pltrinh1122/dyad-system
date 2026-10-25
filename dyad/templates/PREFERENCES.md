@@ -22,6 +22,7 @@ defines what each value means.
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
 | attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
+| relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -138,3 +139,14 @@ defines what each value means.
   Derived by `dyad session list` on every read, never written anywhere (the record is the proof, #295).
   Seeded `7`: a week of silence in a declared seat's chat is worth a warning; a longer or shorter window
   is the Operator's number.
+- `relay-form` — how the leader, the cos, presents to the Operator a question a seat that is not attended owes
+  (d-work #424): the Operator-bound direction of a relay. The seat-bound direction never varies — the Operator's
+  words reach a seat verbatim (the core's relayed prompt, #253 R29). `verbatim`: the seat's question and its
+  evidence passed through as the seat wrote them, the last line the seat's question. `brief`: the cos meets the
+  Operator at the Operator's altitude and presents WHAT (the matter and its state), WHY (what it bears on) and HOW
+  (the path, its strongest counter and the reconciliation — Rule-10's form applied by the cos to the seat's
+  question), the seat's text quoted as citation and evidence, never the body, and the seat's evidence block
+  verbatim; the last `Y/N` line is the seat's own question text, so the `Y` binds to what the seat asked
+  (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
+  binds to. Seeded `verbatim`: the conservative default for a fresh install — the seat's own words pass through
+  until the Operator has chosen the cos's brief.
