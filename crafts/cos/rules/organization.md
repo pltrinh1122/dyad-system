@@ -102,18 +102,21 @@ who disposes — stays the core's):
   touch another seat's presence file, act on the host outside an ops script or a run-book the Operator runs
   (Rule-8), or open a seat the mandates table does not name (a fourth seat is a new plan, plan #369 revision 5).
 
-## 6. Attendance, derived — never declared
-Whether an Operator is present at a seat is read from the record, never written as a claim: a seat is
-**attended** when its provenance record holds a disposition given in that seat's own chat — not a mandate's
-inherited one, not a relayed one — within the attendance window (the preference `attendance-window`, the
-Operator's); the leader is attended by definition while any seat is. Over the live seats this yields the
-organization's **mode** — pure M3 (only the leader attended), pure M4 (every seat), hybrid — and from the mode
-the **route** of every question a seat owes the Operator: asked in the seat's own chat when attended, relayed
-through the leader verbatim and answered verbatim otherwise (#253 R17, R29). No presence file carries an
-attendance line, because a declared line is a claim nobody verifies (#295) and a disposition is the one act
-that proves an Operator was there, already recorded by Rule-7. The derivation is the core's (#388: `dyad
-session list`, the board's WHO column); this rule states what it means and the Guide (`../docs/operating-guide.md`
-§8) what the Operator does with it.
+## 6. Attendance, declared — checked against the records
+Which seats an Operator attends is declared by the Operator and checked against the record, never claimed by a
+seat: a seat is **attended** when it is the leader or the preference `attended-seats` (the Operator's, default
+`none`) names it. The constraint it states is the Operator's span — how many seats the Operator sits at — which is
+not the leader's span of at most seven direct lines (the Guide, §2) and not how many seats run (#412). Over the
+live seats this yields the organization's **mode** — pure M3 (only the leader attended, the default), pure M4
+(every seat), hybrid — and from the declared set the **route** of every question a seat owes the Operator: asked in
+the seat's own chat when attended, relayed through the leader verbatim and answered verbatim otherwise (#253 R17,
+R29). The record is the check: a disposition given in a live seat's own chat within the attendance window (the
+preference `attendance-window`) — not a mandate's inherited one, not a relayed one — in a seat the preference does
+not declare is an `incident`; a declared seat holding none is a `warn`. No presence file carries an attendance
+line, because a line a seat writes about itself is a claim nobody verifies (#295); the declaration is the
+Operator's preference and the proof is Rule-7's record. The reading is the core's (#388, #412: `dyad session
+list`); this rule states what it means and the Guide (`../docs/operating-guide.md` §8) what the Operator does
+with it.
 
 ## When
 - A seat is opened, renamed, re-homed or retired: a row of its own, under the Operator's disposition; the mandates

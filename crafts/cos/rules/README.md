@@ -7,5 +7,5 @@ and named. Terms: `../vocabulary/CRAFT.md`. Records: `../falsification/rules/`.
 
 | rule | read by | what it holds |
 |------|---------|---------------|
-| `organization.md` | Rule-3 Ledger (one sentence citing the Operating Guide, #369 C7); the preference `organization` | M4, the default organization: a tree of Operator–seat pairs, every cos with a cos-board, authority by content-scoped charters, every pair on the same ledgers; the charter form; the standing conduct of a cos; the one-pair case; attendance derived, never declared, and the mode and route it yields (§6) |
+| `organization.md` | Rule-3 Ledger (one sentence citing the Operating Guide, #369 C7); the preference `organization` | M4, the default organization: a tree of Operator–seat pairs, every cos with a cos-board, authority by content-scoped charters, every pair on the same ledgers; the charter form; the standing conduct of a cos; the one-pair case; attendance declared by the Operator's preference and checked against the records, and the mode and route it yields (§6) |
 | `naming.md` | Rule-16 Presence (the seat-name form exists; the installed organization craft checks it, #369 C7); `guards/seats.py`; the core's `dyad session name` | the seat-name form `<function>[-<topic>]-<hp>`, its reading rule, the session title, and the names history keeps |
