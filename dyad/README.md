@@ -5,8 +5,10 @@ templates. The instance lives, by default and as an install creates it, in `agen
 (`DYAD_INSTANCE` overrides) (ledger, audits, gap records),
 `preferences-corpus/` and `workstation-corpus/`. Canonical; the per-machine
 memory cache summarises it and never overrides it. Only `d-work/` reaches `main` without an
-Operator `Y` (clerical ledger commits, fenced by `guards/agent/rows.py`); everything else lands by a
-PR the Operator ratified. Any d-work that adds a directory here updates this map in the same PR.
+Operator `Y` (clerical ledger commits, fenced by `guards/agent/rows.py`), and beside it the run-book
+event store `<host>/runbooks/events/` (clerical events-only commits, monitoring's record of a change of
+reading, `dyadlib.events_only`, #438; append-only by the sysadmin craft's `events` guard), each class in
+commits of its own; everything else lands by a PR the Operator ratified. Any d-work that adds a directory here updates this map in the same PR.
 
 | path | owner | holds | reaches `main` without a `Y`? |
 |------|-------|-------|-------------------------------|

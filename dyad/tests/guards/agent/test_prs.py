@@ -103,5 +103,40 @@ class DworkLinkTests(unittest.TestCase):
                 finally:
                     os.environ.pop("DYAD_INSTANCE", None)
 
+    def test_events_only_range_is_clerical_and_skipped(self):
+        """d-work #438: a range touching only `<host>/runbooks/events/` records observations and claims no
+        d-work, so the gate skips it as it skips a ledger-only range; a range mixing ledger-only and
+        events-only commits is neither, and so is a commit touching a run-book beside its events."""
+        import os, subprocess, tempfile
+        prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_RUNBOOKS", "DYAD_INSTANCE")}
+        def restore():
+            for k, v in prev.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
+        self.addCleanup(restore)
+        root = Path(tempfile.mkdtemp()); sh = lambda *a: subprocess.run(a, cwd=root, check=True, capture_output=True, text=True)
+        rev = lambda: sh("git", "rev-parse", "HEAD").stdout.strip()
+        sh("git", "init", "-q", "-b", "main"); sh("git", "config", "user.email", "t@t"); sh("git", "config", "user.name", "t")
+        rows = root / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: open\ndisposed: \nrefs: \n")
+        ev = root / "workstation-corpus" / "runbooks" / "events"; ev.mkdir(parents=True)
+        sh("git", "add", "-A"); sh("git", "commit", "-qm", "root"); base = rev()
+        sh("git", "checkout", "-q", "-b", "events")
+        (ev / "sessions.jsonl").write_text('{"a": 1}\n'); sh("git", "add", "-A"); sh("git", "commit", "-qm", "events: sessions")
+        events = rev()
+        self.assertTrue(d.events_only(root, base, events)); self.assertFalse(d.ledger_only(root, base, events))
+        self.assertEqual(d.check_transaction(root, base, events), [])        # no citation needed
+        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: d Y plan\nrefs: \n")
+        sh("git", "add", "-A"); sh("git", "commit", "-qm", "ledger: #2 planned")
+        mixed = rev()
+        self.assertFalse(d.events_only(root, base, mixed)); self.assertFalse(d.ledger_only(root, base, mixed))
+        self.assertIn("cites no", d.check_transaction(root, base, mixed)[0])  # one class at a time
+        sh("git", "checkout", "-q", "-B", "runbook", base); ev.mkdir(parents=True, exist_ok=True)   # an empty directory is not tracked
+        (root / "workstation-corpus" / "runbooks" / "sessions.md").write_text("x"); (ev / "sessions.jsonl").write_text('{"a": 1}\n')
+        sh("git", "add", "-A"); sh("git", "commit", "-qm", "a run-book and its events")
+        self.assertFalse(d.events_only(root, base, rev()))
+        self.assertIn("cites no", d.check_transaction(root, base, rev())[0])  # a run-book is no observation
+
 if __name__ == "__main__":
     unittest.main()

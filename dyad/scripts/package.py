@@ -375,17 +375,20 @@ def suite_memo_clause(base, head):
     passed. Second, the range's own non-merge commits all touch only `<instance>/d-work/` (the three-dot walk
     the plan gate reads, `dyadlib.ledger_only`), `head`'s tree differs from its merge-base's only under
     `<instance>/d-work/` too (so a merge commit's own changes count), and that merge-base's tree already
-    passed: a ledger branch behind `origin/main`, whose two-dot range carries `main`'s own advances."""
+    passed: a ledger branch behind `origin/main`, whose two-dot range carries `main`'s own advances. The
+    same two steps hold for an events-only range, `<host>/runbooks/events/` (`dyadlib.events_only`, d-work
+    #438), each class read whole: a range mixing the two is neither."""
     parts = suite_memo_parts(head)
     if suite_memo_hit(parts):
         return f"skip [guards] Rule-12 suite: tree {parts['tree'][:9]} already passed on this checkout (d-work #162)"
-    if parts and dyadlib.ledger_only(REPO, base, head):
-        mb = _git("merge-base", base, head)
-        if mb and dyadlib.ledger_only(REPO, mb, head, merge_base=False):
-            mparts = suite_memo_parts(mb)
-            if suite_memo_hit(mparts):
-                return (f"skip [guards] Rule-12 suite: {base}...HEAD is ledger-only and its merge-base tree "
-                        f"{mparts['tree'][:9]} already passed on this checkout (d-work #162)")
+    for kind, only in (("ledger-only", dyadlib.ledger_only), ("events-only", dyadlib.events_only)):
+        if parts and only(REPO, base, head):
+            mb = _git("merge-base", base, head)
+            if mb and only(REPO, mb, head, merge_base=False):
+                mparts = suite_memo_parts(mb)
+                if suite_memo_hit(mparts):
+                    return (f"skip [guards] Rule-12 suite: {base}...HEAD is {kind} and its merge-base tree "
+                            f"{mparts['tree'][:9]} already passed on this checkout (d-work #162)")
     return None
 
 def suite_gate(base, head, pre_push=False, base_ok=True):
@@ -396,8 +399,9 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     tri-state from `dyadlib.range_paths`: unreadable (None) → run, since an unknown range cannot be shown
     harmless; empty → skip, since a range that changes nothing cannot change a suite's outcome; every path
     under `<instance>/d-work/` → skip, the prefix and never the file suffix (a `.py` filter would have let
-    #137's markdown run-book through, which broke the core suite by falsifying a pinned count); anything
-    else → run. Rename detection off (#191), so a move of code into the ledger still runs it. The plan gate
+    #137's markdown run-book through, which broke the core suite by falsifying a pinned count); every path
+    under `<host>/runbooks/events/` → skip likewise (`dyadlib.events_rel`, d-work #438), the two never mixed;
+    anything else → run. Rename detection off (#191), so a move of code into the ledger still runs it. The plan gate
     and the fence keep `dyadlib.ledger_only`, where an empty range is never ledger-only. Last, and only under
     `pre_push` (the hook's flag), a readable range that would run consults the suite memo
     (`suite_memo_clause`, #162); an unknown range never does. `cmd_evidence` never reaches a skip: its
@@ -414,6 +418,9 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     rel = dyadlib.instance_rel(REPO)
     if rel and all(p.startswith(f"{rel}/d-work/") for p in paths):
         return False, f"skip [guards] Rule-12 suite: {base}..HEAD is ledger-only (d-work #155)"
+    events = dyadlib.events_rel(REPO)
+    if events and all(p.startswith(f"{events}/") for p in paths):
+        return False, f"skip [guards] Rule-12 suite: {base}..HEAD is events-only (d-work #438)"
     if pre_push:
         line = suite_memo_clause(base, head)
         if line:
@@ -714,7 +721,7 @@ def cmd_guards(base="origin/main", pre_push=False):
         else:
             print(f"ok   [guards] {label} transaction{f' [{mode}]' if mode else ''} ({base}..HEAD)")
     # Rule-12's suite, gated (d-work #155): the local gate tested nothing before this, so the Agent
-    # ran it by hand 134 times in one session (#154's audit). A ledger-only or empty range cannot
+    # ran it by hand 134 times in one session (#154's audit). A ledger-only, events-only (#438) or empty range cannot
     # change a suite's outcome, so it skips (`suite_gate`, #164) and the push stays at the guards' own
     # ~1.7 s; anything else pays the suite here rather than by hand at three times the price. The
     # guards above are never gated.

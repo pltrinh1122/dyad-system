@@ -107,6 +107,72 @@ class HostPathTests(unittest.TestCase):
         self.assertEqual(dyadlib.host_path(), (dyadlib.preference("host-path", live) or dyadlib.DEFAULT_HOST).strip().rstrip("/"))
         self.assertIn(dyadlib.host_zone(), dyadlib.HOST_ZONES)
 
+class EventsOnlyTests(unittest.TestCase):
+    """#438: `events_only` — a range whose own commits touch only `<host>/runbooks/events/` is clerical, read as
+    `ledger_only` is: commit by commit (three-dot) for the gates, the two-dot tree for the suite skip; a range
+    mixing ledger and events commits, or a commit touching both, is neither."""
+    EV = "workstation-corpus/runbooks/events/sessions.jsonl"
+    def setUp(self):
+        import subprocess, tempfile
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_HOST_ZONE", "DYAD_RUNBOOKS", "DYAD_INSTANCE")}
+        self.root = Path(tempfile.mkdtemp())
+        self.sh = lambda *a: subprocess.run(a, cwd=self.root, check=True, capture_output=True, text=True).stdout.strip()
+        self.sh("git", "init", "-q", "-b", "main"); self.sh("git", "config", "user.email", "t@t"); self.sh("git", "config", "user.name", "t")
+        self.write("dyad/x.py", "x = 1\n"); self.base = self.commit("root")
+    def tearDown(self):
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+        shutil.rmtree(self.root, ignore_errors=True)
+    def write(self, rel, text):
+        p = self.root / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text)
+    def commit(self, msg="c"):
+        self.sh("git", "add", "-A"); self.sh("git", "commit", "-qm", msg); return self.sh("git", "rev-parse", "HEAD")
+    def test_events_only_range(self):
+        self.write(self.EV, '{"a": 1}\n'); h1 = self.commit("event")
+        self.write(self.EV, '{"a": 1}\n{"a": 2}\n'); h2 = self.commit("event 2")
+        self.assertEqual(dyadlib.events_rel(self.root), "workstation-corpus/runbooks/events")
+        self.assertTrue(dyadlib.events_only(self.root, self.base, h2))
+        self.assertTrue(dyadlib.events_only(self.root, self.base, h2, merge_base=False))
+        self.assertFalse(dyadlib.ledger_only(self.root, self.base, h1))        # the two classes are distinct
+        self.assertFalse(dyadlib.events_only(self.root, h2, h2))               # an empty range is never events-only
+        self.assertFalse(dyadlib.events_only(self.root, self.base, "no-such-ref"))   # nor an unreadable one
+    def test_mixed_ranges_and_commits_are_neither(self):
+        self.write(self.EV, '{"a": 1}\n'); self.commit("event")
+        self.write("agent-corpus/d-work/rows/1.md", "id: 1\n"); h = self.commit("ledger")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h))         # an events commit then a ledger commit
+        self.assertFalse(dyadlib.ledger_only(self.root, self.base, h))
+        self.sh("git", "checkout", "-q", "-B", "both", self.base)
+        self.write(self.EV, '{"a": 1}\n'); self.write("agent-corpus/d-work/rows/1.md", "id: 1\n"); h = self.commit("one commit, two stores")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h)); self.assertFalse(dyadlib.ledger_only(self.root, self.base, h))
+        self.sh("git", "checkout", "-q", "-B", "runbook", self.base)
+        self.write("workstation-corpus/runbooks/sessions.md", "x"); h = self.commit("a run-book is not an event")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h))
+    def test_a_branch_that_ever_touched_code_is_not_events_only(self):
+        self.write("dyad/y.py", "y"); self.commit("code"); (self.root / "dyad" / "y.py").unlink(); self.commit("revert")
+        self.write(self.EV, '{"a": 1}\n'); h = self.commit("event")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h))         # commit by commit
+        self.assertTrue(dyadlib.events_only(self.root, self.base, h, merge_base=False))   # the tree: net events only
+    def test_a_move_into_the_store_is_not_events_only(self):
+        (self.root / "workstation-corpus" / "runbooks" / "events").mkdir(parents=True)
+        self.sh("git", "mv", "dyad/x.py", "workstation-corpus/runbooks/events/x.jsonl"); h = self.commit("move")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h))         # rename detection off: the source counts
+    def test_the_store_follows_the_host_path_and_the_runbooks_override(self):
+        os.environ["DYAD_HOST"] = "infrastructure"
+        self.assertEqual(dyadlib.events_rel(self.root), "infrastructure/runbooks/events")
+        self.write(self.EV, '{"a": 1}\n'); h = self.commit("event under the default host")
+        self.assertFalse(dyadlib.events_only(self.root, self.base, h))         # not this system's store
+        os.environ["DYAD_RUNBOOKS"] = "elsewhere/"
+        self.assertEqual(dyadlib.events_rel(self.root), "elsewhere/events")
+        os.environ["DYAD_RUNBOOKS"] = str(self.root / "workstation-corpus" / "runbooks")   # absolute, inside the tree
+        self.assertEqual(dyadlib.events_rel(self.root), "workstation-corpus/runbooks/events")
+        self.assertTrue(dyadlib.events_only(self.root, self.base, h))
+        os.environ["DYAD_RUNBOOKS"] = "/outside"
+        self.assertIsNone(dyadlib.events_rel(self.root)); self.assertFalse(dyadlib.events_only(self.root, self.base, h))
+        os.environ.pop("DYAD_RUNBOOKS"); os.environ["DYAD_HOST"] = "/abs"
+        self.assertIsNone(dyadlib.events_rel(self.root))                       # an unusable host path: never events-only
+
 class TableHeaderTests(unittest.TestCase):
     def test_header_is_the_line_before_the_separator(self):
         self.assertEqual(dyadlib.table_header(LEDGER), ["id", "title", "opened", "state", "disposed", "refs"])

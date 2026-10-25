@@ -346,6 +346,39 @@ def ledger_only(root: Path, base: str, head: str, merge_base: bool = True) -> bo
     commits = range_commits(root, base, head)
     return bool(commits) and all(inside(commit_paths(root, c)) for c in commits)
 
+EVENTS_REL = "runbooks/events"   # under the host path: the run-book event store (Rule-19; the runner's `events_dir` default)
+
+def events_rel(root: Path | None = None) -> str | None:
+    """The run-book event store as a repo-relative posix path: `<host>/runbooks/events` (`host_path`, the
+    preference `host-path`, d-work #175), or `<DYAD_RUNBOOKS>/events` when that override is set — the same
+    directory the runner writes (`runbook.events_dir`) and the events guard fences, so what the gates exempt
+    is exactly what that guard judges (#438). None when the host path is unusable (an empty, absolute or `..`
+    value) or the store lies outside the work tree, where no range can be shown events-only."""
+    root = root or repo_root()
+    try:
+        rb = (os.environ.get("DYAD_RUNBOOKS") or f"{host_path(root)}/runbooks").rstrip("/")
+        rel = Path(os.path.normpath(Path(root) / rb / "events")).relative_to(Path(os.path.normpath(root))).as_posix()
+    except ValueError:
+        return None
+    return None if rel in ("", ".") or rel.startswith("..") else rel
+
+def events_only(root: Path, base: str, head: str, merge_base: bool = True) -> bool:
+    """True when a range is clerical as monitoring's record — every path under `<host>/runbooks/events/`
+    and nothing else (d-work #438): an event records an observation, never a decision, as a ledger-only
+    commit records a prompt or a disposition. The same reading as `ledger_only`: with `merge_base` (the
+    gates) every one of the range's own non-merge commits, commit by commit, rename detection off; without
+    it (Rule-12's suite skip) the two-dot tree difference. A commit touching both the ledger and the event
+    store is neither, since each commit is one zone (Rule-1); an empty or unreadable range, or an unusable
+    host path, is never events-only."""
+    rel = events_rel(root)
+    if not rel:
+        return False
+    inside = lambda paths: bool(paths) and all(p.startswith(f"{rel}/") for p in paths)
+    if not merge_base:
+        return inside(range_paths(root, base, head, merge_base=False))
+    commits = range_commits(root, base, head)
+    return bool(commits) and all(inside(commit_paths(root, c)) for c in commits)
+
 # ---- the host path and zone (Rule-1, d-work #175): where an instance keeps its host and operating
 # records, and which zone holds them. Instance data, read from the Operator's preferences (`host-path`,
 # `host-zone`) so hooks, CI and a fresh session all see the same value; `DYAD_HOST` / `DYAD_HOST_ZONE`
@@ -670,6 +703,7 @@ INVARIANTS: list[Invariant] = [
     ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),
     ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
     ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
+    ("events-store-relative", lambda: bool(EVENTS_REL) and not EVENTS_REL.startswith("/") and not EVENTS_REL.endswith("/") and "d-work" not in EVENTS_REL),   # #438: the event store never overlaps the ledger
 ]
 
 enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding
