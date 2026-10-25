@@ -22,6 +22,7 @@ defines what each value means.
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
 | attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared), the cos Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
+| relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -137,3 +138,15 @@ defines what each value means.
   noted neither `mandate #<id>` nor `relayed via` within the window. A live seat holding one that
   `attended-seats` does not declare prints `undeclared` (the leader reports it); a declared seat holding none prints `warn`.
   dyad-system: `7`, plan #388's default.
+- `relay-form` — how the leader, the cos, presents to the Operator a question a seat that is not attended owes
+  (d-work #424): the Operator-bound direction of a relay. The seat-bound direction never varies — the Operator's
+  words reach a seat verbatim (the core's relayed prompt, #253 R29). `verbatim`: the seat's question and its
+  evidence passed through as the seat wrote them, the last line the seat's question. `brief`: the cos meets the
+  Operator at the Operator's altitude and presents WHAT (the matter and its state), WHY (what it bears on) and HOW
+  (the path, its strongest counter and the reconciliation — Rule-10's form applied by the cos to the seat's
+  question), the seat's text quoted as citation and evidence, never the body, and the seat's evidence block
+  verbatim; the last `Y/N` line is the seat's own question text, so the `Y` binds to what the seat asked
+  (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
+  binds to.
+  dyad-system: `brief`, the Operator's prompt of 2026-10-25 ("I need dispositions to be presented by you by
+  explaining WHAT is the matter, WHY is the matter important and HOW is the matter being addressed").
