@@ -21,3 +21,19 @@ Attacks carried from the core record (`dyad/falsification/rules/rule-19-server-i
 | 155.11 | `dyad runbook` dispatching to craft code inverts S4. | Superseded by the #155 amendment | The runner stays core (parser, store primitives, `list`/`run`/`new`); this craft's guards import its parser; `runbook check` calls the guard and exits 2 when no craft provides one. |
 
 Disposition: see ledger #155.
+
+## Amendment — d-work #438 (2026-10-25, property 7: a read-only command's event only on a change of reading)
+**Claim (plan #438, the Operator's `Y` of 2026-10-25):** a `class: read-only` command's event is appended only when
+its output's digest differs from the digest of the last event of that command for that instance; a heartbeat that
+repeats the last reading is not an event. Every other class appends on every execution; a deploy's health pass
+(Rule-19 property 2) is read from the run that observed it and is unaffected.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 438.1 | "Every execution leaves an event" records something that happened; a heartbeat per reply is that. | **Refuted** | On a cloud kernel nearly every reading is identical by construction (every other live seat reads `no harness session`, the seat's own `title differs`, #434): a run whose digest equals the last event's records nothing that happened. A change of reading — a mismatch appearing or clearing — is what happened, and it is still recorded. |
+| 438.2 | Change-only is enough on its own; the Rules need no edit (plan #438 alternative c alone). | **Confirmed, partial** | It turns a per-reply stream into a few events a day, but each still needed a row and a PR under the old fence; the core makes an events-only commit clerical (Rule-2, Rule-3 and Rule-12, amendment #438 there). The two stand together. |
+| 438.3 | Change-only loses the "last seen healthy" timestamp an every-run store carried. | **Survives, scoped** | The current reading is on the board and in the presence store, computed on demand; a change's event carries its own time, so the store still says since when the reading has held. What is lost is only the repeated confirmation, which no audit grades (#409 G1 grades recurrence of a change). |
+| 438.4 | A deploy's health pass (Rule-19 property 2) would be skipped when it repeats an earlier reading. | **Refuted** | The completion evidence cites the health command's observed output from the run that observed it, not the store; and a deploy's commands of other classes append on every execution as before. |
+| 438.5 | Comparing digests needs a memory the runner lacks. | **Refuted** | The last event of that command for that instance is in the store the runner appends to (`runbook.py`); the digest is already an event field (`runbook.EVENT_FIELDS`). |
+
+Disposition: see ledger #438.
