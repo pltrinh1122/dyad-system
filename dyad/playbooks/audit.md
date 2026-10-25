@@ -12,6 +12,11 @@ run through `dyad runbook run audit <step>`, the core runner, so each step leave
 are `dyad/runbooks/self-diagnostic.md`; the two share one observation, the evidence run on the head, and
 nothing else.
 
+Since #433 the standing audit is a composite whose phases are run by their domain owners, and the audit seat keeps
+the incident ledger: Phase 0 and Phase 4 by whichever seat runs the exercise; Phase 1 by engineer; Phase 2 by audit
+(hardening's `verify`, generalized to every shipped fence); Phase 3 split by item; Phase 3b by audit. The
+self-diagnostic's L1–L2 are engineer's and its L3–L4 counsel's: one run, its gate and budget unchanged.
+
 It is not a topic audit. A review the Operator asks for on one subject (a performance profile, a sweep
 of one craft, the subset CI should run) stays an Operator prompt with its own plan; it may borrow the
 Conduct below and nothing else here.
@@ -50,6 +55,7 @@ The watermark is compared, never believed: the live line is derived at survey ti
 is caught by the comparison.
 
 ## Phase 1 — Regression
+Owner: engineer (#433).
 The whole suite, every root, **observed** on the exact head: `dyad check --evidence`, the command the merge
 evidence already runs (Rule-14 property 3; Rule-13: reused, not rebuilt). It never reads the suite memo
 (Rule-12 property 2), so the result is a run and not a recollection. The record pastes the block verbatim.
@@ -61,6 +67,7 @@ Seconds are one machine's (#204 section 0): the record states the interpreter an
 ratio.
 
 ## Phase 2 — Fences (ungated)
+Owner: audit (#433): this is incident hardening's `verify` applied to every shipped fence.
 A shipped fence can rot with no commit to the tree, so this phase runs on every invocation, the unchanged
 tree's included (the reason `incident-hardening.md` gives its own phase 4). The `fences` step reads:
 - **the guard registry as installed** — `dyad check --list` — with its line count and a digest, compared to
@@ -75,19 +82,21 @@ tree's included (the reason `incident-hardening.md` gives its own phase 4). The 
 A fence that cannot execute is a finding whatever the registry says.
 
 ## Phase 3 — Drift (detect only)
+Owners, by item (#433): each bullet names its own.
 What moved since the newest record, read and never repaired. The `drift` step lists:
 - **Rules edited since the last Rule-5 sweep.** A sweep is inference (Rule-5, Enforcement), so the step prints
   the date of the last commit to `dyad/rules/` and the newest sweep record in `<instance>/audits/`; the audit
-  states the staleness and does not sweep.
+  states the staleness and does not sweep. (counsel)
 - **Rows with no activity.** Every `open` and `planned` row, `blocked` rows, with the date of the last commit
-  to its row file; the `backlog` count.
-- **Presence files** past the stale window (`dyad session list`, Rule-16): reported, never guards.
-- **Unmerged remote branches** (`git branch -r --no-merged`): the pruning question of #43, asked as a list.
+  to its row file; the `backlog` count. (program)
+- **Presence files** past the stale window (`dyad session list`, Rule-16): reported, never guards. (operate)
+- **Unmerged remote branches** (`git branch -r --no-merged`): the pruning question of #43, asked as a list. (program)
 - **Host documents older than the running kernel** (the frame's convention) are read only on the host that
   keeps them. Anywhere else the record says "unobserved" and names the host path: an audit does not read a
-  document about a machine it is not on and call it verified (Rule-8).
+  document about a machine it is not on and call it verified (Rule-8). (operate)
 
 ## Phase 3b — Incidents
+Owner: audit (#433).
 The incident log is read here and worked by `incident-hardening.md`: one owner per concern (Rule-5), so this
 phase ingests, sizes and surfaces, and never groups. The `incidents` step:
 - **Ingests** the log through its one parser, `dyad/scripts/incidents.py` — `parse`, `check_log` — and not by
@@ -169,6 +178,9 @@ The two kinds of check at two scopes are the four levels (C6):
 
 Order: coded before prose, and unit before system within each kind — L1, L2, L3, L4, the order the countersign-system
 prompt names. Each level gates the next (§3).
+
+Owners (#433): the coded-check levels L1 and L2 are engineer's, the prose-claim levels L3 and L4 counsel's; one run,
+in the order above, so the gate and the budget stay one.
 
 #### L1 — unit × coded check
 - **Verifies:** each unit's own tests — the test modules the levels file (§6) classifies `unit`.
