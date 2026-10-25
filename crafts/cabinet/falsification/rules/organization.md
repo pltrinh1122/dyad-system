@@ -42,3 +42,20 @@ many run; by default only the program seat is attended, and that default is a pr
 
 **Survivor:** §6 and the Guide's §8 as amended; VERSION 0.1.3. Disposition: see ledger #414 (accreted under #412; its Done
 rides that mandate's Done disposition).
+
+## Amendment — dyad-system #418 (2026-10-25, child C1 of #417: the craft renamed `cabinet`; cos, secretary, desk)
+**Claim (plan #417, the Operator's `Y` of 2026-10-25; #416 revision 2 and prompt 4 its specification):** the craft is
+the AI-agent cabinet — one chief of staff beside the Operator, secretaries over the functions, desks under them; the
+roles `leader-cos` → `cos`, `member-cos` → `secretary`, `member-cabinet` → `desk`; the functions unchanged; desks
+unbounded, opened by a secretary as its concurrent work needs.
+
+| # | attack | result |
+|---|---|---|
+| 11 | Naming the craft after a term it defines repeats #415's fault (`cos` named a role). | **Refuted** (#416 revision 2) — under the Operator's model the cabinet is the whole (cos plus secretaries); the leaf that collided, `member-cabinet`, is renamed `desk`, so no term inside the craft is `cabinet`. |
+| 12 | §1's span — "one seat's to five to seven cabinets" — bounds desks at seven, which #416 prompt 4 contradicts ("as many `desk` as necessary for concurrent activities"). | **Confirmed; amended** — the leader reads one line per secretary and never a desk; desks are bounded only by the secretary's charter's ceiling, and they are unattended unless `attended-seats` names them, so they never count against the Operator's span. |
+| 13 | §5 is "the standing conduct of every cos", but cos is now one seat's role. | **Confirmed; amended** — §5 binds every seat, as it always did in substance; its title and subjects say so. |
+| 14 | The guard's reading-rule tokens (`member-cos`, `cabinet`) and the core's (`member-cos`) diverge once the craft says `secretary` and `desk`. | **Confirmed; fixed across C1 and C2** — `seats.py` returns `secretary` and `desk`, the core's `sessions.py` `secretary` (C2, #419, stacked on this PR). Until C2 lands the two readings differ in one token; both are advisory. |
+| 15 | The tag line breaks: `cos-v0.1.2` exists, and a `cabinet` craft at 0.1.3 would look like a continuation. | **Refuted by plan** — VERSION 0.2.0 starts the `cabinet-v*` line; `cos-v0.1.2` stays as history and its archive is never published (plan #417). |
+
+**Survivor:** the tree under `crafts/cabinet/` as renamed; VERSION 0.2.0. Disposition: see ledger #418 (accreted under
+#417; its Done rides that mandate's Done disposition).

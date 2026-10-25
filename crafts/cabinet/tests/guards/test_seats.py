@@ -1,4 +1,4 @@
-"""seats.py (the cos craft's guard, entity `seat`; #383): the seat-name form and its reading rule, the advisory
+"""seats.py (the cabinet craft's guard, entity `seat`; #383): the seat-name form and its reading rule, the advisory
 lines over a fixture store, the mandates table against the template, and the live repo (never a failure)."""
 import shutil, sys, tempfile, unittest
 from pathlib import Path
@@ -24,9 +24,9 @@ class SeatForm(unittest.TestCase):
     def test_reading_rule(self):
         k = lambda n: seats.kind(seats.parse_seat(n, self.form), self.functions)
         self.assertEqual(k("program-59cec502"), "leader")
-        self.assertEqual(k("counsel-0032b4c0"), "member-cos")
-        self.assertEqual(k("engineer-ledgerd-1537d8fb"), "cabinet")
-        self.assertEqual(k("program-alice-59cec502"), "leader")   # a member pair's leader in a multi-Operator tree: the leader keeps no cabinet (naming.md §1)
+        self.assertEqual(k("counsel-0032b4c0"), "secretary")
+        self.assertEqual(k("engineer-ledgerd-1537d8fb"), "desk")
+        self.assertEqual(k("program-alice-59cec502"), "leader")   # a member pair's leader in a multi-Operator tree: the leader keeps no desk (naming.md §1)
         self.assertEqual(k("foo-0032b4c0"), "unknown-function")
         self.assertEqual(seats.parse_seat("counsel-0032b4c0", self.form), {"seat": "counsel-0032b4c0", "function": "counsel", "topic": "", "hp": "0032b4c0"})
     def test_history_is_outside_the_form(self):

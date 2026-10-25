@@ -7,10 +7,12 @@ nothing: your Rules do (`dyad/rules/`), and every sentence here that says "a sea
 you wrote, lets it".
 
 ## 1. What M4 is, in one paragraph
-You keep one seat beside you — the **leader**, named `program-<hp>` — and it keeps the board of programs: every
-parent row you opened and the children it was decomposed into, across the member seats. Each **member seat**
-holds one function you want to watch — `counsel`, `audit`, `engineer`, `distribute`, `operate` by default — under
-a **charter** you wrote in the mandates table, and keeps its own board of the rows and cabinets under it. Every
+The organization is an AI-agent **cabinet**: one chief of staff beside you, secretaries over the functions, desks
+under them. You keep one seat beside you — the leader, your **cos**, named `program-<hp>` — and it keeps the board
+of programs: every parent row you opened and the children it was decomposed into, across the member seats. Each
+member seat is a **secretary**: it holds one function you want to watch — `counsel`, `audit`, `engineer`,
+`distribute`, `operate` by default — under a **charter** you wrote in the mandates table, and keeps its own board
+of the rows and the **desks** under it, a desk being a seat it opens for one topic (`engineer-ledgerd-<hp>`). Every
 seat reads and writes the same ledgers, on the same `main`, so you never need a message to know where anything
 stands: the row's state, its record and its presence file are the report. You dispose, every seat proposes;
 nothing moves on silence. The leader holds your attention, not authority; the members hold authority you granted
@@ -19,8 +21,11 @@ cannot check.
 
 ## 2. Reading a board
 - **Your board is the leader's roll-up**: one line per member seat — children held, open questions, the oldest,
-  the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a cabinet to
+  the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a seat to
   retire or re-home, each by its own row that you dispose.
+- **Desks are not on your board.** A secretary opens desks as its concurrent work needs; a desk is unattended
+  unless `attended-seats` names it; the leader reads secretaries, never desks. There is no count of desks to keep
+  under seven: what bounds them is the secretary's charter, its ceiling read per plan (#416).
 - **A seat's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
   of your answers), `dyad session list` (every presence file: who holds what, how fresh). A PR number in a row's
   `disposed` entry names the head you said `Y` on.
@@ -36,7 +41,7 @@ cannot check.
   questions whatever the mandate says. How the Rules' text is reconciled with that invariant is #384's work.
 
 ## 3. Opening a seat
-1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a cabinet, the topic.
+1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a desk, the topic.
    The seat's own handle (`<hp>`) is the first eight hex characters of the harness session you are about to create,
    so the full name is known only once the session exists.
 2. **Create the session** (a cloud or terminal session of your harness with the repository attached) and **title
