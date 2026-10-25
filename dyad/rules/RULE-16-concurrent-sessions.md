@@ -56,13 +56,13 @@ files and almost never merge.
   name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
   That name is the **seat name**, and under `organization: m4` (`preferences-corpus/PREFERENCES.md`; `flat`
   is one pair and reads no form) it has a form, `<function>[-<topic>]-<hp>`: the installed organization
-  craft's data where one is installed (`crafts/cos/guards/seats_rules.txt`, its `seat` guard the check)
+  craft's data where one is installed (`crafts/cabinet/guards/seats_rules.txt`, its `seat` guard the check)
   and the bare form of `sessions.py` otherwise; `touch()` prints one advisory line when a name is outside
   it, names a function the craft does not list, or carries an `<hp>` that is not the holder's, and
   `dyad session name` prints the name and the harness session title from the environment, setting
-  nothing (#369 C7). What the names describe — the leader's board of programs and each **member-cos**'s
+  nothing (#369 C7). What the names describe — the cos's board of programs and each **secretary**'s
   **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
-  (`crafts/cos/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
+  (`crafts/cabinet/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
   Which seats an Operator sits at is declared by the preference, checked against the records: a seat is
   **attended** when it is the leader or the `attended-seats` preference (`preferences-corpus/PREFERENCES.md`,
@@ -133,6 +133,9 @@ attendance, derived from the provenance records, and the mode it reads 2026-10-2
 unattended (#386), and nothing said which; see the same record, amendment #393. Presence's attendance
 sentence turns from derived to declared 2026-10-25 (d-work #414, child C2 of #412): the Operator's constraint is how
 many seats it attends, not how many run, and by default it attends only the leader, a preference; the record-derived
-reading stays as the check of the declaration; see the same record, amendment #414.
+reading stays as the check of the declaration; see the same record, amendment #414. Presence's
+seat-name sentence names the cos, a secretary and the cabinet craft's paths 2026-10-25 (d-work #419, child C2 of
+#417): the craft `cos` is renamed `cabinet`, `member-cos` becomes `secretary` and a topic seat a desk; see the same
+record, amendment #419.
 
 Set: System Requirements.

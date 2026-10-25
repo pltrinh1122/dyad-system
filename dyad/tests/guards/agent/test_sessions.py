@@ -325,10 +325,10 @@ class SeatNameTests(unittest.TestCase):
     def test_kind_reads_the_tokens_alone(self):
         fns = ["program", "counsel", "engineer"]
         self.assertEqual(sv.seat_kind(sv.parse_seat("program-59cec502"), fns), "leader")
-        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-1537d8fb"), fns), "member-cos")
-        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-ledgerd-1537d8fb"), fns), "cabinet")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-1537d8fb"), fns), "secretary")
+        self.assertEqual(sv.seat_kind(sv.parse_seat("engineer-ledgerd-1537d8fb"), fns), "desk")
         self.assertEqual(sv.seat_kind(sv.parse_seat("ops-1537d8fb"), fns), "unknown-function")
-        self.assertEqual(sv.seat_kind(sv.parse_seat("ops-1537d8fb"), None), "member-cos")   # no craft: no list to be outside
+        self.assertEqual(sv.seat_kind(sv.parse_seat("ops-1537d8fb"), None), "secretary")   # no craft: no list to be outside
     def test_organization_defaults_to_m4_and_reads_flat(self):
         self.assertEqual(sv.organization(self._root()), "flat")        # no preferences corpus at all: one pair, no form read
         self.assertEqual(sv.organization(self._root("flat")), "flat")
@@ -371,7 +371,7 @@ class SeatNameTests(unittest.TestCase):
             with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
                 rc, lines = sv.seat_name_report(root, ["--system", "ds", "--on", "#369 C4 C7"])
         self.assertEqual(rc, 0)
-        self.assertEqual(lines[0], "seat:   engineer-1537d8fb (member-cos; form: core)")
+        self.assertEqual(lines[0], "seat:   engineer-1537d8fb (secretary; form: core)")
         self.assertEqual(lines[2], "title:  engineer-1537d8fb: cloud (ds) - #369 C4 C7")
         self.assertEqual(len(lines), 3)   # DYAD_SESSION equals the seat: no note
     def test_name_verb_takes_the_function_and_topic_from_flags_and_notes_a_differing_dyad_session(self):
@@ -381,7 +381,7 @@ class SeatNameTests(unittest.TestCase):
             with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
                 rc, lines = sv.seat_name_report(root, ["--function", "operate", "--topic", "host"])
         self.assertEqual(rc, 0)
-        self.assertEqual(lines[0], "seat:   operate-host-23d654aa (cabinet; form: core)")
+        self.assertEqual(lines[0], "seat:   operate-host-23d654aa (desk; form: core)")
         self.assertTrue(lines[2].startswith("title:  operate-host-23d654aa: terminal (") and lines[2].endswith(") - host"))
         self.assertIn("DYAD_SESSION is 'cab-8-23d654aa'", lines[3])
     def test_name_verb_refuses_without_a_function_or_a_holder(self):

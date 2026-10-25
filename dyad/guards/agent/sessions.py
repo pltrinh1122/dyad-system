@@ -51,7 +51,7 @@ _WRITER = uuid.uuid4().hex[:12]   # this process's own id (F1, d-work #32): comp
 _KERNELS = frozenset({"terminal", "cloud"})   # the `host` line's first token (d-work #294)
 # The seat name (Rule-16 Presence; #369 C7, d-work #379): under `organization: m4` a presence file's name has a form,
 # `<function>[-<topic>]-<hp>` — the installed organization craft's data where one is installed (its `seat` guard,
-# `crafts/cos/guards/seats_rules.txt`), this bare form otherwise. Read advisorily: `touch()` prints one line, never
+# `crafts/cabinet/guards/seats_rules.txt`), this bare form otherwise. Read advisorily: `touch()` prints one line, never
 # fails (the store is advisory); `dyad session name` prints the name and the session title from the environment.
 ORGANIZATION = "organization"                   # the preference key (`preferences-corpus/PREFERENCES.md`; the template seeds it)
 ORGANIZATIONS = ("flat", "m4")                  # one pair, one board, no form read | the tree of cos-boards (plan #369)
@@ -144,13 +144,13 @@ def parse_seat(name: str, form: re.Pattern | None = None) -> dict[str, str | Non
     return {"function": m.group("function"), "topic": m.group("topic"), "hp": m.group("hp")} if m else None
 
 def seat_kind(seat: dict[str, str | None], functions: list[str] | None) -> str:
-    """The reading rule of the form: `leader` (the leader function, bare), `member-cos` (another function, bare),
-    `cabinet` (a function and a topic); `unknown-function` when the craft's list is known and does not hold it."""
+    """The reading rule of the form: `leader` (the leader function, bare), `secretary` (another function, bare),
+    `desk` (a function and a topic); `unknown-function` when the craft's list is known and does not hold it."""
     if functions is not None and seat["function"] not in functions:
         return "unknown-function"
     if seat["topic"]:
-        return "cabinet"
-    return "leader" if seat["function"] == LEADER_FUNCTION else "member-cos"
+        return "desk"
+    return "leader" if seat["function"] == LEADER_FUNCTION else "secretary"
 
 def name_problems(sid: str, root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     """Advisory lines about a seat name under `organization: m4`: outside the form, or a function the installed

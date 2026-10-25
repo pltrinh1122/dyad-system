@@ -168,9 +168,9 @@ its revision 5.
   its own presence file and reads every other session's (Rule-16); an overlap found there is
   reported when it bears on the prompt at hand, not narrated for its own sake. Under
   `organization: m4` (`preferences-corpus/PREFERENCES.md`) what a session reads and reports is its
-  seat's: the leader reads the cos-board of programs, a member-cos the cos-board of its charter's
-  domain, and the seat name says which (Rule-16 Presence); how a board is read, a seat opened or a
-  charter written is the organization craft's Operating Guide (`crafts/cos/docs/operating-guide.md`),
+  seat's: the leader — the cos — reads the cos-board of programs, a secretary the cos-board of its
+  charter's domain, and the seat name says which (Rule-16 Presence); how a board is read, a seat opened or a
+  charter written is the organization craft's Operating Guide (`crafts/cabinet/docs/operating-guide.md`),
   read beside the d-work play-book and never a Rule (#369 C7).
 - PR bodies — and, on a branch, the commit messages `dyad/guards/agent/prs.py` reads as the body —
   cite `d-work #<id>`; the guard resolves each id against
@@ -410,6 +410,9 @@ model by its core path, and Scope names the delegate edge and the mode lifecycle
 named, 2026-10-22 (d-work #381, child C3 of #369): the countersign craft is retired and its model carried by the core
 as a play-book; see the same record, amendment #381. Ledger's session-start bullet gains
 the organization sentence 2026-10-22 (d-work #379, #369 C7): under `m4` a session reads a board, not the
-whole ledger, and the Guide that says how is the organization craft's; see the same record, amendment #379.
+whole ledger, and the Guide that says how is the organization craft's; see the same record, amendment #379. Ledger's
+session-start bullet names the cos and a secretary, and the Guide's path the cabinet craft, 2026-10-25 (d-work #419,
+child C2 of #417): the organization craft is renamed `cabinet` and its role terms cos and secretary; see the same
+record, amendment #419.
 
 Set: System Requirements.
