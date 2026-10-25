@@ -3,12 +3,16 @@
 store; placed per Rule-11 property 1). Kernel: Python 3.12+.
 
 Package check (`check_package`): every `<instance>/d-work/rows/<id>.md` parses (dyadlib.FIELDS), its
-id equals its file name, its state is one of dyadlib.STATES, and no id is duplicated.
+id equals its file name, its state is one of dyadlib.STATES, no id is duplicated, and no `refs` holds `[`
+or `]` (#439: the shape of a Python list, which the close path wrote into 28 rows; a comma is not judged
+here, since 24 rows written before the fence hold comma-separated ids or prose).
 
 Transaction check (`check_transaction`, TRANSACTION; the main fence, referenced by Rule-2): a commit
 pushed directly to main (non-merge, first-parent) may touch only <instance>/d-work/ and, for row
 files, may only add a file or change state/disposed/refs: never delete a row file or change its id
-or title (C3). A state change must be a transition in dyadlib.TRANSITIONS (Rule-16: state never
+or title (C3). A `refs` value a commit adds or changes is space-separated tokens (`7 parent #3 PR #9`) and
+holds none of `[ ] ' " ,` (`refs_shape_problems`, #439); a row whose refs the commit leaves as it was is
+never re-judged, so the legacy comma rows pass until their refs is edited. A state change must be a transition in dyadlib.TRANSITIONS (Rule-16: state never
 regresses; d-work #112) and a new row file must start in dyadlib.NEW_STATES. The rendered
 LEDGER.md is untracked (d-work #111) and is not diffed. This full fence applies on `main` only;
 on a branch `check_transaction` instead runs `check_id_collisions` (d-work #32 F2): a row id this
@@ -55,6 +59,8 @@ MANDATE = re.compile(r"\d{4}-\d{2}-\d{2} Y plan \(mandate #\d+\)$")   # the one 
 DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")                    # a *given* completion disposition (Rule-3 Completion, #202)
 DONE_MERGES = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b[^;]*\bmerge[sd]?\b[^;]*#\d+")   # one that ratifies a merge: the state waits for it
 HEAD_AT = re.compile(r"\bat ([0-9a-f]{7,40})\b")                       # the head the `Y` was given on
+REFS_REFUSED = "[]'\","   # #439: no refs a commit writes holds these; `dwork` refuses them at -r (package.py)
+REFS_BRACKETS = "[]"      # #439: the store-wide clause; zero rows hold one once the 28 are restored (0c8b260)
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 def git(*a, cwd, stderr=None): return subprocess.check_output(["git", *a], cwd=cwd, text=True, stderr=stderr)
@@ -87,6 +93,9 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             fails.append(f"{rel}: state '{r.state}' not one of {' '.join(sorted(dyadlib.STATES))}")
         if r.id in seen:
             fails.append(f"{rel}: duplicate id {r.id}")
+        if any(c in r.refs for c in REFS_BRACKETS):
+            fails.append(f"{rel}: refs {r.refs!r} holds a bracket, the shape of a list written into the row, not "
+                         f"space-separated references (#439)")
         seen.add(r.id); parsed.append(r)
     return fails + done_recorded_not_closed(parsed)
 
@@ -190,6 +199,22 @@ def done_recorded_not_closed(rows: list) -> list[str]:
                        f"(Rule-3 Completion, #202)")
     return out
 
+# ---- the shape of refs (d-work #439)
+def refs_shape_problems(path: str, before, after, label: str) -> list[str]:
+    """A `refs` value a commit adds (`before` None: a new row) or changes is space-separated tokens — `7`,
+    `#7`, `parent #3`, `PR #9`, `workstation-252` — and holds none of `REFS_REFUSED`. The close path of
+    `dwork state <id> done` wrote `['origin/main', 'main', 'HEAD']` over 28 rows' refs between 2026-10-15 and
+    2026-10-25 and nothing read the value's shape (#439). A row whose refs this commit leaves unchanged is
+    never re-judged: 24 rows written before this clause hold commas or prose (`109, 110`), and they fail only
+    when their refs is edited, which must then rewrite it as tokens."""
+    if before is not None and before.refs == after.refs:
+        return []
+    bad = sorted({c for c in after.refs if c in REFS_REFUSED})
+    if not bad:
+        return []
+    return [f"FAIL [main-fence]: {label} writes refs {after.refs!r} to row file {path}, holding {' '.join(bad)}: "
+            f"refs is space-separated tokens, e.g. '7 parent #3 PR #9' (#439)"]
+
 # ---- the row's mode (the countersign model's term, `dyad/playbooks/countersign-model.md`; d-work #290)
 def mode_changed(path: str, before, after, label: str) -> list[str]:
     """A row's `mode` never changes after the commit that adds the row. `implicit`→`explicit` would revoke a
@@ -276,6 +301,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
                 how = "leaves the table" if after.state not in dyadlib.STATES else "regresses"
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
             fails += mode_changed(path, before, after, label)
+            fails += refs_shape_problems(path, before, after, label)
             fails += disposed_problems(path, before.disposed, after.disposed, label)
             fails += done_order_problems(path, before, after, label)
             fails += landing_problems(path, before, after, label, sha, cwd, base)
@@ -287,6 +313,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             if new.state not in dyadlib.NEW_STATES:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} in state {new.state} (not one of {' '.join(sorted(dyadlib.NEW_STATES))})")
             fails += born_implicit_problems(path, new, label)
+            fails += refs_shape_problems(path, None, new, label)
             fails += disposed_problems(path, "", new.disposed, label)
     return fails
 
@@ -351,6 +378,7 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
             # resolution is where the per-commit walk never looks (the hole #191 closed for state).
             fails += done_order_problems(path, before, after, f"merge {label}")
             fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
+            fails += refs_shape_problems(path, before, after, f"merge {label}")   # #439: a refs rewritten while resolving
     return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
