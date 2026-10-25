@@ -71,7 +71,7 @@ files and almost never merge.
   `dyad session list` prints with the declared set and each seat's route, since a counter-prompt is asked in
   an attended seat's own chat and relayed through the leader otherwise (#253 R29; #388). The check is the
   records': a seat holds an own disposition when a provenance record whose `session:` line names it holds a
-  disposition given there — noted neither `mandate #<id>` nor `relayed via` — within the
+  disposition given there — its note holding neither `mandate #<id>` nor `relayed via`, anywhere — within the
   `attendance-window` preference (default 7 days); a live seat holding one that is neither the leader nor
   declared prints `undeclared`, a declared seat holding none prints `warn` — a reading of the board, not a
   Rule-3 incident: the act is the Operator's, and the leader alone reports it. The constraint the preference
@@ -136,6 +136,8 @@ many seats it attends, not how many run, and by default it attends only the lead
 reading stays as the check of the declaration; see the same record, amendment #414. Presence's
 seat-name sentence names the cos, a secretary and the cabinet craft's paths 2026-10-25 (d-work #419, child C2 of
 #417): the craft `cos` is renamed `cabinet`, `member-cos` becomes `secretary` and a topic seat a desk; see the same
-record, amendment #419.
+record, amendment #419. Presence's own-disposition clause reads the note's whole text 2026-10-25 (d-work #422): every
+accreted row's close had been noted `Y done (mandate #<id>, <date>)`, which the reading took for a disposition given in
+the closing seat; see the same record, amendment #422.
 
 Set: System Requirements.

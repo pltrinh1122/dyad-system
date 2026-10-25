@@ -52,13 +52,16 @@ built on.
    text lives in the plan, the row, the record and the incident log, each already owned. An
    Operator prompt relayed by another agent (Rule-3, Intake) is still an Operator's words: entered
    verbatim as the message carried it, the entry note `relayed via <session>`; the relaying agent's
-   own words are never entered — a defect's observation stays in the plan file (#34). An **accreted
+   own words are never entered — a defect's observation stays in the plan file (#34). A disposition
+   relayed from the seat it was given in is still the Operator's words, and its note gains
+   `relayed via <seat>`, which says where they were given (#422). An **accreted
    row**'s entry 1 (Rule-3, Scope) is still this Operator's words: the plan-`Y` of the mandate the
    row is accreted under, entered verbatim as the Operator gave it to that mandate, the entry note
    `mandate #<id>, <the mandate's own date>` — the id because the words were given on another row,
    and the date because the writer stamps the day it writes, so without it the record misdates the
    Operator. The note is what discloses that the words predate the row they open; the Agent's own
-   account of why the row exists stays in the mandate's plan file (#290).
+   account of why the row exists stays in the mandate's plan file (#290). The same holds of the
+   entry that closes it, the mandate's Done-`Y` words under the same note (#422).
 5. **Checked against the row.** The `disposition` entries of a record correspond one-to-one, in
    order, with the entries of its row's `disposed` column; a mismatch is a failing check, so a
    dropped or invented disposition is visible without reading the chat. A row the instance lists as
@@ -116,6 +119,9 @@ hold that `Y`'s words to satisfy property 5, and the 27 rows already carrying an
 authorization carried it in two ad-hoc note forms — #96 and #97 as `Y plan (named in plan 94.md,
 deferred)`, #240, #257 and #262–#284 as `Y backlog (… from #N's plan-Y)` — neither of which
 disclosed the day the Operator's words were given, which the writer stamps as today; see the same
-record, amendment #290.
+record, amendment #290. Property 4 gains the relayed-disposition sentence and the accreted row's
+closing entry 2026-10-25 (d-work #422): the attendance reading excludes a note naming a mandate or a relay,
+and no CLI form wrote either note on a close or on a relayed disposition, so every mandate close read as a
+disposition given in the closing seat; see the same record, amendment #422.
 
 Set: System Requirements.

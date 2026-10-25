@@ -161,3 +161,27 @@ moves: the store, the entry form, the guard and property 5's count are as they w
 | 1, 8, 9, 10, 11, 12, 13, 14, 18, 19, 20 | yes: agent zone as before, no host action, no new import or World row, no guard registry or reference-kind change, tests unchanged | yes: each keeps its own concern — the amendment is one sentence about whose words an entry holds |
 
 Disposition: see ledger #290.
+
+## Amendment — d-work #422 (2026-10-25, a relayed disposition, and the entry that closes an accreted row)
+Property 4 gains one sentence beside the relayed-prompt sentence #34 added: a disposition relayed from the seat it
+was given in is still the Operator's words, its note gaining `relayed via <seat>`; and its mandate sentence (#290)
+gains the entry that closes an accreted row — the mandate's Done-`Y` words under the same note, `mandate #<id>,
+<the mandate's own date>`. `dyad dwork state` takes `--relayed-via` with `--said`, and `dwork state <id> done
+--mandate <id>` writes the close (#421's HOW). Nothing else moves: the store, the entry form, the guard and property
+5's count are as they were.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 55 | A relayed disposition's note is the Agent's account of where the words were given, so it enters the Agent's text into a record, against property 4. | **Refuted, by attack 53's own reading.** The note is the heading's, outside the fence; property 4 binds the fenced body, and a relayed prompt's note has carried `relayed via <session>` since #34. | The body is the Operator's words verbatim; the note says where they were given, as for a prompt. |
+| 56 | Appending `, relayed via <seat>` to the note breaks the row's correspondence: the `disposed` entry reads `Y plan` while the record's note reads `Y plan, relayed via …`. | **Refuted, by property 5's own test.** The correspondence is the count of `disposition` entries against `disposed` entries, in order (`check_record`); the note is free text the state check never compares (`dyad/tests/test_package.py` `test_dwork_state_notes_a_relayed_disposition` asserts `check_record` is clean). | The row keeps the kind; the record's note adds the route. |
+| 57 | The close form copies the mandate's Done-`Y` into a row the Operator's question named only as `accreted #c`, which is fabrication. | **Refuted, as attack 50 was for entry 1.** Rule-3 Completion: the mandate's Done-`Y` "verifies and closes that set as the completion evidence listed it"; the words are that `Y`'s, the note names the mandate and its date. A row the mandate's Done question did not name is the Agent's breach of Rule-3 (omission), not this form's: the form refuses a row that is not the mandate's child (`refs: parent #<id>` or `Y plan (mandate #<id>)`) and a mandate with no `Y done` on its row and in its record. | `dwork state <id> done --mandate <id>`; the check that the mandate's Done entry names the row stays inference (the forms vary: single, batch, accreted list). |
+| 58 | The rows closed before this form hold `Y done (mandate #412, …)` as the *note* (#413 entry 2), and property 3 forbids rewriting them, so the defect persists in every record already written. | **Confirmed; survivor in Rule-16's reader, not here.** `sessions.own_disposition` excludes a note holding `mandate #` or `relayed via` anywhere (Rule-16 record, attack 49), so the old records read silent and nothing is rewritten. | No record moves; the reader reads the note's whole text. |
+
+**Pairwise (Rule-5), for the sentences property 4 gains.** **7–3**: Rule-3 Scope owns when an accreted row closes
+(its Done rides the mandate's) and Intake owns relayed words across systems; this Rule stores the words and their
+note. **7–16**: Rule-16 Presence reads the notes for attendance; it never writes a record. **7–2**: the relay
+carries a disposition already given; nothing new is ratified. **7–6**: the vocabulary row `relayed prompt` drops
+"never to `--said`"; no new term. **7–12**: tests in `test_package.py` and `test_sessions.py`. Others (1, 4, 5, 8–11,
+13–15, 18–20) unchanged: agent zone, no host action, no new import, no guard registry change. Coherent, orthogonal.
+
+Disposition: see ledger #422.

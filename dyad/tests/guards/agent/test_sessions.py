@@ -438,6 +438,43 @@ class AttendanceTests(unittest.TestCase):
     def test_own_disposition_excludes_mandate_and_relayed_notes(self):
         self.assertTrue(sv.own_disposition("plan")); self.assertTrue(sv.own_disposition("")); self.assertTrue(sv.own_disposition("done (merges PR #3)"))
         self.assertFalse(sv.own_disposition("mandate #369, 2026-10-21")); self.assertFalse(sv.own_disposition("plan, relayed via program-59cec502"))
+    # d-work #422: the three note forms a disposition entry carries, each read in a declared and an undeclared seat.
+    NOTES = {"plain": ("plan", True),
+             "mandate-at-start": ("mandate #412, 2026-10-21", False),                      # `dwork new|state --mandate`
+             "mandate-inside": ("Y done (mandate #412, 2026-10-21)", False),              # the pre-#422 close workaround
+             "relayed": ("plan, relayed via program-59cec502", False)}                    # `--relayed-via` with `--said`
+    def test_own_disposition_excludes_a_mandate_or_relayed_note_anywhere(self):
+        for form, (note, own) in self.NOTES.items():
+            self.assertEqual(sv.own_disposition(note), own, form)
+        self.assertFalse(sv.own_disposition("done (mandate #413, 2026-10-25), relayed via program-59cec502"))
+    def test_three_note_forms_in_a_declared_and_an_undeclared_seat(self):
+        for form, (note, own) in self.NOTES.items():
+            for declared in (True, False):
+                with self.subTest(form=form, declared=declared):
+                    root = self._repo(declared="counsel" if declared else None)
+                    for s in ("program-59cec502", "counsel-0032b4c0"):
+                        self._presence(root, s)
+                    self._record(root, 20, "counsel-0032b4c0", [("disposition", "2026-10-22", note)])
+                    a = self._read(root)
+                    if declared:   # the declaration decides attendance; the record only checks it (`warn` when silent)
+                        self.assertEqual((a["undeclared"], a["warnings"]), ([], [] if own else ["counsel"]))
+                    else:          # an undeclared seat is flagged only for a disposition given in it
+                        self.assertEqual((a["undeclared"], a["warnings"]), ([("counsel-0032b4c0", "2026-10-22")] if own else [], []))
+    def test_record_413_reads_silent_in_an_undeclared_seat(self):
+        """#421's defect, on #413's record exactly as it was written: an accreted row born and closed under #412's
+        mandate, whose entry 2 the pre-#422 workaround noted `Y done (mandate #412, …)` — a false `undeclared`."""
+        root = self._repo()
+        (root / "agent-corpus" / "d-work" / "provenance" / "413.md").write_text(
+            "# Provenance #413\n\nsession: engineer-1537d8fb\n\n"
+            "## 1 disposition 2026-10-25 mandate #412, 2026-10-25\n\n```\nY\n```\n\n"
+            "## 2 disposition 2026-10-25 Y done (mandate #412, 2026-10-25)\n\n```\nY\n```\n")
+        for s in ("program-59cec502", "engineer-1537d8fb"):
+            self._presence(root, s)
+        today = __import__("datetime").date(2026, 10, 25)
+        self.assertEqual(sv.attendance_index(root, today), {})
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            a = sv.attendance(root, today)
+        self.assertEqual((a["undeclared"], sv.fence_lines(a)), ([], []))
     def test_attended_reads_the_latest_own_disposition_within_the_window(self):
         root = self._repo()
         self._record(root, 1, "counsel-0032b4c0", [("prompt", "2026-10-20", ""), ("disposition", "2026-10-20", "plan"), ("disposition", "2026-10-21", "done")])

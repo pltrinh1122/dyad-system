@@ -62,7 +62,7 @@ LEADER_FUNCTION = "program"                     # the function whose bare seat i
 # Attendance (Rule-16 Presence; d-work #388 children 1–3 as #393, declared by #412 C2 as #414): which seats an Operator
 # sits at is declared by the `attended-seats` preference — the leader always, the listed seats beside it, `none` the
 # default — and checked against the provenance records: a seat holds an own disposition when a record whose `session:`
-# line names it holds a disposition given there (noted neither `mandate #<id>` nor `relayed via`) within the
+# line names it holds a disposition given there (a note holding neither `mandate #` nor `relayed via`, #422) within the
 # `attendance-window` preference. A live undeclared seat holding one prints `undeclared`; a declared seat holding none, `warn`.
 ATTENDED_SEATS = "attended-seats"               # the preference key: seat names beside the leader, or `none` (the template seeds `none`)
 NO_SEATS = "none"
@@ -238,10 +238,13 @@ def attendance_window(root: Path | None = None) -> datetime.timedelta:
     return datetime.timedelta(days=days if days > 0 else DEFAULT_ATTENDANCE_DAYS)
 
 def own_disposition(note: str) -> bool:
-    """A disposition the Operator gave in the seat whose record holds it: noted neither as a mandate's words copied
-    onto an accreted row (`mandate #<id>, <date>`, Rule-7 property 4) nor as relayed through another seat."""
+    """A disposition the Operator gave in the seat whose record holds it: its note holds, anywhere, neither a mandate's
+    words copied onto an accreted row (`mandate #<id>, <date>`, Rule-7 property 4) nor `relayed via` another seat.
+    Anywhere, not only at the start (#422): the accreted rows closed before `dwork state <id> done --mandate <id>`
+    existed carry the note `Y done (mandate #<id>, <date>)`, and they read silent without rewriting a record
+    (Rule-7 property 4: a record only grows)."""
     n = note.strip()
-    return not n.startswith(_MANDATE_NOTE) and _RELAYED_NOTE not in n
+    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n
 
 def attendance_index(root: Path | None = None, now: datetime.date | None = None) -> dict[str, str]:
     """{seat: latest date} over every provenance record whose `session:` line names a seat: the latest own disposition
