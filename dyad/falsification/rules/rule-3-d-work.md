@@ -542,3 +542,18 @@ craft's Operating Guide, never a Rule.
 one owner each. **3–2**: nothing ratified. **3–6**: the three terms, owner 16, used by 3. Others unchanged.
 
 Disposition: see ledger #379 (accreted under mandate #369; Done rides its Done-`Y`).
+
+## Amendment — d-work #419 (2026-10-25, child C2 of #417: the cabinet craft's terms in the session-start bullet)
+**Claim (plan #417, the Operator's `Y` of 2026-10-25; #416 revision 2):** the organization craft is renamed `cabinet`;
+the leader's role is the cos and a member's a secretary. Ledger's session-start bullet names both and the Guide's
+new path. A term rename, no change of what a session reads.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Renaming a term Rule-3 uses changes what the bullet binds. | Refuted: the bullet still says the leader reads the board of programs and a member seat the board of its charter's domain; only the names of the two roles and the path change. |
+| 2 | `secretary` collides with an existing term. | Refuted: no Agent term, no preference key and no craft term is `secretary` (`vocabulary.py`, the craft guard's `check_craft`). |
+
+**Pairwise (Rule-5).** **3–16**: Rule-16 owns the seat name and now the term `secretary`; Rule-3 uses it. **3–6**:
+`member-cos` → `secretary`, owner 16, used by 3 and 16; `cos-board` reworded. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #419 (accreted under mandate #417; Done rides its Done-`Y`).

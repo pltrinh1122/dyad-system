@@ -205,3 +205,20 @@ used by 16; no new term (`attended-seats` is a preference key, defined in `prefe
 orthogonal.
 
 Disposition: see ledger #414 (accreted under mandate #412; Done rides its Done-`Y`).
+
+## Amendment — d-work #419 (2026-10-25, child C2 of #417: the cabinet craft's terms and paths in Presence)
+**Claim (plan #417, the Operator's `Y` of 2026-10-25; #416 revision 2 and prompt 4):** the craft `cos` is renamed
+`cabinet`; `member-cos` → `secretary`, the topic seat a desk, `cos-board` unchanged. Presence names the craft's new
+paths; `sessions.seat_kind` reads `secretary` and `desk`, as the craft's `seats.py` does (#418).
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 46 | The vocabulary row `member-cos` said "one of the at most seven lines the leader reads"; with desks unbounded (#416 prompt 4) a reader may take the seven to cover desks. | Refuted in scope: the row is `secretary`'s, and the leader reads secretaries, never desks (the craft's §1, #418). | The `secretary` row says a secretary opens desks as its concurrent work needs. |
+| 47 | The plan's preamble names `secretary` among the cabinet craft's terms, but the core already defines the role term (as `member-cos`, owner 16), and a craft term equal to an Agent term is one fault (`check_craft`). | Confirmed as a plan inconsistency; survivor: `secretary` stays the core's row, owner 16, used by 3 and 16, because Rules 3 and 16 use it. The preamble lists the cabinet craft's own six: charter, cos, desk, roll-up, function, topic. A stated departure from plan #417's wording. | VOCABULARY.md preamble. |
+| 48 | The plan order C1 → C2 → C3 is unpushable: the bundle guard fails C1 ('cos': not a craft in this tree) and fails C3 alone (a released craft with no row). | Confirmed; an incident (Rule-3), escalated to the Operator through the program seat with a proposal (a Rule-11 property 7 sentence for a released craft that has left the tree). Recorded in `agent-corpus/audits/INCIDENTS.md` by this d-work's agent-zone PR. | Pending the Operator's disposition. |
+
+**Pairwise (Rule-5).** **16–3**: Rule-3 uses `secretary` and `cos-board`; Rule-16 owns them. **16–6**: `member-cos`
+renamed `secretary`, `cos-board` reworded, owner 16. **16–11**: the bundle order is Rule-11's (attack 48). Others
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #419 (accreted under mandate #417; Done rides its Done-`Y`).
