@@ -135,5 +135,5 @@ defines what each value means.
 - `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388, #412): a
   seat holds an own disposition when a provenance record whose `session:` line names it holds a disposition
   noted neither `mandate #<id>` nor `relayed via` within the window. A live seat holding one that
-  `attended-seats` does not declare prints `incident`; a declared seat holding none prints `warn`.
+  `attended-seats` does not declare prints `undeclared` (the leader reports it); a declared seat holding none prints `warn`.
   dyad-system: `7`, plan #388's default.
