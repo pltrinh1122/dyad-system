@@ -47,7 +47,11 @@ event, so it works with no craft installed; #155 amendment).
    JSON object appended to `<runbooks>/events/<instance>.jsonl` by the runner — when, the role
    that ran it, instance, command name, the exact command line, class, scope, exit code, duration,
    postcondition result, a digest and the tail of the output, the commit and the run-book's hash
-   (`runbook.EVENT_FIELDS`). The store is instance, committed (an event records something that
+   (`runbook.EVENT_FIELDS`). A `class: read-only` command's event is appended only when its
+   output's digest or its exit code differs from the last event of that command for that instance —
+   a heartbeat that repeats the last reading is not an event, and a changed exit code always is (#438); every other class appends on
+   every execution, and a deploy's health pass (Rule-19 property 2) is unaffected, because it is
+   read from the run that observed it. The store is instance, committed (an event records something that
    happened once; it is not a generated file, Rule-11 property 6) and append-only on `main`
    (`crafts/sysadmin/guards/events.py`, the event guard's transaction check, in the form of Rule-3's
    fence; this rule owns the rule). An audit reads events
@@ -95,4 +99,6 @@ either way). Host values never live in the image files: `compose.yaml` reads the
 
 ## Provenance
 Rule-19 Properties 1–4, 6–9 and the Enforcement check list, moved by #155 (plan
-`agent-corpus/d-work/plans/155.md`, attack 3). Record: `../falsification/rules/server-instances.md`.
+`agent-corpus/d-work/plans/155.md`, attack 3). Record: `../falsification/rules/server-instances.md`. Property 7 records a read-only
+command's event only on a change of reading 2026-10-25 (d-work #438): a standing health check run at
+every reply wrote one identical event per run on a cloud kernel; see the same record, amendment #438.
