@@ -13,7 +13,7 @@ version: 0.16.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 0.11.0 |
+| dyad-operator | 0.12.0 |
 | sysarch | 0.3.0 |
 | syseng | 0.4.0 |
 | sysadmin | 0.3.0 |
