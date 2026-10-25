@@ -1426,7 +1426,8 @@ class SuiteEnvWorktreeTests(unittest.TestCase):
 
 class SpawnSiteTests(unittest.TestCase):
     """#165 fence (d-work #199 N0): every process `package.py` spawns is classified. A python child (a test
-    root, a target) runs with `env=suite_env()`; every other site is a git call the runner makes for itself,
+    root, a target) runs with `env=suite_env()`, unless PY_ALLOWED names the env it runs in and why (the `--at`
+    evidence child, #448); every other site is a git call the runner makes for itself,
     listed here with why it may inherit `os.environ` — so a new spawn site fails until it is judged."""
     SPAWN = {"run", "Popen", "check_output", "check_call", "call", "system", "popen", "execv", "execve", "execvp",
              "execvpe", "execl", "execle", "execlp", "execlpe", "spawnv", "spawnve", "spawnl", "spawnle", "posix_spawn"}
@@ -1442,6 +1443,15 @@ class SpawnSiteTests(unittest.TestCase):
                            "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
         "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, "
                 "under dyadlib.git_env() so a hook's GIT_VARS never redirect them; no write (#162)",
+        "cmd_evidence_at": "rev-parse of the head asked for and of the common dir, then `worktree add --detach` and "
+                           "`worktree remove`/`prune` of its own dyad-evidence-* worktree, under dyadlib.git_env(); "
+                           "the caller's checkout, HEAD and index are never written (#448)",
+    }
+    # enclosing function -> the env a python child that is not a test child runs in, and why: the `--at` child is
+    # `check --evidence` itself, so it must run the suite whenever the caller would, which suite_env() forbids
+    PY_ALLOWED = {
+        "cmd_evidence_at": ("evidence_env", "the evidence block of another head, run by that tree's own runner; "
+                                            "GIT_VARS dropped, DYAD_NO_NESTED_TESTS the caller's (#448)"),
     }
     def sites(self):
         import ast
@@ -1464,8 +1474,9 @@ class SpawnSiteTests(unittest.TestCase):
             env = next((k.value for k in call.keywords if k.arg == "env"), None)
             if head == "sys.executable" or (head or "").strip("'\"").startswith("python"):
                 python.append(line)
-                if not (isinstance(env, ast.Call) and ast.unparse(env.func).endswith("suite_env")):
-                    problems.append(f"l.{line} {fn}: python child without env=suite_env()")
+                want = self.PY_ALLOWED.get(fn, ("suite_env",))[0]
+                if not (isinstance(env, ast.Call) and ast.unparse(env.func).endswith(want)):
+                    problems.append(f"l.{line} {fn}: python child without env={want}()")
             elif head == "'git'":
                 git_fns.add(fn)
                 if fn not in self.GIT_ALLOWED:
@@ -1477,6 +1488,75 @@ class SpawnSiteTests(unittest.TestCase):
         # lets the temp-root sweep cover the push gate and the evidence run as well as `--tests`.
         self.assertGreaterEqual(len(python), 1, "run_suite spawns the suite")
         self.assertEqual(set(self.GIT_ALLOWED) - git_fns, set(), "stale GIT_ALLOWED entry")
+
+class EvidenceAtTests(unittest.TestCase):
+    """d-work #448 (child C2 of #443): `check --evidence --at <rev>` prints the evidence block of `<rev>`, computed
+    by that tree's own runner in a detached worktree under the git common dir, removed afterwards; the caller's
+    checkout, HEAD and index are untouched. The child runs under the caller's DYAD_NO_NESTED_TESTS (`env()` sets
+    it), so these cases run the guards and skip the suite, as `test_evidence_block_shape_and_hash` does in-process."""
+    def git(self, d, *a):
+        return subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,
+                              env=dyadlib.git_env()).stdout
+    def at(self, d, rev):
+        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--at", rev],
+                              cwd=d, capture_output=True, text=True, env=env())
+    def snapshot(self, d):
+        """What a run must leave as it was: HEAD, the index's entries, the status, the files and the worktrees."""
+        return (self.git(d, "rev-parse", "HEAD"), self.git(d, "ls-files", "-s"), self.git(d, "diff", "--cached"),
+                self.git(d, "status", "--porcelain=v1", "-uall"), (d / "note.md").read_text(), (d / "stray.txt").read_text(),
+                self.git(d, "worktree", "list", "--porcelain"))
+    def leftovers(self, d):
+        common = Path(self.git(d, "rev-parse", "--path-format=absolute", "--git-common-dir").strip())
+        return sorted(p.name for p in common.glob("dyad-evidence-*")) + sorted(p.name for p in (common / "worktrees").glob("*"))
+    def fixture(self):
+        """A scratch install with a second commit, so HEAD~1 is a head other than HEAD, and a caller's checkout
+        carrying a staged change and an untracked file."""
+        d = scratch_install(with_craft=False)
+        (d / "note.md").write_text("one\n"); self.git(d, "add", "note.md")
+        self.git(d, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-qm", "two")
+        (d / "note.md").write_text("staged\n"); self.git(d, "add", "note.md")
+        (d / "stray.txt").write_text("untracked\n")
+        return d
+    def test_a_head_other_than_HEAD_is_evidenced_and_the_checkout_untouched(self):
+        d = self.fixture()
+        target = self.git(d, "rev-parse", "HEAD~1").strip(); tree = self.git(d, "rev-parse", "HEAD~1^{tree}").strip()
+        before = self.snapshot(d)
+        r = self.at(d, "HEAD~1")
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[:3], [f"head={target}", f"tree={tree}", "dirty=no"], r.stdout + r.stderr)
+        self.assertTrue(any("[guards] infra/containment" in l for l in lines), r.stdout)
+        self.assertEqual(lines[-1], "evidence-sha256=" + load_package().evidence_sha256(lines[:-1]))   # the block's own form
+        self.assertEqual(self.snapshot(d), before)          # files, HEAD, index, status and worktrees as they were
+        self.assertEqual(self.leftovers(d), [])             # the worktree and git's record of it are gone
+        self.assertNotIn("warn [evidence]", r.stderr)
+    def test_b_the_worktree_is_removed_when_the_child_fails(self):
+        d = self.fixture()
+        empty = self.git(d, "hash-object", "-t", "tree", "/dev/null").strip()
+        orphan = self.git(d, "-c", "user.name=t", "-c", "user.email=t@t", "commit-tree", empty, "-m", "no runner").strip()
+        before = self.snapshot(d)
+        r = self.at(d, orphan)                               # a tree with no dyad/scripts/package.py: the child fails
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.snapshot(d), before)
+        self.assertEqual(self.leftovers(d), [])
+    def test_c_a_rev_that_names_no_commit_is_refused_with_one_line(self):
+        pkg = load_package()
+        for rev in ("no-such-rev-448", None, "--help", "HEAD^{tree}"):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = pkg.cmd_evidence_at(rev)
+            self.assertEqual(rc, 2, rev)
+            self.assertEqual(len(buf.getvalue().splitlines()), 1, buf.getvalue())
+            self.assertRegex(buf.getvalue(), r"^FAIL \[evidence\] --at .*: not a commit in this repository$")
+    def test_d_the_child_env_drops_git_vars_and_keeps_the_callers_nesting(self):
+        pkg = load_package()
+        hook = {"GIT_DIR": "/elsewhere/.git", "GIT_WORK_TREE": "/elsewhere", "GIT_INDEX_FILE": "/x", "GIT_COMMON_DIR": "/y"}
+        with unittest.mock.patch.dict(os.environ, {**hook, "DYAD_NO_NESTED_TESTS": "1"}):
+            e = pkg.evidence_env()
+        self.assertFalse(set(dyadlib.GIT_VARS) & set(e)); self.assertEqual(e["PYTHONDONTWRITEBYTECODE"], "1")
+        self.assertEqual(e["DYAD_NO_NESTED_TESTS"], "1")
+        with unittest.mock.patch.dict(os.environ, {}):
+            os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+            self.assertNotIn("DYAD_NO_NESTED_TESTS", pkg.evidence_env())   # a real run: the child runs the suite
 
 class SuiteMemoTests(unittest.TestCase):
     """#162 (d-work #199 N2): the suite memo. Written after a full, all-roots pass on a clean tree, under the

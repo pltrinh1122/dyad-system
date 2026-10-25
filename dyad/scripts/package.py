@@ -36,6 +36,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
   dyad check --evidence   the evidence block (Rule-14 property 3): head=, tree=, dirty=,
                                 every line `check` and `check --guards` print, then
                                 evidence-sha256= of those lines; non-zero if any check fails
+  dyad check --evidence --at <rev>
+                                the same block for <rev> (HEAD allowed), computed by that tree's own runner in
+                                a detached worktree under the git common dir (dyad-evidence-<sha12>-*, no
+                                bytecode written), removed afterwards on failure too; the caller's checkout,
+                                HEAD and index are never touched, and no suite memo is read (#448, #443 C2).
+                                A <rev> that names no commit is refused with one line (exit 2)
   dyad build [out.tar.gz] deterministic archive of the core craft (scripts/distribute.py, the one
                                 distribution code path every craft uses; #156)
   dyad install <repo> [--from <src>]
@@ -788,6 +794,49 @@ def cmd_evidence():
     print(f"evidence-sha256={evidence_sha256(lines)}")
     return int(rc)
 
+EVIDENCE_WORKTREE = "dyad-evidence-"   # `<git common dir>/dyad-evidence-<sha12>-<random>`: one per `--at` run, never kept
+
+def evidence_env() -> dict[str, str]:
+    """The environment the `--at` child runs in: every `GIT_VARS` dropped, so the child's git calls see the
+    worktree it runs in and never a hook's GIT_DIR (#152), and no bytecode written into that tree (#412–#414:
+    stale ignored directories). `DYAD_NO_NESTED_TESTS` is the caller's, neither set nor dropped: the child
+    runs the suite exactly when `check --evidence` here would (Rule-12 p2), and a test that calls it stays fast."""
+    return {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
+
+def cmd_evidence_at(rev):
+    """`check --evidence --at <rev>` (d-work #448, child C2 of #443): the evidence block of `<rev>`, computed by
+    that tree's own runner in a detached worktree under the git common dir, never in the caller's checkout,
+    whose files, HEAD and index stay as they were (#427: an evidence run in a shared checkout was invalid).
+    stdout is the child's block exactly as `check --evidence` prints it there — `head=` names `<rev>`'s commit,
+    `tree=` its tree, `dirty=no` — and the return code is the child's. The worktree is removed afterwards, on
+    failure or interruption too. Like `--evidence` it never reads the suite memo (Rule-12 p2): the child is
+    that command. A `<rev>` that names no commit is refused with one line, before anything is written."""
+    env = dyadlib.git_env()
+    sha = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{rev}^{{commit}}"],
+                         cwd=REPO, env=env, capture_output=True, text=True).stdout.strip() if rev else ""
+    if not sha:
+        print(f"FAIL [evidence] --at {rev or '(missing)'}: not a commit in this repository")
+        return 2
+    common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=REPO, env=env,
+                            capture_output=True, text=True, check=True).stdout.strip()
+    wt = Path(tempfile.mkdtemp(prefix=f"{EVIDENCE_WORKTREE}{sha[:12]}-", dir=common))   # unique: two runs never collide
+    try:
+        r = subprocess.run(["git", "worktree", "add", "--detach", "--quiet", str(wt), sha], cwd=REPO, env=env,
+                           capture_output=True, text=True)
+        if r.returncode:
+            print(f"FAIL [evidence] --at {rev}: git worktree add: {(r.stderr.strip().splitlines() or ['?'])[-1]}")
+            return 2
+        return subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
+                              cwd=wt, env=evidence_env()).returncode
+    finally:
+        removed = subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=REPO, env=env,
+                                 capture_output=True, text=True).returncode == 0
+        if not removed:   # never registered (the add failed) or half gone: the directory, then git's record of it
+            shutil.rmtree(wt, ignore_errors=True)
+            subprocess.run(["git", "worktree", "prune"], cwd=REPO, env=env, capture_output=True)
+        if wt.exists():
+            print(f"warn [evidence] worktree not removed: {wt}", file=sys.stderr)
+
 def cmd_check():
     rc = cmd_invariants()
     for name, fn in CHECKS.items():
@@ -1320,6 +1369,8 @@ if __name__ == "__main__":
     if not a or a[0] not in ("check", "build", "install"):
         sys.exit(__doc__)
     if a[0] == "check" and "--evidence" in a:
+        if "--at" in a:                                                  # check --evidence --at <rev> (#448)
+            i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None))
         sys.exit(cmd_evidence())
     if a[0] == "check" and "--pr" in a:
         i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
