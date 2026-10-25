@@ -729,13 +729,43 @@ class PackageTests(livetest.LiveCase):
         r = self.dwork_state(d, "1", "done", "-d", "Y done (merges PR #9 at 0123abc)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("the state follows the merge", r.stderr)
         self.assertIn("state: open", rows.joinpath("1.md").read_text(), "nothing written")
-        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d, capture_output=True, text=True).stdout.strip()
+        # #439: package.py runs git in the checkout that holds it (REPO), not in the scratch repo, so the head
+        # must be that checkout's own HEAD; a scratch sha is "unknown in this clone" and the landing test never ran
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PKG, capture_output=True, text=True).stdout.strip()
         r = self.dwork_state(d, "1", "open", "-d", f"Y done (merges PR #9 at {head})", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr)                       # the record, state unchanged
         self.assertIn("state: open", rows.joinpath("1.md").read_text())
         self.assertIn("Y done (merges PR #9", rows.joinpath("1.md").read_text())
         r = self.dwork_state(d, "1", "done")                              # the close: the head is HEAD itself
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("1.md").read_text())
+        self.assertNotIn("unknown in this clone", r.stderr)               # the landing test ran
+        self.assertIn("refs: \n", rows.joinpath("1.md").read_text())    # #439: the landing test writes nothing to refs
+    def test_dwork_done_keeps_the_rows_refs(self):
+        """#439: the landing loop bound its branch list to `refs`, which the close then wrote into the row as
+        `['origin/main', 'main', 'HEAD']` — 28 rows on `main`. A close on a resolvable head keeps the refs."""
+        d, rows = self.dwork_repo()
+        rows.joinpath("1.md").write_text("id: 1\ntitle: one\nopened: d\nstate: open\ndisposed: \nrefs: 7 parent #3\n")
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PKG, capture_output=True, text=True).stdout.strip()   # resolvable in REPO
+        r = self.dwork_state(d, "1", "open", "-d", f"Y done (merges PR #9 at {head})", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "1", "done")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertNotIn("unknown in this clone", r.stderr)   # the landing test ran
+        text = rows.joinpath("1.md").read_text()
+        self.assertIn("state: done", text); self.assertIn("refs: 7 parent #3\n", text); self.assertNotIn("origin/main", text)
+    def test_dwork_refuses_refs_shaped_as_a_list(self):
+        """#439: refs is space-separated tokens; `-r` (and `new`'s positional refs) refuse `[ ] ' " ,` before any
+        write — the fence's `rows.refs_shape_problems` clause said where it costs a line instead of a push."""
+        d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
+        for args in [("1", "open", "-r", "['origin/main', 'main', 'HEAD']"), ("1", "open", "-r", "7, 8"),
+                     ("1", "open", "-r", '"7"')]:
+            with self.subTest(args=args):
+                r = self.dwork_state(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn("space-separated tokens", r.stderr)
+        r = self.dwork_new(d, "three", "7, 8", "--prompt", "p")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("space-separated tokens", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rows.joinpath("3.md").exists())
+        r = self.dwork_state(d, "1", "open", "-r", "202 321 parent #5 PR #9")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("refs: 202 321 parent #5 PR #9\n", rows.joinpath("1.md").read_text())
     def test_dwork_refuses_a_done_with_no_disposition_behind_it(self):
         """#202: the closing act writes no disposition, so the `Y` it executes must already be on the row —
         the coupling the 2026-10-08 chain-of-authority audit (C2) found missing. The landing test itself is
@@ -1408,6 +1438,8 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
         "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
+        "landing_refusal": "cat-file, rev-parse and merge-base of the head a `Y done` names in the operator's own "
+                           "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
         "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, "
                 "under dyadlib.git_env() so a hook's GIT_VARS never redirect them; no write (#162)",
     }

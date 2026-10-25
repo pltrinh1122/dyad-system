@@ -346,6 +346,53 @@ class DoneOrderTests(unittest.TestCase):
         self.assertEqual(len(warns), 1, warns); self.assertIn("row #1 is planned", warns[0])
         self.assertIn("merges are still owed", warns[0])
 
+class RefsShapeTests(unittest.TestCase):
+    """#439: the close path wrote `['origin/main', 'main', 'HEAD']` over 28 rows' refs and no guard read the
+    value's shape. A commit that adds or changes a refs holding `[ ] ' " ,` fails; a legacy comma refs the
+    commit leaves alone passes; the package check fails a bracket anywhere in the store."""
+    R = "agent-corpus/d-work/rows/1.md"; LEGACY = "agent-corpus/d-work/rows/2.md"
+    def setUp(self):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write(self.R, row(1, "one", "open", "2026-01-01 Y plan; 2026-01-02 Y done", "7 parent #3"))
+        self.r.write(self.LEGACY, row(2, "two", "done", "2026-01-01 Y done", "109, 110"))   # a pre-fence row
+        self.base = self.r.commit("root")
+    def fails(self, before, after): return m.check_range(before, after, cwd=self.r.d)
+    def test_a_close_writing_the_branch_list_fails(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done", "['origin/main', 'main', 'HEAD']")); h = self.r.commit()
+        out = self.fails(self.base, h)
+        self.assertEqual(len(out), 1, out); self.assertIn("writes refs", out[0]); self.assertIn("space-separated tokens", out[0])
+    def test_a_new_row_with_a_comma_or_quote_fails(self):
+        for i, refs in enumerate(["109, 110", "'#4'", '"#4"'], start=3):
+            with self.subTest(refs=refs):
+                self.r.write(f"agent-corpus/d-work/rows/{i}.md", row(i, f"r{i}", refs=refs)); h = self.r.commit(f"add {i}")
+                out = m.check_commit(h, self.r.d, "agent-corpus")
+                self.assertEqual(len(out), 1, out); self.assertIn("writes refs", out[0])
+    def test_space_separated_tokens_pass(self):
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done", "202 321 parent #5 PR #9")); h = self.r.commit()
+        self.assertEqual(self.fails(self.base, h), [])
+    def test_a_legacy_comma_refs_left_alone_passes(self):
+        self.r.write(self.LEGACY, row(2, "two", "done", "2026-01-01 Y done; 2026-01-03 Y archive", "109, 110"))
+        self.r.write(self.R, row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done", "7 parent #3")); h = self.r.commit()
+        self.assertEqual(self.fails(self.base, h), [])
+    def test_a_refs_rewritten_resolving_a_merge_fails(self):
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three")); self.r.commit("branch row")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y done", "7 parent #3")); main_h = self.r.commit("planned")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "-s", "ours", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan; 2026-01-02 Y done", "['main', 'HEAD']"))   # hidden in the merge
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_transaction(self.r.d, main_h, h)
+        self.assertTrue(any("merge" in o and "writes refs" in o for o in out), out)
+    def test_the_package_check_fails_a_bracket_not_a_legacy_comma(self):
+        d = self.r.d / "agent-corpus/d-work/rows"
+        fails = lambda: [x for x in m.check_package(self.r.d) if not x.startswith("warning:")]   # row 1's open interval warns
+        self.assertEqual(fails(), [])                                          # `109, 110` is legacy, not judged here
+        (d / "1.md").write_text(row(1, "one", "done", "2026-01-01 Y plan; 2026-01-02 Y done", "['origin/main', 'main', 'HEAD']"))
+        out = fails()
+        self.assertEqual(len(out), 1, out); self.assertIn("holds a bracket", out[0])
+
 class LedgerBranchFenceTests(unittest.TestCase):
     """#191: a ledger-only branch skips the plan gate because `main` would admit its commits — so the fence
     judges each of them as `main` would. A PR merge (`--no-ff`) lands them where the first-parent walk of

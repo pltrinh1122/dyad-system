@@ -1019,6 +1019,27 @@ def mandate_words(rows, raw, kind="Y plan"):
                  f"words to copy, and Rule-7 property 3 forbids writing them now")
     return mid, cands[-1]["text"], cands[-1]["date"]
 
+def landing_refusal(rg, done_entries):
+    """The closing act's landing test (#202), the fence's `rows.landing_problems` said earlier: every head the
+    operative (last) `Y done` entry names must be an ancestor of `origin/main`, `main` or `HEAD`, whichever
+    resolve here; a head this clone cannot resolve prints one warning and is not checked. Returns the refusal
+    text, or None. A function of its own so its locals cannot reach the verb that calls it: inlined in
+    `cmd_dwork`, its branch list was bound to the name `refs`, which the close then wrote into the row as
+    `['origin/main', 'main', 'HEAD']` — 28 rows between 2026-10-15 and 2026-10-25 (#439)."""
+    for e in done_entries[-1:]:     # the operative record only (rows.landing_problems' own rule)
+        for sha in rg.HEAD_AT.findall(e):
+            try:
+                subprocess.check_output(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=REPO, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                print(f"warning: head {sha}, which {e!r} names, is unknown in this clone: not checked (#202)", file=sys.stderr); continue
+            branches = [b for b in ("origin/main", "main", "HEAD")
+                        if subprocess.run(["git", "rev-parse", "--verify", "-q", b], cwd=REPO, capture_output=True).returncode == 0]
+            if all(subprocess.run(["git", "merge-base", "--is-ancestor", sha, b], cwd=REPO, capture_output=True).returncode for b in branches):
+                return (f"refused: head {sha}, which {e!r} names, is on none of {' '.join(branches)}: the "
+                        f"merge that `Y` ratified has not landed (Rule-3 Completion, #202). Merge it, "
+                        f"or ask the Done again on the head that did land — the later entry governs")
+    return None
+
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
@@ -1047,6 +1068,14 @@ def cmd_dwork(a):
         if any(c in vals.get(flag, "") for c in "\r\n"):
             # #191: -d lands unfenced in the row and in a record heading, where a line break forges structure
             sys.exit(f"refused: {flag} text holds a line break; it is one line of a row or a heading")
+    given_refs = [vals["-r"]] if "-r" in vals else []
+    if verb == "new" and len(pos) > 2:
+        given_refs.append(pos[2])
+    refused = dyadlib.load_guard("agent", "rows").REFS_REFUSED if given_refs else ""
+    if any(c in v for v in given_refs for c in refused):
+        # #439: refs is space-separated tokens (`7 parent #3 PR #9`); a bracket, a quote or a comma is the shape of a
+        # Python list written into the row — the fence's `rows.refs_shape_problems` clause, said where it costs a line
+        sys.exit(f"refused: refs holds one of {' '.join(refused)}; write space-separated tokens, e.g. '7 parent #3 PR #9'")
     prompt, said = words(vals, "prompt"), words(vals, "said")
     if d is not None and said is None:
         # d-work #191: a disposition written to the row without its words is property 5's gap at birth
@@ -1153,18 +1182,9 @@ def cmd_dwork(a):
             if not done_entries:
                 sys.exit(f"refused: row {rid} carries no `Y done` entry, so there is no Done-`Y` for this "
                          f"state to execute (Rule-3 Completion: only the Operator closes a d-work)")
-            for e in done_entries[-1:]:     # the operative record only (rows.landing_problems' own rule)
-                for sha in rg.HEAD_AT.findall(e):
-                    try:
-                        subprocess.check_output(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=REPO, stderr=subprocess.DEVNULL)
-                    except subprocess.CalledProcessError:
-                        print(f"warning: head {sha}, which {e!r} names, is unknown in this clone: not checked (#202)", file=sys.stderr); continue
-                    refs = [r_ for r_ in ("origin/main", "main", "HEAD")
-                            if subprocess.run(["git", "rev-parse", "--verify", "-q", r_], cwd=REPO, capture_output=True).returncode == 0]
-                    if all(subprocess.run(["git", "merge-base", "--is-ancestor", sha, r_], cwd=REPO, capture_output=True).returncode for r_ in refs):
-                        sys.exit(f"refused: head {sha}, which {e!r} names, is on none of {' '.join(refs)}: the "
-                                 f"merge that `Y` ratified has not landed (Rule-3 Completion, #202). Merge it, "
-                                 f"or ask the Done again on the head that did land — the later entry governs")
+            refusal = landing_refusal(rg, done_entries)
+            if refusal:
+                sys.exit(refusal)
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
