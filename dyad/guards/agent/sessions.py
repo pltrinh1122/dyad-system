@@ -59,9 +59,13 @@ DEFAULT_ORGANIZATION = "m4"                     # the Operator's default (#369: 
 SEAT_FORM = re.compile(r"^(?P<function>[a-z]+)(?:-(?P<topic>[a-z0-9]+(?:-[a-z0-9]+)*))?-(?P<hp>[0-9a-f]{8})$")   # plan #369 revision 10
 HP_LEN = 8                                      # `<hp>`: the first eight hex of the holder's harness session id
 LEADER_FUNCTION = "program"                     # the function whose bare seat is the leader (revision 10)
-# Attendance (Rule-16 Presence; d-work #388, children 1–3 as #393): whether an Operator sits at a seat is derived from
-# the provenance records, never declared — a seat is attended when a record whose `session:` line names it holds a
-# disposition given there (noted neither `mandate #<id>` nor `relayed via`) within the `attendance-window` preference.
+# Attendance (Rule-16 Presence; d-work #388 children 1–3 as #393, declared by #412 C2 as #414): which seats an Operator
+# sits at is declared by the `attended-seats` preference — the leader always, the listed seats beside it, `none` the
+# default — and checked against the provenance records: a seat holds an own disposition when a record whose `session:`
+# line names it holds a disposition given there (noted neither `mandate #<id>` nor `relayed via`) within the
+# `attendance-window` preference. A live undeclared seat holding one prints `undeclared`; a declared seat holding none, `warn`.
+ATTENDED_SEATS = "attended-seats"               # the preference key: seat names beside the leader, or `none` (the template seeds `none`)
+NO_SEATS = "none"
 ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days (the template seeds 7)
 DEFAULT_ATTENDANCE_DAYS = 7
 ATTENDANCE_MODES = ("M3", "M4", "hybrid")       # only the leader attended | every live seat | some (#366, #388)
@@ -74,6 +78,7 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("seat-form-names-its-three-groups", lambda: set(SEAT_FORM.groupindex) == {"function", "topic", "hp"} and bool(SEAT_FORM.match("engineer-ledgerd-1537d8fb")) and not SEAT_FORM.match("cos-1")),
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
               ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed") and DEFAULT_ATTENDANCE_DAYS > 0),
+              ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
               ("writer-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _WRITER)))]   # crafts/syseng/rules/invariants.md
 
 def sessions_dir(root: Path | None = None) -> Path:
@@ -266,9 +271,25 @@ def attendance_index(root: Path | None = None, now: datetime.date | None = None)
                 out[seat] = e["date"]
     return out
 
+def declared_seats(root: Path | None = None) -> list[str]:
+    """The `attended-seats` preference as a sorted list of entries: [] when the key is absent or holds `none` (the
+    default, #412: only the leader attended). Words are split on spaces and commas; `none` beside a name is dropped."""
+    words = str(dyadlib.preference(ATTENDED_SEATS, root) or "").replace(",", " ").split()
+    return sorted({w for w in words if w != NO_SEATS})
+
+def _seat_key(name: str) -> str:
+    """A seat name without its `-<hp>` suffix: the function and topic, which outlive a change of holder."""
+    m = re.fullmatch(r"(.+)-[0-9a-f]{%d}" % HP_LEN, name)
+    return m.group(1) if m else name
+
+def declares(entries: list[str], seat: str) -> bool:
+    """True when an `attended-seats` entry names `seat`: its full seat name, or the name without `-<hp>`
+    (`engineer` declares `engineer-1537d8fb` and every later holder of that seat)."""
+    return seat in entries or _seat_key(seat) in entries
+
 def attended(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str | None:
-    """The date of the latest disposition the Operator gave in `seat` within the window, or None: the seat is attended
-    when it is not None. Plan #388 child 1."""
+    """The date of the latest disposition the Operator gave in `seat` within the window, or None: the record-derived
+    reading (plan #388 child 1), which since #412 checks the declared set rather than defining it."""
     return attendance_index(root, now).get(seat)
 
 def live_seats(root: Path | None = None) -> list[dict[str, str]]:
@@ -280,21 +301,26 @@ def is_leader(seat: str, form: re.Pattern | None = None, functions: list[str] | 
     return parsed is not None and seat_kind(parsed, functions) == "leader"
 
 def attendance(root: Path | None = None, now: datetime.date | None = None) -> dict:
-    """Plan #388 child 2, the mode read over the live seats: {mode, attended: {seat: date}, relayed: [seat], leaders:
-    [seat], window_days}. Every live seat attended → M4; none, or only leaders → M3; otherwise hybrid. The leader is
-    attended by definition while any seat is (plan #388 §1): an Operator disposing anywhere is present at the leader's
-    board. With no live seat the reading is M3, the degenerate one-pair case."""
+    """The mode read over the live seats (plan #388 child 2, declared by #412): {mode, attended: {seat: date or ""},
+    relayed: [seat], leaders: [seat], declared: [entry], undeclared: [(seat, date)], warnings: [entry], window_days}.
+    Attended = the live leaders ∪ the live seats `attended-seats` declares; the value is the seat's latest own
+    disposition within the window, "" when it holds none. Only leaders attended → M3 (the default, and the reading
+    with no live seat); every live seat attended → M4; otherwise hybrid. The record-derived reading is the fence: a
+    relayed live seat holding an own disposition within the window is `undeclared` (read over the live seats, as the
+    mode is: a seat past the stale window is off the board); an entry that names no seat holding one is a warning (the
+    Operator declared a seat and has not disposed there within the window)."""
     root = root or dyadlib.repo_root()
     form, functions, _ = seat_form()
     index, live = attendance_index(root, now), [s.get("session", s["_path"].removesuffix(".md")) for s in live_seats(root)]
+    declared = declared_seats(root)
     leaders = [s for s in live if is_leader(s, form, functions)]
-    att = {s: index[s] for s in live if s in index}
-    if att:
-        for l in leaders:
-            att.setdefault(l, max(att.values()))
+    att = {s: index.get(s, "") for s in live if s in leaders or declares(declared, s)}
     relayed = [s for s in live if s not in att]
-    mode = "M4" if live and not relayed else ("M3" if set(att) <= set(leaders) else "hybrid")
-    return {"mode": mode, "attended": att, "relayed": relayed, "leaders": leaders, "window_days": attendance_window(root).days}
+    undeclared = sorted((s, index[s]) for s in relayed if s in index)
+    warnings = [e for e in declared if not any(e == s or e == _seat_key(s) for s in index)]
+    mode = "M3" if set(att) <= set(leaders) else ("M4" if not relayed else "hybrid")
+    return {"mode": mode, "attended": att, "relayed": relayed, "leaders": leaders, "declared": declared,
+            "undeclared": undeclared, "warnings": warnings, "window_days": attendance_window(root).days}
 
 def route(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str:
     """Plan #388 child 3: where a counter-prompt this seat owes the Operator is asked — `chat` (its own) when the seat is
@@ -303,8 +329,18 @@ def route(seat: str, root: Path | None = None, now: datetime.date | None = None)
 
 def attendance_line(a: dict) -> str:
     n_live = len(a["attended"]) + len(a["relayed"])
-    return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live seat(s) attended within {a['window_days']} day(s) "
-            f"(attendance is a disposition given in the seat's own record, Rule-16 Presence; the others' questions are relayed through the leader)")
+    return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live seat(s) attended; declared: "
+            f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{ATTENDED_SEATS}`, Rule-16 Presence; the others' "
+            f"questions are relayed through the leader)")
+
+def fence_lines(a: dict) -> list[str]:
+    """The record-derived check against the declared set, one line each (#412): `undeclared` for a disposition given in
+    an undeclared seat, `warn` for a declared entry with none within the window. A board reading, not a Rule-3
+    incident: the act it shows is the Operator's, and the leader, which tracks attendance, is its one reporter."""
+    return ([f"undeclared: {s} holds an own disposition of {d} but `{ATTENDED_SEATS}` does not declare it (Rule-16 Presence)"
+             for s, d in a["undeclared"]]
+            + [f"warn: {e} is declared attended but holds no own disposition within {a['window_days']} day(s)"
+               for e in a["warnings"]])
 
 def system_handle(root: Path) -> str:
     """The system's short handle in a session title, `(ds)` for dyad-system: the initials of the repository
@@ -473,10 +509,13 @@ def main(a: list[str]) -> int:
             print("no session presence files"); return 0
         a = attendance(root)
         print(attendance_line(a))
+        for line in fence_lines(a):
+            print(line)
         for s in rows:
             flag = "stale" if is_stale(s.get("seen", "")) else "live"
             name = s.get("session", s["_path"].removesuffix(".md"))
-            att = f" attended={a['attended'][name]}" if name in a["attended"] else (" relayed" if name in a["relayed"] else "")
+            att = ((f" attended={a['attended'][name]}" if a["attended"][name] else " attended") if name in a["attended"]
+                   else (" relayed" if name in a["relayed"] else ""))
             same_flag = " [SAME ROOT AS YOU]" if (s.get("root") == str(Path(root).resolve()) and s.get("session") != session_id()) else ""
             where = (f" host={s['host']}" if s.get("host") else "") + (f" holder={s['holder']}" if s.get("holder") else "")
             print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{att}{same_flag}")

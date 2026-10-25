@@ -20,7 +20,8 @@ defines what each value means.
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, derived from the records) |
+| attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
+| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -122,11 +123,18 @@ defines what each value means.
   read. Seeded `m4`, the Operator's default: it authorizes nothing by itself — a charter is a
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cos/docs/operating-guide.md` §6).
-- `attendance-window` — how many days a disposition the Operator gave in a seat's own record keeps that
-  seat *attended* (d-work #388): a seat is attended when a provenance record whose `session:` line
-  names it holds a disposition noted neither `mandate #<id>` nor `relayed via` within the window;
-  derived by `dyad session list` on every read, never written anywhere (the record is the proof, #295).
-  Over the live seats the reading is a mode — every seat attended (M4), only the leader (M3), some
-  (hybrid) — and a seat's counter-prompt is asked in its own chat when attended and relayed through the
-  leader otherwise. Seeded `7`: a week of silence in a seat's chat reads as the Operator having left
-  it, which is what a sliding window can say; a longer or shorter window is the Operator's number.
+- `attended-seats` — the seats the Operator attends beside the leader, which is always attended (d-work
+  #412): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
+  of the counsel seat), or `none`. The constraint it states is the Operator's span — how many seats the
+  Operator sits at — never how many seats run: a hundred seats are one span while only the leader is
+  attended and orchestrates the rest. Over the live seats the reading is a mode — every seat attended
+  (M4), only the leader (M3), some (hybrid) — and a seat's counter-prompt is asked in its own chat when
+  attended and relayed through the leader otherwise; `dyad session list` prints the set, the mode and
+  each seat's route (Rule-16 Presence). Seeded `none`: by default only the leader is attended.
+- `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388,
+  #412): a seat holds an own disposition when a provenance record whose `session:` line names it holds a
+  disposition noted neither `mandate #<id>` nor `relayed via` within the window. A live seat holding one
+  that the preference does not declare prints `undeclared`; a declared seat holding none prints `warn`.
+  Derived by `dyad session list` on every read, never written anywhere (the record is the proof, #295).
+  Seeded `7`: a week of silence in a declared seat's chat is worth a warning; a longer or shorter window
+  is the Operator's number.
