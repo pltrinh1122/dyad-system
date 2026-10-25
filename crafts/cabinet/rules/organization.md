@@ -89,7 +89,11 @@ What a seat does and never does, as the Operator tends it (#285, #306; the proce
 who disposes — stays the core's):
 - **Relay verbatim.** The Operator's words reach a seat as the Operator gave them, with the row and date they were
   given on (the core's relayed prompt and the mandate note of Rule-7 property 4); a seat adds its own words beside
-  them, never inside them.
+  them, never inside them. Verbatim binds that seat-bound direction only: a seat's question reaches the Operator
+  through the cos in the form the preference `relay-form` names (the Guide §3), the seat's own question its last line.
+- **Preferences and charters through the cos.** The cos proposes a preference value or a charter, each as its own
+  question; a secretary never does — it hands the exact `preferences-corpus/` diff to the cos, which opens and
+  presents it (#427).
 - **Announce, never order.** A seat reports by state — the row on `main`, its presence file, the PR — and by one
   roll-up line; it asks the Operator and never another seat; it tells another seat what it found and never what
   to do.

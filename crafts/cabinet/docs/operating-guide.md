@@ -51,9 +51,19 @@ cannot check.
    prompt: `dyad dwork new "registration of seat <seat>: …"` and `DYAD_SESSION=<seat> dyad session touch -r
    <row>` — always `-r`: a bare touch claims every open row on the board (#130, #325). The presence file now
    carries `host` and `holder`, and `seats.py` reads its name against the form.
-4. **Relay the words, not a summary.** What a seat acts on is your verbatim prompt and the plan disposition that
-   authorized it, carried by the leader with the row and date they were given on. A seat never acts on the
-   leader's paraphrase.
+4. **Relay has two directions, and only one is verbatim.** *To a seat:* the words, not a summary — what a seat acts
+   on is your verbatim prompt and the plan disposition that authorized it, carried by the leader with the row and
+   date they were given on (R29); a seat never acts on the leader's paraphrase. *To you:* a question a seat that is
+   not attended owes you reaches you in the form your preference `relay-form` names (#424). Under `verbatim` the
+   seat's question and evidence pass through as written. Under `brief` the cos meets you at your altitude: WHAT —
+   the matter and its state; WHY — what it bears on, in your terms rather than the seat's; HOW — the path, its
+   strongest counter and the reconciliation (Rule-10's form, applied by the cos to the seat's question); then the
+   seat's own question as the last line, so your `Y` binds to what the seat asked. The seat's text is citation and
+   evidence, its evidence block quoted verbatim, never the body.
+5. **Preferences and charters are the cos's to propose.** A preference value or a charter (a row of
+   `MANDATES.md`) reaches you from the cos, each as its own question, never folded into a seat's plan or Done; a
+   secretary never proposes one. A secretary whose work needs one hands the exact `preferences-corpus/` diff to
+   the cos, which opens the preferences-zone PR and presents it to you (#427).
 Four seats were opened this way in #369 — the leader renamed twice as the name form was falsified (`cos-1` →
 `cos-59cec502` → `program-59cec502`; the old files stay, that is the store's memory), then `counsel`, `engineer`,
 `distribute` — each registering itself within minutes of creation.
@@ -149,7 +159,7 @@ a release or destructive action that is always its own question) — is asked wh
 | the seat is | the question is asked | the answer travels | the record |
 |---|---|---|---|
 | attended | in the seat's own chat, by the seat | directly: your words in that seat's provenance | the seat's provenance record (Rule-7) |
-| not attended | in the leader's chat, by the leader, verbatim, with the seat named | relayed back to the seat verbatim (R29: a cos relays, never answers) | the seat's plan file quotes the question; the leader's provenance carries your answer; the seat's row cites it (#314's shape, until the bus of #303 lands) |
+| not attended | in the leader's chat, by the leader, with the seat named, in the form `relay-form` names (§3 item 4) | relayed back to the seat verbatim (R29: a cos relays, never answers) | the seat's plan file quotes the question; the leader's provenance carries your answer; the seat's row cites it (#314's shape, until the bus of #303 lands) |
 | the leader itself | in the leader's chat | — | the leader's provenance |
 
 The board lists every outstanding question with its route (R17), so you see in one place what to answer and
