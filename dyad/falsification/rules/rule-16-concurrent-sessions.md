@@ -177,3 +177,28 @@ relayed answer is still the Operator's `Y`, bound as Rule-2 binds it. **16–6**
 **16–12**: `AttendanceTests`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #393 (accreted under mandate #388; Done rides its Done-`Y`).
+
+## Amendment — d-work #414 (2026-10-25, child C2 of #412: attendance declared, the records its check)
+**Claim (plan #412, the Operator's `Y` of 2026-10-25):** the Operator's constraint is how many seats it attends, not
+how many run; the program seat tracks which seats beside it the Operator attends; by default only the program seat is
+attended, and that default is a preference. Survivor of plan #412's attacks 1–5: attended = the leader ∪ the seats
+`attended-seats` declares (default `none`); the record-derived reading of #393 stays, as the check of the declaration.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 38 | Attack 33 refuted a declared line as "a claim nobody verifies" (#295); a declared preference is the same claim. | Refuted in scope: #295's objection is to an unverified line a *seat* writes about itself. The preference is the Operator's own word in its own zone, disposed by its own PR (Rule-2, *Not ratification*), and the records still verify it: an undeclared live seat holding an own disposition prints `incident`, a declared seat holding none prints `warn`. | Declared by the Operator, checked by the records; nothing a seat writes. |
+| 39 | A seat name carries `-<hp>`, the holder's harness id (#379), so a declared name dies with its holder and the Operator re-declares on every handover. | Confirmed; survivor: an entry also matches a seat name with its `-<hp>` removed (`counsel` declares `counsel-0032b4c0` and every later holder). The full name stays admissible for a declaration of one holder. A reading of plan #412's "seat names", stated as such in the completion evidence. | `declares()` in `sessions.py`. |
+| 40 | The incident fires on every seat that holds a disposition from before the preference existed: run on this repo on 2026-10-25, thirteen stale cabinet seats of 2026-10-21 print `incident`. | Confirmed; survivor: the incident is read over the live seats, as the mode is — a seat past the stale window is off the board, and a live relayed seat holding a fresh own disposition is the case #407 names. The warning reads every entry against every record, live or not, because a declaration outlives a seat's presence file. | `incidents` from the relayed live seats only. |
+| 41 | "The leader is attended by definition while any seat is" (attack 34) now reads as always, so a lone leader with no record is M4 (every live seat attended). | Refuted by the order of the test: only leaders attended reads M3 first, which is the default and the one-pair case; M4 needs a declared non-leader seat. | `mode` tests M3 before M4. |
+| 42 | The route still follows the record (an undeclared seat the Operator disposed in gets `chat`). | Refuted: the route follows the declaration alone — an undeclared seat is `relayed` whatever its record holds, and the record's disagreement is the incident line. The Operator sees one reading, and the fence says where it and the record part. | `route()` reads `attended`, which is the declared set. |
+| 43 | Two spans conflate (plan #412 attack 4): the leader's ≤ 7 direct lines (MANDATES.md) and the Operator's attended seats. | Refuted as plan #412 refuted it: different numbers over different sets. The Rule's sentence names only the Operator's span; the leader's is the organization craft's Guide (craft PR of this child). | — |
+
+**Pairwise (Rule-5).** **16–7**: the records are read, never written; Rule-7 owns them. **16–2**: a preference value is the
+Operator's to dispose (C1, #413, its own preferences-zone PR); Rule-16 reads the value on `main`. **16–3**: the counter-prompt
+forms are unchanged; this says only which chat, and an `incident` line here is a printed reading of the board, not
+Rule-3's incident record — a seat that finds one reports it under Rule-3 as any other. **16–6**: `attended` amended, owner 16,
+used by 16; no new term (`attended-seats` is a preference key, defined in `preferences-corpus/`, Rule-6 Boundaries).
+**16–12**: `AttendanceTests` gains the default, the declared seat, the incident and the warning. Others unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #414 (accreted under mandate #412; Done rides its Done-`Y`).

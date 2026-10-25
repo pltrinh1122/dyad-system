@@ -106,9 +106,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 session's file (DYAD_SESSION env, else a fresh id); no args, the
                                 files from this session's own open/planned rows' stored plans;
                                 list prints every session's file, flagging one past the stale window, with the
-                                attendance mode over the live seats (M3 | M4 | hybrid) and each seat's attended
-                                date or `relayed` (a disposition given in the seat's own record within the
-                                `attendance-window` preference; Rule-16 Presence, #388)
+                                attendance mode over the live seats (M3 | M4 | hybrid), the `attended-seats`
+                                declared beside the leader, each seat `attended` or `relayed`, and the records'
+                                check of the declaration: `incident` for an own disposition in an undeclared
+                                live seat, `warn` for a declared seat with none within `attendance-window`
+                                (Rule-16 Presence, #388, #412)
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
   dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
