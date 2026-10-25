@@ -1,4 +1,4 @@
-# Organization (cos craft, Tended rule)
+# Organization (cabinet craft, Tended rule)
 
 Read by Rule-3's Ledger clause through the Operating Guide it cites (`../docs/operating-guide.md`, #369 C7) and
 by the preference `organization` (`preferences-corpus/PREFERENCES.md`, the Operator's; its template row is the
@@ -14,28 +14,31 @@ those rows' provenance records.
 
 ## Intent
 State one organization every dyad system runs under unless its Operator says otherwise — **M4**: a tree of
-Operator–seat pairs in which every cos keeps a cos-board, authority is granted by content-scoped charters and
+Operator–seat pairs in which the cos and every secretary keep a board, authority is granted by content-scoped charters and
 never by identity, and every pair reads and writes the same ledgers — so that one Operator's attention scales to
-five to seven seats, and one seat's to five to seven cabinets, without a second disposer anywhere.
+five to seven secretaries, and a secretary's to as many desks as its concurrent work needs, without a second
+disposer anywhere.
 
 ## 1. The tree
 - **One pair is the whole organization until it is not.** A dyad system with one seat beside its Operator runs M4
-  already: that seat is its leader-cos, its board is the ledger, and no charter is needed — the core's Rules are the
+  already: that seat is its cos, its board is the ledger, and no charter is needed — the core's Rules are the
   charter. Nothing in this rule asks a one-pair system to open a second seat (the core's `d-work` play-book and
   Rule-16 cover the one-pair case without this craft installed).
-- **The leader-cos** sits beside the Operator and keeps the board of programs: every parent row and its children
+- **The cos** sits beside the Operator and keeps the board of programs: every parent row and its children
   across the member seats. It relays the Operator's words to a seat verbatim (the core's relayed prompt, Rule-7
   property 4), writes no row for a seat, answers no seat's question, merges nothing — it holds attention, not
   authority (#253 R28). What it reads: one roll-up line per member seat, at most seven.
-- **A member-cos** holds one function — what the Operator watches on its board — under a charter of the mandates
-  table. It keeps its own cos-board of the rows it holds and the cabinets on it, reports by state on `main` and in
+- **A secretary** holds one function — what the Operator watches on its board — under a charter of the mandates
+  table. It keeps its own cos-board of the rows it holds and the desks on it, reports by state on `main` and in
   its presence file, announces and never orders, and asks nothing of the leader: every question is the Operator's.
-- **A member-cabinet** holds one topic of a member's function under that member's charter (a narrower fence, never
+- **A desk** holds one topic of a member's function under that member's charter (a narrower fence, never
   a wider one); it sits on the member's board. The tree is as deep as the fences nest and never deeper.
-- **Span of control.** A reader keeps five to seven lines: the Operator reads the leader's board, the leader reads
-  one line per member, a member one line per cabinet. A board longer than seven is the signal to consolidate (a
-  cabinet retired or re-homed by its own row) or to split a function — proposed to the Operator, never done by a
-  seat.
+- **Span of control.** A reader keeps five to seven lines: the Operator reads the leader's board, and the leader
+  reads one line per secretary — never a desk. A leader's board longer than seven is the signal to consolidate (a
+  secretary's seat retired or re-homed by its own row) or to split a function — proposed to the Operator, never
+  done by a seat. Desks are unbounded: a secretary opens as many as its concurrent work needs, one session each,
+  bounded only by its own charter's ceiling (#416 prompt 4); a desk is unattended unless `attended-seats` names it,
+  so desks never count against the Operator's span (§6).
 
 ## 2. The precondition: the same ledgers
 Every pair of the tree reads and writes **the same ledgers** — one row store, one provenance store, one presence
@@ -71,28 +74,28 @@ Operator watches on its board — verbs for flows, a noun for the portfolio:
 
 | function | kind | domain | the seam it keeps |
 |---|---|---|---|
-| `program` | leader-cos | the board of programs: every parent row and its children, across the members; relay, roll-up, nothing of its own | accretes nothing; owns no domain |
-| `counsel` | member-cos | the Rules, the vocabulary, the model (`dyad/playbooks/countersign-model.md`), the crafts' governance and shape | Rule text and craft shape, never the machine's code |
-| `audit` | member-cos | the standing audit and the self-diagnostic, the incident ledger's hardening, the sweeps | delegates nothing and accretes nothing: the one member whose rows are findings, never fixes (Three Lines) |
-| `engineer` | member-cos | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb) | the machine, never its shipping |
-| `distribute` | member-cos | the shipping of every craft: install, port, release, bundle, registry, their tests (`dyad build`, `install`, `export` are its verbs) | the seam `package.py` already draws between `check` and `build/install` |
-| `operate` | member-cos | the host: read-before-act, classes, ops scripts the Operator runs, run-books, change-log rows, the services behind boards | the sysadmin craft's whole practice, delivered by the seat and executed by the Operator |
+| `program` | cos | the board of programs: every parent row and its children, across the members; relay, roll-up, nothing of its own | accretes nothing; owns no domain |
+| `counsel` | secretary | the Rules, the vocabulary, the model (`dyad/playbooks/countersign-model.md`), the crafts' governance and shape | Rule text and craft shape, never the machine's code |
+| `audit` | secretary | the standing audit and the self-diagnostic, the incident ledger's hardening, the sweeps | delegates nothing and accretes nothing: the one member whose rows are findings, never fixes (Three Lines) |
+| `engineer` | secretary | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb) | the machine, never its shipping |
+| `distribute` | secretary | the shipping of every craft: install, port, release, bundle, registry, their tests (`dyad build`, `install`, `export` are its verbs) | the seam `package.py` already draws between `check` and `build/install` |
+| `operate` | secretary | the host: read-before-act, classes, ops scripts the Operator runs, run-books, change-log rows, the services behind boards | the sysadmin craft's whole practice, delivered by the seat and executed by the Operator |
 
 A system adopts the six by copying the template; it renames, drops or adds a function by editing its own table —
 the craft ships the default, never the instance.
 
-## 5. The standing conduct of every cos
-What a cos does and never does, as the Operator tends it (#285, #306; the process residue — what a row is,
+## 5. The standing conduct of every seat
+What a seat does and never does, as the Operator tends it (#285, #306; the process residue — what a row is,
 who disposes — stays the core's):
 - **Relay verbatim.** The Operator's words reach a seat as the Operator gave them, with the row and date they were
-  given on (the core's relayed prompt and the mandate note of Rule-7 property 4); a cos adds its own words beside
+  given on (the core's relayed prompt and the mandate note of Rule-7 property 4); a seat adds its own words beside
   them, never inside them.
 - **Announce, never order.** A seat reports by state — the row on `main`, its presence file, the PR — and by one
   roll-up line; it asks the Operator and never another seat; it tells another seat what it found and never what
   to do.
 - **Hold the question.** The leader relays each seat's completion evidence into the parent's own completion reply;
   the Operator disposes once, over the set the evidence lists (Rule-3's Completion clause, the mandate
-  form). No seat merges on another seat's reading, and no cos reads silence as consent.
+  form). No seat merges on another seat's reading, and no seat reads silence as consent.
 - **Keep the board short.** A roll-up line is children held, open questions, the oldest, the stale — and nothing a
   reader could get from the row itself.
 - **Escalate at the fence.** A row whose work leaves the charter's fence, or that the charter's ceiling does not

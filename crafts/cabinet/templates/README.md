@@ -1,4 +1,4 @@
-# cos templates
+# cabinet templates
 
 Seeds an instance copies by hand (exempt from the instance-state scan; never written by `dyad craft install`,
 Rule-11 property 2, and declared by no `seeds:` line — `../MANIFEST.md` says why):

@@ -1,9 +1,9 @@
-# Mandates (preferences zone; the organization's charters — cos craft, `rules/organization.md` §3)
+# Mandates (preferences zone; the organization's charters — cabinet craft, `rules/organization.md` §3)
 
 Operator-owned, like every value under `preferences-corpus/`: one row per seat, a standing mandate the Operator
 holds and a seat reads; changed only by a preferences-zone PR the Operator disposes, never by a seat. Columns as
-`crafts/cos/guards/seats.py` reads them (`MANDATE_COLUMNS`): `seat` is the seat name, or the name's form with
-`<hp>` until the seat is opened; `function` one of `crafts/cos/guards/seats_rules.txt`; `fence` the paths and
+`crafts/cabinet/guards/seats.py` reads them (`MANDATE_COLUMNS`): `seat` is the seat name, or the name's form with
+`<hp>` until the seat is opened; `function` one of `crafts/cabinet/guards/seats_rules.txt`; `fence` the paths and
 kinds of act the seat's rows may touch (what the zone guard and the plan gate read); `ceiling` how many rows one
 plan of the seat may accrete; `escalations` what returns to the Operator as its own question whatever a plan says;
 `revocation` the preferences-zone change that ends the charter. Under every row stand the core's never-accretable

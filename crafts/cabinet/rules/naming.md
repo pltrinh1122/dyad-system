@@ -1,4 +1,4 @@
-# Naming (cos craft, Tended rule)
+# Naming (cabinet craft, Tended rule)
 
 Read by Rule-16's Presence clause — the seat-name form exists; the installed organization craft checks it; absent
 the craft, the core's `touch()` prints one advisory line (#369 C7) — by `../guards/seats.py` (the check, advisory)
@@ -18,7 +18,7 @@ reader nothing (plan #369 revision 10, attack 3).
     <function>[-<topic>]-<hp>
 - `function` — one of the standing functions of the mandates table (`../guards/seats_rules.txt`: `program`,
   `counsel`, `audit`, `engineer`, `distribute`, `operate` by default); lower-case letters.
-- `topic` — optional: the one subject a member-cabinet holds under its function (`engineer-ledgerd-1537d8fb`,
+- `topic` — optional: the one subject a desk holds under its function (`engineer-ledgerd-1537d8fb`,
   `operate-host-23d654aa`); lower-case letters and digits, hyphenated. For `program` the middle token is not a
   topic but the Operator's handle, naming a member pair's leader in a multi-Operator tree (`program-alice-<hp>`);
   the solo default is bare.
@@ -32,11 +32,11 @@ the form lives in this craft's data, where its reading stays advisory.
 
 ## 2. The reading rule
 A name is read from its tokens alone:
-- one function and a handle, `program-<hp>` — **the leader-cos**, and `program-<operator>-<hp>` a member pair's
-  leader in a multi-Operator tree (the leader keeps no cabinet, so `program` never carries a topic); a seat list
+- one function and a handle, `program-<hp>` — **the cos**, and `program-<operator>-<hp>` a member pair's
+  leader in a multi-Operator tree (the leader keeps no desk, so `program` never carries a topic); a seat list
   sorts the leaders first by construction;
-- one function and a handle, any other function — **a member-cos**, keeping the board of that function;
-- a function, a topic and a handle — **a member-cabinet** on that function's board;
+- one function and a handle, any other function — **a secretary**, keeping the board of that function;
+- a function, a topic and a handle — **a desk** on that function's board;
 - `cos` is the vocabulary's word for a seat that keeps a board, never a name token (revision 10, attack 3).
 
 ## 3. The session title

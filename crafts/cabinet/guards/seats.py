@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Seat guard (entity `seat`, corpus `agent`; the cos craft's one guard — its rules `naming.md` (the seat-name
+"""Seat guard (entity `seat`, corpus `agent`; the cabinet craft's one guard — its rules `naming.md` (the seat-name
 form) and `organization.md` (the mandates table) own the check; placed per `crafts/sysarch/rules/guards.md`
-under `crafts/cos/guards/`; d-work #383, #369 C9). Kernel: Python 3.12+.
+under `crafts/cabinet/guards/`; d-work #383, #369 C9). Kernel: Python 3.12+.
 Advisory, never failing — Rule-16 Presence: a presence file is a claim, not a lock, and a seat name from
 before the form (`cab-2`, `cos-1`, `unnamed-<hex>`) is history the store keeps. Two reads:
 - every presence file `<instance>/d-work/sessions/<seat>.md` against the seat-name form of
@@ -18,11 +18,11 @@ if sys.version_info < (3, 12):
     sys.exit("seats.py: Python 3.12+ required")
 import re
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts"))   # crafts/cos/guards/ -> dyad/scripts
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts"))   # crafts/cabinet/guards/ -> dyad/scripts
 import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "seat", "agent", False
-NAME, OWNER = "seat (presence file name)", "crafts/cos/rules/naming.md"
+NAME, OWNER = "seat (presence file name)", "crafts/cabinet/rules/naming.md"
 FIELDS = ("seat", "function", "topic", "hp")                    # what `parse_seat` yields from one presence-file name
 DATA = Path(__file__).resolve().with_name("seats_rules.txt")
 MANDATES = "MANDATES.md"                                        # under the preferences corpus; the template's seed
@@ -56,16 +56,16 @@ def parse_seat(name: str, form: re.Pattern) -> dict[str, str] | None:
     return {"seat": name, "function": m.group("function"), "topic": m.group("topic") or "", "hp": m.group("hp")} if m else None
 
 def kind(seat: dict[str, str], functions: list[str]) -> str:
-    """leader | member-cos | cabinet | unknown-function — the reading rule of naming.md: `program-<hp>` is the
+    """leader | secretary | desk | unknown-function — the reading rule of naming.md: `program-<hp>` is the
     leader, and so is `program-<operator>-<hp>` (the middle token is an Operator's handle, a member pair's leader
-    in a multi-Operator tree — the leader keeps no cabinet by construction, so no `program-<topic>` exists); a
-    bare `<function>-<hp>` is a member-cos; `<function>-<topic>-<hp>` a cabinet on that function's board; a
+    in a multi-Operator tree — the leader keeps no desk by construction, so no `program-<topic>` exists); a
+    bare `<function>-<hp>` is a secretary; `<function>-<topic>-<hp>` a desk on that function's board; a
     function not in the standing list is reported, never refused."""
     if seat["function"] not in functions:
         return "unknown-function"
     if seat["function"] == LEADER:
         return "leader"
-    return "cabinet" if seat["topic"] else "member-cos"
+    return "desk" if seat["topic"] else "secretary"
 
 def presence_names(root: Path) -> list[str]:
     d = dyadlib.instance(root) / "d-work" / "sessions"
@@ -108,7 +108,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     if mp.exists():
         msgs += check_mandates(mp.read_text(), functions, str(mp.relative_to(root)))
     else:
-        msgs.append(f"warning: skip mandates: no preferences-corpus/{MANDATES} here (the Operator's; seeded from crafts/cos/templates/mandates.md)")
+        msgs.append(f"warning: skip mandates: no preferences-corpus/{MANDATES} here (the Operator's; seeded from crafts/cabinet/templates/mandates.md)")
     return msgs
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
@@ -123,7 +123,7 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     names = presence_names(root)
     seats = [s for s in (parse_seat(n, form) for n in names) if s]
     ex = seats[0] if seats else None
-    allowed = {"seat": "the presence file's stem", "function": "one of " + ", ".join(functions), "topic": "a cabinet's topic, or empty", "hp": "8 hex: the holder's harness session id prefix"}
+    allowed = {"seat": "the presence file's stem", "function": "one of " + ", ".join(functions), "topic": "a desk's topic, or empty", "hp": "8 hex: the holder's harness session id prefix"}
     return {"store": "<instance>/d-work/sessions/<seat>.md (names only; the file's fields are agent/sessions')",
             "parser": "`seats.parse_seat` over `seats_rules.txt` `form:`", "observed": len(seats),
             "note": "advisory: names outside the form are counted, never failed (Rule-16 Presence)",
@@ -134,7 +134,7 @@ def main(a: list[str]) -> int:
     msgs = check_package(root)
     for m in msgs:
         print(m)
-    print(f"ok   [cos/seats] {summary(root)}")
+    print(f"ok   [cabinet/seats] {summary(root)}")
     return 0
 
 if __name__ == "__main__":

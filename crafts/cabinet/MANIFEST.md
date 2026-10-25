@@ -1,4 +1,4 @@
-# cos craft manifest (Rule-11 property 2: `requires:`)
+# cabinet craft manifest (Rule-11 property 2: `requires:`)
 
 `key: value` lines (`dyadlib.parse_kv`), read by the craft guard (`dyad/guards/craft/crafts.py`) and by
 `dyad craft install`. `requires:` names the minimum version of another craft this one depends on; `dyad craft
@@ -16,5 +16,5 @@ destination only into a zone one of the craft's own guards claims as `CORPUS` (#
 never `preferences`. Stated here and in the README's *Installing the organization*, as the countersign craft stated
 its own (its record, D25); nothing warns while the table is absent, and `seats.py` prints one `skip` line.
 
-name: cos
+name: cabinet
 requires: dyad-operator>=0.11.0
