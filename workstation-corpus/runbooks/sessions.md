@@ -26,17 +26,28 @@ cadence of its own. A mismatch goes to operate's board; the writer fixes it.
 Health (the pass criterion for Done — server-instances rule, property 4; Rule-19 kernel): the reconcile
 command compares the two lists both ways — for each live presence file a harness session whose title is the
 seat's `dyad session name` form, and for each harness session titled in the seat form a live presence file —
-and prints one line per mismatch: `no harness session`, `no presence`, `title differs`, `stale while titled`
-(plan #431 survivor; the command is #431 C1, `dyad session reconcile`, the engineer seat's). **Pass: no
-mismatch line** — the postcondition greps the output for the four mismatch kinds and holds when none is
-printed. The check is advisory (Rule-16 Presence: never a guard failure); a failed postcondition here is
-operate's report to its board, not a fence.
+and prints one line per mismatch (the command is #431 C1, `dyad session reconcile`, the engineer seat's, #434):
+`no harness session: <seat>`, `no presence: <title>`, `title differs: <seat> (<title>)`, `stale while
+titled: <seat>`, then a count line; exit 0 and one `ok [reconcile] … aligned` line when the lists agree. A
+title matches on its `<seat>: <kernel> (<system>)` prefix, so a suffix the harness appends is no mismatch.
+
+**Pass:** exit 0 — or, on a cloud kernel (`CLAUDE_CODE_REMOTE=true`), exit 1 whose mismatch lines are all of
+the two kinds that kernel produces by construction: `no harness session: <seat>` and `title differs: <seat>
+(no title recorded)`. Each cloud container's harness store holds only its own session and never the UI title
+(#434, record attack 52), so in any one container every *other* live seat reads `no harness session` and the
+seat's own reads `title differs (no title recorded)`: those two lines carry no information there and are not
+read as failures; a `no presence`, a `stale while titled`, or a `title differs` with a title recorded still
+fails. On a terminal kernel the harness store holds every session with its title and the criterion is exit 0
+alone. The postcondition is that test; a hosting-side session list would be a further adapter behind
+`hostadapter.harness_sessions()` and would retire the cloud clause — stated, not built here. The check is
+advisory (Rule-16 Presence: never a guard failure); a failed postcondition is operate's report to its board,
+not a fence, and the writer remedies.
 ```dyad-cmd
 name: health
 class: read-only
 role: any
 undo: none
-postcondition: ! dyad/bin/dyad session reconcile 2>/dev/null | grep -qE '(no harness session|no presence|title differs|stale while titled)'
+postcondition: o=$(dyad/bin/dyad session reconcile 2>/dev/null) || { [ "$(printf %s "${CLAUDE_CODE_REMOTE:-}" | tr A-Z a-z)" = true ] && ! printf '%s\n' "$o" | grep -E '^(no presence|stale while titled|title differs):' | grep -v '(no title recorded)' | grep -q .; }
 scope: agent-corpus/d-work/sessions/ and the harness's session records (read)
 
 dyad/bin/dyad session reconcile
@@ -44,9 +55,9 @@ dyad/bin/dyad session reconcile
 
 ## Seats
 The presence side on its own: every seat's presence file, its freshness, rows, holder and host, the
-attendance mode over the live seats, and a same-root flag (Rule-16 Presence). In a cloud container every
-seat reports the same `root`; the flag then names a path two containers share by name and not by
-filesystem, which is a reading to make, not a collision (found opening this seat, #431 H0).
+attendance mode over the live seats, and a same-root flag (Rule-16 Presence) — counted only when the `host` lines agree and, on a cloud kernel, the
+holders agree, since every cloud container reports the same `root` by name and not by filesystem (found
+opening this seat, #431 H0; #434).
 ```dyad-cmd
 name: seats
 class: read-only
