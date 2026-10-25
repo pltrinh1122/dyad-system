@@ -13,6 +13,7 @@ defines what each value means.
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | plan-and-execute | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
 | delegation-posture | responsive | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
+| delegation-posture-unattended | efficient | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | always | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | agent | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case, #23) |
@@ -48,8 +49,9 @@ defines what each value means.
 - `delegation` — `plan-and-execute`: subagents draft plan files and execution branches so the
   main Agent stays free for the next prompt; the main Agent alone writes rows, asks the plan-Y,
   pushes, opens PRs and asks Done. `none`: subagents read, search and draft text only.
-- `delegation-posture` — how much of a seat's own work runs in its main chat and how much in the sub-agents it
-  spawns (forks, worktrees), for every seat alike (d-work #436). It never routes an act between seats: which seat
+- `delegation-posture` — how much of an **attended** seat's own work — the cos always, and any seat
+  `attended-seats` names (Rule-16 Presence) — runs in its main chat and how much in the sub-agents it spawns (forks,
+  worktrees) (d-work #436, #441). It never routes an act between seats: which seat
   owns an act is the charter's (`MANDATES.md`), unchanged by any value. The floor is Rule-3's subagent clause: a
   seat's main chat alone writes rows, asks and answers counter-prompts, pushes, opens PRs, merges and runs host
   actions; a sub-agent never. Above the floor: `responsive` — the main chat does only the floor; every draft (plan
@@ -57,7 +59,8 @@ defines what each value means.
   rendering runs in a sub-agent, so the chat answers its next message at once. `balanced` — the main chat does
   work it can finish within a budget, 2 minutes of tool time per act, the one number the Operator tunes; longer
   work goes to a sub-agent. `efficient` — the main chat drafts and verifies itself and spawns a sub-agent only for
-  work that must run in parallel or in an isolated worktree. The cost is tokens against chat latency: a sub-agent
+  work that must run in parallel or in an isolated worktree, or that Rule-10 delegates (under `concise-mode: on`,
+  execution longer than a few tool calls). The cost is tokens against chat latency: a sub-agent
   re-reads its context and is the dear hop, so `responsive` spends the most tokens for the least latency and
   `efficient` the fewest, the chat unavailable for the duration. The cos's availability rule (#432: its checkout
   runs nothing longer than a ledger-only push) holds under every value. It refines `plan-and-execute` and is inert
@@ -65,6 +68,15 @@ defines what each value means.
   dyad-system: `responsive`, the Operator's choice (#436), in the words of its revision-2 prompt:
   "clarification: tuning criteria is not for outside of seat delegation but within seat:  `main-chat`  vs. `sub-agent`."
   — followed, after two blank lines, by a lone "not", kept verbatim in the provenance record and read as a truncated line.
+- `delegation-posture-unattended` — the same three values, for every seat that is not attended: under
+  `attended-seats: none`, every secretary and desk (d-work #441). No Operator waits on such a seat's chat. What
+  reaches it comes through the cos, which relays and moves on, so the cos stays free whatever this value is,
+  and a matter routed to the seat waits at most for the act the seat is in. Inert under `organization: flat`
+  (its one seat is the leader). Where neither posture row exists, a seat runs `responsive` attended and
+  `efficient` unattended (the cabinet Guide's fallback). A form preference: it authorizes nothing.
+  dyad-system: `efficient`, the Operator's prompt of 2026-10-25: "Adjustment to the key setting.  The
+  `delegation-posture` is especially important only when operator is attending.  Otherwise, secretary seats
+  should default to `efficient` while `cos` seat defaults to `responsive`."
 - `cli-pattern` — `industry-standard`: a run-book command is the tool's own CLI shown verbatim
   (`docker compose … stop`); a runner may wrap it for telemetry but prints and runs the identical
   line; the dyad's own commands go through one entrypoint, `dyad/bin/dyad`, as `<noun> <verb>`
