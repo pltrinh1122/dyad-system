@@ -110,23 +110,33 @@ craft is absent, and checks nothing).
   every one is named in the Done question you will be asked.
 
 ## 8. The three modes of attendance, and where a question is asked
-You are not at every seat at once. The organization has three **modes**, read from what you did and never from
-what anyone declared (#388; the rule's own sentence: `../rules/organization.md` §6):
+You are not at every seat at once. The organization has three **modes**, read from the seats you declare you
+attend and checked against what you did (#388, #412; the rule's own sentence: `../rules/organization.md` §6):
 - **pure M3** — only the program seat is attended: every member seat's question comes to you through the
   leader;
 - **pure M4** — every live seat is attended: each seat asks you in its own chat;
 - **hybrid** — the program seat and some of the others are attended: the attended ones ask you directly, the
   rest through the leader.
 
-**Attendance is earned, not claimed.** A seat is *attended* when a disposition you gave in that seat's own chat
-— not a mandate's inherited `Y`, not a relayed one — is in its provenance record within the **attendance
-window** (the preference `attendance-window`, default 7 days, yours to set). The leader seat is attended by
-definition while any seat is. Nothing is written to earn it: the record of your own answer is the proof (#295:
-a holder is what the process says; attendance is what you did). Attendance is **lost** when the window passes
-with no disposition of yours in that seat, and regained by the next one. The mode is derived over the live
-seats (presence files within the stale window): all attended → M4; only the leader → M3; otherwise hybrid.
-`dyad session list` prints the mode and each seat's attendance, and the board's WHO column reads `attended` or
-`relayed` (#388's children 1–3, the engineer's).
+**Two spans, two numbers.** Your span is how many seats you attend — sit at, read, answer in their own chat.
+The leader's span is how many member seats it reads directly: at most seven lines (§2). They are different
+numbers over different sets, and neither is how many seats run. A hundred seats are one span for you while you
+attend only the program seat and it orchestrates the rest through its members; what you would feel is a second
+or a third seat you have to watch, never the hundredth you do not (#412).
+
+**Attendance is declared, and the records check it.** The seats you attend beside the program seat are the
+preference `attended-seats`, yours to set: seat names, or seat names without their `-<hp>` (`counsel` covers every
+holder of the counsel seat), or `none`. Its default is `none`: only the program seat is attended, and every
+other seat's question reaches you through the leader. Declaring a seat is a preferences-zone PR you dispose, like
+any preference; nothing a seat writes about itself makes it attended (#295: a holder is what the process says).
+The records are the check, read over the **attendance window** (the preference `attendance-window`, default 7
+days): a disposition you gave in a live seat's own chat — not a mandate's inherited `Y`, not a relayed one — that
+the preference does not declare prints `undeclared`, because you answered where you said you were not — the
+leader reports it to you once, and no member seat reports it as an incident of its own; a declared
+seat with no disposition of yours within the window prints `warn`, because you said you were there and have not
+been. The mode is read over the live seats (presence files within the stale window): only the program seat
+attended → M3, the default; every live seat → M4; otherwise hybrid. `dyad session list` prints the declared set,
+the mode, each seat's `attended` or `relayed`, and the two check lines.
 
 **The route table.** An escalation — a counter-prompt a seat owes you (a plan, a Done, a fence it cannot cross,
 a release or destructive action that is always its own question) — is asked where you will see it:
@@ -140,4 +150,4 @@ a release or destructive action that is always its own question) — is asked wh
 The board lists every outstanding question with its route (R17), so you see in one place what to answer and
 where. What never changes with the mode: who disposes (you), what a seat may do without asking (its charter,
 §4), and what is never accretable (§5). What changes is only the chat a question reaches you in — and the
-seats never guess it: the route is derived from the same records the mode is.
+seats never guess it: the route follows the set you declared, the same set the mode is read from.
