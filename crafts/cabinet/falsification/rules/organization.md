@@ -117,3 +117,16 @@ never moves an act between seats, and the cos's availability rule (#432) holds u
 
 **Survivor:** the Guide's §3 paragraph "Posture", as added; VERSION stays 0.2.0 (unreleased). Disposition: see ledger
 #437 (accreted under #436; its Done rides that mandate's Done disposition).
+
+## Amendment — dyad-system #442 (child C2 of #441: posture keyed by attendance)
+**Claim (plan #441, the Operator's `Y` of 2026-10-25):** the posture matters where the Operator waits; an attended
+seat — the cos always, and any seat `attended-seats` names — reads `delegation-posture`, every other seat reads
+`delegation-posture-unattended`; where neither key exists, an attended seat runs `responsive` and an unattended one
+`efficient`.
+
+| # | attack | result |
+|---|---|---|
+| 25 | The posture is keyed by role, as the Operator's words name roles ("secretary seats should default to `efficient` while `cos` seat defaults to `responsive`."), so keying it by attendance misreads them. | **Refuted, scoped** (plan #441 attack 3): the prompt's first sentence gives the reason, attendance ("especially important only when operator is attending"); under the default `attended-seats: none` attendance yields exactly the role words, and it differs only where the Operator declares a secretary attended, where that stated reason applies. Desks, unnamed in the prompt, read the unattended value by the same reason. |
+
+**Survivor:** the Guide's §3 paragraph "Posture", as reworded; VERSION stays 0.2.0 (uncut). Disposition: see ledger
+#442 (accreted under #441; its Done rides that mandate's Done disposition).
