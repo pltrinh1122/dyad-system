@@ -8,7 +8,9 @@ or `]` (#439: the shape of a Python list, which the close path wrote into 28 row
 here, since 24 rows written before the fence hold comma-separated ids or prose).
 
 Transaction check (`check_transaction`, TRANSACTION; the main fence, referenced by Rule-2): a commit
-pushed directly to main (non-merge, first-parent) may touch only <instance>/d-work/ and, for row
+pushed directly to main (non-merge, first-parent) may touch only <instance>/d-work/ — or only
+<host>/runbooks/events/, an events-only commit (`dyadlib.events_only`, d-work #438): monitoring's record,
+clerical like the ledger, carrying no row for this fence to judge — and, for row
 files, may only add a file or change state/disposed/refs: never delete a row file or change its id
 or title (C3). A `refs` value a commit adds or changes is space-separated tokens (`7 parent #3 PR #9`) and
 holds none of `[ ] ' " ,` (`refs_shape_problems`, #439); a row whose refs the commit leaves as it was is
@@ -21,7 +23,8 @@ signature of two sessions racing the allocator — leaving the append-only rules
 same fence once the branch reaches `main`, and the plan gate to `prs.py`. That hand-off held only for
 a branch replayed onto `main`: a PR merge (`--no-ff`) lands commits this fence, walking
 `--first-parent`, never visits. So a ledger-only branch, which the plan gate now skips (#191), is
-fenced here, each of its own commits as `main` would fence it (`check_ledger_branch`). On both, every `disposed`
+fenced here, each of its own commits as `main` would fence it (`check_ledger_branch`); so is an
+events-only branch, which the gate skips too (#438). A commit touching both stores is neither and fails. On both, every `disposed`
 entry a range *adds* must have the entry shape `<YYYY-MM-DD> <Y|N>[ <text>]` with balanced
 parentheses (`check_disposed`, d-work #133): a `;` inside disposition text splits one entry into
 two, and nothing judged the shape before (#67, #100). Entries already present are never re-judged. A row's
@@ -276,6 +279,9 @@ def check_disposed(root: Path, base: str, head: str) -> list[str]:
 def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[str]:
     label = sha[:9]
     paths = git("diff-tree", "--root", "--no-commit-id", "-r", "--name-only", sha, cwd=cwd).split()
+    events = dyadlib.events_rel(Path(cwd))
+    if paths and events and all(p.startswith(f"{events}/") for p in paths):
+        return []   # #438: an events-only commit is clerical and holds no row; append-only is `sysadmin/events`'
     bad = [p for p in paths if not p.startswith(f"{instance}/d-work/")]
     if bad:
         return [f"FAIL [main-fence]: direct commit {label} touches non-ledger paths: {' '.join(bad)}"]
@@ -332,13 +338,14 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
     independently allocating the same id for different work (d-work #32) — leaving everything
     else (the append-only rules) to this same fence once the branch reaches `main`."""
     if branch(root) != "main":
-        # a ledger-only branch gets the fence per commit, which already judges each added `disposed` entry
-        whole = check_ledger_branch if dyadlib.ledger_only(root, base, head) else check_disposed
+        # a ledger-only or events-only branch gets the fence per commit, which already judges each added `disposed` entry
+        clerical = dyadlib.ledger_only(root, base, head) or dyadlib.events_only(root, base, head)
+        whole = check_ledger_branch if clerical else check_disposed
         return check_id_collisions(root, base, head) + whole(root, base, head)
     return check_range(base, head, cwd=root)
 
 def check_ledger_branch(root: Path, base: str, head: str) -> list[str]:
-    """A ledger-only branch skips the plan gate (Rule-3, #191) because `main` would admit the same
+    """A ledger-only branch — or an events-only one (#438) — skips the plan gate (Rule-3, #191) because `main` would admit the same
     commits — so it gets what `main` gives them: the fence, per commit, over the branch's own
     non-merge commits. Without it a PR merge (`--no-ff`) lands commits the fence, walking
     `--first-parent`, never visits: a row regressed, deleted or retitled on a branch. A merge commit

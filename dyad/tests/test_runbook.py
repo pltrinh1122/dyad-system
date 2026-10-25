@@ -108,6 +108,41 @@ class RunTests(livetest.LiveCase):
         ev = rb.run(self.root, "x", "restore", "operator", confirm_tty=False, out=self.out)   # the test stands in for the tty `Y`
         self.assertEqual((ev.exit, ev.postcondition, ev.cls), (0, "ok", "destructive")); self.assertEqual(rb.exit_code(ev), 0)
         self.assertEqual(self.events()[0]["output_tail"], "r")
+    def test_read_only_records_a_change_of_reading_only(self):
+        """#438: a `read-only` command's heartbeat is not an event — the same output twice is one event, a
+        changed output (or exit) a second; the unchanged run prints one line and keeps its own exit code."""
+        rb.run(self.root, "x", "status", "agent", out=self.out)
+        out = io.StringIO(); ev = rb.run(self.root, "x", "status", "agent", out=out)
+        self.assertEqual(len(self.events()), 1)
+        self.assertEqual(rb.exit_code(ev), 0)
+        self.assertIn(f"unchanged: x status (digest {ev.output_sha256[:12]}); no event", out.getvalue())
+        self.assertNotIn("event x-", out.getvalue())
+        rb.run(self.root, "x", "logs", "agent", out=self.out)                       # another command: its own last event
+        self.assertEqual([e["name"] for e in self.events()], ["status", "logs"])
+        p = self.root / rb.DEFAULT_RUNBOOKS / "x.md"
+        p.write_text(p.read_text().replace("echo up", "echo down"))
+        rb.run(self.root, "x", "status", "agent", out=self.out)                     # the reading changed
+        self.assertEqual([e["name"] for e in self.events()], ["status", "logs", "status"])
+        rb.run(self.root, "x", "status", "agent", out=self.out)
+        self.assertEqual(len(self.events()), 3)
+        p.write_text(p.read_text().replace("echo down", "echo down; false"))        # same output, another exit
+        ev = rb.run(self.root, "x", "status", "agent", out=self.out)
+        self.assertEqual((ev.exit, len(self.events())), (1, 4))
+        out = io.StringIO(); ev = rb.run(self.root, "x", "status", "agent", out=out)
+        self.assertEqual((rb.exit_code(ev), len(self.events())), (1, 4))             # unchanged, the command's own exit kept
+        self.assertIn("unchanged: x status", out.getvalue())
+    def test_other_classes_always_append(self):
+        """#438: only `read-only` is change-only; a reversible run appends every time, same output or not."""
+        for _ in range(2):
+            rb.run(self.root, "x", "restart", "agent", out=self.out)
+        self.assertEqual([e["name"] for e in self.events()], ["restart", "restart"])
+        self.assertEqual(self.events()[0]["output_sha256"], self.events()[1]["output_sha256"])
+    def test_a_store_that_does_not_parse_records(self):
+        """#438: the comparison never hides a run behind a broken store; the guard reports the store."""
+        rb.run(self.root, "x", "status", "agent", out=self.out)
+        p = rb.events_path(self.root, "x"); p.write_text(p.read_text() + "not json\n")
+        rb.run(self.root, "x", "status", "agent", out=self.out)
+        self.assertEqual(p.read_text().count("\n"), 3)
     def test_event_line_is_one_json_object(self):
         rb.run(self.root, "x", "status", "agent", out=self.out)
         raw = rb.events_path(self.root, "x").read_text()

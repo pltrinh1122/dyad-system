@@ -8,7 +8,10 @@ branch's commit messages as the body on any branch but `main`, and skips a range
 clerical — it records a prompt or a disposition, it claims no d-work — so the gate never applies to
 one. Before #191 it did, and a session fenced off `main` (Rule-1, #23) could push a ledger-only branch
 only around the hook, which skipped every other guard too. The row and provenance guards still judge
-the range.
+the range. It skips, for the same reason, a range that touches only `<host>/runbooks/events/`
+(`events_only`, d-work #438): monitoring's record is an observation, never a decision, and claims no
+d-work either. Each class is judged whole: a range mixing ledger-only and events-only commits is
+neither, and goes through the gate. The events guard (`sysadmin/events`) keeps the store append-only.
   PR_BODY="..." BASE_SHA=<sha> prs.py
 """
 import sys
@@ -56,12 +59,18 @@ def ledger_only(root: Path, base: str, head: str) -> bool:
     rename detection off, so a move of code into the ledger is never read as ledger-only (#191)."""
     return dyadlib.ledger_only(root, base, head)
 
+def events_only(root: Path, base: str, head: str) -> bool:
+    """The range's own commits (three-dot) touch only `<host>/runbooks/events/` — `dyadlib.events_only`,
+    read as `ledger_only` is (#438)."""
+    return dyadlib.events_only(root, base, head)
+
 def check_transaction(root: Path, base: str, head: str) -> list[str]:
     """On a branch: the commit messages of base..head are the body; rows read at the base. A
-    ledger-only range is clerical and cites nothing (`ledger_only`, #191)."""
+    ledger-only range (`ledger_only`, #191) or an events-only one (`events_only`, #438) is clerical and
+    cites nothing; a range mixing the two is neither."""
     if subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True).strip() == "main":
         return []
-    if ledger_only(root, base, head):
+    if ledger_only(root, base, head) or events_only(root, base, head):
         return []
     body = subprocess.check_output(["git", "log", "--format=%B", f"{base}..{head}"], cwd=root, text=True)
     return check(body, rows=dyadlib.read_rows(root, at=base))

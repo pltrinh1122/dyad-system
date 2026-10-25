@@ -16,6 +16,10 @@ command on /dev/tty (exit 2 without one), runs the command with `bash -o pipefai
 stdout and stderr, post-tests the postcondition, and appends one event (EVENT_FIELDS, one JSON
 object per line) to `<runbooks>/events/<instance>.jsonl` — the telemetry an audit reads (property 7).
 Events are append-only (the craft's events guard); an event id is `<instance>-<utc ts>-<name>`.
+A `read-only` command records a change of reading, never a heartbeat (d-work #438): its event is
+appended only when its `output_sha256` or its `exit` differs from the last event of the same
+instance and command name (`unchanged`); otherwise it prints `unchanged: …; no event` and appends
+nothing, its exit code still the command's own. Every other class appends on every run.
 
   runbook.py check                       check every run-book (the craft guard's CLI; exit 2 with no craft)
   runbook.py list <instance>             the commands of one run-book with class, role, section
@@ -240,6 +244,24 @@ def tail(output: str, lines: int = TAIL_LINES, chars: int = TAIL_CHARS) -> str:
     t = "\n".join(output.rstrip("\n").splitlines()[-lines:])
     return t if len(t) <= chars else "…" + t[-(chars - 1):]
 
+def last_event(path: Path, name: str) -> dict | None:
+    """The last event of command `name` in one `<instance>.jsonl`, or None (no store, no such event, or a
+    store that does not parse — the guard reports that one; the runner then records, never skips)."""
+    try:
+        evs = read_events(path)
+    except (ValueError, OSError):
+        return None
+    return next((e for e in reversed(evs) if isinstance(e, dict) and e.get("name") == name), None)
+
+def unchanged(path: Path, ev: Event) -> bool:
+    """d-work #438: a `read-only` run whose reading — its output digest and its exit — equals the last event
+    of the same command records nothing that happened, so it appends no event. Any other class, or no
+    earlier event of that command, is a change."""
+    if ev.cls != "read-only":
+        return False
+    last = last_event(path, ev.name)
+    return last is not None and last.get("output_sha256") == ev.output_sha256 and last.get("exit") == ev.exit
+
 # ---- runner
 def _git_commit(root: Path) -> str:
     try:
@@ -268,7 +290,8 @@ def confirm(c: Command, out=sys.stdout) -> None:
         print("declined", file=out); raise Refused("declined")
 
 def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = True, out=sys.stdout) -> Event:
-    """Execute one run-book command as `role` and append its event. Raises Refused (nothing ran, no
+    """Execute one run-book command as `role` and append its event — for a `read-only` command only when its
+    reading changed (`unchanged`, #438); the event is returned either way. Raises Refused (nothing ran, no
     event) on an unknown run-book or command, a role mismatch, a missing tty or a declined confirm."""
     dyadlib.check_invariants(dyadlib, label="dyadlib"); dyadlib.check_invariants(INVARIANTS, label="runbook")   # a broken table must not write an event
     if role not in RUN_ROLES:
@@ -306,7 +329,11 @@ def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = Tru
         print(f"exit {rc}; postcondition {post}; {ms} ms", file=out)
         ev = Event(eid, ts, role, instance, name, c.cmd, c.cls, c.scope, rc, ms, post,
                    hashlib.sha256(output.encode()).hexdigest(), tail(output), commit, sha)
-    ep = events_path(root, instance); ep.parent.mkdir(parents=True, exist_ok=True)
+    ep = events_path(root, instance)
+    if unchanged(ep, ev):   # #438: a heartbeat is not an event
+        print(f"unchanged: {instance} {name} (digest {ev.output_sha256[:12]}); no event", file=out)
+        return ev
+    ep.parent.mkdir(parents=True, exist_ok=True)
     with open(ep, "a") as f:
         f.write(event_line(ev))
     print(f"event {ev.id} -> {ep.relative_to(root) if ep.is_relative_to(root) else ep}", file=out)

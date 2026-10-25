@@ -456,5 +456,42 @@ class LedgerBranchFenceTests(unittest.TestCase):
         (root / "agent-corpus" / "d-work" / "rows" / "01.md").write_text(row(1, "one"))
         self.assertIn("differs from the file name", " ".join(m.check_package(root)))
 
+class EventsOnlyFenceTests(unittest.TestCase):
+    """#438: the main fence admits an events-only direct commit (`<host>/runbooks/events/` only) as it admits a
+    ledger-only one — it carries no row for the fence to judge, and the store's append-only rule stays the
+    sysadmin craft's `events` guard. A commit touching both stores is neither and fails, as any other path does."""
+    R, EV = "agent-corpus/d-work/rows/1.md", "workstation-corpus/runbooks/events/sessions.jsonl"
+    def setUp(self):
+        self.prev = {k: os.environ.pop(k, None) for k in ("DYAD_HOST", "DYAD_RUNBOOKS", "DYAD_INSTANCE")}
+        self.r = Repo(); self.r.write(self.R, row(1, "one")); self.base = self.r.commit("root")
+    def tearDown(self):
+        for k, v in self.prev.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    def test_an_events_only_direct_commit_passes(self):
+        self.r.write(self.EV, '{"a": 1}\n'); h = self.r.commit("events")
+        self.assertEqual(m.check_commit(h, self.r.d, "agent-corpus"), [])
+        self.assertEqual(m.check_range(self.base, h, cwd=self.r.d), [])
+        self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])      # on main
+    def test_a_commit_touching_both_stores_fails(self):
+        self.r.write(self.EV, '{"a": 1}\n'); self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan")); h = self.r.commit("both")
+        out = m.check_range(self.base, h, cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertIn("non-ledger paths: workstation-corpus/runbooks/events/sessions.jsonl", out[0])
+    def test_a_run_book_beside_its_events_fails(self):
+        self.r.write(self.EV, '{"a": 1}\n'); self.r.write("workstation-corpus/runbooks/sessions.md", "x"); h = self.r.commit("runbook")
+        self.assertIn("non-ledger paths", m.check_range(self.base, h, cwd=self.r.d)[0])
+    def test_the_store_follows_the_host_path(self):
+        os.environ["DYAD_HOST"] = "infrastructure"
+        self.r.write(self.EV, '{"a": 1}\n'); h = self.r.commit("events under another host")
+        self.assertIn("non-ledger paths", m.check_range(self.base, h, cwd=self.r.d)[0])
+        self.r.write("infrastructure/runbooks/events/sessions.jsonl", '{"a": 1}\n'); h2 = self.r.commit("this host's events")
+        self.assertEqual(m.check_commit(h2, self.r.d, "agent-corpus"), [])
+    def test_an_events_only_branch_gets_the_per_commit_fence(self):
+        sh("git", "checkout", "-q", "-b", "events", cwd=self.r.d)
+        self.r.write(self.EV, '{"a": 1}\n'); h = self.r.commit("events")
+        self.assertTrue(dyadlib.events_only(self.r.d, self.base, h))
+        self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])
+
 if __name__ == "__main__":
     unittest.main()

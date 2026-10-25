@@ -289,6 +289,26 @@ class PackageTests(livetest.LiveCase):
         finally:
             pkg.REPO = old
 
+    def test_suite_gate_skips_an_events_only_range(self):
+        """#438: a two-dot range wholly under `<host>/runbooks/events/` skips the suite as a ledger-only one does;
+        a range carrying both stores is neither and runs."""
+        pkg = load_package(); d, seed, git = self.gate_repo()
+        ledger = git("rev-parse", "HEAD")
+        ev = d / "workstation-corpus" / "runbooks" / "events"; ev.mkdir(parents=True)
+        (ev / "sessions.jsonl").write_text('{"a": 1}\n'); git("add", "-A"); git("commit", "-qm", "events")
+        old = pkg.REPO; pkg.REPO = d
+        try:
+            with unittest.mock.patch.dict(os.environ, {}, clear=False):
+                for k in ("DYAD_NO_NESTED_TESTS", "DYAD_HOST", "DYAD_RUNBOOKS"):
+                    os.environ.pop(k, None)
+                pkg._SUITE_RAN = False
+                self.assertEqual(pkg.suite_gate(ledger, "HEAD"), (False, f"skip [guards] Rule-12 suite: {ledger}..HEAD is events-only (d-work #438)"))
+                self.assertEqual(pkg.suite_gate(seed, "HEAD"), (True, None))                       # ledger and events together -> run
+                os.environ["DYAD_HOST"] = "infrastructure"
+                self.assertEqual(pkg.suite_gate(ledger, "HEAD"), (True, None))                     # not this host's store -> run
+        finally:
+            pkg.REPO = old
+
     def test_guards_gate_the_suite_on_a_ledger_only_range(self):
         """The wiring of `suite_gate`'s decision to the suite call, over one gate repo
         (`test_suite_gate_truth_table` holds the decisions themselves). The prefix, never the suffix:
@@ -1686,6 +1706,30 @@ class SuiteMemoTests(unittest.TestCase):
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
         (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "not ledger")
         self.assertEqual(gate(), (True, None))                          # one non-ledger commit: the clause is off
+
+    def test_events_branch_behind_main_skips_only_on_a_memoized_merge_base(self):
+        """#438: the memo's second clause holds for an events-only branch as for a ledger-only one, each class
+        read whole."""
+        d, seed, git = self.repo()
+        for k in ("DYAD_HOST", "DYAD_RUNBOOKS"):
+            os.environ.pop(k, None)
+        fork = git("rev-parse", "HEAD")
+        git("switch", "-qc", "events")
+        ev = d / "workstation-corpus" / "runbooks" / "events"; ev.mkdir(parents=True)
+        (ev / "sessions.jsonl").write_text('{"a": 1}\n'); git("add", "-A"); git("commit", "-qm", "events")
+        git("switch", "-q", "main")
+        (d / "code.txt").write_text("main moved\n"); git("commit", "-qam", "main moves")
+        git("switch", "-q", "events")
+        gate = lambda: self.pkg.suite_gate("main", "HEAD", pre_push=True)
+        self.assertEqual(gate(), (True, None))                          # two-dot main..HEAD carries main's code
+        self.pkg.suite_memo_write(self.pkg.suite_memo_parts(fork))      # the merge-base's tree passed
+        tree = git("rev-parse", f"{fork}^{{tree}}")
+        self.assertEqual(gate(), (False, f"skip [guards] Rule-12 suite: main...HEAD is events-only and its merge-base tree "
+                                         f"{tree[:9]} already passed on this checkout (d-work #162)"))
+        self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "a ledger commit")
+        self.assertEqual(gate(), (True, None))                          # events then ledger: neither class, the clause is off
 
 class InstalledRootTests(unittest.TestCase):
     """#176 (d-work #199 N5): `dyad install` records the core's tree in the craft registry, and the pre-push
