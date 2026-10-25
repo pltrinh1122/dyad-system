@@ -73,7 +73,8 @@ files and almost never merge.
   records': a seat holds an own disposition when a provenance record whose `session:` line names it holds a
   disposition given there — noted neither `mandate #<id>` nor `relayed via` — within the
   `attendance-window` preference (default 7 days); a live seat holding one that is neither the leader nor
-  declared prints `incident`, a declared seat holding none prints `warn`. The constraint the preference
+  declared prints `undeclared`, a declared seat holding none prints `warn` — a reading of the board, not a
+  Rule-3 incident: the act is the Operator's, and the leader alone reports it. The constraint the preference
   bounds is the Operator's span — how many seats the Operator attends — never how many seats run (#412).
   No presence line is written for either: the preference is the declaration and the record the proof (#295).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable

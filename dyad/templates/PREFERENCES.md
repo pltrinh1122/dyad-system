@@ -134,7 +134,7 @@ defines what each value means.
 - `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388,
   #412): a seat holds an own disposition when a provenance record whose `session:` line names it holds a
   disposition noted neither `mandate #<id>` nor `relayed via` within the window. A live seat holding one
-  that the preference does not declare prints `incident`; a declared seat holding none prints `warn`.
+  that the preference does not declare prints `undeclared`; a declared seat holding none prints `warn`.
   Derived by `dyad session list` on every read, never written anywhere (the record is the proof, #295).
   Seeded `7`: a week of silence in a declared seat's chat is worth a warning; a longer or shorter window
   is the Operator's number.

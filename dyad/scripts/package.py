@@ -108,7 +108,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 list prints every session's file, flagging one past the stale window, with the
                                 attendance mode over the live seats (M3 | M4 | hybrid), the `attended-seats`
                                 declared beside the leader, each seat `attended` or `relayed`, and the records'
-                                check of the declaration: `incident` for an own disposition in an undeclared
+                                check of the declaration: `undeclared` for an own disposition in an undeclared
                                 live seat, `warn` for a declared seat with none within `attendance-window`
                                 (Rule-16 Presence, #388, #412)
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)

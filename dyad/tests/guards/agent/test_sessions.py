@@ -472,7 +472,7 @@ class AttendanceTests(unittest.TestCase):
             self._presence(root, s)
         a = self._read(root)
         self.assertEqual((a["mode"], a["attended"], sorted(a["relayed"])), ("M3", {"program-59cec502": ""}, ["counsel-0032b4c0", "engineer-1537d8fb"]))
-        self.assertEqual((a["declared"], a["incidents"], a["warnings"]), ([], [], []))
+        self.assertEqual((a["declared"], a["undeclared"], a["warnings"]), ([], [], []))
         self.assertEqual(sv.route("engineer-1537d8fb", root, self.TODAY), "relayed")
         self.assertEqual(sv.route("program-59cec502", root, self.TODAY), "chat")
         self.assertEqual(sv.declared_seats(self._repo(declared="none")), [])
@@ -484,26 +484,26 @@ class AttendanceTests(unittest.TestCase):
         self._record(root, 11, "counsel-0032b4c0", [("disposition", "2026-10-22", "plan")])
         a = self._read(root)
         self.assertEqual((a["mode"], a["attended"], a["relayed"]), ("hybrid", {"program-59cec502": "", "counsel-0032b4c0": "2026-10-22"}, ["engineer-1537d8fb"]))
-        self.assertEqual((a["incidents"], a["warnings"]), ([], []))
+        self.assertEqual((a["undeclared"], a["warnings"]), ([], []))
         self.assertEqual(sv.route("counsel-0032b4c0", root, self.TODAY), "chat")
         self.assertTrue(sv.declares(["ds-cabinet"], "ds-cabinet-1537d8fb")); self.assertFalse(sv.declares(["ds"], "ds-cabinet-1537d8fb"))
-    def test_fence_undeclared_disposition_is_an_incident(self):
+    def test_fence_undeclared_disposition_prints_undeclared(self):
         root = self._repo()                                                        # the Operator disposed in a member seat it never declared
         for s in ("program-59cec502", "counsel-0032b4c0", "engineer-1537d8fb"):
             self._presence(root, s)
         self._record(root, 12, "counsel-0032b4c0", [("disposition", "2026-10-22", "plan")])
         self._record(root, 13, "operate-bbbbbbbb", [("disposition", "2026-10-22", "plan")])    # no presence file: off the board
         a = self._read(root)
-        self.assertEqual((a["mode"], a["incidents"]), ("M3", [("counsel-0032b4c0", "2026-10-22")]))
+        self.assertEqual((a["mode"], a["undeclared"]), ("M3", [("counsel-0032b4c0", "2026-10-22")]))
         self.assertEqual(sv.route("counsel-0032b4c0", root, self.TODAY), "relayed")   # the declaration decides, never the record
-        self.assertEqual(sv.fence_lines(a), ["incident: counsel-0032b4c0 holds an own disposition of 2026-10-22 but `attended-seats` does not declare it (Rule-16 Presence)"])
+        self.assertEqual(sv.fence_lines(a), ["undeclared: counsel-0032b4c0 holds an own disposition of 2026-10-22 but `attended-seats` does not declare it (Rule-16 Presence)"])
     def test_fence_declared_seat_silent_past_the_window_is_a_warning(self):
         root = self._repo(declared="engineer-1537d8fb counsel")
         for s in ("program-59cec502", "counsel-0032b4c0", "engineer-1537d8fb"):
             self._presence(root, s)
         self._record(root, 14, "engineer-1537d8fb", [("disposition", "2026-10-01", "plan")])   # outside the window
         a = self._read(root)
-        self.assertEqual((a["mode"], a["relayed"], a["incidents"]), ("M4", [], []))
+        self.assertEqual((a["mode"], a["relayed"], a["undeclared"]), ("M4", [], []))
         self.assertEqual(a["warnings"], ["counsel", "engineer-1537d8fb"])
         self.assertEqual(sv.fence_lines(a)[0], "warn: counsel is declared attended but holds no own disposition within 7 day(s)")
     def test_no_live_seat_reads_m3(self):

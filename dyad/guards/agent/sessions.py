@@ -63,7 +63,7 @@ LEADER_FUNCTION = "program"                     # the function whose bare seat i
 # sits at is declared by the `attended-seats` preference — the leader always, the listed seats beside it, `none` the
 # default — and checked against the provenance records: a seat holds an own disposition when a record whose `session:`
 # line names it holds a disposition given there (noted neither `mandate #<id>` nor `relayed via`) within the
-# `attendance-window` preference. A live undeclared seat holding one is an incident; a declared seat holding none, a warning.
+# `attendance-window` preference. A live undeclared seat holding one prints `undeclared`; a declared seat holding none, `warn`.
 ATTENDED_SEATS = "attended-seats"               # the preference key: seat names beside the leader, or `none` (the template seeds `none`)
 NO_SEATS = "none"
 ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days (the template seeds 7)
@@ -302,11 +302,11 @@ def is_leader(seat: str, form: re.Pattern | None = None, functions: list[str] | 
 
 def attendance(root: Path | None = None, now: datetime.date | None = None) -> dict:
     """The mode read over the live seats (plan #388 child 2, declared by #412): {mode, attended: {seat: date or ""},
-    relayed: [seat], leaders: [seat], declared: [entry], incidents: [(seat, date)], warnings: [entry], window_days}.
+    relayed: [seat], leaders: [seat], declared: [entry], undeclared: [(seat, date)], warnings: [entry], window_days}.
     Attended = the live leaders ∪ the live seats `attended-seats` declares; the value is the seat's latest own
     disposition within the window, "" when it holds none. Only leaders attended → M3 (the default, and the reading
     with no live seat); every live seat attended → M4; otherwise hybrid. The record-derived reading is the fence: a
-    relayed live seat holding an own disposition within the window is an incident (read over the live seats, as the
+    relayed live seat holding an own disposition within the window is `undeclared` (read over the live seats, as the
     mode is: a seat past the stale window is off the board); an entry that names no seat holding one is a warning (the
     Operator declared a seat and has not disposed there within the window)."""
     root = root or dyadlib.repo_root()
@@ -316,11 +316,11 @@ def attendance(root: Path | None = None, now: datetime.date | None = None) -> di
     leaders = [s for s in live if is_leader(s, form, functions)]
     att = {s: index.get(s, "") for s in live if s in leaders or declares(declared, s)}
     relayed = [s for s in live if s not in att]
-    incidents = sorted((s, index[s]) for s in relayed if s in index)
+    undeclared = sorted((s, index[s]) for s in relayed if s in index)
     warnings = [e for e in declared if not any(e == s or e == _seat_key(s) for s in index)]
     mode = "M3" if set(att) <= set(leaders) else ("M4" if not relayed else "hybrid")
     return {"mode": mode, "attended": att, "relayed": relayed, "leaders": leaders, "declared": declared,
-            "incidents": incidents, "warnings": warnings, "window_days": attendance_window(root).days}
+            "undeclared": undeclared, "warnings": warnings, "window_days": attendance_window(root).days}
 
 def route(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str:
     """Plan #388 child 3: where a counter-prompt this seat owes the Operator is asked — `chat` (its own) when the seat is
@@ -334,10 +334,11 @@ def attendance_line(a: dict) -> str:
             f"questions are relayed through the leader)")
 
 def fence_lines(a: dict) -> list[str]:
-    """The record-derived check against the declared set, one line each (#412): `incident` for a disposition given in
-    an undeclared seat, `warn` for a declared entry with none within the window."""
-    return ([f"incident: {s} holds an own disposition of {d} but `{ATTENDED_SEATS}` does not declare it (Rule-16 Presence)"
-             for s, d in a["incidents"]]
+    """The record-derived check against the declared set, one line each (#412): `undeclared` for a disposition given in
+    an undeclared seat, `warn` for a declared entry with none within the window. A board reading, not a Rule-3
+    incident: the act it shows is the Operator's, and the leader, which tracks attendance, is its one reporter."""
+    return ([f"undeclared: {s} holds an own disposition of {d} but `{ATTENDED_SEATS}` does not declare it (Rule-16 Presence)"
+             for s, d in a["undeclared"]]
             + [f"warn: {e} is declared attended but holds no own disposition within {a['window_days']} day(s)"
                for e in a["warnings"]])
 
