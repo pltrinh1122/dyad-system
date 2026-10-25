@@ -92,6 +92,19 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 #<parent>, <its date>` (Rule-7 property 4). Refuses -d, --said, --prompt
                                 and --relayed-via, a row neither `refs: parent #<parent>` nor born `Y plan
                                 (mandate #<parent>)`, and a mandate whose row or record holds no `Y done`
+  dyad dwork new|state … --land [--mirror <branch>]
+                                the verb, committed and pushed in one call (scripts/land.py; #447, child C1
+                                of plan #443): run in the tool-owned worktree `<git common dir>/dyad-land`,
+                                detached at a freshly fetched origin/main and cleaned (PYTHONDONTWRITEBYTECODE=1),
+                                never this checkout; every written path under <instance>/d-work/ or nothing
+                                lands; one `ledger: …` commit citing no `d-work #`; one `git push --atomic
+                                origin HEAD:main [HEAD:refs/heads/<branch>]`, so the hook runs once; a moved
+                                main is rebuilt from the inputs (a `new` re-allocates), at most 3 tries, and an
+                                entry already on origin/main is refused as `already landed`. Prints the landed
+                                sha; fast-forwards this checkout when it is on a clean `main`
+  dyad dwork land <path>... -m <msg> [--mirror <branch>]
+                                the same for files this checkout already wrote — plan files, presence, traces:
+                                copied into that worktree, committed under <msg>, pushed the same way
   dyad dwork retire <id>... -d text --said[-file] <s>
                                 the retirement form (Rule-3 `archived`, d-work #290): backlog or done
                                 → archived over k rows in one call, one Operator question behind it.
@@ -971,7 +984,7 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate")
+DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
     "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
     "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, set(), 3),
@@ -1100,6 +1113,11 @@ def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
         return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
+    pos, _, bare = dwork_args(a)
+    if (pos and pos[0] == "land") or "--land" in bare:
+        # #447 (child C1 of plan #443): the verb run, committed and pushed from the tool-owned worktree in one call;
+        # scripts/land.py runs the worktree's own `dyad dwork`, so this checkout is never written or reset
+        return dyadlib.load_module(PKG / "scripts" / "land.py", "land").main(a, REPO, DWORK_VALUE_FLAGS, dwork_args, words)
     try:
         dyadlib.check_invariants(dyadlib, label="dyadlib")   # a broken transition table must not write a row (syseng invariants.md p1)
     except dyadlib.InvariantError as e:

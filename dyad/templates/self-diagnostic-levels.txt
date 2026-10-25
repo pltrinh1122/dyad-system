@@ -49,6 +49,7 @@ integration dyad/tests/test_dyadlib_rows.py                # git: locates the li
 integration dyad/tests/test_entrypoint.py                  # the interpreter resolver dyad/bin/dyad-python
 unit        dyad/tests/test_hostadapter.py
 integration dyad/tests/test_incidents.py                   # git: locates the live repo (repo_root)
+integration dyad/tests/test_land.py                        # scratch repos, a bare origin, push; the runner as a child (#447)
 unit        dyad/tests/test_levels.py
 integration dyad/tests/test_livetest.py                    # the runner (install); git
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
