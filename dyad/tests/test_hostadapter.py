@@ -82,3 +82,44 @@ class WriteGitignoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HarnessSessionsTests(unittest.TestCase):
+    """d-work #434: `harness_sessions` reads the harness's own session list for a repo — `[]` with no store, one
+    record per `<id>.jsonl` with its title (`custom-title` before `ai-title`), the main checkout's sessions from a
+    linked worktree, and a base overridable by `DYAD_HARNESS_DIR`."""
+    def _store(self, checkout):
+        base = Path(tempfile.mkdtemp())
+        proj = base / "projects" / hostadapter._slug(hostadapter.resolve(checkout)); proj.mkdir(parents=True)
+        return base, proj
+    def test_absent_store_is_empty(self):
+        self.assertEqual(hostadapter.harness_sessions(tempfile.mkdtemp(), base=tempfile.mkdtemp()), [])
+    def test_slug_replaces_every_non_alphanumeric(self):
+        self.assertEqual(hostadapter._slug("/srv/dyad-system"), "-srv-dyad-system")
+        self.assertEqual(hostadapter._slug("/a/b.c_d"), "-a-b-c-d")
+    def test_ids_and_titles(self):
+        root = Path(tempfile.mkdtemp()); base, proj = self._store(root)
+        (proj / "s1.jsonl").write_text('{"type": "user", "message": "no title here"}\n')
+        (proj / "s2.jsonl").write_text('{"type": "ai-title", "aiTitle": "A"}\n{"type": "custom-title", "customTitle": "B"}\n'
+                                       '{"type": "ai-title", "aiTitle": "C"}\n')
+        (proj / "s3.jsonl").write_text('{"type": "ai-title", "aiTitle": "first"}\nnot json custom-title\n{"type": "ai-title", "aiTitle": "last"}\n')
+        (proj / "s2").mkdir()                                           # a session's side directory is not a session
+        self.assertEqual(hostadapter.harness_sessions(root, base=base),
+                         [{"id": "s1", "title": ""}, {"id": "s2", "title": "B"}, {"id": "s3", "title": "last"}])
+    def test_env_override(self):
+        root = Path(tempfile.mkdtemp()); base, proj = self._store(root)
+        (proj / "s1.jsonl").write_text("")
+        from unittest import mock
+        import os
+        with mock.patch.dict(os.environ, {"DYAD_HARNESS_DIR": str(base)}):
+            self.assertEqual(hostadapter.harness_dir(), base)
+            self.assertEqual(hostadapter.harness_sessions(root), [{"id": "s1", "title": ""}])
+    def test_worktree_reads_the_main_checkout(self):
+        main = Path(tempfile.mkdtemp()); wt = Path(tempfile.mkdtemp())
+        gitdir = main / ".git" / "worktrees" / "wt"; gitdir.mkdir(parents=True)
+        (gitdir / "commondir").write_text("../..\n")
+        (wt / ".git").write_text(f"gitdir: {gitdir}\n")
+        base, proj = self._store(main)
+        (proj / "s1.jsonl").write_text("")
+        self.assertEqual(hostadapter.checkouts(wt), [hostadapter.resolve(wt), hostadapter.resolve(main)])
+        self.assertEqual(hostadapter.harness_sessions(wt, base=base), [{"id": "s1", "title": ""}])

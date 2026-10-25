@@ -90,7 +90,11 @@ files and almost never merge.
   ledger commit already made then); read by `dyad session list` or directly. Advisory only: a
   session past the stale window, or one that ended without a clean write, is never a guard
   failure — a reader judges freshness from `seen`, and may cross-check the harness's own live
-  session directory for whether the name is still active.
+  session directory for whether the name is still active. `dyad session reconcile` makes that
+  cross-check: it compares the live presence files with the harness's own session list, read through
+  `hostadapter.harness_sessions()` (`dyad/scripts/hostadapter.py`), and prints one line per mismatch
+  (`no harness session`, `no presence`, `title differs`, `stale while titled`) — advisory, a run-book's
+  health command (the operate seat's), never a guard failure; the remedy is the writer's (#434).
 - **A plan-less row is invisible to the `files` union.** `sessions.touch_from_open_rows`
   (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of this session's
   `open` and `planned` rows; an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
@@ -138,6 +142,8 @@ seat-name sentence names the cos, a secretary and the cabinet craft's paths 2026
 #417): the craft `cos` is renamed `cabinet`, `member-cos` becomes `secretary` and a topic seat a desk; see the same
 record, amendment #419. Presence's own-disposition clause reads the note's whole text 2026-10-25 (d-work #422): every
 accreted row's close had been noted `Y done (mandate #<id>, <date>)`, which the reading took for a disposition given in
-the closing seat; see the same record, amendment #422.
+the closing seat; see the same record, amendment #422. Presence gains `dyad session reconcile` 2026-10-25 (d-work
+#434, child C1 of #431): the harness's list of sessions and the presence store had drifted apart with nothing to say
+where, and the operate seat owns the check while the writer owns the fix; see the same record, amendment #434.
 
 Set: System Requirements.

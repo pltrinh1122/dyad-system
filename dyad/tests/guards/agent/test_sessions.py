@@ -212,6 +212,24 @@ class SameRootTests(unittest.TestCase):
         (root / "agent-corpus" / "d-work" / "sessions" / "me.md").write_text(
             f"session: me\nseen: {_now()}\nroot: {me}\nrows: \nfiles: \n")
         self.assertEqual(sv.same_root(root, exclude="me"), [])
+    def _other(self, root, host=None, holder=None):
+        (root / "agent-corpus" / "d-work" / "sessions" / "other.md").write_text(
+            f"session: other\nseen: {_now()}\nroot: {root.resolve()}\nrows: \nfiles: \n"
+            + (f"host: {host}\n" if host else "") + (f"holder: {holder}\n" if holder else ""))
+    def test_separate_cloud_containers_do_not_share_a_root(self):
+        """#434, the operate seat's report: one path in two cloud containers is two filesystems."""
+        cases = [  # (my host, my holder, other host, other holder, flagged)
+            ("cloud linux x86_64", "aaaa", "cloud linux x86_64", "bbbb", False),   # two containers
+            ("cloud linux x86_64", "aaaa", "cloud linux x86_64", "aaaa", True),    # one holder, one container
+            ("cloud linux x86_64", "aaaa", "cloud linux x86_64", None, True),      # cannot tell: warn
+            ("terminal linux x86_64", "aaaa", "terminal linux x86_64", "bbbb", True),   # one machine, two sessions
+            ("terminal macos arm64", "aaaa", "terminal linux x86_64", "aaaa", False),   # two machines
+        ]
+        for mine, my_holder, other, other_holder, flagged in cases:
+            with self.subTest(mine=mine, other=other, other_holder=other_holder):
+                root = repo(); self._other(root, other, other_holder)
+                with mock.patch.object(sv, "host_line", return_value=mine), mock.patch.object(sv, "holder", return_value=my_holder):
+                    self.assertEqual(sv.same_root(root), ["other"] if flagged else [])
     def test_touch_records_root(self):
         root = repo()
         import os
@@ -582,3 +600,105 @@ class DescribeTests(unittest.TestCase):
             d = sv.describe(root)
         self.assertTrue(d["store"].startswith(str(inst)))
 
+
+class ReconcileTests(unittest.TestCase):
+    """d-work #434 (child C1 of #431): `reconcile` reads the live presence files against the harness's own session
+    list, through a fake harness store (`DYAD_HARNESS_DIR`) read by `hostadapter.harness_sessions`."""
+    A, B, C = ("1537d8fb-d96b-5c89-933a-d3ee36793d70", "59cec502-0000-4000-8000-000000000000",
+               "0032b4c0-0000-4000-8000-000000000000")
+    def _env(self):
+        root, base = Path(tempfile.mkdtemp()) / "dyad-system", Path(tempfile.mkdtemp())   # system handle `ds`
+        (root / "agent-corpus" / "d-work" / "sessions").mkdir(parents=True)
+        proj = base / "projects" / sv.hostadapter._slug(sv.hostadapter.resolve(root))
+        proj.mkdir(parents=True)
+        return root, base, proj
+    def _harness(self, proj, sid, title=None, kind="custom-title"):
+        recs = [{"type": "user", "sessionId": sid}]
+        if title is not None:
+            recs.append({"type": kind, "sessionId": sid, ("customTitle" if kind == "custom-title" else "aiTitle"): title})
+        (proj / f"{sid}.jsonl").write_text("".join(sv.hostadapter.json.dumps(r) + "\n" for r in recs))
+    def _presence(self, root, seat, holder=None, live=True, host="cloud linux x86_64"):
+        seen = _now() if live else "2026-01-01T00:00:00+00:00"
+        (root / "agent-corpus" / "d-work" / "sessions" / f"{seat}.md").write_text(
+            f"session: {seat}\nseen: {seen}\nroot: /x\nrows: 1\nfiles: \nhost: {host}\n" + (f"holder: {holder}\n" if holder else ""))
+    def _run(self, root, base):
+        with mock.patch.dict(os.environ, {"DYAD_HARNESS_DIR": str(base)}), \
+             mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            return sv.reconcile(root), sv.reconcile_report(root)
+    def test_aligned_passes(self):
+        root, base, proj = self._env()
+        self._presence(root, "engineer-1537d8fb", self.A)
+        self._harness(proj, self.A, "engineer-1537d8fb: cloud (ds) - ledger")
+        self._harness(proj, self.B, "an untitled-form session")      # not in the seat form: not the check's
+        lines, (rc, report) = self._run(root, base)
+        self.assertEqual((lines, rc), ([], 0)); self.assertTrue(report[0].startswith("ok   [reconcile] 1 live"))
+    def test_no_harness_session(self):
+        root, base, proj = self._env()
+        self._presence(root, "program-59cec502", self.B)
+        self._presence(root, "cos", None)                            # no holder line and no <hp>: unmatched
+        self._harness(proj, self.A, None)
+        lines, (rc, _) = self._run(root, base)
+        self.assertEqual(lines, ["no harness session: cos (no holder line)", "no harness session: program-59cec502"]); self.assertEqual(rc, 1)
+    def test_holder_matched_by_hp_prefix(self):
+        root, base, proj = self._env()
+        self._presence(root, "engineer-1537d8fb", "1537d8fb")        # an 8-hex holder, as a seat's <hp>
+        self._harness(proj, self.A, "engineer-1537d8fb: cloud (ds)")
+        self.assertEqual(self._run(root, base)[0], [])
+    def test_no_presence(self):
+        root, base, proj = self._env()
+        self._harness(proj, self.C, "counsel-0032b4c0: cloud (ds) - rules", kind="ai-title")
+        lines, (rc, _) = self._run(root, base)
+        self.assertEqual(lines, ["no presence: counsel-0032b4c0: cloud (ds) - rules"]); self.assertEqual(rc, 1)
+    def test_title_differs(self):
+        for title in ("engineer-1537d8fb: terminal (ds)", "program-1537d8fb: cloud (ds)", "engineer-1537d8fb: cloud (w4)",
+                      "engineer-1537d8fb: cloud (ds)x", "dyad-system-ea", None):
+            with self.subTest(title=title):
+                root, base, proj = self._env()
+                self._presence(root, "engineer-1537d8fb", self.A)
+                self._harness(proj, self.A, title)
+                lines = self._run(root, base)[0]
+                self.assertEqual(len(lines), 1); self.assertTrue(lines[0].startswith("title differs: engineer-1537d8fb ("), lines)
+    def test_suffixed_title_matches_by_its_prefix(self):
+        """The operate seat's observation: the harness appends a suffix (`operate-8cce8b10: cloud (ds) - operate`); the
+        prefix `dyad session name` prints is what is compared, for `title differs` and for `no presence` alike."""
+        for suffix in ("", " - operate", " — ledger work", " | x", ": y"):
+            with self.subTest(suffix=suffix):
+                root, base, proj = self._env()
+                self._presence(root, "operate-8cce8b10", "8cce8b10-0000-4000-8000-000000000000")
+                self._harness(proj, "8cce8b10-0000-4000-8000-000000000000", f"operate-8cce8b10: cloud (ds){suffix}")
+                self._harness(proj, self.C, f"counsel-0032b4c0: cloud (ds){suffix}")
+                self.assertEqual(self._run(root, base)[0], [f"no presence: counsel-0032b4c0: cloud (ds){suffix}"])
+    def test_report_line_forms(self):
+        root, base, proj = self._env()
+        self._presence(root, "engineer-1537d8fb", self.A)
+        self._harness(proj, self.A, "engineer-1537d8fb: cloud (ds)")
+        self.assertEqual(self._run(root, base)[1], (0, ["ok   [reconcile] 1 live presence file(s), 1 harness session(s) aligned"]))
+        self._presence(root, "program-59cec502", self.B)
+        self.assertEqual(self._run(root, base)[1], (1, ["no harness session: program-59cec502",
+            "1 mismatch(es) — 2 live presence file(s), 1 harness session(s) (Rule-16 Presence; the writer remedies)"]))
+    def test_custom_title_wins_over_ai_title(self):
+        root, base, proj = self._env()
+        (proj / f"{self.A}.jsonl").write_text(
+            '{"type": "custom-title", "customTitle": "engineer-1537d8fb: cloud (ds)"}\n'
+            '{"type": "ai-title", "aiTitle": "Fix the ledger"}\n')
+        self._presence(root, "engineer-1537d8fb", self.A)
+        self.assertEqual(self._run(root, base)[0], [])
+    def test_stale_while_titled(self):
+        root, base, proj = self._env()
+        self._presence(root, "operate-59cec502", self.B, live=False)
+        self._harness(proj, self.B, "operate-59cec502: cloud (ds)")
+        self._presence(root, "audit-0032b4c0", self.C, live=False)   # stale and untitled: silent
+        self._harness(proj, self.C, None)
+        lines, (rc, _) = self._run(root, base)
+        self.assertEqual(lines, ["stale while titled: operate-59cec502"]); self.assertEqual(rc, 1)
+    def test_no_harness_store_is_silent(self):
+        root = repo(); base = Path(tempfile.mkdtemp())
+        self._presence(root, "engineer-1537d8fb", self.A)
+        lines, (rc, report) = self._run(root, base)
+        self.assertEqual((lines, rc), ([], 0)); self.assertIn("reports no session", report[0])
+    def test_check_package_never_reads_the_harness(self):
+        root, base, proj = self._env()
+        self._presence(root, "program-59cec502", self.B)
+        self._harness(proj, self.A, None)
+        with mock.patch.dict(os.environ, {"DYAD_HARNESS_DIR": str(base)}):
+            self.assertEqual(sv.check_package(root), [])            # advisory: a mismatch is never a guard failure
