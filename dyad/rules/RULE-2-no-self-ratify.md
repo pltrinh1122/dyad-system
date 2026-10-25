@@ -37,6 +37,9 @@ not edited when they are added (G5).
 - Commits on a branch; opening or updating a PR; running checks.
 - Ledger-only commits to `main` (touching nothing outside `agent-corpus/d-work/`): they
   record a prompt received or a disposition already given, never a decision (Rule-3).
+- Events-only commits to `main` (touching nothing outside `<runbooks>/events/`, the run-book
+  store Rule-19 names, `DYAD_RUNBOOKS`): they record what a read-only run-book command observed, never
+  a decision (Rule-3; #438).
 - Writing proposals, falsification attacks, and proposed survivors.
 - Reading `preferences-corpus/`. Changing a value there is a preferences-zone PR the
   operator disposes; the agent acts on the value on `main`.
@@ -91,6 +94,11 @@ Binding gains the mandate clause 2026-10-14 (d-work #290): a batch `Y` had been 
 supersedes the individual ones — which Binding's first sentence forbade in so many words, since a
 row accreted after the question was asked is named by no question; the clause states what a plan-`Y`
 may bind to instead, and the list of what it may never bind to; see
-`../falsification/rules/rule-2-no-self-ratify.md`, amendment #290.
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #290. Not ratification gains the
+events-only commit 2026-10-25 (d-work #438): a standing health check's events, each a read-only
+command's observation, needed a row, a PR and the full suite to reach `main`, and the Operator asked
+why monitoring should have a row at all; an observation passes the test the ledger-only bullet
+already states — it records, never decides — and only events of read-only commands do; see
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #438.
 
 Set: System Requirements.

@@ -71,3 +71,31 @@ a `Y` covers*. Coherent, orthogonal. Record:
 `agent-corpus/falsification/2026-10-14-operator-attention-scaling.md`.
 
 Disposition: see ledger #290.
+
+## Amendment — d-work #438 (2026-10-25, Not ratification: the events-only commit)
+**Claim (plan #438, the Operator's `Y` of 2026-10-25):** an events-only commit to `main` — touching
+nothing outside `<runbooks>/events/`, holding events of read-only run-book commands only — is
+not a ratification event: it records what a read-only command observed, never a decision, as a
+ledger-only commit records a prompt received or a disposition already given. *Not ratification*
+gains one bullet; the Ratification events list is unchanged.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 16 | Monitoring belongs under a standing row with a batch mandate ("one workstation PR per batch of events", ceiling n), so this Rule needs no edit. | **Refuted** (plan #438 alternative a). A row that never completes breaks Rule-3's lifecycle; its plan-`Y` authorizes no mutation, only an observation; the ceiling forces a fresh row and a fresh plan-`Y` every n batches — an Operator question that decides nothing — and each batch is still a PR and a full suite. | Nothing is authorized, so there is nothing for a `Y` to bind to: the record is clerical or it is no record. |
+| 17 | An event is a workstation-zone record, not the ledger; the clerical class was defined by the path `agent-corpus/d-work/`, not by a test. | **Survives, scoped** (alternative b). The bullet's own reason is the test — "records …, never a decision" — and the path is how a mechanism decides it. An event of a read-only command passes that test; the path `<runbooks>/events/` is how the fence decides it, and `sysadmin/events` already keeps that store append-only on `main`. | Clerical by the same test, decided by its own path, fenced by its own guard. Events of read-only commands only. |
+| 18 | Alone, the exemption commits every heartbeat: a commit and a push per reply, mostly identical lines. | **Confirmed**, and answered outside this Rule (alternative c): the sysadmin craft's property 7 records a read-only command's event only on a change of reading (craft amendment #438). | This Rule admits the commit; how many commits there are is the craft's. |
+| 19 | No record at all: the board reading is the record, computed on demand (alternative f). | **Survives, scoped** — right for a reading nobody grades. The harness side of a reading is The World and kept nowhere, so a past reading cannot be recomputed, and audit grades recurrence from the events (#409 G1). | The committed record is the history of changes; the current reading stays on the board. |
+| 20 | Precedent (the Rule-10 counter): widening the clerical class invites the next class to cite this one. | **Survives, bounded.** The bound is the test this Rule already states — a clerical commit records, never decides — and the class named is events of read-only commands only (Rule-8 class); a commit that chooses, or an event of a reversible or destructive command, fails it. | The bullet carries both bounds in its own words, so the next class is judged against them rather than against this precedent. |
+
+**Rule-5 pairwise (#438, Not ratification edited).** **2–3**: Rule-3 owns the events-only class, the
+statement that monitoring is no d-work and the guards that admit it; Rule-2 owns only that the commit
+is not ratification — one-way, as for the ledger-only bullet. **2–12**: Rule-12 property 2 skips the
+suite for the same range; this Rule is not read there. **2–1**: unchanged — one zone per commit, so a
+commit touching the ledger and the events is neither class. **2–8**: unchanged — the read-only class
+is Rule-8's and the sysadmin craft's; a reversible or destructive action keeps its row and its
+counter-prompt. **2–19**: unchanged — a deploy's health pass is still completion evidence read from
+the run that observed it. **2–4**, **2–5**, **2–6**, **2–7**, **2–9**, **2–10**, **2–11**, **2–13**,
+**2–14**, **2–15**, **2–16**, **2–18**, **2–20**: unchanged. No new Agent term: "events-only" is an
+adjective, as "ledger-only" is. Coherent, orthogonal.
+
+Disposition: see ledger #438.

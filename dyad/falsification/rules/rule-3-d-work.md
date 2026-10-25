@@ -578,3 +578,29 @@ the route; Rule-3 states only what a relayed Done question carries. **3–6**: n
 preference key, defined in `preferences-corpus/`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #424.
+
+## Amendment — d-work #438 (2026-10-25, monitoring is no d-work: the events-only commit)
+**Claim (plan #438, the Operator's `Y` of 2026-10-25, answering "Why should there be a standing row? Evaluate
+alternatives for "monitoring" activities."):** monitoring is its own activity class, not a d-work — read-only,
+standing, with nothing for a plan-`Y` to authorize and no Done to reach — so it opens no row. Its only write, the
+events of read-only run-book commands, is clerical: an events-only range (every non-merge commit touching nothing
+outside `<runbooks>/events/`, read commit by commit with rename detection off) goes to `main` without a row or a
+PR; the PR guard skips it and the fence admits it as a ledger-only one; append-only is the events guard's.
+
+| # | attack | result |
+|---|---|---|
+| 1 | A standing operate row with a batch mandate fits Rule-3 as it stands (alternative a). | Refuted: a row that never completes is the shape "terminates only when the Operator disposes `Y`" excludes; its plan-`Y` authorizes no mutation; the mandate's ceiling forces a fresh row and plan-`Y` every n batches, a question that decides nothing, and each batch is still a PR and a four-minute suite. |
+| 2 | An events-only exemption beside the ledger-only one (alternative b). | Survives, scoped: an observation is no decision, the test Rule-2 states; the store's append-only guard (`sysadmin/events`) already exists; one commit stays one zone (Rule-1). Alone it commits every heartbeat (attack 3). |
+| 3 | Events only on a change of reading (alternative c). | Survives, and is the craft's: the sysadmin craft's property 7 (amendment #438 there). With it a per-reply stream becomes a few events a day, and a mismatch appearing or clearing is still recorded. It does not stand without attack 2: a few events still each need a row and a PR under the old fence. |
+| 4 | No record: the board reading, computed on demand (alternative f). | Survives, scoped: right for a reading nobody grades; the harness side is The World and kept nowhere, so recurrence (#409 G1) cannot be graded without the events. |
+| 5 | Precedent (Rule-10 counter): the next class asking for a clerical exemption will cite this one. | Survives, bounded: Rule-2's own test — records, never a decision — and events of read-only commands only; a commit that chooses, or an event of a reversible or destructive command, fails it. |
+| 6 | A commit carrying a ledger row and an event together would pass as both. | Refuted: one commit stays one zone (Rule-1), and each class is decided commit by commit by its own path, so a mixed commit is neither. |
+
+**Pairwise (Rule-5).** **3–2**: Rule-2's *Not ratification* gains the matching bullet; Rule-3 owns the class and its
+guards, Rule-2 only that it is not ratification. **3–12**: property 2's suite skip names the same range; Rule-3 owns
+the definition, Rule-12 cites it. **3–1**: unchanged — one zone per commit; the events path is the host zone's.
+**3–8**: unchanged — the read-only class is Rule-8's and the sysadmin craft's. **3–19**: unchanged — a deploy's health
+pass is still completion evidence read from the run that observed it. **3–6**: no new Agent term; "events-only" is an
+adjective, as "ledger-only" is. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #438.
