@@ -117,11 +117,11 @@ defines what each value means.
   (its transcript is never committed, Rule-7). `on-demand`: a trace only when the Operator prompts for one;
   a d-work whose session has ended can then be traced from git and the ledger only (d-work #215).
 - `organization` — the shape of this system's seats (d-work #369, plan revisions 1–13; #385 PR-B). `m4`: a
-  tree of operator–agent pairs, each seat a cos keeping a cos-board, authority granted by the content-scoped
-  charters of `MANDATES.md` beside this file (seeded from `crafts/cos/templates/mandates.md`), every pair
+  tree of operator–agent pairs — the program seat its cos, a secretary per function and desks under them, each keeping a board — authority granted by the content-scoped
+  charters of `MANDATES.md` beside this file (seeded from `crafts/cabinet/templates/mandates.md`), every pair
   sharing the same ledgers; a presence file's name is a seat name, `<function>[-<topic>]-<hp>` (Rule-16
-  Presence; the cos craft's `rules/naming.md`), read advisorily by the cos craft's `seat` guard and printed
-  by `dyad session name`. `flat`: one pair, one board, cabinets by row; no seat form is read. dyad-system:
+  Presence; the cabinet craft's `rules/naming.md`), read advisorily by the cabinet craft's `seat` guard and printed
+  by `dyad session name`. `flat`: one pair, one board, desks by row; no seat form is read. dyad-system:
   `m4`, the Operator's default since 2026-10-21 ("codify M4 as the default organizational preference").
 - `attended-seats` — the seats the Operator attends beside the program seat, which is always attended (d-work
   #412): seat names, or seat names without their `-<hp>` (`counsel` names every holder of the counsel seat), or
