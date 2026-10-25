@@ -17,10 +17,13 @@ dyad runbook list sessions
 dyad runbook run sessions health
 ```
 
-Operate runs `health` at every reply and on the program seat's request; each run leaves an event in
-`events/sessions.jsonl` (server-instances rule, property 7), which the audit seat reads and grades (a seat
-repeatedly `stale while titled` is an incident-hardening input, #409 G1; plan #431 revision 2) and never on a
-cadence of its own. A mismatch goes to operate's board; the writer fixes it.
+Operate runs `health` at session start and on the program seat's request — monitoring is a standing read-only
+class, not d-work, and a cadence is this run-book's to set (#438, alternative e); a run whose reading's digest
+equals the last recorded event's leaves no event (a heartbeat is not an event: server-instances rule, property 7
+as #438 S amends it), and a change of reading appends one to `events/sessions.jsonl`, committed as an
+events-only clerical range (#438 R; Rule-2 Not ratification, Rule-3 Ledger). The audit seat reads and grades the
+events (a seat repeatedly `stale while titled` is an incident-hardening input, #409 G1; plan #431 revision 2) and
+never on a cadence of its own. A mismatch goes to operate's board; the writer fixes it.
 
 ## Status/health
 Health (the pass criterion for Done — server-instances rule, property 4; Rule-19 kernel): the reconcile
