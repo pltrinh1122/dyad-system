@@ -41,7 +41,8 @@ behind reusable code carrying a mechanical check.
    are the syseng craft's (`crafts/syseng/rules/invariants.md`,
    `crafts/syseng/rules/verifiable-code.md`); the runner runs both.
 2. The suite is run by the runner, not by hand. Rule-14 property 3's pre-push path runs it on every
-   push whose range touches anything outside `<instance>/d-work/`, so by the time the Agent asks for
+   push whose range touches anything outside `<instance>/d-work/` and is not events-only (Rule-3,
+   Ledger: every commit touching nothing outside `<runbooks>/events/`, #438), so by the time the Agent asks for
    a Done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
    suite when a suite memo on this checkout proves the same tree already passed every root in the
    same environment; `check --evidence` never reads one, so the merge evidence always observes
@@ -89,5 +90,8 @@ points, in place of the tests that only exercise them; pure `INVARIANTS` are enf
 `TREE_INVARIANTS` stay in the runner's pass; see the same record, amendment #203. Boundaries gain the audit
 play-book's two kinds of check, coded check and prose claim, 2026-10-22 (d-work #381, child C3 of #369): the
 countersign craft's self-diagnostic is carried by the core's audit play-book; see the same record, amendment #381.
+Property 2 gains the events-only range 2026-10-25 (d-work #438): a push of read-only run-book events
+paid about four minutes of suite for a change no test root's code depends on, while the guards, the
+events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

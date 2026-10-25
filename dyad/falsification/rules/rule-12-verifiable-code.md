@@ -221,3 +221,22 @@ neither restates the other. 12–6 two terms, defined once when their rows land.
 Coherent, orthogonal.
 
 Disposition: see ledger #381 (accreted under #369; its Done rides that mandate's Done-`Y`).
+
+## Amendment — d-work #438 (2026-10-25, property 2: an events-only range skips the suite)
+Property 2's pre-push path runs the suite on a range outside `<instance>/d-work/` unless the range is events-only
+(Rule-3, Ledger: every non-merge commit touching nothing outside `<runbooks>/events/`). Such a range holds events
+of read-only run-book commands, which Rule-3 makes clerical as it does the ledger (amendment #438 there).
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | A standing row and a PR per batch of events keep the suite on every push (plan #438 alternative a). | **Refuted** | Each batch paid about four minutes of suite for a change no test root's code depends on, and a question per ceiling that decides nothing. |
+| 2 | Skipping the suite lets a bad event reach `main` unchecked (alternative b). | **Refuted** | The guards still run on the kernel-only path; `sysadmin/events` checks the store's form and that it only grows. The suite tests code, and an events-only range changes none. |
+| 3 | The skip invites heartbeats to flood `main` (alternative c). | **Survives, scoped** | The sysadmin craft's property 7 records a read-only command's event only on a change of reading (craft amendment #438), so the range is rare as well as cheap. |
+| 4 | Precedent (the Rule-10 counter): the next class will ask for the same skip. | **Survives, bounded** | The skip follows Rule-3's class, not a path list of its own: whatever Rule-3 does not make clerical by Rule-2's test runs the suite. |
+
+Pairwise (Rule-5): 12–3 Rule-3 defines the events-only range; Rule-12 cites it and adds only the skip. 12–2 the
+commit's not being ratification is Rule-2's. 12–14 the kernel-only path is unchanged; `check --evidence` still runs
+every root. 12–1 one zone per commit, unchanged. 12–8 the read-only class, unchanged. 12–19 a deploy's health pass,
+unchanged. Others untouched. Coherent, orthogonal.
+
+Disposition: see ledger #438.

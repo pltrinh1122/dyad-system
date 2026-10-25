@@ -153,6 +153,15 @@ its revision 5.
 - Ledger-only commits (touching nothing outside `agent-corpus/d-work/`; row and plan files) are clerical and
   go directly to `main` without a PR. `dyad/guards/agent/rows.py` (the main fence) fails any direct
   commit to `main` that touches anything else.
+- Events-only commits are clerical in the same way and go to `main` the same way, without a row or
+  a PR: a commit is events-only when it touches nothing outside `<runbooks>/events/` (the run-book
+  store, `DYAD_RUNBOOKS`, Rule-19 property 1), and a range is events-only when every one of its own non-merge
+  commits is, read commit by commit with rename detection off, as a ledger-only range is read. It
+  holds events of read-only run-book commands only (Rule-8 class; the sysadmin craft's
+  `server-instances.md` property 7): it records an observation, never a decision (Rule-2). One
+  commit stays one zone (Rule-1), so a commit touching both the ledger and the events is neither
+  class. Monitoring is therefore no d-work: a standing read-only check has nothing for a plan-`Y`
+  to authorize and never completes, so it opens no row, and its only write is its events (#438).
 - The `disposed` column records every disposition the row receives, in order, as
   `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`. The Agent writes each entry
   clerically when the disposition is given, so the chain of authorization is reconstructible
@@ -210,7 +219,11 @@ ledger-only. Before the exemption, a session fenced off a direct push to `main` 
 uncited ledger commits around the hook, which skipped every guard. The exemption rests on `main`
 admitting the same commits, so the fence judges each commit of a ledger-only branch as it would on
 `main`, and each of its merge commits against both parents — a PR merge lands them where the fence's
-first-parent walk never looks. Rule-2 references `rows.py` by name; it does not own it.
+first-parent walk never looks. The PR guard (`prs.py`) skips an events-only range (`dyadlib.events_only`,
+the sibling of `ledger_only`) and the fence (`rows.py`) admits an events-only commit to `main` as they do a
+ledger-only one (Ledger, above); a range mixing ledger-only and events-only commits is neither, and is gated;
+that the event store only grows is, on `main`, the sysadmin craft's events guard's (`crafts/sysadmin/guards/events.py`,
+`sysadmin/events`); on an events-only branch the fence judges each commit as it would on `main` (#438). Rule-2 references `rows.py` by name; it does not own it.
 
 ## Completion counter-prompt (intent verification)
 - Done-`Y` is the Operator's verification that the original intent of the d-work was
@@ -420,6 +433,12 @@ child C2 of #417): the organization craft is renamed `cabinet` and its role term
 record, amendment #419. Completion counter-prompt gains the relayed-Done sentence 2026-10-25
 (d-work #424): a seat's Done question reached the Operator in the seat's own shape (#423), while what the Operator
 reads from the cos is the matter at the Operator's altitude; the form is the preference `relay-form`, the
-evidence block and the question stay the seat's; see the same record, amendment #424.
+evidence block and the question stay the seat's; see the same record, amendment #424. Ledger
+and Mechanisms gain the events-only commit 2026-10-25 (d-work #438): a standing health check's
+events needed an `open` row with a `Y plan`, a PR and the full suite, the row behind them (#431) was
+`done` and refused by the plan gate, and the events held uncommitted blocked the seat's own ledger
+pushes; a standing row would be a d-work that never completes and authorizes no mutation, so
+monitoring is stated to be no d-work and its events clerical, as the ledger's are; see the same
+record, amendment #438.
 
 Set: System Requirements.
