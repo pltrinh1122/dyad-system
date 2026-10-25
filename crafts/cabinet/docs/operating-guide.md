@@ -90,6 +90,15 @@ Four seats were opened this way in #369 — the leader renamed twice as the name
 `cos-59cec502` → `program-59cec502`; the old files stay, that is the store's memory), then `counsel`, `engineer`,
 `distribute` — each registering itself within minutes of creation.
 
+**Posture.** Every seat you open, the cos included, splits its own work between its main chat and the sub-agents it
+spawns (forks, worktrees), as your preference `delegation-posture` says (#436). The floor never moves: the main chat
+alone writes rows, asks and answers questions, pushes, opens PRs, merges and runs host actions (Rule-3's subagent
+clause). Above it, `responsive` keeps the chat to the floor and sends every draft, evidence run and board rendering
+to a sub-agent — most tokens, an answer at once; `balanced` keeps work the chat can finish in 2 minutes of tool time
+per act and sends the rest; `efficient` keeps its own drafting and verification and spawns only for work that must
+run in parallel or in its own worktree — fewest tokens, the chat away for the duration. The posture never moves an
+act between seats — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
+
 ## 4. Writing a charter
 A charter is a row of `preferences-corpus/MANDATES.md` (seeded from `../templates/mandates.md`), yours alone, by
 the ordinary preferences-zone PR. Write the **fence as paths and kinds of act**, because that is what the zone
