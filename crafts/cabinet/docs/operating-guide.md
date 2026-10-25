@@ -142,6 +142,11 @@ seat with no disposition of yours within the window prints `warn`, because you s
 been. The mode is read over the live seats (presence files within the stale window): only the program seat
 attended → M3, the default; every live seat → M4; otherwise hybrid. `dyad session list` prints the declared set,
 the mode, each seat's `attended` or `relayed`, and the two check lines.
+The check is only as true as the notes a seat writes, so a seat records the two dispositions that are not its
+own in the forms that say so: an accreted row closes on its mandate's Done-`Y` with `dyad dwork state <id> done
+--mandate <parent>` (the note `mandate #<parent>, <date>`), and a disposition you gave in another seat's chat is
+entered with `--relayed-via <seat>` beside `--said` (the note `… relayed via <seat>`). Either note, anywhere in
+it, keeps the entry out of the seat's own attendance (#422).
 
 **The route table.** An escalation — a counter-prompt a seat owes you (a plan, a Done, a fence it cannot cross,
 a release or destructive action that is always its own question) — is asked where you will see it:
