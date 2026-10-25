@@ -1,5 +1,5 @@
 # Run-book: sessions (the harness's session list against the presence store) — d-work #431
-# sections: Status/health, Seats, Harness
+# sections: Status/health, Seats, Harness, Tidy
 
 Instance: not a server — the agent application's own session records (Claude Code: `~/.claude/projects/<slug>/`,
 one kernel's path, read through `dyad/scripts/hostadapter.py` so another kernel plugs in as data; plan #431
@@ -82,4 +82,44 @@ postcondition: none
 scope: the environment and the harness's session title (read)
 
 dyad/bin/dyad session name
+```
+
+## Tidy
+The census of open sessions and the consolidation it proposes (play-book of plan #444). **North star:** the only
+sessions open are live seats and live desks. A session is archived when every row it holds is `done` and its
+presence is past the window, after the cos relays the Operator's `Y` naming the batch; a desk is closed by its
+secretary when its topic's rows close.
+
+The `census` command prints both sides: the reconcile reading, then every presence file with its freshness, rows
+and holder. The Agent joins them to the harness list the cos transcribes from the Operator's UI — on a cloud
+kernel each container sees only its own session (#434, attack 52) — and sorts each session into one class, by
+plan #444's table:
+
+| class | test |
+|---|---|
+| live seat | a charter row of `preferences-corpus/MANDATES.md` names it, presence within the window |
+| live desk | a desk (`<function>-<topic>-<hp>`) holding an open or planned row, presence within the window |
+| neglected | holds an open or planned row, presence past the window |
+| done | every row it holds is `done` or `archived`, presence past the window |
+| stale | holds no row, presence past the window |
+| never registered | no presence file matches it by name or by `holder` |
+
+The join is inference, stated: this is the play-book's first recurring task by hand, and its second run proposes a
+`dyad session census` verb in the engineer's zone (Rule-13 property 1). **Pass:** every session is a live seat or a
+live desk. Anything else goes to operate's board as one line per class and to the cos as a batch proposal, in this
+order: done, stale and never registered first; then a charter seat with nothing open, alone; then the neglected,
+only after the Operator disposes each row they hold, since a `planned` row cannot be archived (Rule-16) and an
+archived session moves no row. Operate never archives, retitles or touches another seat's presence: archiving is
+the cos's hosting action, Rule-8 reversible with the undo `unarchive_session`, one change-log row per call; a
+terminal session the Operator closes by hand. Cadence: session start and on the program's request. A census is a
+reading: under #438 an event is written only when it changes.
+```dyad-cmd
+name: census
+class: read-only
+role: any
+undo: none
+postcondition: none
+scope: agent-corpus/d-work/sessions/, the ledger rows and the harness's session records (read)
+
+dyad/bin/dyad session reconcile; dyad/bin/dyad session list
 ```
