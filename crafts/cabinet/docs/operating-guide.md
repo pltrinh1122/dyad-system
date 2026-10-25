@@ -91,12 +91,17 @@ Four seats were opened this way in #369 — the leader renamed twice as the name
 `distribute` — each registering itself within minutes of creation.
 
 **Posture.** Every seat you open, the cos included, splits its own work between its main chat and the sub-agents it
-spawns (forks, worktrees), as your preference `delegation-posture` says (#436). The floor never moves: the main chat
-alone writes rows, asks and answers questions, pushes, opens PRs, merges and runs host actions (Rule-3's subagent
-clause). Above it, `responsive` keeps the chat to the floor and sends every draft, evidence run and board rendering
-to a sub-agent — most tokens, an answer at once; `balanced` keeps work the chat can finish in 2 minutes of tool time
-per act and sends the rest; `efficient` keeps its own drafting and verification and spawns only for work that must
-run in parallel or in its own worktree — fewest tokens, the chat away for the duration. The posture never moves an
+spawns (forks, worktrees). Which posture it takes depends on whether you attend it (§8): an attended seat — the cos
+always, and any seat your `attended-seats` names — reads your preference `delegation-posture`; every other seat
+reads `delegation-posture-unattended` (#436, #441). The floor never moves: the main chat alone writes rows, asks and
+answers questions, pushes, opens PRs, merges and runs host actions (Rule-3's subagent clause). Above it,
+`responsive` keeps the chat to the floor and sends every draft, evidence run and board rendering to a sub-agent —
+most tokens, an answer at once; `balanced` keeps work the chat can finish in 2 minutes of tool time per act and
+sends the rest; `efficient` keeps its own drafting and verification and spawns only for work that must run in
+parallel or in its own worktree, or that Rule-10 hands to a sub-agent under `concise-mode: on` — fewest tokens, the
+chat away for the duration. The posture matters where you are waiting: an unattended seat's chat has nobody waiting
+on it but the cos, which relays and moves on, so it can spend its time instead of your tokens. If your preferences
+carry neither key, an attended seat runs `responsive` and an unattended one `efficient`. The posture never moves an
 act between seats — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
 
 ## 4. Writing a charter
