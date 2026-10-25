@@ -115,11 +115,11 @@ defines what each value means.
   harness keeps no transcript is still traced from git and the ledger with its buckets marked
   absent, so the value costs a fresh install nothing it cannot produce.
 - `organization` — the shape of the system's seats (d-work #369). `m4`: a tree of operator–agent pairs,
-  each seat a cos keeping a cos-board, authority granted by content-scoped mandates (the `mandates`
+  the program seat its cos, a secretary per function and desks under them, each keeping a board, authority granted by content-scoped mandates (the `mandates`
   table the organization craft's template seeds, `crafts/cabinet/templates/mandates.md`), every pair
   sharing the same ledgers; a presence file's name is a seat name in the form
   `<function>[-<topic>]-<hp>` (Rule-16 Presence), checked advisorily by the installed organization
-  craft and printed by `dyad session name`. `flat`: one pair, one board, cabinets by row; no seat form is
+  craft and printed by `dyad session name`. `flat`: one pair, one board, desks by row; no seat form is
   read. Seeded `m4`, the Operator's default: it authorizes nothing by itself — a charter is a
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cabinet/docs/operating-guide.md` §6).
