@@ -20,7 +20,8 @@ defines what each value means.
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, derived from the records) |
+| attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared), the cos Operating Guide (§8) |
+| attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -122,9 +123,17 @@ defines what each value means.
   Presence; the cos craft's `rules/naming.md`), read advisorily by the cos craft's `seat` guard and printed
   by `dyad session name`. `flat`: one pair, one board, cabinets by row; no seat form is read. dyad-system:
   `m4`, the Operator's default since 2026-10-21 ("codify M4 as the default organizational preference").
-- `attendance-window` — how many days a disposition the Operator gave in a seat's own record keeps that seat
-  *attended* (d-work #388): a seat is attended when a provenance record whose `session:` line names it holds a
-  disposition noted neither `mandate #<id>` nor `relayed via` within the window; `dyad session list` reads
-  the mode over the live seats — every seat attended (M4), only the leader (M3), some (hybrid) — and a seat's
-  counter-prompt is asked in its own chat when attended and relayed through the leader otherwise. dyad-system:
-  `7`, plan #388's default.
+- `attended-seats` — the seats the Operator attends beside the program seat, which is always attended (d-work
+  #412): seat names, or seat names without their `-<hp>` (`counsel` names every holder of the counsel seat), or
+  `none`. The constraint it states is the Operator's span — how many seats the Operator sits at, a limit of the
+  interface the Operator reads through — never how many seats run: in the Operator's words, "we can have one
+  hundred sessions and that wouldn't bother me if the `program` session is the only one i'm `attending` and it's
+  orchestrating across all of the other sessions." `dyad session list` reads the mode over the live seats —
+  every seat attended (M4), only the program seat (M3), some (hybrid) — and a seat's counter-prompt is asked in
+  its own chat when attended and relayed through the program seat otherwise. dyad-system: `none`, the
+  Operator's default: only the program seat is attended.
+- `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388, #412): a
+  seat holds an own disposition when a provenance record whose `session:` line names it holds a disposition
+  noted neither `mandate #<id>` nor `relayed via` within the window. A live seat holding one that
+  `attended-seats` does not declare prints `undeclared` (the leader reports it); a declared seat holding none prints `warn`.
+  dyad-system: `7`, plan #388's default.
