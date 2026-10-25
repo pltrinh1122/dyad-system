@@ -24,7 +24,7 @@ Disposition: see ledger #155.
 
 ## Amendment — d-work #438 (2026-10-25, property 7: a read-only command's event only on a change of reading)
 **Claim (plan #438, the Operator's `Y` of 2026-10-25):** a `class: read-only` command's event is appended only when
-its output's digest differs from the digest of the last event of that command for that instance; a heartbeat that
+its output's digest or exit code differs from the last event of that command for that instance; a heartbeat that
 repeats the last reading is not an event. Every other class appends on every execution; a deploy's health pass
 (Rule-19 property 2) is read from the run that observed it and is unaffected.
 

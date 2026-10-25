@@ -48,8 +48,8 @@ event, so it works with no craft installed; #155 amendment).
    that ran it, instance, command name, the exact command line, class, scope, exit code, duration,
    postcondition result, a digest and the tail of the output, the commit and the run-book's hash
    (`runbook.EVENT_FIELDS`). A `class: read-only` command's event is appended only when its
-   output's digest differs from the digest of the last event of that command for that instance — a
-   heartbeat that repeats the last reading is not an event (#438); every other class appends on
+   output's digest or its exit code differs from the last event of that command for that instance —
+   a heartbeat that repeats the last reading is not an event, and a changed exit code always is (#438); every other class appends on
    every execution, and a deploy's health pass (Rule-19 property 2) is unaffected, because it is
    read from the run that observed it. The store is instance, committed (an event records something that
    happened once; it is not a generated file, Rule-11 property 6) and append-only on `main`

@@ -92,10 +92,17 @@ class FenceTests(unittest.TestCase):
         self.r.write(self.E, '{"id": "x-1"}\n'); base = self.r.merge("e1")
         self.r.remove(self.E); h = self.r.merge("e2")
         out = self.fails(base, h); self.assertEqual(len(out), 1); self.assertIn("deletes event file", out[0])
-    def test_events_direct_commit_still_non_ledger_for_the_rows_fence(self):
+    def test_events_direct_commit_and_the_rows_fence(self):
+        # Version-tolerant across d-work #438 (#440): a core with `dyadlib.events_only` admits an events-only
+        # direct commit to `main` as clerical; an older core's fence still refuses it as non-ledger. Tightened to
+        # the first branch alone by a later craft PR once every installed core carries #440.
         self.r.write(self.E, '{"id": "x-1"}\n'); h = self.r.commit()
         self.assertEqual(self.fails(self.base, h), [])
-        out = rows.check_range(self.base, h, cwd=self.r.d); self.assertEqual(len(out), 1); self.assertIn("non-ledger paths", out[0])
+        out = rows.check_range(self.base, h, cwd=self.r.d)
+        if hasattr(dyadlib, "events_only"):
+            self.assertEqual(out, [])
+        else:
+            self.assertEqual(len(out), 1); self.assertIn("non-ledger paths", out[0])
     def test_events_prefix_follows_runbooks_env(self):
         self.r.write("elsewhere/events/x.jsonl", "a\n"); self.r.merge("e1")
         self.r.write("elsewhere/events/x.jsonl", "b\n"); h = self.r.merge("e2")
