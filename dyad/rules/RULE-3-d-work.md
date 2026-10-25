@@ -269,6 +269,10 @@ first-parent walk never looks. Rule-2 references `rows.py` by name; it does not 
   The `Y` ratifies those merges too (Rule-2, binding of approval). With an accreted set the one
   clause carries both, the rows before the PRs:
   `Y/N: Done with #<id> <title> (accreted #c, #d, merges PR #a, #b)?`.
+- A Done question the leader — the cos — relays to the Operator for a seat that is not attended presents its
+  evidence in the form the preference `relay-form` names (`preferences-corpus/PREFERENCES.md`), the seat's
+  evidence block quoted verbatim and the seat's own question its last line; Rule-2's Binding is unchanged, the
+  `Y` binding to what the seat asked.
 
 ## Batch disposition
 Preference `batch-disposition-mode` (`preferences-corpus/PREFERENCES.md`). `off` — every plan
@@ -413,6 +417,9 @@ the organization sentence 2026-10-22 (d-work #379, #369 C7): under `m4` a sessio
 whole ledger, and the Guide that says how is the organization craft's; see the same record, amendment #379. Ledger's
 session-start bullet names the cos and a secretary, and the Guide's path the cabinet craft, 2026-10-25 (d-work #419,
 child C2 of #417): the organization craft is renamed `cabinet` and its role terms cos and secretary; see the same
-record, amendment #419.
+record, amendment #419. Completion counter-prompt gains the relayed-Done sentence 2026-10-25
+(d-work #424): a seat's Done question reached the Operator in the seat's own shape (#423), while what the Operator
+reads from the cos is the matter at the Operator's altitude; the form is the preference `relay-form`, the
+evidence block and the question stay the seat's; see the same record, amendment #424.
 
 Set: System Requirements.
