@@ -131,7 +131,8 @@ other seat's question reaches you through the leader. Declaring a seat is a pref
 any preference; nothing a seat writes about itself makes it attended (#295: a holder is what the process says).
 The records are the check, read over the **attendance window** (the preference `attendance-window`, default 7
 days): a disposition you gave in a live seat's own chat — not a mandate's inherited `Y`, not a relayed one — that
-the preference does not declare prints `incident`, because you answered where you said you were not; a declared
+the preference does not declare prints `undeclared`, because you answered where you said you were not — the
+leader reports it to you once, and no member seat reports it as an incident of its own; a declared
 seat with no disposition of yours within the window prints `warn`, because you said you were there and have not
 been. The mode is read over the live seats (presence files within the stale window): only the program seat
 attended → M3, the default; every live seat → M4; otherwise hybrid. `dyad session list` prints the declared set,

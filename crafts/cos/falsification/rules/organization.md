@@ -37,7 +37,7 @@ many run; by default only the program seat is attended, and that default is a pr
 
 | # | attack | result |
 |---|---|---|
-| 9 | §6 said "derived — never declared", because a declared line is a claim nobody verifies (#295). | **Refuted in scope** — #295 refutes a line a seat writes about itself; the preference is the Operator's own word, disposed by its own PR, and the records still check it (`incident`, `warn`). The core's record carries the full set: `dyad/falsification/rules/rule-16-concurrent-sessions.md`, attacks 38–43. |
+| 9 | §6 said "derived — never declared", because a declared line is a claim nobody verifies (#295). | **Refuted in scope** — #295 refutes a line a seat writes about itself; the preference is the Operator's own word, disposed by its own PR, and the records still check it (`undeclared`, `warn`). The core's record carries the full set: `dyad/falsification/rules/rule-16-concurrent-sessions.md`, attacks 38–43. |
 | 10 | The leader's seven lines (§2) and the Operator's attended seats are one span. | **Refuted** — different numbers over different sets; the Guide's §8 names both, and a hundred seats breach neither while only the leader is attended (plan #412 attack 4). |
 
 **Survivor:** §6 and the Guide's §8 as amended; VERSION 0.1.3. Disposition: see ledger #414 (accreted under #412; its Done

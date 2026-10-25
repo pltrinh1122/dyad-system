@@ -112,7 +112,8 @@ live seats this yields the organization's **mode** — pure M3 (only the leader 
 the seat's own chat when attended, relayed through the leader verbatim and answered verbatim otherwise (#253 R17,
 R29). The record is the check: a disposition given in a live seat's own chat within the attendance window (the
 preference `attendance-window`) — not a mandate's inherited one, not a relayed one — in a seat the preference does
-not declare is an `incident`; a declared seat holding none is a `warn`. No presence file carries an attendance
+not declare is `undeclared`, reported by the leader alone — a reading of the board, never a Rule-3 incident, since
+the act is the Operator's; a declared seat holding none is a `warn`. No presence file carries an attendance
 line, because a line a seat writes about itself is a claim nobody verifies (#295); the declaration is the
 Operator's preference and the proof is Rule-7's record. The reading is the core's (#388, #412: `dyad session
 list`); this rule states what it means and the Guide (`../docs/operating-guide.md` §8) what the Operator does
