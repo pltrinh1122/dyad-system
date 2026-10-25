@@ -1,7 +1,8 @@
 # Operator preferences (preferences zone)
 
 Operator-owned settings that the rules read. The Agent never changes a value on its own:
-it proposes a change by a preferences-zone PR, and the Operator disposes it like any other.
+the cos seat — and no other seat (#426; the program charter in `MANDATES.md`) — proposes a change by a
+preferences-zone PR, presented as its own question, and the Operator disposes it like any other.
 Loaded at session start through `agent-corpus/CLAUDE.md`; the rule named in `read by`
 defines what each value means.
 
