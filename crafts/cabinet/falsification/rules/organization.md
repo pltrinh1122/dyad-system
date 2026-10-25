@@ -104,3 +104,16 @@ the incident ledger and its hardening; what else it held goes to the function th
 
 **Survivor:** §4's `audit`, `counsel`, `engineer`, `program` and `operate` rows as amended; VERSION stays 0.2.0, untagged when amended (`cabinet-v0.2.0` not yet cut). Disposition:
 see ledger #433.
+
+## Amendment — dyad-system #437 (child C2 of #436: posture within a seat)
+**Claim (plan #436 revision 2, the Operator's `Y` of 2026-10-25):** the preference `delegation-posture` —
+`responsive`, `balanced` (2 minutes of tool time per act), `efficient` — sets, for every seat, how much of its own
+work runs in its main chat and how much in the sub-agents it spawns, above the floor of Rule-3's subagent clause; it
+never moves an act between seats, and the cos's availability rule (#432) holds under every value.
+
+| # | attack | result |
+|---|---|---|
+| 24 | Revision 1 read the posture as routing between seats — a secretary first where a charter covers the act, a fork only where none does — so the posture would decide which seat acts, which is the charter's (§4). | **Refuted** by the Operator's revision-2 prompt ("tuning criteria is not for outside of seat delegation but within seat:  `main-chat`  vs. `sub-agent`."): which seat owns an act stays the charter's under every value; the posture moves work only between a seat's main chat and its own sub-agents, never below Rule-3's floor. The Guide's §3 "Posture" paragraph says so for every seat, the cos included. |
+
+**Survivor:** the Guide's §3 paragraph "Posture", as added; VERSION stays 0.2.0 (unreleased). Disposition: see ledger
+#437 (accreted under #436; its Done rides that mandate's Done disposition).
