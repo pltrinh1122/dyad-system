@@ -27,7 +27,9 @@ disposer anywhere.
 - **The cos** sits beside the Operator and keeps the board of programs: every parent row and its children
   across the member seats. It relays the Operator's words to a seat verbatim (the core's relayed prompt, Rule-7
   property 4), writes no row for a seat, answers no seat's question, merges nothing — it holds attention, not
-  authority (#253 R28). What it reads: one roll-up line per member seat, at most seven.
+  authority (#253 R28), and does itself only the five acts the Guide names — receive, route, present, relay back,
+  board — handing every other on (`../docs/operating-guide.md` §2, #432). What it reads: one roll-up line per
+  member seat, at most seven.
 - **A secretary** holds one function — what the Operator watches on its board — under a charter of the mandates
   table. It keeps its own cos-board of the rows it holds and the desks on it, reports by state on `main` and in
   its presence file, announces and never orders, and asks nothing of the leader: every question is the Operator's.
@@ -91,9 +93,10 @@ who disposes — stays the core's):
   given on (the core's relayed prompt and the mandate note of Rule-7 property 4); a seat adds its own words beside
   them, never inside them. Verbatim binds that seat-bound direction only: a seat's question reaches the Operator
   through the cos in the form the preference `relay-form` names (the Guide §3), the seat's own question its last line.
-- **Preferences and charters through the cos.** The cos proposes a preference value or a charter, each as its own
-  question; a secretary never does — it hands the exact `preferences-corpus/` diff to the cos, which opens and
-  presents it (#427).
+- **Preferences and charters through the cos.** The cos presents a preference value or a charter, each as its own
+  question, and never pushes it; a secretary never asks one itself — the secretary whose row needs it drafts the
+  exact `preferences-corpus/` diff, pushes the branch and opens the PR for the cos to present, a proposal and not
+  the write the never-list below forbids (#427, #432).
 - **Announce, never order.** A seat reports by state — the row on `main`, its presence file, the PR — and by one
   roll-up line; it asks the Operator and never another seat; it tells another seat what it found and never what
   to do.

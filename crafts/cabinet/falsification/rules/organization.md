@@ -73,3 +73,19 @@ own question the last line. And the cos alone proposes a preference or a charter
 
 **Survivor:** §5 and the Guide's §3 item 4 and §8 route table as amended; VERSION 0.2.0 unchanged (unreleased).
 Disposition: see ledger #424.
+
+## Amendment — dyad-system #435 (2026-10-25, child C1 of #432: the cos's minimum; preferences presented, never pushed)
+**Claim (plan #432, the Operator's `Y` of 2026-10-25):** the cos does itself five acts — receive, route, present,
+relay back, board — each a ledger-only commit or a line of chat; plan drafting, falsification analyses, evidence runs
+and merges, branch pushes and PRs of any zone (preferences included), incident rows, release cutting, board rendering
+and head verification are handed on; the cos's checkout runs nothing longer than a ledger-only push. Plan #432's own
+attacks 1–5 are on the claim; the two below are on this craft's text.
+
+| # | attack | result |
+|---|---|---|
+| 18 | Attack 17's survivor — the cos opens the preferences-zone PR — is what #432 refutes: proposing cost the cos a branch, a hook run and a PR, and held its one checkout for the gate's length (#432 attack 4). | **Confirmed; amended** — §5's bullet and the Guide's §3 item 5 now say the cos *presents* the preference as its own question and never pushes it; the secretary whose row needs it drafts the diff, pushes the branch and opens the PR. Attack 17's routing survives: the question is still the cos's alone, never folded into a seat's plan or Done, and a preference value is still never accretable (Rule-2, Binding). |
+| 19 | A secretary that pushes a `preferences-corpus/` branch writes a preference value, which §5's never-list forbids every seat. | **Refuted** — a diff on a branch is a proposal; the value is written only by the merge the Operator's own disposition of that PR ratifies, and merging to `main` without it is on the same never-list. §5's bullet now says so in one clause, so the two sentences no longer read as one forbidding what the other routes. The cos was a seat under #427 too, so the tension was not new — only unstated. |
+
+**Survivor:** §1's cos bullet (a pointer to the Guide's five acts), §5's preferences bullet, the Guide's §2 subsection
+"What your cos does itself, and what it hands on" and §3 item 5, as amended; VERSION 0.2.0 unchanged (unreleased).
+Disposition: see ledger #435 (accreted under #432; its Done rides that mandate's Done disposition).

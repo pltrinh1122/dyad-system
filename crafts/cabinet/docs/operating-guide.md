@@ -40,6 +40,27 @@ cannot check.
   own, and no merge is asked separately; a release (Rule-11) and a destructive host action (Rule-8) stay their own
   questions whatever the mandate says. How the Rules' text is reconciled with that invariant is #384's work.
 
+### What your cos does itself, and what it hands on (#432)
+Your cos stays available to you only if it does little itself. Its minimum is five acts, each short — a ledger-only
+commit or a line of chat:
+1. **Receive** — record each prompt and disposition of yours verbatim (row and provenance, one ledger-only commit)
+   and open the row it names.
+2. **Route** — dispatch each new row to the secretary whose charter covers it, with your words verbatim (R29):
+   counsel for falsifications, Rule and vocabulary text; engineer for the machine; distribute for releases and
+   ports; audit for findings and hardening; operate for the host.
+3. **Present** — one question per reply, in the form `relay-form` names (§3 item 4), the seat's text as evidence;
+   a preference or a charter as its own question, presented and never pushed (§3 item 5).
+4. **Relay back** — each of your dispositions to its seat verbatim; the seat executes it (record, merge, close).
+5. **Board** — read the board of programs and report it to you; keep the check-in armed.
+
+Never done at the cos, always handed on: drafting a plan file (a fork of the cos or the owning secretary writes it;
+the cos asks you the `Y`); a falsification analysis (counsel); an evidence run and a merge (the seat that holds the
+row); a branch push or a PR of any zone, preferences included (the secretary whose row needs it); an incident row
+(the seat whose act it was); cutting a release (distribute); rendering the board and verifying a head (the cos's own
+fork, #425). **Availability:** the cos's checkout runs nothing longer than a ledger-only push; anything that runs the
+suite runs in a seat or in a worktree. The price when it did not: the cos was away from you for ten to twenty
+minutes at a time while a hook or an evidence run held its one checkout (#432).
+
 ## 3. Opening a seat
 1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a desk, the topic.
    The seat's own handle (`<hp>`) is the first eight hex characters of the harness session you are about to create,
@@ -60,10 +81,11 @@ cannot check.
    strongest counter and the reconciliation (Rule-10's form, applied by the cos to the seat's question); then the
    seat's own question as the last line, so your `Y` binds to what the seat asked. The seat's text is citation and
    evidence, its evidence block quoted verbatim, never the body.
-5. **Preferences and charters are the cos's to propose.** A preference value or a charter (a row of
-   `MANDATES.md`) reaches you from the cos, each as its own question, never folded into a seat's plan or Done; a
-   secretary never proposes one. A secretary whose work needs one hands the exact `preferences-corpus/` diff to
-   the cos, which opens the preferences-zone PR and presents it to you (#427).
+5. **Preferences and charters are presented by the cos, pushed by the seat that needs them.** A preference value
+   or a charter (a row of `MANDATES.md`) reaches you from the cos, each as its own question (WHAT / WHY / HOW, item
+   4), never folded into a seat's plan or Done; a secretary never asks you for one itself. The secretary whose row
+   needs it drafts the exact `preferences-corpus/` diff, pushes the branch and opens the preferences-zone PR; the cos
+   presents it and never pushes it — its name is on the question, not on the push (#427, as amended by #432).
 Four seats were opened this way in #369 — the leader renamed twice as the name form was falsified (`cos-1` →
 `cos-59cec502` → `program-59cec502`; the old files stay, that is the store's memory), then `counsel`, `engineer`,
 `distribute` — each registering itself within minutes of creation.
