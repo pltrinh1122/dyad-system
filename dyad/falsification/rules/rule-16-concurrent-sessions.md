@@ -222,3 +222,17 @@ renamed `secretary`, `cos-board` reworded, owner 16. **16–11**: the bundle ord
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #419 (accreted under mandate #417; Done rides its Done-`Y`).
+
+## Amendment — d-work #422 (2026-10-25, #421's HOW: the own-disposition clause reads the whole note)
+**Claim (plan #422, opened on the Operator's Done-`Y` to #421):** the two exclusions `own_disposition()` relies on
+are reachable by the CLI's own forms, so the board stops printing a false `undeclared` after every mandate close.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| 49 | `own_disposition()` excludes a note that *starts* with `mandate #`, but every accreted row was closed with `dwork state <id> done -d 'Y done (mandate #<id>, <date>)' --said 'Y'`, whose note is `Y done (mandate #412, 2026-10-25)` (#413 entry 2): the copied Done-`Y` counts as a disposition given in the closing seat, and an undeclared seat prints `undeclared` after every mandate close. Attack 44's relayed branch is the same defect for a relay (no CLI form wrote the note). | Confirmed (#421). Survivor: the clause reads the note's whole text — a note holding `mandate #` or `relayed via` anywhere is not an own disposition — so the records already written read silent without rewriting (Rule-7 property 3); `dwork state <id> done --mandate <id>` writes the close under Rule-7 property 4's note, and `--relayed-via` with `--said` writes a relayed disposition's (Rule-7 record, amendment #422). Attack 44's convention is no longer the only fence. | `own_disposition()` in `sessions.py`; Presence's sentence "its note holding neither … anywhere"; `AttendanceTests` (three note forms × declared/undeclared, #413's record). |
+
+**Pairwise (Rule-5).** **16–7**: the notes are Rule-7's; Rule-16 reads them. **16–3**: an accreted row's Done still rides
+its mandate's (Rule-3 Scope); the close form only records it. **16–6**: `attended` reworded to the whole-note reading,
+owner 16. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #422.

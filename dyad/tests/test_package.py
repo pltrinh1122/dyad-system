@@ -782,7 +782,8 @@ class PackageTests(livetest.LiveCase):
                  (self.dwork_new, ("three", "--prompt", "p", "--promt-file", "x"), "does not take --promt-file"),
                  (self.dwork_new, ("three", "#1", "extra", "--prompt", "p"), "unexpected argument"),
                  (self.dwork_new, ("three", "#1", "-r", "#2", "--prompt", "p"), "refs given twice"),
-                 (self.dwork_new, ("three", "--relayed-via", "peer", "-d", "Y", "--said", "Y"), "give the prompt too"),
+                 (self.dwork_new, ("three", "--relayed-via", "peer"), "give them with --prompt[-file] or --said[-file]"),
+                 (self.dwork_state, ("1", "planned", "--relayed-via", "peer"), "give them with --prompt[-file] or --said[-file]"),
                  (self.dwork_state, ("x", "open"), "is not a number")]
         for fn, args, msg in cases:
             with self.subTest(args=args):
@@ -865,6 +866,63 @@ class PackageTests(livetest.LiveCase):
                 self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr); self.assertNotIn("Traceback", r.stderr)
         self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
         self.assertFalse(rows.joinpath("3.md").exists()); self.assertFalse((rows.parent / "provenance").exists())
+    # d-work #422: the accreted row's close form, and a relayed disposition — the two notes `own_disposition` reads
+    def mandate_repo(self):
+        """Row #1 the mandate, planned and then closed on its Done-`Y`; row #3 accreted under it."""
+        d, rows = self.dwork_repo()
+        for args in (("1", "planned", "-d", "Y plan", "--said", "Y, go ahead"),
+                     ("1", "done", "-d", "Y done (accreted #3)", "--said", "Y, both delivered")):
+            r = self.dwork_state(d, *args); self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_new(d, "the accreted row", "--mandate", "1"); self.assertEqual(r.returncode, 0, r.stderr)
+        return d, rows
+    def test_dwork_state_mandate_closes_an_accreted_row_on_the_mandates_words(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv, sv = dyadlib.load_guard("agent", "provenance"), dyadlib.load_guard("agent", "sessions")
+        d, rows = self.mandate_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "3", "done", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual((row.state, row.mode), ("done", "implicit"))
+        self.assertRegex(row.disposed, r"; (\d{4}-\d{2}-\d{2}) Y done \(mandate #1, \1\)$")   # the workaround's entry, composed
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, go ahead"), ("disposition", "Y, both delivered")])
+        self.assertRegex(e[1]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")                  # Rule-7 property 4's form
+        self.assertEqual(e[1]["note"].split(", ")[1], pv.parse(rec.joinpath("1.md").read_text())[-1]["date"])   # the mandate's own date
+        self.assertEqual(pv.check_record(rec / "3.md", row=row), [])                           # property 5: one entry per disposition
+        self.assertFalse(any(sv.own_disposition(x["note"]) for x in e))                         # never an own disposition in this seat
+    def test_dwork_state_mandate_refuses_before_it_writes(self):
+        d, rows = self.mandate_repo()
+        rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan; 2026-10-02 Y done\nrefs: \n")
+        rows.joinpath("6.md").write_text("id: 6\ntitle: six\nopened: d\nstate: open\ndisposed: 2026-10-01 Y plan (mandate #5)\nrefs: \nmode: implicit\n")
+        rows.joinpath("7.md").write_text("id: 7\ntitle: seven\nopened: d\nstate: open\ndisposed: 2026-10-01 Y plan (mandate #4)\nrefs: parent #4\nmode: implicit\n")
+        rows.joinpath("4.md").write_text("id: 4\ntitle: four\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")
+        before = {p.name: p.read_text() for p in rows.parent.rglob("*.md")}
+        cases = [(("3", "planned", "--mandate", "1"), "the state is `done`"),
+                 (("3", "done", "--mandate", "1", "-d", "Y done", "--said", "Y"), "it takes no -d"),
+                 (("3", "done", "--mandate", "1", "--prompt", "p"), "it takes no -d"),
+                 (("3", "done", "--mandate", "9"), "is no row"),
+                 (("3", "done", "--mandate", "x"), "is not a number"),
+                 (("7", "done", "--mandate", "4"), "carries no 'Y done' disposition"),         # the mandate is not done
+                 (("6", "done", "--mandate", "5"), "holds no `disposition` entry noted 'Y done'"),   # its record is absent
+                 (("3", "done", "--mandate", "3"), "carries no 'Y done' disposition"),         # #3 holds no Done of its own
+                 (("6", "done", "--mandate", "1"), "is not accreted under #1")]
+        for args, msg in cases:
+            with self.subTest(args=args):
+                r = self.dwork_state(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual({p.name: p.read_text() for p in rows.parent.rglob("*.md")}, before, "nothing written")
+    def test_dwork_state_notes_a_relayed_disposition(self):
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv, sv = dyadlib.load_guard("agent", "provenance"), dyadlib.load_guard("agent", "sessions")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y", "--relayed-via", "program-59cec502")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = dyadlib.parse_row_file(rows.joinpath("1.md").read_text())
+        self.assertRegex(row.disposed, r"^\d{4}-\d{2}-\d{2} Y plan$")                         # the row's entry is unchanged
+        e = pv.parse(rec.joinpath("1.md").read_text())
+        self.assertEqual([(x["kind"], x["note"], x["text"]) for x in e], [("disposition", "Y plan, relayed via program-59cec502", "Y")])
+        self.assertEqual(pv.check_record(rec / "1.md", row=row), [])
+        self.assertFalse(sv.own_disposition(e[0]["note"]))
     # d-work #290: the retirement form — backlog or done → archived over k rows on one Operator question
     def dwork_retire(self, d, *a):
         env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))

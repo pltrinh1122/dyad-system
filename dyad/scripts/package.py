@@ -71,12 +71,21 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 no disposition of its own, so --mandate refuses -d, --said, --prompt
                                 and --backlog, and refuses a target that is no row or carries no
                                 `Y plan`. refs defaults to `parent #<id>`
-  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p> [--relayed-via <session>]] [-r refs]
+  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
                                 call once that head is on `main` (Rule-3 Completion, #202) / append a disposition to the row and its words to
-                                the record in one step; --prompt records a prompt received (#191)
+                                the record in one step; --prompt records a prompt received (#191).
+                                --relayed-via notes the entries as relayed from <seat> (`relayed via
+                                <seat>`, appended to a disposition's note), with --prompt or --said (#422)
+  dyad dwork state <id> done --mandate <parent>
+                                close an accreted row on its mandate's Done-`Y` (implicit mode, d-work
+                                #422): the row's entry `<date> Y done (mandate #<parent>, <its date>)` and
+                                its record's entry the mandate's own Done-`Y` words, noted `mandate
+                                #<parent>, <its date>` (Rule-7 property 4). Refuses -d, --said, --prompt
+                                and --relayed-via, a row neither `refs: parent #<parent>` nor born `Y plan
+                                (mandate #<parent>)`, and a mandate whose row or record holds no `Y done`
   dyad dwork retire <id>... -d text --said[-file] <s>
                                 the retirement form (Rule-3 `archived`, d-work #290): backlog or done
                                 → archived over k rows in one call, one Operator question behind it.
@@ -904,7 +913,7 @@ def cmd_ledger():
 DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate")
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
     "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via"}, set(), 3),
+    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, set(), 3),
     "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
     "list": ({"--state", "--craft"}, set(), 1)}
 
@@ -975,29 +984,33 @@ def append_provenance(rid, entries, today, fresh=False):
     path.write_text(body, encoding="utf-8")
     return path
 
-def mandate_words(rows, raw):
-    """The mandate's own authorizing words and the date they were given: the *last* `disposition` entry of
-    `<instance>/d-work/provenance/<id>.md` whose note holds `Y plan` — last, because a re-plan supersedes an
-    earlier authorization and the live one is what an accreted row stands on (d-work #290). Every refusal is
-    made here, before `dwork new` writes anything: a target that is no row, one whose `disposed` holds no
-    `Y plan` (the same substring test the plan gate makes, `guards/agent/prs.py`; its unreliability on free
-    text is inherited, and named in plan #290), and one whose record holds no such entry — there being then
-    no Operator words to copy, which Rule-7 property 4 requires and property 3 forbids inventing later."""
+def mandate_words(rows, raw, kind="Y plan"):
+    """The mandate's own words and the date they were given: the *last* `disposition` entry of
+    `<instance>/d-work/provenance/<id>.md` whose note holds `kind` — `Y plan` for the authorization an accreted
+    row is born under (`dwork new --mandate`, d-work #290), `Y done` for the Done-`Y` it closes on (`dwork state
+    <id> done --mandate`, d-work #422) — last, because a re-plan or a re-asked Done supersedes an earlier one
+    and the live one is what an accreted row stands on. Every refusal is made here, before anything is
+    written: a target that is no row, one whose `disposed` holds no `kind` (for `Y plan`, the same substring
+    test the plan gate makes, `guards/agent/prs.py`; its unreliability on free text is inherited, and named in
+    plan #290), and one whose record holds no such entry — there being then no Operator words to copy, which
+    Rule-7 property 4 requires and property 3 forbids inventing later."""
     if not raw.isdigit():
         sys.exit(f"refused: --mandate {raw!r} is not a number")
     mid = int(raw)
     row = rows.get(mid)
     if row is None:
         sys.exit(f"refused: --mandate #{mid} is no row; a mandate stands on a d-work this ledger holds")
-    if "Y plan" not in row.disposed:
-        sys.exit(f"refused: --mandate #{mid} carries no 'Y plan' disposition, so no mandate stands on it (Rule-3 plan gate)")
+    if kind not in row.disposed:
+        sys.exit(f"refused: --mandate #{mid} carries no '{kind}' disposition, so " + (
+            "no mandate stands on it (Rule-3 plan gate)" if kind == "Y plan" else
+            "the mandate has no Done-`Y` for an accreted row to close on (Rule-3 Completion: its Done rides the mandate's)"))
     import dyadlib
     pv = dyadlib.load_guard("agent", "provenance")
     path = pv.store(REPO) / f"{mid}.md"
     es = pv.parse(path.read_text(encoding="utf-8")) if path.is_file() else []
-    cands = [e for e in es if e["kind"] == "disposition" and "Y plan" in e["note"]]
+    cands = [e for e in es if e["kind"] == "disposition" and kind in e["note"]]
     if not cands:
-        sys.exit(f"refused: #{mid}'s record holds no `disposition` entry noted 'Y plan'; there are no Operator "
+        sys.exit(f"refused: #{mid}'s record holds no `disposition` entry noted '{kind}'; there are no Operator "
                  f"words to copy, and Rule-7 property 3 forbids writing them now")
     return mid, cands[-1]["text"], cands[-1]["date"]
 
@@ -1035,10 +1048,14 @@ def cmd_dwork(a):
         sys.exit("refused: -d records a disposition; give its words verbatim with --said or --said-file (Rule-7)")
     if said is not None and d is None:
         sys.exit("refused: --said records a disposition's words; name it in the row with -d (Rule-3 Ledger)")
-    if "--relayed-via" in vals and prompt is None:
-        sys.exit("refused: --relayed-via notes a relayed prompt (Rule-7 property 4); give the prompt too")
+    if "--relayed-via" in vals and prompt is None and said is None:
+        sys.exit("refused: --relayed-via notes the Operator's words relayed from another seat (Rule-7 property 4); "
+                 "give them with --prompt[-file] or --said[-file]")
+    # #422: a relayed disposition is still the Operator's words; its note says where it was given, so the
+    # attendance reading (`sessions.own_disposition`) does not count it as given in this seat.
     relayed = f"relayed via {vals['--relayed-via']}" if "--relayed-via" in vals else ""
-    entries = ([("prompt", prompt, relayed)] if prompt is not None else []) + ([("disposition", said, d)] if said is not None else [])
+    dnote = f"{d}, {relayed}" if relayed and d else (d or relayed)
+    entries = ([("prompt", prompt, relayed)] if prompt is not None else []) + ([("disposition", said, dnote)] if said is not None else [])
     for kind, text, _ in entries:
         fence_for(kind, text)                  # every refusal before the first write (#191): nothing half-written
     if verb == "new" and len(pos) >= 2:
@@ -1091,6 +1108,25 @@ def cmd_dwork(a):
         rid, state = int(pos[1]), pos[2]
         if rid not in rows: sys.exit(f"no row {rid}")
         r = rows[rid]; disposed, refs = r.disposed, r.refs
+        if "--mandate" in vals:
+            # #422: the close form of an accreted row (Rule-3 Scope: its Done rides the mandate's Done-`Y`). The row's
+            # entry and its record's entry are both composed here, as `dwork new --mandate` composes entry 1: the
+            # mandate's own Done-`Y` words, noted `mandate #<id>, <the mandate's own date>` (Rule-7 property 4), so
+            # the attendance reading never counts them as a disposition given in this row's seat (#421).
+            if state != "done":
+                sys.exit("refused: --mandate closes an accreted row on its mandate's Done-`Y`; the state is `done`")
+            if d is not None or said is not None or prompt is not None or "--relayed-via" in vals:
+                sys.exit("refused: --mandate carries the mandate's own Done-`Y` (implicit mode, Rule-3); "
+                         "it takes no -d, --said, --prompt or --relayed-via")
+            mid, mwords, mdate = mandate_words(rows, vals["--mandate"], "Y done")
+            if mid == rid:
+                sys.exit(f"refused: #{rid} cannot be its own mandate")
+            if not (re.search(rf"\bparent #{mid}\b", refs) or f"(mandate #{mid})" in disposed):
+                sys.exit(f"refused: #{rid} is not accreted under #{mid}: its refs name no `parent #{mid}` and its "
+                         f"`disposed` no `Y plan (mandate #{mid})` (Rule-3 Scope)")
+            fence_for("disposition", mwords)
+            d = f"Y done (mandate #{mid}, {mdate})"
+            entries = [("disposition", mwords, f"mandate #{mid}, {mdate}")]
         if r.state == "backlog" and state == "open" and prompt is None:
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
         # #202: the Done state follows the merge. Every refusal here precedes the first write (Rule-7 p3),
