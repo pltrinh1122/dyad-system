@@ -89,3 +89,18 @@ attacks 1–5 are on the claim; the two below are on this craft's text.
 **Survivor:** §1's cos bullet (a pointer to the Guide's five acts), §5's preferences bullet, the Guide's §2 subsection
 "What your cos does itself, and what it hands on" and §3 item 5, as amended; VERSION 0.2.0 unchanged (unreleased).
 Disposition: see ledger #435 (accreted under #432; its Done rides that mandate's Done disposition).
+
+## Amendment — dyad-system #433 (2026-10-25: audit narrowed to the incident ledger and its hardening)
+**Claim (the Operator's prompt, "separation of concerns clarification - audit is narrowly scope for incidences
+management and hardening.  falsify."; plan #433, the Operator's `Y` of 2026-10-25):** the `audit` function's domain is
+the incident ledger and its hardening; what else it held goes to the function that owns the domain it reads.
+
+| # | attack | result |
+|---|---|---|
+| 20 | Hardening cannot include building fences: the play-book's `execute` writes guards and opens `backlog` rows, and audit opens and fixes nothing. | **Confirmed, scoped** — audit runs `survey`, `group`, `inventory`, `plan` and `verify`; `execute` belongs to the seat whose domain holds the fence being built (engineer a guard, counsel a Rule sentence, operate a host fence), on the Operator's disposition of that row (plan #433 attack 2). |
+| 21 | The standing audit's fence re-test is not incident work and leaves under the narrow reading. | **Refuted** — a fence that cannot execute is what hardening re-tests on a log that has not grown; the re-test is hardening's `verify` generalized to every shipped fence, and it stays with audit (attack 3). |
+| 22 | Drift detects before any incident, so a narrow audit loses early warning. | **Survives, scoped** — each drift item moves to its domain owner: Rules edited since the last sweep to counsel, stale rows and unmerged branches to program, stale presence and host documents older than the kernel to operate; a drift that recurs becomes an incident and enters audit's log (attack 4). |
+| 23 | **Three Lines.** Audit is the third line because it authors nothing; giving counsel the Rule-5 sweeps and the self-diagnostic's prose claims lets the seat that writes the Rules grade them. | **Survives, scoped** — the independence a Rule requires is the Operator's from the Agent's (Rule-2), unchanged; counsel already owns the per-edit pairwise statement (Rule-5), and independence is restored at the incident boundary, where a contradicted verdict enters the log audit groups. Conceded: the second reader before the Operator's `Y` is lost; it is stated here so a later Operator can restore it by a charter edit (attack 6). |
+
+**Survivor:** §4's `audit`, `counsel`, `engineer`, `program` and `operate` rows as amended; VERSION stays 0.2.0, untagged when amended (`cabinet-v0.2.0` not yet cut). Disposition:
+see ledger #433.

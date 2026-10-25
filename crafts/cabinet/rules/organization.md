@@ -76,12 +76,12 @@ Operator watches on its board — verbs for flows, a noun for the portfolio:
 
 | function | kind | domain | the seam it keeps |
 |---|---|---|---|
-| `program` | cos | the board of programs: every parent row and its children, across the members; relay, roll-up, nothing of its own | accretes nothing; owns no domain |
-| `counsel` | secretary | the Rules, the vocabulary, the model (`dyad/playbooks/countersign-model.md`), the crafts' governance and shape | Rule text and craft shape, never the machine's code |
-| `audit` | secretary | the standing audit and the self-diagnostic, the incident ledger's hardening, the sweeps | delegates nothing and accretes nothing: the one member whose rows are findings, never fixes (Three Lines) |
-| `engineer` | secretary | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb) | the machine, never its shipping |
+| `program` | cos | the board of programs: every parent row and its children, across the members; relay, roll-up; the board's stale rows and unmerged branches (#433) | accretes nothing; owns no domain |
+| `counsel` | secretary | the Rules, the vocabulary, the model (`dyad/playbooks/countersign-model.md`), the crafts' governance and shape; the Rule-5 sweeps and the self-diagnostic's prose claims (#433) | Rule text and craft shape, never the machine's code |
+| `audit` | secretary | the incident ledger and its hardening (all but the execute step, which the seat owning the fence runs), and the re-test of every shipped fence (#433) | delegates nothing and accretes nothing: the one member whose rows are findings, never fixes (Three Lines) |
+| `engineer` | secretary | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb); the standing regression and the self-diagnostic's coded checks (#433) | the machine, never its shipping |
 | `distribute` | secretary | the shipping of every craft: install, port, release, bundle, registry, their tests (`dyad build`, `install`, `export` are its verbs) | the seam `package.py` already draws between `check` and `build/install` |
-| `operate` | secretary | the host: read-before-act, classes, ops scripts the Operator runs, run-books, change-log rows, the services behind boards | the sysadmin craft's whole practice, delivered by the seat and executed by the Operator |
+| `operate` | secretary | the host: read-before-act, classes, ops scripts the Operator runs, run-books, change-log rows, the services behind boards; host documents older than the running kernel and presence past the stale window (#433) | the sysadmin craft's whole practice, delivered by the seat and executed by the Operator |
 
 A system adopts the six by copying the template; it renames, drops or adds a function by editing its own table —
 the craft ships the default, never the instance.
