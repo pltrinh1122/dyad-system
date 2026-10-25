@@ -168,7 +168,8 @@ class DriftTests(unittest.TestCase):
 
 class UnreleasedCraftTests(unittest.TestCase):
     """#156: a craft with no release tag of its own and no row warns (unreleased, not yet bundled);
-    a released craft with no row, and a row naming a craft not in the tree, still fail (Rule-11 p7)."""
+    a released craft with no row, and a row naming a craft not in the tree that was never released, still fail
+    (Rule-11 p7); a row naming a released craft that has left the tree warns (#423)."""
     ROWS = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.1"), ("syseng", "0.1.2")]
     def test_unreleased_craft_without_row_warns(self):
         live = {**LIVE, "newcraft": "0.1.0"}
@@ -181,6 +182,21 @@ class UnreleasedCraftTests(unittest.TestCase):
     def test_row_for_craft_not_in_tree_still_fails(self):
         msgs = bd.check("0.5.0", self.ROWS + [("ghost", "1.0.0")], LIVE, released=set())
         self.assertEqual(msgs, ["'ghost': not a craft in this tree"])
+    def test_departed_released_craft_row_warns(self):
+        # #423: a released craft that has left the tree (renamed or retired) keeps its row until the infra-zone PR
+        msgs = bd.check("0.5.0", self.ROWS + [("ghost", "1.0.0")], LIVE, released=set(), departed={"ghost"})
+        self.assertEqual(msgs, ["warning: 'ghost' has left the tree but holds a release tag (ghost-v*): the row is removed by an infra-zone PR (#423)"])
+        self.assertEqual(bd.check("0.5.0", self.ROWS + [("ghost", "1.0.0")], LIVE, released=set(), departed={"other"}),
+                         ["'ghost': not a craft in this tree"])        # a departed set that does not name it: still fails
+    def test_departed_end_to_end_reads_local_tags(self):
+        root, pkg = repo()                                  # every LIVE component tagged
+        try:
+            (root / "BUNDLE.md").write_text(BUNDLE.replace("| syseng | 0.1.2 |", "| syseng | 0.1.2 |\n| ghost | 1.0.0 |"))
+            self.assertEqual(bd.check_bundle(root, pkg)[2], ["'ghost': not a craft in this tree"])     # never released: fails
+            git(root, "tag", "ghost-v1.0.0")
+            self.assertEqual(bd.check_bundle(root, pkg)[2], ["warning: 'ghost' has left the tree but holds a release tag (ghost-v*): the row is removed by an infra-zone PR (#423)"])
+        finally:
+            import shutil; shutil.rmtree(root, ignore_errors=True)
     def test_released_defaults_to_strict(self):
         self.assertEqual(bd.check("0.5.0", [], {"sysarch": "0.1.1"}), ["'sysarch' is in the tree but has no bundle row"])
     def test_released_components_reads_local_tags(self):

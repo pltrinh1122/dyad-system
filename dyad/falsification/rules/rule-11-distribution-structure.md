@@ -367,3 +367,27 @@ added or moved: a release stays its own `Y`. 11–3, 11–4 no block change; one
 term. 11–7, 11–8, 11–9 unaffected. 11–12 the new branches carry fixture tests at the mapped path. 11–13, 11–14 no
 import. 11–15, 11–16 no phase or store change. 11–18, 11–19 no Operator command, no server. 11–20 no reference
 kind. Coherent, orthogonal. Disposition: see ledger #230.
+
+## Amendment — d-work #423 (2026-10-25): property 7, a released craft that has left the tree
+
+**Claim (plan #423, the Operator's `Y` of 2026-10-25, batch #422,#423,#424):** a row naming a component that has left
+the tree but holds a release tag of its own warns until the infra-zone PR removes the row; a row whose component
+was never released still fails. Found by #417 (`cos` → `cabinet`): the craft-zone PR that moves the tree failed
+`'cos': not a craft in this tree`, the infra-zone PR alone would fail with a released craft that has no row, and
+Rule-1 forbids one PR carrying both — the order trap #156 (a craft entering) and #230 (a released craft's version
+moving) each closed for their own case.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| A7 | Keep both trees until the infra PR lands (copy `crafts/cos` to `crafts/cabinet`, remove the row, then delete `crafts/cos` in a fourth PR) — no Rule change needed. | **Refuted** | The fourth PR deletes a released craft whose row the third already removed; the strict branch fails it exactly as before, and for a while the tree ships two copies of one craft. No order of a released craft's departure passes the strict guard. |
+| A8 | A warning lets a dead row ship in a bundle release. | **Refuted** | A bundle release is its own Operator `Y` (Ratification events), and `dyad bundle build` builds once per row: a row whose tree is gone cannot build, so the release fails loudly rather than shipping it. The warning only covers the interval between two PRs of one d-work. |
+| A9 | Tags not fetched read as unreleased, so the warning never fires in such a checkout. | **Confirmed as a limit, no looser than before** | `released_components` over the row's component reads local tags only, as it does for the live ones (#156); without them the row fails as strictly as it did. The kernel-only path never fetches. |
+| A10 | A typo in a row (a craft never in the tree) now warns. | **Refuted** | Only a component with its own `<name>-v*` tag warns; a typo has none, and fails as before (`test_departed_end_to_end_reads_local_tags`). |
+
+**The order this enables:** craft-zone PR (the tree moves; the guard warns on the departed row), the agent-zone PR
+that cites the new path, then the infra-zone PR (`BUNDLE.md` drops the row and names the new craft once released).
+
+Pairwise (Rule-5): 11–1 each PR stays one zone; the guard is infra corpus. 11–2 no ratification event added or
+moved. 11–3, 11–4 one sentence in property 7, no block change. 11–6 no new term. 11–12 the new branch carries
+fixture tests at the mapped path. 11–14 no import. 11–20 no reference kind. Others unaffected. Coherent, orthogonal.
+Disposition: see ledger #423.

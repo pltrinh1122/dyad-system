@@ -106,7 +106,10 @@ dyad system without clashes or hand-editing.
    the bundle until its first release, whose release adds its row; a released craft without a row
    fails. A released craft whose live `VERSION` has moved ahead of its tag may run ahead of its row,
    which still names its last release, until the infra-zone PR that updates the row; the guard warns
-   meanwhile, and fails once the new version is itself tagged. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
+   meanwhile, and fails once the new version is itself tagged. A released craft that has left the tree — renamed or retired by
+   a craft-zone PR — may keep its row, which still names its last release, until the infra-zone PR that removes
+   it; the guard warns meanwhile, and a row naming a component that never held a release tag of its own still
+   fails. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
    unprefixed form, the GitHub convention and the repo's one front door, built by sequencing
    property 5's one code path once per row (never a second build mechanism) and publishing every
    component's archive together. A system that wants only some components pins them individually by their own crafts'
@@ -178,6 +181,8 @@ the same record, amendment #156 (2026-09-24). Property 2 gains the core's regist
 suite over a tree it had installed unmodified, and only a recorded sha can show that it is; see the
 same record, amendment #199. Property 7 gains the released-craft sentence 2026-10-07 (d-work #230,
 row #170): changing a released craft needs a craft-zone `VERSION` bump and an infra-zone row, and no
-order landed both; see the same record, amendment #230.
+order landed both; see the same record, amendment #230. Property 7 gains the departed-craft sentence 2026-10-25 (d-work #423):
+renaming a released craft (#417, `cos` → `cabinet`) needs a craft-zone move and an infra-zone row removal, and the
+bundle guard failed each one alone; see the same record, amendment #423.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
