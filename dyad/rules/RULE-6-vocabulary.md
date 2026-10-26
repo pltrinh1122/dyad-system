@@ -31,12 +31,14 @@ reported once by `check_craft`.
 
 ## Mechanisms
 Rule-6 owns `dyad/guards/agent/vocabulary.py` (agent zone; placed per Rule-11 property 1) and its workflow wrapper
-`.github/workflows/dyad-vocabulary.yml` (infra zone; Rule-1). The script checks: the table is well-formed; every `owner` is an existing Rule
+`.github/workflows/dyad-package.yml`, step `rule-6 vocabulary — table well-formed, owners and used-by resolve, no orphans` (infra zone; Rule-1). The script checks: the table is well-formed; every `owner` is an existing Rule
 or `frame`; no term is defined twice; every term occurs in at least one Agent Rule (no
 orphans); every Rule listed in `used by` mentions the term (case-insensitive, emphasis stripped,
 across line breaks; I1). Whether a use matches the definition is inference at falsification time.
 
 ## Provenance
-Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-6-vocabulary.md`.
+Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-6-vocabulary.md`. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-vocabulary.yml` 2026-10-26 (d-work #477, C4
+of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
+record, amendment #477.
 
 Set: System Requirements.

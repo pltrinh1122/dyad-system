@@ -41,3 +41,18 @@ forbids). No block change. Pairwise: see `rule-11-distribution-structure.md` (11
 Rules 17 and 21 removed from `dyad/rules/` (numbers retired, never reused; the README says so); the guard counts the files
 present, so a numbering gap is not a miss. Boundaries already name a Tended craft's `rules/` (#156). No block change.
 Disposition: see ledger #160.
+
+## Amendment — d-work #477 (2026-10-26, C4 of #473: the guard wrapper is a step of `dyad-package.yml`)
+**Claim (plan #473, the Operator's `Y` of 2026-10-26, and the Y recorded on #477 at 3393b19):** the CI wrapper this
+Rule names, `.github/workflows/dyad-rule-integrity.yml`, becomes a named step of `.github/workflows/dyad-package.yml` (job `package`),
+same guard, same trigger (push to `main`, ledger-only paths ignored, and dispatch), still detecting; the Rule's
+sentence names the new file and step, meaning unchanged.
+
+| # | attack | result |
+|---|---|---|
+| 1 | One job couples the guards: a failure in one step hides the others. | Survives, scoped: CI here only corroborates after the merge (Rule-14 property 3); the blocking checks run before the push on the kernel-only path, every guard in one run. |
+| 2 | Re-pointing before the old file is removed leaves two names for one check. | Refuted: this PR lands first and resolves on today's `main`, where both files exist; the removal PR follows, so no state names a missing file. |
+
+**Pairwise (Rule-5).** **4–1**: the wrapper stays infra zone. **4–20**: the new path resolves on today's `main`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #477.
