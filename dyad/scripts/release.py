@@ -250,6 +250,12 @@ def main(a: list[str] | None = None, root: Path | None = None) -> int:
         print("usage: dyad release [--scan]", file=sys.stderr)
         return 2
     ctx = context(Path(root) if root else dyadlib.repo_root())
+    if not ctx.repo and entries(ctx):
+        # the hosting is asked whether each tag's Release exists; with no `owner/name` every answer is "no", so a hand
+        # run would report every recorded release as pending, or try to publish it (#470, distribute's finding)
+        print("refused: GITHUB_REPOSITORY (owner/name) is unset, so no Release can be looked up; set it to run by hand",
+              file=sys.stderr)
+        return 2
     if "--scan" in a:   # read-only: nothing is built, tagged or written but GITHUB_OUTPUT
         p = pending(ctx)
         print(f"pending: {' '.join(p) or 'none'}")

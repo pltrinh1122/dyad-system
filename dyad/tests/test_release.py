@@ -156,6 +156,17 @@ class ScanTests(World):
         self.make_world()
         self.assertEqual(self.run_verb("--publish")[0], 2)
 
+    def test_entries_without_a_repository_are_refused_not_reported_pending(self):
+        """#470: with GITHUB_REPOSITORY unset (a hand run) the Release lookup cannot answer, so the verb refuses
+        rather than report every recorded release as pending; a store with no entry still scans green."""
+        self.make_world()
+        os.environ.pop("GITHUB_REPOSITORY", None)
+        self.assertEqual(self.run_verb("--scan"), (0, "pending: none\n"))   # no entry: nothing to look up
+        self.record(entry("dyad-operator-v0.1.0", self.cut[:7]))
+        self.assertEqual(self.run_verb("--scan")[0], 2)
+        self.assertEqual(self.run_verb()[0], 2)
+        self.assertEqual(self.gh_calls(), [])
+
 
 class PublishTests(World):
     def test_a_cut_not_on_main_is_refused(self):
