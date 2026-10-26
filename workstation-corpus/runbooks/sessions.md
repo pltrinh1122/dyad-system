@@ -1,5 +1,5 @@
 # Run-book: sessions (the harness's session list against the presence store) — d-work #431
-# sections: Status/health, Seats, Harness, Tidy
+# sections: Status/health, Seats, Harness, Tidy, Bootstrap
 
 Instance: not a server — the agent application's own session records (Claude Code: `~/.claude/projects/<slug>/`,
 one kernel's path, read through `dyad/scripts/hostadapter.py` so another kernel plugs in as data; plan #431
@@ -125,4 +125,45 @@ postcondition: none
 scope: agent-corpus/d-work/sessions/, the ledger rows and the harness's session records (read)
 
 dyad/bin/dyad session reconcile; dyad/bin/dyad session list
+```
+
+## Bootstrap
+A seat's clone, prepared once at container start so the guards read a whole history (#474, child C1 of #473). The core
+verb `dyad bootstrap` (`dyad/scripts/bootstrap.py`, the engineer seat's) sets `core.hooksPath` to `dyad/hooks`,
+unshallows a shallow clone and fetches its tags (`fetch --unshallow --tags`), fetches the tags when they are missing,
+and exits 0 with one warning line when the network fails: idempotent and never blocking. A shallow or tagless clone
+otherwise turns the bundle drift check and a plan's base-commit resolution into false failures, which is what
+`check --evidence` now refuses in one line. The `.claude/settings.json` SessionStart hook that calls it at container
+start, `"$CLAUDE_PROJECT_DIR"/dyad/bin/dyad bootstrap` with a timeout of about 600 s (an unshallow can be slow), is the
+distribute seat's; until it lands, a seat runs `bootstrap` itself before its first push.
+
+After it, the order is **evidence, then push, from the same clone, with no fetch between**: a `git fetch --tags`
+after `check --evidence` changes the suite memo's key (it holds a digest of the tags), so the pre-push gate runs the
+whole suite again for no assurance gained (#473, finding 2).
+
+`bootstrap` changes only this clone (its git config and its fetched history), so it is **reversible**: the hook path
+is undone by unsetting it, and fetched history only adds. `bootstrap-check` is its read-only form. Every line either
+form prints is `<state> [bootstrap] <step>: <detail>`, the state `ok`, `changed` or `warn`, and both always exit 0
+(only misuse exits 2), so the pass test reads the lines and not the exit: **pass is no `warn` line from `--check`**,
+which is the `bootstrap` postcondition. A `warn` after `bootstrap` has run means the network or the remote refused,
+and the clone's next evidence run will say which check it breaks.
+```dyad-cmd
+name: bootstrap
+class: reversible
+role: any
+undo: git config --unset core.hooksPath (fetched history and tags only add; nothing else to undo)
+postcondition: ! dyad/bin/dyad bootstrap --check | grep -q '^warn '
+scope: this clone's git config and fetched history
+
+dyad/bin/dyad bootstrap
+```
+```dyad-cmd
+name: bootstrap-check
+class: read-only
+role: any
+undo: none
+postcondition: none
+scope: this clone's git config, shallow state and tags (read)
+
+dyad/bin/dyad bootstrap --check
 ```
