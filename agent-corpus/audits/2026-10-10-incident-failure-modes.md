@@ -553,17 +553,17 @@ both the CLI's refusal was the only channel by which its check could be seen. Th
 and it is a property of the CLI, not a mode: a verb whose checks are visible only as a refusal makes reading
 the check cost a write (231) and makes discarding the refusal cost a silent miss (232).
 
-**Proposed exits** (proposed to the program seat with #463's mitigation plan; opened by nobody here):
-1. O, row 231 — exit 2: a backlog row for `dyad dwork state <id> <state> … --check`, every refusal run, nothing
+**Proposed exits** (proposed to the program seat with #463's mitigation plan; the Operator's `Y` opened them as `backlog` rows #464–#467 at `6244976`, the program seat's commit — none by this seat):
+1. O, row 231 — exit 2: a backlog row (#464) for `dyad dwork state <id> <state> … --check`, every refusal run, nothing
    written, a `would write` line; moment: the call.
-2. E/Q, row 232 — exit 2 → 1: a backlog row for a transaction check — under `dwork-trace: always`, a commit
+2. E/Q, row 232 — exit 2 → 1: a backlog row (#465) for a transaction check — under `dwork-trace: always`, a commit
    that adds a `Y done` entry to row N carries `traces/N.md` or finds it already on the base; the same refusal in
    `dwork state -d 'Y done …'` and `dwork batch` before the first write; moment: the call and every push.
    It makes the discarded refusal harmless rather than forbidding the discard, which no mechanism reads.
-3. Row 232's consequence — a backlog row: `land.fast_forward` restores identical landed copies off `main` too
+3. Row 232's consequence — a backlog row (#466): `land.fast_forward` restores identical landed copies off `main` too
    (the bytes are on `main` whatever branch the caller holds), or prints one line naming the untracked copies
    it left; moment: the land.
-4. W, row 233 — exit 2 for the consequence, exit 3 for the mechanism: a backlog row for the fence's id check —
+4. W, row 233 — exit 2 for the consequence, exit 3 for the mechanism: a backlog row (#467) for the fence's id check —
    the new rows of a range take ids `max(base)+1…` contiguously, so 999 over 463 fails at the commit and the
    push; the lost `cd` itself is conduct (name the target, `git -C <scratch>`), since no mechanism of the
    kernel-only path reads the Agent's shell (as row 177's).
