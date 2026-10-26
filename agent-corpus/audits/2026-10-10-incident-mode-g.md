@@ -192,3 +192,9 @@ verbs it did not cover — the measurement attack 7 of the 2026-10-10 record ask
 four times.
 **Exit after the delta:** exit 2 as proposed (one dispatch-level reader); #268 `backlog`, nothing
 built. The cheapest reach for three of the four rows is one line: `touch` refuses an unknown word.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **217** (2026-10-25, #433): `dyad session touch --help` wrote a presence file under a fresh `unnamed-*` id. `sessions.main` (`sessions.py:624–630`) still skips any word other than `-r` and `-f` without refusing. It is the fourth row on this one verb (159, 182, 196, 217), and the one-line fence proposed on 2026-10-24 (proposal 4) is unbuilt. Proposed again as P1. **10 rows.** Status: exit 2 named, unbuilt.

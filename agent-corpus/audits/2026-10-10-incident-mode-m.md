@@ -187,3 +187,10 @@ secondary four) — **exit 1, fenced at a named moment** by #202, re-verified in
 recurrence since. The no-verb face (121, 126, 154, 207) and the version/zone face (60, 61, 115, 188) —
 open; #274 `backlog`. One candidate the delta adds, stated for the engineer seat: `dwork state <id> done
 --mandate <id>`, copying the mandate's operative `Y done` entry with its heads (row 207).
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **215** (2026-10-25, #417): a released craft leaving the tree had no order of PRs. Fenced since by #423 (Rule-11 property 7's departed-craft sentence and its `bundle.py` warning).
+- **216** (2026-10-25, #433): a `VERSION` bump past a row naming an *untagged* version fails by design (`bundle.py:18–20`), and Rule-1 forbids the infra row in the same push. This is the version/zone face again (60, 61, 115, 188), one transitional state at a time. Proposed as P3: one more sentence and warning, as #230 and #423 did. **18 rows.** Status: split, as before.

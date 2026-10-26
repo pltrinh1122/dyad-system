@@ -123,3 +123,10 @@ here, and row 62 is unreached by anything above.
 over a peer's three files). **Mitigations re-read:** none in the tree. **Exit:** exit 2 as proposed
 (#276 `backlog`); the row's own rule — `merge --ff-only` or `reset --keep`, never `--soft` — would join
 the deny-rule candidate's list.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **225** (2026-10-20, #348): `git merge --ff-only origin/main` (284 commits) run to read the current Rules and allocate an id. Its cell says P, but this record's definition covers it word for word: a git write used as a read, where `git show origin/main:<path>` existed.
+- **231** (2026-10-25, #346; placed here by #463's note and confirmed by the second view): `dwork state 346 done` run to read its refusal. The dyad's own verbs have no read-only form, so #464 (`backlog`, R1, `dwork state … --check`) is the fence to build. The definition widens from git to the dyad's CLI. The git face stays conduct, because its non-writing read exists. **6 rows.** Status: exit 2 named, unbuilt.

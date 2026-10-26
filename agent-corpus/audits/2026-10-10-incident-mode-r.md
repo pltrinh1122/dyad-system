@@ -241,3 +241,10 @@ record measured at 64 files (88 today, 58 `unnamed-*`).
 **Exit after the delta:** open; #279 `backlog`. Exit 2 is reachable for four sub-shapes by rows that
 already exist (#311, #312, #313, #286), which is the measurement: four named fences, zero built, twelve
 recurrences.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **214** (2026-10-25, #412–#414): `crafts.crafts()` (`crafts.py:413–416`) lists every directory under `crafts/`, so a retired craft's ignored `__pycache__/` read as a craft and failed the push. Directory existence stands in for being a craft (`dyadlib.craft_dirs()` already requires a `VERSION`). Proposed as P5.
+- **228** (2026-10-21, #348): the presence writer was keyed on a per-process uuid. Fenced by #350, which keys the writer on the holder (`sessions.py:19–24`). **21 rows.** Status: open.

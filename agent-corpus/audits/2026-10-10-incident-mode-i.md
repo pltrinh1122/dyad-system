@@ -175,3 +175,9 @@ carry the fetch line — the second half has since been done by hand in every re
 **Recurrence after a mitigation shipped:** none shipped; four recurrences after the advice was written.
 **Exit after the delta:** exit 2 is now available for this sub-shape — #315 stands and names the fence
 (it did not exist on 2026-10-10); row 123's sub-shape stays open as before.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **230** (2026-10-13, ported 2026-10-26 by #455): hand runs of the suite passed while the gate failed with 29 errors, because `git -c core.hooksPath=…` exported `GIT_CONFIG_PARAMETERS` to every child, and fixture repos resolved the relative hooks path. This is row 123's established cause (rows 124 and 141 keep their modes; their attributions are superseded by this row). It is fenced by #456: `suite_env()` drops the variable (`package.py:511–513`, merged at `4406580`), with a behavioural test beside #206's. **9 rows.** Status: open; exit 1 for this sub-shape.

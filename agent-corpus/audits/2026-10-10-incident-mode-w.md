@@ -180,3 +180,9 @@ variables live; the hook variables I relied on are the ones
 `SuiteEnvWorktreeTests` (`:1294`) present; `suite_env` (`package.py:436`) still passed at both suite
 spawns; the suite runs at `check --guards --pre-push` and `check --evidence`. Zero rows of this shape in
 69 new rows. **Exit:** exit 1 holds.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **233** (2026-10-26, #461): a hand simulation lost its `cd` and committed a fake row 999 in the live checkout. Nothing reached origin, and the non-fast-forward was timing. It is the mode outside the suite, which `suite_env` and the spawn-site tests cannot reach. Fence for the consequence: #467 (`backlog`, R4, contiguous new row ids). The lost `cd` is exit 3 (no mechanism reads the Agent's shell, as Y's row 177). **3 rows.** Status: exit 1 holds for the suite; open outside it.

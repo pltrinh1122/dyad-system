@@ -181,3 +181,9 @@ reach a filter the Agent types in its own shell.
 **Recurrence after a mitigation shipped:** n/a; no shipped mitigation reaches any row.
 **Exit after the delta:** open; #266 `backlog`. Two of the seven (209, 212) are in shipped code and
 reachable by a code change each — stated for the owning seat (engineer), proposed below in the index.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **232** (2026-10-26, #455–#460): the refusal of `dwork trace … --out <path>` was sent to `/dev/null` by the caller's own redirect, and four Done-record commits carried no trace. Primary here and not in C/G: the starting act (the switch's arity misremembered) met its fence, because `trace.py` refused correctly. What would have to change is the discard, and Q's unread trace obligation is secondary. Fence: #465 (`planned`, R2), the trace required at the Done-record commit, which makes a discarded refusal harmless. **12 rows.** Status: open; exit 2 → 1 when #465 lands.
