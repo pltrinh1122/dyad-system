@@ -4,7 +4,7 @@
 twenty-three per-mode records #262–#284. Detects and counts; disposes nothing (frame: detect,
 don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
-**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 213 rows, latest 2026-10-24 (the 2026-10-10 derivation covered 144; rows 145–213 were grouped by the delta derivation of 2026-10-24 below, d-work #259 revision 5)
+**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 233 rows, latest 2026-10-26 (the 2026-10-10 derivation covered 144; rows 145–213 were grouped by the delta derivation of 2026-10-24, d-work #259 revision 5; rows 214–233 by the delta of 2026-10-26, d-work #472, both below)
 
 ## Phase 0 — the survey that made this a full derivation
 
@@ -521,7 +521,7 @@ Each of the 23 children #262–#284 stays `backlog`; none is closed, re-opened o
 
 ## Note 2026-10-26 — rows 231–233 against the modes (d-work #463, seat audit-e73be78c)
 
-Not a delta: the `covered through:` watermark stays at 213, and rows 214–230 are still ungrouped (the next
+Not a delta: the `covered through:` watermark stayed at 213, and rows 214–230 were still ungrouped (since grouped by the 2026-10-26 delta below; the next
 delta's work, Phase 0's third outcome). This note classifies only the three rows #463 names — 231 (#346, the
 close run to read its refusal), 232 (six Done records without their traces, #455–#460) and 233 (#461's
 fabricated row 999) — and tests the candidate mode #463's plan names: *a refusal discarded, or a mutating
@@ -567,3 +567,166 @@ the check cost a write (231) and makes discarding the refusal cost a silent miss
    the new rows of a range take ids `max(base)+1…` contiguously, so 999 over 463 fails at the commit and the
    push; the lost `cd` itself is conduct (name the target, `git -C <scratch>`), since no mechanism of the
    kernel-only path reads the Agent's shell (as row 177's).
+
+## Delta 2026-10-26 — rows 214–233, grouped against the 25 modes (d-work #472, seat audit-e73be78c)
+
+Phase 0's third outcome. The survey (event `incident-hardening-20261026T215444Z-survey`, committed at `d36b1bd`)
+read 233 live rows, latest 2026-10-26, against the watermark of 213. The delta is rows 214–233: rows 214–230,
+ungrouped since 2026-10-24, and rows 231–233, which #463's note above had grouped by one view only. The method
+is the 2026-10-24 one with two views:
+- **View 1** is a subagent forbidden this index, the mode records and the falsification directory. It
+  reported the sentinel first, derived 13 modes bottom-up from the `cause` cells and then the `what` cells, and
+  applied the one-sentence test.
+- **View 2** is this seat, mapping each row to one of A–Y or to none.
+
+Both views assigned all 20 rows with none in two modes. The reconciliation below was checked mechanically: 20
+rows, each primary in exactly one mode, counts summing to 20. **No row needs a mode A–Y does not name**: every
+one of view 1's 13 modes falls inside one existing mode's definition. So the play-book's trigger for a full
+re-derivation (a new row's mechanism named by no mode) does not fire again. The 2026-10-24 question (re-derive
+213 rows against 25 modes) stays the Operator's and stays unanswered.
+
+### Rows 214–233 by mode
+
+| mode | delta rows | view 1 | delta | was | now |
+|------|------------|--------|-------|-----|-----|
+| C | 227 | M9 | 1 | 20 | 21 |
+| E | 232 | M9 (secondary) | 1 | 11 | 12 |
+| G | 217 | M3 | 1 | 9 | 10 |
+| I | 230 | M12 | 1 | 8 | 9 |
+| J | 218, 219, 220, 221 | M4 | 4 | 3 | 7 |
+| M | 215, 216 | M2 | 2 | 16 | 18 |
+| O | 225, 231 | M7 | 2 | 4 | 6 |
+| Q | 222, 223, 226 | M5, M6 (223), M8 | 3 | 18 | 21 |
+| R | 214, 228 | M1, M10 | 2 | 19 | 21 |
+| T | 224, 229 | M6, M11 | 2 | 14 | 16 |
+| W | 233 | M13 | 1 | 2 | 3 |
+| | | | **20** | | |
+
+"Was" is the 2026-10-24 table's "now". The #463 note's provisional counts (O 5, E 12, W 3) are replaced by this
+table. Modes A, B, D, F, H, K, L, N, P, S, U, V, X and Y gain nothing.
+
+### What the reconciliation decided, and against what
+
+1. **Row 225 is O, not P.** The row's own cell says P (unplanned action under momentum). View 1 put it with 231
+   in one mode, "a command that writes is run to get a read". O's original definition covers it word for word:
+   a git write (`merge --ff-only`) used as a read (to see the current Rules and allocate an id), where `git show
+   origin/main:<path>` was the read that writes nothing. P's change (stop and plan the cleanup) is not the
+   change that would have stopped it. O's two faces now differ only in whether the non-writing read exists:
+   for git it does (225 and the three original rows), and for the dyad's own verbs it does not yet (231; #464
+   is the row to build it).
+2. **Row 232 keeps E primary over view 1's reading.** View 1 made the arity misremembered from memory primary
+   (C/G's family) because it started the incident, and said a reader taking the uncaught act as primary would
+   choose Q. The play-book's rule is that the mechanism that *started* a row is primary. But a failure mode is
+   by definition "the mechanism that would have to change". The starting act met its fence: `trace.py`
+   refused the stray argument correctly and needs no change. What would have to change is the discard (E), and
+   the unread obligation (Q, secondary) is the fence #465 is building. The disagreement is recorded rather
+   than smoothed over.
+3. **Row 223 is Q, not T.** View 1 placed it with 224 (planned from a clone that had not fetched) and flagged
+   the fit as weak itself. The cell has two causes, and the one that would have stopped it is the obligation:
+   the first agent-zone change after a core release owes a patch bump, and nothing tells the next row so.
+   Fetching first would not help if the tag was cut after the plan was written. Stale tags are secondary (T).
+4. **Rows 218–221 are one mechanism, J,** with Q secondary, as their cells say and as view 1 found
+   independently (M4). Four rows record 29 closes. J gains more in one day than in its first two weeks.
+5. **Row 214 is R.** View 1's M1, "a directory is read as a craft", is R's definition of a derived key that
+   does not identify: directory existence stands in for being a craft. The check lives in
+   `dyad/guards/craft/crafts.py` `crafts()`, not in `dyadlib.craft_dirs()` as view 1 guessed:
+   `craft_dirs()` already requires a `VERSION`.
+6. **Row 230 is I, not W.** View 1's M12 is "the caller's environment leaked into the suite", which is W's
+   direction reversed. The 2026-10-10 definition of I holds: hand runs and the gate gave different verdicts,
+   and the input nothing had named was `GIT_CONFIG_PARAMETERS`. The row also replaces the causes rows 124 and
+   141 gave for row 123 (view 1 names them as earlier misattributions). Those rows keep their modes. This row
+   is their established cause, stated in I's record.
+7. **Row 229 is T.** View 1's M11 agrees and finds it conduct only, and this seat finds the same: the presence
+   store carries no prompts in flight, and nothing here proposes that it should.
+
+### Phase 2 over the affected modes — read from the code at `d36b1bd`
+
+- **J — fenced.** `rows.refs_shape_problems` (`dyad/guards/agent/rows.py:206`, called from the transaction
+  check at `:310`; #439) refuses a `refs` value holding `[ ] ' " ,` at every commit and push. No row on `main`
+  carries the list today. 0 recurrence since #439. Exit 1 for the refs shape. J's original three rows are
+  untouched by it.
+- **R — 228 fenced, 214 not.** `sessions.writer()` keys the writer on the holder (#350, `sessions.py:19–24`),
+  which reaches 228. `crafts.crafts()` (`crafts.py:413–416`) still lists every directory under `crafts/`
+  ("a VERSION or not"), so 214 reproduces on any checkout that holds a retired craft's ignored caches.
+- **I — 230 fenced.** `suite_env()` drops `GIT_CONFIG_PARAMETERS` (`package.py:511–513`; #456, PR #496, merged
+  at `4406580`). 0 recurrence since.
+- **M — 215 fenced, 216 not.** The departed-craft warning (#423, Rule-11 property 7's sentence, `bundle.py`)
+  reaches 215. 216's case, a `VERSION` moving past a row that names an *untagged* version, still fails by
+  design (`bundle.py:18–20`: "a row naming an untagged version … fails"). That is the version/zone face of
+  rows 60, 61, 115 and 188, with no order to land the two zones.
+- **G — unfenced.** `sessions.main` `touch` (`sessions.py:624–630`) skips any word other than `-r` and `-f`
+  without refusing, so `touch --help` writes. This is the 2026-10-24 proposal 4, unbuilt, and now its fourth
+  row on this verb (159, 182, 196, 217).
+- **Q — unfenced.** 222: no guard reads `dyad/templates/self-diagnostic-levels.txt` against the test modules
+  (`crafts/syseng/guards/tests.py` holds no `levels`); only `test_levels` in the whole-root suite does. 223:
+  the push gate's drift check is the fence that caught it, and nothing reads the obligation at plan time.
+  226: `session_id()` (`sessions.py:96–105`) still mints `unnamed-<uuid>` per call. That is the 2026-10-24
+  proposal 4 for 145 and 205, unbuilt, and now 226.
+- **T — unfenced.** Rule-3's session-start clause reads the ledger and names no fetch or base. Plan #348 names
+  the fence and nothing built it (224). 229 is conduct.
+- **O — 231 has #464 `backlog` (R1). 225 is conduct:** the non-writing read exists.
+- **C (227)** is conduct, as C's twenty earlier rows are. **E/Q (232)** has #465 `planned` (R2 with
+  `--latest=false`). **W (233)** has #467 `backlog` (R4) for the consequence, and the mechanism is exit 3.
+
+### Falsification — is each affected mode still addressed as its record says?
+
+This is written here and not in `agent-corpus/falsification/`, by the audit charter (plan #472 attack 5), as on
+2026-10-24. The amendment of `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` is proposed
+to counsel. Rule-9's easy-agreement trigger fired on J and I, where I agreed on first reading; both were
+attacked by reading the fence's code and its reach today.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| 1 | J is fenced by #439 | **survives, scoped.** `refs_shape_problems` is in the transaction check and no row holds the list. But it fences one field's shape, not the mechanism (a name rebound by an added loop and written later); a rebind of `disposed` or `title` would pass | exit 1 for refs; the mechanism stays open, with no cheap fence |
+| 2 | I's GIT_CONFIG_PARAMETERS sub-shape is fenced by #456 | **confirmed.** `suite_env` drops it, and #456's behavioural test sits beside #206's | exit 1 for the sub-shape; I stays open for the others |
+| 3 | R is addressed (the 2026-10-24 record: open) | **confirmed as open.** 228 fenced by #350; 214 is a new key in a new store (the craft tree) with a one-line fix | open |
+| 4 | M's version/zone face is addressed by #423 and #230 | **refuted as a whole.** Each sentence admitted one more transitional state, and 216 is the next one (an untagged row). The face recurs one state at a time | open; one more sentence plus a warning in `bundle.py` proposed (P3) |
+| 5 | G is addressed (exit 2 named, #268) | **refuted again.** A fourth row on `session touch`, and #268 still `backlog` | the one-line refusal is the cheapest fence in the ledger, proposed as its own row (P1) |
+| 6 | Q is addressed | **refuted.** Three more rows, each an obligation only the full gate or nothing reads. 226's fence was proposed on 2026-10-24 and not built | open; P2, P6 |
+| 7 | T is addressed | **confirmed as open.** 224's fence is named in plan #348 and unbuilt; 229 is conduct | open; P4 |
+| 8 | O is addressed now that #464 exists | **survives, scoped.** #464 reaches 231 and the dyad's own verbs; 225 had its non-writing read and did not use it, which no mechanism reads | the dyad-verb face reaches exit 2; the git face stays conduct |
+| 9 | C, E, W are addressed as #463's note said | **confirmed.** One row each, already placed and owned (#465, #467) | as proposed |
+| 10 | the 25 modes still cover the ledger | **survives.** View 1's 13 modes each fall inside one, and no row is left | 25; no re-derivation trigger |
+| 11 | this exercise hardens rather than measures (2026-10-24 attack 15) | **survives, scoped.** Since 2026-10-24, three fences reached delta rows (#439, #350, #456) and #464–#467 were opened within the hour of their proposal. But every 2026-10-24 engineer proposal (its items 4–7) is still unbuilt, and two of them reach rows of this delta (217, 226) | the recurrence of unbuilt proposals is the finding; P1 and P2 are those proposals again, now with a recurrence each |
+
+### Phase 4 — affected modes after the delta
+
+| mode | rows | status 2026-10-24 | re-verified 2026-10-26 | status |
+|------|------|-------------------|------------------------|--------|
+| C | 21 | open | +1, conduct | open |
+| E | 12 | open | +1; #465 planned | open; exit 2 → 1 on #465 |
+| G | 10 | exit 2 named, unbuilt | +1 on `session touch` | exit 2 named, unbuilt |
+| I | 9 | open; exit 2 reachable | +1, fenced by #456 | open; exit 1 for one sub-shape |
+| J | 7 | exit 2 named, unbuilt | +4, refs shape fenced by #439 | **exit 1 for the refs shape**; mechanism open |
+| M | 18 | split | +2; 215 fenced by #423, 216 not | split as before |
+| O | 6 | exit 2 named, unbuilt | +2; #464 backlog | exit 2 named, unbuilt |
+| Q | 21 | open | +3 | open |
+| R | 21 | open | +2; 228 fenced by #350 | open |
+| T | 16 | open | +2 | open |
+| W | 3 | exit 1 holds | +1 outside the suite; #467 backlog | exit 1 for the suite; open outside it |
+
+### Proposed, opened by nobody here (the audit charter: proposes rows, opens none)
+
+These are ranked by rows reached per fence. Each states its mode, its rows, its moment and its owner. P1 and
+P2 are the 2026-10-24 proposal 4 again, unbuilt and now recurred.
+1. **P1, G** — `session touch` refuses any word other than `-r <id>` and `-f <path>`, and `--help` prints usage
+   and exits, before the first write. Reaches 159, 182, 196, 217 (four rows, one verb). Moment: the call.
+   Owner: engineer.
+2. **P2, Q/R** — `session_id()` refuses to write when `DYAD_SESSION` is unset, instead of minting `unnamed-*`.
+   Reaches 145, 205, 226. Moment: the call. Owner: engineer.
+3. **P3, M** — a Rule-11 property 7 sentence and a `bundle.py` warning for a `VERSION` ahead of a row that names
+   an untagged version, until that row's release or its infra-zone PR, as #230 and #423 did for their states.
+   Reaches 216 and the face's next state. Moment: the push. Owners: counsel (the sentence and its amendment),
+   then engineer.
+4. **P4, T** — the session-start report states its base and its distance from `origin/main` (`dyad session
+   touch` prints `behind origin/main by <n>` after a fetch). Reaches 224.
+   Moment: session start. Owner: engineer.
+5. **P5, R** — `crafts.crafts()` counts only a directory holding a tracked file, as `craft_dirs()` already
+   requires a `VERSION`. Reaches 214. Moment: every check. Owner: engineer.
+6. **P6, Q** — `syseng/tests` also checks that every test module has a line in
+   `dyad/templates/self-diagnostic-levels.txt`, so `check --guards` and a targeted run see it. Reaches 222.
+   Moment: the push and the call. Owner: engineer (craft zone).
+7. **Counsel** — amend `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` with attacks 1–11
+   above.
+
+Rows #262–#284 and #464–#467 are neither closed, re-opened nor archived here.

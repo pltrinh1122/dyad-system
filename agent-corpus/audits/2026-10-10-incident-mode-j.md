@@ -190,3 +190,9 @@ The mode is not fenced today: `dyad/scripts/craft.py:57` `write_registry` has tw
 `:227`), the suite is spawnable from any new function, and the one test that pins the gate
 (`dyad/tests/test_package.py:178-180`) names the three known sites as literals. The most recent
 occurrence (row 106, 2026-10-07) is three days old.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **218, 219, 220, 221** (2026-10-25; 29 closes from 2026-10-15 to 2026-10-25): #202's close path rebound `refs` to its list of branches in an added loop, and the verb wrote that name into the row. One mechanism, four rows; Q is secondary (no guard read the shape, and `row.refs->row` reads only `#N`). Fenced by #439: the loop moved into `landing_refusal`, and `rows.refs_shape_problems` (`rows.py:206`, called in the transaction check) refuses a bracketed `refs`. 0 rows on `main` carry it. The fence covers one field's shape and not the mechanism: a rebind written into another field would pass. **7 rows.** Status: exit 1 for the refs shape; the mechanism stays open.

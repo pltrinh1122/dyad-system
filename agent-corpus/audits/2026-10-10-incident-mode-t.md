@@ -176,3 +176,10 @@ checks existence in the local object store and not ancestry of `origin/main`; no
 **Exit after the delta:** open, and the 2026-10-10 recommendation to split T stands with a third family
 added — unpushed state published as if shared (170, 172, 178). Candidate stated: `plan.base->commit`
 must be an ancestor of `origin/main`, checked at the writer's push.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **224** (2026-10-20, #348): the session-start board was given from a checkout 284 commits behind and was wrong in every figure. The fence (state the base and the distance from `origin/main`) is named in plan #348 and unbuilt; proposed as P4.
+- **229** (2026-10-21, #348): three seats' parallel renames, unpushed, were invisible to each other. Conduct (ask, don't derive, while another seat's work is unpushed). **16 rows.** Status: open.

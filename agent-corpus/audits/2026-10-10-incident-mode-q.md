@@ -246,3 +246,12 @@ the files that exist (0). Row 210: `crafts/cos/guards/seats.py` reads the `ceili
 **Exit after the delta:** open as before, with two of the eighteen now fenced (7, 75 by #191; 171's
 shape by #202) and one removed (151). #278 `backlog`. Candidates the delta adds, stated: a ceiling
 reader in `seats.py` (210); `check_store` refusing a `- preview:` line on a `done` row (204).
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **222** (2026-10-25, #447): a new test module needed a line in `dyad/templates/self-diagnostic-levels.txt`, which only `test_levels` in the whole-root suite reads. No guard reads it, and `crafts/syseng/guards/tests.py` holds no `levels`. Proposed as P6.
+- **223** (2026-10-25, #350): the first agent-zone change after the #451 release owed the patch bump the drift guard requires, and nothing told the next row. Caught by the push gate, the fence working; the obligation at plan time is unread. Stale tags are secondary (T).
+- **226** (2026-10-20, #348): no presence file was touched at session start, and `session_id()` (`sessions.py:96–105`) still mints `unnamed-*`. This is the 2026-10-24 proposal 4 for R's 145 and 205, unbuilt. Proposed again as P2.
+- Secondary in **218–221** (J) and **232** (E). **21 rows.** Status: open.

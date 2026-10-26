@@ -224,3 +224,9 @@ beside `check_id_collisions`) would have reached 193's second half (the overwrit
 is in any item's reach.
 **Exit after the delta:** open, as before; #264 `backlog`, nothing built. Measured: 7 rows in 12 days
 against 13 in 28.
+
+## Delta 2026-10-26 (d-work #472, seat audit-e73be78c)
+
+Rows from the delta of 2026-10-26 (index `2026-10-10-incident-failure-modes.md`, its section of that date, where the reconciliation, the code read at `d36b1bd` and the attacks are).
+
+- **227** (2026-10-20, #348): Rule-3 Scope stated from memory as "no row for a read", the opposite of its text, which #328, #329 and #347 had already settled. Conduct, as the mode's earlier twenty rows are. **21 rows.** Status: open.
