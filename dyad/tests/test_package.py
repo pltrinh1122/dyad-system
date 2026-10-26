@@ -167,7 +167,7 @@ class PackageTests(livetest.LiveCase):
         ran = [l for l in r.stdout.splitlines() if "[Rule-12]" in l and "Ran" in l]
         self.assertEqual(len(ran), 1, r.stdout)
         pkg = load_package()
-        self.assertIn("DYAD_NO_NESTED_TESTS", inspect.getsource(pkg.run_suite))   # the flag is the point (120 s -> 39 s)
+        self.assertIn("DYAD_NO_NESTED_TESTS", inspect.getsource(pkg.suite_child))   # the flag is the point (120 s -> 39 s); #475: the one child
 
     def test_tests_verb_exits_non_zero_on_a_failing_target(self):
         r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "check", "--tests",
@@ -2037,6 +2037,88 @@ class InstallFromTests(unittest.TestCase):
         arch = SCRATCH.mkdtemp() / "a.tar.gz"; self.run_py("build", str(arch)); root = pkg.distribute.extract(arch, SCRATCH.mkdtemp())
         self.assertEqual(pkg.core_extra(root), pkg.core_extra())                                          # an extracted release: the same hooks, by walk
         self.assertEqual(pkg.bundled_crafts(root / "dyad"), pkg.bundled_crafts())                        # read as text there, never executed
+
+class SuiteParallelTests(unittest.TestCase):
+    """d-work #475 (C2 of #473): a root's classes run as separate children, each in its own temp root, at most
+    SUITE_JOBS at a time, and the root's summary is the sum of theirs in unittest's own words — so the evidence
+    block's `[Rule-12]` lines are the serial run's whatever order the children finish in."""
+    def root(self, files):
+        td = tempfile.TemporaryDirectory(); self.addCleanup(td.cleanup)
+        r = Path(td.name) / "tests"; r.mkdir()
+        for name, text in files.items():
+            (r / name).write_text(text)
+        return r
+    # each class creates one fixed name under the temp dir, exclusively: two classes sharing a temp dir would collide
+    FIXED = ("import os, tempfile, unittest\n"
+             "class {c}(unittest.TestCase):\n"
+             "    def test_fixed_name(self): open(os.path.join(tempfile.gettempdir(), 'fixed.tar.gz'), 'x').close()\n"
+             "    def test_skip(self): self.skipTest('stated')\n")
+    def discover(self, root):
+        """The serial child's summary over the same root, as `run_suite` built it before #475."""
+        r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(root), "-q"], capture_output=True,
+                           text=True, env={**load_package().suite_env(tempfile.mkdtemp(dir=root.parent))})
+        return [l.split(" in ")[0] for l in r.stderr.splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
+
+    def test_summary_sums_in_unittests_words_and_order(self):
+        pkg = load_package()
+        self.assertEqual(pkg.suite_summary(["Ran 1 test in 0.1s\n\nOK\n"], False), ["Ran 1 test", "OK"])
+        self.assertEqual(pkg.suite_summary(["Ran 3 tests in 1s\nOK (skipped=1)", "Ran 2 tests in 1s\nOK (skipped=2)"], False),
+                         ["Ran 5 tests", "OK (skipped=3)"])
+        self.assertEqual(pkg.suite_summary(["Ran 2 tests in 1s\nFAILED (errors=1, skipped=1)", "Ran 1 test in 0s\nFAILED (failures=1)"], True),
+                         ["Ran 3 tests", "FAILED (failures=1, errors=1, skipped=1)"])
+        self.assertEqual(pkg.suite_summary(["boom"], True), ["Ran 0 tests", "FAILED"])   # a child that printed no summary
+
+    def test_classes_run_apart_and_sum_to_the_serial_summary(self):
+        pkg = load_package()
+        root = self.root({"test_a.py": self.FIXED.format(c="A") + self.FIXED.format(c="B").split("\n", 1)[1],
+                          "test_b.py": self.FIXED.format(c="C")})
+        self.assertEqual([len(u) for u in pkg.suite_units(root)], [2, 2, 2])      # one unit per class
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc, summary, err = pkg.run_suite(root)
+        self.assertEqual((rc, summary), (0, ["Ran 6 tests", "OK (skipped=3)"]), err)   # three classes, one fixed name each
+        self.assertEqual(out.getvalue(), "")                                       # nothing kept, nothing printed
+        self.assertNotEqual(self.discover(root)[1:], ["OK (skipped=3)"])           # the control: one shared temp dir collides
+
+    def test_a_failing_class_keeps_its_root_and_ends_the_stderr_with_the_sum(self):
+        pkg = load_package()
+        root = self.root({"test_a.py": "import unittest\nclass A(unittest.TestCase):\n    def test_no(self): self.fail('red')\n",
+                          "test_b.py": "import unittest\nclass B(unittest.TestCase):\n    def test_ok(self): pass\n"})
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc, summary, err = pkg.run_suite(root)
+        self.assertEqual((rc, summary), (1, ["Ran 2 tests", "FAILED (failures=1)"]))
+        self.assertEqual(summary, self.discover(root))
+        self.assertEqual(err.strip().splitlines()[-1], "FAILED (failures=1)"); self.assertIn("red", err)
+        kept = [l.split(": ", 1)[1] for l in out.getvalue().splitlines() if "temp root kept" in l]
+        self.assertEqual(len(kept), 1, out.getvalue())                             # the failing child's, not the passing one's
+        self.assertTrue(Path(kept[0]).is_dir()); shutil.rmtree(kept[0])
+
+    def test_a_module_that_fails_to_import_runs_the_root_as_one_discover_child(self):
+        pkg = load_package()
+        root = self.root({"test_a.py": "import no_such_module_475\n",
+                          "test_b.py": "import unittest\nclass B(unittest.TestCase):\n    def test_ok(self): pass\n"})
+        self.assertIsNone(pkg.suite_units(root))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc, summary, err = pkg.run_suite(root)
+        self.assertEqual((rc, summary), (1, self.discover(root)))
+        self.assertIn("no_such_module_475", err)
+        for l in out.getvalue().splitlines():
+            shutil.rmtree(l.split(": ", 1)[1], ignore_errors=True)
+        self.assertIsNone(pkg.suite_units(self.root({"README": "no tests\n"})))   # nothing found: discover reports it
+
+    def test_roots_run_together_and_return_in_their_own_order(self):
+        import threading, time
+        pkg = load_package(); live, peak, lock = [0], [0], threading.Lock()
+        def fake(suite, target=None):
+            with lock:
+                live[0] += 1; peak[0] = max(peak[0], live[0])
+            time.sleep(0.2 if suite == "first" else 0.01)                       # the first root finishes last
+            with lock:
+                live[0] -= 1
+            return 0, [f"Ran 1 test {suite}", "OK"], ""
+        with unittest.mock.patch.object(pkg, "run_suite", fake):
+            got = pkg.run_suites(["first", "second", "third"])
+        self.assertEqual([s[0] for _, s, _ in got], ["Ran 1 test first", "Ran 1 test second", "Ran 1 test third"])
+        self.assertGreater(peak[0], 1)
 
 if __name__ == "__main__":
     unittest.main()

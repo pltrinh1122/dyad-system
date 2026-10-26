@@ -198,7 +198,8 @@ if __name__ == "__main__":
         else:
             _previous(kind, exc, tb)
     sys.excepthook = _invariant_error_one_line
-import os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil
+import os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil, threading
+from concurrent.futures import ThreadPoolExecutor
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
 
@@ -283,6 +284,7 @@ def version():
 # pass runs it (#203).
 INVARIANTS = [
     ("contract-names-distinct", lambda: len(set(CONTRACT)) == len(CONTRACT)),
+    ("suite-status-keys-distinct", lambda: len(set(SUITE_STATUS_KEYS)) == len(SUITE_STATUS_KEYS)),
 ]
 TREE_INVARIANTS = [
     ("projector-modules-exist-with-main", lambda: all((REPO / rel).is_file() and hasattr(dyadlib.load_module(REPO / rel, f"project_{s.replace('/', '_')}"), "main") for s, rel in PROJECTORS.items())),
@@ -329,12 +331,13 @@ def check_rule_12():
         return msgs  # already inside a test run (test_package.py calls `check`); do not recurse
     _SUITE_RAN = True
     memo = suite_memo_parts()   # read before the run, compared after it: a tree that moved mid-run is never memoized
-    for suite in test_suites():
-        # #326: through `run_suite`, the one child, so the temp-root sweep covers the push gate and the
-        # evidence run too. This loop used to spawn its own `unittest` with no sweep, which is why the
-        # docstring's claim that `run_suite` spawns it "the way `check_rule_12` spawns it" was two code
-        # paths rather than one, and why the leak survived a fix applied to only the other.
-        code, summary, err = run_suite(suite)   # no timing in `summary`: the evidence block is deterministic (#138)
+    suites = test_suites()
+    # #326: through `run_suite`, the one child, so the temp-root sweep covers the push gate and the
+    # evidence run too. This loop used to spawn its own `unittest` with no sweep, which is why the
+    # docstring's claim that `run_suite` spawns it "the way `check_rule_12` spawns it" was two code
+    # paths rather than one, and why the leak survived a fix applied to only the other. #475: every root at
+    # once, printed in this order after all of them finish.
+    for suite, (code, summary, err) in zip(suites, run_suites(suites)):   # no timing in `summary`: the evidence block is deterministic (#138)
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if code != 0:
             msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + err.strip().splitlines()[-1])
@@ -567,11 +570,29 @@ def suite_env(tmp: str | None = None) -> dict[str, str]:
         env.update({"TMPDIR": tmp, "TMP": tmp, "TEMP": tmp})
     return env
 
-def run_suite(suite, target=None):
-    """The one `unittest` child — `check_rule_12` and `cmd_tests` both come here, which is what makes
-    "the way the runner runs it" one thing rather than two (#326). Always `DYAD_NO_NESTED_TESTS`, which
-    is what makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run their own
-    suites), and always inside a temp root this function removes. Returns (rc, summary lines, stderr).
+# ---- the suite in parallel (d-work #475, C2 of #473): a root is listed once, its test classes run as separate
+# children at most SUITE_JOBS at a time across every root, each child in its own temp root, and the root's summary
+# is the sum of theirs, printed once the root is whole and in the roots' own order — so the evidence block's lines
+# are the serial run's, whatever order the children finish in. A class is the unit because `setUpClass` and the
+# class's fixtures are shared by its methods; a module-level fixture (`livetest.ScratchInstalls`) is paid once per
+# child instead of once per module, which is what the parallelism buys back several times over.
+SUITE_JOBS = os.cpu_count() or 1
+_SUITE_SLOTS = threading.BoundedSemaphore(SUITE_JOBS)   # every child of every root, listings included
+SUITE_STATUS_KEYS = ("failures", "errors", "skipped", "expected failures", "unexpected successes")   # unittest's order
+# the listing child: discover the root exactly as `unittest discover -s <root>` does, print one test id per line
+SUITE_LIST_CHILD = ("import sys, unittest\nsys.path.insert(0, sys.argv[1])\n"
+                    "def ids(s):\n    for t in s:\n        yield from ids(t) if isinstance(t, unittest.TestSuite) else [t.id()]\n"
+                    "print(*ids(unittest.defaultTestLoader.discover(sys.argv[1])), sep='\\n')")
+# one unit's child: the root on sys.path as discover puts it there, then those ids by name
+SUITE_UNIT_CHILD = ("import sys, unittest; sys.path.insert(0, sys.argv[1]); "
+                    "unittest.main(module=None, argv=['python -m unittest', '-q', *sys.argv[2:]])")
+
+def suite_child(argv):
+    """The one `unittest` child — every listing, unit, root and target comes here, which is what makes "the
+    way the runner runs it" one thing rather than two (#326). Always `DYAD_NO_NESTED_TESTS`, which is what
+    makes it cost 39 s instead of 120 s (the nested scratch installs do not re-run their own suites), always
+    inside a temp root of its own this function removes, and at most SUITE_JOBS at once (#475). Returns the
+    completed process and the root it kept, or None.
 
     The root is made here, in the parent, and swept in `finally`, because the child is killed outright
     at the `timeout` below and runs no cleanup of its own — which is how 24,876 fixture directories
@@ -580,23 +601,84 @@ def run_suite(suite, target=None):
     The fixtures still call `tempfile.mkdtemp()` without cleanup — 102 call sites over 42 files and two
     zones — so the sweep sits at the one place every sanctioned run passes through (Rule-12 property 2:
     the suite is run by the runner, not by hand); a hand-typed `unittest` is outside it and still leaks.
-    A run that fails, or never returns, keeps its root and prints the path, because that is the tree
-    worth reading; a run that passes leaves nothing. No environment variable gates this: a new `DYAD_*`
+    A run that fails, or never returns, keeps its root, because that is the tree worth reading; a run that
+    passes leaves nothing. A root of its own per child is also what lets two children run at once: a
+    fixture that writes a fixed name under the temp dir (`test_craft.py`'s bundled archive, `d.parent`)
+    writes it under its own child's root. No environment variable gates this: a new `DYAD_*`
     name would have to be declared in the syseng craft's naming table, which is a second zone and a
     craft release (Rule-1, Rule-11 property 7), and the return code already says which runs matter."""
-    argv = ["-m", "unittest", target, "-q"] if target else ["-m", "unittest", "discover", "-s", str(suite), "-q"]
     tmp, keep = tempfile.mkdtemp(prefix="dyad-suite-"), True   # a child that never returns is worth reading
     try:
-        r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
-                           env=suite_env(tmp))
+        with _SUITE_SLOTS:
+            r = subprocess.run([sys.executable, *argv], capture_output=True, text=True, timeout=600, cwd=REPO,
+                               env=suite_env(tmp))
         keep = r.returncode != 0
     finally:
-        if keep:
-            print(f"     [Rule-12] temp root kept for reading: {tmp}")
-        else:
+        if not keep:
             shutil.rmtree(tmp, ignore_errors=True)
-    summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
-    return r.returncode, summary, r.stderr
+    return r, (tmp if keep else None)
+
+def suite_units(suite):
+    """The root's test ids grouped by class, largest class first (ties in discovery order), or None when the
+    listing cannot be trusted to name every test: the listing failed, found nothing, or a module failed to import
+    (unittest names it `unittest.loader._FailedTest`) — the caller then runs the root as one discover child, so
+    the failure is reported exactly as before."""
+    r, kept = suite_child(["-c", SUITE_LIST_CHILD, str(suite)])
+    if kept:
+        shutil.rmtree(kept, ignore_errors=True)   # a listing's root holds nothing worth reading
+    ids = r.stdout.split()
+    if r.returncode or not ids or any(i.startswith("unittest.loader.") for i in ids):
+        return None
+    groups = {}
+    for i in ids:
+        groups.setdefault(i.rsplit(".", 1)[0], []).append(i)
+    return sorted(groups.values(), key=len, reverse=True)
+
+def suite_summary(stderrs, failed):
+    """The children's summaries summed into one, in unittest's own words and order: `Ran N tests`, then
+    `OK` or `FAILED` with `(failures=…, errors=…, skipped=…, …)` — what one discover child over the root prints."""
+    ran, counts = 0, dict.fromkeys(SUITE_STATUS_KEYS, 0)
+    for err in stderrs:
+        for line in err.splitlines():
+            if m := re.match(r"Ran (\d+) tests? in ", line):
+                ran += int(m.group(1))
+            elif m := re.fullmatch(r"(?:OK|FAILED) \((.*)\)", line):
+                for k, v in (kv.split("=") for kv in m.group(1).split(", ")):
+                    counts[k] = counts.get(k, 0) + int(v)
+    info = ", ".join(f"{k}={counts[k]}" for k in SUITE_STATUS_KEYS if counts[k])
+    return [f"Ran {ran} test{'' if ran == 1 else 's'}", ("FAILED" if failed else "OK") + (f" ({info})" if info else "")]
+
+def run_suite(suite, target=None):
+    """One root, or one target, through `suite_child`; returns (rc, summary lines, stderr). A target is one
+    child. A root is listed and its classes run concurrently (`suite_units`); the summary is summed
+    (`suite_summary`) and the stderr is every failing child's followed by that summary, so its last line says
+    what the root's discover child would have said. A root the listing cannot split runs as one discover child.
+    A failing child's root is kept and printed, in unit order once the root is whole (#326, #475)."""
+    units = None if target else suite_units(suite)
+    if units is None:
+        argv = ["-m", "unittest", target, "-q"] if target else ["-m", "unittest", "discover", "-s", str(suite), "-q"]
+        r, kept = suite_child(argv)
+        if kept:
+            print(f"     [Rule-12] temp root kept for reading: {kept}")
+        summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
+        return r.returncode, summary, r.stderr
+    with ThreadPoolExecutor(min(SUITE_JOBS, len(units))) as pool:
+        done = list(pool.map(lambda ids: suite_child(["-c", SUITE_UNIT_CHILD, str(suite), *ids]), units))
+    failed = [(r, kept) for r, kept in done if r.returncode]
+    for _, kept in failed:
+        if kept:
+            print(f"     [Rule-12] temp root kept for reading: {kept}")
+    summary = suite_summary([r.stderr for r, _ in done], bool(failed))
+    return (1 if failed else 0), summary, "".join(r.stderr for r, _ in failed) + summary[-1]
+
+def run_suites(suites):
+    """Every root at once through `run_suite` (their children share SUITE_JOBS slots), results in the roots'
+    order, so the caller prints them as the serial loop did (#475)."""
+    suites = list(suites)
+    if len(suites) <= 1:
+        return [run_suite(s) for s in suites]
+    with ThreadPoolExecutor(len(suites)) as pool:
+        return list(pool.map(run_suite, suites))
 
 def cmd_tests(target=None, roots=None):
     """Rule-13 property 1: the suites, run the way the runner runs them, as one verb. Without a
@@ -617,8 +699,8 @@ def cmd_tests(target=None, roots=None):
         if code:
             print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
         return rc
-    for suite in ([Path(target)] if target else test_suites() if roots is None else list(roots)):
-        code, summary, err = run_suite(suite)
+    suites = [Path(target)] if target else test_suites() if roots is None else list(roots)
+    for suite, (code, summary, err) in zip(suites, run_suites(suites)):
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
             print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
