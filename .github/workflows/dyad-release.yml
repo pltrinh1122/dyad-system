@@ -55,6 +55,7 @@ jobs:
           BEFORE: "${{ github.event.before }}"
           GATE: "${{ vars.RELEASE_APPROVAL || 'ledger' }}"
         run: |
+          gh --version | head -1   # the release adapter as observed (Rule-14: The World is observed, never pinned)
           git config user.name "github-actions[bot]"   # the annotated tag's tagger
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python3 .github/released.py
