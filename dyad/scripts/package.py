@@ -81,7 +81,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
-                                call once that head is on `main` (Rule-3 Completion, #202) / append a disposition to the row and its words to
+                                call once that head is on `main` (Rule-3 Completion, #202). Under `dwork-trace:
+                                always` a `Y done` is refused until <instance>/d-work/traces/<id>.md exists
+                                (`dwork trace <id> --out`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191).
                                 --relayed-via notes the entries as relayed from <seat> (`relayed via
                                 <seat>`, appended to a disposition's note), with --prompt or --said (#422)
@@ -118,7 +120,8 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 in order and a refused line stops the batch with nothing committed; one `ledger:
                                 batch …` commit citing no `d-work #`, one push, a moved main rebuilt (3 tries). A
                                 later line cannot name an id a `new` line of the same batch creates: it is allocated
-                                in the worktree and re-allocated on a rebuild
+                                in the worktree and re-allocated on a rebuild. Under `dwork-trace: always` a `Y done`
+                                line needs its trace: a `land <instance>/d-work/traces/<id>.md` line before it (#465)
   dyad dwork retire <id>... -d text --said[-file] <s>
                                 the retirement form (Rule-3 `archived`, d-work #290): backlog or done
                                 → archived over k rows in one call, one Operator question behind it.
@@ -1135,6 +1138,25 @@ def landing_refusal(rg, done_entries):
                         f"or ask the Done again on the head that did land — the later entry governs")
     return None
 
+def trace_refusal(rg, rid, d):
+    """The fence's `rows.trace_problems` said before the first write (#465): under `dwork-trace: always` a `Y done`
+    entry — a mandate close excepted, whose note holds `mandate #` — is recorded only with
+    `<instance>/d-work/traces/<id>.md` already in this work tree, so the commit that records it can carry it
+    (Rule-3 Completion). Returns the refusal text, or None."""
+    import dyadlib
+    if d is None or not rg.DONE_Y.match(f"2000-01-01 {d}") or "mandate #" in d:
+        return None
+    if dyadlib.preference(rg.TRACE_KEY, REPO) != rg.TRACE_ALWAYS:
+        return None
+    tp = dyadlib.instance(REPO) / "d-work" / "traces" / f"{rid}.md"
+    if tp.is_file():
+        return None
+    rel = tp.relative_to(REPO).as_posix() if tp.is_relative_to(REPO) else str(tp)
+    return (f"refused: a `Y done` entry is recorded with its trace under `dwork-trace: always` (Rule-3 Completion: "
+            f"the Done record commit carries it, #465), and {rel} does not exist; write it first: "
+            f"dyad dwork trace {rid} --out, and re-run; under --land the trace rides the same commit: "
+            f"`dyad dwork batch <file> --land` with a `land {rel}` line before this line")
+
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
@@ -1231,6 +1253,9 @@ def cmd_dwork(a):
         if mandate is not None:
             disposed = f"{today} Y plan (mandate #{mid})"
             refs = refs or f"parent #{mid}"   # the mandate is the row's parent; `row.refs->row` resolves it (Rule-20)
+        refusal = trace_refusal(dyadlib.load_guard("agent", "rows"), rid, d) if mandate is None else None
+        if refusal:   # #465: a row born with a `Y done` carries its trace as any other record does
+            sys.exit(refusal)
         r = dyadlib.Row(rid, title, today, state, disposed, refs, mode)
         try:   # the transition check (dyadlib.require_transition, #203) runs before either write
             dyadlib.write_row(REPO, r, None, first=lambda: append_provenance(rid, entries, today, fresh=True))
@@ -1278,6 +1303,9 @@ def cmd_dwork(a):
                 sys.exit("refused: the state follows the merge (Rule-3 Completion, #202). Record this entry "
                          f"with the state unchanged (`dwork state {rid} {r.state} -d …`), merge, then "
                          f"`dwork state {rid} done`")
+        refusal = trace_refusal(rg, rid, d)   # #465: a `--mandate` close writes `Y done (mandate #…)`, exempt
+        if refusal:
+            sys.exit(refusal)
         if state == "done" and r.state != "done":
             done_entries = [e for e in rg.entries(disposed) + ([f"{today} {d}"] if d else []) if rg.DONE_Y.search(e)]
             if not done_entries:

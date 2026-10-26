@@ -46,7 +46,11 @@ one worktree pass: each line already on `origin/main` is skipped by name (`skipp
 per-line test above), a batch with no line left is refused, the rest run in order through the worktree's runner,
 and a line it refuses stops the batch with nothing committed. One commit, `ledger: batch …`, one push; a moved
 `main` rebuilds the whole batch from its lines. A later line cannot name an id a `new` line of the same batch
-creates: that id is allocated in the worktree and is re-allocated on a rebuild.
+creates: that id is allocated in the worktree and is re-allocated on a rebuild. Lines run in order, a `land` line's
+files copied into the worktree before the next line runs, so a `Y done` line under `dwork-trace: always` lands when an
+earlier `land <instance>/d-work/traces/<id>.md` line carries its trace — the runner refuses it otherwise, and the single
+`state … --land` form, which lands only what the verb writes, refuses it unless the trace is already on `origin/main`
+(#465).
 """
 import sys
 if sys.version_info < (3, 12):
@@ -395,7 +399,8 @@ def land_rels(repo: Path, inst: str, names: list[str], label: str = "dwork land"
 BATCH_USAGE = ("usage: dwork batch <file>|- --land [--mirror <branch>] — one `dwork` argv per line, shell-quoted: "
                "`new …`, `state …` or `land <path>…`; blank and `#` lines are skipped; -m, --land and --mirror are the "
                "batch's, never a line's. A later line cannot name an id a `new` line of the same batch creates: that id "
-               "is allocated in the worktree and re-allocated on a rebuild")
+               "is allocated in the worktree and re-allocated on a rebuild. Under `dwork-trace: always` a `Y done` line's "
+               "trace rides the batch: a `land <instance>/d-work/traces/<id>.md` line before it (#465)")
 SUBJECT_MAX = 200   # the generated subject is one line, cut to this many characters
 
 

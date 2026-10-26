@@ -456,6 +456,76 @@ class LedgerBranchFenceTests(unittest.TestCase):
         (root / "agent-corpus" / "d-work" / "rows" / "01.md").write_text(row(1, "one"))
         self.assertIn("differs from the file name", " ".join(m.check_package(root)))
 
+PREFS = "# Operator preferences\n\n| key | value | allowed | read by |\n|-----|-------|---------|---------|\n| dwork-trace | {v} | `always` \\| `on-demand` | Rule-3 |\n"
+
+class TraceFenceTests(unittest.TestCase):
+    """#465: under `dwork-trace: always`, read at the commit's own tree, a commit that adds a `Y done` entry to row N —
+    a mandate close excepted — holds `<instance>/d-work/traces/N.md` in that tree: carried by it, or on the base."""
+    R, T = "agent-corpus/d-work/rows/1.md", "agent-corpus/d-work/traces/1.md"
+    def setUp(self, pref="always"):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write("preferences-corpus/PREFERENCES.md", PREFS.format(v=pref))
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan"))
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "planned", "2026-01-01 Y plan"))
+        self.base = self.r.commit("root")
+    def fails(self, h, base=None): return m.check_range(base or self.base, h, cwd=self.r.d)
+    def done(self, rid=1, entry="2026-01-02 Y done", state="done"):
+        self.r.write(f"agent-corpus/d-work/rows/{rid}.md", row(rid, {1: "one", 2: "two"}[rid], state, f"2026-01-01 Y plan; {entry}"))
+    def test_a_done_record_without_its_trace_fails(self):
+        self.done(); out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out)
+        self.assertIn(f"without its trace {self.T}", out[0]); self.assertIn("dyad dwork trace 1 --out", out[0])
+        self.assertIn(f"`land {self.T}`", out[0]); self.assertIn("[main-fence]", out[0])
+    def test_the_trace_in_the_same_commit_passes(self):
+        self.done(); self.r.write(self.T, "# Trace #1\n")
+        self.assertEqual(self.fails(self.r.commit()), [])
+    def test_the_trace_already_on_the_base_passes(self):
+        self.r.write(self.T, "# Trace #1\n"); base = self.r.commit("trace first")
+        self.done(); self.assertEqual(self.fails(self.r.commit(), base), [])
+    def test_a_record_with_the_state_left_as_it_is_is_judged_too(self):
+        self.done(entry="2026-01-02 Y done (merges PR #9 at abc1234)", state="planned")
+        out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out); self.assertIn("without its trace", out[0])
+    def test_the_close_commit_adds_no_entry_and_is_not_judged(self):
+        self.r.write(self.T, "# Trace #1\n"); self.done(state="planned"); base = self.r.commit("record")
+        self.r.remove(self.T); self.r.commit("trace removed, a state guard's concern")   # the close below adds no entry
+        self.done(); h = self.r.commit("close")
+        self.assertEqual(m.check_commit(h, self.r.d, "agent-corpus", base), [])
+    def test_a_mandate_close_passes_without_a_trace(self):
+        self.done(entry="2026-10-26 Y done (mandate #3, 2026-10-26)")
+        self.assertEqual(self.fails(self.r.commit()), [])
+    def test_a_batch_done_needs_every_rows_trace(self):
+        e = "2026-01-02 Y done (batch #1,#2, merges PR #9 at abc1234)"
+        self.done(1, e, "planned"); self.done(2, e, "planned"); self.r.write(self.T, "# Trace #1\n")
+        out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out); self.assertIn("agent-corpus/d-work/traces/2.md", out[0])
+        self.r.write("agent-corpus/d-work/traces/2.md", "# Trace #2\n"); sh("git", "commit", "-q", "--amend", "--no-edit", cwd=self.r.d)
+        self.assertEqual(self.fails(sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()), [])
+    def test_a_new_row_born_with_a_done_entry_is_judged(self):
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three", "open", "2026-01-02 Y done"))
+        out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out); self.assertIn("agent-corpus/d-work/traces/3.md", out[0])
+    def test_on_demand_disables_the_clause(self):
+        self.setUp("on-demand")
+        self.done(); self.assertEqual(self.fails(self.r.commit()), [])
+    def test_no_preference_file_disables_the_clause(self):
+        self.r.remove("preferences-corpus/PREFERENCES.md"); base = self.r.commit("no prefs")
+        self.done(); self.assertEqual(self.fails(self.r.commit(), base), [])
+    def test_a_done_record_resolved_into_a_merge_without_its_trace_fails(self):
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three")); self.r.commit("branch row")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/4.md", row(4, "four")); main_h = self.r.commit("main row")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "main", cwd=self.r.d)
+        self.done()                                                                  # the record, hidden in the merge
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_transaction(self.r.d, main_h, h)
+        self.assertTrue(any(o.startswith("FAIL [main-fence]: merge ") and "without its trace" in o for o in out), out)
+        self.r.write(self.T, "# Trace #1\n"); sh("git", "commit", "-q", "--amend", "--no-edit", cwd=self.r.d)
+        h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.assertFalse([o for o in m.check_transaction(self.r.d, main_h, h) if "trace" in o])
+
 class EventsOnlyFenceTests(unittest.TestCase):
     """#438: the main fence admits an events-only direct commit (`<host>/runbooks/events/` only) as it admits a
     ledger-only one — it carries no row for the fence to judge, and the store's append-only rule stays the
