@@ -172,3 +172,18 @@ them in its condition. **1–3** the plan gate over the same range is Rule-3's, 
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #194.
+
+## Amendment — d-work #477 (2026-10-26, C4 of #473: the guard wrapper is a step of `dyad-package.yml`)
+**Claim (plan #473, the Operator's `Y` of 2026-10-26, and the Y recorded on #477 at 3393b19):** the CI wrapper this
+Rule names, `.github/workflows/dyad-containment.yml`, becomes a named step of `.github/workflows/dyad-package.yml` (job `package`),
+same guard, same trigger (push to `main`, ledger-only paths ignored, and dispatch), still detecting; the Rule's
+sentence names the new file and step, meaning unchanged.
+
+| # | attack | result |
+|---|---|---|
+| 1 | One job couples the guards: a failure in one step hides the others. | Survives, scoped: CI here only corroborates after the merge (Rule-14 property 3); the blocking checks run before the push on the kernel-only path, every guard in one run. |
+| 2 | Re-pointing before the old file is removed leaves two names for one check. | Refuted: this PR lands first and resolves on today's `main`, where both files exist; the removal PR follows, so no state names a missing file. |
+
+**Pairwise (Rule-5).** **1–14**: unchanged — CI stays a library adapter that corroborates after the merge and never gates (Rule-14 property 3, #168); the pre-push hook is still Rule-1's only blocking enforcement. **1–20**: the references guard's `rule.text->path` resolves the new path on today's `main`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #477.

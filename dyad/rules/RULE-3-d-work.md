@@ -206,7 +206,8 @@ so only the closing commit is fenced, and only against the head its own entry na
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
 live in `dyad/guards/agent/` (agent zone, Rule-1; placed per Rule-11 property 1) and run on the kernel-only path
 as transaction guards (`package.py check --guards`); their workflow wrapper
-(`.github/workflows/dyad-d-work.yml`) is infra zone. Changing a guard is an agent-zone PR, changing
+(`.github/workflows/dyad-package.yml`, step `rule-3 d-work — direct commits to main touch only the d-work ledger (Rule-2 exception
+fence)`) is infra zone. Changing a guard is an agent-zone PR, changing
 the wrapper an infra-zone PR, each citing a Rule-3 d-work. The plan gate is enforced before a push
 by the kernel-only path (the PR guard over `origin/main..HEAD` with the commit messages as body);
 the wrapper corroborates on `main` only (#168). A state guard beside them checks the trace store on every
@@ -439,6 +440,8 @@ events needed an `open` row with a `Y plan`, a PR and the full suite, the row be
 `done` and refused by the plan gate, and the events held uncommitted blocked the seat's own ledger
 pushes; a standing row would be a d-work that never completes and authorizes no mutation, so
 monitoring is stated to be no d-work and its events clerical, as the ledger's are; see the same
-record, amendment #438.
+record, amendment #438. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-d-work.yml` 2026-10-26 (d-work #477, C4
+of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
+record, amendment #477.
 
 Set: System Requirements.

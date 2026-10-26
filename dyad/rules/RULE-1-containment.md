@@ -20,7 +20,8 @@
   refs being pushed — Rule-14 property 3, #194; each commit of the range, never the range itself — a
   push range is not a transaction, #166).
 - A PR is about to be opened or updated (`dyad check --pr <base> <head>`, run by the Agent), and
-  `main` is pushed (`.github/workflows/dyad-containment.yml`, detecting, after the merge).
+  `main` is pushed (`.github/workflows/dyad-package.yml`, step `rule-1 containment — each new commit stays in one zone (push range)`,
+  detecting, after the merge).
 - A path is added that no zone claims (forbidden).
 
 The repo has five zones — `agent`, `workstation`, `preferences`, `infra`, `craft` (`crafts/*`: every
@@ -45,7 +46,8 @@ no runner judges a PR's whole diff *before* it merges: one zone per PR is the Ag
 that command, reported in the completion evidence, not a gate.
 
 Enforcement: `dyad/hooks/pre-commit` (local, blocking; `git config core.hooksPath dyad/hooks`),
-`dyad/hooks/pre-push` (local, blocking, commits mode) and `.github/workflows/dyad-containment.yml`
+`dyad/hooks/pre-push` (local, blocking, commits mode) and `.github/workflows/dyad-package.yml` (its steps `rule-1 containment — each new commit stays in one zone (push range)`
+and `rule-1 containment — every tracked file is classified`)
 (CI, detecting, range mode). All call `dyad/guards/infra/containment.py`. Before any commit in this repo,
 run `git config core.hooksPath dyad/hooks` if not already set. Until d-work #24 (internal
 LAN git server with required status checks) lands, these hooks are the only *blocking*
@@ -61,6 +63,8 @@ Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-1-contain
 Lived in the root `CLAUDE.md` until 2026-09-13 (A2, Rule-11 property 2: host files hold only an import line).
 The host row is read from the preferences 2026-09-25 (d-work #175); see the same record, amendment #175.
 The push condition names `--pre-push` and the refs being pushed 2026-09-29 (d-work #194); see the same
-record, amendment #194.
+record, amendment #194. Conditions and Enforcement names `.github/workflows/dyad-package.yml` and its step in place of `dyad-containment.yml` 2026-10-26 (d-work #477, C4
+of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
+record, amendment #477.
 
 Set: System Requirements.

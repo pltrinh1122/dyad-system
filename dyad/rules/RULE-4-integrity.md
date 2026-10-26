@@ -33,10 +33,12 @@ inference at falsification time; counts (5a, 5c, 5d, 5e) are checked mechanicall
 
 ## Mechanisms
 Rule-4 owns `dyad/guards/agent/rules.py` (agent zone; placed per Rule-11 property 1) and its workflow wrapper
-`.github/workflows/dyad-rule-integrity.yml` (infra zone; Rule-1). The script reads every `dyad/rules/RULE-*.md` and fails on any count miss (A2: Rule-1
+`.github/workflows/dyad-package.yml`, step `rule-4 integrity — every Rule carries a conforming integrity block` (infra zone; Rule-1). The script reads every `dyad/rules/RULE-*.md` and fails on any count miss (A2: Rule-1
 is a file like the others).
 
 ## Provenance
-Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-4-integrity.md`.
+Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-4-integrity.md`. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-rule-integrity.yml` 2026-10-26 (d-work #477, C4
+of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
+record, amendment #477.
 
 Set: System Requirements.
