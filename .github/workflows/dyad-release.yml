@@ -1,51 +1,46 @@
-name: rule-11 release
+name: released
+# The release service (d-work #461; run-book `workstation-corpus/runbooks/released.md`, Rule-19): the single release
+# path. A request file on main names a tag the Operator ratified (`Y release <tag>` on the row it names, Rule-11
+# Ratification events, Rule-2); this workflow is clerical execution of that Y, never a disposer. It checks the
+# ratification and tag == VERSION at the cut sha, builds by the one code path (Rule-11 property 5), verifies the
+# archive sha256 against the request, then creates the tag and the GitHub Release. Idempotent: an existing tag at the
+# cut sha is reused, an existing Release is skipped, a tag that exists elsewhere is refused (tags never move). No tag-push
+# trigger, so nothing double-fires (plan #461 attack 6). Each released request's event is attached to its Release
+# (`<tag>.event.json`) and every request's is printed to the run log and summary; the run-book's health reconciles
+# requests to tags and Releases.
 on:
   push:
-    tags: ["v*", "*-v*"]
+    branches: [main]
+    paths: ["workstation-corpus/runbooks/releases/**"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "an existing release tag to publish (vX.Y.Z bundle, dyad-operator-vX.Y.Z core, or <craft>-vX.Y.Z) with the workflow on main"
-        required: true
+        description: "process only this request (its file is releases/<tag>.md); empty processes every request"
+        required: false
         type: string
 permissions:
   contents: write
+concurrency: { group: released, cancel-in-progress: false }
 jobs:
-  release:
+  released:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    # Optional second gate (plan #461 attack 4): with the repository variable RELEASE_APPROVAL set to `tap` the job
+    # runs in the `release` environment, whose required reviewer (the Operator) approves each run with one tap.
+    # Unset or `ledger`: the recorded `Y release <tag>` alone gates, at merge trust. The preference is the cos's to propose.
+    environment: ${{ vars.RELEASE_APPROVAL == 'tap' && 'release' || '' }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.tag || github.ref }}", fetch-depth: 0 }   # plans cite base commits; guards read history
+        with: { ref: main, fetch-depth: 0, fetch-tags: true }   # the cut sha and existing tags are read from history
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: tag equals its VERSION (Rule-11 properties 4, 7)
-        # bundle: vX.Y.Z = v + BUNDLE.md's version; core: dyad-operator-vX.Y.Z = dyad-operator-v + dyad/VERSION;
-        # Tended craft: <craft>-vX.Y.Z = <craft>-v + crafts/<craft>/VERSION
-        env: { TAG: "${{ inputs.tag || github.ref_name }}" }
+      - name: process release requests
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          ONLY: "${{ inputs.tag }}"
+          REQUESTS: workstation-corpus/runbooks/releases
+          GATE: "${{ vars.RELEASE_APPROVAL || 'ledger' }}"
         run: |
-          craft="${TAG%-v*}"; [ "${craft}" = "${TAG}" ] && craft=""
-          if [ "${craft}" = "dyad-operator" ]; then
-            kind=core; want="dyad-operator-v$(cat dyad/VERSION)"
-          elif [ -z "${craft}" ]; then
-            kind=bundle; craft=""; want="v$(grep '^version:' BUNDLE.md | cut -d: -f2 | tr -d ' ')"
-          else
-            kind=craft; want="${craft}-v$(cat "crafts/${craft}/VERSION")"
-          fi
-          [ "${TAG}" = "${want}" ] || { echo "tag ${TAG} != ${want}"; exit 1; }
-          echo "kind=${kind}" >> "$GITHUB_ENV"; echo "craft=${craft}" >> "$GITHUB_ENV"; echo "TAG=${TAG}" >> "$GITHUB_ENV"
-      - name: check and build (one distribution code path, Rule-11 property 5)
-        run: |
-          python3 dyad/scripts/package.py check
-          if [ "${kind}" = "bundle" ]; then python3 dyad/scripts/package.py bundle build
-          elif [ "${kind}" = "core" ]; then python3 dyad/scripts/package.py build
-          else python3 dyad/scripts/craft.py export "${craft}"; fi
-      - name: GitHub Release with the archive(s) (library adapter, Rule-14)
-        run: |
-          target="$(git rev-parse HEAD)"
-          if [ -f BUNDLE.sha256 ]; then
-            gh release create "${TAG}" *.tar.gz BUNDLE.sha256 --target "${target}" --title "${TAG}" --notes "dyad ${kind} ${TAG}"
-          else
-            gh release create "${TAG}" *.tar.gz --target "${target}" --title "${TAG}" --notes "dyad ${kind} ${TAG}"
-          fi
-        env: { GH_TOKEN: "${{ github.token }}" }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 .github/released.py
