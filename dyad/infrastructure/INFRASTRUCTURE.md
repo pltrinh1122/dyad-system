@@ -17,6 +17,6 @@ instance contribution `<host>/INFRASTRUCTURE.md` (same seven cells); every insta
 | GitHub (hosting) | library | — | remote of `main`, PRs; mirror for remote sessions once the LAN server is deployed (#24, Q2) | GitHub terms | Gitea on the LAN (`crafts/lan-git/server/`, the lan-git craft, #181; `crafts/sysadmin/server/` before it, #155), #24 | authoring |
 | GitHub Actions + `actions/checkout@v4` | library | — | runs the guards on push and PR; absent since 2026-09-14 (billing); replacement pending #24 | GitHub terms / MIT | LAN runner or kernel-only path, gap I2 | authoring |
 | `actions/setup-python@v5` | library | v5 | installs the pinned Python in CI (`dyad-package.yml`, `dyad-release.yml`) | MIT | kernel Python on a LAN runner, #24 | authoring |
-| gh | library | 2.45.0 observed | PR create, merge, checks (Agent workflow) | MIT | GitHub REST via Python, or LAN server API | authoring |
+| gh | library | 2.45.0 observed | PR create, merge, checks (Agent workflow); release publishing (`dyad release`, the `released` workflow, #470) | MIT | GitHub REST via Python, or LAN server API | both |
 | jq | library | 1.7 observed | JSON in Agent workflow | MIT | Python `json` (kernel) | both |
 | Linux (OS) | The World | 7.0.0-31 observed | provides the kernel | — | observed, never pinned | both |

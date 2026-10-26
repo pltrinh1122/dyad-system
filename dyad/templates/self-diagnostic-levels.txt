@@ -55,6 +55,7 @@ integration dyad/tests/test_livetest.py                    # the runner (install
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
 integration dyad/tests/test_playbooks.py                   # git, bash
 integration dyad/tests/test_project_countersign.py         # scratch repos, git log and tags
+integration dyad/tests/test_release.py                     # scratch repos, a bare origin, a gh shim, an install (#470)
 integration dyad/tests/test_runbook.py                     # scratch repos, the run-book runner, bash
 integration dyad/tests/test_trace.py                       # scratch repos
 
