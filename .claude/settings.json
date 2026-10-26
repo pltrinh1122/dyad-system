@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/dyad/bin/dyad bootstrap || echo \"warn [bootstrap] hook: exit $? (session continues)\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
