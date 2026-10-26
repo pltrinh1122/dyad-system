@@ -1,4 +1,4 @@
-"""released: the release service run by .github/workflows/dyad-release.yml (d-work #461, plan revision 3).
+"""released: the release service run by .github/workflows/dyad-release.yml (d-work #461, plan revisions 3 and 4).
 
 The trigger is the ledger entry that records the Operator's release Y (Rule-11 Ratification events), written on the
 release's row by the cos, ledger-only: `<date> Y release <tag> at <cut sha> (archive <sha256>)`. On every push to main
@@ -9,16 +9,15 @@ the cut sha with its Release is `already` and nothing runs; a tag at the cut sha
 tag elsewhere is refused (tags never move). An entry `Y release <tag>` without `at` predates the service and is not
 read. Clerical execution of the recorded Y, never a disposer (Rule-2).
 
-Its record is one event per changed outcome in `<runbooks>/events/released.jsonl` (EVENT_FIELDS, name `publish`, the
-command of operate's run-book `released.md`), committed to main by the workflow as an events-only commit; an outcome
-equal to the tag's last event's (same digest and exit) appends nothing (#438) and does not fail the run, so a refused
-entry is reported once, not on every push. Stdlib only; invoked by the workflow, never by the package.
+It writes nothing to the repo (plan #461 revision 4): its record is the annotated tag, the Release (with
+`<tag>.release.json`) and the run's log and summary. On a push it reads only the entries the push added (`BEFORE`, the
+push's `before` sha), so an entry refused once is not re-run, and re-red, on every later push; a dispatch with `tag`
+retries one. Stdlib only; invoked by the workflow, never by the package.
 """
-import datetime, hashlib, json, os, pathlib, re, subprocess, sys, tempfile, time
+import hashlib, json, os, pathlib, re, subprocess, sys, tempfile
 
 ROWS = pathlib.Path("agent-corpus/d-work/rows")
-RUNBOOKS = pathlib.Path(os.environ.get("DYAD_RUNBOOKS", "workstation-corpus/runbooks"))
-EVENTS = RUNBOOKS / "events" / "released.jsonl"
+BEFORE = os.environ.get("BEFORE", "").strip()   # the push's `before` sha; empty or all-zero on a dispatch
 ONLY, REPO, GATE = os.environ.get("ONLY", "").strip(), os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GATE", "ledger")
 SCAN = "--scan" in sys.argv   # read-only: print `pending=true|false` for the gated job; nothing is built, tagged or written
 TAG_RE = re.compile(r"(?:(?P<craft>[a-z0-9][a-z0-9-]*)-)?v(?P<ver>\d+\.\d+\.\d+)")
@@ -33,6 +32,15 @@ def run(*a, cwd=None, check=True):
         raise RuntimeError(f"{' '.join(a[:3])} exit {r.returncode}: {(r.stderr or r.stdout).strip()[-300:]}")
     return r
 
+def entries_at(rev):
+    """The release-entry strings on the rows at `rev` (git show), for the push filter."""
+    seen = set()
+    names = run("git", "ls-tree", "--name-only", f"{rev}:{ROWS}", check=False).stdout.split()
+    for n in names:
+        m = re.search(r"^disposed:[ \t]*(.*)$", run("git", "show", f"{rev}:{ROWS}/{n}", check=False).stdout, re.M)
+        seen.update((n[:-3], e.strip()) for e in (m.group(1).split(";") if m else []))
+    return seen
+
 def entries():
     """(row, tag, sha, sha256) for every release entry on the rows main holds; a `Y release <tag> at …` entry of
     another shape comes back with empty fields, so it is refused rather than skipped."""
@@ -43,6 +51,8 @@ def entries():
             e, w = e.strip(), e.split()
             if w[1:3] != ["Y", "release"] or " at " not in e:
                 continue
+            if OLD is not None and (p.stem, e) in OLD:
+                continue                           # on main before this push: processed by an earlier run
             g = ENTRY_RE.fullmatch(e)
             out.append((p.stem, g["tag"] if g else (w[3] if len(w) > 3 else ""), g["sha"] if g else "", g["sha256"] if g else ""))
     return out
@@ -116,42 +126,15 @@ def publish(row, tag, sha, want_sha256):
         "--notes", f"dyad {kind} {tag}: row #{row}, cut {full[:7]}, sha256 {observed} (released, d-work #461)")
     return "released", "ok", f"{tag} at {full[:7]}: {'tag created' if not at else 'tag existed'}, Release created, sha256 {observed}"
 
-def last_event(tag):
-    last = None
-    for line in (EVENTS.read_text().splitlines() if EVENTS.is_file() else []):
-        try:
-            e = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if e.get("scope") == f"tag {tag}":
-            last = e
-    return last
-
-def event(row, tag, outcome, post, detail, code, ms):
-    """One EVENT_FIELDS record (dyad/scripts/runbook.py), as the sysadmin events guard reads it."""
-    now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    out = json.dumps({"row": row, "tag": tag, "outcome": outcome, "detail": detail}, sort_keys=True)
-    rb = RUNBOOKS / "released.md"
-    return {"id": f"released-{now.strftime('%Y%m%dT%H%M%SZ')}-publish", "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "role": "agent", "instance": "released", "name": "publish",
-            "cmd": f"python3 .github/released.py  # {tag}, row #{row}, {run_url()}", "class": "destructive",
-            "scope": f"tag {tag}", "exit": code, "duration_ms": ms, "postcondition": post,
-            "output_sha256": hashlib.sha256(out.encode()).hexdigest(), "output_tail": out[-400:],
-            "commit": os.environ.get("GITHUB_SHA", "")[:8],
-            "runbook_sha256": hashlib.sha256(rb.read_bytes()).hexdigest() if rb.is_file() else ""}
-
 def pending():
-    """Entries the publishing job has work for: not already tagged at their cut sha with a Release, and not refused
-    already (a refused entry is retried by dispatching with its tag, which `ONLY` names)."""
+    """Entries the publishing job has work for: added by this push (or named by a dispatch) and not already tagged at
+    their cut sha with a Release."""
     out = []
     for row, tag, sha, _ in entries():
         if ONLY and tag != ONLY:
             continue
         full = run("git", "rev-parse", "-q", "--verify", f"{sha}^{{commit}}", check=False).stdout.strip() if sha else ""
         if full and tag_commit(tag) == full and release_exists(tag):
-            continue
-        last = last_event(tag)
-        if last and last.get("exit") and not ONLY:
             continue
         out.append(tag)
     return out
@@ -164,36 +147,28 @@ def main():
             with open(os.environ["GITHUB_OUTPUT"], "a") as f:
                 f.write(f"pending={'true' if p else 'false'}\n")
         return 0
-    new, seen, bad = [], [], 0
+    seen, bad = [], 0
     for row, tag, sha, want_sha256 in entries():
         if ONLY and tag != ONLY:
             continue
-        t0 = time.monotonic()
         try:
-            (outcome, post, detail), code = publish(row, tag, sha, want_sha256), 0
+            outcome, _, detail = publish(row, tag, sha, want_sha256)
         except Refused as e:
-            outcome, post, detail, code = "refused", "failed", str(e), 1
+            outcome, detail = "refused", str(e); bad += 1
         except Exception as e:
-            outcome, post, detail, code = "failed", "failed", str(e)[-300:], 1
-        ev = event(row, tag, outcome, post, detail, code, int((time.monotonic() - t0) * 1000))
-        last = last_event(tag)
-        changed = outcome != "already" and not (last and last.get("output_sha256") == ev["output_sha256"] and last.get("exit") == code)
-        if changed:
-            new.append(ev); bad += code
-        seen.append((tag, row, outcome, detail, "event" if changed else "no event (unchanged)"))
-        print(json.dumps({"tag": tag, "row": row, "outcome": outcome, "detail": detail, "event": changed}, sort_keys=True))
+            outcome, detail = "failed", str(e)[-300:]; bad += 1
+        seen.append((tag, row, outcome, detail))
+        print(json.dumps({"tag": tag, "row": row, "outcome": outcome, "detail": detail}, sort_keys=True))
     if ONLY and not seen:
         print(f"no release entry names {ONLY}"); bad += 1
-    if new:
-        EVENTS.parent.mkdir(parents=True, exist_ok=True)
-        with open(EVENTS, "a") as f:
-            f.writelines(json.dumps(e, sort_keys=True) + "\n" for e in new)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as s:
-            s.write("| tag | row | outcome | detail | record |\n|---|---|---|---|---|\n")
-            s.writelines(f"| {t} | {r} | {o} | {d} | {x} |\n" for t, r, o, d, x in seen)
-    print(f"{len(seen)} release entries, {len(new)} new events" + (f" -> {EVENTS}" if new else ""))
+            s.write("| tag | row | outcome | detail |\n|---|---|---|---|\n")
+            s.writelines(f"| {t} | {r} | {o} | {d} |\n" for t, r, o, d in seen)
+    print(f"{len(seen)} release entries")
     return 1 if bad else 0
+
+OLD = entries_at(BEFORE) if BEFORE and set(BEFORE) != {"0"} and not ONLY else None
 
 if __name__ == "__main__":
     sys.exit(main())
