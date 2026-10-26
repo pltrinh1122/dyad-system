@@ -44,8 +44,13 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    The kernel-only path is the merge evidence for every merge: `package.py check --evidence`,
    run by the main Agent on the exact head being merged, prints the evidence block (head sha,
    tree hash, working-tree cleanliness, every check and guard result, and a sha256 of those
-   lines) that the completion reply pastes verbatim and the Operator may re-run on the same
-   head to compare (Rule-2, Binding). Hosted CI corroborates and never replaces the block, and
+   lines). The completion reply cites it by that sha256 and by its brief form, as
+   `check --evidence --brief` prints it: head, tree and dirty flag; each guard's counts, the warnings a guard
+   already raises on `main` folded into its count; every failing line; and every warning of a kind new since
+   `main`. The full block, from which the sha256 is computed, is
+   stored per checkout and never tracked (`<git common dir>/dyad-evidence/<evidence-sha256>.txt`)
+   and shown byte for byte on request (`check --evidence --show <sha256>`), and the Operator may
+   re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). Hosted CI corroborates and never replaces the block, and
    it is never a gate: it runs on `main` after a merge and on manual dispatch, never on a branch
    push or a PR event, and never on a ledger-only commit; the pre-push hook is the only check
    run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
@@ -74,6 +79,8 @@ and import-scan mechanics of Enforcement moved to `crafts/syseng/rules/imports.m
 Property 1 gains the profile cell and the instance contribution 2026-09-25 (d-work #175): the core
 manifest had shipped one system's operating rows to every install; see the same record, amendment #175.
 Property 3 gains the pre-push sentence 2026-09-29 (d-work #194): the hook judged `origin/main..HEAD`
-and the tree on disk, not the refs git pushes; see the same record, amendment #194.
+and the tree on disk, not the refs git pushes; see the same record, amendment #194. Property 3 cites
+the evidence block by its sha256 and its brief form, the full block stored per checkout and shown on request,
+2026-10-26 (d-work #476, child C3 of #473); see the same record, amendment #476.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).

@@ -291,7 +291,8 @@ that the event store only grows is, on `main`, the sysadmin craft's events guard
   `Y/N: Done with #<id> <title> (accreted #c, #d, merges PR #a, #b)?`.
 - A Done question the leader — the cos — relays to the Operator for a seat that is not attended presents its
   evidence in the form the preference `relay-form` names (`preferences-corpus/PREFERENCES.md`), the seat's
-  evidence block quoted verbatim and the seat's own question its last line; Rule-2's Binding is unchanged, the
+  evidence cited as Rule-2's Binding cites it — its `evidence-sha256` and its brief form, the
+  full block on request (Rule-14 property 3) — and the seat's own question its last line; Rule-2's Binding is unchanged, the
   `Y` binding to what the seat asked.
 
 ## Batch disposition
@@ -450,6 +451,8 @@ record, amendment #438. Mechanisms names `.github/workflows/dyad-package.yml` an
 of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
 record, amendment #477. Mechanisms gains the fence's trace clause 2026-10-26 (d-work
 #465): the completion clause said the Done record commit carries the trace, and nothing checked it; six Done records
-(#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465.
+(#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465. Completion's relayed-Done bullet cites the seat's evidence as
+Rule-2's Binding does, by its sha256 and its brief form, 2026-10-26 (d-work #476, child C3 of #473); see the same
+record, amendment #476.
 
 Set: System Requirements.

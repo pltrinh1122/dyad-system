@@ -49,8 +49,9 @@ not edited when they are added (G5).
 - A "Y" binds only to the PR(s) or action(s) named in the question it answers. A Done-`Y`
   merges only the PRs the counter-prompt named, only on the guards' observed passes — the
   kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main Agent
-  on the exact head being merged, its evidence block pasted verbatim in the completion reply
-  (Rule-3), which the Operator may re-run on that head and compare; the hosting's CI
+  on the exact head being merged, its evidence block cited in the completion reply (Rule-3) by
+  its `evidence-sha256` and its brief form — every failure and every warning new since `main`,
+  the standing ones as counts — the full block stored and shown on request (Rule-14 property 3), which the Operator may re-run on that head and compare; the hosting's CI
   corroborates after the merge, on `main` (Rule-14 property 3, #168), and never substitutes — and only if their heads are unchanged since it
   was asked; otherwise the agent stops and re-prompts. A CI failure that is an account or
   adapter failure (no job started) is not a red check but an absent one, reported as such.
@@ -99,6 +100,10 @@ events-only commit 2026-10-25 (d-work #438): a standing health check's events, e
 command's observation, needed a row, a PR and the full suite to reach `main`, and the Operator asked
 why monitoring should have a row at all; an observation passes the test the ledger-only bullet
 already states — it records, never decides — and only events of read-only commands do; see
-`../falsification/rules/rule-2-no-self-ratify.md`, amendment #438.
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #438. Binding cites the evidence block by its
+sha256 and its brief form 2026-10-26 (d-work #476, child C3 of #473): a pasted block was read in full at every
+merge (267 lines on that day; the brief form 140, its standing warnings kept), while its sha256 already covered every
+line and the Operator could re-run it; see
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #476.
 
 Set: System Requirements.
