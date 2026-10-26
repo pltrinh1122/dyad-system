@@ -9,11 +9,11 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
-version: 0.16.1
+version: 0.16.2
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 0.12.1 |
+| dyad-operator | 0.12.2 |
 | sysarch | 0.3.2 |
 | syseng | 0.4.1 |
 | sysadmin | 0.3.0 |
