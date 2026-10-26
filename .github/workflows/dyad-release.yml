@@ -2,7 +2,8 @@ name: released
 # The release service (d-work #461, plan revision 3; run-book `workstation-corpus/runbooks/released.md`, operate's,
 # Rule-19): the single release path. The trigger is the ledger entry that records the Operator's release Y on the
 # release's row, `<date> Y release <tag> at <cut sha> (archive <sha256>)` (Rule-11 Ratification events), written by the
-# cos ledger-only; this workflow is clerical execution of that Y, never a disposer (Rule-2). `.github/released.py` reads
+# cos ledger-only; this workflow is clerical execution of that Y, never a disposer (Rule-2). The core's verb `dyad release`
+# (`dyad/scripts/release.py`, d-work #470; the workflow ships with the core, so every installing system runs it) reads
 # every such entry, checks the cut sha is on main and tag == VERSION at it, builds by the one code path (Rule-11 property
 # 5), verifies the sha256, then creates the annotated tag and the GitHub Release. Idempotent: a tag at the cut sha with
 # its Release is skipped, a tag elsewhere is refused (tags never move). No tag-push trigger, so nothing double-fires
@@ -33,7 +34,7 @@ jobs:
         with: { python-version: "3.12" }
       - id: scan
         env: { GH_TOKEN: "${{ github.token }}", ONLY: "${{ inputs.tag }}", BEFORE: "${{ github.event.before }}" }
-        run: python3 .github/released.py --scan
+        run: python3 dyad/scripts/package.py release --scan   # the verb `dyad release`; python3 is setup-python's 3.12
   released:
     needs: scan
     if: needs.scan.outputs.pending == 'true'
@@ -58,4 +59,4 @@ jobs:
           gh --version | head -1   # the release adapter as observed (Rule-14: The World is observed, never pinned)
           git config user.name "github-actions[bot]"   # the annotated tag's tagger
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 .github/released.py
+          python3 dyad/scripts/package.py release
