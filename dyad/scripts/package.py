@@ -358,7 +358,7 @@ def check_rule_12():
     for suite, (code, summary, err) in zip(suites, run_suites(suites)):   # no timing in `summary`: the evidence block is deterministic (#138)
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if code != 0:
-            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + err.strip().splitlines()[-1])
+            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + "\n".join(suite_failures(err) + err.strip().splitlines()[-1:]))
     if not msgs and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)   # a full, all-roots pass on a clean tree (d-work #162)
     return msgs
@@ -652,6 +652,20 @@ def suite_units(suite):
         groups.setdefault(i.rsplit(".", 1)[0], []).append(i)
     return sorted(groups.values(), key=len, reverse=True)
 
+def suite_failures(err):
+    """Each failing test of a child's stderr as one line, `ERROR: test_x (mod.Cls.test_x) — <the exception's last
+    line>`, in the order unittest printed them. The summary says how many; these say which, so a red run on a host
+    nobody can log into (a CI runner, whose kept temp root is gone with it) names its test (#475)."""
+    out, head, last = [], None, ""
+    for line in err.splitlines() + ["=" * 70]:
+        if line.startswith(("ERROR: ", "FAIL: ")):
+            head, last = line, ""
+        elif head and (line.startswith("=" * 70) or re.match(r"Ran \d+ tests? in ", line)):
+            out.append(f"{head} — {last}" if last else head); head = None
+        elif head and line.strip() and not line.startswith("-" * 70):
+            last = line.strip()
+    return out
+
 def suite_summary(stderrs, failed):
     """The children's summaries summed into one, in unittest's own words and order: `Ran N tests`, then
     `OK` or `FAILED` with `(failures=…, errors=…, skipped=…, …)` — what one discover child over the root prints."""
@@ -715,13 +729,13 @@ def cmd_tests(target=None, roots=None):
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
         if code:
-            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+            print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
         return rc
     suites = [Path(target)] if target else test_suites() if roots is None else list(roots)
     for suite, (code, summary, err) in zip(suites, run_suites(suites)):
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
-            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+            print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
     if rc == 0 and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)
     return rc

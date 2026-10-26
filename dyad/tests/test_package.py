@@ -2276,6 +2276,17 @@ class SuiteParallelTests(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")                                       # nothing kept, nothing printed
         self.assertNotEqual(self.discover(root)[1:], ["OK (skipped=3)"])           # the control: one shared temp dir collides
 
+    def test_failures_name_each_failing_test_and_its_exception(self):
+        """A red run on a CI runner printed only `FAILED (errors=1)`: the kept root went with the runner, and no
+        log named the test (main's `rule-11 package` from 76c1a92 on)."""
+        pkg = load_package(); bar, dash = "=" * 70, "-" * 70
+        err = (f".EF\n{bar}\nERROR: test_b (m.C.test_b)\n{dash}\nTraceback (most recent call last):\n  File \"x\", line 1\n"
+               f"RuntimeError: git clone failed\n\n{bar}\nFAIL: test_c (m.C.test_c)\n{dash}\nTraceback (most recent call last):\n"
+               f"AssertionError: 1 != 2\n\n{dash}\nRan 3 tests in 0.1s\n\nFAILED (failures=1, errors=1)\n")
+        self.assertEqual(pkg.suite_failures(err), ["ERROR: test_b (m.C.test_b) — RuntimeError: git clone failed",
+                                                   "FAIL: test_c (m.C.test_c) — AssertionError: 1 != 2"])
+        self.assertEqual(pkg.suite_failures("Ran 1 test in 0s\n\nOK\n"), [])
+
     def test_a_failing_class_keeps_its_root_and_ends_the_stderr_with_the_sum(self):
         pkg = load_package()
         root = self.root({"test_a.py": "import unittest\nclass A(unittest.TestCase):\n    def test_no(self): self.fail('red')\n",
@@ -2285,6 +2296,7 @@ class SuiteParallelTests(unittest.TestCase):
         self.assertEqual((rc, summary), (1, ["Ran 2 tests", "FAILED (failures=1)"]))
         self.assertEqual(summary, self.discover(root))
         self.assertEqual(err.strip().splitlines()[-1], "FAILED (failures=1)"); self.assertIn("red", err)
+        self.assertEqual(pkg.suite_failures(err), ["FAIL: test_no (test_a.A.test_no) — AssertionError: red"])
         kept = [l.split(": ", 1)[1] for l in out.getvalue().splitlines() if "temp root kept" in l]
         self.assertEqual(len(kept), 1, out.getvalue())                             # the failing child's, not the passing one's
         self.assertTrue(Path(kept[0]).is_dir()); shutil.rmtree(kept[0])
