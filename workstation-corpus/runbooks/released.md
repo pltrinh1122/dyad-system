@@ -34,14 +34,14 @@ Health (server-instances rule, property 4; Rule-19 kernel): every recorded relea
 and its GitHub Release. The command reads every row's `disposed` for the form `Y release <tag> at <sha>`, resolves the
 tag on `origin` (the peeled commit of an annotated tag), and asks the hosting for the Release. One line per gap, `no
 tag: <tag>`, `tag not at cut: <tag> (<sha>)` or `no Release: <tag>`, then a count line. **Pass: exit 0 and no gap
-line.** Entries recorded before #461 carry no `at <sha>` and are not read. With no entry in the new form, the command
+line**; the postcondition is the same check, silent. Entries recorded before #461 carry no `at <sha>` and are not read. With no entry in the new form, the command
 reads zero entries and passes: there is nothing yet to reconcile.
 ```dyad-cmd
 name: health
 class: read-only
 role: any
 undo: none
-postcondition: none
+postcondition: r=$(git remote get-url origin | sed -E 's#^https?://([^@]*@)?github.com/##; s#^git@github.com:##; s#\.git$##'); fail=0; n=0; for e in $(grep -hoE 'Y release [A-Za-z0-9._-]+ at [0-9a-f]{7,40}' agent-corpus/d-work/rows/*.md | awk '{print $3"@"$5}' | sort -u); do n=$((n+1)); t=${e%@*}; s=${e#*@}; p=$(git ls-remote --tags origin "refs/tags/$t" "refs/tags/$t^{}" | awk -v t="refs/tags/$t" '$2==t"^{}"{pe=$1} $2==t{pl=$1} END{print (pe?pe:pl)}'); if [ -z "$p" ]; then fail=1; else case "$p" in "$s"*) ;; *) fail=1;; esac; fi; curl -sf -o /dev/null "https://api.github.com/repos/$r/releases/tags/$t" || fail=1; done; exit $fail
 scope: agent-corpus/d-work/rows/ (read), origin's tags and the hosting's Releases (read)
 
 r=$(git remote get-url origin | sed -E 's#^https?://([^@]*@)?github.com/##; s#^git@github.com:##; s#\.git$##'); fail=0; n=0; for e in $(grep -hoE 'Y release [A-Za-z0-9._-]+ at [0-9a-f]{7,40}' agent-corpus/d-work/rows/*.md | awk '{print $3"@"$5}' | sort -u); do n=$((n+1)); t=${e%@*}; s=${e#*@}; p=$(git ls-remote --tags origin "refs/tags/$t" "refs/tags/$t^{}" | awk -v t="refs/tags/$t" '$2==t"^{}"{pe=$1} $2==t{pl=$1} END{print (pe?pe:pl)}'); if [ -z "$p" ]; then echo "no tag: $t"; fail=1; else case "$p" in "$s"*) ;; *) echo "tag not at cut: $t ($s)"; fail=1;; esac; fi; curl -sf -o /dev/null "https://api.github.com/repos/$r/releases/tags/$t" || { echo "no Release: $t"; fail=1; }; done; echo "$n release entr(ies) checked"; exit $fail
