@@ -1730,29 +1730,32 @@ class SuiteMemoTests(unittest.TestCase):
         d, seed, git = self.repo()
         gate = lambda: self.pkg.suite_gate(seed, "HEAD", pre_push=True)
         write = lambda: self.pkg.suite_memo_write(self.pkg.suite_memo_parts())
+        miss = lambda *k: (f"     [Rule-12] suite memo miss: {', '.join(k)} differ{'s' if len(k) == 1 else ''} "
+                           "from the nearest pass on this checkout")   # d-work #474: the part that missed is named
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: no pass recorded on this checkout"))
         write(); self.assertFalse(gate()[0])                                        # the control: a hit
-        git("tag", "v9.9.9"); self.assertEqual(gate(), (True, None))                # tags (check_drift reads them)
+        git("tag", "v9.9.9"); self.assertEqual(gate(), (True, miss("tags")))                # tags (check_drift reads them)
         write(); self.assertFalse(gate()[0])
-        os.environ["DYAD_HOST_ZONE"] = "infra"; self.assertEqual(gate(), (True, None))   # an env knob
+        os.environ["DYAD_HOST_ZONE"] = "infra"; self.assertEqual(gate(), (True, miss("env:DYAD_HOST_ZONE")))   # an env knob
         write(); self.assertFalse(gate()[0])
         with unittest.mock.patch.object(self.pkg, "utc_date", lambda: "2999-01-01"):
-            self.assertEqual(gate(), (True, None))                                  # the UTC day
+            self.assertEqual(gate(), (True, miss("date")))                                  # the UTC day
         with unittest.mock.patch.object(self.pkg, "test_suites", lambda: [d / "dyad" / "tests", d / "crafts" / "x" / "tests"]):
-            self.assertEqual(gate(), (True, None))                                  # the roots
+            self.assertEqual(gate(), (True, miss("roots")))                                  # the roots
         with unittest.mock.patch.object(sys, "executable", sys.executable + "x"):
-            self.assertEqual(gate(), (True, None))                                  # the interpreter
+            self.assertEqual(gate(), (True, miss("executable")))                                  # the interpreter
         with unittest.mock.patch.object(sys, "version", sys.version + "x"):
-            self.assertEqual(gate(), (True, None))
+            self.assertEqual(gate(), (True, miss("python")))
         real = self.pkg._git
         with unittest.mock.patch.object(self.pkg, "_git", lambda *a: "git version 0.0.0" if a == ("--version",) else real(*a)):
-            self.assertEqual(gate(), (True, None))                                  # git
+            self.assertEqual(gate(), (True, miss("git")))                                  # git
         inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
         (d / inst / "provenance_legacy.local.txt").write_text("1 0 predates\n")
         self.assertEqual(self.pkg.suite_memo_parts()["tree"], git("rev-parse", "HEAD^{tree}"))   # ignored: still clean
-        self.assertEqual(gate(), (True, None))                                      # instance-local data git ignores
+        self.assertEqual(gate(), (True, miss("local")))                             # instance-local data git ignores
         write(); self.assertFalse(gate()[0])
         (d / "code.txt").write_text("changed\n"); git("commit", "-qam", "tree")
-        self.assertEqual(gate(), (True, None))                                      # the tree
+        self.assertEqual(gate(), (True, miss("tree")))                                      # the tree
 
     def test_dirty_tree_partial_run_or_failure_never_writes(self):
         d, seed, git = self.repo()
@@ -1828,7 +1831,7 @@ class SuiteMemoTests(unittest.TestCase):
         (d / "code.txt").write_text("main moved\n"); git("commit", "-qam", "main moves")
         git("switch", "-q", "ledger")
         gate = lambda: self.pkg.suite_gate("main", "HEAD", pre_push=True)
-        self.assertEqual(gate(), (True, None))                          # two-dot main..HEAD carries main's code
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: no pass recorded on this checkout"))   # two-dot main..HEAD carries main's code
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))
         self.pkg.suite_memo_write(self.pkg.suite_memo_parts(fork))      # the merge-base's tree passed
         tree = git("rev-parse", f"{fork}^{{tree}}")
@@ -1836,7 +1839,7 @@ class SuiteMemoTests(unittest.TestCase):
                                          f"{tree[:9]} already passed on this checkout (d-work #162)"))
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
         (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "not ledger")
-        self.assertEqual(gate(), (True, None))                          # one non-ledger commit: the clause is off
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree differs from the nearest pass on this checkout"))                          # one non-ledger commit: the clause is off
 
     def test_events_branch_behind_main_skips_only_on_a_memoized_merge_base(self):
         """#438: the memo's second clause holds for an events-only branch as for a ledger-only one, each class
@@ -1852,7 +1855,7 @@ class SuiteMemoTests(unittest.TestCase):
         (d / "code.txt").write_text("main moved\n"); git("commit", "-qam", "main moves")
         git("switch", "-q", "events")
         gate = lambda: self.pkg.suite_gate("main", "HEAD", pre_push=True)
-        self.assertEqual(gate(), (True, None))                          # two-dot main..HEAD carries main's code
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: no pass recorded on this checkout"))   # two-dot main..HEAD carries main's code
         self.pkg.suite_memo_write(self.pkg.suite_memo_parts(fork))      # the merge-base's tree passed
         tree = git("rev-parse", f"{fork}^{{tree}}")
         self.assertEqual(gate(), (False, f"skip [guards] Rule-12 suite: main...HEAD is events-only and its merge-base tree "
@@ -1860,7 +1863,7 @@ class SuiteMemoTests(unittest.TestCase):
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
         inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
         (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "a ledger commit")
-        self.assertEqual(gate(), (True, None))                          # events then ledger: neither class, the clause is off
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree differs from the nearest pass on this checkout"))                          # events then ledger: neither class, the clause is off
 
 class InstalledRootTests(unittest.TestCase):
     """#176 (d-work #199 N5): `dyad install` records the core's tree in the craft registry, and the pre-push
