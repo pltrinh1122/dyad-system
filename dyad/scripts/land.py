@@ -10,6 +10,9 @@ push to `main` through the pre-push hook, retries when `main` had moved, then a 
   dyad dwork land <path>... -m <msg> [--mirror <branch>]
                           copy the named files (plan files, presence, traces) from this checkout into that worktree,
                           commit and push them the same way
+  dyad dwork batch <file>|- --land [--mirror <branch>]
+                          several of those in one commit and one push (#459): one `dwork` argv per line,
+                          shell-quoted — `new …`, `state …` or `land <path>…`; blank and `#` lines skipped
 
 The worktree is `<git common dir>/dyad-land`: one per clone, shared by its linked worktrees, guarded by a lock file
 beside it, created or reused detached at a freshly fetched `origin/main` and cleaned of every untracked and ignored
@@ -30,12 +33,25 @@ entry with the same words last in its record, the prompt already the record's la
 reached, a `new` with the same title and words already a row, the files already identical — so a retry, or a
 re-run after an ambiguous failure, never records twice (plan #443 attack 11; syseng `idempotence.md` p1). At
 most TRIES tries. On success the landed sha is printed and, when this checkout is on a clean `main`, it is
-fast-forwarded to it; otherwise only the sha is printed.
+fast-forwarded to it; otherwise only the sha is printed. After a `land` of paths, a checkout on `main` whose only
+changes are landed paths, each byte-identical to its blob at the landed sha, has them restored from its HEAD and is
+then fast-forwarded: the content restored is the content landed, so nothing is lost (#459, the #443 finding that a
+landed copy left the checkout dirty forever); any other change, or one differing byte, leaves it as it is.
+
+A batch (#459) parses every line first and refuses the whole batch before any fetch on a line that names `-m`,
+`--land`, `--mirror` or a verb other than `new`, `state`, `land`, and on one row id that both records a
+merge-naming `Y done` and is set `done` — the fence's `rows.done_order_problems`, said where it costs a line
+instead of a push, so a ratified set travels as a record batch, the merges, then a close batch. It then runs as
+one worktree pass: each line already on `origin/main` is skipped by name (`skipped (already landed): …`, the
+per-line test above), a batch with no line left is refused, the rest run in order through the worktree's runner,
+and a line it refuses stops the batch with nothing committed. One commit, `ledger: batch …`, one push; a moved
+`main` rebuilds the whole batch from its lines. A later line cannot name an id a `new` line of the same batch
+creates: that id is allocated in the worktree and is re-allocated on a rebuild.
 """
 import sys
 if sys.version_info < (3, 12):
     sys.exit("land.py: Python 3.12+ required")
-import contextlib, datetime, os, shutil, subprocess
+import contextlib, datetime, os, shlex, shutil, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -234,11 +250,45 @@ def push(wt: Path, mirror: str | None) -> subprocess.CompletedProcess:
     return git(wt, "push", "--porcelain", *(["--atomic"] if mirror else []), "origin", *refs, check=False, timeout=NETWORK_TIMEOUT)
 
 
-def fast_forward(repo: Path, sha: str) -> None:
-    """The caller's checkout, fast-forwarded only when it is on `main`, clean, and behind `sha`; else one line."""
+def restore_landed(repo: Path, sha: str, landed) -> bool:
+    """The caller-copy fix (#459): when every change of the checkout is a landed path, each byte-identical to its
+    blob at `sha`, restore those paths from HEAD — a tracked one checked out from HEAD, an untracked or added one
+    removed — so the fast-forward can bring the same bytes back. Every condition is read before the first write;
+    any change outside `landed`, a rename, a deletion, a conflict or one differing byte returns False untouched."""
+    raw = git(repo, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout.split("\0")   # unstripped: a status column may be a space
+    changed = {e[3:]: e[:2] for e in raw if len(e) > 3}
+    if not changed or not set(changed) <= set(landed) or any(c in xy for xy in changed.values() for c in "RCDU"):
+        return False
+    for rel in changed:
+        blob = git(repo, "rev-parse", "-q", "--verify", f"{sha}:{rel}", check=False).stdout.strip()
+        if not blob or blob != out(repo, "hash-object", "--no-filters", "--", rel):
+            return False
+    tracked = [rel for rel in changed if git(repo, "cat-file", "-e", f"HEAD:{rel}", check=False).returncode == 0]
+    fresh = [rel for rel in changed if rel not in tracked]
+    if tracked:
+        git(repo, "checkout", "-q", "HEAD", "--", *tracked)
+    if fresh:
+        git(repo, "rm", "-q", "--cached", "--ignore-unmatch", "--", *fresh)
+        for rel in fresh:
+            (repo / rel).unlink(missing_ok=True)
+    print(f"restored {', '.join(sorted(changed))} from HEAD: each identical to its landed blob")
+    return True
+
+
+def fast_forward(repo: Path, sha: str, landed=()) -> None:
+    """The caller's checkout, fast-forwarded only when it is on `main`, clean, and behind `sha`; else one line.
+    With `landed` (the paths a `land` copied from it), a checkout whose only changes are those paths, identical
+    to the landed blobs, is restored first (`restore_landed`) and then fast-forwarded (#459)."""
     branch = git(repo, "symbolic-ref", "-q", "--short", "HEAD", check=False).stdout.strip()
     dirty = out(repo, "status", "--porcelain", "--untracked-files=normal")
-    if branch == "main" and not dirty and git(repo, "merge-base", "--is-ancestor", "HEAD", sha, check=False).returncode == 0:
+    behind = git(repo, "merge-base", "--is-ancestor", "HEAD", sha, check=False).returncode == 0
+    if branch == "main" and dirty and behind and landed:
+        try:
+            if restore_landed(repo, sha, landed):
+                dirty = out(repo, "status", "--porcelain", "--untracked-files=normal")
+        except Refused as e:
+            print(f"this checkout was not restored ({e})")
+    if branch == "main" and not dirty and behind:
         git(repo, "merge", "-q", "--ff-only", sha)
         print(f"fast-forwarded main to {sha[:12]}")
     else:
@@ -246,9 +296,10 @@ def fast_forward(repo: Path, sha: str) -> None:
         print(f"this checkout {why}: left as it is (origin/main is {sha[:12]})")
 
 
-def land(repo: Path, inst: str, mirror: str | None, build, label: str) -> int:
+def land(repo: Path, inst: str, mirror: str | None, build, label: str, landed=()) -> int:
     """The loop: fetch, prepare, `build(wt)` -> (paths, subject, verb stdout) or a Refused, commit, push; a push
-    refused while `origin/main` moved is rebuilt, at most TRIES times."""
+    refused while `origin/main` moved is rebuilt, at most TRIES times. `landed` names the caller's paths a `land`
+    copies, for the caller-copy fix after the push (`fast_forward`)."""
     prefix = f"{inst}/d-work/"
     common = Path(out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
     wt = common / WORKTREE
@@ -270,7 +321,7 @@ def land(repo: Path, inst: str, mirror: str | None, build, label: str) -> int:
                 if stdout.strip():
                     print(stdout.strip())
                 print(f"landed {sha} on main{f' and {mirror}' if mirror else ''}")
-                fast_forward(repo, sha)
+                fast_forward(repo, sha, landed)
                 return 0
             now = fetch(repo)
             if now == base:
@@ -279,17 +330,21 @@ def land(repo: Path, inst: str, mirror: str | None, build, label: str) -> int:
         raise Refused(f"main moved on each of {TRIES} tries; nothing landed (origin/main is {now[:12]}); run it again")
 
 
-# ---- the two entries
+# ---- the entries
+def run_verb(wt: Path, inst: str, argv: list[str]) -> subprocess.CompletedProcess:
+    """The worktree's own runner, as its `dyad/bin/dyad` would exec it, under this (already pinned) interpreter:
+    its REPO is the worktree, so every write lands there (#427)."""
+    return subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "dwork", *argv], cwd=wt, capture_output=True, text=True,
+                          env={**env(), "DYAD_INSTANCE": inst})
+
+
 def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: str, words):
     today = datetime.date.today().isoformat()
     def build(wt: Path):
         why = already_landed(wt, inst, pos, vals, bare, words, today)
         if why:
             raise Refused(f"already landed: {why}; nothing pushed")
-        # the worktree's own runner, as its `dyad/bin/dyad` would exec it, under this (already pinned) interpreter:
-        # its REPO is the worktree, so every write lands there (#427)
-        r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "dwork", *argv], cwd=wt, capture_output=True, text=True,
-                           env={**env(), "DYAD_INSTANCE": inst})
+        r = run_verb(wt, inst, argv)
         if r.returncode:
             sys.stderr.write(r.stderr); sys.stdout.write(r.stdout)
             raise Refused(f"dwork {pos[0]} refused it in the worktree; nothing landed")
@@ -297,16 +352,194 @@ def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: s
     return build
 
 
+def identical(repo: Path, wt: Path, rels: list[str]) -> bool:
+    """Every named file of the caller already holds, byte for byte, what the worktree's tree holds."""
+    return all((wt / rel).is_file() and (wt / rel).read_bytes() == (repo / rel).read_bytes() for rel in rels)
+
+
+def copy_paths(repo: Path, wt: Path, rels: list[str]) -> None:
+    for rel in rels:
+        (wt / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(repo / rel, wt / rel)
+
+
 def paths_builder(repo: Path, rels: list[str], msg: str):
     def build(wt: Path):
-        for rel in rels:
-            (wt / rel).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(repo / rel, wt / rel)
+        copy_paths(repo, wt, rels)
         paths = written(wt)
         if not paths:
             raise Refused(f"already landed: {', '.join(rels)} on origin/main are identical; nothing pushed")
         return paths, msg, ""
     return build
+
+
+def land_rels(repo: Path, inst: str, names: list[str], label: str = "dwork land") -> list[str]:
+    """The paths a `land` names, each a file of this work tree under `<instance>/d-work/`, repo-relative."""
+    if not names:
+        raise Refused(f"{label} names at least one path")
+    rels = []
+    for p in names:
+        src = Path(os.path.abspath(p))
+        if not src.is_relative_to(repo):
+            raise Refused(f"{p} lies outside this work tree")
+        rel = src.relative_to(repo).as_posix()
+        if not rel.startswith(f"{inst}/d-work/"):
+            raise Refused(f"{rel} lies outside {inst}/d-work/: that commit would not be ledger-only")
+        if not src.is_file():
+            raise Refused(f"{rel} is not a file")
+        rels.append(rel)
+    return rels
+
+
+# ---- the batch (#459)
+BATCH_USAGE = ("usage: dwork batch <file>|- --land [--mirror <branch>] — one `dwork` argv per line, shell-quoted: "
+               "`new …`, `state …` or `land <path>…`; blank and `#` lines are skipped; -m, --land and --mirror are the "
+               "batch's, never a line's. A later line cannot name an id a `new` line of the same batch creates: that id "
+               "is allocated in the worktree and re-allocated on a rebuild")
+SUBJECT_MAX = 200   # the generated subject is one line, cut to this many characters
+
+
+class Line:
+    """One parsed batch line: its number, its text, its verb and argv as the verb reads them, and for a `land`
+    line its repo-relative paths."""
+    def __init__(self, n: int, text: str, pos: list[str], vals: dict, bare: set, argv: list[str], rels: list[str]):
+        self.n, self.text, self.pos, self.vals, self.bare, self.argv, self.rels = n, text, pos, vals, bare, argv, rels
+        self.verb = pos[0]
+
+    def where(self) -> str:
+        return f"line {self.n} ({self.text})"
+
+
+def as_refused(n: int, f, *a):
+    """The runner's own readers (`dwork_args`, `words`) refuse by `sys.exit`; in a batch that is this line's
+    refusal, named, never the process's exit."""
+    try:
+        return f(*a)
+    except SystemExit as e:
+        raise Refused(f"line {n}: {str(e.code).removeprefix('refused: ')}") from None
+
+
+def read_batch(src: str, repo: Path, inst: str, value_flags, parse) -> list[Line]:
+    """Every line of the batch parsed before anything runs; any refusal refuses the whole batch."""
+    try:
+        text = sys.stdin.read() if src == "-" else Path(src).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise Refused(f"dwork batch {src}: {e}") from None
+    lines = []
+    for n, raw in enumerate(text.splitlines(), 1):
+        t = raw.strip()
+        if not t or t.startswith("#"):
+            continue
+        try:
+            toks = shlex.split(t)
+        except ValueError as e:
+            raise Refused(f"line {n}: {e}") from None
+        pos, vals, bare = as_refused(n, parse, toks)
+        for flag, given in (("-m", "-m" in vals), ("--mirror", "--mirror" in vals), ("--land", "--land" in bare)):
+            if given:
+                raise Refused(f"line {n}: {flag} is the batch's, never a line's: the batch generates one subject, "
+                              f"takes one --mirror and lands every line ({BATCH_USAGE})")
+        verb = pos[0] if pos else None
+        if verb not in ("new", "state", "land"):   # the verbs --land lands, and land
+            raise Refused(f"line {n}: a batch line is `new`, `state` or `land <path>…`, not {verb!r}")
+        if verb == "land":
+            if vals or bare:
+                raise Refused(f"line {n}: land does not take {' '.join(sorted(set(vals) | bare))}")
+            lines.append(Line(n, t, pos, vals, bare, [], land_rels(repo, inst, pos[1:], f"line {n}: land")))
+        else:
+            argv, _ = split_argv(toks, value_flags)          # a --prompt-file / --said-file made absolute
+            lines.append(Line(n, t, pos, vals, bare, argv, []))
+    if not lines:
+        raise Refused(f"the batch holds no line ({BATCH_USAGE})")
+    return lines
+
+
+def done_order(lines: list[Line], today: str) -> None:
+    """The fence's Done order (`rows.done_order_problems`, #202) kept before running: one commit may not both
+    record a merge-naming `Y done` for a row and set that row `done`, so a batch may not either — whether one
+    line does both or two lines do. The fence is unchanged and still judges the commit at the gate."""
+    rg = dyadlib.load_guard("agent", "rows")
+    records, closes = {}, {}
+    for ln in lines:
+        if ln.verb != "state" or len(ln.pos) < 3 or not ln.pos[1].isdigit():
+            continue
+        rid, d = int(ln.pos[1]), ln.vals.get("-d")
+        if d is not None and rg.DONE_MERGES.search(f"{today} {d}"):
+            records.setdefault(rid, ln)
+        if ln.pos[2] == "done":
+            closes.setdefault(rid, ln)
+    for rid, rec in records.items():
+        close = closes.get(rid)
+        if close is None:
+            continue
+        both = (f"{rec.where()} records {rec.vals['-d']!r} and sets #{rid} done" if rec is close else
+                f"{rec.where()} records {rec.vals['-d']!r} and {close.where()} sets #{rid} done")
+        raise Refused(f"{both}, in one commit (Rule-3 Completion: the state follows the merge — record the entry "
+                      f"with the state unchanged, merge, then `dyad dwork state <id> done`): land the record batch, "
+                      f"merge, then the close batch; nothing landed")
+
+
+def line_landed(repo: Path, wt: Path, inst: str, ln: Line, words, today: str) -> str | None:
+    if ln.verb == "land":
+        return f"{', '.join(ln.rels)} identical on origin/main" if identical(repo, wt, ln.rels) else None
+    return as_refused(ln.n, already_landed, wt, inst, ln.pos, ln.vals, ln.bare, words, today)
+
+
+def land_part(inst: str, rel: str) -> str:
+    """A landed path, named for the subject: `presence <seat>`, `plan #<id>`, `trace #<id>`, else its path."""
+    sub = rel.removeprefix(f"{inst}/d-work/")
+    head, _, name = sub.partition("/")
+    stem = name.removesuffix(".md")
+    kind = {"sessions": "presence", "plans": "plan", "traces": "trace", "provenance": "provenance", "rows": "row"}.get(head)
+    if kind is None or "/" in name:
+        return sub
+    return f"{kind} {stem}" if kind == "presence" else f"{kind} #{stem}"
+
+
+def batch_subject(parts: list[str]) -> str:
+    s = " ".join(f"ledger: batch {', '.join(parts)}".split())     # one line, whatever a title held
+    if len(s) > SUBJECT_MAX:
+        s = s[:SUBJECT_MAX - 1].rstrip(", ") + "…"
+    return dyadlib.load_guard("agent", "prs").CITE.sub(r"#\1", s)
+
+
+def batch_builder(repo: Path, lines: list[Line], inst: str, words):
+    today = datetime.date.today().isoformat()
+    def build(wt: Path):
+        run = []
+        for ln in lines:      # judged against origin/main before any line runs, on every try
+            why = line_landed(repo, wt, inst, ln, words, today)
+            if why:
+                print(f"skipped (already landed): {ln.where()}: {why}")
+            else:
+                run.append(ln)
+        if not run:
+            raise Refused("already landed: every line of the batch is on origin/main; nothing pushed")
+        parts, outs = [], []
+        for ln in run:
+            if ln.verb == "land":
+                copy_paths(repo, wt, ln.rels)
+                parts += [land_part(inst, rel) for rel in ln.rels]
+                continue
+            r = run_verb(wt, inst, ln.argv)
+            if r.returncode:
+                sys.stderr.write(r.stderr); sys.stdout.write(r.stdout)
+                raise Refused(f"{ln.where()}: dwork {ln.verb} refused it in the worktree; the batch stops and nothing landed")
+            outs.append(r.stdout.strip())
+            parts.append(subject(ln.verb, ln.pos, ln.vals, ln.bare, r.stdout).removeprefix("ledger: "))
+        return written(wt), batch_subject(parts), "\n".join(o for o in outs if o)
+    return build
+
+
+def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror: str | None, value_flags, parse, words) -> int:
+    if "--land" not in bare:
+        raise Refused(f"dwork batch runs only with --land ({BATCH_USAGE})")
+    if len(a_pos) != 2 or vals or bare - {"--land"}:
+        raise Refused(BATCH_USAGE)
+    lines = read_batch(a_pos[1], repo, inst, value_flags, parse)
+    done_order(lines, datetime.date.today().isoformat())
+    landed = sorted({rel for ln in lines for rel in ln.rels})
+    return land(repo, inst, mirror, batch_builder(repo, lines, inst, words), "dwork batch", landed)
 
 
 def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
@@ -317,31 +550,26 @@ def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
         inst = dyadlib.instance_rel(repo)
         if inst is None:
             raise Refused("the instance (DYAD_INSTANCE) lies outside this work tree; land writes only a tracked store")
+        if a and a[0] == "batch":
+            _, _, given = parse(a)
+            argv, mirror = split_argv(a, value_flags)
+            check_mirror(repo, mirror)
+            pos, vals, bare = parse(argv)
+            return batch(pos, vals, bare | (given & {"--land"}), repo, inst, mirror, value_flags, parse, words)
         argv, mirror = split_argv(a, value_flags)
         check_mirror(repo, mirror)
         pos, vals, bare = parse(argv)
         verb = pos[0] if pos else None
         if verb == "land":
-            msg, rels = vals.get("-m"), []
+            msg = vals.get("-m")
             if not msg or not msg.strip():
                 raise Refused("usage: dwork land <path>... -m <message> [--mirror <branch>]")
             if set(vals) - {"-m"} or bare:
                 raise Refused(f"dwork land does not take {' '.join(sorted((set(vals) - {'-m'}) | bare))}")
             if dyadlib.load_guard("agent", "prs").CITE.search(msg):
                 raise Refused("-m cites a `d-work #`; a ledger-only commit claims no d-work (Rule-3 Ledger): write it as #<id>")
-            if len(pos) < 2:
-                raise Refused("dwork land names at least one path")
-            for p in pos[1:]:
-                src = Path(os.path.abspath(p))
-                if not src.is_relative_to(repo):
-                    raise Refused(f"{p} lies outside this work tree")
-                rel = src.relative_to(repo).as_posix()
-                if not rel.startswith(f"{inst}/d-work/"):
-                    raise Refused(f"{rel} lies outside {inst}/d-work/: that commit would not be ledger-only")
-                if not src.is_file():
-                    raise Refused(f"{rel} is not a file")
-                rels.append(rel)
-            return land(repo, inst, mirror, paths_builder(repo, rels, msg), "dwork land")
+            rels = land_rels(repo, inst, pos[1:])
+            return land(repo, inst, mirror, paths_builder(repo, rels, msg), "dwork land", rels)
         if verb not in ("new", "state"):
             raise Refused(f"--land lands `dwork new` or `dwork state`, not {verb!r}")
         if "-m" in vals:
