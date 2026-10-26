@@ -518,3 +518,52 @@ grants; the mode and the rows it would reach are stated so the Operator can pric
 9. **Operator's word:** whether the 213 rows are re-derived against 25 modes (the play-book's full
    re-derivation on a new mode), or the delta method stands until the next exercise.
 Each of the 23 children #262–#284 stays `backlog`; none is closed, re-opened or archived here.
+
+## Note 2026-10-26 — rows 231–233 against the modes (d-work #463, seat audit-e73be78c)
+
+Not a delta: the `covered through:` watermark stays at 213, and rows 214–230 are still ungrouped (the next
+delta's work, Phase 0's third outcome). This note classifies only the three rows #463 names — 231 (#346, the
+close run to read its refusal), 232 (six Done records without their traces, #455–#460) and 233 (#461's
+fabricated row 999) — and tests the candidate mode #463's plan names: *a refusal discarded, or a mutating
+command run to read its output*.
+
+**The candidate is two modes, not one.** The test throughout: one sentence naming a change that stops every
+row at one moment. Row 231 is stopped at the call by a form of `dwork state` that runs every refusal and writes
+nothing — the refusal was observed and was the point, and the command wrote because the check passed. Row 232
+is stopped at the Done-record commit by a check that the trace the preference requires is in it — the refusal
+was produced, at the call, and discarded by the caller's redirect; a read-only form of `dwork trace` would have
+been discarded the same way. Different change, different moment: two modes.
+- **Row 231 is O, with O widened.** O's definition names git (`git checkout <ref> -- <path>`), but its change
+  — "the read would have to be done by a command that writes nothing" — is row 231's exactly; the dyad's own
+  CLI is the second instance of it, and for the dyad's verbs the read-only form does not exist yet, which is
+  why the row's own cell placed it in Q (no read-only form of the check). Q's change (a register of obligations
+  read by a mechanism) would not have stopped it. O: 4 → 5.
+- **Row 232 is E primary, Q secondary.** E (row 123's class, 172, 197: a filter the Agent typed hid the
+  refusal) is what made the six d-works possible; Q (the trace obligation of `dwork-trace: always` read by no
+  guard) is why it lasted across four commits and was caught only by `land` at the seventh. G (the switch's
+  arity from memory) started it and is not the mechanism: had the refusal been read, nothing would follow. E:
+  11 → 12.
+- **Row 233 is W, with W widened.** W is "the suite's environment leaked into the live repository"; row 233 is
+  the same mechanism without the suite — scratch work whose target was the current directory reached the live
+  checkout. W's fences (`suite_env`, the spawn-site tests) read the suite and cannot reach a hand simulation.
+  W: 2 → 3; W's "exit 1 holds" holds for the suite only.
+
+**Where the two halves meet.** Rows 231 and 232 were both the cos, both on the dwork CLI, within a day, and in
+both the CLI's refusal was the only channel by which its check could be seen. That is the one thing they share,
+and it is a property of the CLI, not a mode: a verb whose checks are visible only as a refusal makes reading
+the check cost a write (231) and makes discarding the refusal cost a silent miss (232).
+
+**Proposed exits** (proposed to the program seat with #463's mitigation plan; the Operator's `Y` opened them as `backlog` rows #464–#467 at `6244976`, the program seat's commit — none by this seat):
+1. O, row 231 — exit 2: a backlog row (#464) for `dyad dwork state <id> <state> … --check`, every refusal run, nothing
+   written, a `would write` line; moment: the call.
+2. E/Q, row 232 — exit 2 → 1: a backlog row (#465) for a transaction check — under `dwork-trace: always`, a commit
+   that adds a `Y done` entry to row N carries `traces/N.md` or finds it already on the base; the same refusal in
+   `dwork state -d 'Y done …'` and `dwork batch` before the first write; moment: the call and every push.
+   It makes the discarded refusal harmless rather than forbidding the discard, which no mechanism reads.
+3. Row 232's consequence — a backlog row (#466): `land.fast_forward` restores identical landed copies off `main` too
+   (the bytes are on `main` whatever branch the caller holds), or prints one line naming the untracked copies
+   it left; moment: the land.
+4. W, row 233 — exit 2 for the consequence, exit 3 for the mechanism: a backlog row (#467) for the fence's id check —
+   the new rows of a range take ids `max(base)+1…` contiguously, so 999 over 463 fails at the commit and the
+   push; the lost `cd` itself is conduct (name the target, `git -C <scratch>`), since no mechanism of the
+   kernel-only path reads the Agent's shell (as row 177's).
