@@ -8,6 +8,9 @@ name: released
 # 5), verifies the sha256, then creates the annotated tag and the GitHub Release. Idempotent: a tag at the cut sha with
 # its Release is skipped, a tag elsewhere is refused (tags never move). No tag-push trigger, so nothing double-fires
 # (plan #461 attack 6). It writes nothing to the repo (plan revision 4): its record is the tag, the Release and the run.
+# The seat's part (d-work #478, #473 C5): the distribute seat builds each archive ONCE at the cut, by the one code path,
+# and gives the cos that sha256 for the entry. It does not build twice to prove determinism: this workflow's own
+# rebuild at the cut, compared against the recorded sha256, is that proof, and a mismatch is refused here, before a tag.
 on:
   push:
     branches: [main]
