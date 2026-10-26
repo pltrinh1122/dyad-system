@@ -2,7 +2,7 @@
 # sections: Status/health, Pending, Retry, Logs, Data
 
 Instance: not a server on this host — the workflow `.github/workflows/dyad-release.yml` (display name `released`; its
-logic `.github/released.py`), run by GitHub Actions with the hosting's token on a push to `main` that touches the
+logic the core verb `dyad release`, `dyad/scripts/release.py`, since #470), run by GitHub Actions with the hosting's token on a push to `main` that touches the
 ledger rows, and on manual dispatch (plan #461 revisions 3 and 4). Its supervisor is the hosting: nothing here starts, stops
 or restarts it, and it survives every session because no session runs it (plan #461 attack 1). The workflow is the
 distribute seat's (its fence, `.github/workflows/`); this run-book, its events location and its health are the operate
@@ -18,6 +18,15 @@ Ratification events; Rule-2). There is no request file. `released` reads `main`,
 not exist yet, checks the tag equals its `VERSION` at the cut sha, builds by the one code path, verifies the archive's
 sha256, creates the annotated tag and the Release. A forged entry would publish (plan #461 attack 4): the
 optional one-tap environment gate is the Operator's to ask for, by the cos.
+
+**Procedure: one seat build per tag** (#478, child C5 of #473). The distribute seat builds each release once, at
+the cut sha, by the one distribution code path in a worktree of that sha: `dyad build` for the core, `dyad craft export
+<craft>` for a craft, `dyad bundle build` for the bundle. It reads the archive's sha256 — `BUNDLE.sha256`'s for a
+bundle — and that one value goes into the release question and into the cos's ledger entry. Nothing else on the seat
+builds the archive again: not the evidence run, not a second check. `released` then rebuilds at the cut sha in CI and
+refuses the entry when its sha256 differs from the recorded one (`dyad release`: `archive sha256 … != recorded …`).
+That CI rebuild is the determinism proof, so a nondeterministic build is found at publish and refused there, with the
+tag never created.
 
 **Record.** `released` writes nothing to the repo (plan #461 revision 4): no events file and no commit. Its record is
 what it creates — the annotated tag, whose message names the cut sha, the archive sha256 and the row, and the Release
