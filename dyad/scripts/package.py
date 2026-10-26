@@ -47,7 +47,15 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 `counts: ok= warn= skip= fail=` line, every line that is not ok verbatim and in
                                 order (an indented continuation line follows its parent), `stored: <path>` and
                                 the same evidence-sha256= the full form prints, computed over the full block; the
-                                same exit code. Every --evidence run, full or brief, stores its full block at
+                                same exit code. Warnings fold against origin/main's own (`baseline: origin/main
+                                <sha12> (self|cached|stored|computed)`): a warning whose kind (`warn_kind`: ids,
+                                quoted spans, paths and numbers made placeholders, the guard kept) main also has is
+                                standing, one `warn [<guard>] <k> standing (<m> lines)` line per guard; a new kind
+                                prints verbatim, once. Main's kinds come from a stored block of its head, else from
+                                its `check` without the suite in a detached worktree, cached at
+                                <git common dir>/dyad-evidence/baseline-<sha>.kinds; without one every warning
+                                prints and one `warn [evidence] no baseline …` line says why. Never the exit code.
+                                Every --evidence run, full or brief, stores its full block at
                                 <git common dir>/dyad-evidence/<sha256>.txt (never tracked; a failed store warns)
   dyad check --evidence --show <sha256>
                                 print a stored block; a unique prefix of at least 12 hex is enough. Too short,
@@ -851,7 +859,7 @@ def cmd_evidence(brief=False):
     lines += buf.getvalue().splitlines()
     block = lines + [f"evidence-sha256={evidence_sha256(lines)}"]
     stored = evidence_store(block)                       # #476: every run, full or brief; never raises
-    for l in (evidence_brief(block, stored) if brief else block):
+    for l in (evidence_brief(block, stored, evidence_baseline(block)) if brief else block):
         print(l)
     return int(rc)
 
@@ -874,26 +882,111 @@ def evidence_counts(lines):
         n[EVIDENCE_TOKENS.get(l.split()[0], "other")] += 1
     return n
 
-def evidence_brief(block, stored=None):
+WARN_KIND_VERSION = 1   # bumped whenever `warn_kind`'s rule changes: a cached baseline of another version is a miss
+WARN_GUARDS = re.compile(r"^warn \[guards\] (\S+) ?")
+WARN_LABEL = re.compile(r"^warn \[([^\]]*)\] ?(.*)$", re.S)
+WARN_HEX = re.compile(r"\b(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])[0-9a-f]{7,}\b")
+WARN_QUOTE = re.compile(r"`[^`]*`|(?<!\w)'[^']*'(?!\w)")
+WARN_TOKEN = re.compile(r"[^\s,;:()\[\]'\"`<>]+")
+WARN_EXT = re.compile(r".*\.(md|py|txt|sh|yml|yaml|json|jsonl|toml|cfg|ini|gz|tar|html|css|js|lock|kinds)", re.I)
+WARN_NUMBER = re.compile(r"\d+(?:\.\d+)*")
+WARN_RUN = re.compile(r"<(sha|q|path|n)>(?:(?:, | )<\1>)+")
+
+def warn_unprefix(line):
+    """Pure: a guard warning as `check` prints it. `check --guards` prints each guard's warning as
+    `warn [guards] <corpus>/<entity> <text>` where `check` prints `warn [<corpus>/<entity>] <text>`; the first is
+    rewritten to the second, so the two sources of one warning are one line. Any other line is returned unchanged."""
+    return WARN_GUARDS.sub(lambda m: f"warn [{m.group(1)}] ", line, count=1).rstrip(" ") if line.startswith("warn [guards] ") else line
+
+def warn_guard(line):
+    """Pure: the guard label of a warn line after `warn_unprefix` (`agent/plans`), or None for a line that is not one."""
+    m = WARN_LABEL.match(warn_unprefix(line))
+    return m.group(1) if m else None
+
+def warn_kind(line):
+    """Pure: the kind of a warn line, the key `--brief` compares with origin/main's to tell a standing warning from a
+    new one (d-work #476); None for a line that is not a warning. The rule, applied in this order:
+    1. `warn_unprefix`: `warn [guards] X …` becomes `warn [X] …`, so both sources of a warning share its kind;
+    2. the guard label `[X]` is kept as it is: the same text from another guard is another kind;
+    3. in the text after it — a hex word of 7 or more characters mixing digits and a–f (a 40- or 64-hex sha, a
+       seat's 8-hex `<hp>`) becomes `<sha>`; a backtick-quoted span, or a single-quoted one not inside a word, `<q>`;
+       a token (split at whitespace and `,;:()[]'"`<>`) holding a `/` or ending in a file extension (`WARN_EXT`)
+       `<path>`; a decimal number, dotted versions included, `<n>`;
+    4. a run of one placeholder separated by `, ` or a space (`<path>, <path>, <path>`) becomes one, so a list that
+       grows or shrinks keeps its kind; whitespace collapses to one space.
+    So `warn [guards] agent/plans 43.md: never mentions `intent as read` (dyadlib.PLAN_PARTS)` is
+    `warn [agent/plans] <path>: never mentions <q> (dyadlib.PLAN_PARTS)`. Words are kept: a list of names that are
+    not ids, paths or numbers (a seat's function, a craft's name) changes the kind when it changes, which prints the
+    warning verbatim — the safe direction: a rule that collapsed too much would hide a new warning as standing."""
+    if not line.startswith("warn "):
+        return None
+    m = WARN_LABEL.match(warn_unprefix(line))
+    if not m:
+        return " ".join(line.split())
+    text = WARN_HEX.sub("<sha>", m.group(2))
+    text = WARN_QUOTE.sub("<q>", text)
+    text = WARN_TOKEN.sub(lambda t: "<path>" if "/" in t.group(0) or WARN_EXT.fullmatch(t.group(0)) else t.group(0), text)
+    text = WARN_NUMBER.sub("<n>", text)
+    text = WARN_RUN.sub(lambda r: f"<{r.group(1)}>", text)
+    return " ".join(f"warn [{m.group(1)}] {text}".split())
+
+def evidence_warn_kinds(lines):
+    """Pure: the set of `warn_kind`s of a block's (or a `check` run's) warn lines; a continuation line is no warning."""
+    return {warn_kind(l) for l in lines if l.startswith("warn ")}
+
+def evidence_fold(body, kinds):
+    """Pure: the non-ok lines of a block's body as `--brief` prints them, in order (d-work #476). Every line that is not
+    ok is kept verbatim — FAIL, skip, any other line — and a continuation line is kept exactly when its parent is.
+    With `kinds` None (no baseline) every warning is kept too. With a baseline set, a warning whose `warn_kind` is in it
+    is *standing*: it is folded into one line per guard, `warn [<guard>] <k> standing (<m> lines)`, placed where that
+    guard's first standing warning was — `k` the distinct warnings once `warn_unprefix` has made `check`'s and
+    `check --guards`' copies of one warning the same line (deduped), `m` the lines folded (both copies counted; the
+    counts line's `warn=` counts lines too). A warning whose kind is not in it is *new*: printed verbatim, once — its
+    twin from the other source, the same line after `warn_unprefix`, is dropped with its continuation lines."""
+    keep, folds, seen, parent_kept = [], {}, set(), False
+    for l in body:
+        if not l.strip() or l.startswith(EVIDENCE_HEADER) or l.startswith(EVIDENCE_SHA):
+            continue
+        if l[0].isspace():
+            if parent_kept: keep.append(l)
+            continue
+        tok = l.split()[0]
+        parent_kept = tok != "ok"
+        if not parent_kept:
+            continue
+        if tok != "warn" or kinds is None:
+            keep.append(l); continue
+        same = warn_unprefix(l)
+        if warn_kind(l) in kinds:
+            guard = warn_guard(l) or "?"
+            if guard not in folds:
+                folds[guard] = [set(), 0, len(keep)]; keep.append(None)
+            folds[guard][0].add(same); folds[guard][1] += 1
+            parent_kept = False
+        elif same in seen:
+            parent_kept = False
+        else:
+            seen.add(same); keep.append(l)
+    for guard, (distinct, n, at) in folds.items():
+        keep[at] = f"warn [{guard}] {len(distinct)} standing ({n} lines)"
+    return keep
+
+def evidence_brief(block, stored=None, baseline=None):
     """Pure: the brief form of a full evidence block (`block`: exactly the lines `check --evidence` prints, its last
     the evidence-sha256= line). head=, tree=, dirty=; one counts line (` other=<n>` appended only when a line had no
-    known token); every line that is not ok, verbatim and in order — a continuation line kept exactly when its
-    parent is; `stored: <path>` (`stored: none` when the store failed); and the evidence-sha256= line recomputed
+    known token); one baseline line — `baseline: <source>` when `baseline` is `(kinds, source)` with a kind set, else
+    `warn [evidence] no baseline for origin/main: warnings not folded (<reason>)`, the reason being `baseline`'s second
+    item or `not looked up` when `baseline` is None; every line that is not ok, as `evidence_fold` keeps it against
+    that baseline; `stored: <path>` (`stored: none` when the store failed); and the evidence-sha256= line recomputed
     over the full block, which is the full form's own value, since the hash is never of what brief prints."""
     body = block[:-1] if block and block[-1].startswith(EVIDENCE_SHA) else list(block)
     head = [l for l in body if l.startswith(EVIDENCE_HEADER)]
     n = evidence_counts(body)
     counts = f"counts: ok={n['ok']} warn={n['warn']} skip={n['skip']} fail={n['fail']}"
-    keep, parent_kept = [], False
-    for l in body:
-        if not l.strip() or l.startswith(EVIDENCE_HEADER):
-            continue
-        if l[0].isspace():
-            if parent_kept: keep.append(l)
-            continue
-        parent_kept = l.split()[0] != "ok"
-        if parent_kept: keep.append(l)
-    return [*head, counts + (f" other={n['other']}" if n["other"] else ""), *keep,
+    kinds, source = baseline if baseline else (None, "not looked up")
+    base = f"baseline: {source}" if kinds is not None else \
+        f"warn [evidence] no baseline for origin/main: warnings not folded ({source})"
+    return [*head, counts + (f" other={n['other']}" if n["other"] else ""), base, *evidence_fold(body, kinds),
             f"stored: {stored if stored else 'none'}", f"{EVIDENCE_SHA}{evidence_sha256(body)}"]
 
 def evidence_dir():
@@ -947,24 +1040,136 @@ def evidence_env() -> dict[str, str]:
     runs the suite exactly when `check --evidence` here would (Rule-12 p2), and a test that calls it stays fast."""
     return {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
 
+def baseline_env() -> dict[str, str]:
+    """The environment the baseline child runs in (d-work #476): `evidence_env()` with `DYAD_NO_NESTED_TESTS` set, so
+    origin/main's `check` runs every guard and never the suite — a baseline is warn kinds, which no test prints."""
+    return {**evidence_env(), "DYAD_NO_NESTED_TESTS": "1"}
+
+def evidence_in_worktree(sha, fn):
+    """Run `fn(<worktree path>)` in a detached worktree of `sha` under the git common dir
+    (`dyad-evidence-<sha12>-<random>`) and return its result; the worktree is removed afterwards, on failure or
+    interruption too, and the caller's checkout, HEAD and index are never touched (#448). A worktree that cannot be
+    added raises RuntimeError naming git's last stderr line. Shared by `--at` and the baseline (#476)."""
+    env = dyadlib.git_env()
+    common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=REPO, env=env,
+                            capture_output=True, text=True, check=True).stdout.strip()
+    wt = Path(tempfile.mkdtemp(prefix=f"{EVIDENCE_WORKTREE}{sha[:12]}-", dir=common))   # unique: two runs never collide
+    try:
+        r = subprocess.run(["git", "worktree", "add", "--detach", "--quiet", str(wt), sha], cwd=REPO, env=env,
+                           capture_output=True, text=True)
+        if r.returncode:
+            raise RuntimeError(f"git worktree add: {(r.stderr.strip().splitlines() or ['?'])[-1]}")
+        return fn(wt)
+    finally:
+        removed = subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=REPO, env=env,
+                                 capture_output=True, text=True).returncode == 0
+        if not removed:   # never registered (the add failed) or half gone: the directory, then git's record of it
+            shutil.rmtree(wt, ignore_errors=True)
+            subprocess.run(["git", "worktree", "prune"], cwd=REPO, env=env, capture_output=True)
+        if wt.exists():
+            print(f"warn [evidence] worktree not removed: {wt}", file=sys.stderr)
+
+BASELINE_CACHE = "baseline-{sha}.kinds"   # in the evidence store: one origin/main commit's warn kinds, never tracked
+
+def evidence_baseline_compute(sha):
+    """origin/main's warn kinds without the suite (d-work #476): `package.py check` of `sha`, run by that tree's own
+    runner in a detached worktree (`evidence_in_worktree`) under `baseline_env()`. `check` alone suffices: its lines
+    are every guard's `check_package` plus Rule-11's and Rule-12's, so its warnings are a superset of
+    `check --guards`' once `warn_unprefix` maps them, and the transaction guards print no warnings. A non-zero exit
+    is fine (main may fail a check); a child that printed no check line at all raises."""
+    r = evidence_in_worktree(sha, lambda wt: subprocess.run(   # a lambda: the spawn fence reads the enclosing function
+        [sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check"], cwd=wt, env=baseline_env(),
+        capture_output=True, text=True, timeout=600))
+    lines = r.stdout.splitlines()
+    n = evidence_counts(lines)
+    if not n["ok"] + n["warn"] + n["skip"] + n["fail"]:
+        raise RuntimeError(f"check printed no check line (exit {r.returncode}): "
+                           f"{(r.stderr.strip().splitlines() or ['?'])[-1]}")
+    return evidence_warn_kinds(lines)
+
+def evidence_baseline_cache_read(path, sha):
+    """The kind set a cache file holds, or None when it is absent or of another `WARN_KIND_VERSION` or sha."""
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return None
+    if not lines or lines[0] != f"# warn_kind v{WARN_KIND_VERSION} {sha}":
+        return None
+    return set(lines[1:])
+
+def evidence_baseline_cache_write(path, sha, kinds):
+    """Write the cache file atomically; a failure is ignored — a cache only saves time."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        tmp.write_text("\n".join([f"# warn_kind v{WARN_KIND_VERSION} {sha}", *sorted(kinds)]) + "\n"); tmp.replace(path)
+    except OSError:
+        pass
+
+def evidence_baseline_stored(d, sha):
+    """The kind set of a stored block (`<store>/<sha256>.txt`) whose `head=` is `sha`, with `dirty=no` and an
+    evidence-sha256= line that matches it, or None when the store holds none."""
+    for f in sorted(d.glob("*.txt")) if d is not None and d.is_dir() else ():
+        try:
+            with f.open() as h:
+                if h.readline().rstrip("\n") != f"head={sha}":
+                    continue
+            block = f.read_text().splitlines()
+        except OSError:
+            continue
+        if "dirty=no" in block[:3] and block and block[-1] == EVIDENCE_SHA + evidence_sha256(block[:-1]):
+            return evidence_warn_kinds(block)
+    return None
+
+def evidence_baseline(block):
+    """The baseline `--brief` folds against (d-work #476): `(kinds, source)` — origin/main's own warn kinds and the
+    line naming where they came from — or `(None, reason)`. Cheapest first: the head being evidenced *is* origin/main
+    (`self`: every warning is standing, it is the baseline); a cache file `<store>/baseline-<sha>.kinds` (`cached`); a
+    stored block of origin/main's head (`stored`); else `evidence_baseline_compute` (`computed`). A kind set found
+    by the last two is written to the cache. Never raises: whatever fails is the reason, and the evidence — its lines,
+    its sha256 and its exit code — is the same either way."""
+    try:
+        sha = _git("rev-parse", "--verify", "-q", "origin/main^{commit}")
+        if not sha:
+            return None, "origin/main does not resolve"
+        name = f"origin/main {sha[:12]}"
+        body = block[:-1] if block and block[-1].startswith(EVIDENCE_SHA) else list(block)
+        if body and body[0] == f"head={sha}":
+            return evidence_warn_kinds(body), f"{name} (self)"
+        d = evidence_dir()
+        if d is None:
+            return None, "git common dir not found"
+        cache = d / BASELINE_CACHE.format(sha=sha)
+        kinds = evidence_baseline_cache_read(cache, sha)
+        if kinds is not None:
+            return kinds, f"{name} (cached)"
+        for how, get in (("stored", lambda: evidence_baseline_stored(d, sha)), ("computed", lambda: evidence_baseline_compute(sha))):
+            kinds = get()
+            if kinds is not None:
+                evidence_baseline_cache_write(cache, sha, kinds)
+                return kinds, f"{name} ({how})"
+        return None, "no kinds"
+    except Exception as e:   # a baseline only shortens what is printed; it never fails the evidence
+        return None, f"{type(e).__name__}: {e}"
+
 def evidence_at_print(out, brief):
-    """The `--at` child's stdout, as the parent prints it: verbatim (full) or `evidence_brief` of it, the block
-    stored either way. A child that printed no well-formed block (a refusal, a crash) is printed verbatim and
-    nothing is stored, brief or not: there is no block to read short (#476)."""
+    """The `--at` child's stdout, as the parent prints it: verbatim (full) or `evidence_brief` of it against
+    `evidence_baseline`, the block stored either way. A child that printed no well-formed block (a refusal, a crash)
+    is printed verbatim and nothing is stored, brief or not: there is no block to read short (#476)."""
     block = out.splitlines()
     whole = bool(block) and block[0].startswith("head=") and block[-1] == EVIDENCE_SHA + evidence_sha256(block[:-1])
     stored = evidence_store(block) if whole else None
     if brief and whole:
-        for l in evidence_brief(block, stored): print(l)
+        for l in evidence_brief(block, stored, evidence_baseline(block)): print(l)
     else:
         sys.stdout.write(out)
 
 def cmd_evidence_at(rev, brief=False):
     """`check --evidence --at <rev>` (d-work #448, child C2 of #443): the evidence block of `<rev>`, computed by
-    that tree's own runner in a detached worktree under the git common dir, never in the caller's checkout,
-    whose files, HEAD and index stay as they were (#427: an evidence run in a shared checkout was invalid).
-    stdout is the child's block exactly as `check --evidence` prints it there — `head=` names `<rev>`'s commit,
-    `tree=` its tree, `dirty=no` — and the return code is the child's. The worktree is removed afterwards, on
+    that tree's own runner in a detached worktree under the git common dir (`evidence_in_worktree`), never in the
+    caller's checkout, whose files, HEAD and index stay as they were (#427: an evidence run in a shared checkout was
+    invalid). stdout is the child's block exactly as `check --evidence` prints it there — `head=` names `<rev>`'s
+    commit, `tree=` its tree, `dirty=no` — and the return code is the child's. The worktree is removed afterwards, on
     failure or interruption too. Like `--evidence` it never reads the suite memo (Rule-12 p2): the child is
     that command. A `<rev>` that names no commit is refused with one line, before anything is written. The
     child's stdout is captured (#476): printed byte for byte, or read short under `brief`, and its block stored."""
@@ -974,27 +1179,15 @@ def cmd_evidence_at(rev, brief=False):
     if not sha:
         print(f"FAIL [evidence] --at {rev or '(missing)'}: not a commit in this repository")
         return 2
-    common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=REPO, env=env,
-                            capture_output=True, text=True, check=True).stdout.strip()
-    wt = Path(tempfile.mkdtemp(prefix=f"{EVIDENCE_WORKTREE}{sha[:12]}-", dir=common))   # unique: two runs never collide
     try:
-        r = subprocess.run(["git", "worktree", "add", "--detach", "--quiet", str(wt), sha], cwd=REPO, env=env,
-                           capture_output=True, text=True)
-        if r.returncode:
-            print(f"FAIL [evidence] --at {rev}: git worktree add: {(r.stderr.strip().splitlines() or ['?'])[-1]}")
-            return 2
-        child = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
-                               cwd=wt, env=evidence_env(), stdout=subprocess.PIPE, text=True)
-        evidence_at_print(child.stdout, brief)   # the child buffers its block anyway: nothing streams (#476)
-        return child.returncode
-    finally:
-        removed = subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=REPO, env=env,
-                                 capture_output=True, text=True).returncode == 0
-        if not removed:   # never registered (the add failed) or half gone: the directory, then git's record of it
-            shutil.rmtree(wt, ignore_errors=True)
-            subprocess.run(["git", "worktree", "prune"], cwd=REPO, env=env, capture_output=True)
-        if wt.exists():
-            print(f"warn [evidence] worktree not removed: {wt}", file=sys.stderr)
+        child = evidence_in_worktree(sha, lambda wt: subprocess.run(   # a lambda: the spawn fence reads the enclosing function
+            [sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--evidence"], cwd=wt,
+            env=evidence_env(), stdout=subprocess.PIPE, text=True))
+    except RuntimeError as e:
+        print(f"FAIL [evidence] --at {rev}: {e}")
+        return 2
+    evidence_at_print(child.stdout, brief)   # the child buffers its block anyway: nothing streams (#476)
+    return child.returncode
 
 def cmd_check():
     rc = cmd_invariants()
