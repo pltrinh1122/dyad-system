@@ -15,6 +15,19 @@ jobs:
         with: { python-version: "3.12" }
       - name: check (Rule-11 runner)
         run: python3 dyad/scripts/package.py check
+      # The four former wrappers, one job (d-work #477, #473 C4): one runner set-up per push instead of five.
+      - name: rule-1 containment — each new commit stays in one zone (push range)
+        if: github.event_name == 'push'
+        run: python3 dyad/guards/infra/containment.py range "${{ github.event.before }}" "${{ github.sha }}"
+      - name: rule-1 containment — every tracked file is classified
+        run: python3 dyad/guards/infra/containment.py tree
+      - name: rule-3 d-work — direct commits to main touch only the d-work ledger (Rule-2 exception fence)
+        if: github.event_name == 'push'
+        run: python3 dyad/guards/agent/rows.py "${{ github.event.before }}" "${{ github.sha }}"
+      - name: rule-4 integrity — every Rule carries a conforming integrity block
+        run: python3 dyad/guards/agent/rules.py
+      - name: rule-6 vocabulary — table well-formed, owners and used-by resolve, no orphans
+        run: python3 dyad/guards/agent/vocabulary.py
       - name: build
         run: python3 dyad/scripts/package.py build /tmp/dyad-package.tar.gz
       - name: install core, then export and install the sysadmin craft, into a scratch repo; run the guards there; install both again (idempotent)
