@@ -707,23 +707,23 @@ attacked by reading the fence's code and its reach today.
 
 ### Proposed, opened by nobody here (the audit charter: proposes rows, opens none)
 
-These are ranked by rows reached per fence. Each states its mode, its rows, its moment and its owner. P1 and
+The Operator's `Y` opened P1–P6 as `backlog` rows #479–#484 at `bdbf324`, the program seat's commit; none by this seat. These are ranked by rows reached per fence. Each states its mode, its rows, its moment and its owner. P1 and
 P2 are the 2026-10-24 proposal 4 again, unbuilt and now recurred.
-1. **P1, G** — `session touch` refuses any word other than `-r <id>` and `-f <path>`, and `--help` prints usage
+1. **P1, G** (#479) — `session touch` refuses any word other than `-r <id>` and `-f <path>`, and `--help` prints usage
    and exits, before the first write. Reaches 159, 182, 196, 217 (four rows, one verb). Moment: the call.
    Owner: engineer.
-2. **P2, Q/R** — `session_id()` refuses to write when `DYAD_SESSION` is unset, instead of minting `unnamed-*`.
+2. **P2, Q/R** (#480) — `session_id()` refuses to write when `DYAD_SESSION` is unset, instead of minting `unnamed-*`.
    Reaches 145, 205, 226. Moment: the call. Owner: engineer.
-3. **P3, M** — a Rule-11 property 7 sentence and a `bundle.py` warning for a `VERSION` ahead of a row that names
+3. **P3, M** (#481) — a Rule-11 property 7 sentence and a `bundle.py` warning for a `VERSION` ahead of a row that names
    an untagged version, until that row's release or its infra-zone PR, as #230 and #423 did for their states.
    Reaches 216 and the face's next state. Moment: the push. Owners: counsel (the sentence and its amendment),
    then engineer.
-4. **P4, T** — the session-start report states its base and its distance from `origin/main` (`dyad session
+4. **P4, T** (#482) — the session-start report states its base and its distance from `origin/main` (`dyad session
    touch` prints `behind origin/main by <n>` after a fetch). Reaches 224.
    Moment: session start. Owner: engineer.
-5. **P5, R** — `crafts.crafts()` counts only a directory holding a tracked file, as `craft_dirs()` already
+5. **P5, R** (#483) — `crafts.crafts()` counts only a directory holding a tracked file, as `craft_dirs()` already
    requires a `VERSION`. Reaches 214. Moment: every check. Owner: engineer.
-6. **P6, Q** — `syseng/tests` also checks that every test module has a line in
+6. **P6, Q** (#484) — `syseng/tests` also checks that every test module has a line in
    `dyad/templates/self-diagnostic-levels.txt`, so `check --guards` and a targeted run see it. Reaches 222.
    Moment: the push and the call. Owner: engineer (craft zone).
 7. **Counsel** — amend `agent-corpus/falsification/2026-10-10-incident-modes-addressed.md` with attacks 1–11
