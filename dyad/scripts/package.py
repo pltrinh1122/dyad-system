@@ -179,6 +179,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 refused, nothing written to the repo (Rule-11 Ratification events: clerical
                                 execution of the recorded Y). --scan is read-only: `pending: <tags>|none`, and
                                 `pending=true|false` appended to GITHUB_OUTPUT when set
+  dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
+                                `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
+                                a core release tag is expected (BUNDLE.md names dyad-operator) and none is here; one
+                                `ok|changed|warn [bootstrap]` line per step, exit 0 even offline (a SessionStart hook
+                                never blocks); --check is read-only. `check --evidence` refuses a shallow clone, or a
+                                tagless one where a core tag is expected, in one line naming this verb
 """
 import sys
 if sys.version_info < (3, 12):
@@ -415,6 +421,44 @@ def suite_memo_hit(parts) -> bool:
     d = suite_memo_dir() if parts else None
     return bool(d) and (d / suite_memo_key(parts)).is_file()
 
+def suite_memo_diff(parts: dict, memo: dict) -> list[str]:
+    """Pure: the names of the key parts in which `parts` differs from a recorded pass's `memo`, in `parts`' own
+    order; an env knob is named `env:<knob>` (d-work #474)."""
+    out = []
+    for k, v in parts.items():
+        if k == "env" and isinstance(v, dict) and isinstance(memo.get(k), dict):
+            out += [f"env:{e}" for e in v if v[e] != memo[k].get(e)]
+        elif memo.get(k) != v:
+            out.append(k)
+    return out
+
+def suite_memo_miss(parts):
+    """The one informational line a pre-push memo miss prints (d-work #474): which key parts differ from the
+    nearest recorded pass on this checkout — the memo file (each holds its parts as JSON, `suite_memo_write`) that
+    differs in the fewest parts, newest first on a tie — so a `fetch --tags` or a new UTC day between an evidence
+    run and its push is named rather than paid for silently. None when no memo was consulted (`parts` None)."""
+    d = suite_memo_dir() if parts else None
+    if d is None:
+        return None
+    best = None
+    try:
+        files = sorted((f for f in d.iterdir() if SUITE_MEMO_NAME.fullmatch(f.name)),
+                       key=lambda f: (f.stat().st_mtime_ns, f.name), reverse=True) if d.is_dir() else []
+    except OSError:
+        files = []
+    for f in files:
+        try:
+            memo = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(memo, dict):
+            diff = suite_memo_diff(parts, memo)
+            if best is None or len(diff) < len(best):
+                best = diff
+    if best is None:
+        return "     [Rule-12] suite memo miss: no pass recorded on this checkout"
+    return f"     [Rule-12] suite memo miss: {', '.join(best)} differ{'s' if len(best) == 1 else ''} from the nearest pass on this checkout"
+
 def suite_memo_clause(base, head):
     """`suite_gate`'s memo clauses (pre-push only): the skip line, or None. First, `head`'s own tree already
     passed. Second, the range's own non-merge commits all touch only `<instance>/d-work/` (the three-dot walk
@@ -449,7 +493,8 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     anything else → run. Rename detection off (#191), so a move of code into the ledger still runs it. The plan gate
     and the fence keep `dyadlib.ledger_only`, where an empty range is never ledger-only. Last, and only under
     `pre_push` (the hook's flag), a readable range that would run consults the suite memo
-    (`suite_memo_clause`, #162); an unknown range never does. `cmd_evidence` never reaches a skip: its
+    (`suite_memo_clause`, #162), and a miss returns run with the line naming the parts that missed
+    (`suite_memo_miss`, #474); an unknown range never does. `cmd_evidence` never reaches a skip: its
     `cmd_check` runs the suite first, and it never passes `pre_push`."""
     if os.environ.get("DYAD_NO_NESTED_TESTS") or _SUITE_RAN:
         return False, None
@@ -470,6 +515,7 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
         line = suite_memo_clause(base, head)
         if line:
             return False, line
+        return True, suite_memo_miss(suite_memo_parts(head))   # which key part missed, one line (d-work #474)
     return True, None
 
 def installed_roots(base, head):
@@ -831,6 +877,10 @@ def cmd_evidence():
     head, prints head/tree/dirty, every line they print, and a sha256 of all preceding lines
     (joined by newline) so the Operator can re-run it on the same head and compare."""
     import io, contextlib
+    unfit = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap").clone_problems(REPO)
+    if unfit:   # d-work #474: a shallow or tagless clone yields false FAILs (infra/bundle, plan.base->commit); one line, nothing run
+        print(f"FAIL [evidence] {unfit[0]}")
+        return 2
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
     lines = [f"head={git('rev-parse', 'HEAD')}", f"tree={git('rev-parse', 'HEAD^{tree}')}",
              f"dirty={'yes' if git('status', '--porcelain') else 'no'}"]
@@ -1427,6 +1477,10 @@ def cmd_release(a):
     `.github/released.py`); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "release.py", "release").main(a, REPO)
 
+def cmd_bootstrap(a):
+    """The seat bootstrap lives in scripts/bootstrap.py (d-work #474); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap").main(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -1447,6 +1501,8 @@ if __name__ == "__main__":
         sys.exit(cmd_session(a[1:]))
     if a and a[0] == "release":
         sys.exit(cmd_release(a[1:]))
+    if a and a[0] == "bootstrap":
+        sys.exit(cmd_bootstrap(a[1:]))
     if a and a[0] == "ledger":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":

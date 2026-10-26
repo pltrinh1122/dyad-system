@@ -41,6 +41,7 @@ integration dyad/tests/guards/infra/test_bundle.py         # scratch repos, tags
 integration dyad/tests/guards/infra/test_containment.py    # scratch repos
 integration dyad/tests/guards/infra/test_manifest.py       # scratch repos
 unit        dyad/tests/guards/preferences/test_preferences.py
+integration dyad/tests/test_bootstrap.py                   # scratch repos, a bare origin, a shallow file:// clone, fetch; the runner as a child (#474)
 integration dyad/tests/test_concurrency.py                 # scratch repos, push
 integration dyad/tests/test_craft.py                       # the runner (craft export|install, install, check)
 integration dyad/tests/test_distribute.py                  # scratch repos, installs
