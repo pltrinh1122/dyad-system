@@ -42,6 +42,16 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 bytecode written), removed afterwards on failure too; the caller's checkout,
                                 HEAD and index are never touched, and no suite memo is read (#448, #443 C2).
                                 A <rev> that names no commit is refused with one line (exit 2)
+  dyad check --evidence --brief [--at <rev>]
+                                the same run, read short (d-work #476, #473 C3): head=, tree=, dirty=, one
+                                `counts: ok= warn= skip= fail=` line, every line that is not ok verbatim and in
+                                order (an indented continuation line follows its parent), `stored: <path>` and
+                                the same evidence-sha256= the full form prints, computed over the full block; the
+                                same exit code. Every --evidence run, full or brief, stores its full block at
+                                <git common dir>/dyad-evidence/<sha256>.txt (never tracked; a failed store warns)
+  dyad check --evidence --show <sha256>
+                                print a stored block; a unique prefix of at least 12 hex is enough. Too short,
+                                ambiguous or not stored is refused with one line (exit 2)
   dyad build [out.tar.gz] deterministic archive of the core craft (scripts/distribute.py, the one
                                 distribution code path every craft uses; #156)
   dyad install <repo> [--from <src>]
@@ -351,7 +361,7 @@ SUITE_MEMO_ENV = ("DYAD_INSTANCE", "DYAD_HOST", "DYAD_HOST_ZONE", "DYAD_OPS", "D
 SUITE_MEMO_NAME = re.compile(r"[0-9a-f]{64}")
 
 def _git(*a):
-    """One read-only git call for the suite memo, in the repo judged and without a hook's GIT_VARS; its
+    """One read-only git call for the suite memo (and the evidence store's common dir, #476), in the repo judged and without a hook's GIT_VARS; its
     stdout stripped, or None when git cannot say."""
     try:
         r = subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True, env=dyadlib.git_env(), timeout=120)
@@ -826,10 +836,11 @@ def evidence_sha256(lines):
     import hashlib
     return hashlib.sha256(chr(10).join(lines).encode()).hexdigest()
 
-def cmd_evidence():
+def cmd_evidence(brief=False):
     """Rule-14 property 3: the evidence block. Runs `check` and `check --guards` on the exact
     head, prints head/tree/dirty, every line they print, and a sha256 of all preceding lines
-    (joined by newline) so the Operator can re-run it on the same head and compare."""
+    (joined by newline) so the Operator can re-run it on the same head and compare. The full block is
+    stored (`evidence_store`) whatever is printed; `brief` prints `evidence_brief` of it instead (#476)."""
     import io, contextlib
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
     lines = [f"head={git('rev-parse', 'HEAD')}", f"tree={git('rev-parse', 'HEAD^{tree}')}",
@@ -838,10 +849,94 @@ def cmd_evidence():
     with contextlib.redirect_stdout(buf):
         rc = cmd_check() | cmd_guards()
     lines += buf.getvalue().splitlines()
-    for l in lines:
+    block = lines + [f"evidence-sha256={evidence_sha256(lines)}"]
+    stored = evidence_store(block)                       # #476: every run, full or brief; never raises
+    for l in (evidence_brief(block, stored) if brief else block):
         print(l)
-    print(f"evidence-sha256={evidence_sha256(lines)}")
     return int(rc)
+
+EVIDENCE_STORE = "dyad-evidence"   # `<git common dir>/dyad-evidence/<sha256>.txt`: every full block a run printed or
+                                   # read short, never tracked; `--show` reads it back (d-work #476, #473 C3)
+EVIDENCE_PREFIX_MIN = 12           # the shortest prefix `--show` accepts: 48 bits, as `--at`'s worktree names use
+EVIDENCE_TOKENS = {"ok": "ok", "warn": "warn", "skip": "skip", "FAIL": "fail"}   # leading token -> counts key
+EVIDENCE_HEADER = ("head=", "tree=", "dirty=")
+EVIDENCE_SHA = "evidence-sha256="
+
+def evidence_counts(lines):
+    """Pure: `{ok, warn, skip, fail, other}` over a block's check and guard lines. A line is classified by its first
+    whitespace-separated token (`ok`, `warn`, `skip`, `FAIL`); the head=/tree=/dirty= and evidence-sha256= lines
+    are not check lines, and a line that starts with whitespace is a continuation of the line above it (a FAIL's
+    `     [Rule-12] …` detail) and is not counted. Any other line is `other`: never silently dropped (#476)."""
+    n = dict.fromkeys(("ok", "warn", "skip", "fail", "other"), 0)
+    for l in lines:
+        if not l.strip() or l[0].isspace() or l.startswith(EVIDENCE_HEADER) or l.startswith(EVIDENCE_SHA):
+            continue
+        n[EVIDENCE_TOKENS.get(l.split()[0], "other")] += 1
+    return n
+
+def evidence_brief(block, stored=None):
+    """Pure: the brief form of a full evidence block (`block`: exactly the lines `check --evidence` prints, its last
+    the evidence-sha256= line). head=, tree=, dirty=; one counts line (` other=<n>` appended only when a line had no
+    known token); every line that is not ok, verbatim and in order — a continuation line kept exactly when its
+    parent is; `stored: <path>` (`stored: none` when the store failed); and the evidence-sha256= line recomputed
+    over the full block, which is the full form's own value, since the hash is never of what brief prints."""
+    body = block[:-1] if block and block[-1].startswith(EVIDENCE_SHA) else list(block)
+    head = [l for l in body if l.startswith(EVIDENCE_HEADER)]
+    n = evidence_counts(body)
+    counts = f"counts: ok={n['ok']} warn={n['warn']} skip={n['skip']} fail={n['fail']}"
+    keep, parent_kept = [], False
+    for l in body:
+        if not l.strip() or l.startswith(EVIDENCE_HEADER):
+            continue
+        if l[0].isspace():
+            if parent_kept: keep.append(l)
+            continue
+        parent_kept = l.split()[0] != "ok"
+        if parent_kept: keep.append(l)
+    return [*head, counts + (f" other={n['other']}" if n["other"] else ""), *keep,
+            f"stored: {stored if stored else 'none'}", f"{EVIDENCE_SHA}{evidence_sha256(body)}"]
+
+def evidence_dir():
+    """`<git common dir>/dyad-evidence`, shared by every worktree of the checkout; None when git cannot say."""
+    common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    return Path(common) / EVIDENCE_STORE if common else None
+
+def evidence_store(block):
+    """Write a full evidence block to `<git common dir>/dyad-evidence/<sha256>.txt` and return the path; the name
+    is the block's own evidence-sha256, so a re-run of the same head and result rewrites the same file. Never
+    raises: a store that fails prints one warn line to stderr and returns None, and the evidence still prints."""
+    try:
+        if not block or not block[-1].startswith(EVIDENCE_SHA):
+            raise ValueError("no evidence-sha256= line")
+        sha = block[-1].removeprefix(EVIDENCE_SHA)
+        if sha != evidence_sha256(block[:-1]):
+            raise ValueError("evidence-sha256= does not match the block")
+        d = evidence_dir()
+        if d is None:
+            raise OSError("git common dir not found")
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{sha}.txt"
+        tmp = d / f".{sha}.{os.getpid()}.tmp"
+        tmp.write_text(chr(10).join(block) + chr(10)); tmp.replace(path)   # atomic: a reader never sees half a block
+        return path
+    except Exception as e:   # a store is a convenience for `--show`, never part of the evidence
+        print(f"warn [evidence] block not stored: {e}", file=sys.stderr)
+        return None
+
+def cmd_evidence_show(prefix):
+    """`check --evidence --show <sha256>`: print a stored block. A unique prefix of at least EVIDENCE_PREFIX_MIN
+    lowercase hex is accepted; too short, not hex, ambiguous or not stored is refused with one line, exit 2."""
+    p = (prefix or "").lower()
+    if len(p) < EVIDENCE_PREFIX_MIN or len(p) > 64 or any(c not in "0123456789abcdef" for c in p):
+        print(f"FAIL [evidence] --show {prefix or '(missing)'}: give a sha256 or a prefix of at least "
+              f"{EVIDENCE_PREFIX_MIN} hex"); return 2
+    d = evidence_dir()
+    hits = sorted(d.glob(f"{p}*.txt")) if d is not None and d.is_dir() else []
+    if len(hits) != 1:
+        why = "no stored evidence block" if not hits else f"ambiguous ({len(hits)} stored blocks)"
+        print(f"FAIL [evidence] --show {prefix}: {why}"); return 2
+    sys.stdout.write(hits[0].read_text())
+    return 0
 
 EVIDENCE_WORKTREE = "dyad-evidence-"   # `<git common dir>/dyad-evidence-<sha12>-<random>`: one per `--at` run, never kept
 
@@ -852,14 +947,27 @@ def evidence_env() -> dict[str, str]:
     runs the suite exactly when `check --evidence` here would (Rule-12 p2), and a test that calls it stays fast."""
     return {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
 
-def cmd_evidence_at(rev):
+def evidence_at_print(out, brief):
+    """The `--at` child's stdout, as the parent prints it: verbatim (full) or `evidence_brief` of it, the block
+    stored either way. A child that printed no well-formed block (a refusal, a crash) is printed verbatim and
+    nothing is stored, brief or not: there is no block to read short (#476)."""
+    block = out.splitlines()
+    whole = bool(block) and block[0].startswith("head=") and block[-1] == EVIDENCE_SHA + evidence_sha256(block[:-1])
+    stored = evidence_store(block) if whole else None
+    if brief and whole:
+        for l in evidence_brief(block, stored): print(l)
+    else:
+        sys.stdout.write(out)
+
+def cmd_evidence_at(rev, brief=False):
     """`check --evidence --at <rev>` (d-work #448, child C2 of #443): the evidence block of `<rev>`, computed by
     that tree's own runner in a detached worktree under the git common dir, never in the caller's checkout,
     whose files, HEAD and index stay as they were (#427: an evidence run in a shared checkout was invalid).
     stdout is the child's block exactly as `check --evidence` prints it there — `head=` names `<rev>`'s commit,
     `tree=` its tree, `dirty=no` — and the return code is the child's. The worktree is removed afterwards, on
     failure or interruption too. Like `--evidence` it never reads the suite memo (Rule-12 p2): the child is
-    that command. A `<rev>` that names no commit is refused with one line, before anything is written."""
+    that command. A `<rev>` that names no commit is refused with one line, before anything is written. The
+    child's stdout is captured (#476): printed byte for byte, or read short under `brief`, and its block stored."""
     env = dyadlib.git_env()
     sha = subprocess.run(["git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{rev}^{{commit}}"],
                          cwd=REPO, env=env, capture_output=True, text=True).stdout.strip() if rev else ""
@@ -875,8 +983,10 @@ def cmd_evidence_at(rev):
         if r.returncode:
             print(f"FAIL [evidence] --at {rev}: git worktree add: {(r.stderr.strip().splitlines() or ['?'])[-1]}")
             return 2
-        return subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
-                              cwd=wt, env=evidence_env()).returncode
+        child = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
+                               cwd=wt, env=evidence_env(), stdout=subprocess.PIPE, text=True)
+        evidence_at_print(child.stdout, brief)   # the child buffers its block anyway: nothing streams (#476)
+        return child.returncode
     finally:
         removed = subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=REPO, env=env,
                                  capture_output=True, text=True).returncode == 0
@@ -1456,9 +1566,12 @@ if __name__ == "__main__":
     if not a or a[0] not in ("check", "build", "install"):
         sys.exit(__doc__)
     if a[0] == "check" and "--evidence" in a:
+        if "--show" in a:                                                # check --evidence --show <sha256> (#476)
+            i = a.index("--show"); sys.exit(cmd_evidence_show(a[i + 1] if i + 1 < len(a) else None))
+        brief = "--brief" in a                                           # check --evidence --brief (#476)
         if "--at" in a:                                                  # check --evidence --at <rev> (#448)
-            i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None))
-        sys.exit(cmd_evidence())
+            i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None, brief=brief))
+        sys.exit(cmd_evidence(brief=brief))
     if a[0] == "check" and "--pr" in a:
         i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
     if a[0] == "check" and "--guards" in a:

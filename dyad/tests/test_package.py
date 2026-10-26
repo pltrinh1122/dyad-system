@@ -1512,8 +1512,9 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
         "landing_refusal": "cat-file, rev-parse and merge-base of the head a `Y done` names in the operator's own "
                            "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
-        "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, "
-                "under dyadlib.git_env() so a hook's GIT_VARS never redirect them; no write (#162)",
+        "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, and the "
+                "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
+                "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for and of the common dir, then `worktree add --detach` and "
                            "`worktree remove`/`prune` of its own dyad-evidence-* worktree, under dyadlib.git_env(); "
                            "the caller's checkout, HEAD and index are never written (#448)",
@@ -1568,8 +1569,8 @@ class EvidenceAtTests(unittest.TestCase):
     def git(self, d, *a):
         return subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,
                               env=dyadlib.git_env()).stdout
-    def at(self, d, rev):
-        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--at", rev],
+    def at(self, d, rev, *extra):
+        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--at", rev, *extra],
                               cwd=d, capture_output=True, text=True, env=env())
     def snapshot(self, d):
         """What a run must leave as it was: HEAD, the index's entries, the status, the files and the worktrees."""
@@ -1628,6 +1629,96 @@ class EvidenceAtTests(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {}):
             os.environ.pop("DYAD_NO_NESTED_TESTS", None)
             self.assertNotIn("DYAD_NO_NESTED_TESTS", pkg.evidence_env())   # a real run: the child runs the suite
+
+    def test_e_brief_composes_with_at_and_stores_the_childs_block(self):
+        """#476: `--brief --at <rev>` reads the child's full block short in the parent, with the full form's hash,
+        and stores the full block, which `--show` prints back by a 12-hex prefix."""
+        d = self.fixture()
+        target = self.git(d, "rev-parse", "HEAD~1").strip()
+        full, brief = self.at(d, "HEAD~1"), self.at(d, "HEAD~1", "--brief")
+        self.assertEqual(brief.returncode, full.returncode, brief.stdout + brief.stderr)
+        b = brief.stdout.splitlines()
+        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
+        self.assertEqual(b[-1], full.stdout.splitlines()[-1])        # the same evidence-sha256 as the full form
+        self.assertTrue(b[-2].startswith("stored: ") and b[-2].endswith(b[-1].split("=")[1] + ".txt"), b[-2])
+        show = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--show",
+                               b[-1].split("=")[1][:12]], cwd=d, capture_output=True, text=True, env=env())
+        self.assertEqual((show.returncode, show.stdout), (0, full.stdout))
+        self.assertEqual(self.leftovers(d), [])
+
+class EvidenceBriefTests(unittest.TestCase):
+    """d-work #476 (child C3 of #473): `check --evidence --brief`, the store and `--show`, on fixed blocks — no
+    suite and no guard runs; the store is pointed at a scratch directory."""
+    BODY = ["head=" + "a" * 40, "tree=" + "b" * 40, "dirty=no",
+            "ok   [invariant] dyadlib (3)", "ok   [Rule-11]", "FAIL [Rule-12] core suite: 1 failure",
+            "     [Rule-12] test_x (dyad.tests.test_y) ... FAIL", "ok   [Rule-12] crafts/sysadmin",
+            "     [Rule-12] a detail of an ok line", "warn [agent/provenance] row 12 unrecorded",
+            "skip [guards] sysadmin/events: no store", "ok   [guards] infra/containment commits"]
+    def setUp(self):
+        self.pkg = load_package()
+        self.dir = Path(tempfile.mkdtemp()) / self.pkg.EVIDENCE_STORE
+        self.addCleanup(shutil.rmtree, self.dir.parent, True)
+        patcher = unittest.mock.patch.object(self.pkg, "evidence_dir", return_value=self.dir)
+        patcher.start(); self.addCleanup(patcher.stop)
+    def block(self, body=None):
+        body = list(self.BODY if body is None else body)
+        return body + ["evidence-sha256=" + self.pkg.evidence_sha256(body)]
+    def run_out(self, fn, *a):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = fn(*a)
+        return rc, out.getvalue(), err.getvalue()
+    def test_counts_classify_by_leading_token_and_skip_continuations(self):
+        self.assertEqual(self.pkg.evidence_counts(self.block()), {"ok": 4, "warn": 1, "skip": 1, "fail": 1, "other": 0})
+        self.assertEqual(self.pkg.evidence_counts(["huh?"])["other"], 1)   # an unknown line is counted, never dropped
+    def test_brief_keeps_header_non_ok_lines_in_order_and_the_full_hash(self):
+        block = self.block()
+        self.assertEqual(self.pkg.evidence_brief(block, "/s/x.txt"), [
+            "head=" + "a" * 40, "tree=" + "b" * 40, "dirty=no",
+            "counts: ok=4 warn=1 skip=1 fail=1",
+            "FAIL [Rule-12] core suite: 1 failure", "     [Rule-12] test_x (dyad.tests.test_y) ... FAIL",
+            "warn [agent/provenance] row 12 unrecorded", "skip [guards] sysadmin/events: no store",
+            "stored: /s/x.txt", block[-1]])
+        self.assertEqual(self.pkg.evidence_brief(block)[-2], "stored: none")
+        self.assertEqual(self.pkg.evidence_brief(block[:-1])[-1], block[-1])   # computed over the full block, either way
+        self.assertIn("counts: ok=0 warn=0 skip=0 fail=0 other=1", self.pkg.evidence_brief(self.block(["head=x", "huh?"])))
+    def test_store_then_show_by_full_sha_and_by_a_12_hex_prefix(self):
+        block = self.block(); sha = block[-1].split("=")[1]
+        path = self.pkg.evidence_store(block)
+        self.assertEqual(path, self.dir / f"{sha}.txt")
+        for key in (sha, sha[:12], sha[:12].upper()):
+            rc, out, _ = self.run_out(self.pkg.cmd_evidence_show, key)
+            self.assertEqual((rc, out.splitlines()), (0, block), key)
+    def test_show_refuses_short_ambiguous_missing_and_non_hex(self):
+        self.pkg.evidence_store(self.block())
+        twin = self.block(self.BODY + ["ok   [x]"]); sha = twin[-1].split("=")[1]
+        (self.dir / f"{sha[:12]}{'0' * 52}.txt").write_text("x\n")   # a second block sharing twin's 12-hex prefix
+        self.pkg.evidence_store(twin)
+        for key, why in ((sha[:11], "at least 12 hex"), (None, "at least 12 hex"), ("z" * 12, "at least 12 hex"),
+                         (sha[:12], "ambiguous (2 stored blocks)"), ("f" * 64, "no stored evidence block")):
+            rc, out, _ = self.run_out(self.pkg.cmd_evidence_show, key)
+            self.assertEqual(rc, 2, key); self.assertEqual(len(out.splitlines()), 1, out)
+            self.assertRegex(out, r"^FAIL \[evidence\] --show "); self.assertIn(why, out)
+    def test_a_failed_store_warns_and_never_raises(self):
+        self.dir.parent.joinpath(self.pkg.EVIDENCE_STORE).write_text("a file where the store's directory goes")
+        rc = self.run_out(lambda: self.pkg.evidence_store(self.block()))
+        self.assertIsNone(rc[0]); self.assertRegex(rc[2], r"^warn \[evidence\] block not stored: ")
+        self.assertIsNone(self.run_out(lambda: self.pkg.evidence_store(self.BODY))[0])   # no sha line: not a block
+    def test_cmd_evidence_brief_prints_brief_stores_full_and_keeps_the_exit_code(self):
+        """In-process, with `cmd_check`/`cmd_guards` replaced by fixed lines: the brief and the full form share the
+        hash and the exit code, and both store the full block."""
+        lines = self.BODY[3:]
+        def check(): print(*lines[:5], sep="\n"); return 1
+        def guards(): print(*lines[5:], sep="\n"); return 0
+        with unittest.mock.patch.object(self.pkg, "cmd_check", check), unittest.mock.patch.object(self.pkg, "cmd_guards", guards):
+            rc_full, full, _ = self.run_out(self.pkg.cmd_evidence)
+            rc_brief, brief, _ = self.run_out(self.pkg.cmd_evidence, True)
+        full, brief = full.splitlines(), brief.splitlines()
+        self.assertEqual((rc_full, rc_brief), (1, 1))
+        self.assertEqual(full[3:-1], lines); self.assertEqual(brief[-1], full[-1])
+        self.assertEqual(brief[3], "counts: ok=4 warn=1 skip=1 fail=1")
+        stored = self.dir / (full[-1].split("=")[1] + ".txt")
+        self.assertEqual(stored.read_text().splitlines(), full); self.assertEqual(brief[-2], f"stored: {stored}")
 
 class SuiteMemoTests(unittest.TestCase):
     """#162 (d-work #199 N2): the suite memo. Written after a full, all-roots pass on a clean tree, under the
