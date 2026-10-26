@@ -50,8 +50,8 @@ not edited when they are added (G5).
   merges only the PRs the counter-prompt named, only on the guards' observed passes — the
   kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main Agent
   on the exact head being merged, its evidence block cited in the completion reply (Rule-3) by
-  its `evidence-sha256` and its brief form — every failure and every warning new since `main`,
-  the standing ones as counts — the full block stored and shown on request (Rule-14 property 3), which the Operator may re-run on that head and compare; the hosting's CI
+  its `evidence-sha256` and its brief form — every failing or skipped line and every warning new
+  since `main`, the standing ones folded per guard — the full block stored and shown on request (Rule-14 property 3), which the Operator may re-run on that head and compare; the hosting's CI
   corroborates after the merge, on `main` (Rule-14 property 3, #168), and never substitutes — and only if their heads are unchanged since it
   was asked; otherwise the agent stops and re-prompts. A CI failure that is an account or
   adapter failure (no job started) is not a red check but an absent one, reported as such.

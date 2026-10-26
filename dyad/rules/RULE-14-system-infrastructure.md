@@ -45,9 +45,10 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    run by the main Agent on the exact head being merged, prints the evidence block (head sha,
    tree hash, working-tree cleanliness, every check and guard result, and a sha256 of those
    lines). The completion reply cites it by that sha256 and by its brief form, as
-   `check --evidence --brief` prints it: head, tree and dirty flag; each guard's counts, the warnings a guard
-   already raises on `main` folded into its count; every failing line; and every warning of a kind new since
-   `main`. The full block, from which the sha256 is computed, is
+   `check --evidence --brief` prints it: head, tree and dirty flag; one count line over the whole block; the
+   baseline the fold compared against (`origin/main`, or a line saying none was found, in which case nothing
+   is folded); for each guard, its warnings already standing on that baseline folded into one line; every
+   warning of a kind new since the baseline; and every failing, skipped or other line. The full block, from which the sha256 is computed, is
    stored per checkout and never tracked (`<git common dir>/dyad-evidence/<evidence-sha256>.txt`)
    and shown byte for byte on request (`check --evidence --show <sha256>`), and the Operator may
    re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). Hosted CI corroborates and never replaces the block, and
