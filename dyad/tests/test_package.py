@@ -1398,6 +1398,25 @@ class SuiteEnvTests(unittest.TestCase):
             git("init", "-q"); git("config", "commit.gpgsign", "true")   # the local config asks; the env entry wins
             git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "c")
             self.assertNotIn("gpgsig", git("cat-file", "-p", "HEAD"))
+    def test_caller_git_c_never_reaches_a_fixture_repo(self):
+        """#456 (row 153): a caller's `git -c` arrives as `GIT_CONFIG_PARAMETERS`; under `suite_env()` it is
+        gone, while the caller's `GIT_CONFIG_COUNT` entries (#206) still survive. A scratch repo whose
+        `dyad/hooks/pre-commit` fails commits under `suite_env()` and fails under the raw environment."""
+        pkg = load_package()
+        with unittest.mock.patch.dict(os.environ, {"GIT_CONFIG_PARAMETERS": "'core.hookspath=dyad/hooks'",
+                                                   "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.autocrlf",
+                                                   "GIT_CONFIG_VALUE_0": "false"}):
+            env, raw = pkg.suite_env(), {**dyadlib.git_env()}
+        self.assertNotIn("GIT_CONFIG_PARAMETERS", env)
+        self.assertEqual((env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_KEY_1"]), ("core.autocrlf", "commit.gpgsign"))
+        with tempfile.TemporaryDirectory() as d:
+            run = lambda e, *a: subprocess.run(["git", *a], cwd=d, env=e, capture_output=True, text=True)
+            run(env, "init", "-q")
+            hook = Path(d) / "dyad" / "hooks" / "pre-commit"
+            hook.parent.mkdir(parents=True); hook.write_text("#!/bin/sh\nexit 1\n"); hook.chmod(0o755)
+            who = ("-c", "user.name=t", "-c", "user.email=t@t")
+            self.assertNotEqual(run(raw, *who, "commit", "-q", "--allow-empty", "-m", "raw").returncode, 0)
+            self.assertEqual(run(env, *who, "commit", "-q", "--allow-empty", "-m", "suite").returncode, 0)
 
 class SuiteEnvWorktreeTests(unittest.TestCase):
     """#165 end to end (d-work #199 N0): a pre-push hook in a linked worktree exports
