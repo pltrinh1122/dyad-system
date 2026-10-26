@@ -194,7 +194,9 @@ class LandTests(unittest.TestCase):
         before = self.main_at_origin()
         presence = self.seat / INST / "d-work" / "sessions" / "s1.md"
         presence.parent.mkdir(parents=True); presence.write_text("session: s1\n")
+        t1, t2 = self.write_trace(1), self.write_trace(2)   # #465: under `dwork-trace: always` each Done rides with its trace
         rc, out, err = self.batch("# a close round\n\n"
+                                  f"land {t1} {t2}\n"
                                   "state 1 done -d 'Y done' --said Y\n"
                                   "state 2 done -d 'Y done' --said 'Y, both'\n"
                                   f"land {presence}\n")
@@ -203,13 +205,43 @@ class LandTests(unittest.TestCase):
         self.assertEqual(git(self.origin, "rev-parse", "main~1"), before, "one commit")
         self.assertEqual(len(self.hook_runs()), 1, "one push, one hook run")
         s = f"{INST}/d-work/"
-        self.assertEqual(self.files_of(head), [s + "provenance/1.md", s + "provenance/2.md", s + "rows/1.md", s + "rows/2.md", s + "sessions/s1.md"])
+        self.assertEqual(self.files_of(head), [s + "provenance/1.md", s + "provenance/2.md", s + "rows/1.md", s + "rows/2.md",
+                                               s + "sessions/s1.md", s + "traces/1.md", s + "traces/2.md"])
         msg = git(self.origin, "log", "-1", "--format=%B", "main")
-        self.assertEqual(msg, "ledger: batch #1 done (Y done), #2 done (Y done), presence s1"); self.assertNotIn("d-work #", msg)
+        self.assertEqual(msg, "ledger: batch trace #1, trace #2, #1 done (Y done), #2 done (Y done), presence s1"); self.assertNotIn("d-work #", msg)
         for rid in (1, 2):
             self.assertIn("state: done", git(self.origin, "show", f"main:{s}rows/{rid}.md"))
         self.assertEqual(git(self.seat, "rev-parse", "HEAD"), head, "the landed copy restored, the seat fast-forwarded")
         self.assertEqual(self.status(), "")
+
+    def write_trace(self, rid):
+        t = self.seat / INST / "d-work" / "traces" / f"{rid}.md"
+        t.parent.mkdir(parents=True, exist_ok=True); t.write_text(f"# Trace #{rid}\n")
+        return t
+
+    def test_a_done_line_lands_only_with_its_trace_before_it(self):
+        """#465: the scratch install's preferences say `dwork-trace: always`, so the worktree's runner refuses a `Y done`
+        line whose trace is not in the worktree; a `land traces/<id>.md` line before it puts it there, and the trace
+        rides the same commit. The single `--land` form lands only what the verb writes, so it is refused too."""
+        self.assertEqual(dyadlib.preference("dwork-trace", self.seat), "always")
+        before = self.main_at_origin()
+        t = self.write_trace(1)
+        rc, out, err = self.batch("state 1 done -d 'Y done' --said Y\n")
+        self.assertEqual(rc, 1); self.assertIn("write it first: dyad dwork trace 1 --out", err)
+        self.assertIn("line 1 (state 1 done", err); self.assertIn("nothing landed", err)
+        rc, _, err = self.dwork("state", "1", "done", "-d", "Y done", "--said", "Y", "--land")
+        self.assertEqual(rc, 1); self.assertIn("dyad dwork trace 1 --out", err)
+        rc, _, err = self.batch(f"state 1 done -d 'Y done' --said Y\nland {t}\n")   # the trace after the line: too late
+        self.assertEqual(rc, 1); self.assertIn("dyad dwork trace 1 --out", err)
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])
+        rc, out, err = self.batch(f"land {t}\nstate 1 done -d 'Y done' --said Y\n")
+        self.assertEqual(rc, 0, err)
+        head = self.main_at_origin()
+        self.assertEqual(git(self.origin, "rev-parse", "main~1"), before, "one commit")
+        s = f"{INST}/d-work/"
+        self.assertEqual(self.files_of(head), [s + "provenance/1.md", s + "rows/1.md", s + "traces/1.md"])
+        self.assertEqual(git(self.origin, "log", "-1", "--format=%s", "main"), "ledger: batch trace #1, #1 done (Y done)")
+        self.assertEqual(len(self.hook_runs()), 1)
 
     def test_a_refused_line_lands_nothing(self):
         before = self.main_at_origin()

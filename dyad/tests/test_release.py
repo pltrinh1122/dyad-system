@@ -224,6 +224,23 @@ class PublishTests(World):
         self.assertIn(f"!= recorded {DIGEST}", o["detail"])
         self.assertEqual((self.tags(), self.tags(self.origin)), ([], []))
 
+    def test_only_the_bundle_takes_latest(self):
+        """#465: a core or craft Release is created `--latest=false`; a bundle keeps gh's default, so it stays Latest."""
+        self.make_world()
+        tags = {"dyad-operator-v0.1.0": "core", "sysadmin-v0.3.0": "craft", "v0.2.0": "bundle"}
+        self.record(*(entry(t, self.cut) for t in tags))
+        def stub(ctx, tag, sha, tmp):   # the build stubbed: each kind's archive, its digest the recorded one
+            (tmp / "out").mkdir(); a = tmp / "out" / f"{tag}.tar.gz"; a.write_bytes(b"x")
+            return tags[tag], DIGEST, [str(a)]
+        with unittest.mock.patch.object(self.rel, "build", stub):
+            rc, out = self.run_verb()
+        self.assertEqual((rc, [o["outcome"] for o in self.outcomes(out)]), (0, ["released"] * 3), out)
+        creates = {c.split()[2]: c.split() for c in self.gh_calls() if c.startswith("release create")}
+        self.assertEqual(set(creates), set(tags))
+        for t in ("dyad-operator-v0.1.0", "sysadmin-v0.3.0"):
+            self.assertIn("--latest=false", creates[t], t)
+        self.assertFalse([a for a in creates["v0.2.0"] if a.startswith("--latest")], creates["v0.2.0"])
+
     def test_a_dispatch_naming_no_entry_fails(self):
         self.make_world()
         os.environ["ONLY"] = "v9.9.9"

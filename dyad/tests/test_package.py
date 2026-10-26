@@ -648,6 +648,12 @@ class PackageTests(livetest.LiveCase):
         rows.joinpath("1.md").write_text("id: 1\ntitle: one\nopened: d\nstate: open\ndisposed: \nrefs: \n")
         rows.joinpath("2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: done\ndisposed: Y done\nrefs: \n")
         return d, rows
+    def trace(self, rows, *ids):
+        """#465: under the real repo's `dwork-trace: always` (package.py reads REPO's preferences), a `Y done` is
+        recorded only beside its trace; a case about something else writes the trace it needs first."""
+        t = rows.parent / "traces"; t.mkdir(exist_ok=True)
+        for rid in ids:
+            t.joinpath(f"{rid}.md").write_text(f"# Trace #{rid}\n")
     def dwork_state(self, d, *a):
         import os
         env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))  # absolute: package.py resolves REPO from its own location
@@ -743,7 +749,7 @@ class PackageTests(livetest.LiveCase):
     def test_dwork_done_state_follows_the_merge(self):
         """#202: a `Y done` that ratifies a merge names the head it was given on, is recorded with the state
         unchanged, and the row reaches `done` by a second dispositionless call once that head is on `main`."""
-        d, rows = self.dwork_repo()
+        d, rows = self.dwork_repo(); self.trace(rows, 1)
         r = self.dwork_state(d, "1", "planned", "-d", "Y done (merges PR #9)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("the head its `Y` was given on", r.stderr)
         r = self.dwork_state(d, "1", "done", "-d", "Y done (merges PR #9 at 0123abc)", "--said", "Y")
@@ -764,7 +770,7 @@ class PackageTests(livetest.LiveCase):
         """#439: the landing loop bound its branch list to `refs`, which the close then wrote into the row as
         `['origin/main', 'main', 'HEAD']` — 28 rows on `main`. A close on a resolvable head keeps the refs."""
         d, rows = self.dwork_repo()
-        rows.joinpath("1.md").write_text("id: 1\ntitle: one\nopened: d\nstate: open\ndisposed: \nrefs: 7 parent #3\n")
+        rows.joinpath("1.md").write_text("id: 1\ntitle: one\nopened: d\nstate: open\ndisposed: \nrefs: 7 parent #3\n"); self.trace(rows, 1)
         head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PKG, capture_output=True, text=True).stdout.strip()   # resolvable in REPO
         r = self.dwork_state(d, "1", "open", "-d", f"Y done (merges PR #9 at {head})", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -790,7 +796,7 @@ class PackageTests(livetest.LiveCase):
         """#202: the closing act writes no disposition, so the `Y` it executes must already be on the row —
         the coupling the 2026-10-08 chain-of-authority audit (C2) found missing. The landing test itself is
         the fence's (`dyad/tests/guards/agent/test_rows.py`), which owns a repository to judge."""
-        d, rows = self.dwork_repo()
+        d, rows = self.dwork_repo(); self.trace(rows, 1)
         r = self.dwork_state(d, "1", "done")
         self.assertNotEqual(r.returncode, 0); self.assertIn("carries no `Y done` entry", r.stderr)
         self.assertIn("state: open", rows.joinpath("1.md").read_text())
@@ -801,11 +807,36 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("is unknown in this clone", r.stderr)
         self.assertIn("state: done", rows.joinpath("1.md").read_text())
     def test_dwork_requires_a_head_per_PR_the_done_names(self):
-        d, rows = self.dwork_repo()
+        d, rows = self.dwork_repo(); self.trace(rows, 1)
         r = self.dwork_state(d, "1", "open", "-d", "Y done (batch #1,#2, merges PR #9,#10 at 0123abcd)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("2 named, 1 head(s) given", r.stderr)
         r = self.dwork_state(d, "1", "open", "-d", "Y done (merges PR #9 at 0123abcd, PR #10 at 4567bcde)", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr)
+    def test_dwork_refuses_a_done_record_without_its_trace(self):
+        """#465: under `dwork-trace: always` (the real repo's value, which package.py reads), a `Y done` entry is
+        refused before any write until `<instance>/d-work/traces/<id>.md` exists — the fence's `rows.trace_problems`
+        said where it costs a line instead of a push; with the trace beside it the same call records it."""
+        self.assertEqual(dyadlib.preference("dwork-trace", PKG.parent), "always", "the case reads the live preference")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"; before = rows.joinpath("1.md").read_text()
+        for args in (("1", "open", "-d", "Y done", "--said", "Y"), ("1", "done", "-d", "Y done", "--said", "Y"),
+                     ("1", "open", "-d", "Y done (batch #1,#2, merges PR #9 at 0123abcd)", "--said", "Y")):
+            with self.subTest(args=args):
+                r = self.dwork_state(d, *args)
+                self.assertNotEqual(r.returncode, 0); self.assertIn("refused: a `Y done` entry is recorded with its trace", r.stderr)
+                self.assertIn("write it first: dyad dwork trace 1 --out", r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rec.exists())
+        r = self.dwork_state(d, "1", "open", "-d", "Y plan", "--said", "Y")               # a disposition other than `Y done`
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        r = self.dwork_state(d, "1", "done", "-d", "Y done", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("1.md").read_text())
+    def test_dwork_state_mandate_close_needs_no_trace(self):
+        """#465: a `--mandate` close writes `Y done (mandate #<id>, …)`; the accreted row's Done rides the mandate's,
+        whose own trace covers the set, so no trace of its own is asked for."""
+        d, rows = self.mandate_repo()
+        self.assertFalse((rows.parent / "traces" / "3.md").exists())
+        r = self.dwork_state(d, "3", "done", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("3.md").read_text())
     def test_dwork_record_entries_are_verbatim_and_complete(self):
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         pv = dyadlib.load_guard("agent", "provenance")
@@ -897,6 +928,7 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(e[0]["date"], born.opened)                                           # the heading is today: the copy is made today
         self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5 by construction
         self.assertEqual(prs.check("d-work #3", rows=[born]), [])                              # and the plan gate passes it at once
+        self.trace(rows, 3)                                                                    # #465: not a `--mandate` close
         r = self.dwork_state(d, "3", "done", "-d", "Y done, with #1", "--said", "Y")           # its Done rides the mandate's
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).mode, "implicit")   # carried, never rewritten
@@ -919,7 +951,7 @@ class PackageTests(livetest.LiveCase):
     # d-work #422: the accreted row's close form, and a relayed disposition — the two notes `own_disposition` reads
     def mandate_repo(self):
         """Row #1 the mandate, planned and then closed on its Done-`Y`; row #3 accreted under it."""
-        d, rows = self.dwork_repo()
+        d, rows = self.dwork_repo(); self.trace(rows, 1)
         for args in (("1", "planned", "-d", "Y plan", "--said", "Y, go ahead"),
                      ("1", "done", "-d", "Y done (accreted #3)", "--said", "Y, both delivered")):
             r = self.dwork_state(d, *args); self.assertEqual(r.returncode, 0, r.stderr)
@@ -981,7 +1013,7 @@ class PackageTests(livetest.LiveCase):
     def test_dwork_retire_archives_a_batch_on_one_disposition(self):
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
         pv = dyadlib.load_guard("agent", "provenance")
-        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"; self.trace(rows, 1)
         for args in (("state", "1", "planned", "-d", "Y plan", "--said", "Y"), ("state", "1", "done", "-d", "Y done", "--said", "Y")):
             self.assertEqual(self.dwork_state(d, *args[1:]).returncode, 0)
         self.assertEqual(self.dwork_new(d, "a surfaced mode", "--backlog", "-d", "Y backlog", "--said", "Y").returncode, 0)

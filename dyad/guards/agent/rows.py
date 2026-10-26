@@ -36,6 +36,10 @@ both record a `Y done` that names a merge and set the row `done` (`done_order_pr
 follows the merge; and the commit that does set `done` must show every head those entries name as an
 ancestor of itself (`landing_problems`), an unresolvable sha printing one line rather than failing. The
 interval between the two is read by the package check as one warning per row (`done_recorded_not_closed`).
+Under the preference `dwork-trace: always`, read at the commit's own tree, a commit that adds a `Y done` entry to row
+N — not a mandate close, whose note holds `mandate #` (Rule-7 property 4) — must hold `<instance>/d-work/traces/N.md`
+in that same tree, carried by the commit or already on the base (`trace_problems`, d-work #465): the Done record
+commit carries the trace (Rule-3 Completion); a merge resolution is judged against each parent.
 The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
@@ -139,6 +143,49 @@ def done_order_problems(path: str, before, after, label: str) -> list[str]:
             f"(Rule-3 Completion: the state follows the merge — record the entry with the state unchanged, "
             f"merge, then `dyad dwork state <id> done`)"
             for e in added_entries(before.disposed, after.disposed) if DONE_MERGES.search(e)]
+
+# ---- the Done record carries its trace (d-work #465)
+TRACE_KEY, TRACE_ALWAYS = "dwork-trace", "always"
+
+def preference_at(sha: str, key: str, cwd) -> str | None:
+    """The value of one preference row in the commit's own tree — `dyadlib.preference`'s reading of the table,
+    over `git show <sha>:preferences-corpus/PREFERENCES.md` — or None when the file or the row is absent there."""
+    try:
+        text = git("show", f"{sha}:{dyadlib.PREFERENCES_REL}", cwd=cwd, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        return None
+    for r in dyadlib.table_rows(text.replace("\\|", "\x00")):
+        if len(r) >= 2 and dyadlib.plain(r[0]).strip() == key:
+            return dyadlib.plain(r[1]).strip()
+    return None
+
+def trace_path(path: str, rid) -> str:
+    """`<instance>/d-work/traces/<id>.md` beside the row file's own store."""
+    return f"{Path(path).parent.parent.as_posix()}/traces/{rid}.md"
+
+def trace_problems(path: str, before, after, label: str, sha: str, cwd) -> list[str]:
+    """Rule-3 Completion: under `dwork-trace: always` the trace is written before the Done **record** commit,
+    which carries it. Each `Y done` entry this commit adds to the row (`before` None: a new row) — a mandate close
+    excepted, whose note holds `mandate #`, since an accreted row's Done rides the mandate's and the mandate's own
+    trace covers the set (Rule-3 Scope, Rule-7 property 4) — needs `<instance>/d-work/traces/<id>.md` in this
+    commit's own tree: carried by it, or already on the base. The preference is read at that tree too, so a
+    commit is judged under the value it was written under; `on-demand`, or no preference file, disables the
+    clause. Only added entries are judged, so no row's history is re-read: six Done records (#455–#460) carried
+    none because a refused `dwork trace` went unseen, and nothing refused the record (#465)."""
+    added = [e for e in added_entries(before.disposed if before is not None else "", after.disposed)
+             if DONE_Y.match(e) and "mandate #" not in e]
+    if not added or preference_at(sha, TRACE_KEY, cwd) != TRACE_ALWAYS:
+        return []
+    tp = trace_path(path, after.id)
+    try:
+        git("cat-file", "-e", f"{sha}:{tp}", cwd=cwd, stderr=subprocess.DEVNULL)
+        return []
+    except subprocess.CalledProcessError:
+        pass
+    return [f"FAIL [main-fence]: {label} records {e!r} on row file {path} without its trace {tp} in the same "
+            f"tree (Rule-3 Completion, `dwork-trace: always`: the Done record commit carries the trace — write it "
+            f"with `dyad dwork trace {after.id} --out`, then carry it in the same commit: `dyad dwork batch` with a "
+            f"`land {tp}` line before the `state` line; #465)" for e in added]
 
 def landing_problems(path: str, before, after, label: str, sha: str, cwd, base: str | None = None) -> list[str]:
     """The commit that sets `done` asserts two things. That a Done-`Y` was given at all: a row reaches
@@ -311,6 +358,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             fails += disposed_problems(path, before.disposed, after.disposed, label)
             fails += done_order_problems(path, before, after, label)
             fails += landing_problems(path, before, after, label, sha, cwd, base)
+            fails += trace_problems(path, before, after, label, sha, cwd)       # #465: the record carries its trace
         elif st.startswith("A"):
             try:
                 new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
@@ -321,6 +369,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             fails += born_implicit_problems(path, new, label)
             fails += refs_shape_problems(path, None, new, label)
             fails += disposed_problems(path, "", new.disposed, label)
+            fails += trace_problems(path, None, new, label, sha, cwd)
     return fails
 
 def check_range(before: str, after: str, cwd=None) -> list[str]:
@@ -386,6 +435,7 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
             fails += done_order_problems(path, before, after, f"merge {label}")
             fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
             fails += refs_shape_problems(path, before, after, f"merge {label}")   # #439: a refs rewritten while resolving
+            fails += trace_problems(path, before, after, f"merge {label}", sha, cwd)   # #465: a Done record resolved in without its trace
     return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:

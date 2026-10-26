@@ -221,7 +221,10 @@ def publish(ctx: Ctx, row: str, tag: str, sha: str, want_sha256: str) -> tuple[s
         note = tmp / f"{tag}.release.json"
         note.write_text(json.dumps({"tag": tag, "row": row, "sha": full, "sha256": observed, "gate": ctx.gate,
                                     "run": run_url(ctx), "service": os.environ.get("GITHUB_SHA", "")}, sort_keys=True) + "\n")
-        gh("release", "create", tag, *files, str(note), "--repo", ctx.repo, "--verify-tag", "--title", tag,
+        # #465: only the bundle — the repo's one front door, the unprefixed tag (Rule-11 p7) — takes gh's default and
+        # becomes Latest; a core or craft Release never takes Latest from it
+        latest = [] if kind == "bundle" else ["--latest=false"]
+        gh("release", "create", tag, *files, str(note), "--repo", ctx.repo, "--verify-tag", *latest, "--title", tag,
            "--notes", f"dyad {kind} {tag}: row #{row}, cut {full[:7]}, sha256 {observed} (released, d-work #461)")
         return "released", "ok", f"{tag} at {full[:7]}: {'tag created' if not at else 'tag existed'}, Release created, sha256 {observed}"
     finally:
