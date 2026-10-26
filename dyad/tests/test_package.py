@@ -1512,17 +1512,21 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
         "landing_refusal": "cat-file, rev-parse and merge-base of the head a `Y done` names in the operator's own "
                            "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
-        "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, "
-                "under dyadlib.git_env() so a hook's GIT_VARS never redirect them; no write (#162)",
-        "cmd_evidence_at": "rev-parse of the head asked for and of the common dir, then `worktree add --detach` and "
-                           "`worktree remove`/`prune` of its own dyad-evidence-* worktree, under dyadlib.git_env(); "
-                           "the caller's checkout, HEAD and index are never written (#448)",
+        "_git": "the suite memo's reads (status, trees, tags, common dir, merge-base) of the repo judged, and the "
+                "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
+                "them; no write (#162)",
+        "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
+        "evidence_in_worktree": "rev-parse of the common dir, then `worktree add --detach` and `worktree remove`/`prune` "
+                                "of its own dyad-evidence-* worktree, under dyadlib.git_env(); the caller's checkout, "
+                                "HEAD and index are never written (#448, shared with the baseline by #476)",
     }
     # enclosing function -> the env a python child that is not a test child runs in, and why: the `--at` child is
     # `check --evidence` itself, so it must run the suite whenever the caller would, which suite_env() forbids
     PY_ALLOWED = {
         "cmd_evidence_at": ("evidence_env", "the evidence block of another head, run by that tree's own runner; "
                                             "GIT_VARS dropped, DYAD_NO_NESTED_TESTS the caller's (#448)"),
+        "evidence_baseline_compute": ("baseline_env", "origin/main's `check` for its warn kinds, run by that tree's own "
+                                                      "runner; GIT_VARS dropped and DYAD_NO_NESTED_TESTS set: never the suite (#476)"),
     }
     def sites(self):
         import ast
@@ -1568,8 +1572,8 @@ class EvidenceAtTests(unittest.TestCase):
     def git(self, d, *a):
         return subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,
                               env=dyadlib.git_env()).stdout
-    def at(self, d, rev):
-        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--at", rev],
+    def at(self, d, rev, *extra):
+        return subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--at", rev, *extra],
                               cwd=d, capture_output=True, text=True, env=env())
     def snapshot(self, d):
         """What a run must leave as it was: HEAD, the index's entries, the status, the files and the worktrees."""
@@ -1628,6 +1632,199 @@ class EvidenceAtTests(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {}):
             os.environ.pop("DYAD_NO_NESTED_TESTS", None)
             self.assertNotIn("DYAD_NO_NESTED_TESTS", pkg.evidence_env())   # a real run: the child runs the suite
+
+    def test_e_brief_composes_with_at_and_stores_the_childs_block(self):
+        """#476: `--brief --at <rev>` reads the child's full block short in the parent, with the full form's hash,
+        and stores the full block, which `--show` prints back by a 12-hex prefix."""
+        d = self.fixture()
+        target = self.git(d, "rev-parse", "HEAD~1").strip()
+        full, brief = self.at(d, "HEAD~1"), self.at(d, "HEAD~1", "--brief")
+        self.assertEqual(brief.returncode, full.returncode, brief.stdout + brief.stderr)
+        b = brief.stdout.splitlines()
+        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
+        self.assertEqual(b[-1], full.stdout.splitlines()[-1])        # the same evidence-sha256 as the full form
+        self.assertTrue(b[-2].startswith("stored: ") and b[-2].endswith(b[-1].split("=")[1] + ".txt"), b[-2])
+        show = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--show",
+                               b[-1].split("=")[1][:12]], cwd=d, capture_output=True, text=True, env=env())
+        self.assertEqual((show.returncode, show.stdout), (0, full.stdout))
+        self.assertEqual(self.leftovers(d), [])
+
+class EvidenceBriefTests(unittest.TestCase):
+    """d-work #476 (child C3 of #473): `check --evidence --brief`, the store and `--show`, on fixed blocks — no
+    suite and no guard runs; the store is pointed at a scratch directory."""
+    BODY = ["head=" + "a" * 40, "tree=" + "b" * 40, "dirty=no",
+            "ok   [invariant] dyadlib (3)", "ok   [Rule-11]", "FAIL [Rule-12] core suite: 1 failure",
+            "     [Rule-12] test_x (dyad.tests.test_y) ... FAIL", "ok   [Rule-12] crafts/sysadmin",
+            "     [Rule-12] a detail of an ok line", "warn [agent/provenance] row 12 unrecorded",
+            "skip [guards] sysadmin/events: no store", "ok   [guards] infra/containment commits"]
+    def setUp(self):
+        self.pkg = load_package()
+        self.dir = Path(tempfile.mkdtemp()) / self.pkg.EVIDENCE_STORE
+        self.addCleanup(shutil.rmtree, self.dir.parent, True)
+        patcher = unittest.mock.patch.object(self.pkg, "evidence_dir", return_value=self.dir)
+        patcher.start(); self.addCleanup(patcher.stop)
+    def block(self, body=None):
+        body = list(self.BODY if body is None else body)
+        return body + ["evidence-sha256=" + self.pkg.evidence_sha256(body)]
+    def run_out(self, fn, *a):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = fn(*a)
+        return rc, out.getvalue(), err.getvalue()
+    def test_counts_classify_by_leading_token_and_skip_continuations(self):
+        self.assertEqual(self.pkg.evidence_counts(self.block()), {"ok": 4, "warn": 1, "skip": 1, "fail": 1, "other": 0})
+        self.assertEqual(self.pkg.evidence_counts(["huh?"])["other"], 1)   # an unknown line is counted, never dropped
+    def test_brief_keeps_header_non_ok_lines_in_order_and_the_full_hash(self):
+        block = self.block()
+        self.assertEqual(self.pkg.evidence_brief(block, "/s/x.txt"), [
+            "head=" + "a" * 40, "tree=" + "b" * 40, "dirty=no",
+            "counts: ok=4 warn=1 skip=1 fail=1",
+            "warn [evidence] no baseline for origin/main: warnings not folded (not looked up)",
+            "FAIL [Rule-12] core suite: 1 failure", "     [Rule-12] test_x (dyad.tests.test_y) ... FAIL",
+            "warn [agent/provenance] row 12 unrecorded", "skip [guards] sysadmin/events: no store",
+            "stored: /s/x.txt", block[-1]])
+        self.assertEqual(self.pkg.evidence_brief(block)[-2], "stored: none")
+        self.assertEqual(self.pkg.evidence_brief(block[:-1])[-1], block[-1])   # computed over the full block, either way
+        self.assertIn("counts: ok=0 warn=0 skip=0 fail=0 other=1", self.pkg.evidence_brief(self.block(["head=x", "huh?"])))
+    def test_store_then_show_by_full_sha_and_by_a_12_hex_prefix(self):
+        block = self.block(); sha = block[-1].split("=")[1]
+        path = self.pkg.evidence_store(block)
+        self.assertEqual(path, self.dir / f"{sha}.txt")
+        for key in (sha, sha[:12], sha[:12].upper()):
+            rc, out, _ = self.run_out(self.pkg.cmd_evidence_show, key)
+            self.assertEqual((rc, out.splitlines()), (0, block), key)
+    def test_show_refuses_short_ambiguous_missing_and_non_hex(self):
+        self.pkg.evidence_store(self.block())
+        twin = self.block(self.BODY + ["ok   [x]"]); sha = twin[-1].split("=")[1]
+        (self.dir / f"{sha[:12]}{'0' * 52}.txt").write_text("x\n")   # a second block sharing twin's 12-hex prefix
+        self.pkg.evidence_store(twin)
+        for key, why in ((sha[:11], "at least 12 hex"), (None, "at least 12 hex"), ("z" * 12, "at least 12 hex"),
+                         (sha[:12], "ambiguous (2 stored blocks)"), ("f" * 64, "no stored evidence block")):
+            rc, out, _ = self.run_out(self.pkg.cmd_evidence_show, key)
+            self.assertEqual(rc, 2, key); self.assertEqual(len(out.splitlines()), 1, out)
+            self.assertRegex(out, r"^FAIL \[evidence\] --show "); self.assertIn(why, out)
+    def test_a_failed_store_warns_and_never_raises(self):
+        self.dir.parent.joinpath(self.pkg.EVIDENCE_STORE).write_text("a file where the store's directory goes")
+        rc = self.run_out(lambda: self.pkg.evidence_store(self.block()))
+        self.assertIsNone(rc[0]); self.assertRegex(rc[2], r"^warn \[evidence\] block not stored: ")
+        self.assertIsNone(self.run_out(lambda: self.pkg.evidence_store(self.BODY))[0])   # no sha line: not a block
+    def test_cmd_evidence_brief_prints_brief_stores_full_and_keeps_the_exit_code(self):
+        """In-process, with `cmd_check`/`cmd_guards` replaced by fixed lines: the brief and the full form share the
+        hash and the exit code, and both store the full block."""
+        lines = self.BODY[3:]
+        def check(): print(*lines[:5], sep="\n"); return 1
+        def guards(): print(*lines[5:], sep="\n"); return 0
+        with unittest.mock.patch.object(self.pkg, "cmd_check", check), unittest.mock.patch.object(self.pkg, "cmd_guards", guards), \
+             unittest.mock.patch.object(self.pkg, "evidence_baseline", lambda block: (set(), "origin/main x (test)")):
+            rc_full, full, _ = self.run_out(self.pkg.cmd_evidence)
+            rc_brief, brief, _ = self.run_out(self.pkg.cmd_evidence, True)
+        full, brief = full.splitlines(), brief.splitlines()
+        self.assertEqual((rc_full, rc_brief), (1, 1))
+        self.assertEqual(full[3:-1], lines); self.assertEqual(brief[-1], full[-1])
+        self.assertEqual(brief[3], "counts: ok=4 warn=1 skip=1 fail=1")
+        stored = self.dir / (full[-1].split("=")[1] + ".txt")
+        self.assertEqual(stored.read_text().splitlines(), full); self.assertEqual(brief[-2], f"stored: {stored}")
+        self.assertEqual(brief[4], "baseline: origin/main x (test)")
+        self.assertIn("warn [agent/provenance] row 12 unrecorded", brief)    # a kind main lacks: verbatim
+
+    # ---- folding against origin/main's warn kinds (#476, the extension the Operator approved)
+    PLANS = ["warn [agent/plans] 43.md: never mentions `intent as read` (dyadlib.PLAN_PARTS)",
+             "warn [agent/plans] 454.md: never mentions `mutation` (dyadlib.PLAN_PARTS)"]
+    def test_warn_kind_normalizes_ids_quotes_paths_and_numbers_and_keeps_the_guard(self):
+        k = self.pkg.warn_kind
+        self.assertEqual(k(self.PLANS[0]), "warn [agent/plans] <path>: never mentions <q> (dyadlib.PLAN_PARTS)")
+        self.assertEqual(k(self.PLANS[0]), k(self.PLANS[1]))
+        self.assertEqual(k("warn [agent/provenance] 451.md: entry 3 carries a 40-hex string (commit sha or token)"),
+                         "warn [agent/provenance] <path>: entry <n> carries a <n>-hex string (commit sha or token)")
+        self.assertEqual(k(f"warn [x/y] head {'ab12' * 10} and {'cd34' * 16} at cab-10-cbc041dd"),
+                         "warn [x/y] head <sha> and <sha> at cab-<n>-<sha>")
+        self.assertEqual(k("warn [x/y] mentions 'the Agent', 'counter-prompt' — the Agent's process"),
+                         "warn [x/y] mentions <q> — the Agent's process")          # a run of one placeholder is one
+        self.assertEqual(k("warn [s/i] crafts/a: 2 module(s): a/b.py, c/d.py"), k("warn [s/i] crafts/b: 5 module(s): e.py"))
+        self.assertEqual(k("warn [c/c] floor dyad-operator>=0.10.0"), "warn [c/c] floor dyad-operator>=<n>")
+        self.assertNotEqual(k("warn [agent/plans] 3.md: x"), k("warn [agent/rows] 3.md: x"))   # another guard, another kind
+        self.assertNotEqual(k("warn [x/y] names no intent"), k("warn [x/y] names no mutation"))   # words are kept
+        self.assertIsNone(k("ok   [agent/plans]")); self.assertIsNone(k("FAIL [agent/plans] 3.md: x"))
+    def test_the_guards_prefix_maps_to_the_guard_label(self):
+        g = "warn [guards] agent/plans 43.md: never mentions `intent as read` (dyadlib.PLAN_PARTS)"
+        self.assertEqual(self.pkg.warn_unprefix(g), self.PLANS[0])
+        self.assertEqual(self.pkg.warn_kind(g), self.pkg.warn_kind(self.PLANS[0]))
+        self.assertEqual(self.pkg.warn_guard(g), "agent/plans")
+        self.assertEqual(self.pkg.warn_unprefix("warn [guards] agent/plans"), "warn [agent/plans]")
+        self.assertEqual(self.pkg.warn_unprefix("ok   [guards] agent/plans"), "ok   [guards] agent/plans")
+    def fold_body(self):
+        return ["head=" + "a" * 40, "tree=" + "b" * 40, "dirty=no", "ok   [Rule-11]", *self.PLANS,
+                "warn [agent/plans] 7.md: names no intent (Rule-15 phase 1)", "     a continuation of a new warning",
+                "FAIL [x/y] broken", "ok   [guards] x/y",
+                *(l.replace("warn [agent/plans]", "warn [guards] agent/plans") for l in self.PLANS),
+                "warn [guards] agent/plans 7.md: names no intent (Rule-15 phase 1)", "     a continuation of a new warning",
+                "skip [guards] z: none"]
+    def test_brief_folds_standing_warnings_per_guard_and_prints_a_new_kind_once(self):
+        block = self.block(self.fold_body())
+        kinds = {self.pkg.warn_kind(self.PLANS[0])}
+        out = self.pkg.evidence_brief(block, "/s/x.txt", (kinds, "origin/main 0123456789ab (stored)"))
+        self.assertEqual(out, [*block[:3], "counts: ok=2 warn=6 skip=1 fail=1", "baseline: origin/main 0123456789ab (stored)",
+                               "warn [agent/plans] 2 standing (4 lines)",                    # deduped: 2 warnings, 4 lines
+                               "warn [agent/plans] 7.md: names no intent (Rule-15 phase 1)",  # a new kind: verbatim, once
+                               "     a continuation of a new warning", "FAIL [x/y] broken", "skip [guards] z: none",
+                               "stored: /s/x.txt", block[-1]])
+        self.assertEqual(out[-1], "evidence-sha256=" + self.pkg.evidence_sha256(block[:-1]))   # still the full block's
+    def test_no_baseline_prints_every_warning_and_one_line_saying_why(self):
+        block = self.block(self.fold_body())
+        out = self.pkg.evidence_brief(block, None, (None, "origin/main does not resolve"))
+        self.assertEqual(out[4], "warn [evidence] no baseline for origin/main: warnings not folded (origin/main does not resolve)")
+        self.assertEqual([l for l in out if l.startswith("warn [") and "evidence" not in l],
+                         [l for l in block if l.startswith("warn [")])                         # every warning, verbatim
+        self.assertEqual(out[-1], block[-1])
+    def baseline_repo(self):
+        """A scratch repo with one commit and `origin/main` pointing at it (an update-ref, no remote needed); REPO and
+        the store pointed there. Returns the main sha."""
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, True)
+        git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,
+                                        env=dyadlib.git_env()).stdout.strip()
+        git("init", "-q"); (d / "f").write_text("x\n"); git("add", "f")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-qm", "one")
+        sha = git("rev-parse", "HEAD"); git("update-ref", "refs/remotes/origin/main", sha)
+        p = unittest.mock.patch.object(self.pkg, "REPO", d); p.start(); self.addCleanup(p.stop)
+        return sha
+    def test_baseline_from_a_stored_block_then_from_the_cache_never_computed(self):
+        sha = self.baseline_repo()
+        mine = self.block(["head=" + "c" * 40, "tree=t", "dirty=no", *self.PLANS])
+        def compute(_): raise AssertionError("computed although a stored block or the cache had the kinds")
+        with unittest.mock.patch.object(self.pkg, "evidence_baseline_compute", compute):
+            self.assertEqual(self.pkg.evidence_baseline(mine), (None, "AssertionError: computed although a stored block "
+                                                                      "or the cache had the kinds"))   # nothing stored yet
+            main = self.block([f"head={sha}", "tree=t", "dirty=no", self.PLANS[0]])
+            self.pkg.evidence_store(self.block([f"head={sha}", "tree=t", "dirty=yes", "warn [q/r] dirty only"]))  # not used
+            self.pkg.evidence_store(main)
+            kinds, src = self.pkg.evidence_baseline(mine)
+            self.assertEqual((kinds, src), ({self.pkg.warn_kind(self.PLANS[0])}, f"origin/main {sha[:12]} (stored)"))
+            cache = self.dir / f"baseline-{sha}.kinds"
+            self.assertTrue(cache.is_file())
+            (self.dir / (main[-1].split("=")[1] + ".txt")).unlink()                # the stored block gone: the cache serves
+            self.assertEqual(self.pkg.evidence_baseline(mine), (kinds, f"origin/main {sha[:12]} (cached)"))
+            self.assertEqual(self.pkg.evidence_baseline(main)[1], f"origin/main {sha[:12]} (self)")   # main itself
+    def test_a_cached_kinds_file_is_used_without_recomputation_and_a_computed_set_is_cached(self):
+        sha = self.baseline_repo()
+        mine = self.block(["head=" + "c" * 40, "tree=t", "dirty=no", *self.PLANS])
+        calls = []
+        def compute(s): calls.append(s); return {"warn [a/b] <n>"}
+        with unittest.mock.patch.object(self.pkg, "evidence_baseline_compute", compute):
+            self.assertEqual(self.pkg.evidence_baseline(mine), ({"warn [a/b] <n>"}, f"origin/main {sha[:12]} (computed)"))
+            self.assertEqual(self.pkg.evidence_baseline(mine), ({"warn [a/b] <n>"}, f"origin/main {sha[:12]} (cached)"))
+        self.assertEqual(calls, [sha])                                                  # once, then the cache
+        cache = self.dir / f"baseline-{sha}.kinds"
+        cache.write_text(f"# warn_kind v0 {sha}\nwarn [old] x\n")                       # another rule's cache: a miss
+        with unittest.mock.patch.object(self.pkg, "evidence_baseline_compute", lambda s: calls.append(s) or set()):
+            self.assertEqual(self.pkg.evidence_baseline(mine), (set(), f"origin/main {sha[:12]} (computed)"))
+        self.assertEqual(len(calls), 2)
+    def test_a_baseline_that_cannot_be_had_never_raises(self):
+        self.baseline_repo()
+        mine = self.block(["head=" + "c" * 40])
+        with unittest.mock.patch.object(self.pkg, "evidence_baseline_compute", lambda s: (_ for _ in ()).throw(RuntimeError("offline"))):
+            self.assertEqual(self.pkg.evidence_baseline(mine), (None, "RuntimeError: offline"))
+        with unittest.mock.patch.object(self.pkg, "_git", lambda *a: None):
+            self.assertEqual(self.pkg.evidence_baseline(mine), (None, "origin/main does not resolve"))
 
 class SuiteMemoTests(unittest.TestCase):
     """#162 (d-work #199 N2): the suite memo. Written after a full, all-roots pass on a clean tree, under the
