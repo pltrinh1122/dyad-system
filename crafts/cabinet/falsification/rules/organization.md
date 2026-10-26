@@ -130,3 +130,17 @@ seat — the cos always, and any seat `attended-seats` names — reads `delegati
 
 **Survivor:** the Guide's §3 paragraph "Posture", as reworded; VERSION stays 0.2.0 (uncut). Disposition: see ledger
 #442 (accreted under #441; its Done rides that mandate's Done disposition).
+
+## Amendment — dyad-system #458 (2026-10-26: the mandates template seeds the charters as #431, #432 and #433 left them)
+**Claim (plan #458, the Operator's `Y` of 2026-10-26):** `templates/mandates.md` seeds every installing system's
+charters, and since #431, #432 and #433 five of its six rows no longer matched what this craft's §4 and §5 say each
+function owns; the seed is brought to the live table's function-level text, seat cells kept `<hp>`.
+
+| # | attack | result |
+|---|---|---|
+| 24 | Only the audit row lagged (#433); five rows widen the change past its cause. | **Refuted** — the program row's lag seeded a cos able to push preferences, which §5 forbids since #435; a seed that contradicts its own rule is the defect whichever row carries it. distribute already matched and is unchanged. |
+| 25 | Ids of this instance's ledger in a craft template leak into another system's seed. | **Survives, scoped** — they are written `dyad-system #<id>`, as §4's records cite them: provenance of where the charter was decided, never a row of the receiving system's ledger. |
+| 26 | The operate row names an alignment check whose run-book only this instance has. | **Survives, scoped** — the row names the duty, "by run-book"; the run-book itself is the sysadmin craft's to seed where installed. |
+
+**Survivor:** `templates/mandates.md`'s program, counsel, audit, engineer and operate rows as amended; VERSION 0.2.1
+(the drift guard requires it, `cabinet-v0.2.0` being cut). Disposition: see ledger #458.
