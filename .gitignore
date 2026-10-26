@@ -1,7 +1,8 @@
 # seeded by dyad install (hostadapter.write_gitignore) from dyad/scripts/package_rules.txt
 **/ops/*.log
 *.pyc
-.claude/
+.claude/*
+!.claude/settings.json
 LEDGER.md
 __pycache__/
 projections/
