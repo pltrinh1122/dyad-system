@@ -201,7 +201,13 @@ than failing, because a hard failure on an unresolvable sha is a cross-clone den
 and the interval between the two is read by the state check as one warning per row
 (`rows.done_recorded_not_closed`), carried in every evidence block and its sha256. Whether a merge ran
 is not decidable from git at the moment of the record — a merge subject naming a PR is no merge of it —
-so only the closing commit is fenced, and only against the head its own entry names (#202).
+so only the closing commit is fenced, and only against the head its own entry names (#202). The same fence keeps the trace
+clause of the completion clause: under `dwork-trace: always`, read at the commit's own tree, a commit that adds a
+`Y done` entry to a row must carry that row's `<instance>/d-work/traces/<id>.md` or find it already on its base
+(`rows.trace_problems`), on the same three paths; it judges only entries a commit adds, never history, and exempts a
+mandate close — an entry noted `mandate #<id>`, whose Done rides the mandate's own trace — while a batch's entry needs
+each named row's trace; `dwork state` and `dwork batch` refuse such an entry before their first write (`package.py trace_refusal`) while the trace is
+absent, a batch passing when an earlier `land <instance>/d-work/traces/<id>.md` line carries it (#465).
 
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
 live in `dyad/guards/agent/` (agent zone, Rule-1; placed per Rule-11 property 1) and run on the kernel-only path
@@ -442,6 +448,8 @@ pushes; a standing row would be a d-work that never completes and authorizes no 
 monitoring is stated to be no d-work and its events clerical, as the ledger's are; see the same
 record, amendment #438. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-d-work.yml` 2026-10-26 (d-work #477, C4
 of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
-record, amendment #477.
+record, amendment #477. Mechanisms gains the fence's trace clause 2026-10-26 (d-work
+#465): the completion clause said the Done record commit carries the trace, and nothing checked it; six Done records
+(#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465.
 
 Set: System Requirements.
