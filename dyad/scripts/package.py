@@ -104,7 +104,21 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 sha; fast-forwards this checkout when it is on a clean `main`
   dyad dwork land <path>... -m <msg> [--mirror <branch>]
                                 the same for files this checkout already wrote — plan files, presence, traces:
-                                copied into that worktree, committed under <msg>, pushed the same way
+                                copied into that worktree, committed under <msg>, pushed the same way; then, when
+                                this checkout is on `main` and its only changes are those paths, each identical
+                                to its landed blob, they are restored from HEAD and the checkout fast-forwarded (#459)
+  dyad dwork batch <file>|- --land [--mirror <branch>]
+                                several records in one commit and one push (#459): the file (or stdin) holds one
+                                `dwork` argv per line, shell-quoted — `new …`, `state …` or `land <path>…`; blank
+                                and `#` lines skipped; -m, --land and --mirror refused on a line. Every line is
+                                parsed first; one row id both recording a merge-naming `Y done` and set `done` is
+                                refused, naming both lines (the fence's Done order: record batch, merges, close
+                                batch). Then one worktree pass: a line already on origin/main is skipped by name
+                                (`skipped (already landed): …`), a batch of only such lines is refused, the rest run
+                                in order and a refused line stops the batch with nothing committed; one `ledger:
+                                batch …` commit citing no `d-work #`, one push, a moved main rebuilt (3 tries). A
+                                later line cannot name an id a `new` line of the same batch creates: it is allocated
+                                in the worktree and re-allocated on a rebuild
   dyad dwork retire <id>... -d text --said[-file] <s>
                                 the retirement form (Rule-3 `archived`, d-work #290): backlog or done
                                 → archived over k rows in one call, one Operator question behind it.
@@ -1117,9 +1131,10 @@ def cmd_dwork(a):
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
         return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
     pos, _, bare = dwork_args(a)
-    if (pos and pos[0] == "land") or "--land" in bare:
+    if (pos and pos[0] in ("land", "batch")) or "--land" in bare:
         # #447 (child C1 of plan #443): the verb run, committed and pushed from the tool-owned worktree in one call;
-        # scripts/land.py runs the worktree's own `dyad dwork`, so this checkout is never written or reset
+        # scripts/land.py runs the worktree's own `dyad dwork`, so this checkout is never written or reset.
+        # #459: `batch <file>|- --land` lands several such lines in one commit and one push
         return dyadlib.load_module(PKG / "scripts" / "land.py", "land").main(a, REPO, DWORK_VALUE_FLAGS, dwork_args, words)
     try:
         dyadlib.check_invariants(dyadlib, label="dyadlib")   # a broken transition table must not write a row (syseng invariants.md p1)
