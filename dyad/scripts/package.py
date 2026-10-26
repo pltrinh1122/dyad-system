@@ -167,6 +167,15 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 execute one command through the one runner — it prints the native
                                 command line, tests the postcondition and appends an event to
                                 <runbooks>/events/<instance>.jsonl — or seed a run-book from the craft's template
+  dyad release [--scan]         the release service (scripts/release.py, d-work #470; run by the `released` workflow,
+                                dyad-release.yml): every `<date> Y release <tag> at <cut sha> (archive <sha256>)` entry
+                                on <instance>/d-work/rows that this push added (BEFORE) or a dispatch names (ONLY) —
+                                cut on main and tag == VERSION at it, built by the cut's own one code path in a
+                                detached worktree, sha256 verified, then the annotated tag pushed to origin and
+                                `gh release create`; a tag at the cut with its Release is skipped, a tag elsewhere
+                                refused, nothing written to the repo (Rule-11 Ratification events: clerical
+                                execution of the recorded Y). --scan is read-only: `pending: <tags>|none`, and
+                                `pending=true|false` appended to GITHUB_OUTPUT when set
 """
 import sys
 if sys.version_info < (3, 12):
@@ -1385,6 +1394,11 @@ def cmd_runbook(a):
     craft's guard, absent-safe — #155 amendment); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "runbook.py", "runbook").main(a)
 
+def cmd_release(a):
+    """Rule-11 Ratification events: the release service lives in scripts/release.py (d-work #470, moved in from
+    `.github/released.py`); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "release.py", "release").main(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -1403,6 +1417,8 @@ if __name__ == "__main__":
         sys.exit(cmd_bundle(a[1:]))
     if a and a[0] == "session":
         sys.exit(cmd_session(a[1:]))
+    if a and a[0] == "release":
+        sys.exit(cmd_release(a[1:]))
     if a and a[0] == "ledger":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":
