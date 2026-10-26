@@ -619,3 +619,29 @@ sentence names the new file and step, meaning unchanged.
 **Pairwise (Rule-5).** **3–1**: the wrapper stays infra zone; changing it is still an infra-zone PR citing a Rule-3 d-work. **3–14**: unchanged — the step corroborates on `main` only. **3–20**: the new path resolves on today's `main`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #477.
+
+## Amendment — d-work #465 (2026-10-26, a `Y done` entry travels with its trace)
+**Claim (plan #465, the Operator's `Y` of 2026-10-26):** the completion clause already requires, under
+`dwork-trace: always`, that the Done **record** commit carry the d-work's trace; the fence now refuses that commit when
+the trace is neither carried by it nor already on its base (`rows.trace_problems`), and `dwork state` refuses before
+its first write. Six Done records (#455–#460) had carried none, a refused `dwork trace` going unseen (row 232, modes
+E and Q of the incident index).
+
+| # | attack | result |
+|---|---|---|
+| 1 | A mandate's accreted rows each gain a `Y done`, so each would need its own trace. | Refuted, scoped: an accreted row's Done rides the mandate's Done-`Y` (Scope), so the mandate's trace covers the set; the clause exempts an entry noted `mandate #<id>`, the note Rule-7 property 4 prescribes. The mandate's own entry still needs its trace. |
+| 2 | Under the three-act Done, which commit must carry it? | Answered by the clause itself: the **record** commit, which adds the entry; the closing commit adds none and is not judged. A re-asked Done adds a second entry and finds the trace already on its base. |
+| 3 | One batch entry might be read as covered by one trace. | Refuted: Batch disposition writes the same entry into every named d-work's own record, and the evidence cites each one's own trace; each named row needs `traces/<id>.md`. |
+| 4 | The clause turns `main` red for history. | Refuted: it judges only entries a commit adds; earlier rows are never re-judged. |
+| 5 | A commit that flips `dwork-trace` and adds an entry is judged under the wrong value. | Survives, accepted: a preference change is its own preferences-zone PR and never rides a ledger commit, so a ledger commit's tree holds the value it is judged under; `on-demand` disables the clause, which is that value's meaning. |
+| 6 | Counter (Rule-10): a state check over the store — every row with a `Y done` holds a trace. | Survives as the weaker path: it would fail today on every row before the preference and on accreted rows and need a legacy list; the transaction clause judges only new records, where they are written, and needs none. |
+
+**Pairwise (Rule-5).** **3–7**: unchanged — the provenance entry of the same disposition is still written in the same
+commit; the trace is the play-book's measurement and never transcript text (Rule-7 property 2). **3–2**: unchanged —
+the clause fences a clerical record, it ratifies nothing. **3–16**: unchanged — no transition is added or refused; the
+clause reads the row's `disposed`, not its state. **3–12**: the clause is code carrying its test (`test_rows`,
+`test_package`, `test_land`), as property 1 requires. **3–1**: unchanged — the trace and the row are both under
+`<instance>/d-work/`, one zone. **3–6**: no new term; `d-work trace` is already defined. Others unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #465.
