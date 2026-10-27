@@ -1,5 +1,5 @@
 """episodes.py (the chronicle craft's guard, entity `episode`; #502, #498 C4): the absent store, a good episode, each
-failing shape (missing path, bad time line, undeclared repo, missing provenance entry), the inference warning for a
+failing shape (missing path, bad time line, undeclared repo, missing provenance entry), the commit: form, the inference warning for a
 cross-repo citation with no clone, a citation resolved in a local clone, the invariants, and the live repo."""
 import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -85,6 +85,25 @@ class Episodes(Fixture):
         self.assertEqual(self.write(episode(repos=decl, notes=(f"repo:pltrinh1122/dyad-bond@{sha}:README.md",))), [])
         f = self.fails(self.write(episode(repos=decl, notes=(f"repo:pltrinh1122/dyad-bond@{sha}:MISSING.md",))))
         self.assertEqual(len(f), 1); self.assertIn("is not in the clone", f[0])
+    def test_commit_citation_declared_and_full_sha(self):
+        f = self.fails(self.write(episode(notes=(f"commit:pltrinh1122/dyad-bond@{SHA}",))))
+        self.assertEqual(len(f), 1); self.assertIn("commit:pltrinh1122/dyad-bond is not declared in `repos:`", f[0])
+        f = self.fails(self.write(episode(repos="pltrinh1122/dyad-bond=public", notes=("commit:pltrinh1122/dyad-bond@0123abc",))))
+        self.assertEqual(len(f), 1); self.assertIn("40-hex", f[0])
+        msgs = self.write(episode(repos="pltrinh1122/dyad-bond=public", notes=(f"commit:pltrinh1122/dyad-bond@{SHA}",)))
+        self.assertEqual(self.fails(msgs), [])
+        self.assertRegex(msgs[0], r"^warning: .*1 cross-repo citation\(s\) unresolvable \(The World.*inference$")
+    def test_commit_citation_resolved_in_local_clone(self):
+        repos = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, repos, ignore_errors=True)
+        clone = repos / "dyad-bond"; clone.mkdir()
+        g = lambda *a: subprocess.run(["git", "-C", str(clone), *a], check=True, capture_output=True, text=True, env=dyadlib.git_env()).stdout.strip()
+        g("init", "-q"); (clone / "README.md").write_text("bond\n"); g("add", "README.md")
+        g("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"); sha = g("rev-parse", "HEAD")
+        os.environ["DYAD_REPOS_DIR"] = str(repos)
+        decl = "pltrinh1122/dyad-bond=public"
+        self.assertEqual(self.write(episode(repos=decl, notes=(f"commit:pltrinh1122/dyad-bond@{sha}",))), [])
+        f = self.fails(self.write(episode(repos=decl, notes=(f"commit:pltrinh1122/dyad-bond@{SHA}",))))
+        self.assertEqual(len(f), 1); self.assertIn("commit:pltrinh1122/dyad-bond@0123456789ab is not in the clone", f[0])
     def test_prov_citation(self):
         self.assertEqual(self.write(episode(notes=("prov:#7/2",))), [])
         f = self.fails(self.write(episode(notes=("prov:#7/3",))))

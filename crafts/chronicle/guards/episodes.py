@@ -7,12 +7,13 @@ and fails what the record cannot hold (`chronicle.md` §1, §4, §5, §7):
 - a header key missing (`title`, `season`, `episode`, `time`, `repos`), a `season`/`episode` that is not a
   number, a `time:` line not `present|past, YYYY-MM-DD`, a `repos:` entry not `<owner>/<repo>=public|private`;
 - an episode with no citation, a footnote referenced in the body and never defined, a footnote whose citation is
-  none of the three forms;
+  none of the four forms;
 - `path:<rel>` that does not exist in the tree; `prov:#<id>/<n>` with no provenance record `<id>` or no entry `n`
   in it (the core's provenance guard parses the record, `dyadlib.load_guard("agent", "provenance")`);
 - `repo:<owner>/<repo>@<sha>:<path>` whose repo is not declared in `repos:` or whose sha is not 40 hex, or which a
-  local clone (`DYAD_REPOS_DIR/<repo>` or `DYAD_REPOS_DIR/<owner>/<repo>`) does not hold.
-A `repo:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
+  local clone (`DYAD_REPOS_DIR/<repo>` or `DYAD_REPOS_DIR/<owner>/<repo>`) does not hold;
+- `commit:<owner>/<repo>@<sha>` (a commit itself, no path) on the same terms, the clone holding the commit.
+A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
 naming it (`chronicle.md` §5). Left to inference, stated: whether a cited artifact says what the episode says.
   episodes.py [repo-root]
@@ -31,7 +32,7 @@ FIELDS = ("file", "title", "season", "episode", "time", "repos")   # what `parse
 HEADER = FIELDS[1:]
 TIMES = ("present", "past")
 VISIBILITY = ("public", "private")
-FORMS = ("path", "prov", "repo")                                    # the three citation forms (chronicle.md §1)
+FORMS = ("path", "prov", "repo", "commit")                          # the four citation forms (chronicle.md §1)
 SITE_ENV, SITE_DEFAULT, REPOS_ENV = "DYAD_SITE", "site", "DYAD_REPOS_DIR"
 _TIME = re.compile(r"^(present|past),\s*(\d{4}-\d{2}-\d{2})$")
 _REPO_DECL = re.compile(r"^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)=(public|private)$")
@@ -40,11 +41,12 @@ _FOOTREF = re.compile(r"\[\^([^\]\s]+)\](?!:)")
 _PATH = re.compile(r"^path:(\S+)$")
 _PROV = re.compile(r"^prov:#(\d+)/(\d+)$")
 _REPO = re.compile(r"^repo:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@([^:\s]+):(\S+)$")
+_COMMIT = re.compile(r"^commit:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@(\S+)$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set(FIELDS)) == len(FIELDS)),   # crafts/syseng/rules/invariants.md
               ("time-pattern-matches-times", lambda: all(_TIME.match(f"{t}, 2026-01-01") for t in TIMES)),
-              ("three-citation-forms", lambda: FORMS == ("path", "prov", "repo")
-               and all(p.pattern.startswith(f"^{f}:") for f, p in zip(FORMS, (_PATH, _PROV, _REPO)))),
+              ("four-citation-forms", lambda: FORMS == ("path", "prov", "repo", "commit")
+               and all(p.pattern.startswith(f"^{f}:") for f, p in zip(FORMS, (_PATH, _PROV, _REPO, _COMMIT)))),
               ("visibility-two", lambda: set(VISIBILITY) == {"public", "private"})]
 dyadlib.enforce(INVARIANTS, __name__)
 
@@ -77,7 +79,7 @@ def parse(text: str) -> tuple[dict[str, str], list[str], dict[str, str]]:
 def citation(text: str) -> tuple[str, tuple[str, ...]] | None:
     """(form, groups) for a footnote's citation — its first token; the rest is a free gloss — else None."""
     tok = text.split(maxsplit=1)[0] if text.split() else ""
-    for form, pat in zip(FORMS, (_PATH, _PROV, _REPO)):
+    for form, pat in zip(FORMS, (_PATH, _PROV, _REPO, _COMMIT)):
         if m := pat.match(tok):
             return form, m.groups()
     return None
@@ -123,9 +125,11 @@ def _clone(repo: str) -> Path | None:
             return c
     return None
 
-def _git_has(clone: Path, sha: str, path: str) -> bool:
+def _git_has(clone: Path, sha: str, path: str | None) -> bool:
+    """The clone holds `sha:path`, or with no path the commit `sha` itself."""
+    obj = f"{sha}:{path}" if path is not None else f"{sha}^{{commit}}"
     try:
-        r = subprocess.run(["git", "-C", str(clone), "cat-file", "-e", f"{sha}:{path}"], capture_output=True,
+        r = subprocess.run(["git", "-C", str(clone), "cat-file", "-e", obj], capture_output=True,
                            env=dyadlib.git_env(), timeout=60)
     except (OSError, subprocess.SubprocessError):
         return False
@@ -156,7 +160,7 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
     for n, txt in notes.items():
         c = citation(txt)
         if c is None:
-            msgs.append(f"{where}: [^{n}] {txt!r} is none of path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path> (chronicle.md §1)")
+            msgs.append(f"{where}: [^{n}] {txt!r} is none of path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path>, commit:<owner>/<repo>@<sha> (chronicle.md §1)")
             continue
         form, g = c
         if form == "path":
@@ -166,12 +170,12 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
             if problem := _prov_entry(root, *g):
                 msgs.append(f"{where}: [^{n}] prov:#{g[0]}/{g[1]}: {problem}")
         else:
-            repo, sha, rel = g
+            repo, sha, rel = g if form == "repo" else (*g, None)
             if repo not in repos:
-                msgs.append(f"{where}: [^{n}] repo:{repo} is not declared in `repos:` with its visibility (chronicle.md §5)")
+                msgs.append(f"{where}: [^{n}] {form}:{repo} is not declared in `repos:` with its visibility (chronicle.md §5)")
                 continue
             if not _SHA.match(sha):
-                msgs.append(f"{where}: [^{n}] repo:{repo}@{sha}: not a full 40-hex commit sha")
+                msgs.append(f"{where}: [^{n}] {form}:{repo}@{sha}: not a full 40-hex commit sha")
                 continue
             if repos[repo] == "private":
                 private.add(repo)
@@ -179,7 +183,8 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
             if clone is None:
                 world += 1
             elif not _git_has(clone, sha, rel):
-                msgs.append(f"{where}: [^{n}] repo:{repo}@{sha[:12]}:{rel} is not in the clone at {clone}")
+                what = f"repo:{repo}@{sha[:12]}:{rel}" if rel is not None else f"commit:{repo}@{sha[:12]}"
+                msgs.append(f"{where}: [^{n}] {what} is not in the clone at {clone}")
     if world:
         msgs.append(f"warning: {where}: {world} cross-repo citation(s) unresolvable (The World: no clone under ${REPOS_ENV}), inference")
     if private:
@@ -207,7 +212,7 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     allowed = {"file": "the episode's file name", "title": "free text", "season": "a number", "episode": "a number",
                "time": "present|past, YYYY-MM-DD", "repos": "none, or <owner>/<repo>=public|private, space-separated"}
     return {"store": f"<{SITE_ENV}, default {SITE_DEFAULT}>/episodes/*.md", "parser": "`episodes.parse`", "observed": len(eps),
-            "note": "footnote citations: path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path> (chronicle.md §1)",
+            "note": "footnote citations: path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path>, commit:<owner>/<repo>@<sha> (chronicle.md §1)",
             "fields": [(f, "text", allowed[f], True, (eps[0].name if f == "file" else ex.get(f, "")) if eps else "", "episodes.FIELDS")
                        for f in FIELDS]}
 

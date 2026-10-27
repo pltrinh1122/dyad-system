@@ -15,7 +15,7 @@ the core: no core Rule cites this craft by path.
 | `rules/chronicle.md` | fact anchoring and the two kinds of material (§1), the main character (§2), characters and flaws (§3), time and interleave (§4), the private-repo flag (§5), outline then episodes (§6), the guard and its severity (§7) |
 | `vocabulary/CRAFT.md` | `episode`, `season outline`, `record citation`, `context citation`, `persona`, `interleave`, `private-repo flag` — referenced by the Agent vocabulary as `chronicle:<term>`, never defined there |
 | `templates/episode.md` | an episode: the header (`title`, `season`, `episode`, `time`, `repos`), the body, the citations as footnotes in the three forms |
-| `guards/episodes.py` | entity `episode`, corpus `infra`: every episode under `<site>/episodes/` — header, time line, each footnote's citation form, `path:` in the tree, `prov:` in a provenance record, `repo:` declared and resolved when a clone is reachable, else one `warning: … inference` line (absent store, one `skip`) |
+| `guards/episodes.py` | entity `episode`, corpus `infra`: every episode under `<site>/episodes/` — header, time line, each footnote's citation form, `path:` in the tree, `prov:` in a provenance record, `repo:` and `commit:` declared and resolved when a clone is reachable, else one `warning: … inference` line (absent store, one `skip`) |
 | `falsification/rules/chronicle.md` | the record of the rule: plan #498's attacks 1, 3, 11, 12, 16, 17 and 19 on the rule as written |
 | `tests/guards/test_episodes.py` | the guard over temp-dir fixtures: absent store, a good episode, each failing shape, the inference warning, the provenance entry, the invariants, the live repo |
 

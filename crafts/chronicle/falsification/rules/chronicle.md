@@ -27,3 +27,20 @@ episode exists yet to test the rule against; a `repo:` citation with no clone is
 reachable.
 
 Disposition: see ledger #502.
+
+## Amendment — d-work #511: the commit form, the quoted-line rule, no persona named
+
+**Claim (plan #511, from the communicate seat's outline research):** the rule cannot cite a commit, it lets a quoted
+line or a commit message pass as the Operator's words, and it names one instance's persona inside a craft.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 9 | A commit is citable by `repo:<owner>/<repo>@<sha>:<path>`. | **Refuted** | A commit message has no path; fourteen of the season outline's past citations are commits. `commit:<owner>/<repo>@<40-hex sha>` is declared in `repos:` like `repo:`, resolved against a local clone by `git cat-file -e <sha>^{commit}`, failing when the clone lacks it, and otherwise counted in the same `warning: … inference` line (§1, §5, §7). |
+| 10 | Text under the Operator's git identity, or a `>` line in a provenance entry, is the Operator's words. | **Refuted** | Commits carry the Operator's git identity whoever wrote them, and a `>` line quotes the reply the Operator was answering. A context citation is the Operator's words only outside quoted lines; a commit message is record, never the Operator's voice (§1). Inference, stated: the guard resolves the entry, not which of its lines an episode quotes. |
+| 11 | The persona's instance name inside the rule is harmless. | **Refuted, hygiene** | A craft carries no instance example (Rule-11 property 1). §2 and the vocabulary's `persona` row name no persona; the name is the Operator's to give, at the instance, and a change of it changes nothing here. |
+
+**Verdict:** the claim survives in all three parts; `episodes.py` gains the fourth form (`FORMS`, its invariant
+`four-citation-forms`) with two tests, and the template gains a `commit:` footnote. No `VERSION` bump: the craft has
+no tag.
+
+Disposition: see ledger #511.
