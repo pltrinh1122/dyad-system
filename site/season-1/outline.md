@@ -1,8 +1,8 @@
 title: Op0: One Y at a Time — season 1 outline
 season: 1
-status: draft, revision 5, for the Operator's approval (chronicle §6); not published
+status: draft, revision 6, for the Operator's approval (chronicle §6); not published
 drafted by: communicate-5d6b62e1 (sec-comm), d-work #503 (C5 of #498)
-revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511); revision 5 adopts the title, through-line, last line, closing anchor and tone rule the Operator approved (prov:#498/16; context prov:#498/10–15)
+revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511); revision 5 adopts the title, through-line, last line, closing anchor and tone rule the Operator approved (prov:#498/16; context prov:#498/10–15); revision 6 records his answers to Q4, Q10 and Q11 (prov:#498/17)
 
 # Op0: One Y at a Time — season 1
 
@@ -50,7 +50,7 @@ Every mechanism that spares him questions took a plan-`Y` and a Done-`Y` of its 
 
 **Markings in this outline**
 
-- **[PRIVATE]**: the citation is into a private repo. The Operator approved reading these (prov:#498/7). Quoting one in an episode still needs his approval at that episode's publication (§5).
+- **[PRIVATE]**: the citation is into a private repo. The Operator approved reading these (prov:#498/7). He approved quoting them in principle (prov:#498/17); each episode's publication question still names every private repo it quotes (§5).
 - **Daemon proposal**: a mapping from a moment to one of Op0's daemons. It is the teller's reading and is never fact (§3). It enters an episode only if the Operator approves it.
 - **Q**: an open question for the Operator.
 
@@ -105,7 +105,7 @@ The world is the present day and the real world (prov:#498/9).
 1. A real thing appears under its real, retrievable name — a repo, a tool, a release — or not at all.
 2. Where the record holds something that must stay unnamed, it appears as a plain description of what the record says, never as an invented proper name. A coined name would send a searching reader either to nothing or to a wrong real entity.
 
-**The commercial client is not mentioned** (prov:#498/7). If a beat ever needs it, the proposed form is the bare description "a commercial client" — exactly what prov:#152/1 says, no more. *(Q4, revised)*
+**The commercial client is not mentioned** (prov:#498/7). If a beat ever needs it, it is "a commercial client" or "the first commercial client" — his forms (prov:#498/17), never a name.
 
 **Op0 is the one coined name.** It is the persona the Operator chose, and nothing else is invented in his name.
 
@@ -160,7 +160,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - the collaborator in group-chat-familiars, and anyone in its logs
 - the account in spbg
 - the people of the practice commons
-- the commercial client — not mentioned at all (prov:#498/7; World setting, Q4)
+- the commercial client — not mentioned at all (prov:#498/7; World setting)
 
 ## Daemon proposals (for the Operator to accept or strike, one by one)
 
@@ -333,7 +333,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 **Beat.**
 - In nsf, a theory that a generator plus a validator cancels errors. Its one experiment is run by a simulated executor and "confirms" itself — the contrast case. *(daemon proposal: Rational)*
 - In pt-ai, a "Chief of Staff" server, and a founder's "cognitive budget".
-- A journal line: "I wonder if this is the steady-state of human-ai co-existence, where human will be bonded with an AI and AI just needs \"context and constraints\" to allow the pair to \"do\"." *(Q10: confirm these are his words.)*
+- A journal line: "I wonder if this is the steady-state of human-ai co-existence, where human will be bonded with an AI and AI just needs \"context and constraints\" to allow the pair to \"do\"." (his own words, confirmed: prov:#498/17)
 - Then two months of silence.
 - Then wu-wei:
   - a frame for an agent without memory;
@@ -621,9 +621,6 @@ dyad-milo-pltrinh1122 is attached, but its content is not read: the domain is pe
 | # | question |
 |---|---|
 | Q2 | Was ChatGPT-Sandbox ChatGPT's code? 2026-03-09 → 05-15 is silent in every repo — tell it as a silence, or is there context? |
-| Q4 | The commercial client: no proper-name alias (World setting). If a beat ever needs it, "a commercial client" — or keep it absent entirely? |
-| Q5 | Accept or strike each daemon proposal above. Are the touchstone OPERATOR-STOPs his to tell? |
+| Q5 | The daemons are still being named (prov:#498/17): candidate labels from his journals come to him separately, for reference only. Accept or strike each proposal above as they settle. |
 | Q8 | dyad-milo: omit, or name once with technical commits only (E16 uses one)? |
 | Q9 | May E10 quote the practice's "1 + 1 = 3" from his fork without naming the commons? |
-| Q10 | Are the pt-ai journal lines (E8) his own words? They carry no agent trailer, but the record cannot prove authorship. |
-| Q11 | Private citations: E14, E16 and E18 rest mostly on private repos (leo, the fleet, workstation). Approve quoting them in principle? Each episode's publication question will still name them. |
