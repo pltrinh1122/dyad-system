@@ -730,3 +730,32 @@ P2 are the 2026-10-24 proposal 4 again, unbuilt and now recurred.
    above.
 
 Rows #262–#284 and #464–#467 are neither closed, re-opened nor archived here.
+
+## Note 2026-10-27 — rows 234–238 (d-work #487, seat audit-e73be78c)
+
+Not a delta. The watermark stays at 233, and the next delta grades these five rows with two views, as it graded
+#463's. One view, this seat's, placed each row, and each row carries its mode in its own cells:
+
+| row | d-work | mode | secondary |
+|-----|--------|------|-----------|
+| 234 | #477 | I (the tagless sub-shape; its worst face: a skip hid a FAIL) | — |
+| 235 | #476 | A (third face, row 198's: a push to a branch a Done names) | C |
+| 236 | #474 | I (git's version and its auto-maintenance, the unnamed input) | — |
+| 237 | #486 | S (a counter-prompt form typed from memory, not seeded from `merge-disposition`) | M, unverified |
+| 238 | #518 | C (CI state stated, not read) | — |
+
+Two of these are the second instance of a face within a week. Row 235 repeats row 198, and the 2026-10-24 delta
+called that face conduct "unless branch protection". Row 234 repeats the tagless skip, which the delta of
+2026-10-24 placed in I. Both now have a mechanism within reach:
+- **F1 (A, rows 198 and 235).** The pre-push gate already reads the refs being pushed (Rule-14 property 3) and
+  the ledger. It can refuse a push whose remote old sha is a head that an operative `Y done` names on a row not
+  yet `done`. The moment is the push, before the commit leaves the clone. It corrects the 2026-10-24 attack 1's
+  survivor: the face is mechanizable without branch protection.
+- **F2 (S, row 237).** `rows.py` can warn on a `Y merge` disposition while `merge-disposition` is `with-done`.
+  It exempts the case the 2026-10-25 entries show (#432, #433, #436, #441 are each noted "its own question per
+  #427", the charter and preference PRs Rule-2 has the Operator dispose as their own PR). The moment is the
+  ledger commit.
+- **Row 234** has its fence already: #474 (`check --evidence` refuses a shallow or tagless clone, and the pre-push
+  path names the skip), so no new candidate is needed.
+
+F1 and F2 go to the program seat as their own questions. Nothing is opened here.
