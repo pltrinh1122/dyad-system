@@ -358,7 +358,7 @@ def check_rule_12():
     for suite, (code, summary, err) in zip(suites, run_suites(suites)):   # no timing in `summary`: the evidence block is deterministic (#138)
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if code != 0:
-            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + err.strip().splitlines()[-1])
+            msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + "\n".join(suite_failures(err) + err.strip().splitlines()[-1:]))
     if not msgs and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)   # a full, all-roots pass on a clean tree (d-work #162)
     return msgs
@@ -568,6 +568,11 @@ def installed_roots(base, head):
             run.append(root)
     return run, lines
 
+# the git config every test child runs under, appended after the caller's own `GIT_CONFIG_*` entries (suite_env)
+SUITE_GIT_CONFIG = (("commit.gpgsign", "false"),   # #206: nothing reads a fixture's signature
+                    ("gc.auto", "0"),              # #475: no background gc or maintenance after a fixture's commit,
+                    ("maintenance.auto", "false")) # which packed a template's loose objects under a copy on git 2.55
+
 def suite_env(tmp: str | None = None) -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped,
     and — given `tmp` — `TMPDIR`/`TMP`/`TEMP` pointed at it, so every fixture the child creates lands
@@ -577,13 +582,17 @@ def suite_env(tmp: str | None = None) -> dict[str, str]:
     branch and a tag written into the live repo by the pre-push hook's run). Fixture commits are never
     signed (#206): a host whose global config signs every commit (a cloud container's) paid ~90 ms per
     scratch-repo commit for signatures nothing reads; appended as one more `GIT_CONFIG_*` entry, so an
-    entry the caller already set survives. A caller's `git -c` is dropped (#456): git exports every `-c` to
+    entry the caller already set survives. Nor does a fixture's commit start git's automatic gc or maintenance
+    (#475): on git 2.55 (a CI runner's) a commit in `livetest.ScratchInstalls`' template detached a background
+    repack that deleted loose objects while `copy` was reading them (`shutil.Error … .git/objects/17 … ENOENT`). A caller's `git -c` is dropped (#456): git exports every `-c` to
     its children as `GIT_CONFIG_PARAMETERS`, so `git -c core.hooksPath=dyad/hooks push` reached every
     fixture repo the suite builds and failed its commits (`INCIDENTS.md` row 153, row 123's cause)."""
     env = {k: v for k, v in dyadlib.git_env().items() if k != "GIT_CONFIG_PARAMETERS"}
     env["DYAD_NO_NESTED_TESTS"] = "1"
     n = int(env.get("GIT_CONFIG_COUNT") or 0)
-    env.update({"GIT_CONFIG_COUNT": str(n + 1), f"GIT_CONFIG_KEY_{n}": "commit.gpgsign", f"GIT_CONFIG_VALUE_{n}": "false"})
+    for i, (k, v) in enumerate(SUITE_GIT_CONFIG, n):
+        env.update({f"GIT_CONFIG_KEY_{i}": k, f"GIT_CONFIG_VALUE_{i}": v})
+    env["GIT_CONFIG_COUNT"] = str(n + len(SUITE_GIT_CONFIG))
     if tmp:
         env.update({"TMPDIR": tmp, "TMP": tmp, "TEMP": tmp})
     return env
@@ -652,6 +661,20 @@ def suite_units(suite):
         groups.setdefault(i.rsplit(".", 1)[0], []).append(i)
     return sorted(groups.values(), key=len, reverse=True)
 
+def suite_failures(err):
+    """Each failing test of a child's stderr as one line, `ERROR: test_x (mod.Cls.test_x) — <the exception's last
+    line>`, in the order unittest printed them. The summary says how many; these say which, so a red run on a host
+    nobody can log into (a CI runner, whose kept temp root is gone with it) names its test (#475)."""
+    out, head, last = [], None, ""
+    for line in err.splitlines() + ["=" * 70]:
+        if line.startswith(("ERROR: ", "FAIL: ")):
+            head, last = line, ""
+        elif head and (line.startswith("=" * 70) or re.match(r"Ran \d+ tests? in ", line)):
+            out.append(f"{head} — {last}" if last else head); head = None
+        elif head and line.strip() and not line.startswith("-" * 70):
+            last = line.strip()
+    return out
+
 def suite_summary(stderrs, failed):
     """The children's summaries summed into one, in unittest's own words and order: `Ran N tests`, then
     `OK` or `FAILED` with `(failures=…, errors=…, skipped=…, …)` — what one discover child over the root prints."""
@@ -715,13 +738,13 @@ def cmd_tests(target=None, roots=None):
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
         if code:
-            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+            print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
         return rc
     suites = [Path(target)] if target else test_suites() if roots is None else list(roots)
     for suite, (code, summary, err) in zip(suites, run_suites(suites)):
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
-            print(err.strip().splitlines()[-1], file=sys.stderr); rc = 1
+            print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
     if rc == 0 and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)
     return rc
