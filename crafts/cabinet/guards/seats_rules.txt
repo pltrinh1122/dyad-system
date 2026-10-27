@@ -10,3 +10,4 @@ function: audit
 function: engineer
 function: distribute
 function: operate
+function: communicate
