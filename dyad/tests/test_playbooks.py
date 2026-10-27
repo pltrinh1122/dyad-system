@@ -275,3 +275,58 @@ class PortPlaybookTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+RELEASE_PLAYBOOK = PKG / "playbooks" / "release.md"
+RELEASE_RUNBOOK = PKG / "runbooks" / "release.md"
+RELEASE_CLASSES = ("critical-fix", "capability", "enhancement", "breaking", "maintenance")
+
+class ReleasePlaybookTests(unittest.TestCase):
+    """The release play-book and its run-book (#493): headings, the five classes and their number, the bundle rule,
+    the run-book's two read-only steps, and `number`'s mapping run against a scratch repo's tags."""
+    def test_playbook_sections_classes_and_citations(self):
+        text = RELEASE_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Classes", "Numbers", "Steps", "Evidence"])
+        classes = next(t for h, t in dyadlib.tables(text) if h[0] == "class")
+        self.assertEqual(tuple(r[1].strip("`") for r in classes), RELEASE_CLASSES)
+        self.assertEqual([r[4] for r in classes][:3], ["patch", "minor", "minor"])
+        for cite in ("dyad/runbooks/release.md", "dyad/rules/RULE-11-distribution-structure.md", "`Y/N: release <tag>?`",
+                     "highest class", "drift guard", "dyad/playbooks/port.md"):
+            self.assertIn(cite, text, cite)
+    def test_runbook_parses_into_two_read_only_steps(self):
+        text = RELEASE_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], ["changes", "number"])
+        self.assertEqual(rb.declared_sections(text), ["Changes", "Number"])
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual({c.cls for c in cmds}, {"read-only"})
+        number = next(c.cmd for c in cmds if c.name == "number")
+        for cls in RELEASE_CLASSES:
+            self.assertIn(cls, number, cls)
+        self.assertIn("release", rb.core_runbooks(PKG.parent))
+    def test_number_maps_each_class_from_the_last_tag(self):
+        number = next(c.cmd for c in rb.parse_text(RELEASE_RUNBOOK.read_text()) if c.name == "number")
+        with tempfile.TemporaryDirectory() as d:
+            env = {**os.environ, **dyadlib.git_env(), "GIT_CONFIG_GLOBAL": os.devnull}
+            run = lambda *a: subprocess.run(a, cwd=d, env=env, capture_output=True, text=True, check=True)
+            run("git", "init", "-q"); run("git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "x")
+            for tag in ("dyad-operator-v0.12.2", "dyad-operator-v0.9.9", "v0.16.2", "cabinet-v1.4.2"):
+                run("git", "tag", tag)
+            def num(craft, cls):
+                r = subprocess.run(["bash", "-c", number], cwd=d, env={**env, "CRAFT": craft, "CLASS": cls}, capture_output=True, text=True)
+                return r.returncode, r.stdout.split(" ")[0]
+            self.assertEqual(num("dyad-operator", "capability"), (0, "dyad-operator-v0.13.0"))
+            self.assertEqual(num("dyad-operator", "enhancement"), (0, "dyad-operator-v0.13.0"))
+            self.assertEqual(num("dyad-operator", "critical-fix"), (0, "dyad-operator-v0.12.3"))
+            self.assertEqual(num("dyad-operator", "breaking"), (0, "dyad-operator-v0.13.0"))   # 0 major: minor
+            self.assertEqual(num("cabinet", "breaking"), (0, "cabinet-v2.0.0"))
+            self.assertEqual(num("bundle", "capability"), (0, "v0.17.0"))
+            self.assertEqual(num("sysarch", "critical-fix"), (0, "sysarch-v0.0.1"))            # no tag yet
+            self.assertEqual(num("bundle", "maintenance")[0], 0)
+            self.assertEqual(num("dyad-operator", "bogus")[0], 2)
+    def test_runbook_passes_the_craft_check_when_present(self):
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        guard = dyadlib.find_guard("workstation", "runbooks")
+        if guard is None or not hasattr(guard, "declared_sections"):
+            self.skipTest("no craft provides a run-book check that reads `# sections:`")
+        self.assertEqual([m for m in guard.check_runbook(RELEASE_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
