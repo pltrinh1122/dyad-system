@@ -1,8 +1,26 @@
 # dyad-system
 
+**The Dyad System** is a way for one person to delegate real work to an AI agent and stay accountable for it.
+
+- **Goal.** Let a human Operator achieve the most effect on the world through work, within a budget of time and cost.
+- **Problem.** The Operator is accountable for that effect, so every output delegated to an agent must be evaluated and
+  validated. That spends the Operator's daily attention, a budget that cannot grow.
+- **Approach.** An Operator–Agent dyad. The Agent proposes, tests its own claims and does the work; only the Operator
+  decides, `Y` or `N`. Guards check the record mechanically, so the Operator's attention goes to decisions, not to
+  re-checking.
+- **Target.** 1+1>2. The pair achieves more than either alone, and neither voice absorbs the other.
+- **What it is not.** An autonomous agent; a general workflow engine or CI product; an affiliate of the practice
+  commons.
+- **This instance applies it to** authoring, checking and releasing the core craft `dyad-operator` and its Tended
+  crafts (`dyad/`, `crafts/`), and to administering the Operator's workstation (`workstation-corpus/`).
+
+It is for an Operator who delegates building and operating work to an AI agent and stays accountable for the result.
+It runs on a CLI inferencing agent — Claude Code or another — with Python 3.12 and git. An agent can read the same
+facts as data in the [identity record](#identity-record) below.
+
 The authoring repository of one Dyad Practice system: the core craft `dyad-operator` (`dyad/`)
-and the three Tended crafts it ships — `crafts/sysadmin/`, `crafts/sysarch/`, `crafts/syseng/`
-— developed here under their own Rules. The d-work ledger, provenance, incident log and
+and the four Tended crafts it ships — `crafts/sysadmin/`, `crafts/sysarch/`, `crafts/syseng/`,
+`crafts/cabinet/` — developed here under their own Rules. The d-work ledger, provenance, incident log and
 falsification records live in `agent-corpus/`; the Operator's preferences in
 `preferences-corpus/`. The root `CLAUDE.md` holds one import line; the operating frame is
 `dyad/CLAUDE.md`.
@@ -38,6 +56,201 @@ pass, the tests, every guard of both roots); `check --guards` runs before every 
 
 Practice: [the-dyad-practice](https://github.com/The-Dyad-Practice-Commons/the-dyad-practice)
 and [dyad-bond](https://github.com/pltrinh1122/dyad-bond); not registered with the commons.
+
+## Identity record
+
+The record below states what this system is and what it is for, as JSON-LD that an agent can parse and compare with
+another system's. It reuses schema.org wherever schema.org has the term; the `dyad:` prefix resolves to this repo's
+[vocabulary](dyad/vocabulary/VOCABULARY.md), and every `dyad:` class it types is a term defined there, a hyphen standing
+for the term's space (`dyad:core-craft` is *core craft*). Every key schema.org does not define carries the `dyad:`
+prefix, at every depth, so no key falls under schema.org's vocabulary by default. It holds no
+version, date, commit or email: versions are in `BUNDLE.md` and on the Releases page. Every path it names exists in
+this repository.
+
+| key | from | required | holds |
+|---|---|---|---|
+| `@id` | JSON-LD | yes | the system's stable IRI |
+| `@type` | schema.org | yes | `SoftwareSourceCode` |
+| `name`, `alternateName` | schema.org | yes | `The Dyad System`, `dyad-system` |
+| `description` | schema.org | yes | one paragraph following the vocabulary's definition of The Dyad System |
+| `codeRepository`, `url`, `license` | schema.org | yes | the repository URL, twice, and the license's SPDX IRI |
+| `author` | schema.org | yes | a `Person`, by profile URL only |
+| `isBasedOn` | schema.org | no | the practice and the bond repositories |
+| `programmingLanguage`, `runtimePlatform` | schema.org | yes | `Python`; the kernel, Python 3.12 and git |
+| `softwareRequirements` | schema.org | yes | what the system runs on: a CLI inferencing agent, with the kernel |
+| `audience` | schema.org | yes | an `Audience`: who the system is for |
+| `keywords` | schema.org | no | search terms |
+| `hasPart` | schema.org | yes | each craft `BUNDLE.md` names, typed `dyad:core-craft` or `dyad:Tended-craft`, with its `name` and `dyad:path` |
+| `dyad:purpose` | extension | yes | `{dyad:goal, dyad:problem, dyad:approach, dyad:target, dyad:nonGoals[]}`: the purpose every dyad system shares |
+| `dyad:appliedTo` | extension | yes | this instance's domains, `[{name, dyad:path[]}]` |
+| `dyad:source` | extension | yes | the paths that state the purpose |
+| `dyad:party` | extension | yes | the two parties: `{dyad:role, dyad:kind, dyad:act}` |
+| `dyad:invariant` | extension | yes | the craft invariants, as short names |
+| `dyad:frame`, `dyad:rules`, `dyad:vocabulary` | extension | yes | the paths of the operating frame, the Agent Rules and the vocabulary |
+| `dyad:entrypoint` | extension | yes | `{dyad:path, dyad:install}`: the one command-line entry and the install command |
+| `dyad:releases` | extension | yes | `{url, dyad:tags{dyad:bundle, dyad:core-craft, dyad:Tended-craft}}`: the Releases URL and the three tag schemes |
+| `dyad:registration` | extension | yes | the system's standing with the practice commons |
+| `dyad:path` | extension | — | a path relative to the repository root |
+
+```json
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "https://github.com/pltrinh1122/dyad-system/blob/main/dyad/vocabulary/VOCABULARY.md#"
+    }
+  ],
+  "@id": "https://github.com/pltrinh1122/dyad-system#system",
+  "@type": "SoftwareSourceCode",
+  "name": "The Dyad System",
+  "alternateName": "dyad-system",
+  "description": "The Operator, the Agent, the core craft, the Tended crafts and the instance: a human Operator and an AI Agent working as a dyad, in which the Agent proposes and the Operator alone disposes, with the practice the two follow packaged as installable crafts and this system's own record kept beside them.",
+  "codeRepository": "https://github.com/pltrinh1122/dyad-system",
+  "url": "https://github.com/pltrinh1122/dyad-system",
+  "license": "https://spdx.org/licenses/0BSD",
+  "author": {
+    "@type": "Person",
+    "url": "https://github.com/pltrinh1122"
+  },
+  "isBasedOn": [
+    {
+      "@type": "CreativeWork",
+      "name": "the-dyad-practice",
+      "url": "https://github.com/The-Dyad-Practice-Commons/the-dyad-practice"
+    },
+    {
+      "@type": "CreativeWork",
+      "name": "dyad-bond",
+      "url": "https://github.com/pltrinh1122/dyad-bond"
+    }
+  ],
+  "programmingLanguage": "Python",
+  "runtimePlatform": [
+    "Python 3.12",
+    "git"
+  ],
+  "softwareRequirements": "a CLI inferencing agent — Claude Code or another — with Python 3.12 and git",
+  "audience": {
+    "@type": "Audience",
+    "audienceType": "An Operator who delegates building and operating work to an AI agent and stays accountable for the result."
+  },
+  "keywords": [
+    "human–AI collaboration",
+    "AI agent",
+    "AI coding agent",
+    "accountable delegation",
+    "operator attention"
+  ],
+  "hasPart": [
+    {
+      "@type": [
+        "SoftwareSourceCode",
+        "dyad:core-craft"
+      ],
+      "name": "dyad-operator",
+      "dyad:path": "dyad/"
+    },
+    {
+      "@type": [
+        "SoftwareSourceCode",
+        "dyad:Tended-craft"
+      ],
+      "name": "sysarch",
+      "dyad:path": "crafts/sysarch/"
+    },
+    {
+      "@type": [
+        "SoftwareSourceCode",
+        "dyad:Tended-craft"
+      ],
+      "name": "syseng",
+      "dyad:path": "crafts/syseng/"
+    },
+    {
+      "@type": [
+        "SoftwareSourceCode",
+        "dyad:Tended-craft"
+      ],
+      "name": "sysadmin",
+      "dyad:path": "crafts/sysadmin/"
+    },
+    {
+      "@type": [
+        "SoftwareSourceCode",
+        "dyad:Tended-craft"
+      ],
+      "name": "cabinet",
+      "dyad:path": "crafts/cabinet/"
+    }
+  ],
+  "dyad:purpose": {
+    "dyad:goal": "Let a human Operator achieve the most effect on the world through work, within a budget of time and cost.",
+    "dyad:problem": "The Operator is accountable for that effect, so every output delegated to an agent must be evaluated and validated. That spends the Operator's daily attention, a budget that cannot grow.",
+    "dyad:approach": "An Operator–Agent dyad. The Agent proposes, tests its own claims and does the work; only the Operator decides, Y or N. Guards check the record mechanically, so the Operator's attention goes to decisions, not to re-checking.",
+    "dyad:target": "1+1>2. The pair achieves more than either alone, and neither voice absorbs the other.",
+    "dyad:nonGoals": [
+      "an autonomous agent",
+      "a general workflow engine or CI product",
+      "an affiliate of the practice commons"
+    ]
+  },
+  "dyad:appliedTo": [
+    {
+      "name": "authoring, checking and releasing dyad-operator and its Tended crafts",
+      "dyad:path": [
+        "dyad/",
+        "crafts/"
+      ]
+    },
+    {
+      "name": "administering the Operator's workstation",
+      "dyad:path": [
+        "workstation-corpus/"
+      ]
+    }
+  ],
+  "dyad:source": [
+    "agent-corpus/d-work/provenance/496.md",
+    "dyad/CLAUDE.md",
+    "dyad/rules/RULE-2-no-self-ratify.md",
+    "dyad/rules/RULE-3-d-work.md",
+    "dyad/rules/RULE-7-provenance.md"
+  ],
+  "dyad:party": [
+    {
+      "dyad:role": "Operator",
+      "dyad:kind": "human",
+      "dyad:act": "disposes"
+    },
+    {
+      "dyad:role": "Agent",
+      "dyad:kind": "model",
+      "dyad:act": "proposes"
+    }
+  ],
+  "dyad:invariant": [
+    "no-self-ratify",
+    "falsification",
+    "provenance"
+  ],
+  "dyad:frame": "dyad/CLAUDE.md",
+  "dyad:rules": "dyad/rules/",
+  "dyad:vocabulary": "dyad/vocabulary/VOCABULARY.md",
+  "dyad:entrypoint": {
+    "dyad:path": "dyad/bin/dyad",
+    "dyad:install": "dyad/bin/dyad install <path-to-repo>"
+  },
+  "dyad:releases": {
+    "url": "https://github.com/pltrinh1122/dyad-system/releases",
+    "dyad:tags": {
+      "dyad:bundle": "vX.Y.Z",
+      "dyad:core-craft": "dyad-operator-vX.Y.Z",
+      "dyad:Tended-craft": "<craft>-vX.Y.Z"
+    }
+  },
+  "dyad:registration": "not registered with the commons"
+}
+```
 
 ## The Dyad System — what, why, how
 
