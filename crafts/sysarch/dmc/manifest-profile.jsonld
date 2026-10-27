@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/manifest-profile",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "manifest-profile",
+  "name": "Manifest profile",
+  "description": "Which activity of a system needs a manifest row.",
+  "dyad:decides": "Which activity needs this manifest row?",
+  "dyad:inputs": [
+    "the row's partition",
+    "whether authoring, operating or both need it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "authoring",
+      "name": "authoring",
+      "dyad:when": "only authoring with the core needs it",
+      "dyad:then": "it may sit in the core file or a craft's contribution"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operating",
+      "name": "operating",
+      "dyad:when": "only operating a system needs it",
+      "dyad:then": "a system's own operating rows live in its instance contribution, never in the core"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "both",
+      "name": "both",
+      "dyad:when": "both activities need it; every kernel row",
+      "dyad:then": "kernel rows are always both"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/manifest.md",
+  "dyad:owner": "sysarch:manifest"
+}

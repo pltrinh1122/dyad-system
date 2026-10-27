@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/changelog-actor",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "changelog-actor",
+  "name": "Change-log actor",
+  "description": "Whose hands executed a logged host action, recorded in the change log's actor column.",
+  "dyad:decides": "Whose hands drove this host action?",
+  "dyad:inputs": [
+    "who typed the command or ran the ops script",
+    "whether it ran in the Agent's own process"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operator",
+      "name": "operator",
+      "dyad:when": "the Operator drove it, including an Operator-run ops script",
+      "dyad:then": "actor is operator; a divergent credential is named in the outcome"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "agent",
+      "dyad:when": "the Agent's own process ran it",
+      "dyad:then": "actor is agent; a divergent credential (such as the Operator's git identity) is named in the outcome"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "guards/changelog.py"
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/host-mutation.md",
+  "dyad:owner": "sysadmin:host-mutation"
+}

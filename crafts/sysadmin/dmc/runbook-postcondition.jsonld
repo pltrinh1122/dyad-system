@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/runbook-postcondition",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "runbook-postcondition",
+  "name": "Run-book postcondition",
+  "description": "What the runner does with a state-changing command, by testing its postcondition before and after.",
+  "dyad:decides": "Does this run-book command run, and how does its run end?",
+  "dyad:inputs": [
+    "the postcondition before the run",
+    "the postcondition after the run",
+    "whether the command is destructive and a terminal is present"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "already-satisfied",
+      "name": "already satisfied",
+      "dyad:when": "the postcondition holds before the run",
+      "dyad:then": "the command does not run; exit 0"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "run",
+      "name": "run",
+      "dyad:when": "the postcondition does not hold before the run",
+      "dyad:then": "the command runs and the postcondition is tested after"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "failed-postcondition",
+      "name": "failed postcondition",
+      "dyad:when": "the postcondition does not hold after the run",
+      "dyad:then": "recorded; exit 1"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "confirmed",
+      "name": "confirmed",
+      "dyad:when": "the command is destructive",
+      "dyad:then": "confirmed on the terminal before it runs; exit 2 without a terminal"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/naming-pattern",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "naming-pattern",
+  "name": "Naming pattern",
+  "description": "Whether a path the tree holds conforms to the naming table.",
+  "dyad:decides": "Does this path conform to its naming pattern?",
+  "dyad:inputs": [
+    "the path",
+    "every kind and mode line whose glob selects it",
+    "the allow lines",
+    "contributed kinds"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "match",
+      "name": "match",
+      "dyad:when": "every selecting native kind accepts it by regex, or a contributed kind rescues it",
+      "dyad:then": "it passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "allowed",
+      "name": "allow",
+      "dyad:when": "an allow line with a reason names it",
+      "dyad:then": "it passes and is counted in the summary"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stale",
+      "name": "stale",
+      "dyad:when": "an allow line whose path is gone",
+      "dyad:then": "fails when the path is package, warns when it is instance"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "fail",
+      "dyad:when": "neither matched nor allowed, or an allow line without a reason",
+      "dyad:then": "the guard fails"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/naming.py"
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/naming.md",
+  "dyad:owner": "syseng:naming"
+}

@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/seat-name-reading",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "seat-name-reading",
+  "name": "Seat name reading",
+  "description": "What a seat is, read from the tokens of its name alone.",
+  "dyad:decides": "What kind of seat does this name name?",
+  "dyad:inputs": [
+    "the presence file's name",
+    "the seat-name form",
+    "the standing functions"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "leader",
+      "name": "leader",
+      "dyad:when": "program and a handle, or program, an Operator's handle and a handle",
+      "dyad:then": "the cos: keeps the board of programs; sorted first in a seat list"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "secretary",
+      "name": "secretary",
+      "dyad:when": "any other function and a handle",
+      "dyad:then": "a secretary keeping the board of that function"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "desk",
+      "name": "desk",
+      "dyad:when": "a function, a topic and a handle",
+      "dyad:then": "a desk on that function's board"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "outside",
+      "name": "outside the form",
+      "dyad:when": "the name does not match the form",
+      "dyad:then": "counted in one summary line; history the store keeps, never a failure"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/seats.py"
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "rules/naming.md",
+  "dyad:owner": "cabinet:naming"
+}

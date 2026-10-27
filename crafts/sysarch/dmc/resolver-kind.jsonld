@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/resolver-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "resolver-kind",
+  "name": "Resolver kind",
+  "description": "Which single resolver a reference kind in the register names.",
+  "dyad:decides": "Which resolver decides that this reference kind's target exists?",
+  "dyad:inputs": [
+    "the register entry",
+    "whether another Rule's guard already parses the target",
+    "whether the target is inside the repo"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "own",
+      "name": "reference guard",
+      "dyad:when": "a function of the reference guard resolves it",
+      "dyad:then": "the guard checks existence itself"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-guard",
+      "name": "existing guard",
+      "dyad:when": "an existing guard of another Rule parses the target",
+      "dyad:then": "listed as guard:<corpus>/<entity>.py and not re-run"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "world",
+      "name": "world",
+      "dyad:when": "the target is outside the repo",
+      "dyad:then": "unresolvable; checked by inference"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/references.md",
+  "dyad:owner": "sysarch:references"
+}

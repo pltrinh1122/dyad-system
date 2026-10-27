@@ -1,0 +1,72 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/seat-function",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "seat-function",
+  "name": "Seat function",
+  "description": "Which standing function a seat holds, by what the Operator watches on its board.",
+  "dyad:decides": "Which function does this seat hold?",
+  "dyad:inputs": [
+    "the mandates table row",
+    "the seat name's function token"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "program",
+      "name": "program",
+      "dyad:when": "the board of programs across the members",
+      "dyad:then": "the cos; accretes nothing and owns no domain"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "counsel",
+      "name": "counsel",
+      "dyad:when": "the Rules, the vocabulary, the model and the crafts' governance and shape",
+      "dyad:then": "a secretary over Rule text and craft shape"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "audit",
+      "name": "audit",
+      "dyad:when": "the incident ledger, its hardening and the re-test of shipped fences",
+      "dyad:then": "a secretary whose rows are findings, never fixes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "engineer",
+      "name": "engineer",
+      "dyad:when": "the core craft's machine and its tests",
+      "dyad:then": "a secretary over the machine, never its shipping"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "distribute",
+      "name": "distribute",
+      "dyad:when": "the shipping of every craft",
+      "dyad:then": "a secretary over install, port, release, bundle and registry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operate",
+      "name": "operate",
+      "dyad:when": "the host",
+      "dyad:then": "a secretary delivering the sysadmin practice for the Operator to execute"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/seats.py"
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "rules/organization.md",
+  "dyad:owner": "cabinet:organization"
+}

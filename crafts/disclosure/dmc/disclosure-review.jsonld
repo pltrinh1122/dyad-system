@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:disclosure/disclosure-review",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "disclosure-review",
+  "name": "Disclosure review",
+  "description": "The reviewer's verdict on a document before it is released, cheap checks first.",
+  "dyad:decides": "May this document be released?",
+  "dyad:inputs": [
+    "whether it names its reader",
+    "its watermark",
+    "the gate run on the file as written",
+    "whether it is one file",
+    "the prose",
+    "pseudonym stability",
+    "where the map is"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "removed",
+      "name": "removed",
+      "dyad:when": "any check fails, the gate finds anything, or nobody reviewed it",
+      "dyad:then": "the document is removed, not repaired, and does not leave"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "released",
+      "name": "released",
+      "dyad:when": "every check holds and the prose reads as written for that reader",
+      "dyad:then": "it may go to the disposition that releases it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:disclosure",
+  "dyad:home": "docs/producing-a-disclosure.md",
+  "dyad:alsoIn": [
+    "rules/redaction.md"
+  ],
+  "dyad:owner": "disclosure:redaction"
+}

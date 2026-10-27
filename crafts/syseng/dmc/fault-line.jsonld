@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/fault-line",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "fault-line",
+  "name": "Fault line",
+  "description": "Which named line a check prints, so that no fault and no skipped check is silent.",
+  "dyad:decides": "Which line does this check print?",
+  "dyad:inputs": [
+    "the check's result",
+    "whether it could check at all"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "FAIL",
+      "dyad:when": "a fault was found",
+      "dyad:then": "a FAIL line naming the check and where; the run still completes and reports every fault"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warn",
+      "name": "warn",
+      "dyad:when": "a finding the owning Rule rates a warning, or a reference judged by inference",
+      "dyad:then": "a warn line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "skip",
+      "name": "skip",
+      "dyad:when": "the check cannot run here",
+      "dyad:then": "a skip line with its reason; never a failure and never silent"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/failure.md",
+  "dyad:owner": "syseng:failure"
+}

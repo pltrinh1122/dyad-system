@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/platform-status",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "platform-status",
+  "name": "Host platform status",
+  "description": "The status of a host platform the Operator has named, read as an obligation the craft owes.",
+  "dyad:decides": "What is this host platform's status?",
+  "dyad:inputs": [
+    "the platform's row in the host-platform table",
+    "whether a host install on that platform has been performed and recorded"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "verified",
+      "name": "verified",
+      "dyad:when": "a host install on that platform has been performed and recorded and its contract is met",
+      "dyad:then": "the platform is one the system runs on"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "in-scope-unmet",
+      "name": "in scope, unmet",
+      "dyad:when": "the Operator named the platform and no item of its contract is verified",
+      "dyad:then": "an obligation the craft owes, never a capability; it moves to verified only by a recorded host install"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/host-platform.md",
+  "dyad:owner": "sysadmin:host-platform"
+}

@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/event-append",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "event-append",
+  "name": "Event append",
+  "description": "Whether one execution of a run-book command appends an event to its instance's event store.",
+  "dyad:decides": "Does this execution leave an event?",
+  "dyad:inputs": [
+    "the command's class",
+    "the output digest and exit code",
+    "the last event of that command for that instance"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unchanged",
+      "name": "not an event",
+      "dyad:when": "a read-only command whose output digest and exit code equal its last event's",
+      "dyad:then": "nothing is appended"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "changed",
+      "name": "changed",
+      "dyad:when": "a read-only command whose output digest or exit code differs from its last event's",
+      "dyad:then": "an event is appended"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-class",
+      "name": "every other class",
+      "dyad:when": "the command is not read-only",
+      "dyad:then": "an event is appended on every execution"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

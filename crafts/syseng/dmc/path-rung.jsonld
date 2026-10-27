@@ -1,0 +1,81 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/path-rung",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "path-rung",
+  "name": "Implementation path rung",
+  "description": "The first rung of the simplicity ladder that holds for a change, after the plan has read the code it touches.",
+  "dyad:decides": "Which is the first rung that holds for this change?",
+  "dyad:inputs": [
+    "the code the change touches",
+    "the codebase",
+    "the stdlib, the platform and the declared dependencies"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "need",
+      "name": "need to exist",
+      "dyad:when": "the change need not exist",
+      "dyad:then": "nothing is written"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reuse",
+      "name": "reuse",
+      "dyad:when": "the codebase already has it",
+      "dyad:then": "reuse it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stdlib",
+      "name": "stdlib",
+      "dyad:when": "the stdlib provides it",
+      "dyad:then": "use the stdlib"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "native",
+      "name": "native platform feature",
+      "dyad:when": "a native platform feature provides it",
+      "dyad:then": "use the platform feature"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "dependency",
+      "name": "declared dependency",
+      "dyad:when": "an installed, declared dependency provides it",
+      "dyad:then": "use the dependency"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "one-line",
+      "name": "one line",
+      "dyad:when": "one line does it",
+      "dyad:then": "write the line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "minimum",
+      "name": "minimum that works",
+      "dyad:when": "no rung above holds",
+      "dyad:then": "write the minimum that works, with its check"
+    }
+  ],
+  "dyad:precedence": "in ladder order; never past the floor: trust-boundary validation, data-loss handling, security, accessibility and anything requested are never simplified away",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/verifiable-code.md",
+  "dyad:owner": "syseng:verifiable-code"
+}

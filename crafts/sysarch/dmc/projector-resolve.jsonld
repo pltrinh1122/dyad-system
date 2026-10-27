@@ -1,0 +1,58 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/projector-resolve",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "projector-resolve",
+  "name": "Projector resolution",
+  "description": "How the runner resolves a requested surface to one projector.",
+  "dyad:decides": "Which projector does this surface name resolve to?",
+  "dyad:inputs": [
+    "the surface name, bare or qualified as craft/surface",
+    "the discovered projectors"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "qualified",
+      "name": "qualified",
+      "dyad:when": "the name is craft/surface",
+      "dyad:then": "that craft's projector runs; collision-free by construction"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "one",
+      "name": "exactly one craft",
+      "dyad:when": "a bare name that exactly one craft provides",
+      "dyad:then": "that projector runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ambiguous",
+      "name": "qualified candidates",
+      "dyad:when": "a bare name that several crafts provide",
+      "dyad:then": "the qualified candidates are listed and the runner exits 2"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "none",
+      "name": "without any craft",
+      "dyad:when": "no craft provides projectors",
+      "dyad:then": "one line naming the install; exit 2"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/projection.md",
+  "dyad:owner": "sysarch:projection"
+}

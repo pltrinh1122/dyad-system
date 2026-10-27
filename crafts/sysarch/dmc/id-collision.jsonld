@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/id-collision",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "id-collision",
+  "name": "Id collision",
+  "description": "Whether a row id a session pushes collides with another session's, and where that is caught.",
+  "dyad:decides": "Is this row id a collision, and which check catches it?",
+  "dyad:inputs": [
+    "the push path (direct to main or a PR branch)",
+    "the id at the base",
+    "its title at the base"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "direct",
+      "name": "non-fast-forward",
+      "dyad:when": "a direct push to main racing another session's id",
+      "dyad:then": "git rejects it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pr",
+      "name": "different",
+      "dyad:when": "on any branch, an id the range adds or modifies already exists at the base under a different title",
+      "dyad:then": "the row guard fails the push"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unseen",
+      "name": "unpushed",
+      "dyad:when": "two sessions hold unpushed ids",
+      "dyad:then": "neither can see the other; only a shared allocator changes that"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/stores.md",
+  "dyad:owner": "sysarch:stores"
+}

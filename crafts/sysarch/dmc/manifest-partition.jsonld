@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/manifest-partition",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "manifest-partition",
+  "name": "Manifest partition",
+  "description": "Which partition of the manifest a dependency on The World belongs to.",
+  "dyad:decides": "Which partition does this manifest row belong to?",
+  "dyad:inputs": [
+    "the component",
+    "whether the kernel needs it",
+    "whether the package invokes it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "kernel",
+      "name": "kernel",
+      "dyad:when": "it is part of the minimal pinned kernel",
+      "dyad:then": "profile both"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "library",
+      "name": "library",
+      "dyad:when": "the package or the workflow invokes it and it is not kernel",
+      "dyad:then": "the row names its replacement"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "the-world",
+      "name": "The World",
+      "dyad:when": "the OS and what it provides",
+      "dyad:then": "recorded as observed, never pinned"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/manifest.md",
+  "dyad:owner": "sysarch:manifest"
+}

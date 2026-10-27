@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/ops-script-check",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "ops-script-check",
+  "name": "Ops-script check",
+  "description": "The verdict of the ops-script guard over each ops script's form.",
+  "dyad:decides": "Does this ops script pass the form check?",
+  "dyad:inputs": [
+    "bash -n",
+    "the tracked mode in git's index",
+    "the shebang and set -euo pipefail",
+    "the header lines",
+    "the postcondition and confirm functions and their token counts"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fails",
+      "name": "fails",
+      "dyad:when": "a syntax error, a tracked mode other than 100755, a missing shebang, strict-mode line or header line, no postcondition function or fewer than three mentions, or a destructive script without confirm used at least twice",
+      "dyad:then": "the push is refused"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warns",
+      "name": "warns",
+      "dyad:when": "a script not yet in the index",
+      "dyad:then": "the disk bit is used instead and a warning printed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "passes",
+      "name": "passes",
+      "dyad:when": "every item of the form holds, or no ops directory exists",
+      "dyad:then": "the check is green; that the script converges stays inference"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/ops_scripts.py"
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/ops-scripts.md",
+  "dyad:owner": "sysadmin:ops-scripts"
+}

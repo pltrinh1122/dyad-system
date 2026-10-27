@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/live-test-empty",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "live-test-empty",
+  "name": "Live test on an empty instance",
+  "description": "What a live test does when the store it reads is empty or the craft it needs is absent.",
+  "dyad:decides": "What does this live test do on an empty instance or an absent craft?",
+  "dyad:inputs": [
+    "whether the code documents its empty behaviour",
+    "the instance's stores",
+    "the installed crafts"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "assert",
+      "name": "asserts",
+      "dyad:when": "the code documents a behaviour for the empty case",
+      "dyad:then": "the test asserts the documented empty behaviour"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "empty",
+      "name": "empty instance",
+      "dyad:when": "the store is empty and no behaviour is documented",
+      "dyad:then": "the test skips with the reason empty instance"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "absent",
+      "name": "absent craft",
+      "dyad:when": "the craft it needs is not installed",
+      "dyad:then": "the test skips with the reason absent craft"
+    }
+  ],
+  "dyad:precedence": "asserting is preferred wherever the code documents a behaviour",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/verifiable-code.md",
+  "dyad:owner": "syseng:verifiable-code"
+}

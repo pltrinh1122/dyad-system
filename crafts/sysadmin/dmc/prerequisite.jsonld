@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/prerequisite",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "prerequisite",
+  "name": "Install prerequisite",
+  "description": "Whether a host provides what a host install needs, judged by running the thing that needs it.",
+  "dyad:decides": "Is this prerequisite met on this host?",
+  "dyad:inputs": [
+    "the prerequisite and its pin from the manifest",
+    "what running the thing that needs it observed"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "met",
+      "name": "met",
+      "dyad:when": "the observation shows the host provides it at the pin",
+      "dyad:then": "the install may proceed; the verdict line is written in the plan before the act"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmet",
+      "name": "unmet",
+      "dyad:when": "the observation shows the host does not provide it",
+      "dyad:then": "a finding; satisfying it is a host action with its own class, and a workaround in the repository is a plan decision stated in those words; found unmet a second time, it proposes a fix in code or a line in the rule"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/host-install.md",
+  "dyad:owner": "sysadmin:host-install"
+}

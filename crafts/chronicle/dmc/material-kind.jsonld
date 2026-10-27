@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/material-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "material-kind",
+  "name": "Episode material",
+  "description": "Which kind of material an event told in an episode draws on.",
+  "dyad:decides": "What material does this event draw on?",
+  "dyad:inputs": [
+    "the event",
+    "its footnote citation"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "record",
+      "name": "record",
+      "dyad:when": "what the system's repos hold, cited as path: or repo:",
+      "dyad:then": "told, with a record citation"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "context",
+      "name": "Operator's context",
+      "dyad:when": "the Operator's own words about the world outside the repo, cited as prov:",
+      "dyad:then": "told, with a context citation"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "gap",
+      "name": "gap",
+      "dyad:when": "neither holds it",
+      "dyad:then": "reported as a gap, never filled; an uncited footnote fails the guard"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/episodes.py"
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/chronicle.md",
+  "dyad:owner": "chronicle:chronicle"
+}

@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/host-action-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "host-action-class",
+  "name": "Host-action class",
+  "description": "Which of the three classes a host action falls in, by whether it changes state and whether it has a tested undo.",
+  "dyad:decides": "Which class is this host action?",
+  "dyad:inputs": [
+    "the action",
+    "whether it changes state",
+    "its stated undo and whether that undo is tested",
+    "whether it loses data"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "read-only",
+      "name": "read-only",
+      "dyad:when": "the action observes and changes nothing",
+      "dyad:then": "free; no change-log row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reversible",
+      "name": "reversible",
+      "dyad:when": "the action changes state and has a stated undo",
+      "dyad:then": "authorized by the plan-Y of the plan that names it, with its undo; a change-log row with a non-empty undo"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "destructive",
+      "name": "destructive",
+      "dyad:when": "the action has no undo, loses data, or its undo is untested",
+      "dyad:then": "needs its own counter-prompt naming the action, even inside a planned d-work; a change-log row"
+    }
+  ],
+  "dyad:default": "destructive (when in doubt, destructive)",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/host-mutation.md",
+  "dyad:owner": "sysadmin:host-mutation"
+}

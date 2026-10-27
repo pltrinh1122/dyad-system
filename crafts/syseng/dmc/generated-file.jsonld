@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/generated-file",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "generated-file",
+  "name": "Generated file",
+  "description": "Whether a path is a generated file, which is never tracked.",
+  "dyad:decides": "Is this path a generated file?",
+  "dyad:inputs": [
+    "the path",
+    "the generated entries of the package rules data"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "generated",
+      "name": "generated",
+      "dyad:when": "it is produced by running the package (bytecode, caches, rendered views, projections)",
+      "dyad:then": "never tracked; a tracked one is refused"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tracked",
+      "name": "tracked",
+      "dyad:when": "it is not produced by running the package",
+      "dyad:then": "it may be tracked"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/determinism.md",
+  "dyad:owner": "syseng:determinism"
+}

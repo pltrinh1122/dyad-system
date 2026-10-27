@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/runbook-sections",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "runbook-sections",
+  "name": "Run-book section set",
+  "description": "Which section set a run-book is checked against.",
+  "dyad:decides": "Which section set does this run-book have to carry?",
+  "dyad:inputs": [
+    "the run-book header's sections line"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "default",
+      "name": "default section set",
+      "dyad:when": "the header carries no sections line",
+      "dyad:then": "the ten sections Status/health, Start, Stop, Restart, Logs, Backup, Restore, Upgrade, Credential rotation, Data, each holding at least one command"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declared",
+      "name": "declared",
+      "dyad:when": "the header carries a sections line",
+      "dyad:then": "checked against that set; the run-book is not a server's and its server-directory warning is skipped"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/runbooks.py"
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

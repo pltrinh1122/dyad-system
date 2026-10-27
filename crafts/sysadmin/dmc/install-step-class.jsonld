@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/install-step-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "install-step-class",
+  "name": "Install step class",
+  "description": "The host-action class of each step of a host install, and whether the session runs it or delivers it as an ops script.",
+  "dyad:decides": "What class is this host-install step, and who runs it?",
+  "dyad:inputs": [
+    "the step",
+    "whether the package manager can remove exactly what it added",
+    "whether the session can run it itself"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reversible",
+      "name": "reversible",
+      "dyad:when": "writing the tree and its registry row, setting core.hooksPath, or a package-manager install it can remove exactly",
+      "dyad:then": "authorized by the plan that names it, with the undo"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "destructive",
+      "name": "destructive",
+      "dyad:when": "a package-manager step that would upgrade, remove or replace anything else",
+      "dyad:then": "needs its own authorizing disposition naming it, even inside a planned d-work"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ops-script",
+      "name": "ops script",
+      "dyad:when": "a step the session cannot run itself (privilege, a system package)",
+      "dyad:then": "delivered for the Operator to run as an ops script; its pasted output is the outcome"
+    }
+  ],
+  "dyad:default": "destructive (when in doubt, destructive)",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/host-install.md",
+  "dyad:alsoIn": [
+    "rules/host-mutation.md"
+  ],
+  "dyad:owner": "sysadmin:host-install"
+}

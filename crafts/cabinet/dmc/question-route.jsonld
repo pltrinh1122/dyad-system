@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/question-route",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "question-route",
+  "name": "Question route",
+  "description": "Where a question a seat owes the Operator is asked, by whether the seat is attended.",
+  "dyad:decides": "Where is this seat's question asked?",
+  "dyad:inputs": [
+    "the seat",
+    "the preference attended-seats",
+    "whether the seat is the leader"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "attended",
+      "name": "attended",
+      "dyad:when": "the seat is attended",
+      "dyad:then": "asked in the seat's own chat; the answer lands in that seat's provenance"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "relayed",
+      "name": "not attended",
+      "dyad:when": "the seat is not attended",
+      "dyad:then": "asked in the leader's chat, seat named, in the form relay-form names; the answer is relayed back verbatim"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "leader",
+      "name": "the leader itself",
+      "dyad:when": "the seat is the leader",
+      "dyad:then": "asked in the leader's chat"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "docs/operating-guide.md",
+  "dyad:alsoIn": [
+    "rules/organization.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

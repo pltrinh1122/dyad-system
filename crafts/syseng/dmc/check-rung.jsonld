@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/check-rung",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "check-rung",
+  "name": "Check rung",
+  "description": "Where a check belongs on the ladder of places a fault can be detected.",
+  "dyad:decides": "At which rung is this fault first knowable?",
+  "dyad:inputs": [
+    "the fault",
+    "the earliest place it can be known"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declaration",
+      "name": "declaration",
+      "dyad:when": "a predicate over a module's own constants can hold it",
+      "dyad:then": "an invariant, run before any check"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "transaction",
+      "name": "transaction",
+      "dyad:when": "a hook before the commit or the push can hold it",
+      "dyad:then": "the pre-commit or pre-push hook"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "run",
+      "name": "run",
+      "dyad:when": "a guard over the tree can hold it",
+      "dyad:then": "a guard's check_package"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "use",
+      "name": "use",
+      "dyad:when": "only the call site can know it",
+      "dyad:then": "an exception where the value is read"
+    }
+  ],
+  "dyad:precedence": "as high as it goes: declaration, then transaction, then run, then use; the plan names the rung and why the one above could not hold it",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/failure.md",
+  "dyad:owner": "syseng:failure"
+}

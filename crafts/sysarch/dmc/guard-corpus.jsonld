@@ -1,0 +1,65 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/guard-corpus",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "guard-corpus",
+  "name": "Guard corpus",
+  "description": "Where a guard is placed and which corpus it declares, by the zone of its entity's store and the craft that owns its check.",
+  "dyad:decides": "Which corpus does this guard belong to?",
+  "dyad:inputs": [
+    "the craft that owns the check",
+    "the Rule-1 zone of the entity's store"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "agent",
+      "dyad:when": "a core guard whose entity's store is in the agent zone",
+      "dyad:then": "dyad/guards/agent/"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "workstation",
+      "name": "workstation",
+      "dyad:when": "the entity's store is the host corpus",
+      "dyad:then": "a core guard under dyad/guards/workstation/, or a craft guard declaring the logical host corpus, which resolves to the host path's zone"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "preferences",
+      "name": "preferences",
+      "dyad:when": "a core guard whose entity's store is in the preferences zone",
+      "dyad:then": "dyad/guards/preferences/"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "infra",
+      "name": "infra",
+      "dyad:when": "a core guard whose entity's store is in the infra zone",
+      "dyad:then": "dyad/guards/infra/"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "craft",
+      "name": "craft",
+      "dyad:when": "a core guard whose entities are stored under crafts/*",
+      "dyad:then": "dyad/guards/craft/; a Tended craft's own guard sits flat under its own guards/ and declares its store's zone as CORPUS"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/guards.md",
+  "dyad:owner": "sysarch:guards"
+}
