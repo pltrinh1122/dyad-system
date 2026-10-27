@@ -12,11 +12,12 @@
   ],
   "identifier": "material-kind",
   "name": "Episode material",
-  "description": "Which kind of material an event told in an episode draws on.",
+  "description": "Which kind of material a passage told in an episode draws on: the record layer's two, or the persona's fiction layer.",
   "dyad:decides": "What material does this event draw on?",
   "dyad:inputs": [
-    "the event",
-    "its footnote citation"
+    "the event or passage",
+    "its footnote citation",
+    "its fiction marker and the episode's fiction header"
   ],
   "hasDefinedTerm": [
     {
@@ -35,9 +36,16 @@
     },
     {
       "@type": "DefinedTerm",
+      "termCode": "fiction",
+      "name": "fiction layer",
+      "dyad:when": "the persona's character, inner life or daemons: private, not held by the record",
+      "dyad:then": "told as fiction based on a real-life model, uncited, in a paragraph opening with the fiction marker under the episode's fiction header; a citation inside it, or a marker with no header, fails the guard"
+    },
+    {
+      "@type": "DefinedTerm",
       "termCode": "gap",
       "name": "gap",
-      "dyad:when": "neither holds it",
+      "dyad:when": "the record layer's material, neither record nor the Operator's context holds it",
       "dyad:then": "reported as a gap, never filled; an uncited footnote fails the guard"
     }
   ],
