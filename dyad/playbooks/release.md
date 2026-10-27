@@ -7,8 +7,9 @@ a release now, and which number that release takes. It exists because the Operat
 not say why it was one: "release should have clear threshold criteria, e.g. a critical bug fix, a significant
 enhancement to an existing capability, a new capability, etc." (#489, plan #493). Steps: `dyad/runbooks/release.md`,
 run through `dyad runbook run release <step>`, the core runner. Nothing here redefines a Rule. That a release is the
-Operator's to ratify, the question's form `Y/N: release <tag>?` and its batch form are Rule-11's
-(`dyad/rules/RULE-11-distribution-structure.md`, Ratification events). That a tag equals its craft's `VERSION`, and
+Operator's to ratify, and its two forms, the single `Y/N: release <tag>?` and the batch `Y/N: release <tag-a>, <tag-b>?`
+for tags one d-work's own Done-`Y` verified, are Rule-11's (`dyad/rules/RULE-11-distribution-structure.md`, Ratification
+events). This play-book makes the batch its default (Evidence, below). That a tag equals its craft's `VERSION`, and
 the drift guard that forces a `VERSION` bump after a tag, are Rule-11 property 4's. The bundle is property 7's.
 Publishing a ratified release is the `released` service's (`dyad release`, its run-book `released.md`; #461, #470).
 The seat proposes; the Operator disposes (Rule-2).
@@ -61,12 +62,24 @@ now.
 - `number`: the tag `CLASS` implies for `CRAFT`.
 
 ## Evidence
-The release question is asked once per tag (Rule-11; its batch form for one d-work's tags stays available), its last
-line in Rule-11's form. Before that line the seat states, for each tag: its class, each d-work that meets the class (one
-line each, with its evidence, as the Classes table names it), the number the class implies, and, for a bundle, the
-component classes it takes the highest of. For example:
+**One question per d-work, not per tag.** When the tags come from one d-work's Done-`Y`, the seat asks them as one
+question in Rule-11's batch form; the usual case is a bundle plus the components it releases. The seat asks single
+questions only for tags of different d-works. The release reply holds the evidence the batch line rests on, before
+that line:
+- for each tag, its class, each d-work that meets the class (one line each, with its evidence, as the Classes table
+  names it) and the number the class implies;
+- for the bundle, the component classes it takes the highest of;
+- the cut, and each archive's sha256 at the cut (#478: one seat build per archive).
 
-    dyad-operator-v0.13.0: class new capability (#474 dyad bootstrap; #476 check --evidence --brief/--show), significant enhancement (#475 parallel suite, failing tests named), fixes (#465, #475)
-    Y/N: release dyad-operator-v0.13.0?
+Its last line is Rule-11's batch form, naming the bundle last:
+
+    dyad-operator-v0.13.0: class new capability (#474 dyad bootstrap; #476 check --evidence --brief/--show; #493 release play-book), significant enhancement (#475 parallel suite; #465 trace fence), critical fix (#475)
+    v0.17.0: class new capability, the highest of its components (dyad-operator 0.13.0; cabinet, sysadmin, sysarch, syseng unchanged)
+    cut ba7c47b; dyad-0.13.0.tar.gz 8a0572cd…b9a9; BUNDLE.sha256 b9060eb2…96e8
+    Y/N: release dyad-operator-v0.13.0, v0.17.0?
+
+One `Y` is recorded as one `Y release <tag> at <cut> (archive <sha256>)` entry per named tag, all in one ledger commit,
+so `released` publishes them in one run. Each entry's provenance text is the same `Y`, as Rule-3's batch writes one `Y`
+into every named row. Anything but `Y` releases none of the named tags (Rule-2, Binding).
 
 A release question that names no class, or a class it cannot evidence, is not asked.
