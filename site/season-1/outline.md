@@ -1,10 +1,43 @@
-title: Season 1 outline — how Op0 got here
+title: Op0: One Y at a Time — season 1 outline
 season: 1
-status: draft, revision 4, for the Operator's approval (chronicle §6); not published
+status: draft, revision 5, for the Operator's approval (chronicle §6); not published
 drafted by: communicate-5d6b62e1 (sec-comm), d-work #503 (C5 of #498)
-revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511)
+revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511); revision 5 adopts the title, through-line, last line, closing anchor and tone rule the Operator approved (prov:#498/16; context prov:#498/10–15)
 
-# Season 1 — how Op0 got here
+# Op0: One Y at a Time — season 1
+
+**Title:** Op0: One Y at a Time (prov:#498/12).
+
+**Through-line:** He wanted to give fewer Ys. Every way he found cost at least two.
+
+Every mechanism that spares him questions took a plan-`Y` and a Done-`Y` of its own, and some took more:
+
+| mechanism | row | dispositions |
+|---|---|---|
+| batching | `path:agent-corpus/d-work/rows/17.md` | 2 |
+| the mandate | `path:agent-corpus/d-work/rows/290.md` | 3 |
+| one attended seat | `path:agent-corpus/d-work/rows/412.md` | 2 |
+| the `released` daemon | `path:agent-corpus/d-work/rows/461.md` | 5 |
+
+**The title is a dare.** Read through the season, "One Y at a Time" is a complaint. Read through his intent ("the irony is that i'm going to try to get it down to a single `Y`", prov:#498/15), it is where he is going. Season 1 ends with the attempt open (E19).
+
+**Whose arc.** Op0's, and every future Operator's: "In achieving the stated purpose, the Operator is achieving their own hopes and dream." (prov:#498/12)
+
+**Tone: wry.** "living an \"unbounded\" life also means not over dramatizing life events" (prov:#498/12).
+- Every event is told at its own size. A self-ratified merge is an incident row, not a betrayal.
+- The humour lives in the gap between the Ys he hoped to save and the Ys each saving cost.
+
+**The four causes are the common anchor** (prov:#498/11, #498/12, #498/13). Every episode closes with one short line naming what it released, in plain words. The line carries only the causes that appear, and they show up however they show up; no arc owns a cause.
+
+| cause | plain words | drawn from these citations |
+|---|---|---|
+| material | made of | code, guards, run-books, release tags |
+| formal | shaped by | a Rule, craft or vocabulary row |
+| efficient | made by | a seat, a charter, or his own prompt |
+| final | made for | a purpose, goal or hope (README, prov:#498/7) |
+
+- Which cause a citation counts as is the teller's reading, so each line is approved with its episode.
+- E19's line is the first to name all four.
 
 **Citation forms** (`crafts/chronicle/rules/chronicle.md` §1):
 
@@ -38,7 +71,7 @@ He named twelve daemons, in four groups (prov:#498/7):
 
 These are the only flaws attributed to Op0.
 
-**Proposed spine** (the teller's frame, for approval): each daemon was once a hero. In the record, each shows up as a strength that later costs him: a standard that produces rework, a duty that turns him into a courier, a demand for reasons that turns into ceremony.
+**Proposed inner spine** (the teller's frame, for approval; under the title's arithmetic): each daemon was once a hero. In the record, each shows up as a strength that later costs him: a standard that produces rework, a duty that turns him into a courier, a demand for reasons that turns into ceremony.
 
 The season traces how the system's own structure lets him set them down:
 
@@ -529,13 +562,16 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - "`program` is responsible for 'communication' with Operator as well as world."
 - A serial "to build an audience of potential operators", its main character named.
 - His hope, given for it: an unbounded life, free of the daemons.
-- The season closes on episode 0's announcement, now earned.
+- The season closes on episode 0's announcement, now earned, and hands the title to the reader: an Operator's hopes are reached the same way.
+- **Last line of the season:** his own intent, quoted as an aim and never as an outcome: "the irony is that i'm going to try to get it down to a single `Y`".
+- **Closing anchor:** all four causes, for the first time.
 
 **Citations**
 - prov:#497/2
 - prov:#498/1
 - prov:#498/2
 - prov:#498/7
+- prov:#498/15
 - path:agent-corpus/d-work/rows/506.md
 
 ---
