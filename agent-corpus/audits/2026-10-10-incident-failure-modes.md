@@ -742,7 +742,7 @@ Not a delta. The watermark stays at 233, and the next delta grades these five ro
 | 235 | #476 | A (third face, row 198's: a push to a branch a Done names) | C |
 | 236 | #474 | I (git's version and its auto-maintenance, the unnamed input) | — |
 | 237 | #486 | S (a counter-prompt form typed from memory, not seeded from `merge-disposition`) | M, unverified |
-| 238 | #518 | C (CI state stated, not read) | — |
+| 238 | #475 (PR #518) | C (CI state stated, not read) | — |
 
 Two of these are the second instance of a face within a week. Row 235 repeats row 198, and the 2026-10-24 delta
 called that face conduct "unless branch protection". Row 234 repeats the tagless skip, which the delta of
