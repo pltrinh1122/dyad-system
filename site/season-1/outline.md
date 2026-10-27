@@ -1,8 +1,8 @@
 title: Season 1 outline — how Op0 got here
 season: 1
-status: draft, revision 2, for the Operator's approval (chronicle §6); not published
+status: draft, revision 3, for the Operator's approval (chronicle §6); not published
 drafted by: communicate-5d6b62e1 (sec-comm), d-work #503 (C5 of #498)
-revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8
+revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9
 
 # Season 1 — how Op0 got here
 
@@ -59,6 +59,21 @@ The structure carries the hero's job, so Op0 no longer has to.
 | 2026-10-14 | #289, #290 | (E13) |
 | 2026-10-22 | #384 | "operator disposes the act" (E15) |
 | 2026-10-27 | #486 | "i don’t disposition merge, only d-work" (E17) |
+
+## World setting
+
+The world is the present day and the real world (prov:#498/9).
+
+**Every event a reader meets can be searched and retrieved.** It is a commit, a row, a tag, a provenance entry or a public page. This is the record rule (§1) seen from the reader's side.
+
+**Names follow from it:**
+
+1. A real thing appears under its real, retrievable name — a repo, a tool, a release — or not at all.
+2. Where the record holds something that must stay unnamed, it appears as a plain description of what the record says, never as an invented proper name. A coined name would send a searching reader either to nothing or to a wrong real entity.
+
+**The commercial client is not mentioned** (prov:#498/7). If a beat ever needs it, the proposed form is the bare description "a commercial client" — exactly what prov:#152/1 says, no more. *(Q4, revised)*
+
+**Op0 is the one coined name.** It is the persona the Operator chose, and nothing else is invented in his name.
 
 ## Shape
 
@@ -569,7 +584,7 @@ dyad-milo-pltrinh1122 is attached, but its content is not read: the domain is pe
 | # | question |
 |---|---|
 | Q2 | Was ChatGPT-Sandbox ChatGPT's code? 2026-03-09 → 05-15 is silent in every repo — tell it as a silence, or is there context? |
-| Q4 | An alias for the commercial client, if the story ever needs one (options given in this seat's chat). The outline currently needs none. |
+| Q4 | The commercial client: no proper-name alias (World setting). If a beat ever needs it, "a commercial client" — or keep it absent entirely? |
 | Q5 | Accept or strike each daemon proposal above. Are the touchstone OPERATOR-STOPs his to tell? |
 | Q8 | dyad-milo: omit, or name once with technical commits only (E16 uses one)? |
 | Q9 | May E10 quote the practice's "1 + 1 = 3" from his fork without naming the commons? |
