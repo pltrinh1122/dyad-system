@@ -665,3 +665,28 @@ request (`check --evidence --show <sha256>`); the Operator may re-run the eviden
 **Pairwise (Rule-5).** **3–2**: the relayed-Done bullet now cites the evidence as Binding does; Binding is unchanged in force. **3–14**: the block's form is property 3's. **3–7**: unchanged — no Operator words are touched; the evidence is the Agent's text. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #476.
+
+## Amendment — d-work #492 (2026-10-27, a read-only answer opens no d-work)
+**Claim (plan #492, the Operator's `Y` of 2026-10-27, falsifying "showing the board should not be a ledger record
+because it only reads the ledger"):** Scope's "every Operator prompt opens a d-work" gains one exemption — a prompt
+whose answer only reads the corpus, writes nothing and asks no question opens none — and its boundary: a reply that
+writes, proposes, or carries a `Y/N` line opens its d-work before its question. The test is the reply's form.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Scope says there are no exemptions. | Confirmed as the text before this amendment: the claim is a Rule change, not a reading of the Rule; it is made here. |
+| 2 | Monitoring is no d-work (#438) because a read-only check authorizes nothing and never completes. | Supports the claim: a read answer authorizes nothing either, and completes in the reply. |
+| 3 | Cost: a board shown on request (#490) took a row, a provenance record, a trace, two ledger pushes and a Done question. | Supports the claim. |
+| 4 | Without a row the prompt's words go unrecorded, since Rule-7 fires on a prompt that opens a d-work. | Survives, conceded: the words of a read request authorize nothing, so no chain of authorization is lost; the transcript still holds them. |
+| 5 | A read reply often ends in a proposal (#490 proposed archiving three rows), and #491 shows a `Y` given with no row to land on. | Refutes the bare claim and scopes it: the line is the question, not the read — a reply that asks anything opens its row before the question. |
+| 6 | Who classifies "read-only"? The Agent, by inference (modes S and C of the incident index). | Survives, scoped: classified by the reply's form, observable — no write, no proposal, no `Y/N` line. |
+
+**Pairwise (Rule-5).** **3–7**: unchanged in text — Rule-7's trigger is "a prompt that opens or is received on a
+d-work", so a read-only answer, opening none, writes no entry; attack 4 states what that concedes. **3–2**: unchanged — a
+read-only answer asks nothing, so no ratification event arises; a reply that asks opens a row first, and Binding applies
+to its question as before. **3–10**: unchanged — Rule-10 frames proposals; a read-only answer is none. **3–15**: a reply
+that opens its row writes its plan file before its question, as Phase 1 requires. **3–16**: unchanged — no state or
+transition is added. **3–6**: no new term; `d-work` still reads correctly ("opened by an Operator prompt" names how one
+opens, not that every prompt opens one). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #492.
