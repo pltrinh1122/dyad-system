@@ -125,7 +125,7 @@ class DriftTests(unittest.TestCase):
     def test_tag_name_and_invariant(self):
         self.assertEqual(bd.tag_name("dyad-operator", "0.6.2"), "dyad-operator-v0.6.2")
         self.assertEqual(bd.tag_name("sysarch", "0.1.5"), "sysarch-v0.1.5")
-        self.assertEqual([n for n, f in bd.INVARIANTS if not f()], []); self.assertEqual(len(bd.INVARIANTS), 2)
+        self.assertEqual([n for n, f in bd.INVARIANTS if not f()], []); self.assertEqual(len(bd.INVARIANTS), 5)   # +3 for #504
     def test_component_roots(self):
         root, pkg = tree()
         self.assertEqual({k: v.as_posix() for k, v in bd.component_roots(root, pkg).items()},
@@ -279,3 +279,86 @@ class ReleasedCraftChangedTests(unittest.TestCase):
             self.assertEqual(bd.check_bundle(root, pkg)[2], [])
         finally:
             import shutil; shutil.rmtree(root, ignore_errors=True)
+
+
+class CitationTests(unittest.TestCase):
+    """d-work #504, Rule-11 property 2: a craft a core Rule cites by path is bundled; one no Rule
+    cites is bundled only with a `PURPOSE` line beside its declaration."""
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.pkg = self.d / "dyad"
+        (self.pkg / "rules").mkdir(parents=True)
+    def tearDown(self):
+        import shutil; shutil.rmtree(self.d, ignore_errors=True)
+    def rule(self, name, text):
+        (self.pkg / "rules" / name).write_text(text)
+    def craft(self, name, guard=None):
+        c = self.d / "crafts" / name; c.mkdir(parents=True)
+        (c / "VERSION").write_text("0.1.0\n")
+        if guard is not None:
+            (c / "guards").mkdir(); (c / "guards" / "x.py").write_text(guard)
+    def fails(self):
+        return [m for m in bd.check_citations(self.pkg) if not m.startswith("warning:")]
+    def warns(self):
+        return [m for m in bd.check_citations(self.pkg) if m.startswith("warning:")]
+
+    def test_cited_and_declared_passes(self):
+        self.rule("RULE-8-x.md", "reads `crafts/foo/rules/a.md`\n")
+        self.craft("foo", "BUNDLED_WITH_CORE = True\n")
+        self.assertEqual(bd.check_citations(self.pkg), [])
+    def test_cited_and_undeclared_fails_naming_the_rules(self):
+        self.rule("RULE-8-x.md", "reads `crafts/foo/rules/a.md`\n")
+        self.rule("RULE-12-y.md", "and `crafts/foo/guards/b.py`\n")
+        self.craft("foo", "NAME = 'x'\n")
+        f = self.fails()
+        self.assertEqual(len(f), 1, f)
+        self.assertIn("'foo': cited by path in RULE-8-x.md, RULE-12-y.md but not bundled", f[0])
+    def test_cited_undeclared_without_guards_dir_fails(self):
+        self.rule("RULE-8-x.md", "`crafts/foo/`\n")
+        self.craft("foo")
+        self.assertEqual(len(self.fails()), 1)
+    def test_commented_or_false_declaration_is_undeclared(self):
+        self.rule("RULE-8-x.md", "`crafts/foo/`\n")
+        self.craft("foo", "# BUNDLED_WITH_CORE = True\nBUNDLED_WITH_CORE = False\n")
+        self.assertEqual(len(self.fails()), 1)
+    def test_declaration_in_private_module_does_not_count(self):
+        self.rule("RULE-8-x.md", "`crafts/foo/`\n")
+        self.craft("foo", "NAME = 'x'\n")
+        (self.d / "crafts" / "foo" / "guards" / "_helper.py").write_text("BUNDLED_WITH_CORE = True\n")
+        self.assertEqual(len(self.fails()), 1)
+    def test_cited_and_absent_warns_never_fails(self):
+        self.rule("RULE-8-x.md", "`crafts/foo/`\n")
+        self.assertEqual(self.fails(), [])
+        w = self.warns(); self.assertEqual(len(w), 1); self.assertIn("'foo'", w[0]); self.assertIn("not in this tree", w[0])
+    def test_declared_uncited_with_purpose_passes(self):
+        self.craft("bar", "BUNDLED_WITH_CORE = True\nPURPOSE = \"spends the Operator's attention only on decisions\"\n")
+        self.assertEqual(bd.check_citations(self.pkg), [])
+    def test_declared_uncited_without_purpose_fails(self):
+        self.craft("bar", "BUNDLED_WITH_CORE = True\n")
+        f = self.fails(); self.assertEqual(len(f), 1); self.assertIn("'bar'", f[0]); self.assertIn("PURPOSE", f[0])
+    def test_declared_uncited_with_empty_purpose_fails(self):
+        self.craft("bar", "BUNDLED_WITH_CORE = True\nPURPOSE = \"\"\n")
+        self.assertEqual(len(self.fails()), 1)
+    def test_purpose_in_another_module_does_not_count(self):
+        self.craft("bar", "BUNDLED_WITH_CORE = True\n")
+        (self.d / "crafts" / "bar" / "guards" / "y.py").write_text("PURPOSE = \"elsewhere\"\n")
+        self.assertEqual(len(self.fails()), 1)
+    def test_undeclared_uncited_craft_is_silent(self):
+        self.craft("bar", "NAME = 'x'\n")
+        self.assertEqual(bd.check_citations(self.pkg), [])
+    def test_citation_outside_a_rule_does_not_count(self):
+        (self.pkg / "playbooks").mkdir(); (self.pkg / "playbooks" / "p.md").write_text("`crafts/foo/`\n")
+        (self.pkg / "rules" / "README.md").write_text("`crafts/foo/`\n")
+        self.craft("foo", "NAME = 'x'\n")
+        self.assertEqual(bd.check_citations(self.pkg), [])
+    def test_placeholder_is_not_a_citation(self):
+        self.rule("RULE-6-x.md", "`crafts/<craft>/vocabulary/CRAFT.md`\n")
+        self.assertEqual(bd.cited_crafts(self.pkg), {})
+    def test_runs_without_bundle_md_in_check_package_and_main(self):
+        """The criterion judges the core's release (property 2), not BUNDLE.md (property 7)."""
+        (self.pkg / "VERSION").write_text("0.5.0\n")
+        self.rule("RULE-8-x.md", "`crafts/foo/`\n")
+        self.craft("foo", "NAME = 'x'\n")
+        self.assertTrue(any("'foo': cited by path" in m for m in bd.check_package(self.d, self.pkg)))
+        r = subprocess.run([sys.executable, str(Path(bd.__file__)), str(self.d)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1, r.stdout); self.assertIn("skip [bundle] no BUNDLE.md", r.stdout)
+        self.assertIn("FAIL [bundle] 'foo': cited by path", r.stderr)

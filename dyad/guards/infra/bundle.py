@@ -24,8 +24,26 @@ tree under that craft's root at HEAD must be the tree the tag holds; `check_drif
 whose root differs from its own tag while `VERSION` is unchanged. A tag that does not resolve
 locally (never released, or tags not fetched — the kernel-only path never fetches) skips with one
 warning line. HEAD, not the working tree: the pre-push hook judges commits.
+
+The bundled-craft criterion (d-work #504, Rule-11 property 2): a Tended craft is bundled with the core
+when (a) a core Rule cites it by path, or (b) it serves the system's purpose, declared with a one-line
+`PURPOSE` reason. `check_citations` keeps both. (a) Every craft a core Agent Rule (`<pkg>/rules/RULE-*.md`,
+the core craft's own Rules, read under `pkg` so an installed tree judges its own) names by path,
+`crafts/<name>/`, that is present in the tree and does not declare `BUNDLED_WITH_CORE = True` in one of
+its own guard modules fails, naming the citing Rules: a core-only install would ship Rules citing a craft
+it does not carry. A cited craft absent from the tree warns, never fails: an installed system, or a
+core-only install of a core whose cited craft is not yet declared, has nothing here to judge, and
+the craft that would carry the declaration is the one missing. (b) A craft that declares itself and that
+no core Rule cites must carry a non-empty one-line `PURPOSE = "..."` in the same guard module as the
+declaration; a cited craft may carry one and need not. The clause runs whether or not `BUNDLE.md`
+exists: it judges what the core's *release* carries (property 2), not the bundle (property 7). Both
+assignments are read as text (`DECLARED`, `PURPOSE_LINE`), never executed: a guard module of another
+tree is never imported (`package.bundled_crafts`'s own reading of an `--from` tree, #353), this guard
+stays free of `package.py`, which loads it, and a declaration this reading misses — any form but the
+literal `BUNDLED_WITH_CORE = True` — fails as undeclared, the strict side.
   bundle.py [repo-root]
 """
+import re
 import subprocess
 import sys
 if sys.version_info < (3, 12):
@@ -38,8 +56,23 @@ ENTITY, CORPUS, TRANSACTION = "bundle", "infra", False
 NAME, OWNER = "bundle row", "Rule-11"
 CORE_NAME = "dyad-operator"                        # crafts/craft.py's own CORE_NAME; a bundle row uses the same name
 FIELDS = ("component", "version")
+# d-work #504 (Rule-11 property 2): a core Rule's path citation of a craft, a craft's bundling
+# declaration and its purpose line, each read as text from one line (module docstring).
+CITATION = re.compile(r"crafts/([a-z0-9][a-z0-9_-]*)/")
+DECLARED = re.compile(r"^BUNDLED_WITH_CORE\s*=\s*True\b", re.M)
+PURPOSE_LINE = re.compile(r"""^PURPOSE\s*=\s*(?:"[^"\n]*\S[^"\n]*"|'[^'\n]*\S[^'\n]*')""", re.M)
 INVARIANTS = [("two-fields", lambda: len(FIELDS) == 2 and len(set(FIELDS)) == 2),   # crafts/syseng/rules/invariants.md
-              ("tag-name-is-prefix-v-version", lambda: tag_name("x", "1.2.3") == "x-v1.2.3")]
+              ("tag-name-is-prefix-v-version", lambda: tag_name("x", "1.2.3") == "x-v1.2.3"),
+              ("citation-reads-a-craft-path-not-a-placeholder",
+               lambda: CITATION.findall("`crafts/sysarch/rules/x.md`, `crafts/<craft>/`") == ["sysarch"]),
+              ("declaration-is-the-literal-true-line",
+               lambda: DECLARED.search("BUNDLED_WITH_CORE = True\n") is not None
+                       and DECLARED.search("BUNDLED_WITH_CORE = False\n") is None
+                       and DECLARED.search("# BUNDLED_WITH_CORE = True\n") is None),
+              ("purpose-is-a-non-empty-one-line-string",
+               lambda: PURPOSE_LINE.search('PURPOSE = "serves every Operator"\n') is not None
+                       and PURPOSE_LINE.search('PURPOSE = ""\n') is None
+                       and PURPOSE_LINE.search('PURPOSE = "  "\n') is None)]
 
 def tag_name(component: str, version: str) -> str:
     """Rule-11 property 4: `<name>-v<VERSION>` for every craft, the core included (`dyad-operator-v…`)."""
@@ -174,9 +207,51 @@ def check_bundle(root: Path | None = None, pkg: Path = dyadlib.PKG) -> tuple[str
     return version, rows, check(version, rows, live, released_components(root, live), tagged_versions(root, live),
                                 released_components(root, gone))
 
+def cited_crafts(pkg: Path = dyadlib.PKG) -> dict[str, list[str]]:
+    """{craft: [citing Rule file names]}: every craft a core Agent Rule (`<pkg>/rules/RULE-*.md`) names
+    by path, `crafts/<name>/`. Rules only — a citation in any other file (a play-book, a record, a
+    README) is prose, not a dependency of the core's Rules (d-work #504)."""
+    out: dict[str, list[str]] = {}
+    for f in sorted((pkg / "rules").glob("RULE-*.md"), key=lambda f: (len(f.name.split("-")[1]), f.name)):
+        for name in sorted(set(CITATION.findall(f.read_text()))):
+            out.setdefault(name, []).append(f.name)
+    return out
+
+def declarations(craft: Path) -> list[tuple[str, bool]]:
+    """[(guard module name, carries PURPOSE)] for every guard module of one craft that declares
+    `BUNDLED_WITH_CORE = True`, read as text (module docstring). Same discovery as
+    `dyadlib.guard_files`: `crafts/<craft>/guards/*.py`, names starting `_` excluded."""
+    out = []
+    for py in sorted((craft / "guards").glob("*.py")):
+        if py.name.startswith("_"):
+            continue
+        text = py.read_text()
+        if DECLARED.search(text):
+            out.append((py.name, PURPOSE_LINE.search(text) is not None))
+    return out
+
+def check_citations(pkg: Path = dyadlib.PKG) -> list[str]:
+    """Rule-11 property 2's criterion (d-work #504): cited and present and undeclared fails; cited and
+    absent warns; declared and uncited without a `PURPOSE` beside the declaration fails."""
+    msgs: list[str] = []
+    cited = cited_crafts(pkg)
+    present = {d.name: d for d in dyadlib.craft_dirs(pkg)}
+    for name, rules in cited.items():
+        if name not in present:
+            msgs.append(f"warning: '{name}': cited by path in {', '.join(rules)} but not in this tree — nothing here to judge (#504)")
+        elif not declarations(present[name]):
+            msgs.append(f"'{name}': cited by path in {', '.join(rules)} but not bundled — declare `BUNDLED_WITH_CORE = True` "
+                        f"in one of crafts/{name}/guards/*.py (Rule-11 property 2, #504)")
+    for name, d in present.items():
+        decl = declarations(d)
+        if decl and name not in cited and not any(has for _, has in decl):
+            msgs.append(f"'{name}': declares `BUNDLED_WITH_CORE` in {', '.join(m for m, _ in decl)} but no core Rule cites it — "
+                        f"a one-line `PURPOSE = \"...\"` beside the declaration is required (Rule-11 property 2, #504)")
+    return msgs
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
-    return check_bundle(root, pkg)[2] + check_drift(root, pkg)
+    return check_bundle(root, pkg)[2] + check_drift(root, pkg) + check_citations(pkg)
 
 def summary(root: Path | None = None) -> str:
     version, rows, _ = check_bundle(root)
@@ -197,9 +272,15 @@ def main(argv=None) -> int:
     pkg = (root / "dyad") if a else dyadlib.PKG        # an explicit root names its own core craft
     if not bundle_path(root).exists():
         print("skip [bundle] no BUNDLE.md")
-        return 0
+        msgs = check_citations(pkg)          # property 2's criterion holds without a bundle (#504)
+        for m in msgs:
+            if m.startswith("warning:"):
+                print(f"warn [bundle] {m.removeprefix('warning:').strip()}")
+            else:
+                print(f"FAIL [bundle] {m}", file=sys.stderr)
+        return 1 if any(not m.startswith("warning:") for m in msgs) else 0
     version, rows, msgs = check_bundle(root, pkg)
-    msgs += check_drift(root, pkg)
+    msgs += check_drift(root, pkg) + check_citations(pkg)
     fails = [m for m in msgs if not m.startswith("warning:")]
     for m in msgs:
         if m.startswith("warning:"):
