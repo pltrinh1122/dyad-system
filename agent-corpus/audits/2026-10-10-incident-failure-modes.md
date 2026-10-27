@@ -731,7 +731,7 @@ P2 are the 2026-10-24 proposal 4 again, unbuilt and now recurred.
 
 Rows #262–#284 and #464–#467 are neither closed, re-opened nor archived here.
 
-## Note 2026-10-27 — rows 234–238 (d-work #487, seat audit-e73be78c)
+## Note 2026-10-27 — rows 234–239 (d-work #487, seat audit-e73be78c)
 
 Not a delta. The watermark stays at 233, and the next delta grades these five rows with two views, as it graded
 #463's. One view, this seat's, placed each row, and each row carries its mode in its own cells:
@@ -743,6 +743,7 @@ Not a delta. The watermark stays at 233, and the next delta grades these five ro
 | 236 | #474 | I (git's version and its auto-maintenance, the unnamed input) | — |
 | 237 | #486 | S (a counter-prompt form typed from memory, not seeded from `merge-disposition`) | M, unverified |
 | 238 | #475 (PR #518) | C (CI state stated, not read) | — |
+| 239 | #487 | F (a PR number in the d-work column; caught by Rule-20's resolver, the fence holding) | — |
 
 Two of these are the second instance of a face within a week. Row 235 repeats row 198, and the 2026-10-24 delta
 called that face conduct "unless branch protection". Row 234 repeats the tagless skip, which the delta of
