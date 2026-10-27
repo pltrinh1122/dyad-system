@@ -1424,12 +1424,16 @@ class SuiteEnvTests(unittest.TestCase):
                                                    "GIT_CONFIG_VALUE_0": "false"}):
             env = pkg.suite_env()
         self.assertEqual((env["GIT_CONFIG_COUNT"], env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_KEY_1"], env["GIT_CONFIG_VALUE_1"]),
-                         ("2", "core.autocrlf", "commit.gpgsign", "false"))
+                         ("4", "core.autocrlf", "commit.gpgsign", "false"))
+        self.assertEqual([(env[f"GIT_CONFIG_KEY_{i}"], env[f"GIT_CONFIG_VALUE_{i}"]) for i in (2, 3)],
+                         [("gc.auto", "0"), ("maintenance.auto", "false")])   # #475: no background repack under a copy
         with tempfile.TemporaryDirectory() as d:
             git = lambda *a: subprocess.run(["git", *a], cwd=d, env=env, check=True, capture_output=True, text=True).stdout
             git("init", "-q"); git("config", "commit.gpgsign", "true")   # the local config asks; the env entry wins
             git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "c")
             self.assertNotIn("gpgsig", git("cat-file", "-p", "HEAD"))
+            self.assertEqual((git("config", "--get", "gc.auto").strip(), git("config", "--get", "maintenance.auto").strip()),
+                             ("0", "false"))
     def test_caller_git_c_never_reaches_a_fixture_repo(self):
         """#456 (row 153): a caller's `git -c` arrives as `GIT_CONFIG_PARAMETERS`; under `suite_env()` it is
         gone, while the caller's `GIT_CONFIG_COUNT` entries (#206) still survive. A scratch repo whose

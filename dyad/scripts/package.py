@@ -568,6 +568,11 @@ def installed_roots(base, head):
             run.append(root)
     return run, lines
 
+# the git config every test child runs under, appended after the caller's own `GIT_CONFIG_*` entries (suite_env)
+SUITE_GIT_CONFIG = (("commit.gpgsign", "false"),   # #206: nothing reads a fixture's signature
+                    ("gc.auto", "0"),              # #475: no background gc or maintenance after a fixture's commit,
+                    ("maintenance.auto", "false")) # which packed a template's loose objects under a copy on git 2.55
+
 def suite_env(tmp: str | None = None) -> dict[str, str]:
     """The environment a test child runs in: `DYAD_NO_NESTED_TESTS` set and every `GIT_VARS` dropped,
     and — given `tmp` — `TMPDIR`/`TMP`/`TEMP` pointed at it, so every fixture the child creates lands
@@ -577,13 +582,17 @@ def suite_env(tmp: str | None = None) -> dict[str, str]:
     branch and a tag written into the live repo by the pre-push hook's run). Fixture commits are never
     signed (#206): a host whose global config signs every commit (a cloud container's) paid ~90 ms per
     scratch-repo commit for signatures nothing reads; appended as one more `GIT_CONFIG_*` entry, so an
-    entry the caller already set survives. A caller's `git -c` is dropped (#456): git exports every `-c` to
+    entry the caller already set survives. Nor does a fixture's commit start git's automatic gc or maintenance
+    (#475): on git 2.55 (a CI runner's) a commit in `livetest.ScratchInstalls`' template detached a background
+    repack that deleted loose objects while `copy` was reading them (`shutil.Error … .git/objects/17 … ENOENT`). A caller's `git -c` is dropped (#456): git exports every `-c` to
     its children as `GIT_CONFIG_PARAMETERS`, so `git -c core.hooksPath=dyad/hooks push` reached every
     fixture repo the suite builds and failed its commits (`INCIDENTS.md` row 153, row 123's cause)."""
     env = {k: v for k, v in dyadlib.git_env().items() if k != "GIT_CONFIG_PARAMETERS"}
     env["DYAD_NO_NESTED_TESTS"] = "1"
     n = int(env.get("GIT_CONFIG_COUNT") or 0)
-    env.update({"GIT_CONFIG_COUNT": str(n + 1), f"GIT_CONFIG_KEY_{n}": "commit.gpgsign", f"GIT_CONFIG_VALUE_{n}": "false"})
+    for i, (k, v) in enumerate(SUITE_GIT_CONFIG, n):
+        env.update({f"GIT_CONFIG_KEY_{i}": k, f"GIT_CONFIG_VALUE_{i}": v})
+    env["GIT_CONFIG_COUNT"] = str(n + len(SUITE_GIT_CONFIG))
     if tmp:
         env.update({"TMPDIR": tmp, "TMP": tmp, "TEMP": tmp})
     return env
