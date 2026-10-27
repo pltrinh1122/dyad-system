@@ -1,8 +1,8 @@
 title: Op0: One Y at a Time — season 1 outline
 season: 1
-status: draft, revision 6, for the Operator's approval (chronicle §6); not published
+status: draft, revision 7, for the Operator's approval (chronicle §6); not published
 drafted by: communicate-5d6b62e1 (sec-comm), d-work #503 (C5 of #498)
-revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511); revision 5 adopts the title, through-line, last line, closing anchor and tone rule the Operator approved (prov:#498/16; context prov:#498/10–15); revision 6 records his answers to Q4, Q10 and Q11 (prov:#498/17)
+revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511); revision 5 adopts the title, through-line, last line, closing anchor and tone rule the Operator approved (prov:#498/16; context prov:#498/10–15); revision 6 records his answers to Q4, Q10 and Q11 (prov:#498/17); revision 7 applies remedy B (prov:#498/27: no quotation from, or paraphrase of the wording of, a private repo on this public branch, every citation and its `=private` declaration kept) and the chronicle's fiction layer (#515; prov:#498/18, prov:#498/21): Op0's character, inner life and daemons become uncited fiction based on a real-life model, the daemon proposals become fiction passages beside cited record-layer events
 
 # Op0: One Y at a Time — season 1
 
@@ -50,11 +50,14 @@ Every mechanism that spares him questions took a plan-`Y` and a Done-`Y` of its 
 
 **Markings in this outline**
 
-- **[PRIVATE]**: the citation is into a private repo. The Operator approved reading these (prov:#498/7). He approved quoting them in principle (prov:#498/17); each episode's publication question still names every private repo it quotes (§5).
-- **Daemon proposal**: a mapping from a moment to one of Op0's daemons. It is the teller's reading and is never fact (§3). It enters an episode only if the Operator approves it.
+- **[PRIVATE]**: the citation is into a private repo. The Operator approved reading these (prov:#498/7). Since revision 7 this outline quotes none of them and reproduces none of their wording (remedy B, prov:#498/27): each stays cited, described in one neutral line marked "private; quoted only if approved at publication". A quote returns only through an episode's publication question, which names every private repo it quotes (§5).
+- **Fiction layer**: Op0's character, inner life and daemons are fiction based on a real-life model, with no citations (chronicle §2; prov:#498/18, prov:#498/21). An episode holding any of it carries the header `fiction: persona, based on a real-life model`, and each interior paragraph opens with `*(fiction)*`. A marked paragraph never tells a system event, a seat's thought or a statement about the real Operator; those stay in the record layer and cite.
+- **Fiction passage** (replaces revision 6's "daemon proposal"): a passage of Op0's interior, naming one or more of his daemons, still to be written in the fiction layer beside a record-layer event that keeps its own citation. It is drawn from him and proves nothing (§2). It enters an episode only if the Operator approves it.
 - **Q**: an open question for the Operator.
 
 ## The persona and the spine
+
+**Fiction layer.** What this section frames — Op0's character, inner life and daemons — is fiction based on a real-life model (chronicle §2): episodes holding it carry the header `fiction: persona, based on a real-life model`, and each interior paragraph opens with `*(fiction)*` and cites nothing. What it cites (his words, prov:#498/7; the dates of the wound) is the record layer, told outside every marked paragraph.
 
 **Op0** is the Operator's persona. He chose the name, the "simple and asymetric" one (prov:#498/7).
 
@@ -69,9 +72,9 @@ He named twelve daemons, in four groups (prov:#498/7):
 | Relationships | Transaction, Obligation |
 | Inner-belief | Rational, Reasonable, Possible |
 
-These are the only flaws attributed to Op0.
+These are the only flaws attributed to Op0. They live in the fiction layer, so no record is asked to prove them (§2, §3).
 
-**Proposed inner spine** (the teller's frame, for approval; under the title's arithmetic): each daemon was once a hero. In the record, each shows up as a strength that later costs him: a standard that produces rework, a duty that turns him into a courier, a demand for reasons that turns into ceremony.
+**Proposed inner spine** (the teller's frame, for approval; under the title's arithmetic; fiction layer): each daemon was once a hero. In the fiction, each shows up as a strength that later costs him, told beside a record-layer event that cites itself: a standard that produces rework, a duty that turns him into a courier, a demand for reasons that turns into ceremony.
 
 The season traces how the system's own structure lets him set them down:
 
@@ -88,7 +91,7 @@ The structure carries the hero's job, so Op0 no longer has to.
 
 | date | where | what |
 |---|---|---|
-| 2026-09-12 | workstation | "asking for Y/N Merge disposition is unnecessary per Rule-2" (E18) |
+| 2026-09-12 | workstation | a provenance entry on merge questions (private; quoted only if approved at publication) (E18) |
 | 2026-09-17 | #65 | (E3) |
 | 2026-10-14 | #289, #290 | (E13) |
 | 2026-10-22 | #384 | "operator disposes the act" (E15) |
@@ -138,7 +141,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Op0** — the main character, the Operator's persona.
 - **Arc:** consumer of generated code → designer of how questions reach him → disposer of the act, never of the mechanism.
-- **Inner life:** only what the Operator gives (prov:#498/7; more "on demand", in his words).
+- **Inner life:** fiction based on a real-life model, drawn from what the Operator gives (prov:#498/7; more "on demand", in his words) and from nothing else; written only in `*(fiction)*` paragraphs, uncited, under the episode's `fiction:` header (§2).
 
 **The Agent** — the one party across the table, 2026-09-14 → 10-12. Its flaws are the audited failure modes:
 - A–I: `path:agent-corpus/audits/2026-09-22-incident-failure-modes.md`
@@ -153,7 +156,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 |---|---|
 | Tool era | the Cursor assistant (aiai); ChatGPT familiars (group-chat-familiars); Daedalus and Metis (pt-ai) |
 | May–June 2026 | wu-wei; the Healer; steward; bond ("Covalent"); touchstone; cairn ("Mason Agent") |
-| July–August 2026 | aule; chiron; leo, the "Chief of Staff", and his fleet; mitra; virgil |
+| July–August 2026 | aule; chiron; leo and his fleet; mitra; virgil |
 | September 2026 | dsys's cos role; countersign |
 
 **No other real person.** Excluded:
@@ -162,27 +165,29 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - the people of the practice commons
 - the commercial client — not mentioned at all (prov:#498/7; World setting)
 
-## Daemon proposals (for the Operator to accept or strike, one by one)
+## Daemon passages (fiction; for the Operator to accept or strike, one by one)
 
-| daemon | moment | citation |
-|---|---|---|
-| High-Standard, Perfect | twelve polishing commits on the first day of a standards repo with no consumer yet | commit:pltrinh1122/standards@41c8633816cc9a9b4c30ff53f5e105e937de0ae5 [PRIVATE] |
-| Perfect, Optimal | 44 commits in one day compressing one familiar | commit:pltrinh1122/group-chat-familiars@da0f62f94eda33e8ca384486b1c4be9da8bb1cfb [PRIVATE] |
-| Perfect | one role redefined four times in a day | commit:pltrinh1122/pt-ai@fb191c4770bb0f93d1db6a1ff863b38ac455f652 [PRIVATE] |
-| High-Standard | `ledgerd`: one row refused through 14 revisions in a day | path:agent-corpus/d-work/rows/336.md |
-| Optimal | "minimum opportunity cost": concurrency pushed to the ceiling, re-grounded on 07-08 | repo:pltrinh1122/dyad-leo@444d780d2c470663a935ee2278b4520ad0846f39:dialectic/craft.md [PRIVATE] |
-| Prepared | a 745-line snapshot tool built, judged "Probably NOT" needed, removed a minute later | repo:pltrinh1122/workstation@dd19fd50df86d2c7a134edea5f2a162103a6932c:btrfs-op/BTRSNAP_VALUE_ASSESSMENT.md [PRIVATE] |
-| Prepared, Duty | "pressure-test assumptions, and reduce downstream rework" — his stated role in a group chat | repo:pltrinh1122/group-chat-familiars@de7d22fefde4d0a074ff8b65df94a37202893e43:tetrarch/test/chat_history/flow/session_tetrarch_ux_eval_v1.log [PRIVATE; third party in the log] |
-| Reliability | release tags pushed by hand three times: "this is the third time" | prov:#461/1 |
-| Reliability, Prepared | "LOCAL CI should always be executed first" | repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/plans/168.md [PRIVATE] |
-| Duty, Obligation | the courier: fleet work "hand-carried by the Operator", until "I don't want to be the human-in-the-loop hand-carrying prompts" | repo:pltrinh1122/dyad-leo-fleet@f51c1c0eb9de8ba993dd87c54f80b10101fb2f5d:ops/followups/2026-08-15-milo-fleet-adoption-imperative.md [PRIVATE]; repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/provenance/247.md [PRIVATE] |
-| Transaction | a familiar told to drop "warm" fillers and to treat every request as an API call | repo:pltrinh1122/group-chat-familiars@c9fcae1625169649843c5ef0fcbe2307a4d031af:nomos/nomos_requirements.md [PRIVATE] |
-| Rational, Reasonable | "falsify" as a standing imperative | prov:#100/2, prov:#152/2, prov:#498/8 — "falsify" closing prompt after prompt |
-| Rational, Reasonable | an entropy proof of "99%+ reliability" asserted before any attack | repo:pltrinh1122/nsf@2e85296d9a388bae418ced7139e7ce55094adb87:README.md [PRIVATE] |
-| Possible | "What if … I wonder if …" — the journal | repo:pltrinh1122/pt-ai@9972aabed0ba185728dcb605ac606f0d5725440f:JOURNAL.md [PRIVATE] |
-| Obligation (a pattern) | aiai, nsf and pt-ai each stop mid-build. Inference only. | — |
+**Fiction layer.** Op0's daemons are fiction based on a real-life model (chronicle §2; prov:#498/18, prov:#498/21). Each row below is a fiction passage still to be written, drawn from him and citing nothing; no journal is cited for it. Beside it sits one record-layer event, told in its own paragraph with its own citation, never inside the passage. An episode holding a passage carries the header `fiction: persona, based on a real-life model`, and the passage's paragraph opens with `*(fiction)*`. The passage tells only Op0's interior: never the event, a seat's thought, or a statement about the real Operator.
 
-**Counter-evidence, kept beside the proposals.** He also leaves three principles as unenforced conduct "by Operator choice" (`path:dyad/CLAUDE.md`). The heroes are not the whole of him.
+| daemon | fiction passage to be written | beside this record-layer event | the event's citation (record layer) |
+|---|---|---|---|
+| High-Standard, Perfect | the pull to polish before anyone needs it | E6: twelve commits on the first day of a standards repo with no consumer yet | commit:pltrinh1122/standards@41c8633816cc9a9b4c30ff53f5e105e937de0ae5 [PRIVATE] |
+| Perfect, Optimal | one more compression, and one more | E6: 44 commits in one day on one familiar | commit:pltrinh1122/group-chat-familiars@da0f62f94eda33e8ca384486b1c4be9da8bb1cfb [PRIVATE] |
+| Perfect | a role that will not sit still | past thread (pt-ai): one role redefined four times in a day | commit:pltrinh1122/pt-ai@fb191c4770bb0f93d1db6a1ff863b38ac455f652 [PRIVATE] |
+| High-Standard | not letting a row go | E15: `ledgerd`, one row refused through 14 revisions in a day | path:agent-corpus/d-work/rows/336.md |
+| Optimal | the ceiling mistaken for the target | E14: a dyad-leo craft file on concurrency, re-grounded on 07-08 (private; quoted only if approved at publication) | repo:pltrinh1122/dyad-leo@444d780d2c470663a935ee2278b4520ad0846f39:dialectic/craft.md [PRIVATE] |
+| Prepared | building for a storm that does not come | past thread (workstation): a 745-line snapshot tool built, assessed as unneeded, removed a minute later (private; quoted only if approved at publication) | repo:pltrinh1122/workstation@dd19fd50df86d2c7a134edea5f2a162103a6932c:btrfs-op/BTRSNAP_VALUE_ASSESSMENT.md [PRIVATE] |
+| Prepared, Duty | catching the rework before it happens | E6: his own turn in a group-chat log (private; quoted only if approved at publication) | repo:pltrinh1122/group-chat-familiars@de7d22fefde4d0a074ff8b65df94a37202893e43:tetrarch/test/chat_history/flow/session_tetrarch_ux_eval_v1.log [PRIVATE; third party in the log, never quoted] |
+| Reliability | doing it by hand, because it has to be done | E17: release tags pushed by hand three times: "this is the third time" | prov:#461/1 |
+| Reliability, Prepared | checking first, always | past thread (workstation): a plan on running checks locally first (private; quoted only if approved at publication) | repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/plans/168.md [PRIVATE] |
+| Duty, Obligation | the courier | E16: a fleet follow-up note on how work reached each dyad, and a later workstation prompt of his on stopping that (both private; quoted only if approved at publication) | repo:pltrinh1122/dyad-leo-fleet@f51c1c0eb9de8ba993dd87c54f80b10101fb2f5d:ops/followups/2026-08-15-milo-fleet-adoption-imperative.md [PRIVATE]; repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/provenance/247.md [PRIVATE] |
+| Transaction | every exchange kept to its terms | past thread (group-chat-familiars): a requirements file for a familiar's register (private; quoted only if approved at publication) | repo:pltrinh1122/group-chat-familiars@c9fcae1625169649843c5ef0fcbe2307a4d031af:nomos/nomos_requirements.md [PRIVATE] |
+| Rational, Reasonable | nothing trusted until it is attacked | present thread: "falsify" closing prompt after prompt | prov:#100/2, prov:#152/2, prov:#498/8 |
+| Rational, Reasonable | certainty arriving before the attack | past thread (nsf): a README asserting a reliability proof before any attack (private; quoted only if approved at publication) | repo:pltrinh1122/nsf@2e85296d9a388bae418ced7139e7ce55094adb87:README.md [PRIVATE] |
+| Possible | the voice that keeps wondering | E8: none of its own; the journal citation is dropped, since the passage is drawn from him, not from the journal | — |
+| Obligation (a pattern) | the unfinished thing that still owes | aiai, nsf and pt-ai each stop mid-build; inference only, so told in the record layer only once cited, or not at all | — |
+
+**Counter-evidence, kept beside the passages** (record layer). He also leaves three principles as unenforced conduct "by Operator choice" (`path:dyad/CLAUDE.md`). The heroes are not the whole of him.
 
 ---
 
@@ -262,7 +267,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Beat.**
 - In mcu he names the human "Operator" and splits the AI's autonomous actions from the "Actions Requiring Operator Decision".
-- In aiai the AI must get his approval before deleting finished plans.
+- In aiai, a commit puts one kind of the AI's action behind his approval (private; quoted only if approved at publication).
 - He proposes deciding, attribute by attribute, which changes need explicit approval and which the agent may make implicitly.
 - Set up: E3, and the explicit/implicit modes that return fourteen months later as `accretion`.
 
@@ -298,16 +303,16 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - SCR and VPLAN ship as "v0.9" products.
 - An install warns not to overwrite a host file.
 - aiai is left behind.
-- A standards repo is reworked twelve times on its first day, and names "coherence and orthogonality" nine months before Rule-5. *(daemon proposal: High-Standard)*
-- In a group chat he opens with "Before we get into design or critique, I want to align on intent so we’re working against the same objective."
-- On 01-26, after 44 commits, a familiar loses its last autonomous step: "all states now human-triggered".
+- A standards repo is reworked twelve times on its first day; a commit there anticipates Rule-5's two terms nine months early (private; quoted only if approved at publication). *(fiction passage beside this beat: High-Standard)*
+- In a group chat, his opening turn puts intent before design (private; quoted only if approved at publication).
+- On 01-26, after 44 commits, a workflow file records the end of a familiar's autonomous steps (private; quoted only if approved at publication).
 - Set up: E5's releases; Rules 5 and 6; the plan's "intent as read"; no-self-ratify.
 
 **Citations**
 - repo:pltrinh1122/scr-framework@0f3c05b21f22dffde270f737686e07f9663b4e77:SCR_SPEC.md
 - repo:pltrinh1122/bizplan_reviewer@58bf93eeb648f1620ed3e9b0aef2986e9edc07b7:README.md
 - commit:pltrinh1122/standards@dd712c839f73a284914dcd286c7603246bd46f67 [PRIVATE]
-- repo:pltrinh1122/group-chat-familiars@de7d22fefde4d0a074ff8b65df94a37202893e43:tetrarch/test/chat_history/flow/session_tetrarch_ux_eval_v1.log [PRIVATE; quote his turn only, never the collaborator's]
+- repo:pltrinh1122/group-chat-familiars@de7d22fefde4d0a074ff8b65df94a37202893e43:tetrarch/test/chat_history/flow/session_tetrarch_ux_eval_v1.log [PRIVATE; not quoted; the collaborator's turns never]
 - repo:pltrinh1122/group-chat-familiars@3c4de4b51f5dc58e0ab94701e3b1271089c879f9:gcm-concierge-cg-ot/core/workflows.md [PRIVATE]
 
 ### E7. The mistakes get names (present, 2026-09-22 → 09-23)
@@ -331,9 +336,9 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 ### E8. Self-confirmation, and a healer from outside (past, 2026-02-07 → 05-28)
 
 **Beat.**
-- In nsf, a theory that a generator plus a validator cancels errors. Its one experiment is run by a simulated executor and "confirms" itself — the contrast case. *(daemon proposal: Rational)*
-- In pt-ai, a "Chief of Staff" server, and a founder's "cognitive budget".
-- A journal line: "I wonder if this is the steady-state of human-ai co-existence, where human will be bonded with an AI and AI just needs \"context and constraints\" to allow the pair to \"do\"." (his own words, confirmed: prov:#498/17)
+- In nsf, a theory of error cancellation, and an experiment result whose executor is simulated (private; quoted only if approved at publication) — the contrast case. *(fiction passage beside this beat: Rational)*
+- In pt-ai, a problem statement on a founder's overload (private; quoted only if approved at publication).
+- A journal line in pt-ai (private; quoted only if approved at publication; his own words, confirmed: prov:#498/17).
 - Then two months of silence.
 - Then wu-wei:
   - a frame for an agent without memory;
@@ -454,10 +459,10 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 ### E14. The fleet is the cabinet (past, 2026-07-06 → 07-22)
 
 **Beat.**
-- leo is cast as his "Chief of Staff", the sibling dyads as his "Cabinet".
-- leo's telos, "minimum opportunity cost", is re-grounded under living "earnestly". *(daemon proposal: Optimal)*
-- leo is "sure and wrong", and earns an invariant against handing over what it has not checked.
-- mitra writes that each dyad's "capacity to refuse is inviolable".
+- dyad-leo casts leo and its sibling dyads in roles that prefigure the cos and the cabinet (private; quoted only if approved at publication).
+- leo's telos is re-grounded, on 07-08, in a craft file (private; quoted only if approved at publication). *(fiction passage beside this beat: Optimal)*
+- A confident error earns leo an invariant on checking before handing over (private; quoted only if approved at publication).
+- A mitra commit on each dyad's right to refuse (private; quoted only if approved at publication).
 - On 07-22, corrected by him: merge-by-the-human is a preference; no-self-ratify is the principle underneath.
 - Set up: E13 directly — the cos, the mandate, `merge-disposition`, the wound seen from the other side.
 
@@ -471,7 +476,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 **Beat.**
 - "N: i dispose `d-work` not git commands."
 - WHAT/WHY/HOW.
-- `ledgerd`'s 14 revisions. *(daemon proposal: High-Standard)*
+- `ledgerd`'s 14 revisions. *(fiction passage beside this beat: High-Standard)*
 - Names must "assist with the operator's mental model".
 - M4, and he names the seats himself.
 - "operator disposes the act: plan review, execution review."
@@ -491,12 +496,12 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Beat.**
 - A tenth dyad is paused on its own name.
-- "you'd misunderstood my intent multiple times now" — elicitation before building.
-- His practice goes private as "IP for selective sharing".
+- A commit records his correction of repeated misreadings of his intent; elicitation comes before building (private; quoted only if approved at publication).
+- His practice goes private; a commit gives the reason (private; quoted only if approved at publication).
 - An issue registry buries four of his dispositions.
-- One session per dyad-session.
-- Fleet work arrives only "hand-carried by the Operator". *(daemon proposal: Duty, Obligation)*
-- A quota outage makes local checks a principle: "A check that never ran is indistinguishable from a check that ran and failed".
+- A commit binds each harness session to one dyad's session (private; quoted only if approved at publication).
+- A fleet follow-up note records how fleet work reached each dyad: through him (private; quoted only if approved at publication). *(fiction passage beside this beat: Duty, Obligation)*
+- A quota outage makes local checks a principle, in a commit message (private; quoted only if approved at publication).
 - Set up: E15's seat names, presence and cos relay; Rule-7; Rule-14's local-first path.
 
 **Citations**
@@ -505,7 +510,6 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - commit:pltrinh1122/dyad-leo-fleet@9a8e3386761419a23aef841a4901c39d37025f0a [PRIVATE]
 - commit:pltrinh1122/dyad-leo@3587e8be9a2d9c846ae92a3f4fc633984112692d [PRIVATE]
 - repo:pltrinh1122/dyad-leo-fleet@f51c1c0eb9de8ba993dd87c54f80b10101fb2f5d:ops/followups/2026-08-15-milo-fleet-adoption-imperative.md [PRIVATE]
-- commit:pltrinh1122/dyad-milo@02a1904fa489d1002b96add053df691b32c87df8 (technical only; Q8)
 
 ---
 
@@ -516,7 +520,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 **Beat.**
 - "we can have one hundred sessions and that wouldn't bother me if the `program` session is the only one i'm `attending`."
 - Relay must "meet me, Operator, at my altitude".
-- Release tags pushed by hand a third time; he asks for a daemon. *(daemon proposal: Reliability)*
+- Release tags pushed by hand a third time; he asks for a daemon. *(fiction passage beside this beat: Reliability)*
 - Six weeks after E3, the wound again: "i don’t disposition merge, only d-work. why are you presenting it to me?"
 - A release threshold, one question per bundle.
 
@@ -538,12 +542,12 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 **Beat.**
 - The dormant workstation repo is reborn with Rule-1. Its first claim is falsified on the first day.
 - The first mishap is a stacked merge.
-- After 31 separate merge questions, all answered `Y`: "asking for Y/N Merge disposition is unnecessary per Rule-2." The first instance of the season's wound, the day `merge-disposition` is born.
-- An audit finds that `N` lives where intent is disposed.
-- Rules 1–14 are written in two days: 197, 259 and 416 commits on 09-12, 09-13 and 09-14. *(daemon proposal: High-Standard)*
-- He refuses provenance as "not critical", then two days later asks that his words be kept.
-- He admits a limit: he "isn't able to discern instantiation of a new `craft` vs. a new `dyad-system`".
-- Asked to scrub the repo before making it public, he refuses and invents the clean room instead: "N: how about the following idea. i create a brand new repo (`pltrinh1122/dyad-system`) based on Release v0.3.0 release artifacts - redacted and cleaned."
+- After 31 separate merge questions, all answered `Y`, he ends the separate merge question, in a provenance entry (private; quoted only if approved at publication). The first instance of the season's wound, the day `merge-disposition` is born.
+- An audit of the disposition chain follows (private; quoted only if approved at publication).
+- Rules 1–14 are written in two days: 197, 259 and 416 commits on 09-12, 09-13 and 09-14. *(fiction passage beside this beat: High-Standard)*
+- He defers provenance (a row), then two days later asks that his words be kept (a provenance entry) (private; quoted only if approved at publication).
+- A plan records a limit he admits, on telling a new craft from a new dyad system (private; quoted only if approved at publication).
+- Asked to scrub the repo before making it public, he refuses and invents the clean room instead: a new repo, this one, built from a release, in a provenance entry (private; quoted only if approved at publication).
 - That evening this repo's first commit lands. E1 begins here.
 
 **Citations**
@@ -584,7 +588,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 |---|---|
 | 2025 | ChatGPT-Sandbox, mcu, scr-framework, vplan-framework, bizplan_reviewer, rblx_toolchain_install (not cited: real name as author) |
 | May–July 2026 | dyad-wu-wei, dyad-healer, dyad-steward, dyad-bond, the-dyad-practice-1, dyad-touchstone, dyad-cairn, commission-invariant-engine, commission-dyad-system, dyad-aule, dyad-chiron, dyad-virgil |
-| later | dyad-milo (technical commits only), dsys-repo, countersign-system |
+| later | dsys-repo, countersign-system, and one repo never named (Q8) |
 
 dyad-system-tools is empty.
 
@@ -599,7 +603,7 @@ dyad-system-tools is empty.
 - nsf, pt-ai
 - agent-travel
 
-dyad-milo-pltrinh1122 is attached, but its content is not read: the domain is personal.
+One personal repo is attached for private reference only; it is never named or cited.
 
 **Not attached, private (10).** The names suggest no AI work; say if any should be read.
 - ubuntu-btrfs-installation, dual_boot
@@ -621,6 +625,6 @@ dyad-milo-pltrinh1122 is attached, but its content is not read: the domain is pe
 | # | question |
 |---|---|
 | Q2 | Was ChatGPT-Sandbox ChatGPT's code? 2026-03-09 → 05-15 is silent in every repo — tell it as a silence, or is there context? |
-| Q5 | The daemons are still being named (prov:#498/17): candidate labels from his journals come to him separately, for reference only. Accept or strike each proposal above as they settle. |
-| Q8 | dyad-milo: omit, or name once with technical commits only (E16 uses one)? |
+| Q5 | The daemons are still being named (prov:#498/17): candidate labels from his journals come to him separately, for reference only. Accept or strike each fiction passage above as they settle; they stay fiction, uncited (§2). |
+| Q8 | Settled: that repo is never named or linked; E16 drops its commit. |
 | Q9 | May E10 quote the practice's "1 + 1 = 3" from his fork without naming the commons? |
