@@ -8,7 +8,7 @@ zone `craft`). Extracted from Agent Rules 11, 12, 14, 16, 17, 20 and 21 by d-wor
 craft `dyad-operator` (`dyad/`) keeps only the *kernel* sentences of those Rules — the ones Rule-2's
 Binding and Rule-3's completion evidence rely on — and each kernel cites the craft rule it reads by
 path. Rules 17 and 21 had no kernel and moved whole; their numbers are retired, never reused.
-Version: `VERSION` (0.1.0).
+Version: `VERSION` (first 0.1.0; 0.3.3: the projector test lists the chronicle guard, d-work #502).
 
 Who imports this craft: any system that *changes* a craft — the core included. A system that only
 runs the process needs the core alone; `dyad project` then prints one line naming this craft.
