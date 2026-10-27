@@ -34,7 +34,11 @@ disposes `Y` to the Agent's counter-prompt of completion (`Y/N: Done with {d-wor
 Any other response leaves it incomplete, to be resumed later.
 
 ## Scope
-- Every Operator prompt opens a d-work. There are no exemptions.
+- Every Operator prompt opens a d-work, with one exemption: a prompt whose answer only reads the corpus, writes
+  nothing and asks no question opens none — like monitoring (Ledger, below), it decides nothing, so nothing is
+  recorded. The test is the reply's form, observable and never the Agent's inference: a reply that writes, proposes,
+  or carries a `Y/N` line is no read-only answer, and it opens its d-work before its question, so the answer has a
+  row to land on (#492).
 - A new prompt while a d-work is open suspends it and opens another. d-works stack.
 - A **bare** disposal response (`Y` or `N` to an Agent counter-prompt) is not a prompt and opens
   nothing. Text accompanying a disposal is a prompt and opens a d-work.
@@ -453,6 +457,9 @@ record, amendment #477. Mechanisms gains the fence's trace clause 2026-10-26 (d-
 #465): the completion clause said the Done record commit carries the trace, and nothing checked it; six Done records
 (#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465. Completion's relayed-Done bullet cites the seat's evidence as
 Rule-2's Binding does, by its sha256 and its brief form, 2026-10-26 (d-work #476, child C3 of #473); see the same
-record, amendment #476.
+record, amendment #476. Scope gains the read-only answer
+2026-10-27 (d-work #492): a board shown on request had cost a row, a provenance record, a trace, two ledger pushes
+and a Done question for a pure read (#490), while a read's own proposal had been given a `Y` with no row to land on
+(#491); see the same record, amendment #492.
 
 Set: System Requirements.
