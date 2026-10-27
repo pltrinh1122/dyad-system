@@ -1,8 +1,8 @@
 title: Season 1 outline — how Op0 got here
 season: 1
-status: draft, revision 3, for the Operator's approval (chronicle §6); not published
+status: draft, revision 4, for the Operator's approval (chronicle §6); not published
 drafted by: communicate-5d6b62e1 (sec-comm), d-work #503 (C5 of #498)
-revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9
+revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, his daemons, the private repos opened) and prov:#498/8; revision 3 adds the World setting, prov:#498/9; revision 4 re-cites commit beats in the `commit:` form (#511)
 
 # Season 1 — how Op0 got here
 
@@ -11,7 +11,8 @@ revision 2 from: prov:#498/7 (the Operator's answers: the name Op0, his hopes, h
 | form | names |
 |---|---|
 | `path:` | a file in this repo |
-| `repo:<owner>/<repo>@<sha>[:<path>]` | a file, or a bare commit, in another repo |
+| `repo:<owner>/<repo>@<sha>:<path>` | a file in another repo |
+| `commit:<owner>/<repo>@<sha>` | a commit (its message is record) in another repo |
 | `prov:#<row>/<entry>` | the Operator's own words, one entry of a provenance record |
 
 **Markings in this outline**
@@ -132,9 +133,9 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 | daemon | moment | citation |
 |---|---|---|
-| High-Standard, Perfect | twelve polishing commits on the first day of a standards repo with no consumer yet | repo:pltrinh1122/standards@41c8633816cc9a9b4c30ff53f5e105e937de0ae5 [PRIVATE] |
-| Perfect, Optimal | 44 commits in one day compressing one familiar | repo:pltrinh1122/group-chat-familiars@da0f62f94eda33e8ca384486b1c4be9da8bb1cfb [PRIVATE] |
-| Perfect | one role redefined four times in a day | repo:pltrinh1122/pt-ai@fb191c4770bb0f93d1db6a1ff863b38ac455f652 [PRIVATE] |
+| High-Standard, Perfect | twelve polishing commits on the first day of a standards repo with no consumer yet | commit:pltrinh1122/standards@41c8633816cc9a9b4c30ff53f5e105e937de0ae5 [PRIVATE] |
+| Perfect, Optimal | 44 commits in one day compressing one familiar | commit:pltrinh1122/group-chat-familiars@da0f62f94eda33e8ca384486b1c4be9da8bb1cfb [PRIVATE] |
+| Perfect | one role redefined four times in a day | commit:pltrinh1122/pt-ai@fb191c4770bb0f93d1db6a1ff863b38ac455f652 [PRIVATE] |
 | High-Standard | `ledgerd`: one row refused through 14 revisions in a day | path:agent-corpus/d-work/rows/336.md |
 | Optimal | "minimum opportunity cost": concurrency pushed to the ceiling, re-grounded on 07-08 | repo:pltrinh1122/dyad-leo@444d780d2c470663a935ee2278b4520ad0846f39:dialectic/craft.md [PRIVATE] |
 | Prepared | a 745-line snapshot tool built, judged "Probably NOT" needed, removed a minute later | repo:pltrinh1122/workstation@dd19fd50df86d2c7a134edea5f2a162103a6932c:btrfs-op/BTRSNAP_VALUE_ASSESSMENT.md [PRIVATE] |
@@ -234,7 +235,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Citations**
 - repo:pltrinh1122/mcu@16279c5c9c1ab5ef48958addee1c13941d347f7c:VIBE_CODING.md
-- repo:pltrinh1122/aiai@01cf77dc4aa9553e8ffeaff3d826d2762b9fcb68 [PRIVATE]
+- commit:pltrinh1122/aiai@01cf77dc4aa9553e8ffeaff3d826d2762b9fcb68 [PRIVATE]
 - repo:pltrinh1122/mcu@dd0dd7849ad74cf478b39428ec0a7f341f3efc93:VIBE_NOTE.md
 
 ---
@@ -272,7 +273,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 **Citations**
 - repo:pltrinh1122/scr-framework@0f3c05b21f22dffde270f737686e07f9663b4e77:SCR_SPEC.md
 - repo:pltrinh1122/bizplan_reviewer@58bf93eeb648f1620ed3e9b0aef2986e9edc07b7:README.md
-- repo:pltrinh1122/standards@dd712c839f73a284914dcd286c7603246bd46f67 [PRIVATE]
+- commit:pltrinh1122/standards@dd712c839f73a284914dcd286c7603246bd46f67 [PRIVATE]
 - repo:pltrinh1122/group-chat-familiars@de7d22fefde4d0a074ff8b65df94a37202893e43:tetrarch/test/chat_history/flow/session_tetrarch_ux_eval_v1.log [PRIVATE; quote his turn only, never the collaborator's]
 - repo:pltrinh1122/group-chat-familiars@3c4de4b51f5dc58e0ab94701e3b1271089c879f9:gcm-concierge-cg-ot/core/workflows.md [PRIVATE]
 
@@ -351,11 +352,11 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Citations**
 - repo:pltrinh1122/the-dyad-practice-1@84c4cb7d01fb3214c0eb093196887d71db8024d2:README.md (Q9)
-- repo:pltrinh1122/dyad-steward@44314eb0681d5a33470d143340da44623626a585
+- commit:pltrinh1122/dyad-steward@44314eb0681d5a33470d143340da44623626a585
 - repo:pltrinh1122/dyad-bond@6bc8e161b188f8eee13c9c9d122a5378a84d4ecf:DYAD.md
-- repo:pltrinh1122/dyad-touchstone@a5d682e8cecec3e0880124c933f4e506e39ea8bd
-- repo:pltrinh1122/dyad-touchstone@9b2dce84fc8e403ef6f1c5ea7b8483f705dd5915
-- repo:pltrinh1122/dyad-cairn@67bdd27ccc721e4d5256e87091db48885315eae6
+- commit:pltrinh1122/dyad-touchstone@a5d682e8cecec3e0880124c933f4e506e39ea8bd
+- commit:pltrinh1122/dyad-touchstone@9b2dce84fc8e403ef6f1c5ea7b8483f705dd5915
+- commit:pltrinh1122/dyad-cairn@67bdd27ccc721e4d5256e87091db48885315eae6
 
 ### E11. Ratified but unmergeable (present, 2026-09-29 → 10-15)
 
@@ -386,9 +387,9 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Citations**
 - repo:pltrinh1122/dyad-cairn@72f1fdd7040a4c1550ddce79d031100aa5a2cc65:DYAD_LEDGER.md
-- repo:pltrinh1122/dyad-aule@607f7243c2009ace54507f291ff3b8c6f9df471f
-- repo:pltrinh1122/dyad-aule@a57ec4cae12e42f1424e83b1c662a26a2a4362cb
-- repo:pltrinh1122/dyad-aule@dc987e806a612daadd82b9dd716dde0554a472f3
+- commit:pltrinh1122/dyad-aule@607f7243c2009ace54507f291ff3b8c6f9df471f
+- commit:pltrinh1122/dyad-aule@a57ec4cae12e42f1424e83b1c662a26a2a4362cb
+- commit:pltrinh1122/dyad-aule@dc987e806a612daadd82b9dd716dde0554a472f3
 
 ---
 
@@ -429,8 +430,8 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Citations**
 - repo:pltrinh1122/dyad-leo@444d780d2c470663a935ee2278b4520ad0846f39:dialectic/craft.md [PRIVATE]
-- repo:pltrinh1122/dyad-mitra@117e977aaa5bcc3f0a97bfa42c43cad945d0fe58 [PRIVATE]
-- repo:pltrinh1122/dyad-chiron@ac002801a490d07639f46469d170b6495f1dd43b
+- commit:pltrinh1122/dyad-mitra@117e977aaa5bcc3f0a97bfa42c43cad945d0fe58 [PRIVATE]
+- commit:pltrinh1122/dyad-chiron@ac002801a490d07639f46469d170b6495f1dd43b
 
 ### E15. An organization of one (present, 2026-10-14 → 10-22)
 
@@ -467,11 +468,11 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 
 **Citations**
 - repo:pltrinh1122/dyad-pltrinh1122@7f231350e4a42a633605a5e48ddb433a4b9d3a8f:RESUME.md [PRIVATE]
-- repo:pltrinh1122/dyad-leo@b033e5697883e9781314b2ecc21724ecedbfdcd9 [PRIVATE]
-- repo:pltrinh1122/dyad-leo-fleet@9a8e3386761419a23aef841a4901c39d37025f0a [PRIVATE]
-- repo:pltrinh1122/dyad-leo@3587e8be9a2d9c846ae92a3f4fc633984112692d [PRIVATE]
+- commit:pltrinh1122/dyad-leo@b033e5697883e9781314b2ecc21724ecedbfdcd9 [PRIVATE]
+- commit:pltrinh1122/dyad-leo-fleet@9a8e3386761419a23aef841a4901c39d37025f0a [PRIVATE]
+- commit:pltrinh1122/dyad-leo@3587e8be9a2d9c846ae92a3f4fc633984112692d [PRIVATE]
 - repo:pltrinh1122/dyad-leo-fleet@f51c1c0eb9de8ba993dd87c54f80b10101fb2f5d:ops/followups/2026-08-15-milo-fleet-adoption-imperative.md [PRIVATE]
-- repo:pltrinh1122/dyad-milo@02a1904fa489d1002b96add053df691b32c87df8 (technical only; Q8)
+- commit:pltrinh1122/dyad-milo@02a1904fa489d1002b96add053df691b32c87df8 (technical only; Q8)
 
 ---
 
@@ -513,14 +514,14 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - That evening this repo's first commit lands. E1 begins here.
 
 **Citations**
-- repo:pltrinh1122/workstation@d26a7d6a81a25923c574eb07f3c35db5b1fbe073 [PRIVATE]
+- commit:pltrinh1122/workstation@d26a7d6a81a25923c574eb07f3c35db5b1fbe073 [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/falsification/merge-disposition.md [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/audits/2026-09-12-disposition-chain.md [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/rows/54.md [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/provenance/164.md [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/plans/165.md [PRIVATE]
 - repo:pltrinh1122/workstation@b40aa1b0c8ae8e37d69921ecc5e17c6b62b717b4:agent-corpus/d-work/provenance/192.md [PRIVATE]
-- repo:pltrinh1122/dyad-system@52024e667332ed25be8ffad754236cc6faeb26c1 (this repo's first commit)
+- commit:pltrinh1122/dyad-system@52024e667332ed25be8ffad754236cc6faeb26c1 (this repo's first commit)
 
 ### E19. The story turns on itself (present, 2026-10-27)
 
