@@ -23,7 +23,7 @@ defines what each value means.
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
+| attended-seats | communicate | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
@@ -162,8 +162,10 @@ defines what each value means.
   hundred sessions and that wouldn't bother me if the `program` session is the only one i'm `attending` and it's
   orchestrating across all of the other sessions." `dyad session list` reads the mode over the live seats —
   every seat attended (M4), only the program seat (M3), some (hybrid) — and a seat's counter-prompt is asked in
-  its own chat when attended and relayed through the program seat otherwise. dyad-system: `none`, the
-  Operator's default: only the program seat is attended.
+  its own chat when attended and relayed through the program seat otherwise. dyad-system: `communicate`, the
+  Operator's prompt of 2026-10-27 ("I need to have this conversation in the `communicate` session.  Mark that session as 'attended' because i'll need to hard-context switch whenever i'm working on the story.  the story is also asynchronous and has no dependency on other matters, persistent for the duration of the dyad-system at a minimimum - so it's an exemplar for when operator attendance should happen.") — the instance's reading: a seat is attended when its work is a
+  hard context switch for the Operator, asynchronous, independent of other matters and long-lived; the leader is
+  always attended.
 - `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388, #412): a
   seat holds an own disposition when a provenance record whose `session:` line names it holds a disposition
   whose note holds neither `mandate #<id>` nor `relayed via`, anywhere (#422), within the window. A live seat holding one that
