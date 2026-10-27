@@ -23,7 +23,7 @@ defines what each value means.
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attended-seats | communicate | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
+| attended-seats | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
