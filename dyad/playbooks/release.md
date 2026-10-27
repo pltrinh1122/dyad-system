@@ -44,6 +44,12 @@ now.
   craft's root after its tag bumps `VERSION` by a patch, because the drift guard (Rule-11 property 4) requires it to
   differ from the tag. That working number is not a release. The PR that prepares a release sets `VERSION` to the number
   the change set's class implies (`number`), and the tag equals it.
+- **The order that keeps the bundle guard green.** `VERSION` (the craft's zone) and the bundle row (`BUNDLE.md`,
+  infra) never move in one PR (Rule-1). Rule-11 property 7 lets a released craft's `VERSION` run ahead of its row
+  only while the row still names that craft's **last release**. So: (1) the craft-zone or agent-zone PR sets `VERSION`
+  to the class's number while the row names the last release; (2) the infra-zone PR moves the row to that number with
+  the bundle's own version; (3) the cut is that merge. A row that names an unreleased number (#522 put 0.12.3 there)
+  pins `VERSION` until the row goes back to the last release or the number is released.
 - **The bundle takes the highest class among its components** since the bundle's last tag, and moves the same part.
   A release of the core or of a Tended craft always also proposes the bundle that names it (Rule-11 property 7: the
   bundle is the front door), in the same PR that moves its row.
