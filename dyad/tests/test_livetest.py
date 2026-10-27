@@ -160,6 +160,11 @@ class ScratchInstallsTests(unittest.TestCase):
         self.assertTrue(self.si.templates[False].is_dir())                     # a dir it did not make is left alone
         si.cleanup()                                                           # idempotent (atexit calls it again)
 
+    def test_a_template_and_its_copies_never_start_auto_maintenance(self):
+        d = self.si.copy()                                                     # #474: git 2.55 packed a template mid-copy
+        for k, v in livetest.NO_AUTO_MAINTENANCE:
+            self.assertEqual(self.git(d, "config", "--get", k).strip(), v)
+
     def test_an_unknown_variant_is_refused(self):
         with self.assertRaises(ValueError):
             self.si.copy(with_craft="sysadmin")

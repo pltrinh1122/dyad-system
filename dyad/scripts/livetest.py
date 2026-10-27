@@ -49,12 +49,17 @@ REASONS = (EMPTY, ABSENT)
 ROW_GLOB = "[0-9]*.md"         # a row or plan file is named by its d-work id; README.md and VERSION are install seeds
 VARIANTS = (False, True)       # ScratchInstalls: core only, or core plus every Tended craft of this tree
 IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@t")   # the committer of a scratch install's one commit
+NO_AUTO_MAINTENANCE = (("gc.auto", "0"), ("maintenance.auto", "false"))   # set in every scratch install before its commit (#474):
+# git 2.55 on the CI runner packed the template's ~230 loose objects in a detached auto-maintenance after that commit, and
+# `copy` read the template while the loose-object dirs were removed under it (shutil.Error, ENOENT); a fixture repo
+# that is copied by path must not change on disk by itself
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("reasons-distinct", lambda: len(set(REASONS)) == len(REASONS)),
     ("reasons-non-empty", lambda: all(isinstance(r, str) and r for r in REASONS)),
     ("row-glob-excludes-seeds", lambda: not any(Path(n).match(ROW_GLOB) for n in ("README.md", "VERSION"))),
     ("variants-are-the-two-booleans", lambda: VARIANTS == (False, True)),
+    ("no-auto-maintenance-pairs", lambda: dict(NO_AUTO_MAINTENANCE) == {"gc.auto": "0", "maintenance.auto": "false"}),
 ]
 
 
@@ -156,6 +161,8 @@ class ScratchInstalls:
         commit. `install` has already written every *bundled* craft (Rule-11 p2). Its files are a subset of the
         tree copied, so the copy leaves exactly this tree's crafts."""
         d = self.mkdtemp(prefix=prefix); self._git(d, "init", "-q")
+        for k, v in NO_AUTO_MAINTENANCE:   # before any commit, so no detached gc or maintenance ever starts here
+            self._git(d, "config", k, v)
         r = subprocess.run([sys.executable, str(self.pkg / "scripts" / "package.py"), "install", str(d)],
                            capture_output=True, text=True, env=dyadlib.git_env())
         if r.returncode:
