@@ -126,7 +126,7 @@ The past thread ends the evening this repo was born, so the two threads meet at 
 - the collaborator in group-chat-familiars, and anyone in its logs
 - the account in spbg
 - the people of the practice commons
-- the commercial client — not mentioned at all (prov:#498/7; alias pending, Q4)
+- the commercial client — not mentioned at all (prov:#498/7; World setting, Q4)
 
 ## Daemon proposals (for the Operator to accept or strike, one by one)
 
