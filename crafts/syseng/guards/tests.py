@@ -17,6 +17,10 @@ import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "test", "craft", False
 NAME, OWNER = "test mapping (module -> test)", "crafts/syseng/rules/verifiable-code.md"
+# Bundled with the core (Rule-11 property 2, criterion (a), d-work #504): core Rules 11, 12, 13 and 14 cite
+# `crafts/syseng/` by path, so a core-only install must carry this craft or ship Rules that cite a
+# tree it lacks. One declaration per craft; the core keeps no list (`package.bundled_crafts`).
+BUNDLED_WITH_CORE = True
 FIELDS = ("module", "test", "present")
 EXEMPT = ("package.py",)                                   # the runner has no test file of its own name (test_package.py tests it as the CLI)
 CRAFT_CODE = ("scripts", "projectors")                     # a craft's non-guard code directories, mapped flat to tests/
