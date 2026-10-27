@@ -437,6 +437,9 @@ REFERENCES = [
     ("bundle.component->craft",   "bundle",     "component",     None,              "craft",      "guard:infra/bundle.py"),
     ("provenance.legacy->row",    "provenance", "provenance_legacy.local.txt", None, "row",        "guard:agent/provenance.py"),   # #191
     ("trace.id->row",             "trace",      "<id>",          None,              "row",        "guard:agent/traces.py"),       # #227
+    ("dmc.home->file",            "dmc",        "dyad:home",     None,              "file",       "guard:agent/dmc.py"),          # plan #507
+    ("dmc.also_in->file",         "dmc",        "dyad:alsoIn",   None,              "file",       "guard:agent/dmc.py"),          # plan #507
+    ("dmc.implementation->file",  "dmc",        "dyad:implementation", None,        "file",       "guard:agent/dmc.py"),          # plan #507
 ]
 
 def craft_references_contrib(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple]]:
