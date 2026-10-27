@@ -55,6 +55,7 @@ def zones_for(host_path: str = dyadlib.DEFAULT_HOST, host_zone: str = dyadlib.DE
         ("infra", ".gitignore"),
         ("infra", "BUNDLE.md"),                           # the bundle manifest (Rule-11 property 7, #196)
         ("infra", ".claude/*"),                           # committed harness adapters: slash commands, skills (#152)
+        ("infra", "site/*"),                              # the GitHub Pages site, the front door's zone (#498 C3, d-work #501)
     ]
 
 def zone_names_for(host_zone: str = dyadlib.DEFAULT_HOST_ZONE) -> tuple[str, ...]:

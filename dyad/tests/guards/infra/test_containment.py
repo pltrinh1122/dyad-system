@@ -34,6 +34,10 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual(c.classify(".claude/commands/falsify.md"), "infra")
         self.assertEqual(c.classify(".claude/skills/pb-craft/SKILL.md"), "infra")
         self.assertEqual(c.classify(".claudex/y"), "unclassified")
+        # #501 (C3 of #498): the GitHub Pages site joins the front door's zone
+        self.assertEqual(c.classify("site/index.md"), "infra")
+        self.assertEqual(c.classify("site/episodes/000-announcement.md"), "infra")
+        self.assertEqual(c.classify("sitex/y"), "unclassified")
 
 class TransactionTests(unittest.TestCase):
     def setUp(self): self.r = Repo()
@@ -154,7 +158,7 @@ DEFAULT_TABLE = [
     ("agent", "agent-corpus/*"), ("agent", "dyad/*"), ("workstation", "workstation-corpus/*"),
     ("preferences", "preferences-corpus/*"), ("craft", "crafts/*"), ("infra", ".github/*"),
     ("infra", ".githooks/*"), ("infra", "CLAUDE.md"), ("infra", "README.md"), ("infra", "LICENSE"),
-    ("infra", ".gitignore"), ("infra", "BUNDLE.md"), ("infra", ".claude/*"),
+    ("infra", ".gitignore"), ("infra", "BUNDLE.md"), ("infra", ".claude/*"), ("infra", "site/*"),
 ]
 PREFS = """| key | value | allowed | read by |
 |-----|-------|---------|---------|
