@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/provenance-legacy",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "provenance-legacy",
+  "name": "Row without record",
+  "description": "Decides how the state check treats a row and the instance's legacy list.",
+  "dyad:decides": "Does this row's missing or short record pass?",
+  "dyad:inputs": [
+    "the row's disposed count",
+    "its record",
+    "the instance's provenance legacy list"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "listed",
+      "name": "listed row",
+      "dyad:when": "the row is named in the list with n",
+      "dyad:then": "passes while its record holds exactly n fewer dispositions, or with no record while disposed holds n"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unlisted",
+      "name": "row with no record",
+      "dyad:when": "a row with no record that the list does not name",
+      "dyad:then": "fails"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-list",
+      "name": "keeps no list",
+      "dyad:when": "the instance keeps no list",
+      "dyad:then": "warns on every unrecorded row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "bad-line",
+      "name": "another shape",
+      "dyad:when": "a list line of another shape, an id listed twice, a listed id that is no row, or n above the row's count",
+      "dyad:then": "fails"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/provenance.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-7-provenance.md",
+  "dyad:owner": "Rule-7"
+}

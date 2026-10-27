@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/transaction-containment",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "transaction-containment",
+  "name": "Transaction containment",
+  "description": "Decides whether a commit or PR stays within exactly one zone.",
+  "dyad:decides": "Does this repo transaction touch exactly one zone?",
+  "dyad:inputs": [
+    "the paths the commit or PR touches",
+    "their zones by zone-classification"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "one-zone",
+      "name": "exactly one",
+      "dyad:when": "every path is classified and all fall in one zone",
+      "dyad:then": "the transaction passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cross-zone",
+      "name": "Cross-zone",
+      "dyad:when": "the paths fall in more than one zone",
+      "dyad:then": "fails; the work is split into separate branches and separate PRs, referent before referrer"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unclassified",
+      "name": "Unclassified",
+      "dyad:when": "a path no zone claims",
+      "dyad:then": "forbidden; fails"
+    }
+  ],
+  "dyad:precedence": "An unclassified path fails whatever the zone count.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/containment.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-1-containment.md",
+  "dyad:owner": "Rule-1"
+}

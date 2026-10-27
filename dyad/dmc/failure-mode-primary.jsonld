@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/failure-mode-primary",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "failure-mode-primary",
+  "name": "Primary failure mode",
+  "description": "Decides which mechanism of an incident row is its failure mode when it carries two.",
+  "dyad:decides": "Which of a row's mechanisms is its failure mode?",
+  "dyad:inputs": [
+    "the incident row",
+    "the mechanisms it carries"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "primary",
+      "name": "primary",
+      "dyad:when": "the mechanism that started the incident",
+      "dyad:then": "the row's failure mode"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "secondary",
+      "name": "secondary",
+      "dyad:when": "the other mechanism",
+      "dyad:then": "named secondary in that mode's own record"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:owner": "Rule-3"
+}

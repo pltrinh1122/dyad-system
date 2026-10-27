@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/held-pr",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "held-pr",
+  "name": "Held PR",
+  "description": "Decides what happens to a PR of a d-work under merge-disposition with-done.",
+  "dyad:decides": "Under merge-disposition with-done, is this PR held, merged, re-prompted or reported as an incident?",
+  "dyad:inputs": [
+    "the d-work's state and recorded Done-Y",
+    "whether the PR's head changed since the Done-Y",
+    "whether the d-work can reach its Done question"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "held",
+      "name": "waits",
+      "dyad:when": "the d-work has no Done-Y naming the PR yet",
+      "dyad:then": "held: rebased as main moves, never merged with main, its age and rebase count stated in the completion evidence"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "merge",
+      "name": "merges",
+      "dyad:when": "the Done-Y named the PR on its current head",
+      "dyad:then": "merged as clerical execution; the row is set done once the head is on main"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reprompt",
+      "name": "re-prompted",
+      "dyad:when": "a rebase changed the head after the Done-Y",
+      "dyad:then": "the Y is void; the Done question is asked again on the live row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incident",
+      "name": "incident",
+      "dyad:when": "the d-work cannot reach its Done question at all",
+      "dyad:then": "reported on the spot as an incident; the PR is not left to rot"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/disposition-digest.md",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md",
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

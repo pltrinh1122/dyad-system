@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/bundled-craft",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "bundled-craft",
+  "name": "Bundled craft",
+  "description": "Whether the core release carries a Tended craft.",
+  "dyad:decides": "Does the core release carry this Tended craft?",
+  "dyad:inputs": [
+    "the craft's own guard modules",
+    "whether a core Rule cites the craft by path"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "bundled",
+      "name": "bundled craft",
+      "dyad:when": "the craft declares itself bundled in one of its own guard modules; the reason to bundle is a core Rule that cites the craft by path",
+      "dyad:then": "dyad build puts its tree in the core's archive and dyad install writes it; it stays a Tended craft in every other respect"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-bundled",
+      "name": "Tended craft",
+      "dyad:when": "the craft makes no such declaration",
+      "dyad:then": "it is built and installed only on its own, by its own export and its own tag"
+    }
+  ],
+  "dyad:default": "not bundled: never by a list the core keeps",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/package.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:owner": "Rule-11"
+}

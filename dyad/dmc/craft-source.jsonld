@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/craft-source",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "craft-source",
+  "name": "Craft availability (D3')",
+  "description": "Decides whether a craft is imported, extended or authored; it never decides between craft and system.",
+  "dyad:decides": "Is the craft imported, extended or authored here?",
+  "dyad:inputs": [
+    "whether the craft exists as a craft corpus",
+    "whether a craft of that practice exists in this system"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "import",
+      "name": "import",
+      "dyad:when": "the craft exists as a craft corpus",
+      "dyad:then": "dyad craft install <src>; its registry row is written by the command"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "extend",
+      "name": "extend",
+      "dyad:when": "a craft of that practice exists here",
+      "dyad:then": "the existing craft is extended"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "author",
+      "name": "authored",
+      "dyad:when": "the craft does not exist yet",
+      "dyad:then": "authored here first (dyad craft new <name>) and extracted later"
+    }
+  ],
+  "dyad:precedence": "Applied in every case, a new dyad system included: even a new system imports or authors the craft.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/craft-instantiation.md",
+  "dyad:owner": "Rule-3"
+}

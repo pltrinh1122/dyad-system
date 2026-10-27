@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/derivation-d7",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "derivation-d7",
+  "name": "Escalation derivation (D7)",
+  "description": "Derives escalations from a row's refs and from the incident log.",
+  "dyad:decides": "Which escalation, if any, does this record project to?",
+  "dyad:inputs": [
+    "a row's refs tokens",
+    "the incident log's rows"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "intake",
+      "name": "intake origin",
+      "dyad:when": "a refs token shaped <system>-<id>, other than parent-<id>",
+      "dyad:then": "an escalation from ext:<token> opening the row's act"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incident",
+      "name": "incident-log row",
+      "dyad:when": "a row of the incident log",
+      "dyad:then": "an escalation from its d-work's act (or ext: when not in this instance), opening none"
+    }
+  ],
+  "dyad:default": "Where identifiable: a <system>-<id> token that is a plain cross-reference is read as an intake, stated and not checked.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

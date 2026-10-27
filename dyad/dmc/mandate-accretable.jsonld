@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/mandate-accretable",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "mandate-accretable",
+  "name": "Accretable under a mandate",
+  "description": "Decides whether a row opened mid-execution carries the mandate's plan-Y or is asked for.",
+  "dyad:decides": "May this row ride the mandate's plan-Y?",
+  "dyad:inputs": [
+    "the plan's stated mandate scope (rule and ceiling)",
+    "the kind of act the row holds",
+    "the preference accretion"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "accreted",
+      "name": "accreted row",
+      "dyad:when": "accretion is implicit and the row is inside the stated rule and below the ceiling",
+      "dyad:then": "it carries the plan-Y as its own authorization and is never asked for separately; the Done-Y ratifies it as listed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "explicit",
+      "name": "explicit mode",
+      "dyad:when": "accretion is explicit, or the row is outside the stated rule or past the ceiling",
+      "dyad:then": "it is not bound by the Y and is asked"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "never",
+      "name": "Never accretable",
+      "dyad:when": "a destructive host action, a release, a Rule-3 Intake, a preference value change, or a mutation the plan did not describe",
+      "dyad:then": "asked by its own question, whatever the plan says"
+    }
+  ],
+  "dyad:precedence": "Never accretable first; then the accretion preference; then the stated scope.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-2"
+}

@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/containment-mode",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "containment-mode",
+  "name": "Containment guard mode",
+  "description": "Selects what the zone guard judges over a pair of commits.",
+  "dyad:decides": "Is the guard judging a push or a PR?",
+  "dyad:inputs": [
+    "the caller (pre-push hook, dyad check --pr, the detector on main)",
+    "base and head"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "commits",
+      "name": "commits",
+      "dyad:when": "a push: dyad check --guards before every push",
+      "dyad:then": "each non-merge commit of the range is judged alone; single-zone commits that together span zones pass"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "range",
+      "name": "range",
+      "dyad:when": "a PR: dyad check --pr before a PR is opened, or the detector over what lands on main",
+      "dyad:then": "the commits and the whole base...head diff are judged"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/containment.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-1-containment.md",
+  "dyad:owner": "Rule-1"
+}

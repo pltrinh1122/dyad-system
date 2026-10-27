@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/diag-levels-file",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "diag-levels-file",
+  "name": "Levels file classification",
+  "description": "Classifies each test module of the tree as unit or integration for the self-diagnostic.",
+  "dyad:decides": "Is this test module unit or integration?",
+  "dyad:inputs": [
+    "the test module's tests",
+    "the host's self-diagnostic-levels.txt"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unit",
+      "name": "unit",
+      "dyad:when": "none of its tests builds a scratch repo, runs git, installs or spawns the runner",
+      "dyad:then": "run at L1"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "integration",
+      "name": "integration",
+      "dyad:when": "any one of its tests builds a scratch repo, runs git, installs or spawns the runner",
+      "dyad:then": "run at L2"
+    }
+  ],
+  "dyad:default": "levels.py fails a test module present but unclassified; whether a module is rightly unit is read.",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "scripts/levels.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:owner": "Rule-12"
+}

@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/install-refusal",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "install-refusal",
+  "name": "Install refusal",
+  "description": "Whether a craft install proceeds, refuses or warns.",
+  "dyad:decides": "May this craft be installed into the receiving system?",
+  "dyad:inputs": [
+    "the receiving tree under the craft's root",
+    "the craft registry row and its sha256",
+    "the craft's MANIFEST.md requires and seeds",
+    "the --force flag"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmodified",
+      "name": "unmodified",
+      "dyad:when": "the receiving tree is absent or matches its registry sha256, and every requirement is met",
+      "dyad:then": "the install writes the craft's root and its registry row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "modified",
+      "name": "modified or authored",
+      "dyad:when": "the receiving system modified or authored the tree",
+      "dyad:then": "the install refuses unless told --force"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmet",
+      "name": "unmet",
+      "dyad:when": "a requires entry names a craft absent or below the minimum version",
+      "dyad:then": "the install refuses; the requirement is never fetched (the check only warns)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "seeds",
+      "name": "seeds",
+      "dyad:when": "a seeds entry names an instance file whose destination is absent",
+      "dyad:then": "craft check and install warn; advisory only, never written by install"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/craft.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:alsoIn": [
+    "guards/craft/crafts.py"
+  ],
+  "dyad:owner": "Rule-11"
+}

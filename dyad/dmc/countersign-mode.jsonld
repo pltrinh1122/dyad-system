@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/countersign-mode",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "countersign-mode",
+  "name": "Countersign mode",
+  "description": "Classifies an act by how it obtains its countersignature and which party processes it.",
+  "dyad:decides": "In which mode is this act, and who processes it?",
+  "dyad:inputs": [
+    "the act's countersignature basis",
+    "the act's processor"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "explicit",
+      "name": "explicit",
+      "dyad:when": "countersigned live by a human",
+      "dyad:then": "an agent processes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "implicit",
+      "name": "implicit",
+      "dyad:when": "countersigned in advance by a standing mandate",
+      "dyad:then": "an agent processes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "automatic",
+      "name": "automatic",
+      "dyad:when": "countersigned beforehand by a countersigned release",
+      "dyad:then": "a non-inferring executor processes"
+    }
+  ],
+  "dyad:default": "In dyad-system every d-work row is explicit, processed by the agent (D1).",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

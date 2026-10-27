@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/audit-watermark",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "audit-watermark",
+  "name": "Audit watermark gate",
+  "description": "Compares the live audit watermark with the newest record's to decide how much of the standing audit runs.",
+  "dyad:decides": "Does the standing audit run its full exercise, a first derivation, or only its ungated phase?",
+  "dyad:inputs": [
+    "the live tree hash, minus the dated audit records",
+    "the interpreter and git versions",
+    "the Audited line of the newest audit record"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unchanged",
+      "name": "unchanged",
+      "dyad:when": "same tree, same interpreter, same git",
+      "dyad:then": "phases 1 and 3 are a no-op, no file is written, phase 2 still runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "changed",
+      "name": "full exercise",
+      "dyad:when": "any of the three differs",
+      "dyad:then": "the full exercise"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "first",
+      "name": "first exercise",
+      "dyad:when": "no record carries the line",
+      "dyad:then": "full derivation"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:alsoIn": [
+    "runbooks/audit.md"
+  ],
+  "dyad:owner": "Rule-12"
+}

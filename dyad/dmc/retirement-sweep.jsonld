@@ -1,0 +1,47 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/retirement-sweep",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "retirement-sweep",
+  "name": "Retirement sweep trigger",
+  "description": "Decides whether a retirement sweep of backlog rows is proposed in a reply.",
+  "dyad:decides": "Is a retirement sweep proposed in this reply?",
+  "dyad:inputs": [
+    "the live backlog count from the row store",
+    "BOARD_THRESHOLD (default 40)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "sweep",
+      "name": "proposes the sweep",
+      "dyad:when": "the live backlog count reaches BOARD_THRESHOLD",
+      "dyad:then": "the d-work states it as a finding and proposes the sweep as its own question, never folded into a plan or Done batch"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-sweep",
+      "name": "threshold",
+      "dyad:when": "the live backlog count is below BOARD_THRESHOLD",
+      "dyad:then": "no sweep; the count is shown beside the threshold on the board"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/disposition-digest.md",
+  "dyad:alsoIn": [
+    "runbooks/disposition-digest.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

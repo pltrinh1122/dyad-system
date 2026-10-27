@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/replan",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "replan",
+  "name": "Re-plan on drift",
+  "description": "Whether a planned d-work executes as written or is planned again.",
+  "dyad:decides": "Does execution of this planned d-work need a new plan-Y?",
+  "dyad:inputs": [
+    "the plan file and its base commit",
+    "the files it touches",
+    "main",
+    "whether the row is accreted"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "replan",
+      "name": "re-plans",
+      "dyad:when": "main has moved past a file the plan touches",
+      "dyad:then": "the Agent re-plans and asks a new plan-Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "as-written",
+      "name": "executes as written",
+      "dyad:when": "main has not moved past a touched file",
+      "dyad:then": "the Agent executes as written"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "accreted",
+      "name": "accreted row",
+      "dyad:when": "the row is accreted under a mandate",
+      "dyad:then": "no drift check of its own: re-planning fires on the mandate's base commit, for the parent and every accreted row together"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-15-d-work-phases.md",
+  "dyad:owner": "Rule-15"
+}

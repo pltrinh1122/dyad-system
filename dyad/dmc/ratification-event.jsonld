@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/ratification-event",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "ratification-event",
+  "name": "Ratification event",
+  "description": "Classifies an act as a ratification event the Operator alone performs, or as work the Agent may do.",
+  "dyad:decides": "Is this act a ratification event?",
+  "dyad:inputs": [
+    "the act",
+    "the Ratification events headings of every Rule",
+    "the paths a direct commit to main touches"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ratification-event",
+      "name": "Ratification events",
+      "dyad:when": "merging any PR into main; pushing directly to main other than ledger-only; declaring an agent-authored verdict final; an event another Rule declares under its own Ratification events heading",
+      "dyad:then": "operator only; the Agent proposes and never disposes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-ratification",
+      "name": "Not ratification",
+      "dyad:when": "commits on a branch, opening or updating a PR, running checks, ledger-only or events-only commits to main, proposals and attacks, reading preferences, writing the memory cache",
+      "dyad:then": "the agent may do it freely"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "clerical",
+      "name": "clerical",
+      "dyad:when": "executing a merge or other act the operator has already ratified",
+      "dyad:then": "the Agent may execute it; execution is not disposal"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:owner": "Rule-2"
+}

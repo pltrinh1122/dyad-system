@@ -1,0 +1,93 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/failure-modes-0922",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "failure-modes-0922",
+  "name": "Incident failure modes (first exercise)",
+  "description": "The observed failure mode each incident of the log was assigned in the first incident-hardening exercise.",
+  "dyad:decides": "By which mechanism did this incident happen?",
+  "dyad:inputs": [
+    "the incident row's what and cause cells"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-a",
+      "name": "acting before the Operator's `Y`",
+      "dyad:when": "A mutation, a merge, a host action or a recorded disposition ran before the counter-prompt that authorizes it was asked or answered. Includes the case where the counter-prompt itself was asked before the row and plan file existed.",
+      "dyad:then": "assigned mode A; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-b",
+      "name": "stale local view of the remote",
+      "dyad:when": "A conclusion drawn, or a branch cut, from a ref that had never been fetched, or from a local ref that had fallen behind the remote.",
+      "dyad:then": "assigned mode B; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-c",
+      "name": "concurrent-session race",
+      "dyad:when": "Two sessions on one instance, with indistinguishable presence identity or independently allocated ids, colliding on a row, an id or a file.",
+      "dyad:then": "assigned mode C; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-d",
+      "name": "wrong cause asserted, then retracted",
+      "dyad:when": "A diagnosis stated as fact rather than hypothesis, acted on, and later refuted by evidence.",
+      "dyad:then": "assigned mode D; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-e",
+      "name": "plan content wrong",
+      "dyad:when": "The plan named a path, a zone, a precedent or a sequence that did not hold when the plan was executed.",
+      "dyad:then": "assigned mode E; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-f",
+      "name": "form error in a clerical record",
+      "dyad:when": "A row, commit message or staging step written in the wrong shape or the wrong order, failing a guard that reads it.",
+      "dyad:then": "assigned mode F; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-g",
+      "name": "mechanism defect",
+      "dyad:when": "A hook, guard, CLI or suite did not do what its own design says.",
+      "dyad:then": "assigned mode G; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-h",
+      "name": "fence collision not surfaced",
+      "dyad:when": "The corpus-legal half of a fenced action was done and the \"state the rest and ask\" half was omitted.",
+      "dyad:then": "assigned mode H; its own record holds the incidents and a remediation candidate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-i",
+      "name": "external environment",
+      "dyad:when": "Resource contention or interruption from outside the dyad.",
+      "dyad:then": "assigned mode I; its own record holds the incidents and a remediation candidate"
+    }
+  ],
+  "dyad:precedence": "where a row carries two mechanisms, the one that started it is primary and the other is named secondary in that mode's record",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "agent-corpus/audits/2026-09-22-incident-failure-modes.md",
+  "dyad:owner": "instance:agent-corpus/audits/2026-09-22-incident-failure-modes.md"
+}

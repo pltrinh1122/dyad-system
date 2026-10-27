@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/reference-severity",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "reference-severity",
+  "name": "Reference severity",
+  "description": "What one reference's resolution prints.",
+  "dyad:decides": "Does this reference pass, fail, warn or skip?",
+  "dyad:inputs": [
+    "the reference kind and its resolver in the register",
+    "the target store",
+    "the installed crafts",
+    "the plan's row state"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "resolved",
+      "name": "resolved",
+      "dyad:when": "the target instance exists",
+      "dyad:then": "passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unresolved",
+      "name": "unresolved",
+      "dyad:when": "the target instance does not exist",
+      "dyad:then": "fails"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "world",
+      "name": "world",
+      "dyad:when": "the kind's resolver is world",
+      "dyad:then": "one warn inference line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "skip",
+      "name": "skips",
+      "dyad:when": "the target store is absent or empty, or the kind's parser is a craft guard no installed craft provides",
+      "dyad:then": "a printed skip line, never a failure"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "exempt",
+      "name": "exemption",
+      "dyad:when": "a plan's base commit whose row is no longer open, planned or blocked",
+      "dyad:then": "skipped silently"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/references.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-20-referential-integrity.md",
+  "dyad:owner": "Rule-20"
+}

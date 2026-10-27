@@ -1,0 +1,66 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/provenance-entry",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "provenance-entry",
+  "name": "Provenance entry",
+  "description": "Classifies what an event writes into a d-work's provenance record.",
+  "dyad:decides": "What entry does this event write?",
+  "dyad:inputs": [
+    "the event (prompt or disposition)",
+    "who relayed it",
+    "whether the row is accreted"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "prompt",
+      "name": "prompt",
+      "dyad:when": "an Operator prompt opens or is received on the d-work",
+      "dyad:then": "a prompt entry with its text verbatim"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "disposition",
+      "name": "disposition",
+      "dyad:when": "the Operator disposes a counter-prompt",
+      "dyad:then": "a disposition entry in the same clerical commit as the row's disposed entry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "relayed",
+      "name": "relayed via",
+      "dyad:when": "the Operator's words reach the session through another agent or seat",
+      "dyad:then": "entered verbatim with a relayed via note; the relaying agent's words never"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mandate",
+      "name": "mandate",
+      "dyad:when": "entry 1 of an accreted row, or the entry that closes it",
+      "dyad:then": "the mandate's plan-Y or Done-Y words, noted with the mandate's id and date"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "own words",
+      "dyad:when": "the Agent's own text",
+      "dyad:then": "never entered; it lives in the plan, row, record or incident log"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/provenance.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-7-provenance.md",
+  "dyad:owner": "Rule-7"
+}

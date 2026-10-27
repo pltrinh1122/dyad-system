@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/agent-vs-tended-rule",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "agent-vs-tended-rule",
+  "name": "Agent or Tended rule",
+  "description": "Classifies a rule by whether it binds the Agent's process.",
+  "dyad:decides": "Is this rule an Agent Rule, a Tended Rule, or not a Rule?",
+  "dyad:inputs": [
+    "the rule's content",
+    "where it is written"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "Agent Rule",
+      "dyad:when": "it binds the Agent's process, wherever it is written",
+      "dyad:then": "belongs in the core craft's rules and carries the block"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tended",
+      "name": "Tended Rule",
+      "dyad:when": "it governs a craft or the host, never the dyad's process",
+      "dyad:then": "a separately contained set; no block, no check here"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-rule",
+      "name": "not Rules",
+      "dyad:when": "frame principles, preferences, audits, falsification records, the ledger, the vocabulary",
+      "dyad:then": "carry no block"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "guards/agent/rules.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-4-integrity.md",
+  "dyad:owner": "Rule-4"
+}

@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/evidence-fold",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "evidence-fold",
+  "name": "Evidence brief fold",
+  "description": "How each line of the evidence block appears in its brief form.",
+  "dyad:decides": "Is this evidence line folded or shown in the brief form?",
+  "dyad:inputs": [
+    "the full evidence block",
+    "the baseline on origin/main",
+    "each warning's kind"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-baseline",
+      "name": "none was found",
+      "dyad:when": "no baseline was found",
+      "dyad:then": "a line says so and nothing is folded"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "standing",
+      "name": "already standing",
+      "dyad:when": "a guard's warning is already standing on the baseline",
+      "dyad:then": "folded into one line for that guard"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new",
+      "name": "new since the baseline",
+      "dyad:when": "a warning is of a kind new since the baseline",
+      "dyad:then": "shown"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other",
+      "name": "failing, skipped or other line",
+      "dyad:when": "a line is failing, skipped or anything else",
+      "dyad:then": "shown"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/package.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-14-system-infrastructure.md",
+  "dyad:owner": "Rule-14"
+}

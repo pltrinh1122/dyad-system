@@ -1,0 +1,50 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/party-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "party-kind",
+  "name": "Party kind",
+  "description": "Classifies who acts, which decides who may countersign and who may author a proposal.",
+  "dyad:decides": "Of what kind is this party, and what may it do?",
+  "dyad:inputs": [
+    "the party's kind in the projection"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "human",
+      "name": "human",
+      "dyad:when": "the human party",
+      "dyad:then": "the only kind that countersigns"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "agent",
+      "dyad:when": "an inferring party",
+      "dyad:then": "authors proposals; processes explicit and implicit acts"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "executor",
+      "name": "executor",
+      "dyad:when": "a non-inferring party",
+      "dyad:then": "processes automatic acts only"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-2"
+}

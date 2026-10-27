@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/hook-failure",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "hook-failure",
+  "name": "Hook failure response",
+  "description": "Classifies a failed containment hook by whether it could execute at all.",
+  "dyad:decides": "Did the hook fail to execute, or run and fail?",
+  "dyad:inputs": [
+    "the hook's exit and output",
+    "whether its guard and interpreter could run"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cannot-execute",
+      "name": "cannot execute",
+      "dyad:when": "the hook cannot execute at all (an exec bit lost, an interpreter below the kernel pin)",
+      "dyad:then": "the Agent runs the guard by hand, records its observed line and the bypass in the commit message, and reports an incident; it never repairs the hook inside an unrelated d-work"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "runs-and-fails",
+      "name": "runs and fails",
+      "dyad:when": "the hook executed and its guard failed",
+      "dyad:then": "never bypassed; the transaction is fixed"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-1-containment.md",
+  "dyad:owner": "Rule-1"
+}

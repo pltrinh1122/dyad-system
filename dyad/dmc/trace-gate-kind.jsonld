@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-gate-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-gate-kind",
+  "name": "Suite or guards",
+  "description": "Decides whether a gate call is booked as suite or guards, by what the gate ran and never by duration.",
+  "dyad:decides": "Did this gate call run the suite or guards only?",
+  "dyad:inputs": [
+    "the command (check --evidence, --tests, git push, hand-run unittest)",
+    "the result text (the gate's skip line, Ran N tests)",
+    "the pushed range read from git"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "suite",
+      "name": "suite",
+      "dyad:when": "check --evidence or --tests; a push whose result shows Ran N tests; a push whose range holds a commit outside the d-work store; a hand-run unittest showing Ran N tests",
+      "dyad:then": "booked as suite"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "guards",
+      "name": "guards",
+      "dyad:when": "a push whose result carries the gate's own skip line, or whose range is all ledger-only or empty",
+      "dyad:then": "booked as guards"
+    }
+  ],
+  "dyad:default": "A range the timeline did not capture reads as guards; a hand-run unittest without Ran N tests is git/local; every range-booked push is named under Limits.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/trace.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}

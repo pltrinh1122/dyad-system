@@ -1,0 +1,62 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/mode-exit",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "mode-exit",
+  "name": "Failure mode exit",
+  "description": "Decides whether a failure mode is closed, and by which of three exits.",
+  "dyad:decides": "Is this failure mode closed, and by which exit?",
+  "dyad:inputs": [
+    "the mode's mitigations and the moment each fires",
+    "the backlog rows",
+    "the kernel's Rules"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fenced",
+      "name": "fenced at a named moment",
+      "dyad:when": "a mechanical check that would catch a fault of the mode, named with the moment it runs",
+      "dyad:then": "closed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "backlog",
+      "name": "backlog",
+      "dyad:when": "a backlog row names the fence to build and the incidents it would have caught",
+      "dyad:then": "closed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unfenceable",
+      "name": "unfenceable",
+      "dyad:when": "recorded unfenceable on this kernel, naming the Rule that makes it so",
+      "dyad:then": "closed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "open",
+      "name": "open",
+      "dyad:when": "none of the three",
+      "dyad:then": "open in the index, whatever its record says"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/attendance-check",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "attendance-check",
+  "name": "Attendance check",
+  "description": "The provenance records' check of the declared attended seats.",
+  "dyad:decides": "Do the provenance records agree with the declared attendance of this seat?",
+  "dyad:inputs": [
+    "provenance records whose session line names the seat",
+    "each disposition's note",
+    "the attendance-window preference",
+    "the declared set"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "undeclared",
+      "name": "undeclared",
+      "dyad:when": "a live seat that is neither the leader nor declared holds an own disposition within the window",
+      "dyad:then": "prints undeclared: a reading of the board, not a Rule-3 incident; the leader alone reports it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warn",
+      "name": "warn",
+      "dyad:when": "a declared seat holds no own disposition within the window",
+      "dyad:then": "prints warn: a reading of the board, not a Rule-3 incident"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agrees",
+      "name": "own disposition",
+      "dyad:when": "the records agree with the declaration",
+      "dyad:then": "nothing is printed"
+    }
+  ],
+  "dyad:precedence": "A disposition counts as the seat's own only when its note holds neither mandate nor relayed via, anywhere.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/sessions.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:owner": "Rule-16"
+}

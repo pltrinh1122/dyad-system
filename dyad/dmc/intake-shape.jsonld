@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/intake-shape",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "intake-shape",
+  "name": "Intake shape",
+  "description": "Classifies work proposed by another agent by its admissible shape.",
+  "dyad:decides": "Is this message an admissible intake?",
+  "dyad:inputs": [
+    "the message's content",
+    "any verbatim Operator prompt or provenance it carries"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "defect",
+      "name": "defect",
+      "dyad:when": "an observation with evidence: what, where, how it reproduces, the mechanism verified",
+      "dyad:then": "surfaced; the Operator's Y opens the row and the evidence goes into its plan file"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "enhancement",
+      "name": "enhancement",
+      "dyad:when": "carries the verbatim Operator prompt that asked for it, or provenance to one",
+      "dyad:then": "surfaced; the relayed prompt is the row's first provenance entry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "returned",
+      "name": "returned to the sender",
+      "dyad:when": "anything else, including an agent's own idea",
+      "dyad:then": "returned with the missing shape named and reported to the Operator as received, not as work"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

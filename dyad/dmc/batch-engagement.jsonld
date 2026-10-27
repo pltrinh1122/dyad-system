@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/batch-engagement",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "batch-engagement",
+  "name": "Batch engagement",
+  "description": "Selects whether plan and Done questions are asked singly or in batch.",
+  "dyad:decides": "Are counter-prompts asked singly or as a batch now?",
+  "dyad:inputs": [
+    "the preference batch-disposition-mode",
+    "whether the Operator left a counter-prompt outstanding",
+    "the pending queue"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "off",
+      "name": "off",
+      "dyad:when": "batch-disposition-mode is off",
+      "dyad:then": "every counter-prompt is asked singly"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "on-ignore",
+      "name": "on-ignore",
+      "dyad:when": "on-ignore, and the Operator's reply to a counter-prompt was a prompt, not its bare disposal",
+      "dyad:then": "the pending queue opens; batch forms are asked until both queues are empty"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "always",
+      "name": "always",
+      "dyad:when": "batch-disposition-mode is always",
+      "dyad:then": "never singly; the first pending item opens the queue"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/plan-gate",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "plan-gate",
+  "name": "Plan gate",
+  "description": "Decides whether a PR or branch range may cite the d-work it claims.",
+  "dyad:decides": "Does this range pass the plan gate?",
+  "dyad:inputs": [
+    "the PR body or the branch's commit messages",
+    "each cited d-work row at the base",
+    "the paths of each commit"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ledger-only",
+      "name": "ledger-only",
+      "dyad:when": "every non-merge commit of the range touches only the d-work store",
+      "dyad:then": "claims no d-work; the gate skips it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "events-only",
+      "name": "events-only",
+      "dyad:when": "every non-merge commit of the range touches only the run-book events store",
+      "dyad:then": "the gate skips it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pass",
+      "name": "Y plan",
+      "dyad:when": "each cited row is open, planned or blocked and carries a Y plan disposition",
+      "dyad:then": "passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "refused",
+      "name": "refuses",
+      "dyad:when": "no d-work cited, a cited id not in the ledger, a terminal row, or no Y plan",
+      "dyad:then": "fails"
+    }
+  ],
+  "dyad:precedence": "A range mixing ledger-only and events-only commits is neither and is gated.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/prs.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

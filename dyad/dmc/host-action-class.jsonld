@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/host-action-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "host-action-class",
+  "name": "Host action authorization",
+  "description": "The authorization a host action needs, by its class.",
+  "dyad:decides": "What authorization does this host action need before the Agent runs it?",
+  "dyad:inputs": [
+    "the host action",
+    "its class, as the active craft's host-mutation rule assigns it",
+    "the plan that names it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "read-only",
+      "name": "read-only",
+      "dyad:when": "the action changes nothing on the host",
+      "dyad:then": "free: no authorization and no change-log row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reversible",
+      "name": "reversible",
+      "dyad:when": "the action changes the host and can be undone",
+      "dyad:then": "authorized by the plan-Y of the plan that names it, with its undo; a change-log row in the same d-work"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "destructive",
+      "name": "destructive",
+      "dyad:when": "the action changes the host and cannot be undone",
+      "dyad:then": "needs its own counter-prompt naming the action, even inside a planned d-work; a change-log row in the same d-work"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-8-host-mutation.md",
+  "dyad:alsoIn": [
+    "../crafts/sysadmin/rules/host-mutation.md"
+  ],
+  "dyad:owner": "Rule-8"
+}

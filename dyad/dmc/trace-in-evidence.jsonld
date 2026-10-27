@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-in-evidence",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-in-evidence",
+  "name": "Trace in completion evidence",
+  "description": "Selects whether the completion evidence cites the d-work trace.",
+  "dyad:decides": "Must this completion cite and store a d-work trace?",
+  "dyad:inputs": [
+    "the preference dwork-trace",
+    "whether the Y done entry is a mandate close"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "always",
+      "name": "always",
+      "dyad:when": "dwork-trace is always",
+      "dyad:then": "the evidence cites the trace and the Done record commit carries it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "on-demand",
+      "name": "on-demand",
+      "dyad:when": "dwork-trace is on-demand",
+      "dyad:then": "only when the Operator has prompted for one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mandate-close",
+      "name": "mandate close",
+      "dyad:when": "the entry is noted mandate",
+      "dyad:then": "exempt; the Done rides the mandate's own trace"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rows.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

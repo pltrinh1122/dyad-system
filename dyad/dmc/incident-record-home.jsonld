@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/incident-record-home",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "incident-record-home",
+  "name": "Incident record home",
+  "description": "Selects where an incident is recorded.",
+  "dyad:decides": "Where is this incident recorded?",
+  "dyad:inputs": [
+    "whether the incident falsifies a Rule or a mechanism"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "falsification",
+      "name": "falsification record",
+      "dyad:when": "it falsifies a Rule or a mechanism",
+      "dyad:then": "an attack in the relevant falsification record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incidents",
+      "name": "INCIDENTS.md",
+      "dyad:when": "otherwise",
+      "dyad:then": "a row in the incident log (date, d-work, what, cause, consequence)"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

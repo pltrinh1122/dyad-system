@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/diag-result",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "diag-result",
+  "name": "Diagnostic level result",
+  "description": "Records the result of each self-diagnostic level, the gate deciding whether later levels run.",
+  "dyad:decides": "What is this diagnostic level's result?",
+  "dyad:inputs": [
+    "the level's observed command output and its readings",
+    "the previous level's result",
+    "the last level the run was asked to end after"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pass",
+      "name": "pass",
+      "dyad:when": "the level's pass criterion holds",
+      "dyad:then": "the next level runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "fail",
+      "dyad:when": "a coded check fails or an attack lands",
+      "dyad:then": "the run ends; nothing is repaired inside the diagnostic"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "gate",
+      "name": "not run (gate)",
+      "dyad:when": "an earlier level did not pass",
+      "dyad:then": "recorded so; a finding of the earlier level"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "last-level",
+      "name": "not run (last level <n>)",
+      "dyad:when": "the run was asked to end after an earlier level",
+      "dyad:then": "recorded so; no finding"
+    }
+  ],
+  "dyad:precedence": "L1 always runs; level N runs only when level N-1 passed.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:owner": "Rule-12"
+}

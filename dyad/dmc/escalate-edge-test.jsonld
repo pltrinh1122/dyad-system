@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/escalate-edge-test",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "escalate-edge-test",
+  "name": "Escalate-edge test",
+  "description": "Decides, before a row is accreted, whether it is born in implicit mode under the mandate or asked for in explicit mode.",
+  "dyad:decides": "May a row the Agent is about to open while executing another be born in implicit mode under the mandate?",
+  "dyad:inputs": [
+    "T1: the authorized plan states a mandate scope (a rule and a ceiling)",
+    "T2: the rule names this row by a property a reader can decide",
+    "T3: the ceiling is unspent",
+    "T4: the row's work is outside the never-accretable classes",
+    "T5: the row's initiation is the mandate's own Operator words",
+    "the preference accretion"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "implicit",
+      "name": "implicit mode",
+      "dyad:when": "accretion is implicit and all five questions T1 to T5 pass",
+      "dyad:then": "born open with the mandate's plan-Y as its disposition and the mandate's words as provenance entry 1; no disposition of its own"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "explicit",
+      "name": "explicit mode",
+      "dyad:when": "any of T1 to T5 fails, or accretion is explicit",
+      "dyad:then": "the escalate edge: the row is asked for, under the failing Rule's own form where T4 fails"
+    }
+  ],
+  "dyad:default": "explicit mode: an unanswerable question is a failure, not a pass.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/disposition-digest.md",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md",
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

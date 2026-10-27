@@ -1,0 +1,69 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/suite-or-guards",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "suite-or-guards",
+  "name": "Suite at the push gate",
+  "description": "Whether the push gate runs Rule-12's suite, and which test roots.",
+  "dyad:decides": "Does this push run the suite, and over which roots?",
+  "dyad:inputs": [
+    "the pushed range",
+    "the suite memo on this checkout",
+    "the craft registry and each installed tree",
+    "whether the run is check --evidence"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ledger-only",
+      "name": "<instance>/d-work/",
+      "dyad:when": "every path of the range is under the instance's d-work store",
+      "dyad:then": "the suite is skipped; the guards still run"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "events-only",
+      "name": "events-only",
+      "dyad:when": "every commit touches nothing outside the run-book events",
+      "dyad:then": "the suite is skipped; the guards still run"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "memo",
+      "name": "suite memo",
+      "dyad:when": "pre-push only: a suite memo proves the same tree already passed every root in the same environment",
+      "dyad:then": "the suite is skipped"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "installed-root",
+      "name": "byte-identical",
+      "dyad:when": "pre-push only: a test root's installed tree is byte-identical to its craft registry row (a Tended craft's only while the core's is too) and the range does not change the registry",
+      "dyad:then": "that root is skipped"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "run",
+      "name": "every root",
+      "dyad:when": "check --evidence, or any other range",
+      "dyad:then": "the suite runs; check --evidence never reads a memo and runs every root"
+    }
+  ],
+  "dyad:precedence": "Ledger-only and events-only first; then, under pre-push only, the memo; then the per-root installed skip.",
+  "dyad:default": "an unreadable range runs the suite",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/package.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-12-verifiable-code.md",
+  "dyad:owner": "Rule-12"
+}

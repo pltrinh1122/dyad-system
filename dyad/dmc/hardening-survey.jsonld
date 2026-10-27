@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/hardening-survey",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "hardening-survey",
+  "name": "Hardening survey gate",
+  "description": "Compares an incident ledger's live row count with the newest index audit's watermark to decide what the hardening exercise derives.",
+  "dyad:decides": "Does the hardening exercise run a full derivation, a delta, or a no-op?",
+  "dyad:inputs": [
+    "LEDGER: its live row count and latest row date",
+    "the watermark of the newest index audit naming that ledger"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "first",
+      "name": "first exercise",
+      "dyad:when": "no index audit names this ledger",
+      "dyad:then": "full derivation, phases 1 to 4"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-op",
+      "name": "no-op",
+      "dyad:when": "the live count equals the watermark",
+      "dyad:then": "phases 1 to 3 do not run; no d-work opened, no file written; phase 4 still runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "delta",
+      "name": "delta",
+      "dyad:when": "the live count exceeds the watermark",
+      "dyad:then": "only the new rows are classified, the affected mode records updated, the watermark advanced"
+    }
+  ],
+  "dyad:default": "A full re-derivation on the Operator's word, or when a new row's mechanism is named by no existing mode.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:alsoIn": [
+    "runbooks/incident-hardening.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

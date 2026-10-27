@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/merge-question",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "merge-question",
+  "name": "Merge question form",
+  "description": "Selects how a PR merge is ratified from the merge-disposition preference.",
+  "dyad:decides": "Is this merge asked as its own question or ratified by the Done-Y?",
+  "dyad:inputs": [
+    "the preference merge-disposition"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "separate",
+      "name": "own counter-prompt",
+      "dyad:when": "merge-disposition is separate",
+      "dyad:then": "the merge is asked as its own counter-prompt"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "with-done",
+      "name": "with-done",
+      "dyad:when": "merge-disposition is with-done",
+      "dyad:then": "the Done-Y of the completion counter-prompt that names the PR ratifies it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/preferences/preferences.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-2"
+}

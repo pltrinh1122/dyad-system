@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/derivation-d3-text",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "derivation-d3-text",
+  "name": "Countersignature text source (D3)",
+  "description": "Decides where a projected countersignature's verbatim text is taken from.",
+  "dyad:decides": "Is a countersignature's text taken from the provenance record or the ledger?",
+  "dyad:inputs": [
+    "the provenance record's disposition count",
+    "the row's disposed count"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "provenance",
+      "name": "provenance",
+      "dyad:when": "the record's disposition count equals the row's",
+      "dyad:then": "the text is the verbatim body of the matching disposition entry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ledger",
+      "name": "ledger",
+      "dyad:when": "the counts differ",
+      "dyad:then": "the text is the ledger entry itself; the profile says text_source: ledger"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

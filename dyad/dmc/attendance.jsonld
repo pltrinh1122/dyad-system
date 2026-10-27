@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/attendance",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "attendance",
+  "name": "Seat attendance",
+  "description": "Whether the Operator attends a seat, and so where its counter-prompts are asked.",
+  "dyad:decides": "Is this seat attended?",
+  "dyad:inputs": [
+    "the seat name",
+    "whether it is the leader",
+    "the attended-seats preference"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "attended",
+      "name": "attended",
+      "dyad:when": "the seat is the leader, or the attended-seats preference names it by its seat name or by that name without its -<hp>",
+      "dyad:then": "a counter-prompt is asked in the seat's own chat"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "relayed",
+      "name": "relayed",
+      "dyad:when": "otherwise",
+      "dyad:then": "a counter-prompt is relayed through the leader"
+    }
+  ],
+  "dyad:default": "the preference default none: only the leader is attended",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/agent/sessions.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:owner": "Rule-16"
+}

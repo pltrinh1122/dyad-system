@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/craft-instantiation",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "craft-instantiation",
+  "name": "Craft instantiation criteria",
+  "description": "Applies the craft-instantiation criteria D1, D2, D4, D5 and D6 to decide between a new craft in this system and a new dyad system.",
+  "dyad:decides": "Does a new body of work become a new craft in this dyad system or a new dyad system?",
+  "dyad:inputs": [
+    "D1 classification boundary",
+    "D2 disposer identity",
+    "D4 ledger coupling",
+    "D5 lifecycle",
+    "D6 zone fit (Rule-1)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new-craft",
+      "name": "new craft",
+      "dyad:when": "no criterion fires",
+      "dyad:then": "the plan proposes crafts/<name>/, authored or imported, and states that no criterion fires"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new-system",
+      "name": "new dyad system",
+      "dyad:when": "any one of D1, D2, D4, D5 or D6 fires",
+      "dyad:then": "the plan advises a new dyad system, quoting the criterion, and stops at the plan-Y; the Agent never instantiates either on its own"
+    }
+  ],
+  "dyad:precedence": "Applied in the order D1, D2, D3', D4, D5, D6, which encodes the cost of being wrong; the first criterion that fires decides.",
+  "dyad:default": "new craft",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/craft-instantiation.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

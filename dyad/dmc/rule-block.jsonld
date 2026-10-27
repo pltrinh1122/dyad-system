@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/rule-block",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "rule-block",
+  "name": "Rule block conformance",
+  "description": "Decides whether an Agent Rule's block has the required counts.",
+  "dyad:decides": "Does this Rule's block conform?",
+  "dyad:inputs": [
+    "the Rule file",
+    "its Intent, Target, Boundaries and Conditions counts"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "conforming",
+      "name": "conforming",
+      "dyad:when": "exactly one Intent, exactly one Target, one or more Boundaries bullets, one or more Conditions bullets",
+      "dyad:then": "passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "count-miss",
+      "name": "count miss",
+      "dyad:when": "any count outside those bounds",
+      "dyad:then": "fails"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rules.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-4-integrity.md",
+  "dyad:owner": "Rule-4"
+}

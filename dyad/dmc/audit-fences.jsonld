@@ -1,0 +1,49 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/audit-fences",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "audit-fences",
+  "name": "Audit fences",
+  "description": "Judges what the standing audit's ungated fences phase reads.",
+  "dyad:decides": "Is what the fences phase read a finding?",
+  "dyad:inputs": [
+    "the guard registry as installed (dyad check --list), its line count and digest",
+    "the Fences line of the newest record",
+    "core.hooksPath",
+    "the mode of dyad/hooks/* and dyad/bin/*"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "finding",
+      "name": "finding",
+      "dyad:when": "a guard left the registry, hooks are not enabled, a file run by path is not 100755, or a fence cannot execute",
+      "dyad:then": "a finding of the record, whatever the registry says"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reported",
+      "name": "reported, not judged",
+      "dyad:when": "the registry grew",
+      "dyad:then": "reported, not judged"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:alsoIn": [
+    "runbooks/audit.md"
+  ],
+  "dyad:owner": "Rule-12"
+}

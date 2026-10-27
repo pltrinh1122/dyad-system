@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-window",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-window",
+  "name": "Trace window",
+  "description": "Decides where a trace's window ends.",
+  "dyad:decides": "Where does this trace's window end?",
+  "dyad:inputs": [
+    "whether --out is given",
+    "whether the transcript holds the Done-Y",
+    "the row's record"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "preview",
+      "name": "preview",
+      "dyad:when": "the trace is run at done-ready, without --out",
+      "dyad:then": "the window runs from the first anchored prompt to the transcript's last record; nothing is written"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "done",
+      "name": "through the Done",
+      "dyad:when": "the Done-Y has been received and the trace is written with --out",
+      "dyad:then": "the window runs through the Done-Y; the merges and the closing commit are the clerical tail, outside it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "last-event",
+      "name": "last d-work event",
+      "dyad:when": "the record holds a Done the transcript does not",
+      "dyad:then": "the window runs to the last d-work event, said under Limits"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/trace.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}

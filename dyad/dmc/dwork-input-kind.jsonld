@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/dwork-input-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "dwork-input-kind",
+  "name": "d-work input kind",
+  "description": "Classifies the input that moves a d-work along each edge or birth of its machine by whose act it is.",
+  "dyad:decides": "Of what kind is the input that moves a row along this transition?",
+  "dyad:inputs": [
+    "the transition (from state, to state)",
+    "dyadlib.INPUTS"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "prompt",
+      "name": "prompt",
+      "dyad:when": "an Operator prompt: a birth into open, or backlog to open",
+      "dyad:then": "a prompt entry of the provenance record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "disposition",
+      "name": "disposition",
+      "dyad:when": "an Operator answer to a counter-prompt",
+      "dyad:then": "a disposed entry and the matching disposition entry of the record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "clerical",
+      "name": "clerical",
+      "dyad:when": "an Agent act a disposition already covers: re-planning when main moved, blocked to open",
+      "dyad:then": "no entry of its own"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/dyadlib.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-16-concurrent-sessions.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/plan-departure",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "plan-departure",
+  "name": "Plan departure",
+  "description": "Decides whether work is covered by the authorized plan.",
+  "dyad:decides": "Is this work within the plan its plan-Y authorized?",
+  "dyad:inputs": [
+    "the plan file",
+    "its stated mandate scope",
+    "the work about to be done"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "as-planned",
+      "name": "as planned",
+      "dyad:when": "the work is the mutation the plan describes",
+      "dyad:then": "authorized by the plan-Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mandate",
+      "name": "mandate scope",
+      "dyad:when": "a row the plan's stated rule covers, within its ceiling",
+      "dyad:then": "accreted under the plan-Y, not asked a second time"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new-plan",
+      "name": "new plan",
+      "dyad:when": "work departs from the plan, or a row outside the stated rule or past the ceiling",
+      "dyad:then": "a new plan needing a new Y"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

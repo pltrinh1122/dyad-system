@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-batch",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-batch",
+  "name": "Release counter-prompt form",
+  "description": "Whether a release is asked singly or in the release batch form.",
+  "dyad:decides": "May these release tags be asked in one counter-prompt?",
+  "dyad:inputs": [
+    "the tags to release",
+    "the d-work whose Done-Y verified each tag's content",
+    "the same reply's completion evidence"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "single",
+      "name": "release <tag>",
+      "dyad:when": "one tag is asked",
+      "dyad:then": "Y/N: release <tag>?; the Y binds to that one tag only"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "batch",
+      "name": "several tags",
+      "dyad:when": "every tag's content was verified and ratified by one d-work's own Done-Y and each tag was named individually, unmerged, in the same reply's completion evidence",
+      "dyad:then": "one question names them all; a Y ratifies exactly the named tags, anything else none"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "never",
+      "name": "different d-work",
+      "dyad:when": "a tag belongs to a different d-work, or the question would fold into a plan or Done batch",
+      "dyad:then": "not batched: asked as its own release counter-prompt"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-11"
+}

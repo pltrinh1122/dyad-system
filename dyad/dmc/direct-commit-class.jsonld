@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/direct-commit-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "direct-commit-class",
+  "name": "Direct commit to main",
+  "description": "Classifies a commit to main by the paths it touches.",
+  "dyad:decides": "May this commit go directly to main without a PR?",
+  "dyad:inputs": [
+    "the paths of each non-merge commit, rename detection off"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ledger-only",
+      "name": "ledger-only",
+      "dyad:when": "it touches nothing outside the d-work store",
+      "dyad:then": "clerical; goes directly to main without a PR"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "events-only",
+      "name": "events-only",
+      "dyad:when": "it touches nothing outside the run-book events store",
+      "dyad:then": "clerical; goes directly to main without a row or a PR"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "neither",
+      "name": "neither",
+      "dyad:when": "a commit touching both the ledger and the events",
+      "dyad:then": "not clerical; gated as any other"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other",
+      "name": "touches anything else",
+      "dyad:when": "it touches any other path",
+      "dyad:then": "the main fence fails it; it goes by PR"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rows.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

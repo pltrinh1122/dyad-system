@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/dwork-state",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "dwork-state",
+  "name": "Row state transition",
+  "description": "Whether a row may move from one state to another.",
+  "dyad:decides": "Is this change of a row's state a legal transition?",
+  "dyad:inputs": [
+    "the row's state before",
+    "the state after",
+    "the transition table"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "in-table",
+      "name": "in the table",
+      "dyad:when": "the transition is one of: open to planned, blocked or done; planned to open, blocked or done; blocked to open; backlog to open or archived; done to archived; or a new row starting open or backlog",
+      "dyad:then": "allowed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "refused",
+      "name": "any other transition",
+      "dyad:when": "any other transition, archived included as a source",
+      "dyad:then": "refused by the fence on main and by dwork state locally"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reopen",
+      "name": "never reopened",
+      "dyad:when": "the change would reopen a done d-work",
+      "dyad:then": "refused: a new row refs it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rows.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:alsoIn": [
+    "scripts/dyadlib.py"
+  ],
+  "dyad:owner": "Rule-16"
+}
