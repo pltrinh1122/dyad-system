@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/craft-vs-instance",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "craft-vs-instance",
+  "name": "Craft or instance",
+  "description": "Whether a tracked file is craft, instance, or generated output that is never tracked.",
+  "dyad:decides": "Is this file craft, instance or generated?",
+  "dyad:inputs": [
+    "the file's path and content",
+    "whether another dyad system installs it identically",
+    "whether it was produced by running the package"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "craft",
+      "name": "craft",
+      "dyad:when": "another dyad system installs it and it is identical across systems",
+      "dyad:then": "it lives under a craft root; the scan refuses host-specific strings and instance artifacts there"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "instance",
+      "name": "instance",
+      "dyad:when": "it is one system's state (rows, plans, incidents, audits, records, preference values, host corpus, the craft registry, archives)",
+      "dyad:then": "it lives outside every craft"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "generated",
+      "name": "generated",
+      "dyad:when": "it was produced by running the package (rendered views, projections, bytecode, logs)",
+      "dyad:then": "it is neither and is never tracked"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/distribution.md",
+  "dyad:owner": "sysarch:distribution"
+}

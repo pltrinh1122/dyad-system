@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/supervisor",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "supervisor",
+  "name": "Supervisor",
+  "description": "What keeps a server instance running independent of any session.",
+  "dyad:decides": "Which supervisor keeps this server instance running?",
+  "dyad:inputs": [
+    "the deployment's restart policy or unit"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "docker",
+      "name": "Docker",
+      "dyad:when": "a container with restart policy unless-stopped or always",
+      "dyad:then": "persistent across the session's end and a reboot; the plan names the policy"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "systemd",
+      "name": "systemd unit",
+      "dyad:when": "a systemd unit with Restart=, enabled at boot",
+      "dyad:then": "persistent across the session's end and a reboot; the plan names the unit"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

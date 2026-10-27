@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/script-exit",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "script-exit",
+  "name": "Script exit code",
+  "description": "What an idempotent script's exit code says about its run.",
+  "dyad:decides": "What does this script's exit code mean?",
+  "dyad:inputs": [
+    "the postcondition before and after",
+    "the confirmation answer",
+    "whether a terminal is present"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "done",
+      "name": "already satisfied",
+      "dyad:when": "the postcondition holds, before any mutation or after the run",
+      "dyad:then": "exit 0"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declined",
+      "name": "declined",
+      "dyad:when": "a destructive step was declined, or no terminal is present",
+      "dyad:then": "exit 2; no later step runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "failed",
+      "name": "failed postcondition",
+      "dyad:when": "the postcondition does not hold at the end",
+      "dyad:then": "exit 1"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/idempotence.md",
+  "dyad:owner": "syseng:idempotence"
+}

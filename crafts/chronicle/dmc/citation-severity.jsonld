@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/citation-severity",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "citation-severity",
+  "name": "Citation severity",
+  "description": "What the episode guard does with one citation.",
+  "dyad:decides": "Does this citation resolve?",
+  "dyad:inputs": [
+    "the citation form",
+    "the tree",
+    "the provenance store",
+    "the repos line",
+    "a local clone of the cited repo"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "resolved",
+      "name": "resolved",
+      "dyad:when": "the path exists, the provenance entry exists, or a local clone holds the cited sha and path",
+      "dyad:then": "it passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warn",
+      "name": "warning",
+      "dyad:when": "a repo citation with no local clone, or a citation into a private repo",
+      "dyad:then": "one warning line per episode; never a pass by assumption"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "fails",
+      "dyad:when": "a malformed form, a missing path or entry, an undeclared repo, a sha that is not 40 hex, or a clone that lacks it",
+      "dyad:then": "the guard fails"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/episodes.py"
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/chronicle.md",
+  "dyad:owner": "chronicle:chronicle"
+}

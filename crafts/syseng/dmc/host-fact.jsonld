@@ -1,0 +1,47 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/host-fact",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "host-fact",
+  "name": "Host fact",
+  "description": "Whether a fact the code depends on is a host fact read through the host adapter or an architectural fact.",
+  "dyad:decides": "Is this a host fact or an architectural one?",
+  "dyad:inputs": [
+    "the fact",
+    "whether it differs by which host asked"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "host",
+      "name": "host fact",
+      "dyad:when": "it differs by host: path resolution, filesystem case-sensitivity, line endings",
+      "dyad:then": "read through the host adapter, never inline; it fits one of the two functions or earns its own, justified in the plan"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "architectural",
+      "name": "architectural",
+      "dyad:when": "it is a fact of the code's own data model",
+      "dyad:then": "it belongs in the module's invariants"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/host-facts.md",
+  "dyad:alsoIn": [
+    "rules/invariants.md"
+  ],
+  "dyad:owner": "syseng:host-facts"
+}

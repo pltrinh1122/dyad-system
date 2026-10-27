@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/failloud-strategic",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "failloud-strategic",
+  "name": "Strategic point",
+  "description": "Whether a fail-loud check belongs at a point in the code, and whether a test of its condition stays.",
+  "dyad:decides": "Is this point strategic for a fail-loud check?",
+  "dyad:inputs": [
+    "where control passes",
+    "how often it passes",
+    "what a test exercises"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "boundary",
+      "name": "boundary",
+      "dyad:when": "a dispatch table, or Operator input entering a store",
+      "dyad:then": "a fail-loud check goes here; a test that only exercises its condition is replaced by it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "transition",
+      "name": "state transition",
+      "dyad:when": "a state transition",
+      "dyad:then": "a fail-loud check goes here, raising before the one write it guards"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "impossible",
+      "name": "impossible",
+      "dyad:when": "a condition that should be impossible",
+      "dyad:then": "a fail-loud check goes here"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "per-item",
+      "name": "per-item path",
+      "dyad:when": "a path run per row, per file or per path",
+      "dyad:then": "no fail-loud check; behaviour tests and trust-boundary validation stay"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/invariants.md",
+  "dyad:owner": "syseng:invariants"
+}

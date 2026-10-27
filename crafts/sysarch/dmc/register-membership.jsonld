@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/register-membership",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "register-membership",
+  "name": "Register membership",
+  "description": "Whether every core guard's entity takes part in the reference register.",
+  "dyad:decides": "Is this guard's entity in the reference register or a listed leaf?",
+  "dyad:inputs": [
+    "the guard's ENTITY",
+    "the register's sources and targets",
+    "the Leaves section of the references rule"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "source",
+      "name": "source",
+      "dyad:when": "the entity is the source of a register row",
+      "dyad:then": "it passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "target",
+      "name": "target",
+      "dyad:when": "the entity is the target of a register row",
+      "dyad:then": "it passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "leaf",
+      "name": "leaf",
+      "dyad:when": "the entity is listed as a leaf in backticks",
+      "dyad:then": "it passes, by design outside the register"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "missing",
+      "name": "fail",
+      "dyad:when": "none of the three",
+      "dyad:then": "the craft guard fails"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/registry.py"
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/references.md",
+  "dyad:owner": "sysarch:references"
+}

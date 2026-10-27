@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:disclosure/redaction-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "redaction-class",
+  "name": "Redaction class",
+  "description": "How each piece of material in a disclosure is treated, by what it reveals.",
+  "dyad:decides": "Which redaction class does this material fall in?",
+  "dyad:inputs": [
+    "the material",
+    "the class data",
+    "the pseudonym map"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "a",
+      "name": "identity",
+      "dyad:when": "who and where: host names, absolute paths, address literals, e-mail addresses, session names and ids, repository URLs, request numbers, personal names, key shapes",
+      "dyad:then": "removed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "b",
+      "name": "proprietary substance",
+      "dyad:when": "what the practice is made of: rule numbers, guard, module and craft names, file paths, defined terms, ledger ids",
+      "dyad:then": "pseudonymized with stable pseudonyms, never deleted"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "c",
+      "name": "retained",
+      "dyad:when": "dates, the failure-mode class, the consequence shape, the mitigation status, prose written for the audience",
+      "dyad:then": "kept, and gated like everything else"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/redaction.py"
+  },
+  "isPartOf": "urn:dyad:craft:disclosure",
+  "dyad:home": "rules/redaction.md",
+  "dyad:owner": "disclosure:redaction"
+}

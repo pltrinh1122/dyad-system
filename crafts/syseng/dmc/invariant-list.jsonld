@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/invariant-list",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "invariant-list",
+  "name": "Invariant list",
+  "description": "Which list a module's invariant goes in, or whether the module needs none.",
+  "dyad:decides": "Which invariant list does this predicate belong to?",
+  "dyad:inputs": [
+    "the module's constants",
+    "what the predicate reads"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pure",
+      "name": "INVARIANTS",
+      "dyad:when": "the predicate reads only the module's own literals",
+      "dyad:then": "enforced at import by dyadlib.enforce; a false one raises InvariantError"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tree",
+      "name": "TREE_INVARIANTS",
+      "dyad:when": "the predicate reads the package tree or loads modules",
+      "dyad:then": "never run at import; run by the runner's pass and at the mutating call sites"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "exempt",
+      "name": "exempt",
+      "dyad:when": "the module's only constants are strings or regexes, or an exempt line names it",
+      "dyad:then": "no invariant list is required"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/invariants.py"
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/invariants.md",
+  "dyad:owner": "syseng:invariants"
+}

@@ -1,0 +1,57 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/test-mapping",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "test-mapping",
+  "name": "Test mapping",
+  "description": "Which test path a module must have, by where the module lives.",
+  "dyad:decides": "Where must this module's test be?",
+  "dyad:inputs": [
+    "the module's path"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "scripts",
+      "name": "scripts",
+      "dyad:when": "a core script dyad/scripts/<name>.py, or a craft script",
+      "dyad:then": "the test is dyad/tests/test_<name>.py, or crafts/<craft>/tests/test_<name>.py"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "guards",
+      "name": "guards",
+      "dyad:when": "a core guard or a craft guard",
+      "dyad:then": "the test is dyad/tests/guards/<corpus>/test_<entity>.py, or crafts/<craft>/tests/guards/test_<entity>.py"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "projectors",
+      "name": "projectors",
+      "dyad:when": "a craft projector",
+      "dyad:then": "the test is crafts/<craft>/tests/test_<name>.py"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "exempt",
+      "name": "exempt",
+      "dyad:when": "package.py or a module whose name starts with _",
+      "dyad:then": "no mapped test is required"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/tests.py"
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/verifiable-code.md",
+  "dyad:owner": "syseng:verifiable-code"
+}

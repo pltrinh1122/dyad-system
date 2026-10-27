@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysarch/guard-contract",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "guard-contract",
+  "name": "Guard contract",
+  "description": "Whether a module found under a guards root meets the one guard contract.",
+  "dyad:decides": "Does this module meet the guard contract?",
+  "dyad:inputs": [
+    "whether the module loads",
+    "ENTITY, CORPUS, FIELDS, TRANSACTION",
+    "check_package and, when TRANSACTION, check_transaction",
+    "describe"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "meets",
+      "name": "guard contract",
+      "dyad:when": "the module loads and declares every contract symbol",
+      "dyad:then": "it enters the registry, labelled by its corpus or craft"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "failing",
+      "name": "failing check",
+      "dyad:when": "the module does not load or lacks the contract",
+      "dyad:then": "a failing check, never a silent skip"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysarch",
+  "dyad:home": "rules/guards.md",
+  "dyad:owner": "sysarch:guards"
+}

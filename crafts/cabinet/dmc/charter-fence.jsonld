@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/charter-fence",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "charter-fence",
+  "name": "Charter fence",
+  "description": "Whether a seat's row stays inside its charter or returns to the Operator as an explicit question.",
+  "dyad:decides": "May this row proceed under the seat's charter?",
+  "dyad:inputs": [
+    "the charter's fence (paths and act kinds)",
+    "the charter's ceiling",
+    "the charter's escalations",
+    "the row's work"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "inside",
+      "name": "inside its fence",
+      "dyad:when": "the row's work stays within the fence and under the ceiling",
+      "dyad:then": "it proceeds under the charter"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "escalate",
+      "name": "explicit mode",
+      "dyad:when": "the work leaves the fence, the ceiling does not cover it, or it is one of the charter's escalations",
+      "dyad:then": "it returns to explicit mode and is asked; the escalation is the seat's own line in its evidence"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "rules/organization.md",
+  "dyad:owner": "cabinet:organization"
+}

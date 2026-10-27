@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:disclosure/redaction-gate",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "redaction-gate",
+  "name": "Redaction gate",
+  "description": "The fail-closed deny-list gate over an assembled disclosure, run before it is written and again after.",
+  "dyad:decides": "Does this assembled disclosure pass the gate?",
+  "dyad:inputs": [
+    "the assembled output",
+    "the file as written",
+    "the deny-list"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "finding",
+      "name": "finding",
+      "dyad:when": "any deny-list finding",
+      "dyad:then": "nothing is written and nothing is delivered; the document is removed and the failure is an incident; no redact-and-recheck, no override"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "clean",
+      "name": "delivered",
+      "dyad:when": "no finding before the write and after it",
+      "dyad:then": "the document may be written and delivered"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/redaction.py"
+  },
+  "isPartOf": "urn:dyad:craft:disclosure",
+  "dyad:home": "rules/redaction.md",
+  "dyad:owner": "disclosure:redaction"
+}

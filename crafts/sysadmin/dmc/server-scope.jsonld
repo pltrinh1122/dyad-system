@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/server-scope",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "server-scope",
+  "name": "Server instance scope",
+  "description": "Whether a long-running service on the host is bound by the server-instance properties.",
+  "dyad:decides": "Is this service a server instance under the rule?",
+  "dyad:inputs": [
+    "who deployed it",
+    "whether the Operator asked the Agent to operate it",
+    "whether a d-work has touched it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "in",
+      "name": "every server instance",
+      "dyad:when": "the Agent deployed it, or the Operator asked the Agent to operate it",
+      "dyad:then": "it needs a supervisor, a run-book and a health command"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "out",
+      "name": "out of scope",
+      "dyad:when": "a service already present that neither party operates through the dyad",
+      "dyad:then": "out of scope until a d-work touches it; that d-work's plan brings it under the rule"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

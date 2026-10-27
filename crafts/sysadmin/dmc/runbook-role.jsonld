@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:sysadmin/runbook-role",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "runbook-role",
+  "name": "Run-book command role",
+  "description": "Who may run a run-book command.",
+  "dyad:decides": "Which role may run this run-book command?",
+  "dyad:inputs": [
+    "the command line",
+    "whether it names sudo or a credential word"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operator",
+      "name": "operator",
+      "dyad:when": "the command line names sudo or a credential word",
+      "dyad:then": "role operator; the runner refuses it under the agent role with exit 2"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "any",
+      "name": "any",
+      "dyad:when": "the command line names neither",
+      "dyad:then": "either party may run it through the runner"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/runbooks.py"
+  },
+  "isPartOf": "urn:dyad:craft:sysadmin",
+  "dyad:home": "rules/server-instances.md",
+  "dyad:owner": "sysadmin:server-instances"
+}

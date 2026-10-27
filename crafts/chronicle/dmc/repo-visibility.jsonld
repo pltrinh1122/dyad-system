@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/repo-visibility",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "repo-visibility",
+  "name": "Cited repo visibility",
+  "description": "Whether a repo an episode cites may be quoted when the episode is published.",
+  "dyad:decides": "Is this cited repo public or private?",
+  "dyad:inputs": [
+    "the episode header's repos line"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "public",
+      "name": "public",
+      "dyad:when": "the repo is declared public",
+      "dyad:then": "quoted with the episode"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "private",
+      "name": "private",
+      "dyad:when": "the repo is declared private",
+      "dyad:then": "named in the episode's publication question so the Operator approves quoting it; the guard prints a warning naming it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/episodes.py"
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/chronicle.md",
+  "dyad:owner": "chronicle:chronicle"
+}

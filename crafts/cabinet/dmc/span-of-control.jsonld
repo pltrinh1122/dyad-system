@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/span-of-control",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "span-of-control",
+  "name": "Span of control",
+  "description": "Whether a leader's board is within the span one reader can keep.",
+  "dyad:decides": "Is this board within span?",
+  "dyad:inputs": [
+    "the lines on the leader's board",
+    "whether a seat is a secretary or a desk"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "within",
+      "name": "five to seven",
+      "dyad:when": "the leader reads at most seven lines, one per secretary",
+      "dyad:then": "nothing to do"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "over",
+      "name": "longer than seven",
+      "dyad:when": "the leader's board is longer than seven lines",
+      "dyad:then": "the signal to consolidate or split a function, proposed to the Operator, never done by a seat"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "desk",
+      "name": "desks are unbounded",
+      "dyad:when": "the seat is a desk",
+      "dyad:then": "never counted: a secretary opens as many as its work needs, bounded by its charter's ceiling"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "rules/organization.md",
+  "dyad:owner": "cabinet:organization"
+}

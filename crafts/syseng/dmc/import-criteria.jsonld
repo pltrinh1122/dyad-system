@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:syseng/import-criteria",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "import-criteria",
+  "name": "Import or author",
+  "description": "Whether a need is met by importing a candidate or by authoring code.",
+  "dyad:decides": "Is this need met by an import or by authored code?",
+  "dyad:inputs": [
+    "the candidates searched",
+    "the preferences import-licenses and import-support",
+    "whether the candidate is in the kernel ecosystem"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "import",
+      "name": "import",
+      "dyad:when": "a candidate meets the criteria",
+      "dyad:then": "import it, declared and pinned as a library row with version, license and replacement"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "author",
+      "name": "author",
+      "dyad:when": "no candidate meets the criteria",
+      "dyad:then": "author it; the plan states what was searched"
+    }
+  ],
+  "dyad:precedence": "kernel ecosystem first: Python packages before tools outside the kernel",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:syseng",
+  "dyad:home": "rules/imports.md",
+  "dyad:owner": "syseng:imports"
+}
