@@ -733,7 +733,7 @@ Rows #262–#284 and #464–#467 are neither closed, re-opened nor archived here
 
 ## Note 2026-10-27 — rows 234–239 (d-work #487, seat audit-e73be78c)
 
-Not a delta. The watermark stays at 233, and the next delta grades these five rows with two views, as it graded
+Not a delta. The watermark stays at 233, and the next delta grades these six rows with two views, as it graded
 #463's. One view, this seat's, placed each row, and each row carries its mode in its own cells:
 
 | row | d-work | mode | secondary |
