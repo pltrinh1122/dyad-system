@@ -78,7 +78,7 @@ class CraftCliTests(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = [l.split() for l in r.stdout.splitlines()]
         self.assertEqual(lines[0], ["craft", "version", "origin"]); self.assertEqual(lines[1][:3], ["dyad-operator", (PKG / "VERSION").read_text().strip(), "core"])
-        self.assertEqual(lines[2], ["fx", "0.2.0", "authored"])
+        self.assertIn(["fx", "0.2.0", "authored"], lines[2:])   # after the core row; bundled crafts the install brought may list too (#504)
     def test_check(self):
         r = dyad(self.src, "check", "fx"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [craft] crafts/fx 0.2.0", r.stdout)
         r = dyad(self.src, "check"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [craft] crafts/fx 0.2.0", r.stdout)
@@ -154,13 +154,13 @@ class CraftCliTests(unittest.TestCase):
         self.assertFalse((self.dst / "crafts/fx/docs/d.md").exists()); self.assertTrue((self.dst / "crafts/fx/docs/e.md").exists())
         self.assertIn("| fx | 0.3.0 | fx2.tar.gz |", (self.dst / "crafts/REGISTRY.md").read_text()); shutil.rmtree(src2, ignore_errors=True)
     def test_requires_refused_at_install_and_met(self):
-        src2 = scratch(); author(src2, files={**CRAFT, "MANIFEST.md": "name: fx\nrequires: syseng>=0.2.0 dyad-operator>=0.1.0\n"})
-        r = dyad(src2, "check", "fx"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [craft] crafts/fx: requires syseng>=0.2.0: not installed (checked at install)", r.stdout)
+        src2 = scratch(); author(src2, files={**CRAFT, "MANIFEST.md": "name: fx\nrequires: zzcraft>=0.2.0 dyad-operator>=0.1.0\n"})
+        r = dyad(src2, "check", "fx"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [craft] crafts/fx: requires zzcraft>=0.2.0: not installed (checked at install)", r.stdout)
         r = dyad(src2, "export", "fx", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 0, r.stderr)
         before = snapshot(self.dst)
         r = dyad(self.dst, "install", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 1)
-        self.assertIn("requires syseng>=0.2.0: not installed", r.stderr); self.assertIn("requirements unmet", r.stderr); self.assertEqual(snapshot(self.dst), before)   # the refusal wrote nothing at all; crafts/ itself may already hold a bundled craft the core install wrote (Rule-11 p2)
-        author(self.dst, name="syseng", files={**CRAFT, "VERSION": "0.2.0\n"})
+        self.assertIn("requires zzcraft>=0.2.0: not installed", r.stderr); self.assertIn("requirements unmet", r.stderr); self.assertEqual(snapshot(self.dst), before)   # the refusal wrote nothing at all; crafts/ itself may already hold a bundled craft the core install wrote (Rule-11 p2)
+        author(self.dst, name="zzcraft", files={**CRAFT, "VERSION": "0.2.0\n"})
         r = dyad(self.dst, "install", str(src2 / "fx.tar.gz")); self.assertEqual(r.returncode, 0, r.stderr); shutil.rmtree(src2, ignore_errors=True)
     def test_install_from_directory_and_repo_root(self):
         r = dyad(self.dst, "install", str(self.src / "crafts" / "fx"), "--source", "the-src-repo"); self.assertEqual(r.returncode, 0, r.stderr)
