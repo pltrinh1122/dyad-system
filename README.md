@@ -61,7 +61,9 @@ and [dyad-bond](https://github.com/pltrinh1122/dyad-bond); not registered with t
 
 The record below states what this system is and what it is for, as JSON-LD that an agent can parse and compare with
 another system's. It reuses schema.org wherever schema.org has the term; the `dyad:` prefix resolves to this repo's
-[vocabulary](dyad/vocabulary/VOCABULARY.md), and every `dyad:` class it types is a term defined there. It holds no
+[vocabulary](dyad/vocabulary/VOCABULARY.md), and every `dyad:` class it types is a term defined there, a hyphen standing
+for the term's space (`dyad:core-craft` is *core craft*). Every key schema.org does not define carries the `dyad:`
+prefix, at every depth, so no key falls under schema.org's vocabulary by default. It holds no
 version, date, commit or email: versions are in `BUNDLE.md` and on the Releases page. Every path it names exists in
 this repository.
 
@@ -78,15 +80,15 @@ this repository.
 | `softwareRequirements` | schema.org | yes | what the system runs on: a CLI inferencing agent, with the kernel |
 | `audience` | schema.org | yes | an `Audience`: who the system is for |
 | `keywords` | schema.org | no | search terms |
-| `hasPart` | schema.org | yes | each craft `BUNDLE.md` names, typed `dyad:core craft` or `dyad:Tended craft`, with its `dyad:path` |
-| `dyad:purpose` | extension | yes | `{goal, problem, approach, target, nonGoals[]}`: the purpose every dyad system shares |
+| `hasPart` | schema.org | yes | each craft `BUNDLE.md` names, typed `dyad:core-craft` or `dyad:Tended-craft`, with its `name` and `dyad:path` |
+| `dyad:purpose` | extension | yes | `{dyad:goal, dyad:problem, dyad:approach, dyad:target, dyad:nonGoals[]}`: the purpose every dyad system shares |
 | `dyad:appliedTo` | extension | yes | this instance's domains, `[{name, dyad:path[]}]` |
 | `dyad:source` | extension | yes | the paths that state the purpose |
-| `dyad:party` | extension | yes | the two parties: `{role, kind, act}` |
+| `dyad:party` | extension | yes | the two parties: `{dyad:role, dyad:kind, dyad:act}` |
 | `dyad:invariant` | extension | yes | the craft invariants, as short names |
 | `dyad:frame`, `dyad:rules`, `dyad:vocabulary` | extension | yes | the paths of the operating frame, the Agent Rules and the vocabulary |
-| `dyad:entrypoint` | extension | yes | the one command-line entry and the install command |
-| `dyad:releases` | extension | yes | the Releases URL and the three tag schemes |
+| `dyad:entrypoint` | extension | yes | `{dyad:path, dyad:install}`: the one command-line entry and the install command |
+| `dyad:releases` | extension | yes | `{url, dyad:tags{dyad:bundle, dyad:core-craft, dyad:Tended-craft}}`: the Releases URL and the three tag schemes |
 | `dyad:registration` | extension | yes | the system's standing with the practice commons |
 | `dyad:path` | extension | — | a path relative to the repository root |
 
@@ -143,7 +145,7 @@ this repository.
     {
       "@type": [
         "SoftwareSourceCode",
-        "dyad:core craft"
+        "dyad:core-craft"
       ],
       "name": "dyad-operator",
       "dyad:path": "dyad/"
@@ -151,7 +153,7 @@ this repository.
     {
       "@type": [
         "SoftwareSourceCode",
-        "dyad:Tended craft"
+        "dyad:Tended-craft"
       ],
       "name": "sysarch",
       "dyad:path": "crafts/sysarch/"
@@ -159,7 +161,7 @@ this repository.
     {
       "@type": [
         "SoftwareSourceCode",
-        "dyad:Tended craft"
+        "dyad:Tended-craft"
       ],
       "name": "syseng",
       "dyad:path": "crafts/syseng/"
@@ -167,7 +169,7 @@ this repository.
     {
       "@type": [
         "SoftwareSourceCode",
-        "dyad:Tended craft"
+        "dyad:Tended-craft"
       ],
       "name": "sysadmin",
       "dyad:path": "crafts/sysadmin/"
@@ -175,18 +177,18 @@ this repository.
     {
       "@type": [
         "SoftwareSourceCode",
-        "dyad:Tended craft"
+        "dyad:Tended-craft"
       ],
       "name": "cabinet",
       "dyad:path": "crafts/cabinet/"
     }
   ],
   "dyad:purpose": {
-    "goal": "Let a human Operator achieve the most effect on the world through work, within a budget of time and cost.",
-    "problem": "The Operator is accountable for that effect, so every output delegated to an agent must be evaluated and validated. That spends the Operator's daily attention, a budget that cannot grow.",
-    "approach": "An Operator–Agent dyad. The Agent proposes, tests its own claims and does the work; only the Operator decides, Y or N. Guards check the record mechanically, so the Operator's attention goes to decisions, not to re-checking.",
-    "target": "1+1>2. The pair achieves more than either alone, and neither voice absorbs the other.",
-    "nonGoals": [
+    "dyad:goal": "Let a human Operator achieve the most effect on the world through work, within a budget of time and cost.",
+    "dyad:problem": "The Operator is accountable for that effect, so every output delegated to an agent must be evaluated and validated. That spends the Operator's daily attention, a budget that cannot grow.",
+    "dyad:approach": "An Operator–Agent dyad. The Agent proposes, tests its own claims and does the work; only the Operator decides, Y or N. Guards check the record mechanically, so the Operator's attention goes to decisions, not to re-checking.",
+    "dyad:target": "1+1>2. The pair achieves more than either alone, and neither voice absorbs the other.",
+    "dyad:nonGoals": [
       "an autonomous agent",
       "a general workflow engine or CI product",
       "an affiliate of the practice commons"
@@ -216,14 +218,14 @@ this repository.
   ],
   "dyad:party": [
     {
-      "role": "Operator",
-      "kind": "human",
-      "act": "disposes"
+      "dyad:role": "Operator",
+      "dyad:kind": "human",
+      "dyad:act": "disposes"
     },
     {
-      "role": "Agent",
-      "kind": "model",
-      "act": "proposes"
+      "dyad:role": "Agent",
+      "dyad:kind": "model",
+      "dyad:act": "proposes"
     }
   ],
   "dyad:invariant": [
@@ -236,14 +238,14 @@ this repository.
   "dyad:vocabulary": "dyad/vocabulary/VOCABULARY.md",
   "dyad:entrypoint": {
     "dyad:path": "dyad/bin/dyad",
-    "install": "dyad/bin/dyad install <path-to-repo>"
+    "dyad:install": "dyad/bin/dyad install <path-to-repo>"
   },
   "dyad:releases": {
     "url": "https://github.com/pltrinh1122/dyad-system/releases",
-    "tags": {
-      "bundle": "vX.Y.Z",
-      "core craft": "dyad-operator-vX.Y.Z",
-      "Tended craft": "<craft>-vX.Y.Z"
+    "dyad:tags": {
+      "dyad:bundle": "vX.Y.Z",
+      "dyad:core-craft": "dyad-operator-vX.Y.Z",
+      "dyad:Tended-craft": "<craft>-vX.Y.Z"
     }
   },
   "dyad:registration": "not registered with the commons"
