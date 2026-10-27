@@ -61,9 +61,15 @@ dyad system without clashes or hand-editing.
    and its own `<craft>-vX.Y.Z` tag (property 4) — and it is bundled only because it says so
    itself, in the contribution shape above (a `BUNDLED_WITH_CORE` declaration in one of its own
    guard modules, discovered like a guard), never by a list the core keeps: a craft removed from
-   the tree takes its own claim with it. A core Rule that cites a craft by path is the reason to
-   bundle one — what the core ships and what its own Rules depend on must not disagree — and it is
-   the only reason the core's install may write outside its own root. The registry records the core
+   the tree takes its own claim with it. A craft is bundled on one of two grounds and no other:
+   **(a) dependency** — a core Rule cites it by path, since what the core ships and what its own
+   Rules depend on must not disagree, and `dyad/guards/infra/bundle.py` fails a cited craft in the
+   tree that does not declare itself bundled; or **(b) purpose** — it serves the system's purpose
+   (`dyad:purpose` of the identity record in `README.md`, #496) for every installing Operator, never
+   one instance's applied domain (`dyad:appliedTo`) alone, and its declaration carries a one-line
+   `PURPOSE` reason beside it, which the same guard requires of a declared craft no core Rule cites;
+   that reason is the Operator's to ratify, by the Done-`Y` of the PR that adds it. Those grounds
+   are the only reasons the core's install may write outside its own root. The registry records the core
    install too: `dyad install` writes the `dyad-operator` row, its `sha256` the installed `dyad/`
    tree by the same computation as a Tended craft's row, rewritten only when it differs (#199).
 3. **Craft-relative paths.** Craft files reference their own paths relative to the craft root, and
@@ -148,7 +154,9 @@ warn (`rules.py check_tended`, Rule-4's); an unmet `requires:` warns at check an
 The guard composes those scans by import; it owns only the craft's shape (S4). Property 7's bundle
 is checked the same way: `dyad/guards/infra/bundle.py` (entity `bundle`, corpus `infra`; a missing
 `BUNDLE.md` skips, never fails — property 4's absent-store pattern), registered by discovery like
-every other guard (no hand-listing here either).
+every other guard (no hand-listing here either); its property 2 check — a cited craft undeclared, a
+declaration with neither citation nor `PURPOSE` — runs with or without `BUNDLE.md`, and reads each
+declaration as text, never executing it.
 
 ## Provenance
 Operator rule, 2026-09-13 (Architecture Rule 1). Falsified; see
@@ -183,6 +191,10 @@ same record, amendment #199. Property 7 gains the released-craft sentence 2026-1
 row #170): changing a released craft needs a craft-zone `VERSION` bump and an infra-zone row, and no
 order landed both; see the same record, amendment #230. Property 7 gains the departed-craft sentence 2026-10-25 (d-work #423):
 renaming a released craft (#417, `cos` → `cabinet`) needs a craft-zone move and an infra-zone row removal, and the
-bundle guard failed each one alone; see the same record, amendment #423.
+bundle guard failed each one alone; see the same record, amendment #423. Property 2 gains the
+two grounds for a bundled craft 2026-10-27 (d-work #504): core Rules cited four crafts by path and only
+one declared itself bundled, so a core-only install shipped Rules citing three crafts it did not carry,
+and the one reason written down named a symptom of the system's purpose rather than the purpose; see
+the same record, amendment #504.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

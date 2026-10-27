@@ -391,3 +391,43 @@ Pairwise (Rule-5): 11–1 each PR stays one zone; the guard is infra corpus. 11�
 moved. 11–3, 11–4 one sentence in property 7, no block change. 11–6 no new term. 11–12 the new branch carries
 fixture tests at the mapped path. 11–14 no import. 11–20 no reference kind. Others unaffected. Coherent, orthogonal.
 Disposition: see ledger #423.
+
+## Amendment — d-work #504 (2026-10-27): property 2, the two grounds for a bundled craft
+
+**Claim (plan #504, the Operator's `Y` of 2026-10-27):** the most distinguishing criterion for bundling a craft with
+the core is whether it directly contributes to the overall purpose of The Dyad System.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| B1 | The written criterion (a core Rule cites the craft by path, #114) is the one applied. | **Refuted — a finding** | Core Rules cite four crafts by path (sysadmin, sysarch, syseng, cabinet) and only sysadmin declared `BUNDLED_WITH_CORE`. What was actually applied was narrower, "a core-only install goes red without it" (R2 above), so a core-only install shipped Rules that cite three crafts it did not carry. The guard now fails a cited, undeclared craft. |
+| B2 | Purpose is the distinguishing criterion. | **Survives, as the reason** | A path citation is a symptom: the core cites those crafts because the system's purpose (`dyad:purpose`, #496) is delivered through them. A criterion that names the reason also classifies crafts that no Rule cites yet. |
+| B3 | Purpose can only be judged by inference, while the path test is mechanical (Rule-12). | **Survives, scoped** | Keep both. (a) Dependency stays mechanical and fails when it is missing. (b) Purpose is declared: a craft no Rule cites carries a one-line `PURPOSE` reason, which the guard requires to be present. Whether that reason holds is inference, and it is ratified by the Operator at the Done-`Y` of the PR that adds it. |
+| B4 | "Serves the purpose" lets everything in. | **Scoped by the #496 split** | `dyad:purpose` is what every dyad system shares; `dyad:appliedTo` is one instance's domain. Ground (b) does not bundle a craft that serves only one instance's domain. |
+| B5 | Bundling costs every install. | **Conceded, small** | The costs are archive size and a test root. Rule-12 property 2 already skips an installed root that is unchanged from its registry row. |
+| B6 | Two grounds reopen R5 above (stop core Rules citing craft paths). | **Refuted as a reversal** | R5 stays available and untaken. Ground (a) only makes the existing choice consistent across every cited craft instead of one. |
+
+**Survivor.** Property 2 states two grounds and no others. (a) A core Rule cites the craft by path; the bundle guard
+fails a cited craft in the tree that does not declare itself bundled. (b) The craft serves the system's purpose for
+every installing Operator, never one instance's applied domain alone, and its declaration carries a one-line
+`PURPOSE` reason, which the guard requires of a declared craft no core Rule cites. A cited craft absent from the tree
+warns and skips (a core-only install, or a system that removed it), as property 7's absent-store pattern does.
+
+Pairwise (Rule-5):
+- 11–1: the Rule text and guard are agent zone and the craft declarations are craft zone, so they land in separate PRs.
+- 11–2: no ratification event is added; ground (b)'s reason rides an existing Done-`Y`.
+- 11–3: no d-work lifecycle change.
+- 11–4: one property's sentences change; the block is unchanged.
+- 11–5: no overlap; the bundle guard stays this Rule's.
+- 11–6: the `bundled craft` row is updated in the same PR, and no new term is added (`PURPOSE` is a module constant, as `BUNDLED_WITH_CORE` is).
+- 11–7: none.
+- 11–8, 11–18, 11–19: sysadmin's citations are unchanged, and it already declares itself.
+- 11–9: this record.
+- 11–10: none.
+- 11–12: the new guard branch carries tests at its mapped path.
+- 11–13: no import.
+- 11–14: no manifest row.
+- 11–15, 11–16: none.
+- 11–20: the guard reads Rule texts for craft paths but registers no reference kind; resolving them stays Rule-20's.
+
+Coherent, orthogonal.
+Disposition: see ledger #504.
