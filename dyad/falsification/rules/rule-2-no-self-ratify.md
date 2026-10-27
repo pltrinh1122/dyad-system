@@ -99,3 +99,23 @@ the run that observed it. **2–4**, **2–5**, **2–6**, **2–7**, **2–9**,
 adjective, as "ledger-only" is. Coherent, orthogonal.
 
 Disposition: see ledger #438.
+
+## Amendment — d-work #476 (2026-10-26, child C3 of #473: the evidence block cited by its sha256 and its brief form)
+**Claim (plan #473, the Operator's `Y` of 2026-10-26, asking to reduce time and tokens in verification, evidence
+collection above all):** the completion reply cites the evidence block by its `evidence-sha256` and its brief form,
+as `check --evidence --brief` prints it — one count line, the baseline compared against, the warnings already
+standing on that baseline folded per guard, every failing, skipped or other line, and every warning of a kind new
+since the baseline (the Operator's `Y` escalating #476, 2026-10-26); the full block, over which the sha256 is computed unchanged, is
+stored per checkout and never tracked (`<git common dir>/dyad-evidence/<sha256>.txt`) and shown byte for byte on
+request (`check --evidence --show <sha256>`); the Operator may re-run the evidence on the same head and compare.
+
+| # | attack | result |
+|---|---|---|
+| 21 | A brief block weakens the merge evidence: the Operator no longer reads every line. | Survives, scoped: the sha256 still covers every line, every failing or skipped line and every warning new since `main` are still in the reply, and the full block is one command away; what the Operator verifies — the same head yields the same sha256 — is unchanged. Only what is pasted shrinks. |
+| 22 | A stored block can be edited after the fact to match a claimed sha256. | Refuted: the sha256 is recomputed by re-running on the head, never read back from the store; the store is a convenience for reading, not evidence of its own. |
+| 23 | The store is per checkout, so another clone cannot show it. | Survives, accepted: the re-run on the same head is the cross-clone check, as before; showing is for the clone that ran it. |
+| 24 | Folding standing warnings into counts hides a warning that changed, or a check that silently stopped running. | Refuted, scoped: a warning of a kind not already on `main` is printed in full; a check that stopped running changes the count line; with no baseline found nothing is folded, and a line says so; and the sha256 covers the full block, so any changed line changes it. |
+
+**Pairwise (Rule-5).** **2–14**: Rule-14 property 3 owns the block, its store and its show command; Binding cites them. **2–3**: Rule-3's relayed-Done bullet cites the block as Binding does. **2–6**: the vocabulary row `evidence block` changes (owner 14, used by 2 and 14); both still read correctly. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #476.
