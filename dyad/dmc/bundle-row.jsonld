@@ -1,0 +1,68 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/bundle-row",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "bundle-row",
+  "name": "Bundle row",
+  "description": "Whether a craft's row in BUNDLE.md is in order.",
+  "dyad:decides": "Is this craft's bundle row, or its absence, admissible?",
+  "dyad:inputs": [
+    "BUNDLE.md rows",
+    "each craft's live VERSION",
+    "each craft's own release tags",
+    "the crafts in the tree"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "equal",
+      "name": "pinned versions",
+      "dyad:when": "the row's version equals the craft's live VERSION",
+      "dyad:then": "passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unreleased",
+      "name": "unreleased craft",
+      "dyad:when": "the craft has no release tag of its own",
+      "dyad:then": "it may be absent from the bundle until its first release, whose release adds its row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "missing",
+      "name": "released craft without a row",
+      "dyad:when": "the craft holds a release tag but has no row",
+      "dyad:then": "fails"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ahead",
+      "name": "run ahead of its row",
+      "dyad:when": "the craft's live VERSION moved ahead of its tag and the row names its last release",
+      "dyad:then": "the guard warns until the infra-zone PR updates the row, and fails once the new version is itself tagged"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "departed",
+      "name": "left the tree",
+      "dyad:when": "a released craft has left the tree and its row names its last release",
+      "dyad:then": "the guard warns until the infra-zone PR removes the row; a row naming a component that never held a release tag fails"
+    }
+  ],
+  "dyad:default": "absent BUNDLE.md skips, never fails",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/bundle.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:owner": "Rule-11"
+}

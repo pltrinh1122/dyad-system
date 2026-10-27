@@ -1,0 +1,62 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/board-lines",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "board-lines",
+  "name": "Pending board lines",
+  "description": "Places each pending item on one line of the board reported at the end of every reply.",
+  "dyad:decides": "On which line of the pending board does an item appear?",
+  "dyad:inputs": [
+    "the row store",
+    "the stored plan files",
+    "the opening candidates the turn surfaced"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "plan-ready",
+      "name": "plan-ready",
+      "dyad:when": "its plan file is written and its counter-prompt not yet asked as part of a batch",
+      "dyad:then": "counted on the plan-ready line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "done-ready",
+      "name": "done-ready",
+      "dyad:when": "its completion evidence is gathered and its Done question not yet asked",
+      "dyad:then": "counted on the done-ready line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "backlog",
+      "name": "backlog",
+      "dyad:when": "the row is in state backlog",
+      "dyad:then": "counted live beside BOARD_THRESHOLD"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "named-not-opened",
+      "name": "named not opened",
+      "dyad:when": "an opening candidate surfaced this turn and not opened: an intake received, a fence left as a candidate, a defect found",
+      "dyad:then": "listed by id on the fourth line"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/disposition-digest.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

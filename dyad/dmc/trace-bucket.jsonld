@@ -1,0 +1,102 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-bucket",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-bucket",
+  "name": "Trace bucket",
+  "description": "Assigns every second of a traced d-work's window to exactly one bucket.",
+  "dyad:decides": "In which bucket is this second of the trace window?",
+  "dyad:inputs": [
+    "the transcript's records and tool calls with their durations",
+    "the anchored provenance entries",
+    "git's commits and pushed ranges"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operator",
+      "name": "operator",
+      "dyad:when": "a reply ending in a Y/N line, to the Operator's next message",
+      "dyad:then": "Operator partition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "idle",
+      "name": "idle",
+      "dyad:when": "a reply with no Y/N line, to the Operator's next message",
+      "dyad:then": "Operator partition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "inference",
+      "name": "inference",
+      "dyad:when": "a tool result or a message, to the Agent's next tool call or reply",
+      "dyad:then": "agent partition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "background",
+      "name": "background",
+      "dyad:when": "a finished turn, to a background task's notification",
+      "dyad:then": "agent partition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "suite",
+      "name": "suite",
+      "dyad:when": "a call whose gate ran Rule-12's suite",
+      "dyad:then": "agent partition, mechanical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "guards",
+      "name": "guards",
+      "dyad:when": "a git push whose gate ran guards only",
+      "dyad:then": "agent partition, mechanical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "github",
+      "name": "github",
+      "dyad:when": "a GitHub tool, or Bash gh api",
+      "dyad:then": "agent partition, mechanical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "git-local",
+      "name": "git/local",
+      "dyad:when": "any other Bash call",
+      "dyad:then": "agent partition, mechanical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "subagent",
+      "name": "subagent",
+      "dyad:when": "an Agent, Task or Workflow call",
+      "dyad:then": "agent partition, mechanical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other",
+      "name": "other",
+      "dyad:when": "any other tool call",
+      "dyad:then": "agent partition, mechanical"
+    }
+  ],
+  "dyad:precedence": "Overlap is counted once: calls made together take the first kind of the order suite, guards, github, git/local, subagent, other; a background launch is counted for its launch only.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/trace.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}

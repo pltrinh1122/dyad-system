@@ -1,0 +1,57 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/answer-grammar",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "answer-grammar",
+  "name": "Answer grammar",
+  "description": "Classifies the Operator's answer to a counter-prompt.",
+  "dyad:decides": "What does this answer authorize?",
+  "dyad:inputs": [
+    "the answer to the counter-prompt"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "y",
+      "name": "Y",
+      "dyad:when": "the disposition asked for is given",
+      "dyad:then": "bound as Rule-2's Binding binds it; a Y with text is also a prompt"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "n-bare",
+      "name": "bare",
+      "dyad:when": "N with no text",
+      "dyad:then": "nothing is authorized; the Agent revises"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "amend",
+      "name": "amend",
+      "dyad:when": "N with text",
+      "dyad:then": "the proposal is refused and its revision asked for; the text is a prompt entry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "silence",
+      "name": "Silence",
+      "dyad:when": "the counter-prompt is left unanswered",
+      "dyad:then": "authorizes nothing; never read as a Y"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

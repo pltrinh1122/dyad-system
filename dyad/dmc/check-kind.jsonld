@@ -1,0 +1,47 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/check-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "check-kind",
+  "name": "Check kind",
+  "description": "The two kinds of check the system is read against.",
+  "dyad:decides": "Is this check a coded check or a prose claim?",
+  "dyad:inputs": [
+    "the check",
+    "whether code can run it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "coded",
+      "name": "coded check",
+      "dyad:when": "a test, a guard or an invariant runs it",
+      "dyad:then": "it is run mechanically; every module must carry one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "prose",
+      "name": "prose claim",
+      "dyad:when": "code cannot run it",
+      "dyad:then": "it is read against a written attack, the inference stated"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-12-verifiable-code.md",
+  "dyad:alsoIn": [
+    "playbooks/audit.md"
+  ],
+  "dyad:owner": "Rule-12"
+}

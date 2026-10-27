@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/incident",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "incident",
+  "name": "Incident",
+  "description": "Decides whether an action or outcome is an incident.",
+  "dyad:decides": "Is this an incident?",
+  "dyad:inputs": [
+    "the plan",
+    "the action taken or outcome reached"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incident",
+      "name": "incident",
+      "dyad:when": "an action or outcome the plan did not name, or a plan item not achieved as the plan said",
+      "dyad:then": "reported in the reply where it occurred or the completion reply, and recorded; a plan change needs a fresh plan-Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "as-planned",
+      "name": "as the plan said",
+      "dyad:when": "the action and outcome are those the plan named",
+      "dyad:then": "nothing to report"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

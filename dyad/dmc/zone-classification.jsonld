@@ -1,0 +1,74 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/zone-classification",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "zone-classification",
+  "name": "Zone of a path",
+  "description": "Classifies a repo path into the zone whose pattern in the zone table claims it.",
+  "dyad:decides": "Which zone does this path belong to?",
+  "dyad:inputs": [
+    "the repo-relative path",
+    "the zone table ZONES",
+    "the preferences host-path and host-zone"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "agent",
+      "dyad:when": "the path matches the agent rows of the table",
+      "dyad:then": "the path is in the agent zone"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "workstation",
+      "name": "workstation",
+      "dyad:when": "the path is under the host path and host-zone is workstation",
+      "dyad:then": "the path is in the workstation zone"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "preferences",
+      "name": "preferences",
+      "dyad:when": "the path matches the preferences row",
+      "dyad:then": "the path is in the preferences zone"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "infra",
+      "name": "infra",
+      "dyad:when": "the path matches an infra row, or is under the host path when host-zone is infra",
+      "dyad:then": "the path is in the infra zone"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "craft",
+      "name": "craft",
+      "dyad:when": "the path is under crafts/",
+      "dyad:then": "the path is in the craft zone; a craft changes by craft PRs only"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unclassified",
+      "name": "Unclassified",
+      "dyad:when": "no zone pattern claims the path",
+      "dyad:then": "forbidden; the guard fails the transaction that adds it"
+    }
+  ],
+  "dyad:precedence": "The zone table is defined only in the guard; its patterns are disjoint, so at most one row matches.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/containment.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-1-containment.md",
+  "dyad:owner": "Rule-1"
+}

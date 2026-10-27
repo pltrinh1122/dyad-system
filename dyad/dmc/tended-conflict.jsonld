@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/tended-conflict",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "tended-conflict",
+  "name": "Tended Rule conflict",
+  "description": "What the Agent does when a planned host action meets a Tended Rule.",
+  "dyad:decides": "May the Agent proceed with a planned reversible or destructive host action given the Tended Rules it has read?",
+  "dyad:inputs": [
+    "the planned host action",
+    "every rule of the active crafts and of the host"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "conflict",
+      "name": "conflict",
+      "dyad:when": "the planned action conflicts with a Tended Rule",
+      "dyad:then": "a blocking question: the Agent stops and asks, never resolves it and never edits the Tended Rule to fit the plan"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "doubt",
+      "name": "doubt",
+      "dyad:when": "the Agent is in doubt about a Tended Rule's meaning",
+      "dyad:then": "a blocking question: the Agent stops and asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "misplaced",
+      "name": "misplaced",
+      "dyad:when": "a Tended Rule binds the Agent's process",
+      "dyad:then": "obeyed conservatively and reported as misplaced"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-8-host-mutation.md",
+  "dyad:owner": "Rule-8"
+}

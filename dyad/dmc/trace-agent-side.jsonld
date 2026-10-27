@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-agent-side",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-agent-side",
+  "name": "Agent-side against the median",
+  "description": "Decides whether a trace's agent-side figure earns a sentence in the completion reply.",
+  "dyad:decides": "Does this d-work's agent-side figure need a sentence in the completion reply?",
+  "dyad:inputs": [
+    "the trace's agent-side seconds",
+    "the median of the other traces in the store"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "above",
+      "name": "well above the median",
+      "dyad:when": "the agent-side figure is well above the median of the traced d-works",
+      "dyad:then": "one sentence in the completion reply naming its top agent bucket"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "at-or-below",
+      "name": "at or below the median",
+      "dyad:when": "the agent-side figure is at or below the median",
+      "dyad:then": "no sentence"
+    }
+  ],
+  "dyad:default": "The comparison flags, never judges; a preview's agent-side figure is the one to compare.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/derivation-d3",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "derivation-d3",
+  "name": "Countersignature answer (D3)",
+  "description": "Derives a countersignature's answer from a disposed entry.",
+  "dyad:decides": "What answer does a disposed entry project to?",
+  "dyad:inputs": [
+    "the row's disposed entry"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "yes",
+      "name": "yes",
+      "dyad:when": "the entry is a Y",
+      "dyad:then": "answer yes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no",
+      "name": "no",
+      "dyad:when": "the entry is an N",
+      "dyad:then": "answer no; amend is never derived"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

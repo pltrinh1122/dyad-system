@@ -1,0 +1,207 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/failure-modes-1010",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "failure-modes-1010",
+  "name": "Incident failure modes (full derivation)",
+  "description": "The observed failure mode each incident row was assigned in the full derivation, reconciled from two independent views and extended by its deltas.",
+  "dyad:decides": "By which mechanism did this incident happen?",
+  "dyad:inputs": [
+    "the incident row's cause and what cells",
+    "the two independent derivations",
+    "the one-sentence test: one change that stops every row of the mode at one moment"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-a",
+      "name": "acting before the authorizing disposition",
+      "dyad:when": "the row's mechanism: acting before the authorizing disposition",
+      "dyad:then": "assigned mode A"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-b",
+      "name": "a disposition recorded that the Operator never gave",
+      "dyad:when": "the row's mechanism: a disposition recorded that the Operator never gave",
+      "dyad:then": "assigned mode B"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-c",
+      "name": "a value stated from memory or a digest instead of read from its source",
+      "dyad:when": "the row's mechanism: a value stated from memory or a digest instead of read from its source",
+      "dyad:then": "assigned mode C"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-d",
+      "name": "the wrong object read",
+      "dyad:when": "the row's mechanism: the wrong object read",
+      "dyad:then": "assigned mode D"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-e",
+      "name": "an instrument narrower than the question",
+      "dyad:when": "the row's mechanism: an instrument narrower than the question",
+      "dyad:then": "assigned mode E"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-f",
+      "name": "the d-work #N citation form used for a cross-reference",
+      "dyad:when": "the row's mechanism: the d-work #N citation form used for a cross-reference",
+      "dyad:then": "assigned mode F"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-g",
+      "name": "a flag taken as a positional argument",
+      "dyad:when": "the row's mechanism: a flag taken as a positional argument",
+      "dyad:then": "assigned mode G"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-h",
+      "name": "the present enumeration pinned as an invariant",
+      "dyad:when": "the row's mechanism: the present enumeration pinned as an invariant",
+      "dyad:then": "assigned mode H"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-i",
+      "name": "verified in one environment, run in another",
+      "dyad:when": "the row's mechanism: verified in one environment, run in another",
+      "dyad:then": "assigned mode I"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-j",
+      "name": "a call site added without its call graph",
+      "dyad:when": "the row's mechanism: a call site added without its call graph",
+      "dyad:then": "assigned mode J"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-k",
+      "name": "a plan incomplete against its own text",
+      "dyad:when": "the row's mechanism: a plan incomplete against its own text",
+      "dyad:then": "assigned mode K"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-l",
+      "name": "a plan ordering no disposition sequence can authorize",
+      "dyad:when": "the row's mechanism: a plan ordering no disposition sequence can authorize",
+      "dyad:then": "assigned mode L"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-m",
+      "name": "no legal order, no verb",
+      "dyad:when": "the row's mechanism: no legal order, no verb",
+      "dyad:then": "assigned mode M"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-n",
+      "name": "a target named by an ambiguous pattern",
+      "dyad:when": "the row's mechanism: a target named by an ambiguous pattern",
+      "dyad:then": "assigned mode N"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-o",
+      "name": "a git write used as a read",
+      "dyad:when": "the row's mechanism: a git write used as a read",
+      "dyad:then": "assigned mode O"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-p",
+      "name": "unplanned cleanup under momentum",
+      "dyad:when": "the row's mechanism: unplanned cleanup under momentum",
+      "dyad:then": "assigned mode P"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-q",
+      "name": "an obligation no mechanism reads",
+      "dyad:when": "the row's mechanism: an obligation no mechanism reads",
+      "dyad:then": "assigned mode Q"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-r",
+      "name": "a derived key that does not identify",
+      "dyad:when": "the row's mechanism: a derived key that does not identify",
+      "dyad:then": "assigned mode R"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-s",
+      "name": "a form typed from memory, not seeded from its governing definition",
+      "dyad:when": "the row's mechanism: a form typed from memory, not seeded from its governing definition",
+      "dyad:then": "assigned mode S"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-t",
+      "name": "a stale or partial view of shared state",
+      "dyad:when": "the row's mechanism: a stale or partial view of shared state",
+      "dyad:then": "assigned mode T"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-u",
+      "name": "the World moved",
+      "dyad:when": "the row's mechanism: the World moved",
+      "dyad:then": "assigned mode U"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-v",
+      "name": "enforcement routed around",
+      "dyad:when": "the row's mechanism: enforcement routed around",
+      "dyad:then": "assigned mode V"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-w",
+      "name": "the suite's environment leaked into the live repository",
+      "dyad:when": "the row's mechanism: the suite's environment leaked into the live repository",
+      "dyad:then": "assigned mode W"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-x",
+      "name": "tail-append contention under a held PR",
+      "dyad:when": "the row's mechanism: tail-append contention under a held PR",
+      "dyad:then": "assigned mode X, admitted by the later delta"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mode-y",
+      "name": "the gate starved of a host resource by the system's own process",
+      "dyad:when": "the row's mechanism: the gate starved of a host resource by the system's own process",
+      "dyad:then": "assigned mode Y, admitted by the later delta"
+    }
+  ],
+  "dyad:precedence": "every row in exactly one mode; a candidate that no single sentence covers is two modes",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "agent-corpus/audits/2026-10-10-incident-failure-modes.md",
+  "dyad:owner": "instance:agent-corpus/audits/2026-10-10-incident-failure-modes.md"
+}

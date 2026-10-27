@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/craft-trigger",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "craft-trigger",
+  "name": "Craft play-book trigger",
+  "description": "Decides whether a prompt's body of work triggers the craft-instantiation play-book.",
+  "dyad:decides": "Does this body of work trigger the craft-instantiation play-book?",
+  "dyad:inputs": [
+    "the installed crafts (dyad craft list)",
+    "whether the work's rules, vocabulary or guards would be consistent with an installed craft"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "trigger",
+      "name": "body of work",
+      "dyad:when": "no installed craft practises it: its rules, vocabulary or guards would not be consistent with any craft here",
+      "dyad:then": "the play-book runs inside the d-work the prompt opened, before its plan file"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-a-trigger",
+      "name": "further instance",
+      "dyad:when": "it is a further instance of an installed craft's practice (another server for the sysadmin craft)",
+      "dyad:then": "not a trigger; the work is planned in that craft"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/craft-instantiation.md",
+  "dyad:owner": "Rule-3"
+}

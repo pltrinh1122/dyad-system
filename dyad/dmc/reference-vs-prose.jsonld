@@ -1,0 +1,50 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/reference-vs-prose",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "reference-vs-prose",
+  "name": "Reference or prose",
+  "description": "Whether a mention is a reference Rule-20 resolves.",
+  "dyad:decides": "Is this mention a reference the register resolves?",
+  "dyad:inputs": [
+    "where the mention sits: a parsed field, a Rule text, the frame, the preference table, free prose, or a transaction"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "reference",
+      "name": "parsed fields",
+      "dyad:when": "the mention is a parsed field, or prose in a Rule text, the frame or the preference table",
+      "dyad:then": "resolved by its kind's one resolver"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "prose",
+      "name": "free prose",
+      "dyad:when": "the mention is in a record's attack, an audit's body or a README",
+      "dyad:then": "not a reference; not resolved"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "transaction",
+      "name": "transaction",
+      "dyad:when": "the mention is held in a transaction, such as a PR body's d-work citation",
+      "dyad:then": "judged by Rule-3's gate, never by Rule-20"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/agent/references.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-20-referential-integrity.md",
+  "dyad:owner": "Rule-20"
+}

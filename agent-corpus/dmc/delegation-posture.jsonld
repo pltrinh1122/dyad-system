@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/delegation-posture",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "delegation-posture",
+  "name": "Delegation posture",
+  "description": "How much of a seat's own work runs in its main chat and how much in sub-agents, by whether the seat is attended.",
+  "dyad:decides": "Where does this piece of a seat's work run?",
+  "dyad:inputs": [
+    "whether the seat is attended",
+    "the preferences delegation-posture and delegation-posture-unattended",
+    "the work and its tool time"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "responsive",
+      "name": "responsive",
+      "dyad:when": "the seat's value is responsive",
+      "dyad:then": "the main chat does only the floor; every draft, evidence run and board rendering runs in a sub-agent"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "balanced",
+      "name": "balanced",
+      "dyad:when": "the seat's value is balanced",
+      "dyad:then": "the main chat does work it can finish within a budget of tool time per act; longer work goes to a sub-agent"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "efficient",
+      "name": "efficient",
+      "dyad:when": "the seat's value is efficient",
+      "dyad:then": "the main chat drafts and verifies itself and spawns a sub-agent only for parallel or isolated work, or what Rule-10 delegates"
+    }
+  ],
+  "dyad:precedence": "an attended seat reads delegation-posture, every other seat delegation-posture-unattended; the floor never moves: the main chat alone writes rows, asks and answers, pushes, opens PRs, merges and runs host actions",
+  "dyad:default": "responsive for an attended seat and efficient for one that is not, where neither posture row exists",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "preferences-corpus/PREFERENCES.md",
+  "dyad:owner": "instance:preferences-corpus/PREFERENCES.md"
+}

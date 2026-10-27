@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/ledger-pr-merge",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "ledger-pr-merge",
+  "name": "Ledger-only PR merge",
+  "description": "Who executes the merge when a ledger-only change reaches main as a PR rather than as a direct commit.",
+  "dyad:decides": "Is this ledger-only PR merged without a counter-prompt?",
+  "dyad:inputs": [
+    "the preference ledger-pr-merge",
+    "the PR's whole diff"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ask",
+      "name": "ask",
+      "dyad:when": "the value is ask",
+      "dyad:then": "the Agent states the collision and asks, per instance, before the PR is merged"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent",
+      "name": "agent",
+      "dyad:when": "the value is agent and the entire diff touches nothing outside agent-corpus/d-work/",
+      "dyad:then": "the Agent merges without a counter-prompt; the merge commit cites the preference and the file list"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other",
+      "name": "merge-disposition",
+      "dyad:when": "the PR carries any path outside agent-corpus/d-work/",
+      "dyad:then": "unaffected by this preference; it follows merge-disposition"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "preferences-corpus/PREFERENCES.md",
+  "dyad:owner": "instance:preferences-corpus/PREFERENCES.md"
+}

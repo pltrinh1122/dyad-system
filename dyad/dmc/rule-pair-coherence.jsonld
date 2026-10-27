@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/rule-pair-coherence",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "rule-pair-coherence",
+  "name": "Rule pair coherence",
+  "description": "Classifies a pair of Agent Rules by coherence and orthogonality.",
+  "dyad:decides": "Is this pair of Rules coherent and orthogonal?",
+  "dyad:inputs": [
+    "the two Rules' blocks and texts",
+    "the vocabulary's definitions of coherent and orthogonal"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ok",
+      "name": "coherent and orthogonal",
+      "dyad:when": "no two instruct differently on one trigger and every concern has one owner",
+      "dyad:then": "stated so in the falsification record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "overlap",
+      "name": "overlap",
+      "dyad:when": "a concern is owned by both (shared ownership)",
+      "dyad:then": "a gap, named in the record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "contradiction",
+      "name": "contradiction",
+      "dyad:when": "they instruct differently on the same trigger",
+      "dyad:then": "a gap, named in the record"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-5-coherence.md",
+  "dyad:alsoIn": [
+    "vocabulary/VOCABULARY.md"
+  ],
+  "dyad:owner": "Rule-5"
+}

@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/parent-askable",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "parent-askable",
+  "name": "Parent Done askable",
+  "description": "Decides whether a parent row's completion counter-prompt may be asked.",
+  "dyad:decides": "May the parent's Done question be asked?",
+  "dyad:inputs": [
+    "each child row's state",
+    "each child's recorded Done-Y and its merge"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "askable",
+      "name": "asked only when",
+      "dyad:when": "every child is done, blocked, backlog, or carrying its own recorded Done-Y and waiting on its merge",
+      "dyad:then": "the parent's question may be asked; its evidence names each child's state"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unaskable",
+      "name": "unaskable",
+      "dyad:when": "any child is still open or planned without a recorded Done-Y",
+      "dyad:then": "the parent's question is not asked yet"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

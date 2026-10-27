@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-bottleneck",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-bottleneck",
+  "name": "Trace bottleneck reading",
+  "description": "Reads a trace's top bucket as the kind of change that could move it.",
+  "dyad:decides": "What does the top bucket of a trace's bottleneck line say could move it?",
+  "dyad:inputs": [
+    "the trace's bottleneck line",
+    "its Limits"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mechanical",
+      "name": "mechanical bucket on top",
+      "dyad:when": "a mechanical bucket leads",
+      "dyad:then": "a system cost a fence, a cache or a skipped step can move"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "inference",
+      "name": "inference on top",
+      "dyad:when": "inference leads",
+      "dyad:then": "the model's turns, moved by a plan that asks less or delegates"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operator",
+      "name": "operator on top",
+      "dyad:when": "operator leads",
+      "dyad:then": "the Operator's wait, shortened only by asking fewer or batched questions"
+    }
+  ],
+  "dyad:default": "No verdict without a second trace: a bucket that leads across several traces is a claim about the system, falsified before any plan encodes it.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}

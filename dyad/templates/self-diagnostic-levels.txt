@@ -25,6 +25,7 @@
 # craft (#378) keep the levels observed there: test_levels.py started no child process; test_project_countersign.py
 # builds scratch repos and runs git log and tags.
 
+unit        dyad/tests/guards/agent/test_dmc.py
 unit        dyad/tests/guards/agent/test_frame.py
 unit        dyad/tests/guards/agent/test_plans.py
 integration dyad/tests/guards/agent/test_provenance.py     # scratch repos

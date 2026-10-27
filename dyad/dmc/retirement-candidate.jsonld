@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/retirement-candidate",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "retirement-candidate",
+  "name": "Retirement candidate",
+  "description": "Decides whether a backlog row is proposed for retirement in a sweep, and on what ground.",
+  "dyad:decides": "Is this backlog row proposed for retirement, and why?",
+  "dyad:inputs": [
+    "the backlog row, read before it is proposed",
+    "where its fence or work now lives (path or row id)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fenced",
+      "name": "fence is already recorded elsewhere",
+      "dyad:when": "the row's fence is already recorded elsewhere",
+      "dyad:then": "proposed for retirement, naming where the fence lives"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "dead",
+      "name": "premise is dead",
+      "dyad:when": "the row's premise is dead",
+      "dyad:then": "proposed for retirement, saying so"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "carried",
+      "name": "work another row",
+      "dyad:when": "another row now carries its work",
+      "dyad:then": "proposed for retirement, naming that row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unread",
+      "name": "reading",
+      "dyad:when": "the Agent has not read the row",
+      "dyad:then": "proposed as a reading, never as a retirement"
+    }
+  ],
+  "dyad:precedence": "Candidates are taken oldest first.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/disposition-digest.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/attendance-mode",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "attendance-mode",
+  "name": "Attendance mode",
+  "description": "The mode attendance reads over the live seats.",
+  "dyad:decides": "Which seats of the live board does the Operator attend?",
+  "dyad:inputs": [
+    "the live seats",
+    "each seat's attendance"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "all",
+      "name": "every seat attended",
+      "dyad:when": "every live seat is attended",
+      "dyad:then": "the mode is every seat attended"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "leader",
+      "name": "only the leader",
+      "dyad:when": "only the leader is attended",
+      "dyad:then": "the mode is only the leader"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "some",
+      "name": "some",
+      "dyad:when": "some live seats beside the leader are attended",
+      "dyad:then": "the mode is some"
+    }
+  ],
+  "dyad:default": "only the leader, with no live seat",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/sessions.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:owner": "Rule-16"
+}

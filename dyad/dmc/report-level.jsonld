@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/report-level",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "report-level",
+  "name": "Incident report level",
+  "description": "Selects how much an anonymized incident report for a third party holds.",
+  "dyad:decides": "At which level is the incident report built?",
+  "dyad:inputs": [
+    "the LEVEL parameter"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "standard",
+      "name": "standard",
+      "dyad:when": "LEVEL is standard (the default)",
+      "dyad:then": "groups, counts and one external summary per group"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "minimal",
+      "name": "minimal",
+      "dyad:when": "LEVEL is minimal",
+      "dyad:then": "groups and counts only, no prose"
+    }
+  ],
+  "dyad:default": "standard",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/ds-report-incidents.md",
+  "dyad:owner": "Rule-3"
+}

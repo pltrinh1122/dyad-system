@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/preference-kind",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "preference-kind",
+  "name": "Preference kind",
+  "description": "Classifies a preference by whether it shapes interaction, authorizes a class of act, or neither.",
+  "dyad:decides": "Is this preference a form preference, an authority preference, or not interaction?",
+  "dyad:inputs": [
+    "the preference key and its allowed values"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "form",
+      "name": "form",
+      "dyad:when": "it shapes how countersign proposals and reports look and authorizes nothing",
+      "dyad:then": "no mandate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "authority",
+      "name": "authority",
+      "dyad:when": "it countersigns in advance one class of act",
+      "dyad:then": "a mandate; one not projected as a mandate is an I7 gap"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-interaction",
+      "name": "not interaction",
+      "dyad:when": "it governs neither proposals nor authority (command-line form, import criteria, host path)",
+      "dyad:then": "outside the interaction model"
+    }
+  ],
+  "dyad:default": "A new preference is classified when it is added.",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

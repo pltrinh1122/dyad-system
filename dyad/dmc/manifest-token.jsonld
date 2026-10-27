@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/manifest-token",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "manifest-token",
+  "name": "Manifest token mapping",
+  "description": "Whether an invocation or third-party import maps to a declared manifest component.",
+  "dyad:decides": "Does this invocation or third-party import map to a declared component?",
+  "dyad:inputs": [
+    "every invocation and third-party Python import the package makes",
+    "the manifest rules file beside the guard",
+    "the manifest rows"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mapped",
+      "name": "declared component",
+      "dyad:when": "the token maps to a declared component",
+      "dyad:then": "passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmapped",
+      "name": "unmapped",
+      "dyad:when": "the token maps to no declared component",
+      "dyad:then": "fails"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-token",
+      "name": "no token",
+      "dyad:when": "a declared component has no token mapping to it",
+      "dyad:then": "warns"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/manifest.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-14-system-infrastructure.md",
+  "dyad:alsoIn": [
+    "../crafts/syseng/rules/imports.md"
+  ],
+  "dyad:owner": "Rule-14"
+}

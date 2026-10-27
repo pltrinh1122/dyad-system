@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/countersign-basis",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "countersign-basis",
+  "name": "Countersignature basis",
+  "description": "Classifies how a countersignature covers its act.",
+  "dyad:decides": "On what basis does this countersignature cover its act?",
+  "dyad:inputs": [
+    "the disposed entry and its note",
+    "the countersigned subject"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "per-act",
+      "name": "per-act",
+      "dyad:when": "a disposition given for this act",
+      "dyad:then": "basis per-act"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mandate",
+      "name": "mandate",
+      "dyad:when": "a standing countersignature; in the dyad, the (mandate #<id>) note on a disposed entry",
+      "dyad:then": "basis mandate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "release",
+      "name": "release",
+      "dyad:when": "a countersigned release an executor runs",
+      "dyad:then": "basis release"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/initiation-severity",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "initiation-severity",
+  "name": "I6 severity",
+  "description": "Decides the I6 line dyad project countersign prints over the derived initiations.",
+  "dyad:decides": "Is the I6 line ok or warn?",
+  "dyad:inputs": [
+    "every derivable act's profile.initiation"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ok",
+      "name": "ok",
+      "dyad:when": "every derivable act is initiated",
+      "dyad:then": "one ok line"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warn",
+      "name": "warn",
+      "dyad:when": "some derivable act is not initiated",
+      "dyad:then": "one warn line with the count and the first three ids; a candidate for the Operator, never a verdict"
+    }
+  ],
+  "dyad:default": "Never a failure: the exit code stays the schema check's.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

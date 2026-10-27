@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/y-binding",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "y-binding",
+  "name": "What a Y binds",
+  "description": "Decides whether a given Y still authorizes the act about to be executed.",
+  "dyad:decides": "Does this Y authorize this act?",
+  "dyad:inputs": [
+    "the question the Y answered",
+    "the PRs and actions it named",
+    "their heads when asked and now"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "bound",
+      "name": "named in the question",
+      "dyad:when": "the act is a PR or action named in the question and its head is unchanged since it was asked",
+      "dyad:then": "the act is authorized; executing it is clerical"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "re-prompt",
+      "name": "re-prompts",
+      "dyad:when": "a named head changed since the question was asked",
+      "dyad:then": "the agent stops and re-prompts"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fresh-y",
+      "name": "fresh Y",
+      "dyad:when": "the act is a new PR, including one created to recover from an error",
+      "dyad:then": "it needs a fresh Y"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-2"
+}

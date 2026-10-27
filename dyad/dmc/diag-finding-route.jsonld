@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/diag-finding-route",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "diag-finding-route",
+  "name": "Diagnostic finding route",
+  "description": "Routes each self-diagnostic finding to what the Rules already say it becomes.",
+  "dyad:decides": "What does a self-diagnostic finding become?",
+  "dyad:inputs": [
+    "the finding's kind and level"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incident",
+      "name": "incident",
+      "dyad:when": "a failed coded check (a test, a guard or an invariant), or an outcome the diagnostic's own plan did not name",
+      "dyad:then": "an incident, reported as observed; its repair a plan of its own"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "proposal",
+      "name": "proposals",
+      "dyad:when": "a landed L3 attack (an uncovered contract clause) or a landed L4 attack (a system claim shown false)",
+      "dyad:then": "a proposal, adopted if at all as a plan of its own or held as a backlog row by the disposition that opens one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "codify",
+      "name": "codify candidate",
+      "dyad:when": "an inference task met a second time",
+      "dyad:then": "proposes code (Rule-13 property 1)"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
+    "rules/RULE-13-reuse-over-inference.md"
+  ],
+  "dyad:owner": "Rule-12"
+}

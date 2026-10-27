@@ -1,0 +1,70 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-class",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-class",
+  "name": "Release class",
+  "description": "Classifies each d-work landed under a craft's root since its last tag, and so the change set, into one of five release classes.",
+  "dyad:decides": "Which release class does a change set since a craft's last tag take, and does it release now?",
+  "dyad:inputs": [
+    "each d-work cited since the craft's last tag (the changes step)",
+    "the evidence each d-work carries: incident row, red run or reproduction, help text, guard registry line, Rule sentence, before/after observation, upgrade step"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "critical-fix",
+      "name": "critical fix",
+      "dyad:when": "a defect that gives an installing system a wrong result it can act on, loses or leaks data, or turns its CI red",
+      "dyad:then": "patch; released as soon as the fix lands"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "capability",
+      "name": "new capability",
+      "dyad:when": "something an installing system can do that it could not: a new verb or flag, guard or check, craft, or Rule property",
+      "dyad:then": "minor; released with the change set"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "enhancement",
+      "name": "significant enhancement",
+      "dyad:when": "an existing capability changed in what it does or decides for an installing system",
+      "dyad:then": "minor; released with the change set"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "breaking",
+      "name": "breaking",
+      "dyad:when": "an installing system must change something on upgrade; combines with the classes above",
+      "dyad:then": "major (minor while the major is 0, the question marking it breaking); never released without the upgrade step"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "maintenance",
+      "name": "maintenance",
+      "dyad:when": "nothing an installing system would notice",
+      "dyad:then": "no release: the change set waits for the next class that releases"
+    }
+  ],
+  "dyad:precedence": "Highest first: breaking, then critical fix, new capability and significant enhancement, then maintenance; the change set takes the highest class among its d-works, and the bundle the highest among its components.",
+  "dyad:default": "A class the seat cannot evidence is the class below it; a release question naming no class, or one it cannot evidence, is not asked.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/release.md",
+  "dyad:alsoIn": [
+    "runbooks/release.md"
+  ],
+  "dyad:owner": "Rule-11"
+}

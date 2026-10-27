@@ -1,0 +1,64 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/session-reconcile",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "session-reconcile",
+  "name": "Session reconcile",
+  "description": "The readings of the presence store against the harness's own session list.",
+  "dyad:decides": "Does this presence file or harness session mismatch the other store?",
+  "dyad:inputs": [
+    "the live presence files",
+    "the harness's own session list",
+    "each holder and title",
+    "the stale window"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-harness",
+      "name": "no harness session",
+      "dyad:when": "a live presence file's holder matches no harness session",
+      "dyad:then": "one advisory line; the remedy is the writer's"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-presence",
+      "name": "no presence",
+      "dyad:when": "a harness session titled in the seat form has no live presence file",
+      "dyad:then": "one advisory line; the remedy is the writer's"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "title-differs",
+      "name": "title differs",
+      "dyad:when": "the holder's harness session title does not carry the seat's expected prefix",
+      "dyad:then": "one advisory line; the remedy is the writer's"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stale-titled",
+      "name": "stale while titled",
+      "dyad:when": "a presence file past the stale window whose holder still carries the seat's title",
+      "dyad:then": "one advisory line; the remedy is the writer's"
+    }
+  ],
+  "dyad:default": "nothing is printed when the two align; never a guard failure",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/sessions.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:alsoIn": [
+    "scripts/hostadapter.py"
+  ],
+  "dyad:owner": "Rule-16"
+}

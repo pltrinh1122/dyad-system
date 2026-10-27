@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/codify-candidate",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "codify-candidate",
+  "name": "Codify candidate",
+  "description": "Decides whether a prose claim or contract clause checked at L3 or L4 is marked a codify candidate.",
+  "dyad:decides": "Is this clause or claim a candidate for code?",
+  "dyad:inputs": [
+    "the record's claim | attack | result | codify? rows of successive runs"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "nothing",
+      "name": "needs nothing",
+      "dyad:when": "an invariant, a test or the claim's coded half already decides it",
+      "dyad:then": "nothing; it is code already"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "candidate",
+      "name": "codify candidate",
+      "dyad:when": "it was decided only by reading, a reading that could be written down, on two successive runs that sampled it",
+      "dyad:then": "marked codify? in the record; proposes code"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:owner": "Rule-12"
+}

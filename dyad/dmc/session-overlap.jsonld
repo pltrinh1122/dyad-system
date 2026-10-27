@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/session-overlap",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "session-overlap",
+  "name": "Session overlap",
+  "description": "What a presence-file overlap with another session means.",
+  "dyad:decides": "Does another live session's presence bear on the new plan?",
+  "dyad:inputs": [
+    "every other session's presence file",
+    "the new plan's touched files",
+    "this session's root"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "overlap",
+      "name": "overlaps",
+      "dyad:when": "another session's files set overlaps the new plan's touched files",
+      "dyad:then": "stated in the plan's falsification section as a finding, never a guard FAIL; whether it matters stays inference"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "same-root",
+      "name": "same root",
+      "dyad:when": "another session's root is identical to this one's",
+      "dyad:then": "the sharper signal: this session moves its own work into a worktree; dyad session touch reports it and dyad session list flags it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "disjoint",
+      "name": "different",
+      "dyad:when": "no files set overlaps and no root is shared",
+      "dyad:then": "nothing to state"
+    }
+  ],
+  "dyad:precedence": "Same root outranks a file overlap.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "guards/agent/sessions.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
+  "dyad:owner": "Rule-16"
+}

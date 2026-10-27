@@ -1,0 +1,62 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/diag-level",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "diag-level",
+  "name": "Diagnostic level",
+  "description": "Places a self-diagnostic check on one of four levels by its kind of check and its scope.",
+  "dyad:decides": "On which diagnostic level does a check run?",
+  "dyad:inputs": [
+    "the kind of check: coded check or prose claim",
+    "the scope: unit (one module) or system (modules together, the live tree)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "l1",
+      "name": "L1",
+      "dyad:when": "unit scope, coded check",
+      "dyad:then": "unit tests, each through dyad check --tests"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "l2",
+      "name": "L2",
+      "dyad:when": "system scope, coded check",
+      "dyad:then": "integration tests, the guards on the live tree, the transaction guards and the evidence block"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "l3",
+      "name": "L3",
+      "dyad:when": "unit scope, prose claim",
+      "dyad:then": "each unit's contract read against its invariants and tests, K units in rotation"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "l4",
+      "name": "L4",
+      "dyad:when": "system scope, prose claim",
+      "dyad:then": "the fixed list of system claims and the instance's own, P samples each"
+    }
+  ],
+  "dyad:precedence": "Coded before prose and unit before system: L1, L2, L3, L4; each level gates the next.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:alsoIn": [
+    "rules/RULE-12-verifiable-code.md"
+  ],
+  "dyad:owner": "Rule-12"
+}

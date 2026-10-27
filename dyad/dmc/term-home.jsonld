@@ -1,0 +1,61 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/term-home",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "term-home",
+  "name": "Term home",
+  "description": "Decides where a term is defined.",
+  "dyad:decides": "Where is this term defined?",
+  "dyad:inputs": [
+    "the term",
+    "the Agent vocabulary",
+    "the craft vocabularies",
+    "the preference keys"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "vocabulary",
+      "name": "vocabulary",
+      "dyad:when": "a term used by the Agent Rules",
+      "dyad:then": "defined once in the vocabulary; Rules cite it, never redefine it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "preference",
+      "name": "preference keys",
+      "dyad:when": "a preference key",
+      "dyad:then": "defined in the preferences; referenced, never defined, in the vocabulary"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "craft",
+      "name": "craft term",
+      "dyad:when": "a Tended craft's term",
+      "dyad:then": "defined in its craft vocabulary; referenced as <craft>:term"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "both",
+      "name": "defined in both",
+      "dyad:when": "a term in both the Agent and a craft vocabulary",
+      "dyad:then": "one fault, reported once"
+    }
+  ],
+  "dyad:precedence": "On divergence between a Rule and the vocabulary, the vocabulary wins and the Rule is a bug.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/vocabulary.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-6-vocabulary.md",
+  "dyad:owner": "Rule-6"
+}

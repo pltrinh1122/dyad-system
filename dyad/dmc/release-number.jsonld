@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-number",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-number",
+  "name": "Release number",
+  "description": "Maps a change set's release class to the part of the version its release moves.",
+  "dyad:decides": "Which version part does a release of this class move?",
+  "dyad:inputs": [
+    "CRAFT (the core, a Tended craft or the bundle)",
+    "CLASS",
+    "the craft's last tag"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "patch",
+      "name": "patch",
+      "dyad:when": "class critical fix",
+      "dyad:then": "the patch part moves"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "minor",
+      "name": "minor",
+      "dyad:when": "class new capability or significant enhancement, or breaking while the major is 0",
+      "dyad:then": "the minor part moves"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "major",
+      "name": "major",
+      "dyad:when": "class breaking with a major above 0",
+      "dyad:then": "the major part moves"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "none",
+      "name": "none",
+      "dyad:when": "class maintenance",
+      "dyad:then": "no release; only the drift guard's working bump"
+    }
+  ],
+  "dyad:precedence": "The bundle takes the highest class among its components since the bundle's last tag and moves the same part.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/release.md",
+  "dyad:alsoIn": [
+    "runbooks/release.md"
+  ],
+  "dyad:owner": "Rule-11"
+}

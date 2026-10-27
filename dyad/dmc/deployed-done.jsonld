@@ -1,0 +1,47 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/deployed-done",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "deployed-done",
+  "name": "Deployed means run-book and health",
+  "description": "Whether a server's deploying d-work may be Done.",
+  "dyad:decides": "May the deploying d-work of this server instance be asked Done?",
+  "dyad:inputs": [
+    "the run-book at its instance path",
+    "the health command's observed output"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "deployed",
+      "name": "deployed",
+      "dyad:when": "the run-book exists and its health command passes as observed",
+      "dyad:then": "the completion reply cites the run-book path and the observed output"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-done",
+      "name": "not Done",
+      "dyad:when": "the run-book is missing or the health command does not pass",
+      "dyad:then": "the d-work is not Done"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-19-server-instances.md",
+  "dyad:alsoIn": [
+    "../crafts/sysadmin/rules/server-instances.md"
+  ],
+  "dyad:owner": "Rule-19"
+}

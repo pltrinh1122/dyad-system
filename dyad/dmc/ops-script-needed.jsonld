@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/ops-script-needed",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "ops-script-needed",
+  "name": "Ops script needed",
+  "description": "How a host command is delivered and recorded, by who runs it.",
+  "dyad:decides": "Is this command delivered as an ops script?",
+  "dyad:inputs": [
+    "the command",
+    "whether the Agent may run it (privilege, credentials, physical presence)",
+    "whether it is a recurring operation of a server instance"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "agent-runs",
+      "name": "Commands the Agent runs itself",
+      "dyad:when": "the Agent may run the command",
+      "dyad:then": "no ops script: the change log is its record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ops-script",
+      "name": "ops script",
+      "dyad:when": "the plan names a host action the Agent may not run",
+      "dyad:then": "the plan names the ops script that delivers it, one committed file per change-log row; never an inline block"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "run-book",
+      "name": "run-book command",
+      "dyad:when": "the command is a recurring operation of a server instance",
+      "dyad:then": "run by either party through Rule-19's runner, which records an event"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-18-ops-scripts.md",
+  "dyad:owner": "Rule-18"
+}

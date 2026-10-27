@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/mitigation-status",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "mitigation-status",
+  "name": "Mitigation status",
+  "description": "Classifies a mitigation of a failure mode, read from the code and the Rule text.",
+  "dyad:decides": "Is this mitigation shipped, a candidate, or declined?",
+  "dyad:inputs": [
+    "the code and Rule text, by path and identifier",
+    "the mode's records"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "shipped",
+      "name": "shipped",
+      "dyad:when": "in the tree today, verified by reading it",
+      "dyad:then": "tested against the incidents it claimed; a recurrence after it shipped is evidence about it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "candidate",
+      "name": "candidate",
+      "dyad:when": "surfaced in a mode record, never implemented",
+      "dyad:then": "falsified; a survivor executed under its own plan-Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declined",
+      "name": "declined",
+      "dyad:when": "a survivor the Operator declined",
+      "dyad:then": "stays a candidate, written back into the mode's record as declined"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:owner": "Rule-3"
+}

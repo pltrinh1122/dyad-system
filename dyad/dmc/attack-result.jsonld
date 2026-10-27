@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/attack-result",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "attack-result",
+  "name": "Attack result",
+  "description": "The result recorded for one attack on a claim in a falsification record.",
+  "dyad:decides": "What is the result of this attack on the claim?",
+  "dyad:inputs": [
+    "the claim",
+    "the attack",
+    "the evidence tried"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "confirmed",
+      "name": "confirmed",
+      "dyad:when": "the attack holds against the claim",
+      "dyad:then": "the claim as attacked is not implemented; only a survivor is"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "refuted",
+      "name": "refuted",
+      "dyad:when": "the attack fails against the claim",
+      "dyad:then": "the claim stands against this attack"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "survives",
+      "name": "survives",
+      "dyad:when": "the claim outlives the attack, possibly scoped",
+      "dyad:then": "its surviving form is the survivor, the only form implemented"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-attack-found",
+      "name": "no attack found",
+      "dyad:when": "no attack could be made",
+      "dyad:then": "permitted only by naming what was tried"
+    }
+  ],
+  "dyad:precedence": "On easy agreement at least one attack is pushed to confirmed or refuted before the claim is accepted.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-9-falsification.md",
+  "dyad:owner": "Rule-9"
+}

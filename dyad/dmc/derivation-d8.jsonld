@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/derivation-d8",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "derivation-d8",
+  "name": "Initiation derivation (D8)",
+  "description": "Derives each act's initiation into its profile.",
+  "dyad:decides": "From what is this act's initiation derived?",
+  "dyad:inputs": [
+    "the act's provenance record",
+    "the row's refs",
+    "the row's first disposition"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "provenance",
+      "name": "provenance",
+      "dyad:when": "a prompt entry of the act's provenance record",
+      "dyad:then": "kind prompt, source provenance"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "intake",
+      "name": "intake",
+      "dyad:when": "an intake origin <system>-<id> in the row's refs",
+      "dyad:then": "kind signal, source intake"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "opening",
+      "name": "opening-disposition",
+      "dyad:when": "a first disposition whose first word is backlog, intake or opened",
+      "dyad:then": "kind prompt, source opening-disposition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "none",
+      "name": "kind: null",
+      "dyad:when": "none of the three found",
+      "dyad:then": "missing names what was looked for"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "underivable",
+      "name": "underivable",
+      "dyad:when": "a run-book act: an event names no d-work",
+      "dyad:then": "counted apart, never as a finding"
+    }
+  ],
+  "dyad:precedence": "Tried in order: provenance, intake, opening-disposition.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

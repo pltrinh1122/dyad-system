@@ -1,0 +1,59 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/tag-drift",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "tag-drift",
+  "name": "Release tag drift",
+  "description": "Whether a craft's tree has drifted from its own release tag.",
+  "dyad:decides": "Is the tree under this craft's root at HEAD the tree its release tag holds?",
+  "dyad:inputs": [
+    "the craft's VERSION",
+    "the tag equal to the craft name prefix plus VERSION",
+    "the tree under the craft's root at HEAD"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "same-tree",
+      "name": "tree that tag holds",
+      "dyad:when": "the tag exists and the tree at HEAD equals the tree the tag holds",
+      "dyad:then": "nothing is printed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "version-moved",
+      "name": "has moved",
+      "dyad:when": "VERSION names a version that has no tag yet",
+      "dyad:then": "no drift: the next release tags it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "drift",
+      "name": "fails",
+      "dyad:when": "the tree at HEAD differs from its own tag under an unchanged VERSION",
+      "dyad:then": "the push fails"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "skip",
+      "name": "skips",
+      "dyad:when": "the tag does not resolve locally",
+      "dyad:then": "one skip line, never a failure"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/bundle.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:owner": "Rule-11"
+}

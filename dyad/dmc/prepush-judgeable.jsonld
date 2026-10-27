@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/prepush-judgeable",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "prepush-judgeable",
+  "name": "Pre-push judgeable ref",
+  "description": "Whether the pre-push hook can judge each ref git pushes.",
+  "dyad:decides": "Can the guards judge this pushed ref?",
+  "dyad:inputs": [
+    "the refs git pushes, read from the hook's stdin",
+    "the checked-out HEAD",
+    "the working tree",
+    "origin/main"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-new-commit",
+      "name": "passes",
+      "dyad:when": "the ref is a deletion, or its commit is already on origin/main",
+      "dyad:then": "it carries no new commit and passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-ref",
+      "name": "a ref other than the checked-out HEAD",
+      "dyad:when": "the ref's commit is not the checked-out HEAD",
+      "dyad:then": "the push is refused"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "dirty",
+      "name": "working tree with changes",
+      "dyad:when": "the working tree has changes the push does not carry",
+      "dyad:then": "the push is refused"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "judged",
+      "name": "judges",
+      "dyad:when": "the ref is the checked-out HEAD and the tree is clean",
+      "dyad:then": "every guard judges it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/package.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-14-system-infrastructure.md",
+  "dyad:owner": "Rule-14"
+}

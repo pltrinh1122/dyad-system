@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/amend-scope",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "amend-scope",
+  "name": "Amend scope",
+  "description": "Decides whether an amend's text revises the refused proposal or opens other work.",
+  "dyad:decides": "Does the amend ask for the same proposal revised?",
+  "dyad:inputs": [
+    "the text of the N"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "same",
+      "name": "same proposal revised",
+      "dyad:when": "the text asks for that same proposal revised",
+      "dyad:then": "no second row; the plan file is revised in place, the refused revision kept"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "else",
+      "name": "something else",
+      "dyad:when": "the text asks for something else",
+      "dyad:then": "a prompt like any other; opens its own d-work"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

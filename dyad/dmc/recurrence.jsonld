@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/recurrence",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "recurrence",
+  "name": "Recurring task",
+  "description": "Whether an inference task has recurred and so proposes code.",
+  "dyad:decides": "Does this inference task yield a code path in the plan?",
+  "dyad:inputs": [
+    "the operation",
+    "whether the Agent has performed it by inference before"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "first",
+      "name": "inference",
+      "dyad:when": "the Agent performs the operation by inference for the first time",
+      "dyad:then": "no code path is owed yet"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "second",
+      "name": "second occurrence",
+      "dyad:when": "the Agent performs the same operation by inference a second time",
+      "dyad:then": "the plan yields a code path, chosen per Rule-12, imported rather than authored when a fit candidate exists"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declined",
+      "name": "decline",
+      "dyad:when": "the Operator declines the proposed code path",
+      "dyad:then": "the task stays inference"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-13-reuse-over-inference.md",
+  "dyad:owner": "Rule-13"
+}

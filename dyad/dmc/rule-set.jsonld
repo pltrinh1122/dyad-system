@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/rule-set",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "rule-set",
+  "name": "Rule set membership",
+  "description": "Classifies a rule into one of the three homes of Rules.",
+  "dyad:decides": "Which set does this rule belong to?",
+  "dyad:inputs": [
+    "where the rule lives",
+    "its Set line"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "requirements",
+      "name": "System Requirements",
+      "dyad:when": "a core craft Agent Rule, kernels included",
+      "dyad:then": "a member of the set this Rule sweeps"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "architecture",
+      "name": "System Architecture",
+      "dyad:when": "a sysarch craft rule",
+      "dyad:then": "Tended; swept by the craft's own form"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "practice",
+      "name": "Host and craft practice",
+      "dyad:when": "a host rule or a sysadmin craft rule",
+      "dyad:then": "Tended; swept by its own form"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-5-coherence.md",
+  "dyad:owner": "Rule-5"
+}

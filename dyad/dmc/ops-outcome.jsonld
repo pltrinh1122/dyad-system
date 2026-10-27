@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/ops-outcome",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "ops-outcome",
+  "name": "Ops script outcome",
+  "description": "What the Operator's pasted output of an ops script proves.",
+  "dyad:decides": "What does this ops script run record?",
+  "dyad:inputs": [
+    "the pasted output",
+    "the script's commit and hash",
+    "the exit code"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mismatch",
+      "name": "mismatch",
+      "dyad:when": "the pasted output's commit or hash differs from the committed script",
+      "dyad:then": "reported as an incident before any change-log row is written"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "declined",
+      "name": "declined step",
+      "dyad:when": "a step was declined at the run-time confirmation (exit 2)",
+      "dyad:then": "withdrawn execution: reported as an incident and recorded as the row's outcome"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "exit-code",
+      "name": "exit code",
+      "dyad:when": "the output matches the script",
+      "dyad:then": "the completion reply cites the exit code with its outcome, 0, 1 or 2 per the craft rule"
+    }
+  ],
+  "dyad:precedence": "The commit and hash are compared before any row is written.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-18-ops-scripts.md",
+  "dyad:alsoIn": [
+    "../crafts/sysadmin/rules/ops-scripts.md"
+  ],
+  "dyad:owner": "Rule-18"
+}

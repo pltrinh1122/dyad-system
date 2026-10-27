@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/port-diff",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "port-diff",
+  "name": "Port owed",
+  "description": "Decides from a craft diff whether a receiving system owes a port.",
+  "dyad:decides": "Does the receiving tree differ from its source, so that a port is owed?",
+  "dyad:inputs": [
+    "dyad craft diff <CRAFT> --against <SRC>"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unchanged",
+      "name": "unchanged",
+      "dyad:when": "the diff is empty (exit 0)",
+      "dyad:then": "nothing owed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "owed",
+      "name": "port owed",
+      "dyad:when": "the diff is non-empty (exit 1)",
+      "dyad:then": "either the change goes back or the tree is reinstalled --force: the Operator's call, asked as its own question"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/craft.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/port.md",
+  "dyad:owner": "Rule-11"
+}

@@ -1,0 +1,45 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/zone-set",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "zone-set",
+  "name": "Zone set of a system",
+  "description": "Selects whether the system has five zones or four from the host-zone preference.",
+  "dyad:decides": "How many zones does this system have?",
+  "dyad:inputs": [
+    "the preference host-zone",
+    "the preference host-path"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "five-zones",
+      "name": "five zones",
+      "dyad:when": "host-zone is workstation (the default)",
+      "dyad:then": "zones are agent, workstation, preferences, infra, craft"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "four-zones",
+      "name": "four-zone system",
+      "dyad:when": "host-zone is infra",
+      "dyad:then": "the host path is in the infra zone and there is no workstation zone"
+    }
+  ],
+  "dyad:default": "five zones",
+  "dyad:judgedBy": {
+    "dyad:kind": "declared",
+    "dyad:implementation": "guards/infra/containment.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-1-containment.md",
+  "dyad:owner": "Rule-1"
+}

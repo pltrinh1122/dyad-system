@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/port-direction",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "port-direction",
+  "name": "Port direction",
+  "description": "Classifies a prompt to move a craft between dyad systems into one of three directions.",
+  "dyad:decides": "In which direction does this port run, if any?",
+  "dyad:inputs": [
+    "the Operator's prompt in the system where the step runs",
+    "the receiving registry row and tree",
+    "whether the authoring tree still holds the craft"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "forward",
+      "name": "forward",
+      "dyad:when": "a receiving system is to run a newer release of a craft, or install one it lacks",
+      "dyad:then": "install, crafts, guards, then the change-log row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "diff",
+      "name": "diff",
+      "dyad:when": "a receiving registry row no longer matches its tree",
+      "dyad:then": "what changed is read, by path"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "back",
+      "name": "back",
+      "dyad:when": "a change made in a receiving tree is to reach the authoring system",
+      "dyad:then": "patch, then port as a PR in the authoring repository on the receiving Operator's prompt"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "retired",
+      "name": "retired craft",
+      "dyad:when": "the authoring tree no longer holds the craft",
+      "dyad:then": "not a trigger: retirement is no release and ports nothing"
+    }
+  ],
+  "dyad:default": "Every port is a PR its receiving repository's Operator disposes; nothing is mirrored.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/port.md",
+  "dyad:owner": "Rule-11"
+}

@@ -1,0 +1,43 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/read-only-answer",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "read-only-answer",
+  "name": "Read-only answer",
+  "description": "Decides whether a prompt opens a d-work by the form of its reply.",
+  "dyad:decides": "Does this prompt open a d-work?",
+  "dyad:inputs": [
+    "the reply's form: whether it writes, proposes, or carries a Y/N line"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "read-only",
+      "name": "read-only answer",
+      "dyad:when": "the answer only reads the corpus, writes nothing and asks no question",
+      "dyad:then": "opens no d-work; nothing is recorded"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "opens",
+      "name": "opens its d-work",
+      "dyad:when": "the reply writes, proposes, or carries a Y/N line",
+      "dyad:then": "the d-work opens before its question"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/bundled-craft",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "bundled-craft",
+  "name": "Bundled craft",
+  "description": "Whether the core release carries a Tended craft, and on which of the two grounds.",
+  "dyad:decides": "Does the core release carry this Tended craft?",
+  "dyad:inputs": [
+    "whether a core Rule cites the craft by path",
+    "the craft's own BUNDLED_WITH_CORE declaration and its PURPOSE line",
+    "whether the craft serves the system's purpose for every installing Operator"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "dependency",
+      "name": "dependency",
+      "dyad:when": "a core Rule cites the craft by path and the craft declares itself bundled",
+      "dyad:then": "dyad build puts its tree in the core's archive and dyad install writes it; it stays a Tended craft in every other respect"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "purpose",
+      "name": "purpose",
+      "dyad:when": "no core Rule cites the craft, it serves the system's purpose for every installing Operator and never one instance's applied domain alone, and its declaration carries a one-line PURPOSE reason",
+      "dyad:then": "bundled as under dependency; the reason is the Operator's to ratify, by the Done-Y of the PR that adds the declaration"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cited-undeclared",
+      "name": "does not declare itself bundled",
+      "dyad:when": "a core Rule cites the craft by path, the craft is in the tree, and it makes no declaration",
+      "dyad:then": "the bundle guard fails, naming the citing Rules"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-bundled",
+      "name": "Tended craft",
+      "dyad:when": "no core Rule cites the craft and it makes no declaration",
+      "dyad:then": "it is built and installed only on its own, by its own export and its own tag"
+    }
+  ],
+  "dyad:default": "not bundled: never by a list the core keeps",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/infra/bundle.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-11-distribution-structure.md",
+  "dyad:owner": "Rule-11",
+  "dyad:alsoIn": [
+    "scripts/distribute.py"
+  ]
+}

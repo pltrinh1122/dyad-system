@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/done-order",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "done-order",
+  "name": "Done order",
+  "description": "Decides when a row may be set done relative to its Done-Y and merges.",
+  "dyad:decides": "May this row be set done now?",
+  "dyad:inputs": [
+    "the row's disposed entries",
+    "the operative Y done entry and the heads it names",
+    "whether those heads are on main"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "at-once",
+      "name": "at once",
+      "dyad:when": "the Done-Y names no merge",
+      "dyad:then": "recorded done at once"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "record",
+      "name": "Record",
+      "dyad:when": "the Done-Y names a merge",
+      "dyad:then": "the disposition and provenance entry are written with the state unchanged, then the merge runs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "close",
+      "name": "Close",
+      "dyad:when": "a Y done entry is on the row and every head it names is on main",
+      "dyad:then": "a dispositionless ledger commit sets done"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "self-ratification",
+      "name": "self-ratification",
+      "dyad:when": "a merge ran before the Y",
+      "dyad:then": "an incident whatever the outcome"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "converse-breach",
+      "name": "converse breach",
+      "dyad:when": "done is written while a named head is not yet on main, or in the same commit that records the Y",
+      "dyad:then": "the fence refuses the commit"
+    }
+  ],
+  "dyad:precedence": "Record, then merge, then Close, in that order.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rows.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3"
+}

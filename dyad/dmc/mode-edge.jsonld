@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/mode-edge",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "mode-edge",
+  "name": "Mode edge",
+  "description": "Names the edge along which an act changes mode.",
+  "dyad:decides": "Along which edge does an act change mode?",
+  "dyad:inputs": [
+    "the act's mode before",
+    "the act's mode after"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "delegate",
+      "name": "delegate",
+      "dyad:when": "explicit to implicit",
+      "dyad:then": "a live countersignature becomes a mandate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "codify",
+      "name": "codify",
+      "dyad:when": "explicit or implicit to automatic",
+      "dyad:then": "a practice becomes a countersigned release"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "escalate",
+      "name": "escalate",
+      "dyad:when": "automatic or implicit to explicit",
+      "dyad:then": "the unexpected returns to a human"
+    }
+  ],
+  "dyad:default": "An act changes mode only along an edge.",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/project_countersign.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/countersign-model.md",
+  "dyad:owner": "Rule-3"
+}

@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/trace-anchor",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "trace-anchor",
+  "name": "Trace anchor",
+  "description": "Matches each provenance entry to the Operator message that carried it.",
+  "dyad:decides": "Is this provenance entry anchored to an Operator message?",
+  "dyad:inputs": [
+    "the provenance record's entries in order",
+    "the transcript's Operator messages",
+    "the Y/N lines naming the d-work"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "anchored",
+      "name": "anchored",
+      "dyad:when": "one message matches, whitespace-normalized, equal or containing an entry of twenty characters or more, after the previous anchor; a disposition only on a message answering a Y/N line naming the d-work",
+      "dyad:then": "the entry carries that message's timestamp"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmatched",
+      "name": "unmatched",
+      "dyad:when": "no message matches",
+      "dyad:then": "reported under Limits, never guessed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ambiguous",
+      "name": "ambiguous",
+      "dyad:when": "a prompt matches more than one message",
+      "dyad:then": "reported under Limits, never guessed"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/trace.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/dwork-trace.md",
+  "dyad:owner": "Rule-3"
+}
