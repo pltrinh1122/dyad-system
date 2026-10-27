@@ -23,6 +23,10 @@ import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "seat", "agent", False
 NAME, OWNER = "seat (presence file name)", "crafts/cabinet/rules/naming.md"
+# Bundled with the core (Rule-11 property 2, criterion (a), d-work #504): core Rules 3 and 16 cite
+# `crafts/cabinet/` by path, so a core-only install must carry this craft or ship Rules that cite a
+# tree it lacks. One declaration per craft; the core keeps no list (`package.bundled_crafts`).
+BUNDLED_WITH_CORE = True
 FIELDS = ("seat", "function", "topic", "hp")                    # what `parse_seat` yields from one presence-file name
 DATA = Path(__file__).resolve().with_name("seats_rules.txt")
 MANDATES = "MANDATES.md"                                        # under the preferences corpus; the template's seed

@@ -20,6 +20,10 @@ import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "projector", "craft", False
 NAME, OWNER = "projector (registry entry)", "crafts/sysarch/rules/projection.md"
+# Bundled with the core (Rule-11 property 2, criterion (a), d-work #504): core Rules 5, 7, 11, 12, 14, 16, 18 and 20 cite
+# `crafts/sysarch/` by path, so a core-only install must carry this craft or ship Rules that cite a
+# tree it lacks. One declaration per craft; the core keeps no list (`package.bundled_crafts`).
+BUNDLED_WITH_CORE = True
 FIELDS = ("surface", "craft", "module", "test")
 INVARIANTS = [("fields-distinct", lambda: len(set(FIELDS)) == len(FIELDS) and FIELDS[0] == "surface")]   # crafts/syseng/rules/invariants.md
 LEAVES_RULE = Path(__file__).resolve().parents[1] / "rules" / "references.md"
