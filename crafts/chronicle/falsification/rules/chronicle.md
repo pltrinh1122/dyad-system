@@ -44,3 +44,22 @@ line or a commit message pass as the Operator's words, and it names one instance
 no tag.
 
 Disposition: see ledger #511.
+
+## Amendment — d-work #515: a labelled fiction layer for the persona
+
+**Claim (the Operator, relayed from the communicate seat):** the persona's character is private and needs no evidence;
+whatever is written of it is labelled fiction based on a real-life model.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 12 | The craft's premise is that nothing is invented (attack 1); a fiction layer breaks it. | **Survives, scoped** | The premise binds the record layer — the system's events, the seats and their audited flaws — which stays cited and guarded as before. The fiction layer is confined to the persona's character, inner life and daemons, the one thing the record cannot hold and the Operator declares private (§1, §2). |
+| 13 | A reader cannot tell the layers apart. | **Survives, two labels** | The header key `fiction: persona, based on a real-life model` and a `*(fiction)*` marker opening each interior paragraph make any sentence's layer decidable by its paragraph. The guard fails a marked passage under no such header and a `fiction:` value other than the label, and warns on the header with no marked passage (§2, §7). |
+| 14 | Fiction leaks into the record layer: an invented event, or a seat's invented thought. | **Survives, fenced** | A footnote inside a marked passage fails, so a passage cannot be both fiction and record. Every footnoted event still needs its citation, and a seat's thinking stays its plan or falsification record (§1). Inference, stated: whether a marked passage tells only the persona's interior is read at publication. |
+| 15 | §3's approval rule for a flaw attributed to the Operator becomes moot. | **Confirmed, scoped** | It is moot for the persona's daemons, which are fiction. It still binds every statement about the real Operator in the record layer (§3). |
+
+**Verdict:** the claim survives with the two labels and the fence of attack 14. `episodes.py` gains `marked_passages`,
+the constants `FICTION_KEY`, `FICTION_LABEL` and `MARKER` and their invariant, with six tests. The template carries the
+header key and a marked passage. The vocabulary gains `fiction layer`, and the `material-kind` DMC record gains it as
+an outcome. No `VERSION` bump: the craft has no tag.
+
+Disposition: see ledger #515.

@@ -104,6 +104,30 @@ class Episodes(Fixture):
         self.assertEqual(self.write(episode(repos=decl, notes=(f"commit:pltrinh1122/dyad-bond@{sha}",))), [])
         f = self.fails(self.write(episode(repos=decl, notes=(f"commit:pltrinh1122/dyad-bond@{SHA}",))))
         self.assertEqual(len(f), 1); self.assertIn("commit:pltrinh1122/dyad-bond@0123456789ab is not in the clone", f[0])
+    def fiction(self, header=True, label=None, passage="*(fiction)* He lay awake, counting the questions he had not asked."):
+        text = episode()
+        if header:
+            text = text.replace("repos: none\n", f"repos: none\nfiction: {label or episodes.FICTION_LABEL}\n", 1)
+        head, _, rest = text.partition("\n\n")
+        return head + "\n\n" + passage + "\n\n" + rest
+    def test_fiction_layer_labelled_passes(self):
+        self.assertEqual(self.write(self.fiction()), [])
+    def test_marked_passage_without_header_fails(self):
+        f = self.fails(self.write(self.fiction(header=False)))
+        self.assertEqual(len(f), 1); self.assertIn("no `fiction: persona, based on a real-life model` header", f[0])
+    def test_fiction_header_other_label_fails(self):
+        f = self.fails(self.write(self.fiction(label="persona")))
+        self.assertEqual(len(f), 1); self.assertIn("is not `fiction: persona, based on a real-life model`", f[0])
+    def test_marked_passage_with_citation_fails(self):
+        f = self.fails(self.write(self.fiction(passage="*(fiction)* He remembered the night the rule was made.[^1]")))
+        self.assertEqual(len(f), 1); self.assertIn("the fiction layer cites nothing", f[0])
+    def test_fiction_header_without_passage_warns(self):
+        msgs = self.write(self.fiction(passage="An event.[^1]"))
+        self.assertEqual(self.fails(msgs), [])
+        self.assertEqual(len(msgs), 1); self.assertRegex(msgs[0], r"^warning: .*no passage marked")
+    def test_record_layer_still_needs_citations(self):
+        f = self.fails(self.write(self.fiction(passage="*(fiction)* Interior.\n\nAn event.[^9]")))
+        self.assertEqual(len(f), 1); self.assertIn("[^9] is referenced and never defined", f[0])
     def test_prov_citation(self):
         self.assertEqual(self.write(episode(notes=("prov:#7/2",))), [])
         f = self.fails(self.write(episode(notes=("prov:#7/3",))))

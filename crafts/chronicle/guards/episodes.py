@@ -12,7 +12,10 @@ and fails what the record cannot hold (`chronicle.md` §1, §4, §5, §7):
   in it (the core's provenance guard parses the record, `dyadlib.load_guard("agent", "provenance")`);
 - `repo:<owner>/<repo>@<sha>:<path>` whose repo is not declared in `repos:` or whose sha is not 40 hex, or which a
   local clone (`DYAD_REPOS_DIR/<repo>` or `DYAD_REPOS_DIR/<owner>/<repo>`) does not hold;
-- `commit:<owner>/<repo>@<sha>` (a commit itself, no path) on the same terms, the clone holding the commit.
+- `commit:<owner>/<repo>@<sha>` (a commit itself, no path) on the same terms, the clone holding the commit;
+- the fiction layer's labels (`chronicle.md` §2): a marked passage (a paragraph opening `*(fiction)*`) in an episode
+  whose header lacks `fiction: persona, based on a real-life model`, a `fiction:` value other than that label, or a
+  footnote reference inside a marked passage. A `fiction:` header with no marked passage is one warning line.
 A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
 naming it (`chronicle.md` §5). Left to inference, stated: whether a cited artifact says what the episode says.
@@ -33,6 +36,7 @@ HEADER = FIELDS[1:]
 TIMES = ("present", "past")
 VISIBILITY = ("public", "private")
 FORMS = ("path", "prov", "repo", "commit")                          # the four citation forms (chronicle.md §1)
+FICTION_KEY, FICTION_LABEL, MARKER = "fiction", "persona, based on a real-life model", "*(fiction)*"   # chronicle.md §2
 SITE_ENV, SITE_DEFAULT, REPOS_ENV = "DYAD_SITE", "site", "DYAD_REPOS_DIR"
 _TIME = re.compile(r"^(present|past),\s*(\d{4}-\d{2}-\d{2})$")
 _REPO_DECL = re.compile(r"^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)=(public|private)$")
@@ -47,7 +51,9 @@ INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set
               ("time-pattern-matches-times", lambda: all(_TIME.match(f"{t}, 2026-01-01") for t in TIMES)),
               ("four-citation-forms", lambda: FORMS == ("path", "prov", "repo", "commit")
                and all(p.pattern.startswith(f"^{f}:") for f, p in zip(FORMS, (_PATH, _PROV, _REPO, _COMMIT)))),
-              ("visibility-two", lambda: set(VISIBILITY) == {"public", "private"})]
+              ("visibility-two", lambda: set(VISIBILITY) == {"public", "private"}),
+              ("fiction-key-optional", lambda: FICTION_KEY not in HEADER and FICTION_LABEL.startswith("persona, ")
+               and MARKER.strip() == MARKER and MARKER != "")]
 dyadlib.enforce(INVARIANTS, __name__)
 
 def store(root: Path | None = None) -> Path:
@@ -83,6 +89,17 @@ def citation(text: str) -> tuple[str, tuple[str, ...]] | None:
         if m := pat.match(tok):
             return form, m.groups()
     return None
+
+def marked_passages(body: list[str]) -> list[list[str]]:
+    """The fiction layer's passages: each paragraph of the body (lines up to a blank line) whose first line opens
+    with MARKER (chronicle.md §2)."""
+    paras, cur = [], []
+    for line in body + [""]:
+        if line.strip():
+            cur.append(line)
+        elif cur:
+            paras.append(cur); cur = []
+    return [p for p in paras if p[0].lstrip().startswith(MARKER)]
 
 def declared_repos(value: str) -> tuple[dict[str, str], list[str]]:
     """({owner/repo: visibility}, bad entries) from a `repos:` value; `none` is the empty declaration."""
@@ -150,6 +167,16 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
             ok = False
         if not ok:
             msgs.append(f"{where}: `time: {header['time']}` is not `present|past, YYYY-MM-DD` (chronicle.md §4)")
+    fiction, marked = header.get(FICTION_KEY), marked_passages(body)
+    if fiction is not None and fiction != FICTION_LABEL:
+        msgs.append(f"{where}: `{FICTION_KEY}: {fiction}` is not `{FICTION_KEY}: {FICTION_LABEL}` (chronicle.md §2)")
+    if marked and fiction is None:
+        msgs.append(f"{where}: {len(marked)} passage(s) marked {MARKER} and no `{FICTION_KEY}: {FICTION_LABEL}` header (chronicle.md §2)")
+    if fiction is not None and not marked:
+        msgs.append(f"warning: {where}: `{FICTION_KEY}:` header and no passage marked {MARKER} (chronicle.md §2)")
+    for para in marked:
+        if refs := sorted({r for line in para for r in _FOOTREF.findall(line)}):
+            msgs.append(f"{where}: a passage marked {MARKER} cites [^{'], [^'.join(refs)}]; the fiction layer cites nothing (chronicle.md §2)")
     repos, bad = declared_repos(header.get("repos", "none"))
     msgs += [f"{where}: `repos:` entry {b!r} is not `<owner>/<repo>=public|private` (chronicle.md §5)" for b in bad]
     if not notes:

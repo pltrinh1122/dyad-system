@@ -2,16 +2,18 @@
 
 Read by `../guards/episodes.py` (the check) and by whoever drafts a serial from a dyad system's own record. A
 Tended rule: any form, no Rule-4 block, no sweep. Terms: `../vocabulary/CRAFT.md` (`episode`, `season outline`,
-`record citation`, `context citation`, `persona`, `interleave`, `private-repo flag`); the core's `Operator`,
+`record citation`, `context citation`, `persona`, `fiction layer`, `interleave`, `private-repo flag`); the core's `Operator`,
 `provenance record`, `seat`, `failure mode`, `audit`. Record: `../falsification/rules/chronicle.md`. Source:
 dyad-system plan #498 revisions 1–3 (attacks 1, 3, 11, 12, 16, 17, 19), authored as its child C4 (#502).
 
 ## Intent
 Tell a dyad system's journey as a serial — characters, flaws, conflicts, climax and release — without one sentence
-of it being invented: story form decides order, viewpoint and emphasis, and the record decides what happened.
+of its record layer being invented: story form decides order, viewpoint and emphasis, and the record decides what
+happened. The one thing the record cannot hold, the persona's character, is written as fiction and labelled so (§2).
 
 ## 1. Fact anchoring
-An episode draws on exactly two kinds of material, and nothing else:
+An episode has two layers. Its **record layer** — the system's events, the seats and their audited flaws — draws
+on exactly two kinds of material, and nothing else:
 - **the record** — what the system's repos hold: rows, plans, provenance, incidents, audits, falsification
   records, releases. A **record citation** names it by an in-repo path, `path:<repo-relative path>`, or, for a
   repo other than the one the serial lives in, by `repo:<owner>/<repo>@<40-hex sha>:<path>` — a full commit sha,
@@ -23,8 +25,8 @@ An episode draws on exactly two kinds of material, and nothing else:
   entry's quoted lines: a line beginning `>` quotes the earlier reply the Operator was answering, and is never
   told as the Operator's voice.
 Every event an episode tells cites one or the other, as a footnote (`[^n]: <citation>`, the template's form). A
-seat's "thinking" is its plan or its falsification record; the inner life of the main character is only what the
-Operator gave. A commit message is record, never the Operator's voice: commits carry the Operator's git identity
+seat's "thinking" is its plan or its falsification record, never fiction. Its other layer, the **fiction layer**, is
+the persona's alone (§2): it cites nothing and is labelled wherever it appears. A commit message is record, never the Operator's voice: commits carry the Operator's git identity
 whoever wrote them, so authorship in git says nothing of who wrote the words. A gap in the record is reported as a gap,
 never filled.
 
@@ -34,11 +36,21 @@ is the persona's growth in the Dyad-Operator craft, readable in the record: the 
 given, the amends that turned plans, the Rules made. The persona is the Operator's choice of how to appear; no
 other real person is a character, and the commons and its people are not named.
 
+The persona's character, inner life and daemons are private, and the record is not asked to prove them: they are
+written as **fiction based on a real-life model**, in the fiction layer, with no citations. Fiction is admitted here
+only because it is labelled, twice:
+- the episode's header carries `fiction: persona, based on a real-life model` whenever its text holds the layer;
+- each interior passage is a paragraph that opens with the marker `*(fiction)*`, so the layer of any sentence can be
+  decided by reading its paragraph.
+A marked passage tells only the persona's interior. It never tells a system event, a seat's thought or a statement
+about the real Operator: those are the record layer's and cite as §1 says.
+
 ## 3. Characters and flaws
 The other characters are the parties and the seats of the system (the cos, counsel, audit, engineer,
 distribute, operate, communicate, and any seat the organization opens). A seat's flaws are the failure modes an audit has
 classed, each cited to the incident ledger or the audit that classed it. A flaw is attributed to the Operator only
-where the Operator approves that attribution, at the episode's publication.
+where the Operator approves that attribution, at the episode's publication; that approval binds every statement
+about the real Operator in the record layer, and is moot for the persona's daemons, which are fiction (§2).
 
 ## 4. Time and interleave
 Every episode's header carries its time: `time: present, <YYYY-MM-DD>` or `time: past, <YYYY-MM-DD>` — the present
@@ -61,12 +73,15 @@ an outline that does.
 ## 7. The guard and its severity
 `../guards/episodes.py` reads every episode under `<site>/episodes/*.md` (`DYAD_SITE`, default `site`; an absent
 store prints one `skip` line). It fails an episode whose header lacks a key or whose `time:` line is malformed; a
-footnote that is not one of the four citation forms; a `path:` that does not exist in the tree; a `prov:` that
+footnote that is not one of the four citation forms; a marked passage (`*(fiction)*`) in an episode whose header
+lacks `fiction: persona, based on a real-life model`, a `fiction:` value other than that label, or a footnote
+reference inside a marked passage; a `path:` that does not exist in the tree; a `prov:` that
 names no provenance record or no such entry in it; a `repo:` or `commit:` whose repo is not declared in `repos:` or whose sha is
 not 40 hex. A `repo:` citation is resolved when a clone of that repo is reachable locally (`DYAD_REPOS_DIR/<repo>`,
 `git cat-file -e <sha>:<path>`), and fails when the clone lacks it; a `commit:` citation likewise, by
 `git cat-file -e <sha>^{commit}`; with no clone it is unresolvable — The World,
 the `world` severity of the core's Rule-20 register, property 2 — and the guard prints one `warning: … inference`
 line per episode counting them: never a pass by assumption. A citation into a private repo prints one warning
-naming the repo (§5). Whether a cited artifact says what the episode says it does is inference, read at the
-episode's publication.
+naming the repo (§5). A `fiction:` header over a text with no marked passage prints one warning. Whether a cited
+artifact says what the episode says it does, and whether a marked passage tells only the persona's interior, is
+inference, read at the episode's publication.
