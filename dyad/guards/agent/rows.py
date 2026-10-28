@@ -250,6 +250,28 @@ def done_recorded_not_closed(rows: list) -> list[str]:
     return out
 
 # ---- the shape of refs (d-work #439)
+# ---- the head a Done-`Y` was given on (d-work #495, F1 of #487)
+PR_AT = re.compile(r"(?:\bPR #(\d+) )?\bat ([0-9a-f]{7,40})\b")   # `merges PR #a at <head-a>, PR #b at <head-b>`
+
+def named_heads(rows: list) -> list[tuple[int, str | None, str, str]]:
+    """Every head an operative `Y done` names on a row not yet terminal: (row id, PR number or None, head as
+    written, the entry). The operative entry only — the last, as `landing_problems` reads it — since a later
+    `Y` given on a new head supersedes the earlier (Rule-2, Binding). Pure: what the pre-push gate
+    (`package.py done_head_refusals`) matches a pushed ref's old sha against, by prefix."""
+    out = []
+    for r in rows:
+        if r.state in dyadlib.TERMINAL_STATES:
+            continue
+        done = [e for e in entries(r.disposed) if DONE_Y.search(e)]
+        for e in done[-1:]:
+            out += [(r.id, pr or None, s, e) for pr, s in PR_AT.findall(e)]
+    return out
+
+def heads_naming(sha: str, rows: list) -> list[tuple[int, str | None, str, str]]:
+    """The `named_heads` entries that name `sha` (full 40-hex): an entry's head may be written short (7+ hex),
+    so it names `sha` when `sha` starts with it."""
+    return [h for h in named_heads(rows) if sha.startswith(h[2])]
+
 def refs_shape_problems(path: str, before, after, label: str) -> list[str]:
     """A `refs` value a commit adds (`before` None: a new row) or changes is space-separated tokens — `7`,
     `#7`, `parent #3`, `PR #9`, `workstation-252` — and holds none of `REFS_REFUSED`. The close path of

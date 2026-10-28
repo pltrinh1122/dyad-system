@@ -563,5 +563,26 @@ class EventsOnlyFenceTests(unittest.TestCase):
         self.assertTrue(dyadlib.events_only(self.r.d, self.base, h))
         self.assertEqual(m.check_transaction(self.r.d, self.base, h), [])
 
+class NamedHeadsTests(unittest.TestCase):
+    """d-work #495: `named_heads` reads each head the operative `Y done` of a row not yet terminal names, with its
+    PR; `heads_naming` matches a full sha against them by prefix. The pre-push gate (`package.py
+    done_head_refusals`) is their caller."""
+    A, B = "a" * 40, "b" * 40
+    def rows(self, state, disposed):
+        return [dyadlib.Row(7, "t", "d", state, disposed, "")]
+    def test_every_pr_head_pair_of_the_operative_entry(self):
+        d = f"2026-01-01 Y plan; 2026-01-02 Y done (batch #7,#8, merges PR #1 at {self.A[:7]}, PR #2 at {self.B})"
+        self.assertEqual([(i, pr, h) for i, pr, h, _ in m.named_heads(self.rows("planned", d))],
+                         [(7, "1", self.A[:7]), (7, "2", self.B)])
+        self.assertEqual(len(m.heads_naming(self.A, self.rows("planned", d))), 1)       # short sha, by prefix
+        self.assertEqual(m.heads_naming("c" * 40, self.rows("planned", d)), [])
+    def test_only_the_last_entry_and_only_live_rows(self):
+        d = f"2026-01-02 Y done (merges PR #1 at {self.A}); 2026-01-03 Y done (merges PR #1 at {self.B})"
+        self.assertEqual(m.heads_naming(self.A, self.rows("open", d)), [])              # superseded
+        self.assertEqual(len(m.heads_naming(self.B, self.rows("open", d))), 1)
+        for state in ("done", "archived"):
+            self.assertEqual(m.named_heads(self.rows(state, d)), [], state)
+        self.assertEqual(m.named_heads(self.rows("open", "2026-01-02 Y done")), [])     # names no head
+
 if __name__ == "__main__":
     unittest.main()
