@@ -36,10 +36,8 @@ def preferences_path(root: Path) -> Path:
     return root / "preferences-corpus" / "PREFERENCES.md"
 
 def parse(text: str) -> tuple[list[str], list[list[str]]]:
-    """Header and rows; an escaped pipe `\\|` inside a cell is kept as `|`."""
-    t = text.replace("\\|", "\x00")
-    header, rows = dyadlib.table_header(t), dyadlib.table_rows(t)
-    return [h.replace("\x00", "|") for h in header], [[c.replace("\x00", "|") for c in r] for r in rows]
+    """Header and rows; an escaped pipe `\\|` inside a cell is kept as `|` (`dyadlib.split_cells`, #171)."""
+    return dyadlib.table_header(text), dyadlib.table_rows(text)
 
 def alternatives(allowed: str) -> list[str] | None:
     """The values an enumeration cell admits (`\\`a\\` | \\`b\\``, or a lone `\\`a\\``), or None for free text:

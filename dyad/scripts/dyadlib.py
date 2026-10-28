@@ -397,7 +397,7 @@ def preference(key: str, root: Path | None = None) -> str | None:
     p = (root or repo_root()) / PREFERENCES_REL
     if not p.is_file():
         return None
-    for r in table_rows(p.read_text().replace("\\|", "\x00")):
+    for r in table_rows(p.read_text()):   # `table_rows` keeps an escaped `\\|` inside its cell (#171)
         if len(r) >= 2 and plain(r[0]).strip() == key:
             return plain(r[1]).strip()
     return None
@@ -468,7 +468,7 @@ def ledger_rows(text: str) -> list[Row]:
     for line in text.splitlines():
         if not _ROW.match(line):
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = split_cells(line)
         if len(cells) < 6:
             raise ValueError(f"ledger row with {len(cells)} cells: {line!r}")
         rid = int(cells[0])
@@ -529,6 +529,22 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
 PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification")
 
+_CELL_SEP = re.compile(r"(?<!\\)\|")   # a `|` not preceded by `\`: an escaped `\|` is cell content (#171)
+
+def escape_cell(text: str) -> str:
+    """A cell's text as a markdown table writes it: every `|` escaped as `\\|`, so a cell holding one stays one
+    cell (#7). `split_cells` reads it back."""
+    return text.replace("|", "\\|")
+
+def split_cells(line: str) -> list[str]:
+    """The cells of one markdown table line, stripped: split on every unescaped `|`, the leading and trailing
+    separators dropped, and each escaped `\\|` returned as `|` (#171). The one cell splitter of every table parser
+    here; a caller that replaced `\\|` before parsing still reads the same cells."""
+    s = line.strip()
+    s = s[1:] if s.startswith("|") else s
+    s = s[:-1] if s.endswith("|") and not s.endswith("\\|") else s
+    return [c.strip().replace("\\|", "|") for c in _CELL_SEP.split(s)]
+
 def table_header(text: str) -> list[str]:
     """Column names of the first markdown table in `text`: the `|` line followed by a `|---|`
     separator. Empty when there is none. Used to read a schema from a template or a record."""
@@ -536,7 +552,7 @@ def table_header(text: str) -> list[str]:
     for i, line in enumerate(lines[:-1]):
         nxt = lines[i + 1].strip()
         if line.startswith("|") and nxt.startswith("|") and set(nxt) <= set("|-: "):
-            return [c.strip() for c in line.strip().strip("|").split("|")]
+            return split_cells(line)
     return []
 
 def table_rows(text: str) -> list[list[str]]:
@@ -551,7 +567,7 @@ def table_rows(text: str) -> list[list[str]]:
         if set(s) <= set("|-: "):
             seen_sep = True; continue
         if seen_sep:
-            out.append([c.strip() for c in s.strip("|").split("|")])
+            out.append(split_cells(s))
     return out
 
 def tables(text: str) -> list[tuple[list[str], list[list[str]]]]:
@@ -561,10 +577,10 @@ def tables(text: str) -> list[tuple[list[str], list[list[str]]]]:
     while i < len(lines) - 1:
         line, nxt = lines[i].strip(), lines[i + 1].strip()
         if line.startswith("|") and nxt.startswith("|") and set(nxt) <= set("|-: "):
-            header = [c.strip() for c in line.strip("|").split("|")]
+            header = split_cells(line)
             rows, i = [], i + 2
             while i < len(lines) and lines[i].strip().startswith("|"):
-                rows.append([c.strip() for c in lines[i].strip().strip("|").split("|")]); i += 1
+                rows.append(split_cells(lines[i])); i += 1
             out.append((header, rows))
         else:
             i += 1
@@ -656,7 +672,8 @@ def read_rows(root: Path | None = None, at: str | None = None) -> list[Row]:
 def render(rows: list[Row]) -> str:
     head = ("# d-work ledger (rendered view, Rule-16; canonical rows in rows/)\n\n"
             "| id | title | opened | state | disposed | refs |\n|----|-------|--------|-------|----------|------|\n")
-    return head + "".join(f"| {r.id} | {r.title} | {r.opened} | {r.state} | {r.disposed} | {r.refs} |\n" for r in rows)
+    e = escape_cell   # every cell escaped, so a `|` in any field stays in its cell (#7); `ledger_rows` reads it back
+    return head + "".join(f"| {r.id} | {e(r.title)} | {e(r.opened)} | {e(r.state)} | {e(r.disposed)} | {e(r.refs)} |\n" for r in rows)
 
 def ledger_row(text: str, rid: int) -> Row | None:
     return next((r for r in ledger_rows(text) if r.id == rid), None)
@@ -688,6 +705,7 @@ INVARIANTS: list[Invariant] = [
     ("row-optional-fields-disjoint", lambda: not (set(FIELDS) & set(OPTIONAL_FIELDS))),   # #290: a key in both would be required and optional at once
     ("row-mode-default-is-a-mode", lambda: DEFAULT_MODE in MODES and len(MODES) == 2),    # #290: the value an absent line takes is a legal mode
     ("backlog-exits-to-archived", lambda: TRANSITIONS["backlog"] == frozenset({"open", "archived"})),   # #290: the board's drain
+    ("table-cell-escape-round-trips", lambda: split_cells(f"| {escape_cell('a | b')} | c |") == ["a | b", "c"]),   # #7, #171: a rendered `|` stays in its cell
     ("inputs-cover-the-machine", lambda: set(INPUTS) == {(a, b) for a, t in TRANSITIONS.items() for b in t} | {(None, s) for s in NEW_STATES}),   # #309: one input per edge and per birth
     ("input-kinds-known", lambda: all(k and k <= INPUT_KINDS for _, k in INPUTS.values())),
     ("terminal-states-stay-terminal", lambda: TERMINAL_STATES <= STATES and all(TRANSITIONS[s] <= {"archived"} for s in TERMINAL_STATES)),

@@ -15,6 +15,13 @@ class RowFileTests(unittest.TestCase):
     def test_render_and_table_parse_agree(self):
         rows = [dyadlib.Row(1, "a", "d", "open", "", ""), dyadlib.Row(2, "b", "d", "done", "Y done", "PR #1")]
         self.assertEqual(dyadlib.ledger_rows(dyadlib.render(rows)), rows)
+    def test_a_pipe_in_any_cell_renders_escaped_and_parses_back(self):
+        # #7: render escapes `|` in every cell; #171: the parser keeps an escaped `\|` in its cell and unescapes it
+        r = dyadlib.Row(7, "render | escape", "2026-09-14", "open", "2026-09-14 Y intake (a | b)", "x | y")
+        text = dyadlib.render([r])
+        self.assertIn("| 7 | render \\| escape | 2026-09-14 | open | 2026-09-14 Y intake (a \\| b) | x \\| y |", text)
+        self.assertEqual(dyadlib.ledger_rows(text), [r])
+        self.assertEqual(dyadlib.table_rows(text), [["7", "render | escape", "2026-09-14", "open", "2026-09-14 Y intake (a | b)", "x | y"]])
     def test_rule_16_bullet_enumerates_transitions(self):
         # d-work #112: code is the table; the Rule-16 Store bullet enumerates it and must agree.
         text = dyadlib.rule_files()[16].read_text()
@@ -74,9 +81,9 @@ class LiveTests(livetest.LiveCase):
         rows = dyadlib.read_rows()                                          # raises on a duplicate id
         self.assertEqual(len(rows), len({r.id for r in rows}))
         self.assertEqual([r for r in rows if r.state not in dyadlib.STATES], [])
-        # the rendered view parses back to the same ids (a title holding `|` splits into extra cells — row #156;
-        # render/parse agreement on well-formed titles is the fixture case above)
-        self.assertEqual([r.id for r in dyadlib.ledger_rows(dyadlib.render(rows))], [r.id for r in rows])
+        # the rendered view parses back to the same ids and titles, a title holding `|` included (#7, #171)
+        back = dyadlib.ledger_rows(dyadlib.render(rows))
+        self.assertEqual([(r.id, r.title) for r in back], [(r.id, r.title) for r in rows])
         if livetest.instance_is_empty():
             self.assertEqual(rows, [])
             self.assertEqual(dyadlib.render(rows), dyadlib.render([]))       # the header-only view `dyad ledger` writes
