@@ -95,7 +95,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 no disposition of its own, so --mandate refuses -d, --said, --prompt
                                 and --backlog, and refuses a target that is no row or carries no
                                 `Y plan`. refs defaults to `parent #<id>`
-  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs]
+  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
@@ -105,6 +105,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 the record in one step; --prompt records a prompt received (#191).
                                 --relayed-via notes the entries as relayed from <seat> (`relayed via
                                 <seat>`, appended to a disposition's note), with --prompt or --said (#422)
+  dyad dwork state … --check    the same call, every refusal it would make — flags, words, fences, the
+                                Done order, the head and trace tests, landing, the transition — and no
+                                write: no row, no record, no trace. Prints `ok <id>: <from> -> <to>` and
+                                exits 0, or the real call's own refusal and exits non-zero (#464). With
+                                --land it checks in the land worktree against a freshly fetched
+                                origin/main and lands nothing
   dyad dwork state <id> done --mandate <parent>
                                 close an accreted row on its mandate's Done-`Y` (implicit mode, d-work
                                 #422): the row's entry `<date> Y done (mandate #<parent>, <its date>)` and
@@ -1561,7 +1567,7 @@ def cmd_ledger():
 DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
     "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, set(), 3),
+    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--check"}, 3),   # #464
     "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
     "list": ({"--state", "--craft"}, set(), 1)}
 
@@ -1811,6 +1817,9 @@ def cmd_dwork(a):
         if not pos[1].isdigit():
             sys.exit(f"refused: id {pos[1]!r} is not a number")
         rid, state = int(pos[1]), pos[2]
+        # #464 (R1, mode O): `--check` runs this branch to its write and stops there — every refusal below is the
+        # real call's, made at the same point, and `write_row(dry_run=True)` checks the transition and writes nothing
+        check = "--check" in bare
         if rid not in rows: sys.exit(f"no row {rid}")
         r = rows[rid]; disposed, refs = r.disposed, r.refs
         if "--mandate" in vals:
@@ -1863,9 +1872,13 @@ def cmd_dwork(a):
         if "-r" in vals: refs = vals["-r"]
         new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
         try:   # an unknown state or a transition outside Rule-16's table is refused here, before either write (#203)
-            dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None)
+            dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None,
+                              dry_run=check)
         except dyadlib.TransitionError as e:
             sys.exit(str(e))
+        if check:
+            print(f"ok {rid}: {r.state} -> {state}" + (f", entries {', '.join(k for k, _, _ in entries)}" if entries else "")
+                  + " (--check: nothing written)"); return 0
         print(f"{rid}: {state}"); return 0
     if verb == "retire":
         # #290: the retirement form. `archived` is the board's one terminal exit and had been used 0 times in

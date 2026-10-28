@@ -609,11 +609,16 @@ def require_transition(before: str | None, after: str) -> None:
         raise TransitionError(f"transition {before}→{after} not in the table (Rule-16); allowed from {before}: "
                               f"{' '.join(sorted(TRANSITIONS.get(before, ()))) or 'none'}")
 
-def write_row(root: Path, row: Row, before: str | None, first: Callable[[], object] | None = None) -> Path:
+def write_row(root: Path, row: Row, before: str | None, first: Callable[[], object] | None = None,
+              dry_run: bool = False) -> Path:
     """The one write of a row file (Rule-16): `require_transition(before, row.state)` first, so a refused
     transition writes nothing; then `first` (the caller's other write of the same disposition, its provenance
-    entry, Rule-7) and the row file. `before` is the row's state on disk, None for a new row."""
+    entry, Rule-7) and the row file. `before` is the row's state on disk, None for a new row. With `dry_run`
+    the transition is checked and nothing is written, neither `first` nor the row (`dwork state --check`,
+    d-work #464): the same refusal at the same point, so a check can never disagree with the write it stands for."""
     require_transition(before, row.state)
+    if dry_run:
+        return rows_dir(root) / f"{row.id}.md"
     if first is not None:
         first()
     path = rows_dir(root) / f"{row.id}.md"

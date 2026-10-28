@@ -1,6 +1,6 @@
 """Row-file store tests over dyadlib (Rule-16): round trip, render/parse agreement, the live store,
 Rule-16's transition bullet equals dyadlib.TRANSITIONS. The fence itself: tests/guards/agent/test_rows.py."""
-import re, sys, unittest
+import re, sys, unittest, unittest.mock
 from dataclasses import fields
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
@@ -34,6 +34,17 @@ class RowFileTests(unittest.TestCase):
             targets = [t.strip() for t in dst.split(",")]
             table[src.strip()] = frozenset() if targets == ["none"] else frozenset(targets)
         self.assertEqual(table, dyadlib.TRANSITIONS)
+    def test_write_row_dry_run_checks_the_transition_and_writes_nothing(self):
+        """#464: `dry_run` is the same transition check at the same point, then no `first`, no row file."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as t, unittest.mock.patch.dict("os.environ", {"DYAD_INSTANCE": str(Path(t) / "inst")}):
+            dyadlib.rows_dir(Path(t)).mkdir(parents=True)
+            called = []
+            p = dyadlib.write_row(Path(t), dyadlib.Row(1, "a", "d", "planned", "", ""), "open", first=lambda: called.append(1), dry_run=True)
+            self.assertFalse(p.exists()); self.assertEqual(called, [])
+            with self.assertRaises(dyadlib.TransitionError):
+                dyadlib.write_row(Path(t), dyadlib.Row(1, "a", "d", "open", "", ""), "done", first=lambda: called.append(1), dry_run=True)
+            self.assertEqual(called, []); self.assertEqual(list(dyadlib.rows_dir(Path(t)).iterdir()), [])
     def test_backlog_drains_to_archived(self):
         # d-work #290: `archived` was used 0 times in 280 rows because the table gave `backlog` only `open` —
         # 75 rows could not be retired without being worked. Rule-3 already defined `archived` as retirement
