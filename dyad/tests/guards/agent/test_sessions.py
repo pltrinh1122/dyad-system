@@ -217,6 +217,34 @@ class SelfExclusionCLITests(unittest.TestCase):
         files = list((root / "agent-corpus" / "d-work" / "sessions").glob("*.md"))
         self.assertEqual(len(files), 1, files)   # the CLI's own file, correctly excluded from its own check
 
+class TouchArgsTests(unittest.TestCase):
+    """#479 P1 (mode G): `session touch` skipped any word it did not know and wrote anyway; it now
+    refuses (exit 2, one line naming the word, nothing written), and `--help`/`-h` prints usage and
+    exits 0 before any write."""
+    def _main(self, *args):
+        import io, contextlib
+        root = repo(); out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "args-test"}), \
+             mock.patch.object(sv.dyadlib, "repo_root", return_value=root), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = sv.main(["touch", *args])
+        return rc, out.getvalue(), err.getvalue(), list((root / "agent-corpus" / "d-work" / "sessions").glob("*.md"))
+    def test_unknown_word_refuses_and_writes_nothing(self):
+        for args, word in ((("--rows", "3"), "'--rows'"), (("3",), "'3'"), (("-r", "1", "2"), "'2'"), (("-r",), "'-r' without a value")):
+            with self.subTest(args=args):
+                rc, out, err, files = self._main(*args)
+                self.assertEqual(rc, 2); self.assertIn(word, err); self.assertEqual(len(err.strip().splitlines()), 1)
+                self.assertEqual(files, [])
+    def test_help_prints_usage_before_any_write(self):
+        for flag in ("--help", "-h"):
+            with self.subTest(flag=flag):
+                rc, out, err, files = self._main("-r", "1", flag)
+                self.assertEqual(rc, 0); self.assertIn("usage: dyad session touch", out); self.assertEqual(files, [])
+    def test_known_flags_still_write(self):
+        rc, out, err, files = self._main("-r", "1", "-r", "#2", "-f", "a.py")
+        self.assertEqual(rc, 0, err); self.assertEqual([f.name for f in files], ["args-test.md"])
+        f = sv.parse(files[0].read_text()); self.assertEqual((f["rows"], f["files"]), ("1 2", "a.py"))
+
 class StaleTests(unittest.TestCase):
     def test_fresh_is_not_stale(self):
         import datetime
