@@ -88,10 +88,17 @@ class ProvenanceTests(unittest.TestCase):
     def test_credential_shapes_fail(self):
         for secret in ("ghp_abcdefghijklmnopqrstuvwxyz0123456789",
                        "github_pat_11ABCDEFG0abcdefghijklmnop",
+                       "sk-ant-" + "api03-" + "Ab3_dE-f" * 8,   # #52; assembled so no key-shaped literal is tracked
                        "-----BEGIN OPENSSH PRIVATE KEY-----",
                        "Authorization: Bearer abc.def.ghi"):
             root = fixture({"7.md": GOOD.replace("do the thing", secret)})
             self.assertTrue(fails(pv.check_package(root)), secret)
+
+    def test_anthropic_prefix_in_prose_passes(self):
+        """#52: the shape needs a token after `sk-ant-`; naming the prefix, or a short example, is prose."""
+        for prose in ("keys carry the sk-ant- prefix", "an sk-ant-api03-... key", "grep for `sk-ant-`"):
+            root = fixture({"7.md": GOOD.replace("do the thing", prose)})
+            self.assertEqual(fails(pv.check_package(root)), [], prose)
 
     def test_forty_hex_only_warns(self):
         """A commit sha and a Gitea token are the same shape; the Operator pastes shas constantly."""
