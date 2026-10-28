@@ -40,6 +40,11 @@ Under the preference `dwork-trace: always`, read at the commit's own tree, a com
 N — not a mandate close, whose note holds `mandate #` (Rule-7 property 4) — must hold `<instance>/d-work/traces/N.md`
 in that same tree, carried by the commit or already on the base (`trace_problems`, d-work #465): the Done record
 commit carries the trace (Rule-3 Completion); a merge resolution is judged against each parent.
+Under `merge-disposition: with-done`, read at the commit's own tree the same way, a `Y merge` entry a commit adds
+warns — a `warning:` line, never a failure (`merge_disposition_warnings`, d-work #519): the Done-`Y` ratifies the
+merge, so a separate merge question was asked against the preference (#486); a note naming a preference-zone or
+charter PR (`per #427`, `preference`, `charter`, `MANDATES`) is exempt; a merge commit warns only on an entry no
+parent holds. The transaction runners print `warning:` lines as `warn` and keep the push.
 The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
@@ -186,6 +191,30 @@ def trace_problems(path: str, before, after, label: str, sha: str, cwd) -> list[
             f"tree (Rule-3 Completion, `dwork-trace: always`: the Done record commit carries the trace — write it "
             f"with `dyad dwork trace {after.id} --out`, then carry it in the same commit: `dyad dwork batch` with a "
             f"`land {tp}` line before the `state` line; #465)" for e in added]
+
+# ---- a merge question asked against `merge-disposition: with-done` (d-work #519, the audit's F2)
+MERGE_KEY, MERGE_WITH_DONE = "merge-disposition", "with-done"
+MERGE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y merge\b")    # a *separate* merge disposition: `<date> Y merge PR #n at <head> (...)`
+MERGE_EXEMPT = re.compile(r"\bper #427\b|\bpreferences?\b|\bcharter\b|MANDATES", re.IGNORECASE)
+
+def merge_disposition_warnings(path: str, old: set[str], after, label: str, sha: str, cwd) -> list[str]:
+    """Rule-2 Binding: under `merge-disposition: with-done` a merge is ratified by the Done-`Y` that names it, so a
+    separate `Y merge` entry records a merge question asked against the Operator's own preference ("i don't
+    disposition merge, only d-work", #486). Each `Y merge` entry the row holds and `old` does not — the entries
+    already there are never re-judged — warns, read under the value at the commit's own tree; `separate`, or no
+    preference file, disables the clause. Exempt: a merge the Operator disposes as its own question because the PR
+    is the Operator's own — a preference-zone PR or a charter (`MANDATES.md`) PR (#427) — recognized by the entry's
+    note, which names it: `per #427`, `preference`/`preferences`, `charter` or `MANDATES` (case-insensitive; the
+    2026-10-25 entries of #432, #433, #436 and #441 read "its own question per #427"). A warning, never a failure:
+    the `Y` was given and the record is true; what it shows is an Operator asked a question the preference says
+    not to ask."""
+    added = [e for e in entries(after.disposed) if e not in old and MERGE_Y.match(e) and not MERGE_EXEMPT.search(e)]
+    if not added or preference_at(sha, MERGE_KEY, cwd) != MERGE_WITH_DONE:
+        return []
+    return [f"warning: {label} records {e!r} on row file {path} (row #{after.id}) under `merge-disposition: with-done`: "
+            f"the Done-`Y` that names the PR ratifies its merge, so no separate merge question is asked (Rule-2 "
+            f"Binding; #486) — a preference-zone or charter PR, asked as its own question, names that in the note "
+            f"(`its own question per #427`); #519" for e in added]
 
 def landing_problems(path: str, before, after, label: str, sha: str, cwd, base: str | None = None) -> list[str]:
     """The commit that sets `done` asserts two things. That a Done-`Y` was given at all: a row reaches
@@ -381,6 +410,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             fails += done_order_problems(path, before, after, label)
             fails += landing_problems(path, before, after, label, sha, cwd, base)
             fails += trace_problems(path, before, after, label, sha, cwd)       # #465: the record carries its trace
+            fails += merge_disposition_warnings(path, set(entries(before.disposed)), after, label, sha, cwd)   # #519: warns
         elif st.startswith("A"):
             try:
                 new = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd))
@@ -392,6 +422,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             fails += refs_shape_problems(path, None, new, label)
             fails += disposed_problems(path, "", new.disposed, label)
             fails += trace_problems(path, None, new, label, sha, cwd)
+            fails += merge_disposition_warnings(path, set(), new, label, sha, cwd)
     return fails
 
 def check_range(before: str, after: str, cwd=None) -> list[str]:
@@ -435,10 +466,12 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
     id and title unchanged, state equal or a legal transition (Rule-16)."""
     label, prefix, fails = sha[:9], f"{instance}/d-work/rows/", []
     parents = git("rev-list", "--parents", "-n", "1", sha, cwd=cwd).split()[1:]
+    touched: set[str] = set()        # #519: row files the merge differs on from some parent
     for par in parents:
         for st, path in (l.split("\t", 1) for l in git("diff", "--no-renames", "--name-status", par, sha, "--", prefix, cwd=cwd).splitlines() if "\t" in l):
             if st.startswith("D"):
                 fails.append(f"FAIL [main-fence]: merge {label} drops row file {path} that parent {par[:9]} has"); continue
+            touched.add(path)
             if not st.startswith("M"):
                 continue
             try:
@@ -458,6 +491,20 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
             fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
             fails += refs_shape_problems(path, before, after, f"merge {label}")   # #439: a refs rewritten while resolving
             fails += trace_problems(path, before, after, f"merge {label}", sha, cwd)   # #465: a Done record resolved in without its trace
+    # #519: a `Y merge` entry the resolution itself adds — held by no parent — warns once; one that arrived from
+    # either side was judged by the commit that added it, and is never re-judged here.
+    for path in sorted(touched):
+        old: set[str] = set()
+        try:
+            after = dyadlib.parse_row_file(git("show", f"{sha}:{path}", cwd=cwd, stderr=subprocess.DEVNULL))
+            for par in parents:
+                try:
+                    old |= set(entries(dyadlib.parse_row_file(git("show", f"{par}:{path}", cwd=cwd, stderr=subprocess.DEVNULL)).disposed))
+                except subprocess.CalledProcessError:
+                    pass   # absent from this parent: it holds none of the entries
+        except (subprocess.CalledProcessError, ValueError):
+            continue
+        fails += merge_disposition_warnings(path, old, after, f"merge {label}", sha, cwd)
     return fails
 
 def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
@@ -516,9 +563,10 @@ def main(argv):
         sys.exit(__doc__)
     root = dyadlib.repo_root()
     ev = dyadlib.find_guard(dyadlib.HOST_CORPUS, "events")   # the logical host corpus, whatever zone holds it (#175)
-    fails = check_range(argv[0], argv[1], cwd=root) + (ev.check_range(argv[0], argv[1], cwd=root) if ev else [])
-    for f in fails:
+    msgs = check_range(argv[0], argv[1], cwd=root) + (ev.check_range(argv[0], argv[1], cwd=root) if ev else [])
+    for f in msgs:
         print(f, file=sys.stderr)
+    fails = [f for f in msgs if not f.startswith("warning:")]   # #519: a warning never fails the fence
     print("main fence OK" if not fails else "main fence FAILED")
     return 1 if fails else 0
 

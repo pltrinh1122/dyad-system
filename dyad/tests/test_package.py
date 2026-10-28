@@ -2421,5 +2421,24 @@ class SuiteParallelTests(unittest.TestCase):
         self.assertEqual([s[0] for _, s, _ in got], ["Ran 1 test first", "Ran 1 test second", "Ran 1 test third"])
         self.assertGreater(peak[0], 1)
 
+class TransactionWarningTests(unittest.TestCase):
+    """#519: a transaction guard's `warning:` line is printed as `warn` and never fails the PR transaction, as
+    `check_package`'s are; anything else still fails."""
+    def run_pr(self, msgs):
+        pkg = load_package()
+        fake = type("G", (), {"check_transaction": staticmethod(lambda root, base, head: list(msgs))})
+        with unittest.mock.patch.object(pkg, "registry", return_value=[("agent", "row", "x", True, fake, None)]), \
+             unittest.mock.patch.object(pkg, "cmd_invariants", return_value=0), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = pkg.cmd_pr("HEAD", "HEAD")
+        return rc, out.getvalue()
+    def test_a_warning_is_printed_and_passes(self):
+        rc, out = self.run_pr(["warning: a separate merge question"])
+        self.assertEqual(rc, 0, out); self.assertIn("warn [pr] agent/row a separate merge question", out)
+        self.assertIn("ok   [pr] agent/row", out)
+    def test_a_failure_still_fails(self):
+        rc, out = self.run_pr(["warning: w", "FAIL [main-fence]: x"])
+        self.assertEqual(rc, 1, out); self.assertIn("FAIL [pr] agent/row [main-fence]: x", out); self.assertIn("warn [pr]", out)
+
 if __name__ == "__main__":
     unittest.main()
