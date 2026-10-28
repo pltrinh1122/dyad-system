@@ -51,6 +51,7 @@ _FENCE = re.compile(r"^(`{3,}|~{3,})")
 # commit sha as often as a token, so it warns instead (WARN_SHAPES).
 FAIL_SHAPES = [("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}")),
                ("GitHub PAT", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}")),
+               ("Anthropic API key", re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}")),   # #52: a token, never the bare prefix in prose
                ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
                ("Authorization header", re.compile(r"(?i)authorization:\s*(bearer|token)\s+\S+"))]
 WARN_SHAPES = [("40-hex string (commit sha or token)", re.compile(r"(?<![0-9a-fA-F])[0-9a-f]{40}(?![0-9a-fA-F])"))]
