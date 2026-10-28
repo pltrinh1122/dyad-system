@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/draft-role",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "draft-role",
+  "name": "Who drafts and who edits",
+  "description": "Which role may touch a draft of a piece.",
+  "dyad:decides": "May this party draft, or edit, this draft?",
+  "dyad:inputs": [
+    "the assignment",
+    "who wrote the draft"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "writer",
+      "name": "writer",
+      "dyad:when": "a piece or a notes round is to be drafted",
+      "dyad:then": "a fresh subagent drafts it from the form's style guide, the brief and the cited record only"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "editor",
+      "name": "editor",
+      "dyad:when": "a draft exists that this party did not write",
+      "dyad:then": "the communicating seat edits it in stages: fact check, structural, line, copy edit and proofread"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "own-draft",
+      "name": "never edits its own draft",
+      "dyad:when": "the party that would edit is the one that wrote the draft",
+      "dyad:then": "it does not edit; a fresh writer answers the editor's notes instead"
+    }
+  ],
+  "dyad:precedence": "never edits its own draft overrides editor",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/chronicle.md",
+  "dyad:owner": "chronicle:chronicle"
+}

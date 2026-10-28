@@ -3,7 +3,7 @@
 check; placed per `crafts/sysarch/rules/guards.md` under `crafts/chronicle/guards/`; d-work #502, #498 C4).
 Kernel: Python 3.12+, stdlib and git only.
 Reads every episode `<site>/episodes/*.md` (`DYAD_SITE`, default `site`; absent store: one `warning: skip` line)
-and fails what the record cannot hold (`chronicle.md` §1, §4, §5, §7):
+and fails what the record cannot hold (the core `chronicle.md` §1, §2, §4, §8; the serial `serial.md` §1, §3, §7):
 - a header key missing (`title`, `season`, `episode`, `time`, `repos`), a `season`/`episode` that is not a
   number, a `time:` line not `present|past, YYYY-MM-DD`, a `repos:` entry not `<owner>/<repo>=public|private`;
 - an episode with no citation, a footnote referenced in the body and never defined, a footnote whose citation is
@@ -18,7 +18,7 @@ and fails what the record cannot hold (`chronicle.md` §1, §4, §5, §7):
   footnote reference inside a marked passage. A `fiction:` header with no marked passage is one warning line.
 A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
-naming it (`chronicle.md` §5). Left to inference, stated: whether a cited artifact says what the episode says.
+naming it (`chronicle.md` §4). Left to inference, stated: whether a cited artifact says what the episode says.
   episodes.py [repo-root]
 """
 import sys
@@ -166,7 +166,7 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
         except ValueError:
             ok = False
         if not ok:
-            msgs.append(f"{where}: `time: {header['time']}` is not `present|past, YYYY-MM-DD` (chronicle.md §4)")
+            msgs.append(f"{where}: `time: {header['time']}` is not `present|past, YYYY-MM-DD` (serial.md §3)")
     fiction, marked = header.get(FICTION_KEY), marked_passages(body)
     if fiction is not None and fiction != FICTION_LABEL:
         msgs.append(f"{where}: `{FICTION_KEY}: {fiction}` is not `{FICTION_KEY}: {FICTION_LABEL}` (chronicle.md §2)")
@@ -178,7 +178,7 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
         if refs := sorted({r for line in para for r in _FOOTREF.findall(line)}):
             msgs.append(f"{where}: a passage marked {MARKER} cites [^{'], [^'.join(refs)}]; the fiction layer cites nothing (chronicle.md §2)")
     repos, bad = declared_repos(header.get("repos", "none"))
-    msgs += [f"{where}: `repos:` entry {b!r} is not `<owner>/<repo>=public|private` (chronicle.md §5)" for b in bad]
+    msgs += [f"{where}: `repos:` entry {b!r} is not `<owner>/<repo>=public|private` (chronicle.md §4)" for b in bad]
     if not notes:
         msgs.append(f"{where}: cites nothing; every event cites the record or the Operator's context (chronicle.md §1)")
     used = {r for line in body for r in _FOOTREF.findall(line)}
@@ -199,7 +199,7 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
         else:
             repo, sha, rel = g if form == "repo" else (*g, None)
             if repo not in repos:
-                msgs.append(f"{where}: [^{n}] {form}:{repo} is not declared in `repos:` with its visibility (chronicle.md §5)")
+                msgs.append(f"{where}: [^{n}] {form}:{repo} is not declared in `repos:` with its visibility (chronicle.md §4)")
                 continue
             if not _SHA.match(sha):
                 msgs.append(f"{where}: [^{n}] {form}:{repo}@{sha}: not a full 40-hex commit sha")
@@ -215,7 +215,7 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
     if world:
         msgs.append(f"warning: {where}: {world} cross-repo citation(s) unresolvable (The World: no clone under ${REPOS_ENV}), inference")
     if private:
-        msgs.append(f"warning: {where}: cites private repo(s) {', '.join(sorted(private))}; its publication names them (chronicle.md §5)")
+        msgs.append(f"warning: {where}: cites private repo(s) {', '.join(sorted(private))}; its publication names them (chronicle.md §4)")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:

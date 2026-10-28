@@ -1,0 +1,44 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/episode-coverage",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "episode-coverage",
+  "name": "May an episode be drafted",
+  "description": "Whether an episode of the serial may be drafted now, under the rolling wave.",
+  "dyad:decides": "May this episode be drafted?",
+  "dyad:inputs": [
+    "the approved series bible and season arc",
+    "the episode's place in the season"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "covered",
+      "name": "covers it",
+      "dyad:when": "the approved season arc covers the episode",
+      "dyad:then": "its outline is filled in and it may be drafted"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "waits",
+      "name": "waits for a season arc",
+      "dyad:when": "no approved season arc covers the episode",
+      "dyad:then": "it waits for a season arc that covers it"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/serial.md",
+  "dyad:owner": "chronicle:serial"
+}
