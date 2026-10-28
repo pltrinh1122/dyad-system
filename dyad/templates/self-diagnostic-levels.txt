@@ -55,6 +55,7 @@ integration dyad/tests/test_land.py                        # scratch repos, a ba
 unit        dyad/tests/test_levels.py
 integration dyad/tests/test_livetest.py                    # the runner (install); git
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
+integration dyad/tests/test_privatecite.py                 # scratch repos, a bare remote, git diffs read by the fence (#518)
 integration dyad/tests/test_playbooks.py                   # git, bash
 integration dyad/tests/test_project_countersign.py         # scratch repos, git log and tags
 integration dyad/tests/test_release.py                     # scratch repos, a bare origin, a gh shim, an install (#470)

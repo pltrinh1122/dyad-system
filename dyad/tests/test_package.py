@@ -1279,7 +1279,7 @@ class InvariantPassTests(unittest.TestCase):
         labels = [l for l, _, _ in pkg.invariant_modules()]
         guards = [f"{dyadlib.guard_key(py)[1]}/{py.stem}" for py in dyadlib.guard_files()]
         projectors = [f"project_{s.replace('/', '_')}" for s in sorted(pkg.PROJECTORS)]
-        self.assertEqual(labels, ["dyadlib", "package"] + guards + projectors + ["runbook", "craft", "distribute"])
+        self.assertEqual(labels, ["dyadlib", "package"] + guards + projectors + ["runbook", "craft", "distribute", "privatecite"])
         self.assertEqual(len(set(labels)), len(labels))
         for label, mod, extra in pkg.invariant_modules():
             self.assertEqual([n for n, _ in extra], ["entity-non-empty", "corpus-matches-directory", "fields-unique-strings", "transaction-implies-check_transaction"] if "/" in label else [])
@@ -1400,6 +1400,28 @@ class PrePushTests(unittest.TestCase):
         r = self.push("rel-v0.0.1")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("ok   [pre-push] nothing new to judge", r.stdout + r.stderr)
+    def test_f_private_citation_to_a_public_remote_is_refused_by_the_hook(self):
+        """#518: the hook threads git's `<remote> <url>` to the private-citation fence; fixture names only."""
+        import hashlib
+        self.ensure_main_pushed()
+        self.git("checkout", "-q", "-B", "leak", "main")
+        inst = self.d / "agent-corpus"
+        (inst / "public_remotes.local.txt").write_text(f"{self.bare}\n")
+        (inst / "private_repos.local.txt").write_text(hashlib.sha256(b"acme/secret").hexdigest() + "\n")
+        self.git("add", "-A"); self.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "lists")   # one zone per commit (Rule-1)
+        f = self.d / "workstation-corpus" / "leak.md"; f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(f"[^1]: repo:acme/secret@{'c' * 40}:notes.md\n\n```\nprivate words\n```\n")
+        self.git("add", "-A"); self.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "leak")
+        r = self.push("leak")
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("FAIL [private-cite]", r.stdout + r.stderr)
+        self.assertIn("workstation-corpus/leak.md:1 cites a private repo", r.stdout + r.stderr)
+        self.assertNotIn("[guards]", r.stdout + r.stderr)             # refused before any guard runs
+        f.write_text("[^1]: repo:acme/secret@" + "c" * 40 + ":notes.md\n")   # the citation alone, no quoted body
+        self.git("add", "-A"); self.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "no body")
+        r = self.push("leak")                                           # the earlier commit still leaves with it: refused
+        self.assertIn("FAIL [private-cite]", r.stdout + r.stderr)
+        self.git("checkout", "-q", "main")
     def test_pushed_refs_skips_lines_it_cannot_read(self):
         pkg = load_package()
         z = "0" * 40
