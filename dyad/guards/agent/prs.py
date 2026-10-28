@@ -31,6 +31,14 @@ INVARIANTS = [("cite-has-one-group", lambda: CITE.groups == 1)]   # crafts/sysen
 def cited(body: str) -> list[int]:
     return sorted({int(m) for m in CITE.findall(body or "")})
 
+def has_plan_y(disposed: str) -> bool:
+    """One parsed `disposed` entry *is* a plan-`Y` — `<date> Y plan`, bare or with its note (`(mandate #N)`,
+    `(batch #a,#b)`, `(revision N…)`) — read with the row guard's own `entries()` and `PLAN_Y`. Before #250
+    this was a substring test over the whole column, so an entry merely mentioning the words (`Y backlog
+    (asked: Y plan later)`, `N plan (wanted Y plan)`) opened the gate on a row no plan-`Y` authorized."""
+    rg = dyadlib.load_guard("agent", "rows")
+    return any(rg.PLAN_Y.match(e) for e in rg.entries(disposed or ""))
+
 def check(body: str, ledger_text: str | None = None, rows: list | None = None) -> list[str]:
     """rows: parsed Row list (Rule-16); ledger_text: a table, kept for tests."""
     ids = cited(body)
@@ -46,7 +54,7 @@ def check(body: str, ledger_text: str | None = None, rows: list | None = None) -
             fails.append(f"FAIL [d-work]: #{n} not in ledger"); continue
         if row.state not in ("open", "planned", "blocked"):
             fails.append(f"FAIL [d-work]: #{n} is {row.state}, not open"); continue
-        if "Y plan" not in row.disposed:
+        if not has_plan_y(row.disposed):
             fails.append(f"FAIL [d-work]: #{n} has no 'Y plan' disposition (plan gate)")
     return fails
 
