@@ -199,10 +199,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 `pending=true|false` appended to GITHUB_OUTPUT when set
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
-                                a core release tag is expected (BUNDLE.md names dyad-operator) and none is here; one
-                                `ok|changed|warn [bootstrap]` line per step, exit 0 even offline (a SessionStart hook
-                                never blocks); --check is read-only. `check --evidence` refuses a shallow clone, or a
-                                tagless one where a core tag is expected, in one line naming this verb
+                                the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
+                                here, older core tags notwithstanding (#505); one `ok|changed|warn [bootstrap]` line
+                                per step, exit 0 even offline (a SessionStart hook never blocks); --check is read-only.
+                                `check --evidence` refuses a shallow clone, or one missing the row's tag, in one line
+                                naming this verb
 """
 import sys
 if sys.version_info < (3, 12):
@@ -1002,7 +1003,7 @@ def cmd_evidence(brief=False):
     stored (`evidence_store`) whatever is printed; `brief` prints `evidence_brief` of it instead (#476)."""
     import io, contextlib
     unfit = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap").clone_problems(REPO)
-    if unfit:   # d-work #474: a shallow or tagless clone yields false FAILs (infra/bundle, plan.base->commit); one line, nothing run
+    if unfit:   # d-work #474, #505: a shallow clone, or one missing the row's core tag, yields false FAILs (infra/bundle, plan.base->commit); one line, nothing run
         print(f"FAIL [evidence] {unfit[0]}")
         return 2
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
