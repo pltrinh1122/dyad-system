@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/change-direction",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "change-direction",
+  "name": "Which way a change may flow",
+  "description": "Whether a change to a form's documents or pieces may be made, and on whose word.",
+  "dyad:decides": "May this change be made without the Operator's Y?",
+  "dyad:inputs": [
+    "the document or piece changed",
+    "whether it is published",
+    "whether the change comes from an earlier or a later stage"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "down",
+      "name": "flow down freely",
+      "dyad:when": "the change runs from a long-lived document toward plans and drafts not yet published",
+      "dyad:then": "made by the editor without a question"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "up",
+      "name": "flow up only on the Operator's",
+      "dyad:when": "the change would alter a longer-lived document from a later stage",
+      "dyad:then": "made only on the Operator's Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "canon",
+      "name": "canon",
+      "dyad:when": "the piece is published",
+      "dyad:then": "never rewritten; a contradiction found later gets a correction note"
+    }
+  ],
+  "dyad:precedence": "canon first: a published piece is never changed",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/chronicle.md",
+  "dyad:owner": "chronicle:chronicle"
+}

@@ -63,3 +63,29 @@ header key and a marked passage. The vocabulary gains `fiction layer`, and the `
 an outcome. No `VERSION` bump: the craft has no tag.
 
 Disposition: see ledger #515.
+
+## Amendment — d-work #521: a core for every form, and the serial as its first section
+
+**Claim (the Operator, relayed from the communicate seat):** "the `chronicle` craft is meant to be applicable for all
+use cases", not only a serial. The decision records behind it — criteria K1–K8 and DR-1 to DR-9, accepted by the
+Operator at their default weights — are in `pltrinh1122/dyad-system-scratch@360c6fa:communicate/method/decision-records.md`.
+They are quoted here, and only they.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 16 | The craft is already form-neutral. | **Refuted** | DR-9, read against the rule at main 92a216bc: "Its README and Intent say 'a serial', and §2–§4 (main character, characters and flaws, time and interleave) and §6 (season outline) assume one." Anchoring, the fiction layer, the private-repo flag, approval at publication and the guard held for any form. They are now the core (`chronicle.md` §1–§4, §6, §8). |
+| 17 | A split loses the serial's specifics. | **Refuted** | They move to the serial's section (`serial.md`): episodes, characters, time and interleave, and the serial's documents. Those documents are the series bible, season arc, episode outline and beat sheet, continuity bible, canon and a buffer of two (DR-6: "2: room to fix a payoff before its setup is canon"). The Story Circle is "a lens, never a mould" (DR-2). |
+| 18 | One outline locked before drafting keeps direction. | **Refuted, by the record** | DR-1: "A single-document outline went through 7 revisions without an approval, and every change came from upstream." The rolling wave — "bible and season arc fixed, the next 1–2 episodes in detail, the rest one line each, plus a small buffer" — is "the only option without a weak score on K3 or K4" (adaptability, direction). §6's "an outline that does" becomes "a season arc that covers it" (`serial.md` §6). |
+| 19 | Roles are an organization's, not a craft's. | **Scoped** | The core names roles by function, never by seat (`chronicle.md` §5), so any organization fills them. The Operator disposes ("Under Rule-2, no role changes who disposes", DR-4). The editor is the communicating seat. The writer is a fresh subagent per assignment, "given only the form's style guide, the brief and the cited record; never the editor's notes or earlier drafts" (DR-8 B). "The editor never edits its own draft" (DR-4). The serial names the Operator's authority showrunner, "the only one that means final say over a series' story" (DR-4 C). |
+| 20 | Changes after a piece is outlined or published re-open everything. | **Survives, the change rule** | DR-6 C: "changes flow down freely, up only on his Y; published episodes are canon; buffered episodes stay revisable". The core states it for every form (`chronicle.md` §6). Each publication question lists what the piece adds to continuity and the planned pieces it moved. |
+| 21 | The new terms are coined and teach nothing outside the project. | **Refuted, procedure** | DR-3 E: "Web serial for the form, prose publishing for editing, TV only where prose has no term". Every new vocabulary row names its source. |
+| 22 | The guard changes. | **Procedure, unchanged in substance** | `episodes.py` checks the serial's episodes, and with them every rule of the core a file can show. Its messages now cite the new sections. A form whose pieces no guard reads is checked by inference, stated in its publication question (`chronicle.md` §8). The 25 tests pass unchanged. |
+| 23 | Rule-4: a Tended rule naming roles binds the Agent's process. | **Survives** | The roles bind the work of writing, not the dyad's process. The rule uses no Agent-process token, and the craft guard prints no warning on either file. Who disposes stays Rule-2's. |
+
+**Verdict:** the claim survives as a core plus one section per form. Version 0.2.0: `chronicle-v0.1.0` is released,
+and the tree moves past it.
+- **New files:** the serial's section, `rules/serial.md`, and `templates/brief.md`.
+- **Vocabulary:** gains the core's and the serial's terms with their sources. `season outline` gives way to `season arc`.
+- **DMC records:** three new ones — `draft-role`, `change-direction` and `episode-coverage`.
+
+Disposition: see ledger #521.

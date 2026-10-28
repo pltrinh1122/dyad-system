@@ -5,10 +5,10 @@ time: present, <YYYY-MM-DD>
 repos: none
 fiction: persona, based on a real-life model
 
-<!-- `time:` is `present, <YYYY-MM-DD>` or `past, <YYYY-MM-DD>` (rules/chronicle.md §4). `repos:` is `none`, or
-     space-separated `<owner>/<repo>=public|private`, one per repo a `repo:` or `commit:` citation below names (§5). Every
-     event below carries a footnote; nothing is told that no footnote holds (§1). `fiction:` stays only while the text
-     holds a passage marked `*(fiction)*`: the persona's character, inner life and daemons, uncited (§2). -->
+<!-- `time:` is `present, <YYYY-MM-DD>` or `past, <YYYY-MM-DD>` (rules/serial.md §3). `repos:` is `none`, or
+     space-separated `<owner>/<repo>=public|private`, one per repo a `repo:` or `commit:` citation below names (rules/chronicle.md §4). Every
+     event below carries a footnote; nothing is told that no footnote holds (rules/chronicle.md §1). `fiction:` stays only while the text
+     holds a passage marked `*(fiction)*`: the persona's character, inner life and daemons, uncited (rules/chronicle.md §2). -->
 
 <The body: the events, in story form — order, viewpoint and emphasis are the teller's; each fact cites.>[^1] <The
 Operator's own words about the world around the work, quoted verbatim.>[^2] <A moment from an earlier repo.>[^3] <A commit's own message.>[^4]
