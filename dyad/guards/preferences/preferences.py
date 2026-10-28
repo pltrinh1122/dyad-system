@@ -3,9 +3,11 @@
 the Rule named in `read by` owns each value's meaning, the guard placed per Rule-11 property 1). Kernel: Python 3.12+.
 `preferences-corpus/PREFERENCES.md` (instance; seeded from `dyad/templates/PREFERENCES.md`): the table
 header is FIELDS; every row has a unique non-empty key, a value, an `allowed` cell and a `read by` cell
-naming at least one `Rule-N` that exists (`dyadlib.rule_files`); when `allowed` is an enumeration
-(alternatives separated by `\\|`, each backticked) the value is one of them; otherwise `allowed` is
-free text and the value is inference. A missing file passes (an install seeds it). The template is
+naming at least one `Rule-N` that exists (`dyadlib.rule_files`); when `allowed` is an enumeration —
+every part, split on `\\|`, wholly one backticked value, a lone backticked value an enumeration of one
+— the value is one of them; any other cell, a mixed one (`none` \\| seat names) included, is free text
+and the value is inference (d-work #512: #510's mixed cell refused a seat name). A missing file passes
+(an install seeds it). The template is
 the preference schema (`dyad/vocabulary/VOCABULARY.md`'s `package` row: package-level, not
 per-instance); a key it carries but the live corpus does not warns (`missing_keys`, #180) — an
 instance never re-seeded after the template gained a key a Rule now reads.
@@ -22,8 +24,13 @@ import dyadlib
 ENTITY, CORPUS, TRANSACTION = "preference", "preferences", False
 NAME, OWNER = "preference row", "frame (Operator-owned; read by the Rule named)"
 FIELDS = ("key", "value", "allowed", "read by")
-INVARIANTS = [("fields-in-order", lambda: FIELDS == ("key", "value", "allowed", "read by"))]   # crafts/syseng/rules/invariants.md
 _RULE = re.compile(r"\bRule-(\d+)\b")
+_ALT = re.compile(r"`([^`]+)`")   # one enumerated value: the whole part, backticked
+INVARIANTS = [   # crafts/syseng/rules/invariants.md
+    ("fields-in-order", lambda: FIELDS == ("key", "value", "allowed", "read by")),
+    ("enumeration-only-when-every-part-is-backticked", lambda: alternatives("`a` | `b`") == ["a", "b"]
+        and alternatives("`a`") == ["a"] and alternatives("`a` | free text") is None and alternatives("free text") is None),
+]
 
 def preferences_path(root: Path) -> Path:
     return root / "preferences-corpus" / "PREFERENCES.md"
@@ -35,11 +42,10 @@ def parse(text: str) -> tuple[list[str], list[list[str]]]:
     return [h.replace("\x00", "|") for h in header], [[c.replace("\x00", "|") for c in r] for r in rows]
 
 def alternatives(allowed: str) -> list[str] | None:
-    """The values an enumeration cell admits (`\\`a\\` | \\`b\\``), or None for free text."""
-    if "|" not in allowed:
-        return None
-    parts = [dyadlib.plain(p).strip() for p in allowed.split("|")]
-    return parts if all(parts) else None
+    """The values an enumeration cell admits (`\\`a\\` | \\`b\\``, or a lone `\\`a\\``), or None for free text:
+    a cell is an enumeration only when every `|`-separated part is wholly one backticked value (#512)."""
+    parts = [_ALT.fullmatch(p.strip()) for p in allowed.split("|")]
+    return [m.group(1).strip() for m in parts] if all(parts) else None
 
 def keys(text: str) -> set[str]:
     """The non-empty `key` cells of a preference table (first column; malformed rows contribute none)."""
