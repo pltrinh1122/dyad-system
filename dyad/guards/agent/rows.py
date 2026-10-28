@@ -68,6 +68,7 @@ INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]  
 # (`row-fields-match-dataclass`, `row-optional-fields-disjoint`), which the runner's pass runs all the same.
 ENTRY = re.compile(r"\d{4}-\d{2}-\d{2} [YN](?: |$)")   # Rule-3 Ledger: `<date> <Y|N> <plan|done|merge #n|reason>`
 MANDATE = re.compile(r"\d{4}-\d{2}-\d{2} Y plan \(mandate #\d+\)$")   # the one entry an implicit-mode row is born with (Rule-3, #290)
+PLAN_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y plan(?:$|[ ,])")              # a *given* plan disposition, matched on one parsed entry (the plan gate, #250)
 DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")                    # a *given* completion disposition (Rule-3 Completion, #202)
 DONE_MERGES = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b[^;]*\bmerge[sd]?\b[^;]*#\d+")   # one that ratifies a merge: the state waits for it
 HEAD_AT = re.compile(r"\bat ([0-9a-f]{7,40})\b")                       # the head the `Y` was given on

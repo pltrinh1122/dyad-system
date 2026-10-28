@@ -26,6 +26,22 @@ class DworkLinkTests(unittest.TestCase):
         self.assertIn("is backlog", d.check("d-work #5", LEDGER)[0])
     def test_plan_gate(self):
         self.assertIn("no 'Y plan'", d.check("d-work #3", LEDGER)[0])
+    def test_plan_gate_parses_entries(self):
+        """#250: the gate reads one parsed entry that *is* a plan-`Y`, never the words anywhere in the column."""
+        def gate(disposed):
+            ledger = ("| id | title | opened | state | disposed | refs |\n|----|-------|--------|-------|----------|------|\n"
+                      f"| 9 | t | 2026-10-01 | open | {disposed} | |\n")
+            return d.check("d-work #9", ledger)
+        for refused in ("2026-10-01 Y backlog (asked: Y plan later)", "2026-10-01 N plan (wanted Y plan)",
+                        "2026-10-01 Y intake (Y plan pending)", "2026-10-01 Y planning deferred", "2026-10-01 Y plan-shape",
+                        "2026-10-01 N Y plan", "Y plan"):
+            self.assertIn("no 'Y plan'", gate(refused)[0], refused)
+        for accepted in ("2026-10-01 Y plan", "2026-10-01 Y plan (mandate #524)",
+                         "2026-10-01 Y plan (batch #1,#2,#3)", "2026-10-01 Y plan (revision 3, batch #4,#5)",
+                         "2026-10-01 Y backlog; 2026-10-02 N plan; 2026-10-03 Y plan (revision 2)",
+                         "2026-10-01 Y plan, relayed via program-59cec502"):
+            self.assertEqual(gate(accepted), [], accepted)
+        self.assertTrue(d.has_plan_y("2026-10-01 Y plan")); self.assertFalse(d.has_plan_y(""))
     def test_duplicate_citation_counted_once(self):
         self.assertEqual(d.cited("d-work #2 and again d-work #2"), [2])
     def test_contract(self):
@@ -35,7 +51,7 @@ class DworkLinkTests(unittest.TestCase):
         root = Path(tempfile.mkdtemp()); sh = lambda *a: subprocess.run(a, cwd=root, check=True, capture_output=True, text=True)
         sh("git", "init", "-q", "-b", "main"); sh("git", "config", "user.email", "t@t"); sh("git", "config", "user.name", "t")
         rows = root / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True)
-        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: d Y plan\nrefs: \n")
+        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")
         sh("git", "add", "-A"); sh("git", "commit", "-qm", "root"); base = sh("git", "rev-parse", "HEAD").stdout.strip()
         os.environ.pop("DYAD_INSTANCE", None)
         self.assertEqual(d.check_transaction(root, base, base), [])          # on main: nothing to say
@@ -58,7 +74,7 @@ class DworkLinkTests(unittest.TestCase):
         sh("git", "add", "-A"); sh("git", "commit", "-qm", "root"); base = rev()
         os.environ.pop("DYAD_INSTANCE", None)
         sh("git", "checkout", "-q", "-b", "ledger")
-        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: d Y plan\nrefs: \n")
+        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")
         sh("git", "add", "-A"); sh("git", "commit", "-qm", "ledger: #2 planned"); ledger = rev()
         self.assertTrue(d.ledger_only(root, base, ledger))
         self.assertEqual(d.check_transaction(root, base, ledger), [])        # no citation needed
@@ -127,7 +143,7 @@ class DworkLinkTests(unittest.TestCase):
         events = rev()
         self.assertTrue(d.events_only(root, base, events)); self.assertFalse(d.ledger_only(root, base, events))
         self.assertEqual(d.check_transaction(root, base, events), [])        # no citation needed
-        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: d Y plan\nrefs: \n")
+        (rows / "2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")
         sh("git", "add", "-A"); sh("git", "commit", "-qm", "ledger: #2 planned")
         mixed = rev()
         self.assertFalse(d.events_only(root, base, mixed)); self.assertFalse(d.ledger_only(root, base, mixed))
