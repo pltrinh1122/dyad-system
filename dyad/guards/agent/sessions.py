@@ -38,7 +38,7 @@ typed: a hand-added key does not survive the next `touch()`.
 import sys
 if sys.version_info < (3, 12):
     sys.exit("sessions.py: Python 3.12+ required")
-import datetime, os, platform, re, uuid
+import datetime, os, platform, re, subprocess, uuid
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, hostadapter
@@ -626,6 +626,16 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
 
 TOUCH_USAGE = "usage: dyad session touch [-r <row>]... [-f <file>]... (no word: this session's open and planned rows)"
 
+def behind_origin(root: Path) -> int | None:
+    """#482 P4 (mode T): commits on the local `origin/main` ref that HEAD lacks — counted against the ref as last
+    fetched, never fetching (touch makes no network call); None when there is no such ref or git cannot say."""
+    try:
+        r = subprocess.run(["git", "rev-list", "--count", "HEAD..origin/main"], cwd=root, capture_output=True,
+                           text=True, env=dyadlib.git_env(), timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return int(r.stdout) if r.returncode == 0 and r.stdout.strip().isdigit() else None
+
 def main(a: list[str]) -> int:
     root = dyadlib.repo_root()
     if a and a[0] == "touch":
@@ -644,6 +654,8 @@ def main(a: list[str]) -> int:
         except SessionUnset as e:
             print(e, file=sys.stderr); return 2
         print(f"touched {p.relative_to(root)}")
+        if n := behind_origin(root):   # #482 P4: the session-start report states its base; nothing when 0
+            print(f"behind origin/main by {n}")
         same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call
         if same:
             print(f"warning: same working tree as: {', '.join(same)} — a raw git command from either "
