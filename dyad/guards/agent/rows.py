@@ -45,6 +45,8 @@ warns — a `warning:` line, never a failure (`merge_disposition_warnings`, d-wo
 merge, so a separate merge question was asked against the preference (#486); a note naming a preference-zone or
 charter PR (`per #427`, `preference`, `charter`, `MANDATES`) is exempt; a merge commit warns only on an entry no
 parent holds. The transaction runners print `warning:` lines as `warn` and keep the push.
+On `main` and on a branch alike, the row ids a range adds run contiguously from the base's highest id + 1
+(`contiguity_problems`, R4 of d-work #467): no id skipped, none typed by hand, a batch of k new rows passing.
 The append-only rule of the run-book event store
 (the sysadmin craft's server-instances rule) lives in the craft's guard `crafts/sysadmin/guards/events.py`;
 the CLI below runs both when that guard is installed, as the former `main_fence.py` did (#155).
@@ -443,8 +445,8 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
         # a ledger-only or events-only branch gets the fence per commit, which already judges each added `disposed` entry
         clerical = dyadlib.ledger_only(root, base, head) or dyadlib.events_only(root, base, head)
         whole = check_ledger_branch if clerical else check_disposed
-        return check_id_collisions(root, base, head) + whole(root, base, head)
-    return check_range(base, head, cwd=root)
+        return check_id_collisions(root, base, head) + contiguity_problems(root, base, head) + whole(root, base, head)
+    return check_range(base, head, cwd=root) + contiguity_problems(root, base, head)
 
 def check_ledger_branch(root: Path, base: str, head: str) -> list[str]:
     """A ledger-only branch — or an events-only one (#438) — skips the plan gate (Rule-3, #191) because `main` would admit the same
@@ -540,6 +542,37 @@ def check_id_collisions(root: Path, base: str, head: str) -> list[str]:
                          f"for different work ({head_row.title!r})")
     return fails
 
+def row_ids_at(root: Path, ref: str, prefix: str) -> set[int]:
+    """The ids of the row files the tree at `ref` holds under `prefix` (raises CalledProcessError when git cannot say)."""
+    out = git("ls-tree", "-r", "--name-only", ref, "--", prefix, cwd=root, stderr=subprocess.DEVNULL)
+    return {int(Path(p).stem) for p in out.split() if p.endswith(".md") and Path(p).stem.isdigit()}
+
+def contiguity_problems(root: Path, base: str, head: str) -> list[str]:
+    """R4 (d-work #467, mode W): the row ids a range *adds* — row files at `head` that `base` does not hold, the
+    two-dot tree difference, so ids another session landed on `base` meanwhile are never this range's — sorted, must
+    be exactly `base_max+1 … base_max+k`, `base_max` the highest id at `base` (0 when it holds none): the allocator's
+    own rule (`dwork new`: `max(origin, local)+1`, Rule-16), so a skipped id or a hand-typed one (#461's row 999)
+    fails, and a batch adding k rows passes. An id reused at the base under another title is `check_id_collisions`'
+    report, never this one's: a rebased row that collides is a modified file here, not an added one. Gaps already in
+    the store's history are never judged — only what this range adds. A base or range git cannot read is silent."""
+    prefix = f"{dyadlib.instance_rel(root) or os.environ.get('DYAD_INSTANCE', 'agent-corpus')}/d-work/rows/"
+    try:
+        added = git("diff", "--no-renames", "--name-only", "--diff-filter=A", f"{base}..{head}", "--", prefix,
+                    cwd=root, stderr=subprocess.DEVNULL).split()
+        new = sorted(int(Path(p).stem) for p in added if p.endswith(".md") and Path(p).stem.isdigit())
+        if not new:
+            return []
+        top = max(row_ids_at(root, base, prefix), default=0)
+    except subprocess.CalledProcessError:
+        return []
+    expected = list(range(top + 1, top + 1 + len(new)))
+    if new == expected:
+        return []
+    span = lambda ids: f"#{ids[0]}" if len(ids) == 1 else ", ".join(f"#{i}" for i in ids)
+    return [f"FAIL [row-id]: the range adds row id(s) {span(new)}; expected {span(expected)} — contiguous from the "
+            f"base's highest id #{top} (Rule-16 allocator, `dwork new`; #467). A skipped or hand-typed id is a row "
+            f"the allocator did not write: re-allocate it with `dyad dwork new`"]
+
 # ---- entity card (the entities projector reads it; crafts/sysarch/templates/entity-card.md)
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     rows = dyadlib.read_rows(root) if dyadlib.rows_dir(root).is_dir() else []
@@ -563,7 +596,7 @@ def main(argv):
         sys.exit(__doc__)
     root = dyadlib.repo_root()
     ev = dyadlib.find_guard(dyadlib.HOST_CORPUS, "events")   # the logical host corpus, whatever zone holds it (#175)
-    msgs = check_range(argv[0], argv[1], cwd=root) + (ev.check_range(argv[0], argv[1], cwd=root) if ev else [])
+    msgs = check_range(argv[0], argv[1], cwd=root) + contiguity_problems(root, argv[0], argv[1]) + (ev.check_range(argv[0], argv[1], cwd=root) if ev else [])
     for f in msgs:
         print(f, file=sys.stderr)
     fails = [f for f in msgs if not f.startswith("warning:")]   # #519: a warning never fails the fence

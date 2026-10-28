@@ -208,6 +208,70 @@ class BranchIdCollisionTests(unittest.TestCase):
         self.assertIn("id 1 already names", out[0])
         self.assertIn("changes id or title", out[1])   # #191: a ledger-only branch is fenced as `main` would fence it
 
+class ContiguousIdTests(unittest.TestCase):
+    """R4 (d-work #467, mode W): the row ids a range adds run contiguously from the base's highest id + 1 —
+    #461's hand simulation committed a row 999 that nothing judged."""
+    R = "agent-corpus/d-work/rows"
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+        self.r = Repo()
+        for i in (1, 2, 5):                                   # a gap already in history (#28, #63 have them) is never judged
+            self.r.write(f"{self.R}/{i}.md", row(i, f"r{i}"))
+        self.base = self.r.commit("root")
+    def add(self, *ids, msg="new"):
+        for i in ids:
+            self.r.write(f"{self.R}/{i}.md", row(i, f"r{i}"))
+        return self.r.commit(msg)
+    def test_next_id_passes(self):
+        self.assertEqual(m.contiguity_problems(self.r.d, self.base, self.add(6)), [])
+    def test_a_batch_of_k_rows_in_one_commit_passes(self):
+        self.assertEqual(m.contiguity_problems(self.r.d, self.base, self.add(6, 7, 8, msg="ledger: batch")), [])
+    def test_k_rows_over_several_commits_pass(self):
+        self.add(6); self.add(7); h = self.add(8)
+        self.assertEqual(m.contiguity_problems(self.r.d, self.base, h), [])
+    def test_a_skipped_id_fails_naming_expected_and_got(self):
+        out = m.contiguity_problems(self.r.d, self.base, self.add(6, 8))
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("adds row id(s) #6, #8; expected #6, #7", out[0]); self.assertIn("highest id #5", out[0])
+    def test_a_hand_typed_id_fails(self):
+        out = m.contiguity_problems(self.r.d, self.base, self.add(999))
+        self.assertEqual(len(out), 1, out); self.assertIn("#999; expected #6", out[0])
+    def test_filling_a_historical_gap_fails(self):
+        out = m.contiguity_problems(self.r.d, self.base, self.add(3))
+        self.assertEqual(len(out), 1, out); self.assertIn("#3; expected #6", out[0])
+    def test_edits_and_no_new_rows_are_silent(self):
+        self.r.write(f"{self.R}/1.md", row(1, "r1", "planned", "2026-01-01 Y plan")); h = self.r.commit()
+        self.assertEqual(m.contiguity_problems(self.r.d, self.base, h), [])
+    def test_an_empty_base_starts_at_one(self):
+        r = Repo(); r.write("README.md", "x"); base = r.commit()
+        r.write(f"{self.R}/1.md", row(1, "one")); h = r.commit()
+        self.assertEqual(m.contiguity_problems(r.d, base, h), [])
+        r.write(f"{self.R}/3.md", row(3, "three")); h = r.commit()
+        self.assertIn("#1, #3; expected #1, #2", m.contiguity_problems(r.d, base, h)[0])
+    def test_a_rebased_collision_is_the_collision_check_s_not_this(self):
+        """Two sessions both allocate #6; A lands first. B's range against the moved base modifies #6 (another
+        title) rather than adding it — `check_id_collisions` reports it, and this check says nothing."""
+        sh("git", "checkout", "-q", "-b", "b", cwd=self.r.d)
+        self.r.write(f"{self.R}/6.md", row(6, "B's work")); b = self.r.commit("B")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d); moved = self.add(6, msg="A")
+        self.assertEqual(m.contiguity_problems(self.r.d, moved, b), [])
+        self.assertIn("id 6 already names", m.check_id_collisions(self.r.d, moved, b)[0])
+    def test_a_base_that_moved_on_is_judged_by_its_own_max(self):
+        """A branch cut at #5 that adds #6 after `main` took #6, #7 under the same title is no added row at all;
+        a branch adding #8 against that base passes, #6 being the base's."""
+        sh("git", "checkout", "-q", "-b", "b", cwd=self.r.d); self.r.write("dyad/x.md", "x"); b = self.r.commit("code")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d); moved = self.add(6, 7)
+        self.assertEqual(m.contiguity_problems(self.r.d, moved, b), [])
+        sh("git", "checkout", "-q", "b", cwd=self.r.d); sh("git", "merge", "-q", "--no-edit", moved, cwd=self.r.d)
+        h = self.add(8)
+        self.assertEqual(m.contiguity_problems(self.r.d, moved, h), [])
+    def test_check_transaction_runs_it_on_main_and_on_a_branch(self):
+        h = self.add(9)
+        self.assertTrue(any("#9; expected #6" in f for f in m.check_transaction(self.r.d, self.base, h)))
+        sh("git", "checkout", "-q", "-b", "feature", cwd=self.r.d)
+        h = self.add(11)
+        self.assertTrue(any("#9, #11; expected #6, #7" in f for f in m.check_transaction(self.r.d, self.base, h)))
+
 class DisposedShapeTests(unittest.TestCase):
     """d-work #133: every `disposed` entry a range adds is `<date> <Y|N>[ text]` with balanced parentheses,
     on `main` (the fence, per commit) and on a branch (the whole diff); existing entries are never re-judged."""
