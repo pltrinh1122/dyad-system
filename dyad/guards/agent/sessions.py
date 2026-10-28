@@ -624,14 +624,21 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
             "note": "one file per session, only that session writes it; advisory, never a lock",
             "fields": [(f, "text", _ALLOWED.get(f, "space-separated tokens"), True, "", "sessions.FIELDS") for f in FIELDS]}
 
+TOUCH_USAGE = "usage: dyad session touch [-r <row>]... [-f <file>]... (no word: this session's open and planned rows)"
+
 def main(a: list[str]) -> int:
     root = dyadlib.repo_root()
     if a and a[0] == "touch":
+        if any(w in ("-h", "--help") for w in a[1:]):   # #479 P1: usage before any write
+            print(TOUCH_USAGE); return 0
         rows, files, i = [], [], 1
-        while i < len(a):
-            if a[i] == "-r" and i + 1 < len(a): rows.append(a[i + 1]); i += 2
-            elif a[i] == "-f" and i + 1 < len(a): files.append(a[i + 1]); i += 2
-            else: i += 1
+        while i < len(a):   # #479 P1 (mode G): every word is -r <id> or -f <path>; anything else refuses, nothing written
+            if a[i] in ("-r", "-f") and i + 1 < len(a):
+                (rows if a[i] == "-r" else files).append(a[i + 1]); i += 2
+            else:
+                print(f"refused: `session touch` does not take {a[i]!r}{' without a value' if a[i] in ('-r', '-f') else ''} "
+                      f"— nothing written; {TOUCH_USAGE}", file=sys.stderr)
+                return 2
         try:
             p = touch(root, rows, files) if (rows or files) else touch_from_open_rows(root)
         except SessionUnset as e:
