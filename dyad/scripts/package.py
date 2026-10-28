@@ -802,7 +802,7 @@ CHECKS.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e i
 def invariant_modules(failures: list | None = None):
     """[(label, module, extra invariants)] in pass order: dyadlib, this runner, every guard in registry order
     (each with the four contract invariants appended, dyadlib.contract_invariants), every projector in
-    PROJECTORS order, then the run-book runner, the craft CLI and the distribution path. A module that does not
+    PROJECTORS order, then the run-book runner, the craft CLI, the distribution path and the pre-push private-citation fence (#518). A module that does not
     load — a guard (the registry's own failure too) or any other, whose import-time `enforce` raised (#203) — is
     left out and, when `failures` is a list, appended to it as (label, problem), so one module never aborts the pass."""
     out = [("dyadlib", dyadlib, ()), ("package", sys.modules[__name__], ())]
@@ -818,7 +818,7 @@ def invariant_modules(failures: list | None = None):
             zones = zone_names()
         out.append((f"{group}/{entity}", mod, dyadlib.contract_invariants(mod, root, group, zones)))
     later = [(f"project_{s.replace('/', '_')}", REPO / rel) for s, rel in sorted(PROJECTORS.items())]   # `/`-free: distinct from a guard label
-    later += [(name, PKG / "scripts" / f"{name}.py") for name in ("runbook", "craft", "distribute")]
+    later += [(name, PKG / "scripts" / f"{name}.py") for name in ("runbook", "craft", "distribute", "privatecite")]
     for label, path in later:
         try:
             out.append((label, dyadlib.load_module(path, label), ()))
@@ -949,14 +949,25 @@ def done_head_refusals(lines, base="origin/main"):
                             f"new head and record it before pushing (Rule-3 Completion, #495)")
     return refusals, notes
 
-def cmd_guards(base="origin/main", pre_push=False):
+def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
     refs git is pushing come on stdin: a push the guards cannot judge is refused before any check
     runs, a push that adds no commit passes at once, and otherwise the transaction head is the
-    pushed commit, which the refusal rule makes the checked-out HEAD."""
+    pushed commit, which the refusal rule makes the checked-out HEAD. Before all of it runs the
+    private-citation fence (#518, `privatecite.py`), over every commit leaving for the remote and
+    not only those beyond `base`: `remote` and `url` are git's hook argv, and a push to a declared
+    public remote carrying a private citation beside a quoted body is refused, with no override."""
     if pre_push:
         lines = sys.stdin.read().splitlines()
+        import privatecite                               # #518: a public remote never receives a private citation's body
+        cite_refusals, cite_info = privatecite.check_push(REPO, remote, url, lines)
+        for m in cite_info:
+            print(m)
+        for m in cite_refusals:
+            print(f"FAIL [private-cite] {m}")
+        if cite_refusals:
+            return 1
         held, notes = done_head_refusals(lines, base)    # #495: before `pushed_refs`, which waves a deletion through
         for m in notes:
             print(m)
@@ -1998,7 +2009,8 @@ if __name__ == "__main__":
     if a[0] == "check" and "--pr" in a:
         i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
     if a[0] == "check" and "--guards" in a:
-        sys.exit(cmd_guards(pre_push="--pre-push" in a))
+        hook = a[a.index("--pre-push") + 1:a.index("--pre-push") + 3] if "--pre-push" in a else []   # git's <remote> <url> (#518)
+        sys.exit(cmd_guards(pre_push="--pre-push" in a, remote=(hook[0] if hook else None), url=(hook[1] if len(hook) > 1 else None)))
     if a[0] == "check" and "--list" in a:
         sys.exit(cmd_list())
     if a[0] == "check" and "--tests" in a:

@@ -1,0 +1,5 @@
+# Remotes this instance declares public (d-work #518): a push to one of them runs the private-citation fence
+# (dyad/scripts/privatecite.py). One remote per line, any URL form git accepts; compared after normalization
+# (scheme, credentials, `.git`, trailing `/` and case dropped; `git@host:o/r` read as `host/o/r`). Instance data,
+# never the core's (Rule-11 property 1). Removing a line turns the fence off for that remote: a reviewed decision.
+github.com/pltrinh1122/dyad-system

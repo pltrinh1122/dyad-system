@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 # dyad pre-push (I2): every guard runs on the kernel before anything leaves this machine, over the refs
-# git is pushing (stdin, passed through by exec; #194).
-exec "$(git rev-parse --show-toplevel)/dyad/bin/dyad-python" "$(git rev-parse --show-toplevel)/dyad/scripts/package.py" check --guards --pre-push
+# git is pushing (stdin, passed through by exec; #194), and git's `<remote name> <url>` (argv) for the
+# private-citation fence (#518).
+exec "$(git rev-parse --show-toplevel)/dyad/bin/dyad-python" "$(git rev-parse --show-toplevel)/dyad/scripts/package.py" check --guards --pre-push "$@"
