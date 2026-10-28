@@ -1405,6 +1405,92 @@ class PrePushTests(unittest.TestCase):
         z = "0" * 40
         self.assertEqual(pkg.pushed_refs(["", "garbage", f"(delete) {z} refs/heads/x {'1' * 40}"]), (None, []))
 
+class DoneHeadPrePushTests(unittest.TestCase):
+    """d-work #495 (F1 of #487): the pre-push gate refuses a push that moves a head the operative `Y done` of a row
+    not yet terminal names (`Y done (merges PR #9 at <head>)`), since the push would void that `Y` (Rule-2, Binding;
+    #476). A scratch repo, `pkg.REPO` pointed at it: `origin/main` (a remote-tracking ref written by hand) holds the
+    rows, the branch `feat` is at X, and each case feeds `done_head_refusals` git's pre-push lines."""
+    def setUp(self):
+        self.pkg = load_package()
+        self.addCleanup(setattr, self.pkg, "REPO", self.pkg.REPO)
+        e = unittest.mock.patch.dict(os.environ, {}, clear=False); e.start(); self.addCleanup(e.stop)
+        os.environ.pop("DYAD_INSTANCE", None)
+        d = self.d = SCRATCH.mkdtemp()
+        self.git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True,
+                                             env=dyadlib.git_env()).stdout.strip()
+        self.git("init", "-q", "-b", "main")
+        for k, v in (("user.email", "t@example.com"), ("user.name", "t"), ("commit.gpgsign", "false")):
+            self.git("config", k, v)
+        (d / "seed.txt").write_text("seed\n"); self.git("add", "-A"); self.git("commit", "-qm", "seed")
+        self.git("checkout", "-q", "-b", "feat")
+        (d / "feat.txt").write_text("x\n"); self.git("add", "-A"); self.git("commit", "-qm", "x")
+        self.x = self.git("rev-parse", "HEAD")
+        (d / "feat.txt").write_text("y\n"); self.git("add", "-A"); self.git("commit", "-qm", "y")
+        self.y = self.git("rev-parse", "HEAD")
+        self.git("checkout", "-q", "main")
+        self.pkg.REPO = d
+    def ledger(self, state, disposed, publish=True):
+        """Row 1 on `main` in `state` with `disposed`; `origin/main` moved to it unless `publish` is False."""
+        rows = self.d / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True, exist_ok=True)
+        (rows / "1.md").write_text(dyadlib.format_row_file(dyadlib.Row(1, "one", "d", state, disposed, "")))
+        self.git("add", "-A"); self.git("commit", "-qm", f"row {state}")
+        if publish:
+            self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+    def done_on(self, head):
+        return f"2026-01-01 Y plan; 2026-01-02 Y done (merges PR #9 at {head})"
+    def judge(self, *lines):
+        return self.pkg.done_head_refusals(list(lines))
+    def move(self, old=None, new=None, ref="refs/heads/feat"):
+        return f"refs/heads/feat {new or self.y} {ref} {old or self.x}"
+    def test_moving_a_named_head_is_refused(self):
+        self.ledger("planned", self.done_on(self.x[:7]))       # a short sha, as entries may hold
+        refusals, notes = self.judge(self.move())
+        self.assertEqual(len(refusals), 1, refusals); self.assertEqual(notes, [])
+        self.assertIn("row #1", refusals[0]); self.assertIn("PR #9", refusals[0]); self.assertIn(self.x[:9], refusals[0])
+        self.assertIn("void", refusals[0])
+        self.ledger("planned", self.done_on(self.x))           # the full sha too
+        self.assertEqual(len(self.judge(self.move())[0]), 1)
+    def test_a_deletion_of_a_named_head_is_refused(self):
+        self.ledger("open", self.done_on(self.x))
+        refusals, _ = self.judge(f"(delete) {'0' * 40} refs/heads/feat {self.x}")
+        self.assertEqual(len(refusals), 1, refusals); self.assertIn("deletes it", refusals[0])
+    def test_an_unrelated_branch_passes(self):
+        self.ledger("planned", self.done_on(self.x))
+        self.assertEqual(self.judge(f"refs/heads/other {self.x} refs/heads/other {self.y}"), ([], []))
+        self.assertEqual(self.judge(f"refs/heads/new {self.y} refs/heads/new {'0' * 40}"), ([], []))   # replaces nothing
+        self.assertEqual(self.judge(f"refs/tags/t {self.y} refs/tags/t {self.x}"), ([], []))           # not a branch
+        self.assertEqual(self.judge(self.move(ref="refs/heads/main")), ([], []))                         # the ledger's branch
+        self.assertEqual(self.judge(self.move(new=self.x)), ([], []))                                    # moves nothing
+    def test_a_done_or_archived_row_passes(self):
+        for state in ("done", "archived"):
+            self.ledger(state, self.done_on(self.x))
+            self.assertEqual(self.judge(self.move()), ([], []), state)
+    def test_a_later_done_on_the_new_head_passes(self):
+        self.ledger("planned", self.done_on(self.x) + f"; 2026-01-03 Y done (merges PR #9 at {self.y[:7]})")
+        self.assertEqual(self.judge(self.move()), ([], []))      # X is history: the operative entry names Y
+        self.assertEqual(len(self.judge(self.move(old=self.y, new=self.x))[0]), 1)   # and Y is now held
+    def test_a_landed_head_passes(self):
+        self.ledger("planned", self.done_on(self.x))
+        self.git("merge", "-q", "--no-ff", "-m", "merge PR #9", self.x)
+        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.assertEqual(self.judge(f"(delete) {'0' * 40} refs/heads/feat {self.x}"), ([], []))
+    def test_a_record_on_local_main_not_yet_pushed_counts(self):
+        self.ledger("planned", "2026-01-01 Y plan")
+        self.ledger("planned", self.done_on(self.x), publish=False)
+        self.assertEqual(len(self.judge(self.move())[0]), 1)
+    def test_no_ledger_skips_with_one_line(self):
+        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        refusals, notes = self.judge(self.move())
+        self.assertEqual(refusals, []); self.assertEqual(len(notes), 1); self.assertIn("skip [pre-push]", notes[0])
+    def test_cmd_guards_refuses_before_any_guard(self):
+        self.ledger("planned", self.done_on(self.x))
+        buf = io.StringIO()
+        with unittest.mock.patch.object(sys, "stdin", io.StringIO(self.move() + "\n")), contextlib.redirect_stdout(buf):
+            rc = self.pkg.cmd_guards(pre_push=True)
+        self.assertEqual(rc, 1, buf.getvalue())
+        self.assertIn("FAIL [pre-push] refs/heads/feat is at", buf.getvalue())
+        self.assertNotIn("[guards]", buf.getvalue())
+
 class SuiteEnvTests(unittest.TestCase):
     """#152: a test child never inherits a hook's GIT_VARS (an absolute GIT_DIR from a linked worktree)."""
     def test_git_vars_dropped_and_nesting_marked(self):
@@ -1510,6 +1596,8 @@ class SpawnSiteTests(unittest.TestCase):
         "<module>": "REPO discovery; strips the hook's GIT_DIR itself (#142) so --show-toplevel finds the true root",
         "tracked_files": "ls-files of the repo the runner judges; a hook's GIT_DIR names that same repo",
         "pushed_refs": "reads the refs the hook is pushing, in the repo the hook runs for (#194)",
+        "done_head_refusals": "rev-parse, cat-file and merge-base of the ledger's refs and the heads a pushed ref "
+                              "replaces, in the repo the hook runs for (#495); no write",
         "cmd_guards": "rev-parse of base and HEAD in the repo being pushed; no write",
         "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
         "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",

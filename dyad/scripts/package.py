@@ -885,6 +885,70 @@ def pushed_refs(lines, base="origin/main"):
                             f"them, not the commit — commit, stash or remove them, then push")
     return (heads.pop() if heads else None), refusals
 
+def done_head_refusals(lines, base="origin/main"):
+    """F1 of #487 (d-work #495): a push that moves a head an operative `Y done` names is refused while the
+    Done is unexecuted. Rule-3 records the Done-`Y` with the head each PR was verified on (`Y done (merges PR #a
+    at <head-a>)`); a push replacing that head voids the `Y` (Rule-2, Binding) and forces the question again
+    (#476, row 198: a push onto a branch a pending Done named). Judged on git's own pre-push lines: for each
+    `refs/heads/*` other than the base's branch whose remote old sha is not zero (a new branch replaces
+    nothing) and moves (a force, a fast-forward or a deletion — each changes or removes what the `Y` named),
+    the old sha is matched by prefix against `rows.heads_naming`, over the rows of the ledger of record: the
+    base's tree (`origin/main`, where every Done record lands as a ledger-only commit before its merge) and the
+    local `main`, which may carry a record not yet pushed, the version with more `disposed` entries per row
+    governing and a terminal state in either winning (state never regresses). A head already on either is
+    landed: the merge ran, and moving the branch now changes nothing the `Y` bound. No rows on either, or rows
+    that do not parse, print one skip line and refuse nothing — a hard failure there would wedge every push
+    of every seat (#321's I7). Returns (refusals, notes)."""
+    import dyadlib
+    rg = dyadlib.load_guard("agent", "rows")
+    git = lambda *a: subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True)
+    branch = "refs/heads/" + base.split("/", 1)[-1]
+    moves = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 4:
+            continue
+        local_ref, local_sha, remote_ref, remote_sha = parts
+        if not remote_ref.startswith("refs/heads/") or remote_ref == branch:
+            continue
+        if set(remote_sha) <= ZERO_SHA or local_sha == remote_sha:
+            continue
+        moves.append((remote_ref, local_sha, remote_sha))
+    if not moves:
+        return [], []
+    try:
+        rel = dyadlib.rows_dir(REPO).relative_to(REPO).as_posix()
+    except ValueError:
+        return [], ["skip [pre-push] Done heads: the instance lies outside the repo, no ledger of record to read (#495)"]
+    refs = [r for r in (base, "main") if git("rev-parse", "--verify", "-q", f"{r}^{{commit}}").returncode == 0]
+    rows, notes = {}, []
+    for r in refs:
+        if git("cat-file", "-e", f"{r}:{rel}").returncode:
+            continue
+        try:
+            got = dyadlib.read_rows(REPO, at=r)
+        except (ValueError, subprocess.CalledProcessError) as e:
+            notes.append(f"skip [pre-push] Done heads: the rows at {r} do not read ({e}): not judged here, the "
+                         f"package check names it (#495)")
+            continue
+        for row in got:
+            had = rows.get(row.id)
+            newer = lambda x: (x.state in dyadlib.TERMINAL_STATES, len(rg.entries(x.disposed)))
+            rows[row.id] = row if had is None or newer(row) > newer(had) else had
+    if not rows:
+        return [], notes or [f"skip [pre-push] Done heads: no rows on {' or '.join(refs) or base}: no Done names a head (#495)"]
+    refusals = []
+    for remote_ref, local_sha, old in moves:
+        for rid, pr, head, entry in rg.heads_naming(old, list(rows.values())):
+            if any(git("merge-base", "--is-ancestor", old, r).returncode == 0 for r in refs):
+                continue                                 # landed: the merge the `Y` ratified ran
+            how = "deletes it" if set(local_sha) <= ZERO_SHA else f"moves it to {local_sha[:9]}"
+            refusals.append(f"{remote_ref} is at {old[:9]}, the head row #{rid}'s operative `Y done` names"
+                            f"{f' for PR #{pr}' if pr else ''} ({entry!r}), and this push {how}: that would void "
+                            f"the `Y` (Rule-2, Binding). Merge what it ratified first, or ask the Done again on the "
+                            f"new head and record it before pushing (Rule-3 Completion, #495)")
+    return refusals, notes
+
 def cmd_guards(base="origin/main", pre_push=False):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -892,7 +956,12 @@ def cmd_guards(base="origin/main", pre_push=False):
     runs, a push that adds no commit passes at once, and otherwise the transaction head is the
     pushed commit, which the refusal rule makes the checked-out HEAD."""
     if pre_push:
-        pushed, refusals = pushed_refs(sys.stdin.read().splitlines(), base)
+        lines = sys.stdin.read().splitlines()
+        held, notes = done_head_refusals(lines, base)    # #495: before `pushed_refs`, which waves a deletion through
+        for m in notes:
+            print(m)
+        pushed, refusals = pushed_refs(lines, base)
+        refusals = held + refusals
         for m in refusals:
             print(f"FAIL [pre-push] {m}")
         if refusals:
