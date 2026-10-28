@@ -410,10 +410,36 @@ def seed_status(repo: Path, craft_dir: Path) -> list[str]:
             f"cp {rel}/templates/{tmpl} {dest}"
             for tmpl, dest in seeds(d, repo) if not (repo / dest).exists()]
 
+def carried_crafts(root: Path) -> set[str] | None:
+    """The names `n` of every `crafts/<n>/` holding at least one file git carries under `root`: tracked (staged
+    counts, as the pre-commit hook sees it) or untracked and not ignored (`dyad craft new`'s scaffold, before its
+    `git add`). An ignored file — a renamed craft's leftover `__pycache__/` — carries nothing (#483, row 214).
+    None when `root` is not itself the top of a git work tree — an extracted archive or a staged copy
+    (`craft.py stage`) — where every directory is read instead."""
+    root = Path(root)
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=root, capture_output=True, text=True,
+                             env=dyadlib.git_env(), timeout=60)
+        if top.returncode != 0 or Path(top.stdout.strip()).resolve() != root.resolve():
+            return None                              # no work tree, or `root` sits inside another repo's
+        r = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "crafts/"], cwd=root, capture_output=True, text=True,
+                           env=dyadlib.git_env(), timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    return {parts[1] for parts in (f.split("/") for f in r.stdout.split("\0") if f) if len(parts) > 2}
+
 def crafts(root: Path) -> list[Path]:
-    """Every `crafts/<name>/` directory of `root` (a VERSION or not: a directory beside REGISTRY.md is a craft)."""
+    """Every `crafts/<name>/` directory of `root` holding a file git carries (a VERSION or not: such a directory
+    beside REGISTRY.md is a craft, and a missing VERSION fails it). A directory holding only ignored files — a
+    renamed craft's leftover `__pycache__/` — is no craft (#483, incident row 214). Outside a git work tree
+    (`carried_crafts` None) every directory counts, as before."""
     c = Path(root) / "crafts"
-    return sorted(p for p in c.iterdir() if p.is_dir()) if c.is_dir() else []
+    if not c.is_dir():
+        return []
+    names = carried_crafts(root)
+    return sorted(p for p in c.iterdir() if p.is_dir() and (names is None or p.name in names))
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = Path(root or dyadlib.repo_root())

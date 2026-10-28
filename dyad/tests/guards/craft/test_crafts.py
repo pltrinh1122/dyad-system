@@ -2,7 +2,8 @@
 invalid VERSION fails; a host string fails; `events/x.jsonl` inside fails; a `REGISTRY.md` inside fails; a CRAFT.md
 term equal to an Agent term fails; `the Agent` in a rule warns and does not fail; a guard lacking check_package
 fails; unmet `requires` warns; `seeds:` (#180) — a mismatched destination zone fails, a missing template fails, a
-collision between two crafts warns, `seed_status` warns only when the destination is absent and never writes; the
+collision between two crafts warns, `seed_status` warns only when the destination is absent and never writes; `crafts()`
+skips a directory holding only ignored files and reads every directory outside a work tree (#483); the
 live sysadmin craft passes; the contract and CLI line."""
 import os, shutil, subprocess, sys, tempfile, unittest
 from unittest import mock
@@ -23,6 +24,10 @@ def fixture(name="fx", files=CRAFT) -> Path:
     for rel, text in files.items():
         f = r / "crafts" / name / rel; f.parent.mkdir(parents=True, exist_ok=True); f.write_text(text)
     return r
+
+def track(r: Path) -> Path:
+    """Stage every file of `r` (`crafts()` reads git's view of `crafts/`, #483)."""
+    subprocess.run(["git", "-C", str(r), "add", "-A"], check=True); return r
 
 def check(r: Path, name="fx"):
     return cg.check_craft(r, r / "crafts" / name, PKG)
@@ -141,6 +146,26 @@ class CraftGuardTests(unittest.TestCase):
         d = self.r / "crafts/gy"; shutil.copytree(self.craft(), d)
         msgs = cg.check_package(self.r)
         self.assertEqual(fails(msgs), []); self.assertTrue(any("terms also defined by crafts/gy (widget)" in m for m in warns(msgs)), msgs)
+    def test_crafts_counts_only_a_directory_holding_a_carried_file(self):
+        # #483, incident row 214: a renamed craft's leftover `__pycache__/` (ignored) read as a craft and failed the push
+        (self.r / ".gitignore").write_text("__pycache__/\n"); track(self.r)
+        old = self.r / "crafts" / "old" / "__pycache__"; old.mkdir(parents=True); (old / "x.pyc").write_bytes(b"\0")
+        (self.r / "crafts" / "empty").mkdir()
+        self.assertEqual([d.name for d in cg.crafts(self.r)], ["fx"])
+        self.assertEqual(fails(cg.check_package(self.r)), []); self.assertEqual(cg.summary(self.r), "1 craft(s)")
+        (self.r / "crafts" / "draft").mkdir(); (self.r / "crafts" / "draft" / "VERSION").write_text("0.1.0\n")   # untracked, not ignored: `craft new`'s scaffold
+        self.assertEqual([d.name for d in cg.crafts(self.r)], ["draft", "fx"])
+        track(self.r); self.assertEqual([d.name for d in cg.crafts(self.r)], ["draft", "fx"])
+        (self.r / "crafts" / "bare").mkdir(); (self.r / "crafts" / "bare" / "rules").mkdir(); (self.r / "crafts" / "bare" / "rules" / "r.md").write_text("# r\n")
+        track(self.r); self.assertIn("crafts/bare/VERSION: missing", fails(cg.check_package(self.r)))   # a tracked dir without VERSION still fails
+    def test_crafts_outside_a_work_tree_counts_every_directory(self):
+        # an extracted archive or a staged copy (craft.py stage) is no work tree: every directory is read, as before
+        t = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, t, True)
+        shutil.copytree(self.craft(), t / "crafts" / "fx"); (t / "crafts" / "junk" / "__pycache__").mkdir(parents=True)
+        with mock.patch.object(cg.subprocess, "run", side_effect=OSError("no git")):
+            self.assertIsNone(cg.carried_crafts(t)); self.assertEqual([d.name for d in cg.crafts(t)], ["fx", "junk"])
+        nested = self.r / "nested"; shutil.copytree(self.craft(), nested / "crafts" / "fx")   # inside another repo's work tree
+        self.assertIsNone(cg.carried_crafts(nested)); self.assertEqual([d.name for d in cg.crafts(nested)], ["fx"])
     def test_check_package_over_repo_and_summary(self):
         self.assertEqual(fails(cg.check_package(self.r)), []); self.assertEqual(cg.summary(self.r), "1 craft(s)")
         self.assertEqual(cg.check_package(Path(tempfile.mkdtemp())), [])   # no crafts/: nothing to check (a core-only install)
