@@ -1,7 +1,8 @@
 """Preference guard tests (preferences/preferences.py): header equals FIELDS (template too), unique
 non-empty keys, non-empty cells, an enumerated `allowed` admits the value, `read by` names existing
 Rules; an absent file passes; the live table passes; a template key missing from the live corpus
-warns (`missing_keys`, #180)."""
+warns (`missing_keys`, #180); `allowed` is an enumeration only when every part is backticked — a mixed
+cell is free text and a lone backticked value an enumeration of one (#512)."""
 import sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
@@ -24,6 +25,21 @@ class PreferenceTests(unittest.TestCase):
         header, rows = pf.parse(HEAD + ROWS)
         self.assertEqual(header, list(pf.FIELDS)); self.assertEqual(rows[0][2], "`separate` | `with-done`")
         self.assertEqual(pf.alternatives(rows[0][2]), ["separate", "with-done"]); self.assertIsNone(pf.alternatives("free text"))
+    def test_enumeration_only_when_every_part_is_backticked(self):   # #512, #510's fix B
+        self.assertEqual(pf.alternatives("`a` | `b` | `c`"), ["a", "b", "c"])          # all backticked: an enumeration
+        self.assertEqual(pf.alternatives("`a`"), ["a"])                                # a lone backticked value: of one
+        self.assertIsNone(pf.alternatives("`a` | free text"))                          # mixed: free text
+        self.assertIsNone(pf.alternatives("`none` | seat names, or seat names without `-<hp>`"))   # #510's cell
+        self.assertIsNone(pf.alternatives("`a` | "))                                   # an empty part is no value
+        self.assertIsNone(pf.alternatives("SPDX identifiers"))
+    def test_mixed_cell_admits_any_value(self):   # #510: `attended-seats` refused `communicate`
+        row = "| attended-seats | communicate | `none` \\| seat names, or seat names without `-<hp>` | Rule-16 (Presence) |\n"
+        root, pkg = fixture(HEAD + ROWS + row, rules=(2, 3, 13, 16)); self.assertEqual(pf.check_package(root, pkg), [])
+    def test_enumeration_of_one_checks_the_value(self):
+        row = "| only | other | `one` | Rule-2 |\n"
+        root, pkg = fixture(HEAD + ROWS + row)
+        msgs = pf.check_package(root, pkg); self.assertEqual(len(msgs), 1, msgs); self.assertIn("value `other` is not one of one", msgs[0])
+        root, pkg = fixture(HEAD + ROWS + row.replace("| other |", "| `one` |")); self.assertEqual(pf.check_package(root, pkg), [])
     def test_good_table_passes(self):
         root, pkg = fixture(HEAD + ROWS); self.assertEqual(pf.check_package(root, pkg), []); self.assertEqual(pf.summary(root), "2 preferences")
     def test_absent_file_passes(self):
