@@ -7,7 +7,8 @@ the network answers, so a session always starts. Exit 2 only on misuse (an unkno
   dyad bootstrap           (a) `git config core.hooksPath dyad/hooks` when it is not already (Rule-1: the hooks are the
                            only blocking enforcement before a push); (b) a shallow clone is unshallowed and its tags
                            fetched, `git fetch --unshallow --tags origin`; (c) a full clone fetches tags,
-                           `git fetch --tags origin`, only when a core release tag is expected and none is here
+                           `git fetch --tags origin`, only when the core release tag `BUNDLE.md` names
+                           (`dyad-operator-v<row version>`) is not here — an older core tag does not stand in for it
   dyad bootstrap --check   read-only: the same three lines, nothing set and nothing fetched
 
 Each line is `<state> [bootstrap] <step>: <detail>`, the state `ok` (nothing to do), `changed` (done now) or `warn`
@@ -15,13 +16,15 @@ Each line is `<state> [bootstrap] <step>: <detail>`, the state `ok` (nothing to 
 
 Why both repairs: a shallow or tagless clone yields false FAILs — `infra/bundle` reads release tags (Rule-11 property
 4's drift check) and Rule-20's `plan.base->commit` resolves base commits a shallow history lacks — so `check
---evidence` refuses one (`clone_problems`, the one test both share). Why tags are fetched only when missing: the suite
+--evidence` refuses one (`clone_problems`, the one test both share). The tag tested is the one the row names, not any
+core tag: the bundle guard fails a row naming a version with no local tag, so a clone holding older core tags but not
+the row's own read red in `infra/bundle` (d-work #505; the live case held tags below `dyad-operator-v0.13.0`). Why tags are fetched only when missing: the suite
 memo keys on a digest of `refs/tags` (Rule-12 property 2), so a fetch that brings a new tag between an evidence run and
 its push re-runs the whole suite at the push; this verb runs at container start, before any evidence, and on a warm
 clone touches no network at all, while a plain `git fetch` already follows the tags that point into what it fetches.
 
 When is a core release tag expected: when `BUNDLE.md` (Rule-11 property 7; the authoring repo's, never an install's)
-has a `dyad-operator` row, since a row is added by a release. An installed system carries no `BUNDLE.md` and a fresh
+has a `dyad-operator` row, since a row is added by a release; the tag expected is `dyad-operator-v<row version>`. An installed system carries no `BUNDLE.md` and a fresh
 scratch repo no row, so neither is ever refused for having no tag; no network is read to decide it.
 
 Every git child runs under `dyadlib.git_env()` (a hook's GIT_VARS dropped, #142) with `GIT_TERMINAL_PROMPT=0`, so a
@@ -50,6 +53,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("core-tag-pattern-is-the-core-release-prefix", lambda: CORE_TAGS == "dyad-operator-v*"),
     ("unshallow-also-fetches-tags", lambda: "--unshallow" in UNSHALLOW and "--tags" in UNSHALLOW and UNSHALLOW[-1] == REMOTE),
     ("fetches-name-one-remote", lambda: FETCH_TAGS[-1] == UNSHALLOW[-1] == REMOTE),
+    ("expected-tag-is-the-core-prefix-and-the-row-version", lambda: core_tag("1.2.3") == "dyad-operator-v1.2.3"
+                                                               and core_tag("1.2.3").startswith(CORE_TAGS[:-1])),
 ]
 
 
@@ -80,6 +85,15 @@ def core_tags(repo: Path) -> list[str]:
     return (_out(git(repo, "tag", "-l", CORE_TAGS)) or "").split()
 
 
+def core_tag(version: str) -> str:
+    """The core release tag of one version (Rule-11 property 4): `dyad-operator-v<version>`."""
+    return f"{dyadlib.CORE_CRAFT}-v{version}"
+
+
+def has_tag(repo: Path, tag: str) -> bool:
+    return _out(git(repo, "rev-parse", "--verify", "-q", f"refs/tags/{tag}")) is not None
+
+
 def expected_core_release(repo: Path) -> str | None:
     """The core version `BUNDLE.md` names, or None when it names none (no file, no `dyad-operator` row): a row is
     added by a release (Rule-11 property 7), so a row means a core release tag exists upstream. Parsed by the bundle
@@ -96,13 +110,15 @@ def expected_core_release(repo: Path) -> str | None:
 
 def clone_problems(repo: Path) -> list[str]:
     """What makes this clone unfit to evidence, one line each, local reads only (no network): a shallow history,
-    and no `dyad-operator-v*` tag while `BUNDLE.md` names a core release. `check --evidence` refuses on the first."""
+    and the missing tag `dyad-operator-v<version>` while `BUNDLE.md` names that core release — older core tags do
+    not stand in for it (d-work #505). `check --evidence` refuses on the first."""
     out = []
     if is_shallow(repo):
         out.append(f"shallow clone: {REMEDY} (git fetch --unshallow --tags)")
     expected = expected_core_release(repo)
-    if expected and not core_tags(repo):
-        out.append(f"no {CORE_TAGS} tag while BUNDLE.md names {dyadlib.CORE_CRAFT} {expected}: {REMEDY} (git fetch --tags)")
+    if expected and not has_tag(repo, core_tag(expected)):
+        out.append(f"no {core_tag(expected)} tag while BUNDLE.md names {dyadlib.CORE_CRAFT} {expected}: "
+                   f"{REMEDY} (git fetch --tags)")
     return out
 
 
@@ -142,23 +158,27 @@ def step_history(repo: Path, check: bool) -> str:
 
 
 def step_tags(repo: Path, check: bool) -> str:
-    have, expected = core_tags(repo), expected_core_release(repo)
-    if have:
-        return line("ok", "tags", f"{len(have)} {CORE_TAGS} tag(s)")
+    expected = expected_core_release(repo)
     if not expected:
-        return line("ok", "tags", f"no {CORE_TAGS} tag, none expected (BUNDLE.md names no {dyadlib.CORE_CRAFT} row)")
+        have = core_tags(repo)
+        if not have:
+            return line("ok", "tags", f"no {CORE_TAGS} tag, none expected (BUNDLE.md names no {dyadlib.CORE_CRAFT} row)")
+        return line("ok", "tags", f"{len(have)} {CORE_TAGS} tag(s), none expected "
+                                  f"(BUNDLE.md names no {dyadlib.CORE_CRAFT} row)")
+    tag = core_tag(expected)
+    if has_tag(repo, tag):
+        return line("ok", "tags", f"{tag} (BUNDLE.md names {dyadlib.CORE_CRAFT} {expected})")
     if check:
-        return line("warn", "tags", f"no {CORE_TAGS} tag while BUNDLE.md names {dyadlib.CORE_CRAFT} {expected}; "
+        return line("warn", "tags", f"no {tag} tag while BUNDLE.md names {dyadlib.CORE_CRAFT} {expected}; "
                                     f"a run would `git {' '.join(FETCH_TAGS)}`")
     if not _has_remote(repo):
-        return line("warn", "tags", f"no {CORE_TAGS} tag and no {REMOTE} remote; nothing fetched")
+        return line("warn", "tags", f"no {tag} tag and no {REMOTE} remote; nothing fetched")
     r = git(repo, *FETCH_TAGS, timeout=FETCH_TIMEOUT)
     if r is None or r.returncode:
         return line("warn", "tags", f"git {' '.join(FETCH_TAGS)} failed: {_last(r)}")
-    have = core_tags(repo)
-    if not have:
-        return line("warn", "tags", f"fetched, still no {CORE_TAGS} tag on {REMOTE}")
-    return line("changed", "tags", f"fetched; {len(have)} {CORE_TAGS} tag(s)")
+    if not has_tag(repo, tag):
+        return line("warn", "tags", f"fetched, still no {tag} tag on {REMOTE}")
+    return line("changed", "tags", f"fetched {tag}; {len(core_tags(repo))} {CORE_TAGS} tag(s)")
 
 
 def run(repo: Path, check: bool = False) -> list[str]:

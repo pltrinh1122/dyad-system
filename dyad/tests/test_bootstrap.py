@@ -7,7 +7,10 @@ changes nothing; a run sets the hooks path, unshallows and fetches the tags (`ch
 a full clone missing its tags fetches them only when `BUNDLE.md` names a core release; a clone with no core row is
 never fetched for (its origin removed, a fetch would warn); a fetch that fails is a `warn` line and exit 0; misuse is
 exit 2, through the runner too; `clone_problems` names a shallow history first and a missing expected tag; and
-`check --evidence` refuses a shallow or tagless clone with one `FAIL [evidence]` line, running nothing."""
+`check --evidence` refuses a shallow or tagless clone with one `FAIL [evidence]` line, running nothing. A second world
+(d-work #505) tags commit two `dyad-operator-v0.2.0` with the row moved to 0.2.0, and deletes that tag from a full
+clone that keeps v0.1.0: an older core tag does not stand in for the row's — `--check` warns, a run fetches it, and
+`clone_problems` and `check --evidence` name it."""
 import contextlib, io, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -16,6 +19,7 @@ sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
 SCRATCH = livetest.ScratchInstalls()
 tearDownModule = SCRATCH.cleanup
 TAG = "dyad-operator-v0.1.0"
+TAG2 = "dyad-operator-v0.2.0"
 BUNDLE = "# Bundle\n\nversion: 0.2.0\n\n| component | version |\n|-----------|---------|\n| dyad-operator | 0.1.0 |\n"
 
 
@@ -35,7 +39,7 @@ class World(unittest.TestCase):
         self.bs = bootstrap()
         self.top = SCRATCH.mkdtemp()
 
-    def make_origin(self, bundle=BUNDLE):
+    def make_origin(self, bundle=BUNDLE, second=None):
         seed = self.top / "seed"; seed.mkdir()
         git(seed, "init", "-q", "-b", "main")
         (seed / "dyad" / "hooks").mkdir(parents=True); (seed / "dyad" / "hooks" / "pre-commit").write_text("#!/bin/sh\n")
@@ -43,7 +47,12 @@ class World(unittest.TestCase):
             (seed / "BUNDLE.md").write_text(bundle)
         git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "one")
         git(seed, *livetest.IDENTITY, "tag", "-a", TAG, "-m", TAG)
-        (seed / "two.txt").write_text("two\n"); git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "two")
+        (seed / "two.txt").write_text("two\n")
+        if second:   # commit two moves the row to `second` and is tagged with it (#505)
+            (seed / "BUNDLE.md").write_text(BUNDLE.replace("| dyad-operator | 0.1.0 |", f"| dyad-operator | {second} |"))
+        git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "two")
+        if second:
+            git(seed, *livetest.IDENTITY, "tag", "-a", f"dyad-operator-v{second}", "-m", second)
         self.origin = self.top / "origin.git"
         git(self.top, "clone", "-q", "--bare", str(seed), str(self.origin))
         return self.origin
@@ -59,6 +68,16 @@ class World(unittest.TestCase):
         work = self.top / "full"
         git(self.top, "clone", "-q", str(self.origin), str(work))
         git(work, "tag", "-d", TAG)
+        return work
+
+    def older_tag_only(self):
+        """A full clone holding v0.1.0 but not v0.2.0, the tag its BUNDLE.md row names (the #505 incident)."""
+        self.make_origin(second="0.2.0")
+        work = self.top / "older"
+        git(self.top, "clone", "-q", str(self.origin), str(work))
+        git(work, "tag", "-d", TAG2)
+        git(work, "config", "core.hooksPath", "dyad/hooks")
+        self.assertEqual(git(work, "tag", "-l"), TAG)
         return work
 
     def run_main(self, work, *argv):
@@ -134,7 +153,7 @@ class BootstrapTests(World):
         probs = self.bs.clone_problems(work)
         self.assertEqual(len(probs), 2, probs)
         self.assertTrue(probs[0].startswith("shallow clone: run ./dyad/bin/dyad bootstrap"), probs)
-        self.assertTrue(probs[1].startswith(f"no {self.bs.CORE_TAGS} tag while BUNDLE.md names dyad-operator 0.1.0"), probs)
+        self.assertTrue(probs[1].startswith(f"no {TAG} tag while BUNDLE.md names dyad-operator 0.1.0"), probs)
 
     def test_expected_core_release_reads_the_bundle_row(self):
         self.assertIsNone(self.bs.expected_core_release(self.top))   # no BUNDLE.md
@@ -142,6 +161,29 @@ class BootstrapTests(World):
         self.assertIsNone(self.bs.expected_core_release(self.top))   # no core row
         (self.top / "BUNDLE.md").write_text(BUNDLE)
         self.assertEqual(self.bs.expected_core_release(self.top), "0.1.0")
+
+    def test_an_older_core_tag_does_not_stand_in_for_the_rows(self):
+        work = self.older_tag_only()
+        rc, lines, _ = self.run_main(work, "--check")
+        self.assertEqual((rc, [l.split()[0] for l in lines]), (0, ["ok", "ok", "warn"]), lines)
+        self.assertIn(f"no {TAG2} tag while BUNDLE.md names dyad-operator 0.2.0", lines[2])
+        self.assertEqual(git(work, "tag", "-l"), TAG)   # --check fetched nothing
+        self.assertEqual(self.bs.clone_problems(work),
+                         [f"no {TAG2} tag while BUNDLE.md names dyad-operator 0.2.0: run ./dyad/bin/dyad bootstrap (git fetch --tags)"])
+        rc, lines, _ = self.run_main(work)
+        self.assertEqual((rc, [l.split()[0] for l in lines]), (0, ["ok", "ok", "changed"]), lines)
+        self.assertIn(f"fetched {TAG2}", lines[2])
+        self.assertEqual(git(work, "tag", "-l").split(), [TAG, TAG2])
+        self.assertEqual(self.bs.clone_problems(work), [])
+        rc, lines, _ = self.run_main(work)
+        self.assertEqual((rc, [l.split()[0] for l in lines]), (0, ["ok", "ok", "ok"]), lines)
+
+    def test_the_rows_tag_missing_offline_is_a_warn_line_and_exit_0(self):
+        work = self.older_tag_only()
+        git(work, "remote", "set-url", "origin", (self.top / "gone.git").as_uri())
+        rc, lines, _ = self.run_main(work)
+        self.assertEqual((rc, [l.split()[0] for l in lines]), (0, ["ok", "ok", "warn"]), lines)
+        self.assertIn("failed", lines[2])
 
 
 class EvidenceRefusalTests(World):
@@ -167,8 +209,14 @@ class EvidenceRefusalTests(World):
         rc, lines = self.evidence(self.full())
         self.assertEqual(rc, 2)
         self.assertEqual(len(lines), 1, lines)
-        self.assertRegex(lines[0], r"^FAIL \[evidence\] no dyad-operator-v\* tag while BUNDLE\.md names dyad-operator 0\.1\.0: "
+        self.assertRegex(lines[0], r"^FAIL \[evidence\] no dyad-operator-v0\.1\.0 tag while BUNDLE\.md names dyad-operator 0\.1\.0: "
                                    r"run \./dyad/bin/dyad bootstrap \(git fetch --tags\)$")
+
+    def test_a_clone_missing_the_rows_tag_but_holding_an_older_one_is_refused_in_one_line(self):
+        rc, lines = self.evidence(self.older_tag_only())
+        self.assertEqual(rc, 2)
+        self.assertEqual(lines, [f"FAIL [evidence] no {TAG2} tag while BUNDLE.md names dyad-operator 0.2.0: "
+                                 f"run ./dyad/bin/dyad bootstrap (git fetch --tags)"])
 
 
 if __name__ == "__main__":
