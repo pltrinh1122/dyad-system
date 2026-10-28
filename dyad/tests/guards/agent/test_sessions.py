@@ -61,19 +61,29 @@ class TouchTests(unittest.TestCase):
             self.assertEqual(sv.parse(p.read_text())["files"], "a.py")
         finally:
             del os.environ["DYAD_SESSION"]
-    def test_unset_session_gets_a_fresh_id_each_time(self):
-        root = repo()
-        os.environ.pop("DYAD_SESSION", None)
-        p1 = sv.touch(root, [], []); p2 = sv.touch(root, [], [])
-        self.assertNotEqual(p1.name, p2.name)   # never silently overwrites another's file
-    def test_bad_session_id_falls_back(self):
-        root = repo()
-        os.environ["DYAD_SESSION"] = "has a space/slash"
-        try:
-            p = sv.touch(root, [], [])
-            self.assertNotIn("has a space", p.name)
-        finally:
-            del os.environ["DYAD_SESSION"]
+    def test_unset_or_bad_session_refuses_to_write(self):
+        """#480 P2 (modes Q/R): a touch under no usable DYAD_SESSION minted a stray `unnamed-*` file;
+        it now refuses before any write, while the read path's `session_id()` keeps its fallback."""
+        for env in ({}, {"DYAD_SESSION": "has a space/slash"}):
+            with self.subTest(env=env):
+                root = repo()
+                with mock.patch.dict(os.environ, env):
+                    if not env: os.environ.pop("DYAD_SESSION", None)
+                    with self.assertRaises(sv.SessionUnset) as cm:
+                        sv.touch(root, ["1"], ["a.py"])
+                    self.assertIn("set DYAD_SESSION", str(cm.exception))
+                    self.assertTrue(sv.session_id().startswith("unnamed-"))   # reads still resolve
+                self.assertEqual(list((root / "agent-corpus" / "d-work" / "sessions").iterdir()), [])
+    def test_touch_cli_refuses_without_session_and_list_still_reads(self):
+        import io, contextlib
+        root = repo(); out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {}), mock.patch.object(sv.dyadlib, "repo_root", return_value=root), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            os.environ.pop("DYAD_SESSION", None)
+            self.assertEqual(sv.main(["touch", "-r", "1"]), 2)
+            self.assertEqual(sv.main(["list"]), 0)
+        self.assertEqual(len(err.getvalue().strip().splitlines()), 1); self.assertIn("set DYAD_SESSION", err.getvalue())
+        self.assertIn("no session presence files", out.getvalue())
 
 class WriterCollisionTests(unittest.TestCase):
     """F1 (d-work #32): two processes configured with the same DYAD_SESSION collide on one file
@@ -198,8 +208,7 @@ class SelfExclusionCLITests(unittest.TestCase):
         real corpus."""
         import io, contextlib
         root = repo()
-        os.environ.pop("DYAD_SESSION", None)
-        with mock.patch.object(sv.dyadlib, "repo_root", return_value=root):
+        with mock.patch.object(sv.dyadlib, "repo_root", return_value=root), mock.patch.dict(os.environ, {"DYAD_SESSION": "self-excl"}):   # #480: touch needs a name
             stdout, stderr = io.StringIO(), io.StringIO()
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 rc = sv.main(["touch", "-r", "1"])
