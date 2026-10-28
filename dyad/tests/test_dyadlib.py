@@ -179,6 +179,22 @@ class TableHeaderTests(unittest.TestCase):
         self.assertEqual(dyadlib.table_header("prose\n| a | b |\nno separator\n"), [])
         self.assertEqual(dyadlib.table_header(""), [])
 
+class EscapedPipeTests(unittest.TestCase):
+    """#171: a cell splits on an unescaped `|` only; an escaped `\\|` stays in its cell and is returned as `|`."""
+    TEXT = "| key | allowed |\n|-----|---------|\n| m | `a` \\| `b` |\n| n | plain |\n"
+    def test_split_cells(self):
+        self.assertEqual(dyadlib.split_cells("| a \\| b | c |"), ["a | b", "c"])
+        self.assertEqual(dyadlib.split_cells("| a | b |"), ["a", "b"])
+        self.assertEqual(dyadlib.split_cells("| a | b \\|"), ["a", "b |"])          # an escaped last pipe is content
+        self.assertEqual(dyadlib.split_cells(f"| {dyadlib.escape_cell('x|y')} |"), ["x|y"])
+    def test_table_rows_and_tables_keep_the_cell(self):
+        self.assertEqual(dyadlib.table_rows(self.TEXT), [["m", "`a` | `b`"], ["n", "plain"]])
+        self.assertEqual(dyadlib.tables(self.TEXT), [(["key", "allowed"], [["m", "`a` | `b`"], ["n", "plain"]])])
+        self.assertEqual(dyadlib.table_header("| a \\| b | c |\n|---|---|\n"), ["a | b", "c"])
+    def test_a_caller_that_pre_replaces_still_reads_the_same_cells(self):
+        pre = dyadlib.table_rows(self.TEXT.replace("\\|", "\x00"))
+        self.assertEqual([[c.replace("\x00", "|") for c in r] for r in pre], dyadlib.table_rows(self.TEXT))
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -159,7 +159,7 @@ def preference_at(sha: str, key: str, cwd) -> str | None:
         text = git("show", f"{sha}:{dyadlib.PREFERENCES_REL}", cwd=cwd, stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
         return None
-    for r in dyadlib.table_rows(text.replace("\\|", "\x00")):
+    for r in dyadlib.table_rows(text):   # an escaped `\\|` stays inside its cell (#171)
         if len(r) >= 2 and dyadlib.plain(r[0]).strip() == key:
             return dyadlib.plain(r[1]).strip()
     return None
