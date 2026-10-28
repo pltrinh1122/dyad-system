@@ -172,7 +172,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 craft's form when installed, #369 C7); prints only, sets nothing
   dyad session touch [-r <row>]... [-f <file>]... | list
                                 Rule-16 presence (guards/agent/sessions.py): touch refreshes this
-                                session's file (DYAD_SESSION env, else a fresh id); no args, the
+                                session's file (DYAD_SESSION env; unset, it refuses); no args, the
                                 files from this session's own open/planned rows' stored plans;
                                 list prints every session's file, flagging one past the stale window, with the
                                 attendance mode over the live seats (M3 | M4 | hybrid), the `attended-seats`

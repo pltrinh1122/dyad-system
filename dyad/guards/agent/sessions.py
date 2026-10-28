@@ -94,7 +94,7 @@ def sessions_dir(root: Path | None = None) -> Path:
     return dyadlib.instance(root) / "d-work" / "sessions"
 
 def session_id() -> str:
-    """`DYAD_SESSION` when set and shaped like a path segment; else a fresh id *each call*, so an
+    """`DYAD_SESSION` when set and shaped like a path segment; else (reads only: `touch()` refuses, #480) a fresh id *each call*, so an
     unconfigured caller never overwrites another session's file merely by chance of naming — it
     simply gets whichever fresh id the caller resolved once (#185). Not memoized: a caller needing
     one stable value per logical operation resolves it once and threads it through (`touch()`
@@ -239,7 +239,12 @@ def _path_tokens(text: str) -> list[str]:
             out.append(tok)
     return out
 
+class SessionUnset(Exception):
+    """#480 P2 (modes Q/R): a write with no usable `DYAD_SESSION` would mint a stray `unnamed-*` file."""
+
 def touch(root: Path, rows: list[str], files: list[str]) -> Path:
+    if not _SESSION_ID.match(os.environ.get("DYAD_SESSION", "")):   # #480 P2: before any write; reads keep session_id()'s fallback
+        raise SessionUnset("refused: set DYAD_SESSION=<seat> (a path-safe name) before `session touch` — nothing written")
     root = root or dyadlib.repo_root()
     d = sessions_dir(root); d.mkdir(parents=True, exist_ok=True)
     sid = session_id()   # resolved once (F4, d-work #32): the path and the body must agree
@@ -627,7 +632,10 @@ def main(a: list[str]) -> int:
             if a[i] == "-r" and i + 1 < len(a): rows.append(a[i + 1]); i += 2
             elif a[i] == "-f" and i + 1 < len(a): files.append(a[i + 1]); i += 2
             else: i += 1
-        p = touch(root, rows, files) if (rows or files) else touch_from_open_rows(root)
+        try:
+            p = touch(root, rows, files) if (rows or files) else touch_from_open_rows(root)
+        except SessionUnset as e:
+            print(e, file=sys.stderr); return 2
         print(f"touched {p.relative_to(root)}")
         same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call
         if same:
