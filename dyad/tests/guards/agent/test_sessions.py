@@ -245,6 +245,40 @@ class TouchArgsTests(unittest.TestCase):
         self.assertEqual(rc, 0, err); self.assertEqual([f.name for f in files], ["args-test.md"])
         f = sv.parse(files[0].read_text()); self.assertEqual((f["rows"], f["files"]), ("1 2", "a.py"))
 
+class BehindOriginTests(unittest.TestCase):
+    """#482 P4 (mode T): touch prints `behind origin/main by n` when HEAD lacks n commits of the local
+    `origin/main` ref (no fetch), and nothing when n is 0 or there is no such ref."""
+    def _git(self, root, *a):
+        import subprocess
+        subprocess.run(["git", *a], cwd=root, check=True, capture_output=True, env=sv.dyadlib.git_env())
+    def _repo(self):
+        root = repo()
+        self._git(root, "init", "-q", "-b", "main")
+        for k, v in (("user.email", "t@t"), ("user.name", "t"), ("commit.gpgsign", "false")):
+            self._git(root, "config", k, v)
+        self._git(root, "commit", "-q", "--allow-empty", "-m", "c0")
+        return root
+    def _touch_out(self, root):
+        import io, contextlib
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "behind-test"}), \
+             mock.patch.object(sv.dyadlib, "repo_root", return_value=root), contextlib.redirect_stdout(out):
+            self.assertEqual(sv.main(["touch", "-r", "1"]), 0)
+        return out.getvalue()
+    def test_counts_commits_origin_main_has_and_head_lacks(self):
+        root = self._repo()
+        self.assertIsNone(sv.behind_origin(root))                       # no origin/main ref: nothing to say
+        self.assertNotIn("behind origin/main", self._touch_out(root))
+        self._git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        self.assertEqual(sv.behind_origin(root), 0)
+        self.assertNotIn("behind origin/main", self._touch_out(root))  # 0: nothing printed
+        for i in (1, 2):
+            self._git(root, "commit", "-q", "--allow-empty", "-m", f"c{i}")
+        self._git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        self._git(root, "reset", "-q", "--hard", "HEAD~2")
+        self.assertEqual(sv.behind_origin(root), 2)
+        self.assertIn("behind origin/main by 2\n", self._touch_out(root))
+
 class StaleTests(unittest.TestCase):
     def test_fresh_is_not_stale(self):
         import datetime
