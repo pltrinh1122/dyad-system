@@ -1,7 +1,8 @@
 """Row guard tests (agent/rows.py): the main fence over row files — direct commits touch only the
 ledger, a row file is never deleted or retitled, states follow dyadlib.TRANSITIONS, a new row starts
 in NEW_STATES; the package check over a rows store; the transaction check applies on `main` only."""
-import os, subprocess, sys, tempfile, unittest
+import contextlib, io, os, subprocess, sys, tempfile, unittest
+from unittest import mock
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
@@ -525,6 +526,74 @@ class TraceFenceTests(unittest.TestCase):
         self.r.write(self.T, "# Trace #1\n"); sh("git", "commit", "-q", "--amend", "--no-edit", cwd=self.r.d)
         h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
         self.assertFalse([o for o in m.check_transaction(self.r.d, main_h, h) if "trace" in o])
+
+MERGE_PREFS = "# Operator preferences\n\n| key | value | allowed | read by |\n|-----|-------|---------|---------|\n| merge-disposition | {v} | `separate` \\| `with-done` | Rule-2 |\n"
+
+class MergeDispositionWarnTests(unittest.TestCase):
+    """#519 (the audit's F2): under `merge-disposition: with-done`, read at the commit's own tree, a `Y merge` entry a
+    commit adds warns — never fails — unless its note names a preference-zone or charter PR; entries already on the
+    row are never re-judged, and a merge commit warns only on an entry no parent holds."""
+    R = "agent-corpus/d-work/rows/1.md"
+    def setUp(self, pref="with-done"):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write("preferences-corpus/PREFERENCES.md", MERGE_PREFS.format(v=pref))
+        self.r.write(self.R, row(1, "one", "planned", "2026-01-01 Y plan"))
+        self.base = self.r.commit("root")
+    def out(self, h, base=None): return m.check_range(base or self.base, h, cwd=self.r.d)
+    def merge(self, entry, prior="2026-01-01 Y plan"):
+        self.r.write(self.R, row(1, "one", "planned", f"{prior}; {entry}"))
+    def test_a_merge_entry_under_with_done_warns(self):
+        self.merge("2026-01-02 Y merge PR #9 at abc1234"); out = self.out(self.r.commit())
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: "), out)
+        self.assertIn("row #1", out[0]); self.assertIn("'2026-01-02 Y merge PR #9 at abc1234'", out[0])
+        self.assertIn("with-done", out[0])
+    def test_the_warning_is_not_a_failure_of_the_cli(self):
+        self.merge("2026-01-02 Y merge #9"); h = self.r.commit()
+        old = os.getcwd(); os.chdir(self.r.d)
+        try:
+            with mock.patch.object(m.dyadlib, "repo_root", return_value=self.r.d), \
+                 mock.patch.object(m.dyadlib, "find_guard", return_value=None), \
+                 contextlib.redirect_stdout(io.StringIO()) as so, contextlib.redirect_stderr(io.StringIO()) as se:
+                rc = m.main([self.base, h])
+        finally:
+            os.chdir(old)
+        self.assertEqual(rc, 0); self.assertIn("main fence OK", so.getvalue()); self.assertIn("warning:", se.getvalue())
+    def test_separate_does_not_warn(self):
+        self.setUp("separate")
+        self.merge("2026-01-02 Y merge #9"); self.assertEqual(self.out(self.r.commit()), [])
+    def test_no_preference_file_does_not_warn(self):
+        self.r.remove("preferences-corpus/PREFERENCES.md"); base = self.r.commit("no prefs")
+        self.merge("2026-01-02 Y merge #9"); self.assertEqual(self.out(self.r.commit(), base), [])
+    def test_a_preference_or_charter_pr_is_exempt(self):
+        for note in ("(the charter PR, its own question per #427)", "(relay-form brief, its own question per #427)",
+                     "(preference-zone PR)", "(MANDATES.md)", "(a Charter change)"):
+            with self.subTest(note=note):
+                self.setUp(); self.merge(f"2026-01-02 Y merge PR #9 at abc1234 {note}")
+                self.assertEqual(self.out(self.r.commit()), [])
+    def test_existing_entries_are_not_rejudged(self):
+        self.merge("2026-01-02 Y merge #9"); base = self.r.commit("first")   # warned once, when it was added
+        self.merge("2026-01-03 Y done", prior="2026-01-01 Y plan; 2026-01-02 Y merge #9")
+        self.assertEqual(self.out(self.r.commit("second"), base), [])
+    def test_other_dispositions_do_not_warn(self):
+        self.merge("2026-01-02 Y done (merges PR #9 at abc1234)"); self.assertEqual(self.out(self.r.commit()), [])
+    def test_a_new_row_born_with_a_merge_entry_warns(self):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", "open", "2026-01-02 Y merge #9"))
+        out = self.out(self.r.commit()); self.assertEqual(len(out), 1, out); self.assertIn("row #2", out[0])
+    def test_a_merge_warns_only_on_an_entry_it_adds(self):
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+        self.merge("2026-01-02 Y merge #9"); self.r.commit("branch entry")     # judged by its own commit
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/4.md", row(4, "four")); main_h = self.r.commit("main row")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-edit", "main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.assertEqual(m.check_merge(h, self.r.d, "agent-corpus"), [])
+        sh("git", "reset", "-q", "--hard", "HEAD~1", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "main", cwd=self.r.d)
+        self.merge("2026-01-03 Y merge #10", prior="2026-01-01 Y plan; 2026-01-02 Y merge #9")   # resolved in
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_merge(h, self.r.d, "agent-corpus")
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: merge "), out)
+        self.assertIn("Y merge #10", out[0])
 
 class EventsOnlyFenceTests(unittest.TestCase):
     """#438: the main fence admits an events-only direct commit (`<host>/runbooks/events/` only) as it admits a

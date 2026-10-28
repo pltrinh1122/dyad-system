@@ -930,8 +930,11 @@ def cmd_guards(base="origin/main", pre_push=False):
     for corpus, entity, rel, tx, mod, problem in (entries if base_ok else ()):
         if not tx or mod is None:
             continue
-        fails = mod.check_transaction(REPO, base, head)
+        msgs = mod.check_transaction(REPO, base, head)
         label, mode = f"{corpus}/{entity}", getattr(mod, "TRANSACTION_MODE", "")   # the guard names its mode (#166); most declare none
+        fails = [m for m in msgs if not m.startswith("warning:")]   # a transaction guard may warn too (#519), as check_package does
+        for m in msgs:
+            if m.startswith("warning:"): print(f"warn [guards] {label} {m.removeprefix('warning:').strip()}")
         if fails:
             for m in fails: print(f"FAIL [guards] {label} {m.removeprefix('FAIL ')}")
             rc = 1
@@ -982,7 +985,10 @@ def cmd_pr(base=None, head="HEAD"):
             print(f"FAIL [pr] {label}: {problem}"); rc = 1; continue
         pr = getattr(mod, "check_pr", None)
         mode = getattr(mod, "PR_MODE", "pr") if pr else getattr(mod, "TRANSACTION_MODE", "transaction")
-        fails = (pr or mod.check_transaction)(REPO, shas["base"], shas["head"])
+        msgs = (pr or mod.check_transaction)(REPO, shas["base"], shas["head"])
+        fails = [m for m in msgs if not m.startswith("warning:")]   # #519: a warning is printed, never a failure
+        for m in msgs:
+            if m.startswith("warning:"): print(f"warn [pr] {label} {m.removeprefix('warning:').strip()}")
         if fails:
             for m in fails: print(f"FAIL [pr] {label} {m.removeprefix('FAIL ')}")
             rc = 1
