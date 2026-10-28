@@ -746,6 +746,50 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("state: backlog", rows.joinpath("5.md").read_text())
         r = self.dwork_state(d, "5", "open", "--prompt", "work five")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: open", rows.joinpath("5.md").read_text())
+    # d-work #464 (R1, mode O): `dwork state … --check` makes every refusal of the real call and writes nothing
+    def snapshot(self, d):
+        """Every file under the scratch instance with its bytes, and git's own status of the scratch repo."""
+        files = {p.relative_to(d).as_posix(): p.read_bytes() for p in sorted((d / "inst").rglob("*")) if p.is_file()}
+        return files, subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=d,
+                                     capture_output=True, text=True).stdout
+    def test_dwork_state_check_on_a_legal_transition_writes_nothing(self):
+        d, rows = self.dwork_repo(); before = self.snapshot(d)
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y", "--check")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.startswith("ok 1: open -> planned"), r.stdout); self.assertIn("nothing written", r.stdout)
+        self.assertEqual(self.snapshot(d), before, "no row, no provenance record, nothing else")
+        self.assertFalse((rows.parent / "provenance").exists())
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")          # the real call it stood for
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: planned", rows.joinpath("1.md").read_text())
+    def test_dwork_state_check_refuses_as_the_real_call_does(self):
+        """Each refusal under --check is the real call's, word for word, exit for exit, and the tree is unchanged."""
+        d, rows = self.dwork_repo(); rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        before = self.snapshot(d)
+        cases = [("2", "open"),                                                              # transition outside the table
+                 ("1", "bogus"),                                                             # no such state
+                 ("1", "done"),                                                              # no `Y done` to execute
+                 ("1", "done", "-d", "Y done (merges PR #9 at 0123abc)", "--said", "Y"),     # the Done order (#202)
+                 ("1", "planned", "-d", "Y done (merges PR #9)", "--said", "Y"),             # a merge with no head
+                 ("1", "open", "-d", "Y done", "--said", "Y"),                               # no trace under `always` (#465)
+                 ("1", "planned", "-d", "Y plan"),                                           # a disposition without its words
+                 ("5", "open"),                                                              # backlog opens only on a prompt
+                 ("9", "open", "--prompt", "p")]                                             # no such row
+        for args in cases:
+            with self.subTest(args=args):
+                real, check = self.dwork_state(d, *args), self.dwork_state(d, *args, "--check")
+                self.assertNotEqual(real.returncode, 0, real.stdout)
+                self.assertEqual((check.returncode, check.stderr, check.stdout), (real.returncode, real.stderr, real.stdout))
+                self.assertEqual(self.snapshot(d), before, "nothing written")
+    def test_dwork_new_does_not_take_check(self):
+        d, _ = self.dwork_repo()
+        r = self.dwork_new(d, "three", "--prompt", "p", "--check")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("does not take --check", r.stderr)
+        self.assertFalse((d / "inst" / "d-work" / "rows" / "3.md").exists())
+    def test_dwork_state_check_passes_the_trace_test_without_writing_the_trace(self):
+        d, rows = self.dwork_repo(); self.trace(rows, 1); before = self.snapshot(d)
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y", "--check")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("entries disposition", r.stdout)
+        self.assertEqual(self.snapshot(d), before)
     def test_dwork_done_state_follows_the_merge(self):
         """#202: a `Y done` that ratifies a merge names the head it was given on, is recorded with the state
         unchanged, and the row reaches `done` by a second dispositionless call once that head is on `main`."""

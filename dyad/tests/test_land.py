@@ -303,6 +303,7 @@ class LandTests(unittest.TestCase):
         for line, says in (("state 1 open --prompt x -m hi", "-m is the batch's"),
                            ("state 1 open --prompt x --land", "--land is the batch's"),
                            ("state 1 open --prompt x --mirror w", "--mirror is the batch's"),
+                           ("state 1 open --prompt x --check", "--check writes nothing"),   # #464
                            ("retire 1 -d 'Y archive' --said Y", "not 'retire'"),
                            ("land a b -m hi", "-m is the batch's"),
                            ("'unbalanced", "line 1")):

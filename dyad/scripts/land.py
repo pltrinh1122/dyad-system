@@ -6,7 +6,8 @@ push to `main` through the pre-push hook, retries when `main` had moved, then a 
 4–6 tool calls and about 2.1 hook runs per record):
 
   dyad dwork new|state … --land [--mirror <branch>]
-                          run the verb in the tool-owned worktree, commit what it wrote, push it
+                          run the verb in the tool-owned worktree, commit what it wrote, push it; with
+                          `state … --check` run only the check there and land nothing (#464)
   dyad dwork land <path>... -m <msg> [--mirror <branch>]
                           copy the named files (plan files, presence, traces) from this checkout into that worktree,
                           commit and push them the same way
@@ -356,6 +357,24 @@ def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: s
     return build
 
 
+def check_only(repo: Path, inst: str, argv: list[str], pos: list[str], vals: dict, bare: set, words) -> int:
+    """`dwork state … --check --land` (#464): the verb's own `--check` run where `--land` would run it — the tool-owned
+    worktree at a freshly fetched origin/main, after the `already landed` test — and nothing committed or pushed; the
+    worktree is cleaned before its next use as always. Exit 0 on `ok`, the verb's refusal and 1 otherwise."""
+    common = Path(out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+    wt = common / WORKTREE
+    with locked(common):
+        base = fetch(repo)
+        prepare(repo, wt, base)
+        why = already_landed(wt, inst, pos, vals, bare, words, datetime.date.today().isoformat())
+        if why:
+            raise Refused(f"already landed: {why}; nothing pushed")
+        r = run_verb(wt, inst, argv)
+        sys.stderr.write(r.stderr); sys.stdout.write(r.stdout)
+        print(f"checked against origin/main {base[:12]}; nothing landed")
+        return 1 if r.returncode else 0
+
+
 def identical(repo: Path, wt: Path, rels: list[str]) -> bool:
     """Every named file of the caller already holds, byte for byte, what the worktree's tree holds."""
     return all((wt / rel).is_file() and (wt / rel).read_bytes() == (repo / rel).read_bytes() for rel in rels)
@@ -447,6 +466,8 @@ def read_batch(src: str, repo: Path, inst: str, value_flags, parse) -> list[Line
         verb = pos[0] if pos else None
         if verb not in ("new", "state", "land"):   # the verbs --land lands, and land
             raise Refused(f"line {n}: a batch line is `new`, `state` or `land <path>…`, not {verb!r}")
+        if "--check" in bare:   # #464: a line that writes nothing has nothing to land; check it alone
+            raise Refused(f"line {n}: --check writes nothing, so a batch cannot land it; run `dwork state … --check` alone")
         if verb == "land":
             if vals or bare:
                 raise Refused(f"line {n}: land does not take {' '.join(sorted(set(vals) | bare))}")
@@ -579,6 +600,8 @@ def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
             raise Refused(f"--land lands `dwork new` or `dwork state`, not {verb!r}")
         if "-m" in vals:
             raise Refused(f"dwork {verb} --land generates its own subject; -m is `dwork land`'s")
+        if "--check" in bare:
+            return check_only(repo, inst, argv, pos, vals, bare, words)
         return land(repo, inst, mirror, verb_builder(argv, pos, vals, bare, inst, words), f"dwork {verb}")
     except Refused as e:
         print(f"refused: {e}", file=sys.stderr)
