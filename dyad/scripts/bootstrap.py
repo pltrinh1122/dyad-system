@@ -25,7 +25,12 @@ clone touches no network at all, while a plain `git fetch` already follows the t
 
 When is a core release tag expected: when `BUNDLE.md` (Rule-11 property 7; the authoring repo's, never an install's)
 has a `dyad-operator` row, since a row is added by a release; the tag expected is `dyad-operator-v<row version>`. An installed system carries no `BUNDLE.md` and a fresh
-scratch repo no row, so neither is ever refused for having no tag; no network is read to decide it.
+scratch repo no row, so neither is ever refused for having no tag; no network is read to decide it. One exception (d-work
+#526): a head whose row names a core version newer than `origin/main`'s row proposes that release — the release
+play-book's row PR names the version its own merge will cut, so its tag cannot exist yet — and `check --evidence` warns
+on it instead of refusing (`clone_warnings`). The same version as `origin/main`'s is #505's stale clone (the cut has
+landed, so the tag exists upstream) and is still refused, as is every head while `origin/main` cannot be read. Local
+reads only: `origin/main` is the ref this clone last fetched.
 
 Every git child runs under `dyadlib.git_env()` (a hook's GIT_VARS dropped, #142) with `GIT_TERMINAL_PROMPT=0`, so a
 fetch that would ask for credentials fails at once instead of hanging a session's start.
@@ -47,12 +52,17 @@ FETCH_TIMEOUT = 600                             # an unshallow of a long history
 UNSHALLOW = ("fetch", "--unshallow", "--tags", REMOTE)
 FETCH_TAGS = ("fetch", "--tags", REMOTE)
 REMEDY = "run ./dyad/bin/dyad bootstrap"
+ORIGIN_MAIN = f"{REMOTE}/main"                  # d-work #526: the row a head is compared with, read locally
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("states-are-ok-changed-warn", lambda: STATES == ("ok", "changed", "warn")),
     ("core-tag-pattern-is-the-core-release-prefix", lambda: CORE_TAGS == "dyad-operator-v*"),
     ("unshallow-also-fetches-tags", lambda: "--unshallow" in UNSHALLOW and "--tags" in UNSHALLOW and UNSHALLOW[-1] == REMOTE),
     ("fetches-name-one-remote", lambda: FETCH_TAGS[-1] == UNSHALLOW[-1] == REMOTE),
+    ("release-baseline-is-the-remotes-main", lambda: ORIGIN_MAIN == f"{REMOTE}/main"),
+    ("only-a-strictly-newer-row-proposes-a-release", lambda: newer("0.2.0", "0.1.0") and newer("0.1.0", None)
+                                                        and not newer("0.1.0", "0.1.0") and not newer("0.1.0", "0.2.0")
+                                                        and not newer("x", "0.1.0")),
     ("expected-tag-is-the-core-prefix-and-the-row-version", lambda: core_tag("1.2.3") == "dyad-operator-v1.2.3"
                                                                and core_tag("1.2.3").startswith(CORE_TAGS[:-1])),
 ]
@@ -94,32 +104,77 @@ def has_tag(repo: Path, tag: str) -> bool:
     return _out(git(repo, "rev-parse", "--verify", "-q", f"refs/tags/{tag}")) is not None
 
 
+def core_row(text: str) -> str | None:
+    """The `dyad-operator` version of one `BUNDLE.md` text, or None: parsed by the bundle guard's own parser, never a
+    second one (Rule-13)."""
+    _, rows = dyadlib.load_guard("infra", "bundle").parse(text)
+    return next((v for c, v in rows if c == dyadlib.CORE_CRAFT), None)
+
+
 def expected_core_release(repo: Path) -> str | None:
     """The core version `BUNDLE.md` names, or None when it names none (no file, no `dyad-operator` row): a row is
-    added by a release (Rule-11 property 7), so a row means a core release tag exists upstream. Parsed by the bundle
-    guard's own parser, never a second one (Rule-13)."""
+    added by a release (Rule-11 property 7), so a row means a core release tag exists upstream."""
     path = repo / "BUNDLE.md"
     if not path.is_file():
         return None
     try:
-        _, rows = dyadlib.load_guard("infra", "bundle").parse(path.read_text(encoding="utf-8"))
+        return core_row(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError):
         return None
-    return next((v for c, v in rows if c == dyadlib.CORE_CRAFT), None)
+
+
+def origin_core_release(repo: Path) -> tuple[bool, str | None]:
+    """(readable, version): whether `origin/main` resolves locally, and the core version its `BUNDLE.md` names (None
+    when it carries no file or no core row). No network: the ref this clone last fetched (d-work #526)."""
+    if _out(git(repo, "rev-parse", "--verify", "-q", f"{ORIGIN_MAIN}^{{commit}}")) is None:
+        return False, None
+    text = _out(git(repo, "show", f"{ORIGIN_MAIN}:BUNDLE.md"))
+    return True, (core_row(text) if text else None)
+
+
+def newer(version: str, base: str | None) -> bool:
+    """Pure: `version` is a release after `base` (None: no core row yet, so any release is after it)."""
+    if not dyadlib.SEMVER.fullmatch(version):
+        return False
+    if base is None:
+        return True
+    return bool(dyadlib.SEMVER.fullmatch(base)) and dyadlib.semver_tuple(version) > dyadlib.semver_tuple(base)
+
+
+def proposed_core_release(repo: Path) -> tuple[str, str | None] | None:
+    """(version, origin's) when this head's row names an untagged core version newer than `origin/main`'s row: the head
+    proposes that release, as the release play-book's row PR does, so its tag cannot exist yet (d-work #526). None
+    otherwise — no row, the tag is here, `origin/main` unreadable, or a version not newer (#505's stale clone)."""
+    expected = expected_core_release(repo)
+    if not expected or has_tag(repo, core_tag(expected)):
+        return None
+    readable, base = origin_core_release(repo)
+    return (expected, base) if readable and newer(expected, base) else None
 
 
 def clone_problems(repo: Path) -> list[str]:
     """What makes this clone unfit to evidence, one line each, local reads only (no network): a shallow history,
     and the missing tag `dyad-operator-v<version>` while `BUNDLE.md` names that core release — older core tags do
-    not stand in for it (d-work #505). `check --evidence` refuses on the first."""
+    not stand in for it (d-work #505) — unless the head proposes that release (`proposed_core_release`, #526).
+    `check --evidence` refuses on the first."""
     out = []
     if is_shallow(repo):
         out.append(f"shallow clone: {REMEDY} (git fetch --unshallow --tags)")
     expected = expected_core_release(repo)
-    if expected and not has_tag(repo, core_tag(expected)):
+    if expected and not has_tag(repo, core_tag(expected)) and not proposed_core_release(repo):
         out.append(f"no {core_tag(expected)} tag while BUNDLE.md names {dyadlib.CORE_CRAFT} {expected}: "
                    f"{REMEDY} (git fetch --tags)")
     return out
+
+
+def clone_warnings(repo: Path) -> list[str]:
+    """What `check --evidence` reports and does not refuse, one line each: a head proposing a core release (#526)."""
+    p = proposed_core_release(repo)
+    if not p:
+        return []
+    version, base = p
+    return [f"no {core_tag(version)} tag: BUNDLE.md names {dyadlib.CORE_CRAFT} {version}, {ORIGIN_MAIN} names "
+            f"{base or 'none'}, so this head proposes that release (d-work #526)"]
 
 
 def line(state: str, step: str, detail: str) -> str:

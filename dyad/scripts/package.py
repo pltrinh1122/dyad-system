@@ -1094,10 +1094,13 @@ def cmd_evidence(brief=False):
     (joined by newline) so the Operator can re-run it on the same head and compare. The full block is
     stored (`evidence_store`) whatever is printed; `brief` prints `evidence_brief` of it instead (#476)."""
     import io, contextlib
-    unfit = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap").clone_problems(REPO)
+    bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+    unfit = bs.clone_problems(REPO)
     if unfit:   # d-work #474, #505: a shallow clone, or one missing the row's core tag, yields false FAILs (infra/bundle, plan.base->commit); one line, nothing run
         print(f"FAIL [evidence] {unfit[0]}")
         return 2
+    for w in bs.clone_warnings(REPO):   # d-work #526: a head proposing a core release; stderr, so the block is unchanged
+        print(f"warn [evidence] {w}", file=sys.stderr)
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
     lines = [f"head={git('rev-parse', 'HEAD')}", f"tree={git('rev-parse', 'HEAD^{tree}')}",
              f"dirty={'yes' if git('status', '--porcelain') else 'no'}"]

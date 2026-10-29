@@ -10,7 +10,10 @@ exit 2, through the runner too; `clone_problems` names a shallow history first a
 `check --evidence` refuses a shallow or tagless clone with one `FAIL [evidence]` line, running nothing. A second world
 (d-work #505) tags commit two `dyad-operator-v0.2.0` with the row moved to 0.2.0, and deletes that tag from a full
 clone that keeps v0.1.0: an older core tag does not stand in for the row's — `--check` warns, a run fetches it, and
-`clone_problems` and `check --evidence` name it."""
+`clone_problems` and `check --evidence` name it. A third shape (d-work #526) commits, on a full clone holding v0.1.0, a
+row moved to an untagged 0.2.0 while `origin/main` still names 0.1.0 — the release play-book's cut PR: it proposes that
+release, so `clone_problems` is empty, `clone_warnings` names it, and `check --evidence` runs with one stderr warn; the
+same head is still refused once `origin/main` cannot be read, and a row equal to `origin/main`'s is still #505's case."""
 import contextlib, io, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -77,6 +80,17 @@ class World(unittest.TestCase):
         git(self.top, "clone", "-q", str(self.origin), str(work))
         git(work, "tag", "-d", TAG2)
         git(work, "config", "core.hooksPath", "dyad/hooks")
+        self.assertEqual(git(work, "tag", "-l"), TAG)
+        return work
+
+    def proposing(self, version="0.2.0"):
+        """A full clone holding v0.1.0 whose head commits a row naming `version`, untagged, while origin/main names
+        0.1.0: the cut PR of a release (d-work #526)."""
+        work = self.full()
+        git(work, "fetch", "-q", "--tags", "origin")
+        git(work, "config", "core.hooksPath", "dyad/hooks")
+        (work / "BUNDLE.md").write_text(BUNDLE.replace("| dyad-operator | 0.1.0 |", f"| dyad-operator | {version} |"))
+        git(work, "add", "-A"); git(work, *livetest.IDENTITY, "commit", "-qm", "cut")
         self.assertEqual(git(work, "tag", "-l"), TAG)
         return work
 
@@ -186,6 +200,54 @@ class BootstrapTests(World):
         self.assertIn("failed", lines[2])
 
 
+class ProposedReleaseTests(World):
+    """d-work #526: a head whose row names an untagged core version newer than origin/main's proposes that release."""
+    def test_a_newer_untagged_row_is_a_warning_not_a_problem(self):
+        work = self.proposing()
+        self.assertEqual(self.bs.proposed_core_release(work), ("0.2.0", "0.1.0"))
+        self.assertEqual(self.bs.clone_problems(work), [])
+        self.assertEqual(self.bs.clone_warnings(work),
+                         [f"no {TAG2} tag: BUNDLE.md names dyad-operator 0.2.0, origin/main names 0.1.0, "
+                          f"so this head proposes that release (d-work #526)"])
+
+    def test_the_same_version_as_origin_main_is_still_refused(self):
+        work = self.older_tag_only()   # origin/main names 0.2.0: the cut landed, its tag must be here
+        self.assertIsNone(self.bs.proposed_core_release(work))
+        self.assertEqual(len(self.bs.clone_problems(work)), 1)
+        self.assertEqual(self.bs.clone_warnings(work), [])
+
+    def test_an_older_row_than_origin_main_is_still_refused(self):
+        work = self.proposing()
+        (work / "BUNDLE.md").write_text(BUNDLE.replace("| dyad-operator | 0.1.0 |", "| dyad-operator | 0.0.9 |"))
+        git(work, *livetest.IDENTITY, "commit", "-qam", "older")
+        self.assertIsNone(self.bs.proposed_core_release(work))
+        self.assertTrue(self.bs.clone_problems(work)[0].startswith("no dyad-operator-v0.0.9 tag while"))
+
+    def test_unreadable_origin_main_keeps_the_refusal(self):
+        work = self.proposing()
+        git(work, "remote", "remove", "origin")   # origin/main no longer resolves
+        self.assertEqual(self.bs.origin_core_release(work), (False, None))
+        self.assertIsNone(self.bs.proposed_core_release(work))
+        self.assertEqual(self.bs.clone_problems(work),
+                         [f"no {TAG2} tag while BUNDLE.md names dyad-operator 0.2.0: run ./dyad/bin/dyad bootstrap (git fetch --tags)"])
+
+    def test_newer_is_strict_and_no_base_row_admits_a_first_release(self):
+        self.assertTrue(self.bs.newer("0.2.0", "0.1.0")); self.assertTrue(self.bs.newer("1.0.0", "0.9.9"))
+        self.assertTrue(self.bs.newer("0.1.0", None))   # origin/main has no core row yet
+        self.assertFalse(self.bs.newer("0.1.0", "0.1.0")); self.assertFalse(self.bs.newer("0.1.0", "0.2.0"))
+        self.assertFalse(self.bs.newer("next", "0.1.0")); self.assertFalse(self.bs.newer("0.2.0", "garbled"))
+
+    def test_a_shallow_proposing_clone_is_still_refused_for_its_history(self):
+        self.make_origin()
+        work = self.top / "shallow"
+        git(self.top, "clone", "-q", "--depth", "1", self.origin.as_uri(), str(work))
+        (work / "BUNDLE.md").write_text(BUNDLE.replace("| dyad-operator | 0.1.0 |", "| dyad-operator | 0.2.0 |"))
+        git(work, *livetest.IDENTITY, "commit", "-qam", "cut")
+        probs = self.bs.clone_problems(work)
+        self.assertEqual(len(probs), 1, probs)
+        self.assertTrue(probs[0].startswith("shallow clone:"), probs)
+
+
 class EvidenceRefusalTests(World):
     """`check --evidence` refuses an unfit clone with one line before anything runs (d-work #474)."""
     def evidence(self, work):
@@ -211,6 +273,31 @@ class EvidenceRefusalTests(World):
         self.assertEqual(len(lines), 1, lines)
         self.assertRegex(lines[0], r"^FAIL \[evidence\] no dyad-operator-v0\.1\.0 tag while BUNDLE\.md names dyad-operator 0\.1\.0: "
                                    r"run \./dyad/bin/dyad bootstrap \(git fetch --tags\)$")
+
+    def test_the_cut_pr_of_a_release_is_evidenced_with_one_stderr_warn(self):
+        """Regression, d-work #526: the release play-book's row PR names the version its own merge cuts; #505 refused
+        its evidence. It now runs, the block unchanged and the warn on stderr."""
+        import importlib.util
+        work = self.proposing()
+        spec = importlib.util.spec_from_file_location("package", PKG / "scripts" / "package.py")
+        pkg = importlib.util.module_from_spec(spec); spec.loader.exec_module(pkg)
+        pkg.REPO = work
+        out, err = io.StringIO(), io.StringIO()
+        ran = []
+        def check(): ran.append("check"); print("ok   [Rule-11] fixed"); return 0
+        def guards(): ran.append("guards"); print("ok   [guards] infra/containment fixed"); return 0
+        with unittest.mock.patch.object(pkg, "cmd_check", check), unittest.mock.patch.object(pkg, "cmd_guards", guards), \
+             unittest.mock.patch.object(pkg, "evidence_store", lambda block: None), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = pkg.cmd_evidence()
+        lines = out.getvalue().splitlines()
+        self.assertEqual((rc, ran), (0, ["check", "guards"]))
+        self.assertRegex(lines[0], r"^head=[0-9a-f]{40}$")
+        self.assertEqual(lines[3:-1], ["ok   [Rule-11] fixed", "ok   [guards] infra/containment fixed"])
+        self.assertEqual(lines[-1], "evidence-sha256=" + pkg.evidence_sha256(lines[:-1]))
+        self.assertEqual(err.getvalue().splitlines(),
+                         [f"warn [evidence] no {TAG2} tag: BUNDLE.md names dyad-operator 0.2.0, origin/main names 0.1.0, "
+                          f"so this head proposes that release (d-work #526)"])
 
     def test_a_clone_missing_the_rows_tag_but_holding_an_older_one_is_refused_in_one_line(self):
         rc, lines = self.evidence(self.older_tag_only())
