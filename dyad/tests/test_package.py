@@ -424,7 +424,12 @@ class PackageTests(livetest.LiveCase):
         # cmd_install prints the resolved destination (hostadapter.resolve; d-work #179, G5) — d itself
         # may be a symlink (e.g. macOS /var -> /private/var) even though it never is on this kernel,
         # which is exactly how this assertion passed here by coincidence before the fix (#179 plan, attack 3)
-        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn(f"installed into {Path(d).resolve()}: 0 changes", r.stdout)
+        # #522: under the parallel suite this second install once saw 2 changes, which did not reproduce in three full
+        # runs; the message names what the install wrote (the destination's own diff), so the next occurrence says why
+        changed = lambda: subprocess.run(["git", "-C", str(d), "status", "--porcelain", "--untracked-files=all"],
+                                         capture_output=True, text=True).stdout
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(f"installed into {Path(d).resolve()}: 0 changes", r.stdout, f"{r.stdout}\nwhat the install changed:\n{changed()}")
         self.assertEqual((d / ".gitignore").read_text(), ignore_text)
         with self.subTest("install twice: import line once, templates, core roots and hooks"):   # merged from test_install_twice_is_zero_changes (d-work #203 N2)
             self.assertEqual((d / "CLAUDE.md").read_text().count("@dyad/CLAUDE.md"), 1)
