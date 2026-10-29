@@ -25,6 +25,31 @@ class MappingTests(unittest.TestCase):
         self.assertEqual([m["module"] for m in tg.mapping(pkg)], ["dyad/scripts/a.py", "dyad/guards/agent/g.py", "crafts/c/guards/w.py", "crafts/c/projectors/project_x.py", "crafts/c/scripts/s.py"])
         self.assertEqual(tg.summary(root, pkg), "5 modules mapped, 2 tests present")
 
+class LevelsSeedTests(unittest.TestCase):
+    """#484: every core test module has a line in the core's levels seed, read by the core's own levels.py."""
+    def fixture(self, seed_lines):
+        root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, root, ignore_errors=True); pkg = root / "dyad"
+        for rel in ("dyad/tests/test_a.py", "dyad/tests/guards/agent/test_g.py", "dyad/tests/helper.py"):
+            f = root / rel; f.parent.mkdir(parents=True, exist_ok=True); f.write_text("")
+        (pkg / "scripts").mkdir(parents=True)
+        shutil.copy(dyadlib.PKG / "scripts" / "levels.py", pkg / "scripts" / "levels.py")
+        if seed_lines is not None:
+            (pkg / "templates").mkdir(); (pkg / "templates" / "self-diagnostic-levels.txt").write_text("# seed\n" + "".join(l + "\n" for l in seed_lines))
+        return root, pkg
+    def test_an_unclassified_module_fails_and_a_complete_seed_passes(self):
+        root, pkg = self.fixture(["unit dyad/tests/test_a.py  # a comment"])
+        self.assertEqual(tg.unclassified(pkg), ["dyad/tests/guards/agent/test_g.py"])
+        seeded = lambda: [m for m in tg.check_package(root, pkg) if "#484" in m]   # the fixture's levels.py has no test: a p4 line, not this one
+        self.assertEqual(seeded(), ["dyad/tests/guards/agent/test_g.py: no line in dyad/templates/self-diagnostic-levels.txt "
+                                                       "(a test module is classified unit or integration, #484)"])
+        root, pkg = self.fixture(["unit dyad/tests/test_a.py", "integration dyad/tests/guards/agent/test_g.py"])
+        self.assertEqual(seeded(), [])
+    def test_no_seed_skips(self):
+        root, pkg = self.fixture(None)
+        self.assertEqual(tg.unclassified(pkg), [])
+    def test_the_live_seed_is_complete(self):
+        self.assertEqual(tg.unclassified(), [])
+
 class LiveTests(unittest.TestCase):
     def test_live_repo_passes(self):
         self.assertEqual(tg.check_package(dyadlib.repo_root()), [])
