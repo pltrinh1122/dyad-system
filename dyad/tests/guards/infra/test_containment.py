@@ -107,6 +107,34 @@ class TransactionTests(unittest.TestCase):
         self.r.commit({"dyad/a.md": "x"})
         (self.r.d / "dyad" / "b.md").write_text("b"); sh("git", "add", "dyad/b.md", cwd=self.r.d)
         self.assertEqual(c.check_staged(cwd=self.r.d), [])
+    def conflicted_merge(self):
+        """A merge of two branches touching different zones, stopped on a conflict: the index spans both zones."""
+        self.r.commit({"README.md": "r"})
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.commit({"dyad/a.md": "side", "README.md": "side"})
+        sh("git", "checkout", "-q", "-", cwd=self.r.d)
+        self.r.commit({"CLAUDE.md": "main", "README.md": "main"})
+        m = subprocess.run(["git", "merge", "-q", "--no-ff", "side"], cwd=self.r.d, capture_output=True, text=True)
+        self.assertNotEqual(m.returncode, 0, "expected a conflict")
+        (self.r.d / "README.md").write_text("resolved"); sh("git", "add", "README.md", cwd=self.r.d)
+        self.assertTrue(c.merge_in_progress(self.r.d))
+    def test_staged_skips_a_merge_commit(self):
+        """#38: a merge commit is not a Rule-1 transaction (#166); the hook skips it, says so, and exits 0."""
+        self.conflicted_merge()
+        self.assertTrue(any("multiple zones" in f for f in c.check_paths("staged", c.name_status("--cached", cwd=self.r.d), self.r.d)))
+        self.assertEqual(c.check_staged(cwd=self.r.d), [])
+        r = subprocess.run([sys.executable, str(Path(c.__file__)), "staged"], cwd=self.r.d, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("containment SKIP [staged]: a merge commit is not a Rule-1 transaction", r.stdout)
+        sh("git", "commit", "-q", "--no-edit", cwd=self.r.d)
+        self.assertFalse(c.merge_in_progress(self.r.d))
+    def test_staged_still_refuses_a_mixed_ordinary_commit(self):
+        self.r.commit({"README.md": "r"})
+        for rel in ("dyad/a.md", "CLAUDE.md"):
+            (self.r.d / rel).parent.mkdir(parents=True, exist_ok=True); (self.r.d / rel).write_text("x")
+            sh("git", "add", rel, cwd=self.r.d)
+        self.assertFalse(c.merge_in_progress(self.r.d))
+        self.assertTrue(any("multiple zones" in f for f in c.check_staged(cwd=self.r.d)))
 
 
 class VerbTableTests(unittest.TestCase):
