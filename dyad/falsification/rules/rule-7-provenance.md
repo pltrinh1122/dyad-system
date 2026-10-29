@@ -185,3 +185,19 @@ carries a disposition already given; nothing new is ratified. **7–6**: the voc
 13–15, 18–20) unchanged: agent zone, no host action, no new import, no guard registry change. Coherent, orthogonal.
 
 Disposition: see ledger #422.
+
+## Amendment — d-work #525 (2026-10-29): Enforcement's credential shapes as the guard reads them
+
+**Claim (plan #525):** the State check's credential shapes in Enforcement should say what `provenance.py`'s
+`FAIL_SHAPES` matches: `gh[pousr]_` and not `gh[pous]_`, plus the Anthropic API key `sk-ant-` that #558 added.
+
+| # | attack | result |
+|---|--------|--------|
+| 1 | Text only, so it can wait. | **Refuted**: a Rule that names fewer shapes than its guard fails on misleads the reader about what a provenance body may hold. |
+| 2 | `gh[pousr]_` widens what fails. | **Refuted, by reading the code**: `FAIL_SHAPES` has read `gh[pousr]_` (refresh tokens included) since the guard was written. The Rule had understated it, and nothing changes in what fails. |
+| 3 | `sk-ant-` fails prose that names the prefix. | **Refuted**: the shape needs 20 or more key characters after the prefix (`sk-ant-[A-Za-z0-9_-]{20,}`), so the bare prefix in a sentence, as here, passes. That is #52's own condition. |
+
+Pairwise (Rule-5): 7–14 is unchanged; the shapes are property 2's residue, not a manifest row. 7–3, 7–2 and 7–16:
+no trigger and no store changes. 7–6: no term is added. 7–11 and 7–12: the guard and its tests are unchanged. 7–20: no
+reference kind. All other pairs are untouched. Coherent and orthogonal.
+Disposition: see ledger #525.

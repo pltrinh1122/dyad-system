@@ -115,7 +115,9 @@ files and almost never merge.
 
 ## Enforcement
 The row guard (`dyad/guards/agent/rows.py`, the fence) for row files: append-only, ids and titles
-immutable, transitions in the table; the PR guard (`prs.py`) reads rows at the base commit; the
+immutable, transitions in the table, and new ids contiguous — on `main` and on a branch alike, the row ids a range
+adds run from the base's highest id + 1 with none skipped, as the allocator writes them, so a skipped or hand-typed
+id fails (`rows.contiguity_problems`, #560); the PR guard (`prs.py`) reads rows at the base commit; the
 presence guard (`dyad/guards/agent/sessions.py`) checks only that a presence file is well-formed
 (every field present, `seen` parses) — never overlap, never staleness (Presence, above); inference
 for phase ownership and for whether an overlap the Agent found actually matters.
@@ -152,6 +154,8 @@ the closing seat; see the same record, amendment #422. Presence gains `dyad sess
 where, and the operate seat owns the check while the writer owns the fix; see the same record, amendment #434. Presence's
 writer sentence 2026-10-25 (d-work #350, ported by #453 from PR #425): the F1 fence of #32 compared a uuid
 computed per `dyad` invocation, so it warned on a session's own previous command and could not tell a second
-holder from the same one; see the same record, amendment #350.
+holder from the same one; see the same record, amendment #350. Enforcement
+names the row-id contiguity fence 2026-10-29 (d-work #525): the fence refused a range whose new ids skipped or were
+typed by hand since #560, and no Rule named it; see the same record, amendment #525.
 
 Set: System Requirements.

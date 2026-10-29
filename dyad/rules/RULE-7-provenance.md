@@ -87,8 +87,8 @@ Rule-11's runner as `agent/provenance`). Its two checks are split by what a fail
 - **State**, over the store: it fails on a record whose title id differs from its file name;
   entries not numbered from 1 without gaps; an unknown `kind`; a missing or unterminated fenced
   body; a `disposition` count that differs from the row's `disposed` count (property 5); a credential
-  shape in any body (property 2's residue: `gh[pous]_…`, `github_pat_…`, a PEM private-key header,
-  an `Authorization:` bearer or token value); any tracked `*.jsonl` under the d-work store; and a
+  shape in any body (property 2's residue: `gh[pousr]_…`, `github_pat_…`, an Anthropic API key `sk-ant-…`, a PEM
+  private-key header, an `Authorization:` bearer or token value); any tracked `*.jsonl` under the d-work store; and a
   row with no record that the instance does not name in `<instance>/provenance_legacy.local.txt`.
   That list holds the rows that predate enforcement, one `<id> <n> <reason>` per line, n the
   dispositions the row held whose words were never written (property 3 forbids writing them now): a
@@ -122,6 +122,8 @@ disclosed the day the Operator's words were given, which the writer stamps as to
 record, amendment #290. Property 4 gains the relayed-disposition sentence and the accreted row's
 closing entry 2026-10-25 (d-work #422): the attendance reading excludes a note naming a mandate or a relay,
 and no CLI form wrote either note on a close or on a relayed disposition, so every mandate close read as a
-disposition given in the closing seat; see the same record, amendment #422.
+disposition given in the closing seat; see the same record, amendment #422. Enforcement's credential shapes read
+`gh[pousr]_` and gain `sk-ant-` 2026-10-29 (d-work #525): the guard had matched `gh[pousr]_` from the start and
+added the Anthropic key in #558, and the Rule named neither; see the same record, amendment #525.
 
 Set: System Requirements.
