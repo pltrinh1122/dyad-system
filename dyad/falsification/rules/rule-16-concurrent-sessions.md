@@ -286,3 +286,19 @@ unchanged. Coherent, orthogonal.
 users, Rules 3 and 16; its row does not list `writer`, as it did not before.
 
 Disposition: see ledger #350.
+
+## Amendment — d-work #525 (2026-10-29): Enforcement names the row-id contiguity fence
+
+**Claim (plan #525):** the fence's check that new row ids run contiguously from the base's highest id (`rows.contiguity_problems`, #560, R4 of #467) belongs in the Rule whose store it guards.
+
+| # | attack | result |
+|---|--------|--------|
+| 1 | The allocation rule (`max(origin, local)+1`) is the sysarch craft's `stores.md` (Boundaries), so the fence belongs there too. | **Scoped**: the pattern stays `stores.md`'s. Rule-16's Enforcement already lists what the fence checks on the row files (append-only, immutable ids and titles, transitions), and the contiguity check is one more of those. Naming it here describes the guard and does not redefine the allocator. |
+| 2 | The fence refuses a legitimate batch. | **Refuted, by the code**: k new rows numbered `top+1 … top+k` pass. Only the ids this range *adds* are judged, so ids another session landed on the base meanwhile are never this range's, and gaps already in history are never judged. |
+| 3 | Rule-3 should carry it, as the fence's owner. | **Refuted**: Rule-3 owns the fence's Done-order and plan-gate semantics. Ids and the store are Rule-16's (Boundaries: "the canonical path and the transition table"), and plan #525 attack 2 leaves Rule-3 untouched. |
+
+Pairwise (Rule-5): 16–3 still owns the fence's Done and plan-gate clauses, and this sentence names only a store check;
+coherent. 16–1 and 16–2 have no zone or ratification change. 16–7: provenance's transaction check is unaffected. 16–15:
+plan files are unaffected. 16–20: no reference kind. 16–6: no term is added. All other pairs are untouched. Coherent and
+orthogonal.
+Disposition: see ledger #525.
