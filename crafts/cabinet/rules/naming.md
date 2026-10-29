@@ -48,9 +48,10 @@ both from the environment, for the Operator to paste or compare.
 ## 4. The names history keeps
 A presence file is never deleted or renamed (Rule-16): `cos.md`, `cos-1.md`, `cos-59cec502.md`, `cab-2-8c27a6fd.md`,
 `unnamed-<hex>.md` and the rest stay as the record of who sat where. `seats.py` counts them as outside the form,
-in one line, and fails nothing; a holder that takes a new seat writes a new file and leaves the old one. A
-`unnamed-<hex>` file is what a bare `dyad session touch` writes under no `DYAD_SESSION`: one of the costs this
-form exists to make visible, not an error of the store.
+in one line, and fails nothing; a holder that takes a new seat writes a new file and leaves the old one. An
+`unnamed-<hex>` file is what a bare `dyad session touch` once wrote under no `DYAD_SESSION`. The touch now refuses
+before it writes anything (#561), so no new one appears, and those already written stay as history: one of the costs
+this form exists to make visible, not an error of the store.
 
 ## When
 - A function is added to the mandates table: its `function:` line is added to `seats_rules.txt` in the same

@@ -23,3 +23,16 @@ this craft's data rather than the syseng table (2) and every `program-…` name 
 arithmetic, not observation.
 
 Disposition: see ledger #383 (accreted under #369; its Done rides that mandate's Done disposition).
+
+## Amendment — d-work #525: §4 no longer describes the `unnamed-` fallback as current
+
+**Claim (plan #525):** §4 says a bare `dyad session touch` *writes* an `unnamed-<hex>` file. Since #561, `touch()`
+refuses before any write when `DYAD_SESSION` is unset or not path-safe (#480 P2). The rule should say so.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 5 | The old `unnamed-*` files lose their reading once none is written. | **Refuted** | Rule-16 never deletes a presence file. §4 still lists `unnamed-<hex>.md` among the names history keeps, and `seats.py` still counts them as outside the form. Only the present tense changes: such a file *was* written, and none is written now. |
+| 6 | Attack 4's survivor ("the fix is the touch's") is now wrong. | **Confirmed as delivered, not wrong** | The touch's fix landed (#561, d-work #480). Attack 4 stands as the record of that decision. |
+
+`VERSION` 0.3.0 → 0.3.1, because `cabinet-v0.3.0` is released.
+Disposition: see ledger #525.
