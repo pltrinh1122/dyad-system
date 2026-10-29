@@ -8,7 +8,8 @@ ONE zone. Deleting an unclassified path is tolerated so a passing tree can be re
 Rule-1 binds a commit and a PR; a push range is neither, so the two are separate modes (#166):
 `commits` walks each non-merge commit of `base..head` (the pre-push path, `check_transaction`);
 `range` walks those commits **and** the whole `base...head` diff, which is the PR (`check_pr`, the
-`range` CLI, `dyad check --pr`, and the hosted detector over what landed on `main`). The result
+`range` CLI, `dyad check --pr`, and the hosted detector over what landed on `main`); with several merge bases
+(a criss-cross) the PR's diff is its merge's net diff instead (`range_diff`, #528). The result
 line names the mode that ran.
 
   containment.py staged               pre-commit: check the index
@@ -165,9 +166,26 @@ def check_commits(base, head, cwd=None):
     for sha in git("rev-list", "--no-merges", f"{base}..{head}", cwd=cwd).split():
         fails += check_commit(sha, cwd=cwd)
     return fails
+def merge_bases(base, head, cwd=None) -> list[str]:
+    return git("merge-base", "--all", base, head, cwd=cwd).split()
+def range_diff(base, head, cwd=None) -> tuple[str, list[tuple[str, str]]]:
+    """(how, entries): the PR's whole diff. With one merge base it is `base...head`. With several (a criss-cross,
+    as when a PR merged `main` after a prerequisite it carries landed there) the three-dot diff picks one base and
+    counts what the other already landed, so the PR's diff is the net diff of its merge instead: `base` against the
+    tree `git merge-tree --write-tree base head` makes (#528, the #569 false FAIL). A merge that would conflict has
+    no such tree, and the three-dot diff stands."""
+    bases = merge_bases(base, head, cwd=cwd)
+    if len(bases) > 1:
+        r = subprocess.run(["git", "merge-tree", "--write-tree", base, head], cwd=cwd, capture_output=True, text=True)
+        tree = r.stdout.split("\n", 1)[0].strip() if r.returncode == 0 else ""
+        if tree:
+            return f"net merge diff, {len(bases)} merge bases", name_status(base, tree, cwd=cwd)
+    return "", name_status(f"{base}...{head}", cwd=cwd)
 def check_range(base, head, cwd=None):
-    """Mode `range`: the commits **and** the whole `base...head` diff — the PR transaction."""
-    return check_commits(base, head, cwd=cwd) + check_paths(f"range {base[:7]}..{head[:7]}", name_status(f"{base}...{head}", cwd=cwd), cwd)
+    """Mode `range`: the commits **and** the whole diff of the PR (`range_diff`) — the PR transaction."""
+    how, entries = range_diff(base, head, cwd=cwd)
+    label = f"range {base[:7]}..{head[:7]}" + (f" ({how})" if how else "")
+    return check_commits(base, head, cwd=cwd) + check_paths(label, entries, cwd)
 def check_tree(cwd=None):
     t = table(cwd)
     return [f"FAIL [tree]: unclassified path: {p}" for p in git("ls-files", cwd=cwd).split() if classify(p, zones=t) == "unclassified"]
