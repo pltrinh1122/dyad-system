@@ -112,7 +112,11 @@ dyad system without clashes or hand-editing.
    the bundle until its first release, whose release adds its row; a released craft without a row
    fails. A released craft whose live `VERSION` has moved ahead of its tag may run ahead of its row,
    which still names its last release, until the infra-zone PR that updates the row; the guard warns
-   meanwhile, and fails once the new version is itself tagged. A released craft that has left the tree — renamed or retired by
+   meanwhile, and fails once the new version is itself tagged. The same holds of a row that names a version no tag
+   holds — a number set for a cut not yet made (#522's 0.12.3): a live `VERSION` moved past it warns until the
+   infra-zone PR moves the row, and fails once the live version is tagged, so such a row never pins the craft's
+   `VERSION`; a row naming the live, untagged version is a cut being prepared and passes, and a row ahead of the
+   live `VERSION` fails (#481). A released craft that has left the tree — renamed or retired by
    a craft-zone PR — may keep its row, which still names its last release, until the infra-zone PR that removes
    it; the guard warns meanwhile, and a row naming a component that never held a release tag of its own still
    fails. Its release is a git tag `vMAJOR.MINOR.PATCH` equal to `v` + `BUNDLE.md`'s version: the
@@ -195,6 +199,9 @@ bundle guard failed each one alone; see the same record, amendment #423. Propert
 two grounds for a bundled craft 2026-10-27 (d-work #504): core Rules cited four crafts by path and only
 one declared itself bundled, so a core-only install shipped Rules citing three crafts it did not carry,
 and the one reason written down named a symptom of the system's purpose rather than the purpose; see
-the same record, amendment #504.
+the same record, amendment #504. Property 7 gains the untagged-row sentence 2026-10-29 (d-work #481, mandate
+#527): a row naming a version no tag held pinned `VERSION`, since any bump past it failed and Rule-1 forbade the row's
+fix in the same PR, the version/zone face of mode M one state further (incident row 216); see the same record,
+amendment #481.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

@@ -50,7 +50,8 @@ now.
   only while the row still names that craft's **last release**. So: (1) the craft-zone or agent-zone PR sets `VERSION`
   to the class's number while the row names the last release; (2) the infra-zone PR moves the row to that number with
   the bundle's own version; (3) the cut is that merge. A row that names an unreleased number (#522 put 0.12.3 there)
-  pins `VERSION` until the row goes back to the last release or the number is released.
+  no longer pins `VERSION`: a later bump past it warns until the infra-zone PR moves the row, and fails once the new
+  number is tagged (Rule-11 property 7, #481).
 - **The bundle takes the highest class among its components** since the bundle's last tag, and moves the same part.
   A release of the core or of a Tended craft always also proposes the bundle that names it (Rule-11 property 7: the
   bundle is the front door), in the same PR that moves its row.
