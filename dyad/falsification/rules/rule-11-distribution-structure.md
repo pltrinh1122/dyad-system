@@ -431,3 +431,40 @@ Pairwise (Rule-5):
 
 Coherent, orthogonal.
 Disposition: see ledger #504.
+
+## Amendment — d-work #481 (2026-10-29, mandate #527): property 7, a row naming an untagged version
+
+**Claim (#472's index delta, P3):** a released craft whose bundle row names a version no tag holds should have the
+same transitional allowance #230 gave a row naming its last release. Otherwise the row pins `VERSION`. Found as
+incident row 216 (#433): a `VERSION` bump past such a row failed, and Rule-1 forbade the infra row in the same push.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| B1 | Property 7 already covers it. | **Refuted** | The #230 sentence admits a row behind the live `VERSION` only while the row "still names its last release". A row naming an untagged number (#522's 0.12.3) is outside that, and `bundle.check` fails it (`(comp, ver) not in tagged`). The release play-book records the consequence: such a row "pins `VERSION`". |
+| B2 | An untagged row is a mistake, so it should keep failing. | **Refuted** | It is not always a mistake. A cut being prepared names its coming number in the row, and that number is untagged until the tag (release play-book, Numbers, step 2). When the cut is not made, or a later change must bump the craft first, a fail makes every craft-zone or agent-zone bump wait on an infra-zone PR. The deadlock is the same one #156, #230 and #423 each opened one state at a time. |
+| B3 | A warning lets a bundle release ship a row that no tag holds. | **Refuted** | A bundle release is its own Operator `Y`, and `dyad bundle build` builds each row from its tag. A row naming an untagged version cannot build, so the release fails loudly. The warning covers only the interval between two PRs. |
+| B4 | The warning hides a row that runs *ahead* of the tree, or loosens a craft never released. | **Refuted** | Only a row behind the live `VERSION` of a *released* craft (one holding a `<craft>-v*` tag, #170's scope) warns. A row ahead still fails, a row behind a live version that is itself tagged still fails, as under #230, and a craft never released keeps the strict form. |
+| B5 | Tags not fetched read every row as untagged, so the warning fires where it shouldn't. | **Confirmed as a limit, no looser than before** | Without tags every row behind the live `VERSION` was already ambiguous. The fail it replaces was no truer, and the evidence path refuses a tagless clone (#474). |
+| B6 | Mode M recurs one state at a time; this is one more sentence. | **Conceded** | The audit's attack 4 says so (`agent-corpus/audits/2026-10-10-incident-failure-modes.md`). The sentence is stated generally — any row behind an untagged live `VERSION` warns, whether the row's own version is tagged or not — so that no further state of this shape needs its own sentence. |
+
+**Survivor.** Property 7 gains one sentence:
+- A row naming a version no tag holds, with the live `VERSION` past it, warns until the infra-zone PR moves the row, and fails once the live version is tagged.
+- A row naming the live, untagged version passes as a cut being prepared.
+- A row ahead of the live `VERSION` fails.
+
+`bundle.check` widens #230's branch from "the row names a tagged version" to "the row names any version". Engineer's guard and tests ship in this PR. The release play-book's Numbers line, which said such a row pins
+`VERSION`, is corrected in the same PR.
+
+Pairwise (Rule-5):
+- 11–1: the row stays infra zone and `VERSION` stays in its craft's zone; one zone per PR is unchanged, and this sentence exists because of it.
+- 11–2: no ratification event changes; a release is still its own `Y`.
+- 11–3: no d-work state.
+- 11–4: one sentence in property 7; the block is unchanged.
+- 11–6: no new term.
+- 11–12: the widened branch carries fixture tests at the mapped path.
+- 11–14: no import.
+- 11–20: no reference kind.
+- All other pairs are untouched.
+
+Coherent, orthogonal.
+Disposition: see ledger #481.
