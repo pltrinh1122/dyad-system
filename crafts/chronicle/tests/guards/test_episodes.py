@@ -114,10 +114,10 @@ class Episodes(Fixture):
         self.assertEqual(self.write(self.fiction()), [])
     def test_marked_passage_without_header_fails(self):
         f = self.fails(self.write(self.fiction(header=False)))
-        self.assertEqual(len(f), 1); self.assertIn("no `fiction: persona, based on a real-life model` header", f[0])
+        self.assertEqual(len(f), 1); self.assertIn("and no `fiction:` header", f[0])
     def test_fiction_header_other_label_fails(self):
         f = self.fails(self.write(self.fiction(label="persona")))
-        self.assertEqual(len(f), 1); self.assertIn("is not `fiction: persona, based on a real-life model`", f[0])
+        self.assertEqual(len(f), 1); self.assertIn("part 'persona' is neither", f[0])
     def test_marked_passage_with_citation_fails(self):
         f = self.fails(self.write(self.fiction(passage="*(fiction)* He remembered the night the rule was made.[^1]")))
         self.assertEqual(len(f), 1); self.assertIn("the fiction layer cites nothing", f[0])
@@ -128,6 +128,20 @@ class Episodes(Fixture):
     def test_record_layer_still_needs_citations(self):
         f = self.fails(self.write(self.fiction(passage="*(fiction)* Interior.\n\nAn event.[^9]")))
         self.assertEqual(len(f), 1); self.assertIn("[^9] is referenced and never defined", f[0])
+    def test_composites_declared_in_the_fiction_line_pass(self):
+        label = f"{episodes.FICTION_LABEL}; composites: Mara, The Apprentice"
+        passage = "*(fiction)* Mara painted all night; The Apprentice watched."
+        self.assertEqual(self.write(self.fiction(label=label, passage=passage)), [])
+        self.assertEqual(self.write(self.fiction(label="composites: Mara", passage="*(fiction)* Mara laughed.")), [])
+    def test_composite_outside_a_marked_passage_fails(self):
+        label = f"{episodes.FICTION_LABEL}; composites: Mara"
+        f = self.fails(self.write(self.fiction(label=label, passage="*(fiction)* Interior.\n\nMara read the release notes.[^1]")))
+        self.assertEqual(len(f), 1); self.assertIn("composite(s) Mara in a passage not marked", f[0])
+        self.assertEqual(self.fails(self.write(self.fiction(label=label, passage="*(fiction)* Interior.\n\nMaraschino.[^1]"))), [])
+    def test_malformed_composites_part_fails(self):
+        for label in ("composites:", "composites: Mara, ", "composites: Mara, Mara"):
+            f = self.fails(self.write(self.fiction(label=label)))
+            self.assertEqual(len(f), 1, label); self.assertIn("is neither", f[0])
     def test_prov_citation(self):
         self.assertEqual(self.write(episode(notes=("prov:#7/2",))), [])
         f = self.fails(self.write(episode(notes=("prov:#7/3",))))

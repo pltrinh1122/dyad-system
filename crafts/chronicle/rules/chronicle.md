@@ -10,12 +10,14 @@ DR-9).
 
 ## Intent
 Tell a dyad system's journey to readers, in whatever form the piece takes, without one sentence of its record layer
-being invented: the form decides order, viewpoint and emphasis, and the record decides what happened. The one thing
-the record cannot hold, the persona's character, is written as fiction and labelled so (§2).
+being invented: the form decides order, viewpoint and emphasis, and the record decides what happened. Everything
+the record does not hold — the persona's character, the world around the work, the composites — is written as fiction
+and labelled so (§2).
 
 ## 1. Fact anchoring
-A **piece** has two layers. Its **record layer** — the system's events, the seats and their audited flaws — draws
-on exactly two kinds of material, and nothing else:
+A **piece** has two layers. Its **record layer** is the system's record: the agents' work (the system's events, the
+seats and their audited flaws) and the Operator's recorded prompts and approvals. It draws on exactly two kinds of
+material, and nothing else:
 - **the record** — what the system's repos hold: rows, plans, provenance, incidents, audits, falsification
   records, releases. A **record citation** names it by an in-repo path, `path:<repo-relative path>`, or, for a
   repo other than the one the piece lives in, by `repo:<owner>/<repo>@<40-hex sha>:<path>` — a full commit sha,
@@ -30,27 +32,34 @@ Every event a piece tells cites one or the other, as a footnote (`[^n]: <citatio
 seat's "thinking" is its plan or its falsification record, never fiction. A commit message is record, never the
 Operator's voice: commits carry the Operator's git identity whoever wrote them, so authorship in git says nothing
 of who wrote the words. A gap in the record is reported as a gap, never filled — and a structure a form uses is a
-lens on the record, never a mould: a part the record does not hold is a gap, not a cue to invent one. A piece's
-other layer, the **fiction layer**, is the persona's alone (§2): it cites nothing and is labelled wherever it appears.
+lens on the record, never a mould: a part the record does not hold is a gap, not a cue to invent one. Everything
+and everyone else in a piece is its other layer, the **fiction layer** (§2): it cites nothing and is labelled wherever
+it appears.
 
-## 2. The persona and the fiction layer
+## 2. The fiction layer: the persona and composites
 The Operator may appear in a piece as a **persona**, named by the Operator: the Operator's choice of how to appear.
 No other real person is a character, and the commons and its people are not named.
 
-The persona's character, inner life and daemons are private, and the record is not asked to prove them: they are
-written as **fiction based on a real-life model**, in the fiction layer, with no citations. Fiction is admitted here
-only because it is labelled, twice:
-- the piece's header carries `fiction: persona, based on a real-life model` whenever its text holds the layer;
-- each interior passage is a paragraph that opens with the marker `*(fiction)*`, so the layer of any sentence can be
-  decided by reading its paragraph.
-A marked passage tells only the persona's interior. It never tells a system event, a seat's thought or a statement
-about the real Operator: those are the record layer's and cite as §1 says.
+The fiction layer holds everything the record layer does not: the persona's character, inner life and daemons, which
+are private and which the record is not asked to prove; the world around the work; and **composites**. A composite is
+a character drawn from more than one real person and from no single one, so it is fiction and never a real person.
+Each composite is declared as one, in the form's character list and in every piece it appears in, and its traits are
+never cited to anyone. All of it is written as **fiction based on real-life models**, with no citations. Fiction is
+admitted only because it is labelled, twice:
+- the piece's header carries a `fiction:` line whenever its text holds the layer. The line names what the layer
+  holds, its parts separated by `;`: `persona, based on a real-life model` when the persona's interior is told, and
+  `composites: <name>, <name>` naming every composite the piece tells;
+- each fiction passage is a paragraph that opens with the marker `*(fiction)*`, so the layer of any sentence can be
+  decided by reading its paragraph. A declared composite appears only in such a paragraph.
+A marked passage never tells a system event, a seat's thought, or the Operator's recorded prompts and approvals:
+those are the record layer's and cite as §1 says.
 
 ## 3. Flaws and the real Operator
 A seat's flaws are the failure modes an audit has classed, each cited to the incident ledger or the audit that
 classed it. A flaw is attributed to the Operator only where the Operator approves that attribution, at the piece's
-publication; that approval binds every statement about the real Operator in the record layer, and is moot for the
-persona's daemons, which are fiction (§2).
+publication. That rule binds the record layer only: every statement about the real Operator made there. It is moot in
+the fiction layer, where the persona's daemons and a composite's flaws are fiction and attributed to no real person
+(§2).
 
 ## 4. The private-repo flag
 Every repo a `repo:` or `commit:` citation names is declared in the piece's header `repos:` line with its visibility,
@@ -92,8 +101,9 @@ first form.
 ## 8. The guard and its severity
 `../guards/episodes.py` checks the serial's pieces, its episodes (`serial.md` §7), and with them every rule of this
 core that a file can show. It fails a footnote that is not one of the four citation forms; a marked passage
-(`*(fiction)*`) under a header that lacks `fiction: persona, based on a real-life model`, a `fiction:` value other
-than that label, or a footnote reference inside a marked passage; a `path:` that does not exist in the tree; a
+(`*(fiction)*`) under no `fiction:` header; a `fiction:` part that is neither `persona, based on a real-life model`
+nor `composites: <name>, <name>`; a footnote reference inside a marked passage; a declared composite named in a
+paragraph not marked; a `path:` that does not exist in the tree; a
 `prov:` that names no provenance record or no such entry in it; a `repo:` or `commit:` whose repo is not declared in
 `repos:` or whose sha is not 40 hex. A `repo:` citation is resolved when a clone of that repo is reachable locally
 (`DYAD_REPOS_DIR/<repo>`, `git cat-file -e <sha>:<path>`), and fails when the clone lacks it; a `commit:` citation
@@ -101,6 +111,6 @@ likewise, by `git cat-file -e <sha>^{commit}`; with no clone it is unresolvable 
 the core's Rule-20 register, property 2 — and the guard prints one `warning: … inference` line per piece counting
 them: never a pass by assumption. A citation into a private repo prints one warning naming the repo (§4). A
 `fiction:` header over a text with no marked passage prints one warning. Whether a cited artifact says what the piece
-says it does, and whether a marked passage tells only the persona's interior, is inference, read at the piece's
-publication. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
+says it does, whether a marked passage holds only what the record does not, and whether a composite is drawn from
+no single real person, is inference, read at the piece's publication. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
 question.

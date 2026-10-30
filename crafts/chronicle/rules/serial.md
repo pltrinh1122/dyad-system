@@ -18,6 +18,8 @@ The main character is the Operator's persona (the core's §2), and the arc is th
 Dyad-Operator craft, readable in the record: the preferences set, the corrections given, the amends that turned
 plans, the Rules made. The other characters are the parties and the seats of the system (the cos, counsel, audit,
 engineer, distribute, operate, communicate, and any seat the organization opens), their flaws as the core's §3 says.
+Every other character is fiction (the core's §2): a composite is declared as one in the series bible, named in each
+episode's `fiction:` line, and appears only in marked passages; no real person is one.
 The Operator's role in the serial is the **showrunner**: the final creative say over the whole series (the core's §5).
 
 ## 3. Time and interleave
