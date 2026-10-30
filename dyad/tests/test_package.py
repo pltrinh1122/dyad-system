@@ -35,6 +35,19 @@ def load_package():
     sys.modules[spec.name] = mod   # package.py's own invariant_modules() looks itself up via sys.modules[__name__]
     spec.loader.exec_module(mod); return mod
 
+def hermetic_clone() -> Path:
+    """A local clone of this repo's HEAD whose tags the test controls (#529): the core release tag its `BUNDLE.md`
+    row names is created when missing, so `check --evidence` never depends on whether the live repo's tag has been
+    cut or fetched yet (`main` read red from a release cut until its tag, #526). #505's refusal of a clone that
+    lacks the tag stays covered by test_bootstrap's own worlds."""
+    d = SCRATCH.mkdtemp() / "clone"
+    subprocess.run(["git", "clone", "-q", "--local", str(PKG.parent), str(d)], check=True, capture_output=True, env=dyadlib.git_env())
+    bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+    v = bs.expected_core_release(d)
+    if v and not bs.has_tag(d, bs.core_tag(v)):
+        subprocess.run(["git", "tag", bs.core_tag(v), "HEAD"], cwd=d, check=True, capture_output=True, env=dyadlib.git_env())
+    return d
+
 def scratch_repo(paths, tracked=True):
     """A temp git repo holding `paths` (added and committed when tracked, else left untracked)."""
     d = SCRATCH.mkdtemp()
@@ -592,24 +605,24 @@ class PackageTests(livetest.LiveCase):
         self.assertNotEqual(r.returncode, 0); self.assertIn("declares CORPUS 'nowhere', not a zone in containment.ZONES", r.stdout)
         shutil.rmtree(d, ignore_errors=True)
     # Rule-14 property 3 (d-work #138): the evidence block. d-work #108 (separation of concerns):
-    # the shape assertions still exercise a real `cmd_evidence()` traversal (unavoidably
-    # integration-flavored — head/tree/dirty and the guard lines come from the real repo), but
-    # in-process (load_package() + redirect_stdout, no subprocess) and with DYAD_NO_NESTED_TESTS
-    # forced for the call's duration so Rule-12's own nested-suite recursion guard applies exactly
-    # as it does for run_py's subprocess env. The hash property itself is unit-tested separately,
-    # on fixed fake lines, in test_evidence_sha256_is_pure_and_deterministic below.
+    # the shape assertions exercise a real `check --evidence` traversal (integration-flavored: head/tree/dirty
+    # and the guard lines are real), run as a child of a local clone whose release tags the test controls
+    # (`hermetic_clone`, #529), so a release cut on `main` before its tag is pushed cannot turn it red (#526).
+    # DYAD_NO_NESTED_TESTS is set in the child's env (`env()`), so Rule-12's nested-suite recursion guard applies.
+    # The hash property itself is unit-tested separately, on fixed fake lines, in
+    # test_evidence_sha256_is_pure_and_deterministic below.
     def test_evidence_block_shape_and_hash(self):
-        import contextlib, io
-        pkg = load_package()
-        buf = io.StringIO()
-        with unittest.mock.patch.dict(os.environ, {"DYAD_NO_NESTED_TESTS": "1"}), contextlib.redirect_stdout(buf):
-            pkg.cmd_evidence()
-        lines = buf.getvalue().splitlines()
+        clone = hermetic_clone()                      # #529: tags under the test's control, not the live repo's
+        r = subprocess.run([sys.executable, str(clone / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
+                           cwd=clone, capture_output=True, text=True, env={**env(), **dyadlib.git_env()})
+        lines = r.stdout.splitlines()
+        self.assertNotIn("FAIL [evidence]", r.stdout, r.stdout + r.stderr)
         self.assertRegex(lines[0], r"^head=[0-9a-f]{40}$"); self.assertRegex(lines[1], r"^tree=[0-9a-f]{40}$")
+        self.assertEqual(lines[0], "head=" + subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip())
         self.assertRegex(lines[2], r"^dirty=(yes|no)$")
-        self.assertTrue(any("[Rule-11]" in l for l in lines) and any("[guards] infra/containment" in l for l in lines), buf.getvalue())
+        self.assertTrue(any("[Rule-11]" in l for l in lines) and any("[guards] infra/containment" in l for l in lines), r.stdout)
         self.assertRegex(lines[-1], r"^evidence-sha256=[0-9a-f]{64}$")
-        self.assertEqual(lines[-1], "evidence-sha256=" + pkg.evidence_sha256(lines[:-1]))
+        self.assertEqual(lines[-1], "evidence-sha256=" + load_package().evidence_sha256(lines[:-1]))
     def test_evidence_block_deterministic(self):
         pkg = load_package()
         lines = ["head=deadbeef", "dirty=no", "ok   [Rule-11]"]
@@ -1870,6 +1883,8 @@ class EvidenceBriefTests(unittest.TestCase):
         """In-process, with `cmd_check`/`cmd_guards` replaced by fixed lines: the brief and the full form share the
         hash and the exit code, and both store the full block."""
         lines = self.BODY[3:]
+        old = self.pkg.REPO; self.addCleanup(setattr, self.pkg, "REPO", old)
+        self.pkg.REPO = hermetic_clone()              # #529: tags under the test's control, not the live repo's
         def check(): print(*lines[:5], sep="\n"); return 1
         def guards(): print(*lines[5:], sep="\n"); return 0
         with unittest.mock.patch.object(self.pkg, "cmd_check", check), unittest.mock.patch.object(self.pkg, "cmd_guards", guards), \
