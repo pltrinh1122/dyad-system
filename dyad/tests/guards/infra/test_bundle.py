@@ -239,9 +239,21 @@ class ReleasedCraftChangedTests(unittest.TestCase):
         rows = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.3"), ("syseng", "0.1.2")]
         tagged = self.TAGGED | {("sysarch", "0.1.3")}          # even a tagged row cannot run ahead of the tree
         self.assertEqual(bd.check("0.5.0", rows, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.3, the tree has 0.1.2"])
-    def test_row_naming_an_untagged_version_fails(self):
+    def test_row_naming_an_untagged_version_behind_an_untagged_bump_warns(self):
+        """#481 (#522's 0.12.3): the row was moved to a number no release cut, and the live bump is not tagged either."""
         tagged = self.TAGGED - {("sysarch", "0.1.1")}
-        self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
+        msgs = bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=tagged)
+        self.assertEqual(len(msgs), 1, msgs)
+        self.assertTrue(msgs[0].startswith("warning: 'sysarch': bundle names 0.1.1, which was never released (no sysarch-v0.1.1 tag), "
+                                           "and the tree has 0.1.2, also unreleased"), msgs)
+        self.assertIn("(#481)", msgs[0])
+    def test_an_untagged_row_still_fails_ahead_of_the_tree_or_for_an_unreleased_craft(self):
+        tagged = self.TAGGED - {("sysarch", "0.1.1")}
+        rows = [("dyad-operator", "0.5.0"), ("sysarch", "0.1.3"), ("syseng", "0.1.2")]
+        self.assertEqual(bd.check("0.5.0", rows, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.3, the tree has 0.1.2"])
+        released = set(LIVE) - {"sysarch"}                     # a craft with no release tag at all keeps the strict form
+        self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), released=released, tagged=tagged),
+                         ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])
     def test_row_left_behind_once_the_live_version_is_tagged_fails(self):
         tagged = self.TAGGED | {("sysarch", "0.1.2")}           # the release was cut against a stale row
         self.assertEqual(bd.check("0.5.0", self.ROWS, self.live(sysarch="0.1.2"), tagged=tagged), ["'sysarch': bundle names 0.1.1, the tree has 0.1.2"])

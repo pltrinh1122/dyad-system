@@ -17,7 +17,10 @@ and Rule-1 forbids that PR from carrying the infra-zone row. So a row that is *b
 exists) and the live version has no tag yet — the infra-zone PR that updates the row follows. Any
 other mismatch fails: a row ahead of the tree, a row naming an untagged version, or a row left
 behind once the live version is itself tagged (a release cannot be cut against a row the tree
-contradicts). Tags not fetched read as untagged, so such a checkout keeps the strict form.
+contradicts). One exception warns (#481, #522's 0.12.3): a released craft's row behind its live `VERSION`
+naming a number never tagged, while the live one is not tagged either — the row was moved to a number no
+release cut, and the craft-zone bump that followed it is not one either; the infra-zone PR that corrects
+the row follows. Tags not fetched read as untagged, so such a checkout keeps the strict form.
 
 Drift (#91, after #61/#67/#71/#90): property 4's converse. Once `<name>-v<VERSION>` exists, the
 tree under that craft's root at HEAD must be the tree the tag holds; `check_drift` fails a craft
@@ -184,6 +187,10 @@ def check(version: str, rows: list[tuple[str, str]], live: dict[str, str], relea
             behind = row_v is not None and live_v is not None and row_v < live_v
             if tagged is not None and behind and (comp, ver) in tagged and (comp, live[comp]) not in tagged:
                 msgs.append(f"warning: '{comp}': bundle names {ver}, the tree has {live[comp]}, which is unreleased: the row follows in an infra-zone PR (#170)")
+            elif tagged is not None and behind and comp in released and (comp, ver) not in tagged and (comp, live[comp]) not in tagged:
+                msgs.append(f"warning: '{comp}': bundle names {ver}, which was never released (no {comp}-v{ver} tag), and the tree has "
+                            f"{live[comp]}, also unreleased: the row names a number no archive holds, and an infra-zone PR moves it "
+                            f"to the last release or to the version being cut (#481)")
             else:
                 msgs.append(f"'{comp}': bundle names {ver}, the tree has {live[comp]}")
     for comp in live:
