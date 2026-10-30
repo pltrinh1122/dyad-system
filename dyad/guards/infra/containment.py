@@ -11,7 +11,7 @@ Rule-1 binds a commit and a PR; a push range is neither, so the two are separate
 `range` CLI, `dyad check --pr`, and the hosted detector over what landed on `main`). The result
 line names the mode that ran.
 
-  containment.py staged               pre-commit: check the index
+  containment.py staged               pre-commit: check the index (skipped while a merge is being concluded)
   containment.py commit <sha>         one commit
   containment.py commits <base> <head> each non-merge commit of a push range
   containment.py range <base> <head>  a PR: each non-merge commit + the whole diff
@@ -155,7 +155,16 @@ def name_status(*diff_args, cwd=None) -> list[tuple[str, str]]:
     out = git("diff", "--name-status", "--no-renames", *diff_args, cwd=cwd)
     return [tuple(line.split("\t", 1)) for line in out.splitlines() if "\t" in line]
 
-def check_staged(cwd=None): return check_paths("staged", name_status("--cached", cwd=cwd), cwd)
+def merge_in_progress(cwd=None) -> bool:
+    """A merge is being concluded: `MERGE_HEAD` exists, so the commit being made is a merge commit."""
+    return subprocess.run(["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd=cwd,
+                          capture_output=True, text=True).returncode == 0
+def check_staged(cwd=None):
+    """The index, as the commit about to be made — except a merge commit, which is not a Rule-1 transaction (#166):
+    its index spans whatever both parents touched, the `commits` mode skips it, and `range` judges the PR's diff (#38)."""
+    if merge_in_progress(cwd):
+        return []
+    return check_paths("staged", name_status("--cached", cwd=cwd), cwd)
 def check_commit(sha, cwd=None):
     out = git("diff-tree", "--root", "--no-commit-id", "-r", "--name-status", "--no-renames", sha, cwd=cwd)
     return check_paths(f"commit {sha[:7]}", [tuple(l.split("\t", 1)) for l in out.splitlines() if "\t" in l], cwd)
@@ -223,6 +232,9 @@ def main(argv):
     fn = VERBS.get(mode)
     if fn is None:
         sys.exit(__doc__)
+    if mode == HOOK_VERB and merge_in_progress():
+        print(f"containment SKIP [{mode}]: a merge commit is not a Rule-1 transaction (#166, #38)")
+        return 0
     fails = fn(args)
     if fails is None:              # the verb printed its own output (`zones`)
         return 0

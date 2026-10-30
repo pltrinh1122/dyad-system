@@ -37,7 +37,9 @@ most TRIES tries. On success the landed sha is printed and, when this checkout i
 fast-forwarded to it; otherwise only the sha is printed. After a `land` of paths, a checkout on `main` whose only
 changes are landed paths, each byte-identical to its blob at the landed sha, has them restored from its HEAD and is
 then fast-forwarded: the content restored is the content landed, so nothing is lost (#459, the #443 finding that a
-landed copy left the checkout dirty forever); any other change, or one differing byte, leaves it as it is.
+landed copy left the checkout dirty forever); any other change, or one differing byte, leaves it as it is. A checkout
+on another branch keeps its own work, so each landed path is judged alone: one byte-identical to its landed blob is
+restored from HEAD, and every landed path still changed is named in one `left changed here:` line (#466).
 
 A batch (#459) parses every line first and refuses the whole batch before any fetch on a line that names `-m`,
 `--land`, `--mirror` or a verb other than `new`, `state`, `land`, and on one row id that both records a
@@ -280,6 +282,37 @@ def restore_landed(repo: Path, sha: str, landed) -> bool:
     return True
 
 
+def restore_landed_paths(repo: Path, sha: str, landed) -> tuple[list[str], list[str]]:
+    """The caller-copy fix off `main` (#466, R3 of #463): a checkout on another branch keeps its own changes, so
+    only the landed paths are judged, each alone. One byte-identical to its blob at `sha`, with a plain status
+    (modified, added or untracked; no rename, deletion or conflict), is restored from HEAD — a tracked one checked
+    out, an untracked or added one removed — since its bytes are on `main` now. Returns (restored, left): every other
+    landed path still changed is left as it is and named, so a copy is never left silently."""
+    raw = git(repo, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout.split("\0")   # unstripped: a status column may be a space
+    changed = {e[3:]: e[:2] for e in raw if len(e) > 3}
+    restored, left = [], []
+    for rel in sorted(set(changed) & set(landed)):
+        blob = git(repo, "rev-parse", "-q", "--verify", f"{sha}:{rel}", check=False).stdout.strip()
+        plain = not any(c in changed[rel] for c in "RCDU")
+        if plain and blob and blob == out(repo, "hash-object", "--no-filters", "--", rel):
+            restored.append(rel)
+        else:
+            left.append(rel)
+    tracked = [rel for rel in restored if git(repo, "cat-file", "-e", f"HEAD:{rel}", check=False).returncode == 0]
+    fresh = [rel for rel in restored if rel not in tracked]
+    if tracked:
+        git(repo, "checkout", "-q", "HEAD", "--", *tracked)
+    if fresh:
+        git(repo, "rm", "-q", "--cached", "--ignore-unmatch", "--", *fresh)
+        for rel in fresh:
+            (repo / rel).unlink(missing_ok=True)
+    if restored:
+        print(f"restored {', '.join(restored)} from HEAD: each identical to its landed blob on main")
+    if left:
+        print(f"left changed here: {', '.join(left)} (not identical to the landed blob, or not a plain change)")
+    return restored, left
+
+
 def fast_forward(repo: Path, sha: str, landed=()) -> None:
     """The caller's checkout, fast-forwarded only when it is on `main`, clean, and behind `sha`; else one line.
     With `landed` (the paths a `land` copied from it), a checkout whose only changes are those paths, identical
@@ -291,6 +324,12 @@ def fast_forward(repo: Path, sha: str, landed=()) -> None:
         try:
             if restore_landed(repo, sha, landed):
                 dirty = out(repo, "status", "--porcelain", "--untracked-files=normal")
+        except Refused as e:
+            print(f"this checkout was not restored ({e})")
+    if branch != "main" and landed:
+        try:
+            restore_landed_paths(repo, sha, landed)
+            dirty = out(repo, "status", "--porcelain", "--untracked-files=normal")
         except Refused as e:
             print(f"this checkout was not restored ({e})")
     if branch == "main" and not dirty and behind:

@@ -342,6 +342,31 @@ class LandTests(unittest.TestCase):
         self.assertEqual(git(self.seat, "rev-parse", "HEAD"), here)
         self.assertEqual(plan.read_text(), "# Plan #1\nrevision 3!\n")
 
+    def test_off_main_an_identical_copy_is_restored_and_a_differing_one_named(self):
+        """#466 (R3 of #463): a seat on its own branch keeps its own work; each landed path is judged alone."""
+        git(self.seat, "checkout", "-q", "-b", "feature")
+        d = self.seat / INST / "d-work" / "plans"; d.mkdir(parents=True)
+        same, diff = d / "1.md", d / "2.md"
+        same.write_text("# Plan #1\n"); diff.write_text("# Plan #2\n")
+        (self.seat / "mine.txt").write_text("feature work\n")
+        here = git(self.seat, "rev-parse", "HEAD")
+        rc, out, err = self.dwork("land", str(same), str(diff), "-m", "ledger: plans 1 2")
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"restored {INST}/d-work/plans/1.md, {INST}/d-work/plans/2.md from HEAD", out)
+        self.assertFalse(same.exists()); self.assertFalse(diff.exists())       # both identical to main: on main now
+        self.assertTrue((self.seat / "mine.txt").exists())                     # the branch's own work is untouched
+        self.assertEqual(git(self.seat, "rev-parse", "HEAD"), here)            # never fast-forwarded off main
+        self.assertIn("not on main", out)
+        diff.write_text("# Plan #2\nedited after landing\n")
+        same.write_text("# Plan #1\n")
+        o = io.StringIO()
+        with contextlib.redirect_stdout(o):
+            sys.modules["land"].fast_forward(self.seat, self.main_at_origin(),
+                                             [f"{INST}/d-work/plans/1.md", f"{INST}/d-work/plans/2.md"])
+        self.assertIn(f"restored {INST}/d-work/plans/1.md from HEAD", o.getvalue())
+        self.assertIn(f"left changed here: {INST}/d-work/plans/2.md", o.getvalue())
+        self.assertFalse(same.exists()); self.assertEqual(diff.read_text(), "# Plan #2\nedited after landing\n")
+
 
 if __name__ == "__main__":
     unittest.main()
