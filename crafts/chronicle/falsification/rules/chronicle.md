@@ -89,3 +89,30 @@ and the tree moves past it.
 - **DMC records:** three new ones — `draft-role`, `change-direction` and `episode-coverage`.
 
 Disposition: see ledger #521.
+
+## Amendment — d-work #530: the record layer is the system's record; everything else is fiction, composites declared
+
+**Claim (the Operator, relayed from the communicate seat):** the system's record — the agents' work and the
+Operator's recorded approvals and prompts — is non-fiction. Everyone and everything else is fiction, including
+characters drawn as composites.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 24 | "Only the agents' work is non-fiction", read literally, makes the Operator's approvals fiction. | **Refuted** | A serial that counts the Operator's approvals must keep them checkable. The record layer is the agents' work *plus* the Operator's recorded prompts and approvals (§1). Everything else is the fiction layer. |
+| 25 | A composite breaks "no other real person is a character". | **Survives, scoped** | A composite is drawn from more than one real person and from no single one, so it is fiction, not a person. §2 still keeps real people out and admits composites only as declared fiction. |
+| 26 | A reader takes a composite for a real person. | **Survives, procedure** | Every composite is declared twice: in the form's character list (the serial's series bible) and in the `fiction:` line of every piece that tells it (`composites: <name>, …`). Its traits are never cited to anyone. The guard fails a declared composite named in a paragraph not marked `*(fiction)*`, so it cannot stand in the record layer. |
+| 27 | The fiction layer was the persona's alone (#515); widening it lets fiction leak into the record. | **Survives, fenced** | The same two labels bind it: a marked passage still cites nothing, and the record layer still cites every event. The `fiction:` line now names what the layer holds (`persona, based on a real-life model`; `composites: …`), and any other part fails. |
+| 28 | §3's approval for a flaw attributed to the Operator now covers fiction. | **Refuted** | It binds the record layer only. In the fiction layer the persona's daemons and a composite's flaws are fiction, attributed to no real person (§3). |
+| 29 | A comparison to a real work, or its author, in the craft would name a real person. | **Confirmed, procedure** | No comparison, author or real work appears anywhere in this craft. A form's private comparisons stay in that seat's own private material, never in `crafts/chronicle/` or a published site. |
+
+**Verdict:** the claim survives.
+- **Rules:** §1, §2 and §3 change, and `serial.md` §2 names composites.
+- **Guard:** `episodes.py` gains `fiction_parts` and `paragraphs`, and its `fiction:` check now reads parts. Three new tests; 28 pass.
+- **Template:** gains a `composites:` part.
+- **Vocabulary:** gains `record layer` and `composite`, and `fiction layer` is widened.
+- **DMC:** the `material-kind` record's fiction outcome is widened to match.
+- **VERSION:** 0.2.0 → 0.2.1, a working bump.
+
+The instance's own composites are declared in its series bible, not here.
+
+Disposition: see ledger #530.

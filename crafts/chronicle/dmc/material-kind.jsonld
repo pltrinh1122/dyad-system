@@ -38,8 +38,8 @@
       "@type": "DefinedTerm",
       "termCode": "fiction",
       "name": "fiction layer",
-      "dyad:when": "the persona's character, inner life or daemons: private, not held by the record",
-      "dyad:then": "told as fiction based on a real-life model, uncited, in a paragraph opening with the fiction marker under the episode's fiction header; a citation inside it, or a marker with no header, fails the guard"
+      "dyad:when": "anything the record layer does not hold: the persona's character, inner life or daemons, the world around the work, or a declared composite",
+      "dyad:then": "told as fiction based on real-life models, uncited, in a paragraph opening with the fiction marker under the piece's fiction line; a citation inside it, a marker with no fiction line, or a declared composite outside a marked paragraph fails the guard"
     },
     {
       "@type": "DefinedTerm",

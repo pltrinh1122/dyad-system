@@ -14,8 +14,9 @@ and fails what the record cannot hold (the core `chronicle.md` §1, §2, §4, §
   local clone (`DYAD_REPOS_DIR/<repo>` or `DYAD_REPOS_DIR/<owner>/<repo>`) does not hold;
 - `commit:<owner>/<repo>@<sha>` (a commit itself, no path) on the same terms, the clone holding the commit;
 - the fiction layer's labels (`chronicle.md` §2): a marked passage (a paragraph opening `*(fiction)*`) in an episode
-  whose header lacks `fiction: persona, based on a real-life model`, a `fiction:` value other than that label, or a
-  footnote reference inside a marked passage. A `fiction:` header with no marked passage is one warning line.
+  with no `fiction:` header; a `fiction:` part that is neither `persona, based on a real-life model` nor
+  `composites: <name>, <name>`; a footnote reference inside a marked passage; a declared composite's name in a
+  paragraph not marked (#530). A `fiction:` header with no marked passage is one warning line.
 A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
 naming it (`chronicle.md` §4). Left to inference, stated: whether a cited artifact says what the episode says.
@@ -37,6 +38,7 @@ TIMES = ("present", "past")
 VISIBILITY = ("public", "private")
 FORMS = ("path", "prov", "repo", "commit")                          # the four citation forms (chronicle.md §1)
 FICTION_KEY, FICTION_LABEL, MARKER = "fiction", "persona, based on a real-life model", "*(fiction)*"   # chronicle.md §2
+COMPOSITES = "composites:"                                         # the fiction header's composite part (chronicle.md §2, #530)
 SITE_ENV, SITE_DEFAULT, REPOS_ENV = "DYAD_SITE", "site", "DYAD_REPOS_DIR"
 _TIME = re.compile(r"^(present|past),\s*(\d{4}-\d{2}-\d{2})$")
 _REPO_DECL = re.compile(r"^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)=(public|private)$")
@@ -53,7 +55,8 @@ INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set
                and all(p.pattern.startswith(f"^{f}:") for f, p in zip(FORMS, (_PATH, _PROV, _REPO, _COMMIT)))),
               ("visibility-two", lambda: set(VISIBILITY) == {"public", "private"}),
               ("fiction-key-optional", lambda: FICTION_KEY not in HEADER and FICTION_LABEL.startswith("persona, ")
-               and MARKER.strip() == MARKER and MARKER != "")]
+               and MARKER.strip() == MARKER and MARKER != ""),
+              ("composites-part-is-not-the-label", lambda: not FICTION_LABEL.startswith(COMPOSITES) and COMPOSITES.endswith(":"))]
 dyadlib.enforce(INVARIANTS, __name__)
 
 def store(root: Path | None = None) -> Path:
@@ -90,16 +93,37 @@ def citation(text: str) -> tuple[str, tuple[str, ...]] | None:
             return form, m.groups()
     return None
 
-def marked_passages(body: list[str]) -> list[list[str]]:
-    """The fiction layer's passages: each paragraph of the body (lines up to a blank line) whose first line opens
-    with MARKER (chronicle.md §2)."""
+def fiction_parts(value: str) -> tuple[bool, list[str], list[str]]:
+    """(persona labelled, declared composites, bad parts) from a `fiction:` value: parts separated by `;`, each the
+    persona label or `composites: <name>, <name>` (chronicle.md §2, #530)."""
+    persona, names, bad = False, [], []
+    for part in (s.strip() for s in value.split(";")):
+        if part == FICTION_LABEL:
+            persona = True
+        elif part.startswith(COMPOSITES):
+            got = [n.strip() for n in part[len(COMPOSITES):].split(",")]
+            if not got or any(not n for n in got) or len(set(got)) != len(got):
+                bad.append(part)
+            else:
+                names += got
+        else:
+            bad.append(part)
+    return persona, names, bad
+
+def paragraphs(body: list[str]) -> list[list[str]]:
+    """The body's paragraphs: runs of non-blank lines."""
     paras, cur = [], []
     for line in body + [""]:
         if line.strip():
             cur.append(line)
         elif cur:
             paras.append(cur); cur = []
-    return [p for p in paras if p[0].lstrip().startswith(MARKER)]
+    return paras
+
+def marked_passages(body: list[str]) -> list[list[str]]:
+    """The fiction layer's passages: each paragraph of the body (lines up to a blank line) whose first line opens
+    with MARKER (chronicle.md §2)."""
+    return [p for p in paragraphs(body) if p[0].lstrip().startswith(MARKER)]
 
 def declared_repos(value: str) -> tuple[dict[str, str], list[str]]:
     """({owner/repo: visibility}, bad entries) from a `repos:` value; `none` is the empty declaration."""
@@ -168,10 +192,19 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
         if not ok:
             msgs.append(f"{where}: `time: {header['time']}` is not `present|past, YYYY-MM-DD` (serial.md §3)")
     fiction, marked = header.get(FICTION_KEY), marked_passages(body)
-    if fiction is not None and fiction != FICTION_LABEL:
-        msgs.append(f"{where}: `{FICTION_KEY}: {fiction}` is not `{FICTION_KEY}: {FICTION_LABEL}` (chronicle.md §2)")
+    composites: list[str] = []
+    if fiction is not None:
+        _, composites, bad_parts = fiction_parts(fiction)
+        msgs += [f"{where}: `{FICTION_KEY}:` part {b!r} is neither `{FICTION_LABEL}` nor `{COMPOSITES} <name>, <name>` (chronicle.md §2)"
+                 for b in bad_parts]
     if marked and fiction is None:
-        msgs.append(f"{where}: {len(marked)} passage(s) marked {MARKER} and no `{FICTION_KEY}: {FICTION_LABEL}` header (chronicle.md §2)")
+        msgs.append(f"{where}: {len(marked)} passage(s) marked {MARKER} and no `{FICTION_KEY}:` header (chronicle.md §2)")
+    for para in paragraphs(body):
+        if para[0].lstrip().startswith(MARKER):
+            continue
+        text = " ".join(para)
+        if hits := [n for n in composites if re.search(rf"(?<!\w){re.escape(n)}(?!\w)", text)]:
+            msgs.append(f"{where}: composite(s) {', '.join(hits)} in a passage not marked {MARKER}; a composite is fiction (chronicle.md §2)")
     if fiction is not None and not marked:
         msgs.append(f"warning: {where}: `{FICTION_KEY}:` header and no passage marked {MARKER} (chronicle.md §2)")
     for para in marked:
