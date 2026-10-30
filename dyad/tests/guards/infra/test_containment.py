@@ -70,6 +70,43 @@ class TransactionTests(unittest.TestCase):
         fails = c.check_range(base, head, cwd=self.r.d)
         self.assertTrue(any("range" in f and "multiple zones" in f for f in fails))
 
+    # #528: a criss-cross range (several merge bases) is judged by its merge's net diff
+    def criss_cross(self, extra=None):
+        """#569's shape: main lands a prerequisite `u` (agent) by merging it after its own commit `v`; the PR was
+        stacked on `u`, adds an infra file, then merges `v`. Both `u` and `v` are merge bases of main and the PR."""
+        r0 = self.r.commit({"README.md": "r"})
+        sh("git", "branch", "-M", "main", cwd=self.r.d)
+        sh("git", "checkout", "-q", "-b", "prereq", cwd=self.r.d); self.r.commit({"dyad/u.md": "u"})
+        sh("git", "checkout", "-q", "main", cwd=self.r.d); v = self.r.commit({"dyad/v.md": "v"})
+        sh("git", "checkout", "-q", "-b", "pr", "prereq", cwd=self.r.d)
+        self.r.commit({".github/x.yml": "x"})
+        if extra:
+            self.r.commit(extra)   # its own single-zone commit: only the range sees the PR span two zones
+        sh("git", "merge", "-q", "--no-ff", "-m", "merge main", v, cwd=self.r.d)
+        head = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-ff", "-m", "land prereq", "prereq", cwd=self.r.d)
+        base = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.assertEqual(len(c.merge_bases(base, head, cwd=self.r.d)), 2)
+        return base, head
+    def test_a_criss_cross_pr_is_judged_by_its_net_merge_diff(self):
+        base, head = self.criss_cross()
+        three_dot = c.check_paths("x", c.name_status(f"{base}...{head}", cwd=self.r.d), self.r.d)
+        self.assertTrue(any("multiple zones" in f for f in three_dot), three_dot)   # the false FAIL #528 removes
+        how, entries = c.range_diff(base, head, cwd=self.r.d)
+        self.assertEqual((how, entries), ("net merge diff, 2 merge bases", [("A", ".github/x.yml")]))
+        self.assertEqual(c.check_range(base, head, cwd=self.r.d), [])
+        self.assertEqual(c.check_pr(self.r.d, base, head), [])
+    def test_a_truly_mixed_criss_cross_pr_still_fails(self):
+        base, head = self.criss_cross(extra={"dyad/x.md": "agent too"})
+        self.assertEqual(c.check_commits(base, head, cwd=self.r.d), [])
+        fails = c.check_range(base, head, cwd=self.r.d)
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("(net merge diff, 2 merge bases)]: touches multiple zones: agent infra", fails[0])
+    def test_one_merge_base_keeps_the_three_dot_diff(self):
+        base = self.r.commit({"README.md": "r"}); head = self.r.commit({"dyad/a.md": "x"})
+        self.assertEqual(c.range_diff(base, head, cwd=self.r.d), ("", [("A", "dyad/a.md")]))
+
     # #166: Rule-1 binds a commit and a PR; a push range is neither.
     def test_commits_mode_passes_a_stacked_push_the_range_mode_refuses(self):
         """Two single-zone commits in different zones: a correct push (commits), a refused PR (range)."""
