@@ -6,6 +6,9 @@ The mapping moved from the runner's `check_rule_12` (which keeps "run the tests"
 `crafts/<craft>/guards/<e>.py` -> `crafts/<craft>/tests/guards/test_<e>.py`; `crafts/<craft>/projectors/<n>.py` and
 `crafts/<craft>/scripts/<n>.py` -> `crafts/<craft>/tests/test_<n>.py`. A module without its test at the mapped path fails.
 The mapping is one-way: a test without a module is legal. Whether a test is adequate is inference.
+Beside it, the core's test modules each need a line in the core's levels seed, `dyad/templates/self-diagnostic-levels.txt`
+(#484, mode Q of #472: an obligation only the full suite's `test_levels` read, so a targeted run and `check --guards` could
+not see it, #447). The seed is parsed by the core's own `levels.py` (Rule-13); a core without either skips.
   tests.py [repo-root]
 """
 import sys
@@ -24,6 +27,7 @@ BUNDLED_WITH_CORE = True
 FIELDS = ("module", "test", "present")
 EXEMPT = ("package.py",)                                   # the runner has no test file of its own name (test_package.py tests it as the CLI)
 CRAFT_CODE = ("scripts", "projectors")                     # a craft's non-guard code directories, mapped flat to tests/
+LEVELS_SEED = ("templates", "self-diagnostic-levels.txt")  # under the core: the seed every core test module has a line in (#484)
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("fields-in-order", lambda: FIELDS == ("module", "test", "present")),
@@ -51,8 +55,23 @@ def mapping(pkg: Path = dyadlib.PKG) -> list[dict]:
     rel = lambda p: str(p.relative_to(root)) if p.is_relative_to(root) else str(p)
     return [{"module": rel(m), "test": rel(test_for(m, pkg)), "present": test_for(m, pkg).exists()} for m in modules(pkg)]
 
+def unclassified(pkg: Path = dyadlib.PKG) -> list[str]:
+    """Every core test module (`<pkg>/tests/**/test_*.py`) the levels seed names no line for, repo-relative; [] when
+    the seed or `levels.py` is absent (#484)."""
+    seed, script = pkg.joinpath(*LEVELS_SEED), pkg / "scripts" / "levels.py"
+    if not (seed.is_file() and script.is_file()):
+        return []
+    lv = dyadlib.load_module(script, "levels")
+    root = pkg.parent
+    named = {path for _, _, path in lv.parse(lv.read(seed))[0]}
+    own = sorted(p.relative_to(root).as_posix() for p in (pkg / "tests").rglob("test_*.py")
+                 if lv.is_test_name(p.name) and "__pycache__" not in p.relative_to(pkg).parts)
+    return [m for m in own if m not in named]
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
-    return [f"{m['module']}: no {m['test']} (verifiable-code.md p4)" for m in mapping(pkg) if not m["present"]]
+    seed = "/".join((pkg.name, *LEVELS_SEED))
+    return ([f"{m['module']}: no {m['test']} (verifiable-code.md p4)" for m in mapping(pkg) if not m["present"]]
+            + [f"{m}: no line in {seed} (a test module is classified unit or integration, #484)" for m in unclassified(pkg)])
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     ms = mapping(pkg)
