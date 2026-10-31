@@ -1,0 +1,107 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/seat-topology",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "seat-topology",
+  "name": "Seat topology across workstations",
+  "description": "How the seats of one or several Operators are placed when the Operators work across several workstations.",
+  "dyad:decides": "Which topology of cos, secretaries and desks serves Operators who work across several workstations?",
+  "dyad:inputs": [
+    "K1 one board: the Operator reads exactly one roll-up per Operator",
+    "K2 one relay and one merger per question: no question or merge can be asked or executed by two seats",
+    "K3 availability: the cos survives any one workstation being asleep or offline",
+    "K4 locality: every machine-bound act has a seat on that machine",
+    "K5 reach: the cos reaches every seat, and a seat that receives no message reports through the ledgers",
+    "K6 the same ledgers: every seat pushes to the one main",
+    "K7 generalizes to N Operators: the single-Operator case is unchanged when a second Operator arrives",
+    "K8 span: the Operator's attended seats and the leader's seven lines are unchanged",
+    "K9 cost: new terms, guards and Rule changes",
+    "K10 orthogonal charters: every act has exactly one owning charter"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "A",
+      "name": "a cos per workstation",
+      "dyad:when": "peers, one cos on each machine",
+      "dyad:then": "out at the gates: fails K1 (two boards), K2 (two relays and mergers racing on main) and K7"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "B",
+      "name": "a subordinate workstation cos",
+      "dyad:when": "one cos on one workstation and a second kind of cos on the other",
+      "dyad:then": "out at the gates: fails K7 (the cos's machine is one Operator's), and K3 besides"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "C-prime",
+      "name": "a cos per Operator and a desk per (function, workstation)",
+      "dyad:when": "one cos per Operator bound to no machine; a workstation is a topic, and a function whose acts are machine-bound opens a desk with the host as topic, standing or per act, on its own function's board",
+      "dyad:then": "selected: passes every gate, and K3 and K4 decide for it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "D",
+      "name": "a leader per Operator",
+      "dyad:when": "several Operators, each leader named program-<operator>-<hp> under one cos",
+      "dyad:then": "the selected topology's extension to several Operators, not an alternative to it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "E",
+      "name": "host-first secretaries",
+      "dyad:when": "one cos and a secretary per workstation, each with desks per function on that machine",
+      "dyad:then": "out at the gates: fails K10 (an act on a host is owned by both its function and the host)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "F",
+      "name": "roaming seats",
+      "dyad:when": "no standing workstation seat; whatever seat an act needs attaches to the machine for that act",
+      "dyad:then": "survives the gates and merges into the selected topology as its desks opened per act; K4 decides against it alone, since an attached session stays tied to its first computer"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G-session",
+      "name": "a cos re-seated onto each workstation",
+      "dyad:when": "one cos session moved onto whichever workstation the Operator is at",
+      "dyad:then": "out at the gates: fails K7, and K3 besides (absent while moving)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G-mode",
+      "name": "a mode any unseated session can hold",
+      "dyad:when": "the cos is an office held by a lease, its state in the corpus, reached through an inbox on main, held only by a session holding no other seat",
+      "dyad:then": "the destination: passes every gate at a high K9 cost, paid by the roadmap phases the Guide names"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "H",
+      "name": "a system per workstation",
+      "dyad:when": "each machine runs its own dyad system with its own ledgers, linked by intake",
+      "dyad:then": "out at the gates: fails K1, K6 and K7"
+    }
+  ],
+  "dyad:precedence": "K1, K2, K6, K7 and K10 are gates: an option failing any one is out; among the survivors K3 and K4 decide; K9 breaks a tie",
+  "dyad:default": "a cos per Operator and a desk per (function, workstation)",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "rules/organization.md",
+  "dyad:alsoIn": [
+    "docs/operating-guide.md",
+    "guards/seats.py"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

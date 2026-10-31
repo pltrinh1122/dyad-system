@@ -144,3 +144,26 @@ function owns; the seed is brought to the live table's function-level text, seat
 
 **Survivor:** `templates/mandates.md`'s program, counsel, audit, engineer and operate rows as amended; VERSION 0.2.1
 (the drift guard requires it, `cabinet-v0.2.0` being cut). Disposition: see ledger #458.
+
+## Amendment — dyad-system #531 (2026-10-31: workstations — a cos per Operator, a desk per workstation; the cos as a mode)
+**Claim (plan #531 revisions 1–4, the Operator's `Y` on revision 4):** across several workstations, one cos per
+Operator bound to no machine, a workstation a topic and never a function, a desk per (function, workstation) where
+the function's acts are machine-bound, standing or per act; several Operators, a leader per Operator under one cos;
+the destination a cos held as a mode, under conditions S1–S8. The plan's own tables carry the options A–H, the
+criteria K1–K10 and the attacks on the mode (S1–S9); the attacks below are on the text as written.
+
+| # | attack | result |
+|---|---|---|
+| 27 | The cloud cos cannot touch a workstation's files. | **Survives, scoped** (plan attack 1): it never needs to — its acts are the five of the Guide's §2 — and the host desk does (§9). |
+| 28 | A terminal desk receives no message, so the cos cannot route to it. | **Survives, procedure** (plan attack 2): routing goes through the ledgers, which §2's precondition already makes sufficient; the Guide's §9 step 2 states it for a terminal desk, and a desk attached by Remote Control receives messages. |
+| 29 | Two checkouts on two machines collide. | **Refuted** (plan attack 4): each machine has its own clone and `root`; both push to one `main` through the fence, and the contiguity fence (#560) rejects a true id collision. |
+| 30 | A second cos is needed when the cloud is down. | **Conceded, scoped** (plan attack 5): the leader is re-seated by its own row, never doubled; `guards/seats.py` warns on two live `program` seats of one Operator — the same operator token or none — and counts no seat past the core's stale window, so a re-seating's old file ages off the warning by itself. |
+| 31 | The warning misreads a multi-Operator tree, where several `program` seats are correct. | **Refuted by the token**: seats are grouped by the operator token (`program-<operator>-<hp>`, `naming.md`), so one leader per Operator never warns; the test carries both cases. |
+| 32 | A workstation as a function (`mac-<hp>`) is simpler to read. | **Refuted** (option E, K10): an act on the Mac would be owned by both its function's charter and the host's — shared ownership, a gap (§3). A topic under each function keeps one owner per act. |
+| 33 | The destination section binds the cos before any phase is planned. | **Refuted, scoped**: the Guide binds nothing (its preamble); §10 states the destination and its conditions, and each phase is a `backlog` row (#535–#539) planned when the Operator asks. S2 and S3 bind P3 and P5 when they are planned. |
+| 34 | S9 — the cos executes merges while §1 says it "merges nothing". | **Detected, not disposed here**: carried to the Operator as a finding by plan #531 revision 4; the merges sentence of the Guide's §2 is #532's, and this amendment leaves it as it stands. |
+
+**Survivor:** `../../rules/organization.md` §1's Workstations bullet; the Guide's §9 (opening a host desk) and §10 (the
+cos as a mode, S1–S8, the roadmap P1–P5 as rows #535–#539); `../../dmc/seat-topology.jsonld`; the leader warning of
+`../../guards/seats.py`; VERSION 0.3.2 (the drift guard requires it, `cabinet-v0.3.1` being cut). Disposition: see
+ledger #531.
