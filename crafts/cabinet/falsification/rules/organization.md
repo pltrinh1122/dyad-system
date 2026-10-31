@@ -167,3 +167,23 @@ criteria K1–K10 and the attacks on the mode (S1–S9); the attacks below are o
 cos as a mode, S1–S8, the roadmap P1–P5 as rows #535–#539); `../../dmc/seat-topology.jsonld`; the leader warning of
 `../../guards/seats.py`; VERSION 0.3.2 (the drift guard requires it, `cabinet-v0.3.1` being cut). Disposition: see
 ledger #531.
+
+## Amendment — dyad-system #540 (2026-10-31, accreted under #532: a seat executes its own merge with `dyad merge`)
+**Claim (plan #532 revision 5, step 4, on the exit test's result recorded there as passed):** a seat executes its own
+merge with `dyad merge <pr> --head <sha>` on a Done disposition recorded on `main`, whether given in the seat's chat or
+the cos's; a seat whose harness refuses stops and reports, and the cos executes that merge as the fallback, reported.
+
+| # | attack | result |
+|---|---|---|
+| 35 | §1 said the cos "merges nothing", while the cos executed every merge since #494; the new text keeps the contradiction. | **Refuted as written now**: §1 says the cos merges no seat's PR as its own act and executes one only as the reported fallback for a refused merge; that fallback is the one live exception, and it is named (plan #532 revision 4, A3; revision 5, R6). |
+| 36 | One passing run proves nothing about the allow rule. | **Survives, scoped**: the claim rests on the run (engineer merged PR #579 in its own session, no refusal), not on its cause. Whether the Operator's allow rule (5bc7a2d) or the harness's own judgement admitted the verb is open, because the seat's session predated the rule; the Guide's §2 says so. Either way the seat merged on the record alone. |
+| 37 | A seat's own branch may carry an older or altered verb. | **Refuted, procedure**: the text says the verb runs from `main`'s code, in a fresh worktree of `origin/main` when the checkout predates it, as the exit test did (plan #532, A2 observed). |
+| 38 | A `Y` given in the cos's chat is not the seat's to execute. | **Refuted**: the verb reads the recorded entry on `main`, which holds the Operator's words wherever given (Rule-7); executing it is clerical (Rule-2), as Guide §5 already says of every merge. |
+| 39 | The fallback lets the cos route around a refusal. | **Refuted**: the seat stops and reports the refusal word for word, and the cos's merge is reported to the Operator; nothing is retried around the harness (plan #532, R6). |
+
+**Out of this row's scope, stated:** Rule-2's Enforcement still says "one mechanical fence" (`rows.py`), while `merges.py`
+now guards merges as well. That is Rule text in the agent zone; #540's mandate covers the exit test and the cabinet text
+only (ceiling 1), so it is proposed to the Operator as its own row, not written here.
+
+**Survivor:** `../../rules/organization.md` §1's cos bullet and §5's "Execute your own merge, on the record"; the Guide's §2
+merges sentence and its "never done at the cos" list. VERSION stays 0.3.2 (uncut). Disposition: see ledger #540.

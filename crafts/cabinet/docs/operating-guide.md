@@ -35,7 +35,13 @@ cannot check.
   parent's completion reply, and you answer once over the set that reply lists (the mandate form of Rule-3:
   `Y/N: Done with #<id> … (accreted #a, #b, …, merges PR #w, #x, …)?`). A `Y` ratifies exactly that set — the rows
   and the PRs — and a child or a PR left out of the list is left out of the `Y`. After it, each seat executes its
-  own merges clerically, referent before referrer (Rule-2: execution is clerical, never disposal), and the leader
+  own merges clerically, referent before referrer (Rule-2: execution is clerical, never disposal), with `dyad merge
+  <pr> --head <sha>` once your `Y` is recorded on `main` — whether you gave it in the seat's chat or the cos's; the
+  verb reads only that record and the PR's live head, and runs from `main`'s code (#532, #540). The first run passed
+  with no refusal; whether your allow rule or the harness's own judgement admitted it is not yet established (the
+  seat's session predated the rule). If a seat's harness
+  refuses it, the seat stops and reports the refusal word for word, and the cos executes that merge as the fallback,
+  reported to you. The leader
   closes the parent once every named head is on `main` (Rule-3's three acts, #202). No seat asks you a Done of its
   own, and no merge is asked separately; a release (Rule-11) and a destructive host action (Rule-8) stay their own
   questions whatever the mandate says. How the Rules' text is reconciled with that invariant is #384's work.
@@ -55,7 +61,7 @@ commit or a line of chat:
 
 Never done at the cos, always handed on: drafting a plan file (a fork of the cos or the owning secretary writes it;
 the cos asks you the `Y`); a falsification analysis (counsel); an evidence run and a merge (the seat that holds the
-row); a branch push or a PR of any zone, preferences included (the secretary whose row needs it); an incident row
+row, by `dyad merge` — the cos merges only as the reported fallback when that seat's harness refused, #540); a branch push or a PR of any zone, preferences included (the secretary whose row needs it); an incident row
 (the seat whose act it was); cutting a release (distribute); rendering the board and verifying a head (the cos's own
 fork, #425). **Availability:** the cos's checkout runs nothing longer than a ledger-only push; anything that runs the
 suite runs in a seat or in a worktree. The price when it did not: the cos was away from you for ten to twenty
