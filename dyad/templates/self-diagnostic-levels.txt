@@ -54,6 +54,7 @@ integration dyad/tests/test_incidents.py                   # git: locates the li
 integration dyad/tests/test_land.py                        # scratch repos, a bare origin, push; the runner as a child (#447)
 unit        dyad/tests/test_levels.py
 integration dyad/tests/test_livetest.py                    # the runner (install); git
+integration dyad/tests/test_merge.py                       # scratch repos, a bare origin with refs/pull, merge and push (#532)
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
 integration dyad/tests/test_privatecite.py                 # scratch repos, a bare remote, git diffs read by the fence (#518)
 integration dyad/tests/test_playbooks.py                   # git, bash
