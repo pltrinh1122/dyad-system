@@ -119,3 +119,36 @@ request (`check --evidence --show <sha256>`); the Operator may re-run the eviden
 **Pairwise (Rule-5).** **2–14**: Rule-14 property 3 owns the block, its store and its show command; Binding cites them. **2–3**: Rule-3's relayed-Done bullet cites the block as Binding does. **2–6**: the vocabulary row `evidence block` changes (owner 14, used by 2 and 14); both still read correctly. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #476.
+
+## Amendment — d-work #543 (2026-10-31: Enforcement names its three mechanical checks)
+**Claim (plan #543, the Operator's `Y` of 2026-10-31 on "fix rule-2"):** Enforcement said "Inference-only, with one
+mechanical fence" (`rows.py`), while `dyad/guards/agent/merges.py` (d-work #541) declares `OWNER = "Rule-2"` and checks
+that a merge into `main` executes a recorded Done-`Y`, and `dyad merge` (d-work #532) refuses a merge the operative
+disposition does not name at the PR's live head. Enforcement now names all three and keeps inference for the binding
+itself.
+
+| # | attack | result |
+|---|---|---|
+| 25 | Only the wording is stale; leave it. | **Refuted** (plan attack 1): Rule-4 and Rule-5 read Enforcement to place a guard's owner; a guard naming an owner whose text denied having any guard of its own is an incoherence Rule-5 counts. |
+| 26 | `merges.py` belongs to Rule-3, as the three-act Done and `rows.py` do. | **Survives as the guard states it** (plan attack 2): its check is that a merge executes a recorded Done-`Y` — a ratification event, this Rule's. Rule-3 owns *when* that `Y` is recorded and when the row closes (`rows.done_order_problems`, `rows.landing_problems`); `merges.py` reads the record Rule-3 writes and judges the merge, which Rule-2 Binding governs. Split stated in the pairwise below. |
+| 27 | `dyad merge` is a verb, not a guard; naming it in Enforcement over-claims. | **Scoped** (plan attack 3): the text calls it execution, not a guard — Binding's heads-unchanged condition applied when the merge runs — and claims no check of any other path. A merge made outside the verb is still judged by `merges.py`. |
+| 28 | With mechanical checks named, "Inference-only" is false, and so is the claim that the binding is inference. | **Survives, reworded** (plan attack 4): the section no longer opens "Inference-only"; what stays inference is whether a `Y` was given to the question it is recorded against, because the identity of the disposer cannot be read from git. |
+| 29 | `merges.py` only warns, so naming it as Enforcement overstates it. | **Refuted, stated in the text**: the bullet says "warns — never fails", detection being the posture the Operator chose (#532 revision 3). |
+| 30 | The main fence's description omits events-only commits (#438), so the new bullet is inaccurate if copied from the old one. | **Confirmed and fixed**: the bullet reads "not ledger-only or events-only", as Rule-3's Ledger and the fence admit both. |
+
+Vocabulary (Rule-6): no new term. `guard` (owner 11) and `ratification event` (owner 2) already list Rule 2 in `used by`.
+
+**Pairwise (Rule-5).** **2–3**: Rule-3 owns `rows.py` (the main fence), the three-act Done and when a `Y done` is
+recorded; Rule-2 owns `merges.py`, which reads that record to judge a merge commit — reading, not sharing, the concern;
+Rule-3's Mechanisms already says "Rule-2 references `rows.py` by name; it does not own it", unchanged. **2–14**: the
+merge guard runs on the kernel-only path as a transaction guard (property 3), and `dyad merge` is the local merge path
+property 3 sanctions; Rule-14 owns the path, Rule-2 what runs on it. **2–11**: the guard is placed under
+`dyad/guards/agent/` per property 1 and discovered by the runner; unchanged. **2–12**: `merges.py` carries its tests and
+invariants per property 1; unchanged. **2–20**: `merges.py` resolves a merge's second parent against a `Y done` entry as
+its own check, not as a registered reference kind; Rule-20 owns stored references and is not touched. **2–1**: one zone
+per commit and PR, unchanged; a merge commit's zone is judged by containment. **2–4**: the block is unchanged; Rule-4's
+guard passes. **2–5**: this record is the sweep's statement. **2–6**: no term added. **2–7**: provenance unchanged.
+**2–8**: no host action. **2–9**: falsified here. **2–10**: unchanged. **2–13**, **2–15**, **2–16**, **2–18**, **2–19**:
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #543.
