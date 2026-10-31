@@ -26,8 +26,9 @@ disposer anywhere.
   Rule-16 cover the one-pair case without this craft installed).
 - **The cos** sits beside the Operator and keeps the board of programs: every parent row and its children
   across the member seats. It relays the Operator's words to a seat verbatim (the core's relayed prompt, Rule-7
-  property 4), writes no row for a seat, answers no seat's question, merges nothing — it holds attention, not
-  authority (#253 R28), and does itself only the five acts the Guide names — receive, route, present, relay back,
+  property 4), writes no row for a seat, answers no seat's question, merges no seat's PR as its own act — a seat
+  executes its own merge (§5), and the cos executes one only as the reported fallback for a merge a seat's harness
+  refused (#540) — it holds attention, not authority (#253 R28), and does itself only the five acts the Guide names — receive, route, present, relay back,
   board — handing every other on (`../docs/operating-guide.md` §2, #432). What it reads: one roll-up line per
   member seat, at most seven.
 - **A secretary** holds one function — what the Operator watches on its board — under a charter of the mandates
@@ -119,6 +120,13 @@ who disposes — stays the core's):
 - **Hold the question.** The leader relays each seat's completion evidence into the parent's own completion reply;
   the Operator disposes once, over the set the evidence lists (Rule-3's Completion clause, the mandate
   form). No seat merges on another seat's reading, and no seat reads silence as consent.
+- **Execute your own merge, on the record.** A seat merges its own PR itself, clerically (Rule-2), once the
+  Operator's Done disposition naming that PR at its head is recorded on `main` — given in the seat's own chat or in
+  the cos's — with `dyad merge <pr> --head <sha>`, which acts only on that recorded entry and the PR's live head and
+  refuses anything else (dyad-system #532, its exit test passed in #540). It runs the verb from `main`'s code (a
+  fresh worktree of `origin/main` when the seat's checkout predates it), never from its own branch's. A seat whose
+  harness refuses the verb stops, reports the refusal word for word, and the cos executes that merge as the
+  fallback, reported to the Operator — never a way around the refusal, and never the cos's merge by default.
 - **Keep the board short.** A roll-up line is children held, open questions, the oldest, the stale — and nothing a
   reader could get from the row itself.
 - **Escalate at the fence.** A row whose work leaves the charter's fence, or that the charter's ceiling does not
