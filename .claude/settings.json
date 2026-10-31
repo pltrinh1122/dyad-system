@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(dyad/bin/dyad merge:*)",
+      "Bash(./dyad/bin/dyad merge:*)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
