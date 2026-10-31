@@ -79,11 +79,19 @@ not edited when they are added (G5).
   `explicit` a plan-`Y` authorizes the mutation alone and every accreted row is asked for.
 
 ## Enforcement
-Inference-only, with one mechanical fence: `dyad/guards/agent/rows.py` (the main fence, owned by
-Rule-3) fails any direct commit to `main` that is not ledger-only, so the sole exception
-to "pushing directly to `main`" cannot widen silently. Everything else is inference: all
-commits carry the operator's git identity and the platform cannot distinguish proposer
-from disposer. Any mechanical check lives in the package (`dyad/guards/`, agent zone; Rule-11 property 1) and its
+Three mechanical checks read the record; the binding itself stays inference.
+- **The main fence**, `dyad/guards/agent/rows.py` (owned by Rule-3), fails any direct commit to `main` that is
+  not ledger-only or events-only, so the sole exceptions to "pushing directly to `main`" cannot widen silently.
+- **The merge guard**, `dyad/guards/agent/merges.py` (this Rule's own; entity `merge`, a transaction guard on
+  the kernel-only path, Rule-14 property 3), warns — never fails — on a merge commit on `main`'s first-parent line
+  whose tree is not the merge of its two parents, or whose second parent no operative `Y done` names: so a merge
+  that executes no recorded Done-`Y`, or carries content neither parent holds, is visible (d-work #541).
+- **The merge verb**, `dyad merge <pr> --head <sha>` (`dyad/scripts/merge.py`), is execution, not a guard: it
+  refuses unless `origin/main` holds the operative `Y done` naming that PR at that head, the PR's live head is that
+  head, and the head is not yet on `main` — Binding's "only if their heads are unchanged" applied at the moment of
+  execution (d-work #532).
+Everything else is inference: whether a `Y` was given to the question it is recorded against, because all commits
+carry the operator's git identity and the platform cannot distinguish proposer from disposer. Any mechanical check lives in the package (`dyad/guards/`, agent zone; Rule-11 property 1) and its
 workflow wrapper in the infra zone — a dependency on Rule-1, not an overlap (A1).
 
 ## Provenance
@@ -104,6 +112,9 @@ already states — it records, never decides — and only events of read-only co
 sha256 and its brief form 2026-10-26 (d-work #476, child C3 of #473): a pasted block was read in full at every
 merge (267 lines on that day; the brief form 140, its standing warnings kept), while its sha256 already covered every
 line and the Operator could re-run it; see
-`../falsification/rules/rule-2-no-self-ratify.md`, amendment #476.
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #476. Enforcement names its three mechanical checks 2026-10-31 (d-work #543):
+it said "one mechanical fence" after #541 had added a merge guard that names this Rule its owner and #532 a merge
+verb that refuses an unbound merge, so a guard claimed an owner whose text denied having one; see the same record,
+amendment #543.
 
 Set: System Requirements.
