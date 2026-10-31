@@ -4,8 +4,9 @@
 A seat merges a PR itself, on the record alone, when the Operator's Done-`Y` that names it is already on `main`:
 
   dyad merge <pr> --head <sha>
-                          fetch `origin/main`; act only when, on it, some row's operative `Y done` (the row's last;
-                          a later one voids an earlier, Rule-2 Binding) names `PR #<pr> at <sha>`, `<sha>` written
+                          fetch `origin/main`; act only when, on it, some row's operative `Y done` (the row's last
+                          disposition, when that is a `Y done`: a later `Y done` voids an earlier, Rule-2 Binding,
+                          and a later `N` revokes it, #541) names `PR #<pr> at <sha>`, `<sha>` written
                           in full; when the PR's live head (`git ls-remote origin refs/pull/<pr>/head`) is `<sha>`;
                           and when `<sha>` is not yet an ancestor of `origin/main`. Then `git merge --no-ff <sha>`
                           onto `origin/main` in the tool-owned worktree, the message citing the PR, the row and the
@@ -64,6 +65,13 @@ def authorizing(rows, pr: int, sha: str) -> tuple[int, str]:
     if named:
         rid, _, head, entry = named[0]
         raise Refused(f"row #{rid}'s operative Y done names PR #{pr} at {head}, not {sha}: {entry!r}")
+    for r in rows:                         # a Y done that names it, revoked by a later disposition (#541, R4)
+        es = rg.entries(r.disposed)
+        if r.state in dyadlib.TERMINAL_STATES or not es or rg.DONE_Y.search(es[-1]):
+            continue
+        if any(rg.DONE_Y.search(e) and (str(pr), sha) in rg.PR_AT.findall(e) for e in es):
+            raise Refused(f"row #{r.id}'s last disposition is {es[-1]!r}, after the Y done naming PR #{pr}: "
+                          f"that Y is no longer operative (#541)")
     raise Refused(f"no operative Y done on origin/main names PR #{pr} (a Done-Y is recorded before its merge, Rule-3)")
 
 

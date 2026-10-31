@@ -27,6 +27,7 @@
 
 unit        dyad/tests/guards/agent/test_dmc.py
 unit        dyad/tests/guards/agent/test_frame.py
+integration dyad/tests/guards/agent/test_merges.py         # scratch repos, git merge, merge-tree and cat-file (#541)
 unit        dyad/tests/guards/agent/test_plans.py
 integration dyad/tests/guards/agent/test_provenance.py     # scratch repos
 integration dyad/tests/guards/agent/test_prs.py            # scratch repos
