@@ -3,7 +3,7 @@ whose ledger holds one row, a bare `origin` cloned from it, a PR branch pushed t
 seat cloned from that origin whose pre-push hook only logs (and, when asked, lands a racing commit on `main` first). The
 row's operative `Y done` is written onto `origin/main` per case. The cases: a recorded Done-Y merges the PR (`--no-ff`,
 the message citing the PR, the row and the entry) and one hook run carries it; no entry, a void entry (a later `Y done`
-on another head), a short head, a moved live head, an already-landed head and a conflicting PR each refuse with nothing
+on another head), a revoked entry (a later `N`, #541), a short head, a moved live head, an already-landed head and a conflicting PR each refuse with nothing
 pushed; a push race is re-read and re-checked once, then lands; misuse is exit 2; and the rows fence's main path admits
 the merge commit the verb makes."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
@@ -115,6 +115,11 @@ class MergeTests(unittest.TestCase):
         other = self.pr_commit("dyad/c.txt", "c\n", pr=8)
         self.record(self.done() + f"; 2026-10-31 Y done (merges PR #7 at {other})")   # a later Y on another head voids it
         self.refused("7", "--head", self.sha, says=f"row #9's operative Y done names PR #7 at {other}, not {self.sha}")
+
+    def test_a_revoked_entry_refuses(self):
+        """#541 (R4): a later disposition after the `Y done` (an `N hold`) revokes it."""
+        self.record(self.done() + "; 2026-10-31 N hold")
+        self.refused("7", "--head", self.sha, says="row #9's last disposition is '2026-10-31 N hold', after the Y done naming PR #7")
 
     def test_an_entry_for_another_pr_only_refuses(self):
         self.record(self.done(pr=8))

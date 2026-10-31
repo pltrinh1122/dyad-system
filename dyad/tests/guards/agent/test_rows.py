@@ -716,6 +716,19 @@ class NamedHeadsTests(unittest.TestCase):
         for state in ("done", "archived"):
             self.assertEqual(m.named_heads(self.rows(state, d)), [], state)
         self.assertEqual(m.named_heads(self.rows("open", "2026-01-02 Y done")), [])     # names no head
+    def test_a_later_disposition_revokes_the_y_done(self):
+        """#541 (R4 of A4): the operative entry is the row's last disposition, and only when it is a `Y done`. The
+        pre-push gate reads the same, so a revoked `Y` no longer pins the head it named."""
+        d = f"2026-01-02 Y done (merges PR #1 at {self.A}); 2026-01-03 N hold"
+        self.assertIsNone(m.operative_done(d))
+        self.assertEqual(m.named_heads(self.rows("open", d)), [])
+        self.assertEqual(m.heads_naming(self.A, self.rows("open", d)), [])
+        self.assertEqual(m.operative_done(f"2026-01-02 Y done (merges PR #1 at {self.A})"), f"2026-01-02 Y done (merges PR #1 at {self.A})")
+        self.assertIsNone(m.operative_done(""))
+    def test_terminal_rows_are_read_on_request(self):
+        d = f"2026-01-02 Y done (merges PR #1 at {self.A})"
+        self.assertEqual(m.named_heads(self.rows("done", d)), [])
+        self.assertEqual([(i, pr, h) for i, pr, h, _ in m.named_heads(self.rows("done", d), terminal=True)], [(7, "1", self.A)])
 
 if __name__ == "__main__":
     unittest.main()

@@ -285,17 +285,26 @@ def done_recorded_not_closed(rows: list) -> list[str]:
 # ---- the head a Done-`Y` was given on (d-work #495, F1 of #487)
 PR_AT = re.compile(r"(?:\bPR #(\d+) )?\bat ([0-9a-f]{7,40})\b")   # `merges PR #a at <head-a>, PR #b at <head-b>`
 
-def named_heads(rows: list) -> list[tuple[int, str | None, str, str]]:
-    """Every head an operative `Y done` names on a row not yet terminal: (row id, PR number or None, head as
-    written, the entry). The operative entry only — the last, as `landing_problems` reads it — since a later
-    `Y` given on a new head supersedes the earlier (Rule-2, Binding). Pure: what the pre-push gate
-    (`package.py done_head_refusals`) matches a pushed ref's old sha against, by prefix."""
+def operative_done(disposed: str) -> str | None:
+    """The row's operative Done-`Y` for a merge: its *last* disposition when that is a `Y done`, else None (#541,
+    R4 of A4). A later `Y done` on a new head supersedes the earlier (Rule-2, Binding), and so does any later
+    disposition at all — an `N hold` after the `Y` revokes it — since a row whose Done is recorded takes no further
+    plan entry while its merge is pending (Rule-3's three acts): whatever follows the `Y` is about that merge."""
+    es = entries(disposed)
+    return es[-1] if es and DONE_Y.search(es[-1]) else None
+
+def named_heads(rows: list, terminal: bool = False) -> list[tuple[int, str | None, str, str]]:
+    """Every head an operative `Y done` names: (row id, PR number or None, head as written, the entry), on a row
+    not yet terminal unless `terminal` (the merge reconciliation reads landed rows too, #541). The operative entry
+    is `operative_done`'s — the row's last disposition, and only when it is a `Y done`. Pure: what the pre-push gate
+    (`package.py done_head_refusals`) matches a pushed ref's old sha against, by prefix, and what `dyad merge`
+    acts on, in full."""
     out = []
     for r in rows:
-        if r.state in dyadlib.TERMINAL_STATES:
+        if r.state in dyadlib.TERMINAL_STATES and not terminal:
             continue
-        done = [e for e in entries(r.disposed) if DONE_Y.search(e)]
-        for e in done[-1:]:
+        e = operative_done(r.disposed)
+        if e:
             out += [(r.id, pr or None, s, e) for pr, s in PR_AT.findall(e)]
     return out
 
