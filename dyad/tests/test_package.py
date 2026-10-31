@@ -86,7 +86,7 @@ class PackageTests(livetest.LiveCase):
             self.assertIsInstance(mod.ENTITY, str); self.assertTrue(mod.FIELDS); self.assertTrue(callable(mod.check_package))
             self.assertEqual(tx, mod.TRANSACTION); self.assertEqual(tx, hasattr(mod, "check_transaction") and tx)
             self.assertTrue(callable(mod.describe), f"{rel}: no describe()")
-        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs", "provenance"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171); provenance: #191
+        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs", "provenance", "merges"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171); provenance: #191; merges: #541
         self.assertEqual(pkg.CONTRACT, dyadlib.CONTRACT)   # one contract definition, shared with the craft guard (#156)
         self.assertEqual(len({mod.ENTITY for *_, mod, _ in reg}), len(reg), "one ENTITY per guard")
     def test_list_prints_registry(self):
