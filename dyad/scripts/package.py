@@ -203,6 +203,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 refused, nothing written to the repo (Rule-11 Ratification events: clerical
                                 execution of the recorded Y). --scan is read-only: `pending: <tags>|none`, and
                                 `pending=true|false` appended to GITHUB_OUTPUT when set
+  dyad merge <pr> --head <sha>  merge a PR on the record alone (scripts/merge.py, d-work #532): only when origin/main
+                                holds an operative `Y done` naming `PR #<pr> at <sha>` in full, the PR's live head is
+                                <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
+                                the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
+                                one line naming the authorizing entry, or `refused: <reason>`
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
                                 the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
@@ -1992,6 +1997,10 @@ def cmd_bootstrap(a):
     """The seat bootstrap lives in scripts/bootstrap.py (d-work #474); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap").main(a, REPO)
 
+def cmd_merge(a):
+    """The record-bound merge lives in scripts/merge.py (d-work #532); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "merge.py", "merge").main(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2014,6 +2023,8 @@ if __name__ == "__main__":
         sys.exit(cmd_release(a[1:]))
     if a and a[0] == "bootstrap":
         sys.exit(cmd_bootstrap(a[1:]))
+    if a and a[0] == "merge":
+        sys.exit(cmd_merge(a[1:]))
     if a and a[0] == "ledger":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":
