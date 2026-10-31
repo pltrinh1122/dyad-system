@@ -1,6 +1,6 @@
 """seats.py (the cabinet craft's guard, entity `seat`; #383): the seat-name form and its reading rule, the advisory
 lines over a fixture store, the mandates table against the template, and the live repo (never a failure)."""
-import shutil, sys, tempfile, unittest
+import datetime, shutil, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "dyad" / "scripts"))
 import dyadlib
@@ -40,6 +40,30 @@ class Advisory(unittest.TestCase):
         self.assertTrue(msgs[0].startswith("warning: 2 of 4 presence file(s) are outside the seat form"), msgs[0]); self.assertIn("cab-2, unnamed-x", msgs[0])
         self.assertTrue(msgs[1].startswith("warning: 1 presence file(s) name a function outside"), msgs[1]); self.assertIn("first: zed-0032b4c0", msgs[1])
         self.assertEqual(seats.check_names(["counsel-0032b4c0"], *seats.rules()), [])
+    def test_two_live_leaders_of_one_operator_warn(self):
+        form, functions = seats.rules()
+        never, always = (lambda seen: False), (lambda seen: True)
+        rec = lambda n: {"_path": f"{n}.md", "seen": "x"}
+        two = [rec("program-59cec502"), rec("program-0032b4c0"), rec("counsel-0032b4c0")]
+        msgs = seats.check_leaders(two, form, functions, never)
+        self.assertEqual(len(msgs), 1); self.assertIn("2 live program seats for one Operator", msgs[0])
+        self.assertIn("program-0032b4c0, program-59cec502", msgs[0])
+        self.assertEqual(seats.check_leaders(two, form, functions, always), [])          # a stale seat is off the board (d-work #531)
+        operators = [rec("program-alice-59cec502"), rec("program-bob-0032b4c0"), rec("program-1537d8fb")]
+        self.assertEqual(seats.check_leaders(operators, form, functions, never), [])     # one leader per Operator: no warning
+        same = operators + [rec("program-alice-1537d8fb")]
+        msgs = seats.check_leaders(same, form, functions, never)
+        self.assertEqual(len(msgs), 1); self.assertIn("Operator 'alice'", msgs[0])
+        self.assertEqual(seats.check_leaders([rec("cos-1"), rec("cos-59cec502"), rec("program-59cec502")], form, functions, never), [])   # history is not a leader
+    def test_check_package_reads_live_leaders(self):
+        root = fixture(["program-59cec502", "program-0032b4c0"], TEMPLATE.read_text()); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        self.assertEqual(seats.check_package(root), [])                                  # the fixture's `seen` is past the stale window
+        d = root / "agent-corpus" / "d-work" / "sessions"
+        now = datetime.datetime.now(datetime.UTC).isoformat()
+        for n in ("program-59cec502", "program-0032b4c0"):
+            (d / f"{n}.md").write_text(f"session: {n}\nseen: {now}\nroot: /r\nrows: \nfiles: \n")
+        msgs = seats.check_package(root)
+        self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("warning: 2 live program seats"), msgs)
     def test_mandates_table_against_the_template(self):
         _, functions = seats.rules()
         self.assertEqual(seats.check_mandates(TEMPLATE.read_text(), functions, "templates/mandates.md"), [])   # the template seeds a passing table

@@ -7,6 +7,10 @@ before the form (`cab-2`, `cos-1`, `unnamed-<hex>`) is history the store keeps. 
 - every presence file `<instance>/d-work/sessions/<seat>.md` against the seat-name form of
   `seats_rules.txt` (`form:`, one regex with the groups `function`, `topic`, `hp`; `function:` lines, the
   standing functions); one summary line names how many are outside the form, with the first three;
+- every *live* presence file (within the core's stale window, `agent/presence`) whose name reads as a leader: two live
+  `program` seats of one Operator — the same operator token, or none — are one line, because a cos belongs to an
+  Operator, never to a machine, and a second is a re-seating in progress or a mistake (`organization.md` §1,
+  Workstations; d-work #531);
 - the mandates table, `<preferences>/MANDATES.md` (seeded from `../templates/mandates.md`; absent: one
   `warning: skip` line, the bundle guard's convention), against the template's columns and the function list: one line per row whose columns differ
   or whose function is unknown.
@@ -88,6 +92,24 @@ def check_names(names: list[str], form: re.Pattern, functions: list[str]) -> lis
                     f"first: {', '.join(unknown[:3])}")
     return msgs
 
+def presence():
+    """The core's presence guard (`dyad/guards/agent/sessions.py`): its parser and stale window, never restated here."""
+    return dyadlib.load_guard_file(dyadlib.PKG / "guards" / "agent" / "sessions.py")
+
+def check_leaders(records: list[dict[str, str]], form: re.Pattern, functions: list[str], stale) -> list[str]:
+    """One line per Operator holding more than one live leader seat: `program-<hp>` seats share the empty operator
+    token, `program-<operator>-<hp>` seats the named one. `records` as `sessions.read_all` yields them (`_path` the
+    file name), `stale` its `is_stale`; a seat past the stale window is off the board and never counted."""
+    by_operator: dict[str, list[str]] = {}
+    for r in records:
+        s = parse_seat(Path(r.get("_path", "")).stem, form)
+        if s and kind(s, functions) == "leader" and not stale(r.get("seen", "")):
+            by_operator.setdefault(s["topic"], []).append(s["seat"])
+    return [f"warning: {len(seats)} live {LEADER} seats for {'Operator ' + repr(op) if op else 'one Operator'} "
+            f"({', '.join(sorted(seats))}): a cos per Operator, never per machine — a re-seating in progress or a "
+            f"mistake (organization.md §1, Workstations)"
+            for op, seats in sorted(by_operator.items()) if len(seats) > 1]
+
 def mandates_path(root: Path) -> Path:
     return root / "preferences-corpus" / MANDATES
 
@@ -108,6 +130,8 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     root = root or dyadlib.repo_root()
     form, functions = rules()
     msgs = check_names(presence_names(root), form, functions)
+    sessions = presence()
+    msgs += check_leaders(sessions.read_all(root), form, functions, sessions.is_stale)
     mp = mandates_path(root)
     if mp.exists():
         msgs += check_mandates(mp.read_text(), functions, str(mp.relative_to(root)))

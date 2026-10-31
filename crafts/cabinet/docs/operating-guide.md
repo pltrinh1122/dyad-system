@@ -207,3 +207,72 @@ The board lists every outstanding question with its route (R17), so you see in o
 where. What never changes with the mode: who disposes (you), what a seat may do without asking (its charter,
 §4), and what is never accretable (§5). What changes is only the chat a question reaches you in — and the
 seats never guess it: the route follows the set you declared, the same set the mode is read from.
+
+## 9. Opening a host desk (dyad-system #531)
+You work on more than one machine — a Linux workstation, a MacBook — and your cos is a cloud session bound to
+neither: you reach it from either one through the Claude app. What is bound to a machine is a host action (Rule-8),
+that host's files and credentials, a tool only its terminal has, and its change log. Those get a **host desk**: a
+desk whose topic is the host, on the board of the function whose acts they are (`../rules/organization.md` §1,
+Workstations). `operate-mac-<hp>` runs the Mac's host actions under operate's charter; `engineer-mac-<hp>` runs the
+builds and tests only macOS can. You never open a `mac` secretary: a place is a topic, never a function, so no act
+is owned by two charters.
+1. **Decide standing or per act.** A host with a stream of work keeps a standing desk; a host you touch once a week
+   gets a desk opened for the act and retired by its own row after it.
+2. **Open it as §3 says**, from one of two kinds of session:
+   - **a terminal session on the host** — it runs where the acts run, with that host's files and credentials. It
+     cannot receive a message from the cos, so it **reports by the ledgers**: it reads its rows and its presence file
+     at start and at each of your prompts, and reports by row state, events and its presence file on `main`, where
+     the cos reads them (§2's precondition: no message is needed to know where anything stands);
+   - **a cloud session attached to the host by Remote Control** — it receives the cos's messages like any cloud
+     seat. Remote Control ties a session to the first computer it attaches to, so a desk serves one host for its
+     whole life, and a second host is a second desk.
+3. **Title it** with the host as topic, `operate-mac-<hp>: terminal (ds) - <what>`, and register it with
+   `dyad session touch -r <row>`; its presence file records `host` and `holder`, so you can see which machine it
+   is on.
+4. **Its facts live under the host's own name.** Each host's facts and change log are in the host corpus under
+   that host's name (operate's charter); a desk never writes another host's.
+Two checkouts on two machines cannot collide: each has its own clone, both push to the one `main` through the fence,
+and the id allocator's contiguity fence rejects a true collision of row ids.
+
+## 10. The cos as a mode: the destination (dyad-system #531)
+Today your cos is one session. Where it is headed is a **mode**: an office any session can hold, whose holder
+changes while the office persists — what the core already says of every seat, held by one harness session at a time
+and by many over time. You open any session on any machine, say "cos", and you are talking to your cos.
+- **Continuity lives in the corpus, never in a chat.** Everything a cos knows is readable from `main` — the board,
+  the pending queue, every question in flight and whose it is, every relay and its answer, every seat and its state
+  — so a fresh session that takes the mode reconstructs the cos with nothing told to it.
+- **One holder at a time, by a lease.** The mode is the seat `program` (`program-<operator>` with several
+  Operators); taking it is an explicit act that records the new holder and makes the old one yield. The lease is
+  advisory, as presence is: a second holder is warned on, never locked out, because the order of pushes to `main`
+  is the only arbiter the kernel has.
+- **Seats reach the mode, not a session**, through an inbox on `main` the holder reads every turn, so a terminal
+  holder that receives no message is reachable and a hand-off loses nothing in transit.
+- **Its acts are unchanged**: the five of §2. Host work stays with the host desks (§9); a mode sitting on your Mac
+  may open a Mac desk, and never becomes one.
+- **Authority is unchanged.** You dispose wherever the mode is; your words are recorded verbatim with the seat that
+  received them.
+
+**The conditions it must keep** (plan #531 revision 4, the mode stress-tested against this cabinet's own text):
+| # | the model says | the mode keeps it by |
+|---|---|---|
+| S1 | one chief of staff beside you (§1) | the mode is that office, the lease its holder |
+| S2 | the leader holds your attention, not authority | **exclusive**: only a session holding no other seat may take the mode, and taking it never carries a charter |
+| S3 | attendance is not leadership (`organization.md` §6) | the mode follows you only into a session holding no seat; an attended secretary or desk stays what it is |
+| S4 | authority by content, never by identity | the lease grants nothing: a wrongly held lease confers no authority, because the cos has none |
+| S5 | every seat reads and writes the same ledgers (§2 of the rule) | the mode requires it: the queue and relays move from chat into the corpus |
+| S6 | one leader per Operator, at most seven lines | one mode per Operator; no seat count changes |
+| S7 | a relayed question is asked in the leader's chat, checked from records naming the seat | the leader's chat is the holder's session, and the records name the seat `program`, never the harness session |
+| S8 | the cos does only its five short acts (#432) | the mode's act list stays the five; host work goes to the host desk |
+
+**The roadmap.** Each phase leaves a working system and is planned as its own d-work when you ask for it; each is a
+`backlog` row of the ledger.
+| phase | what lands | row | exit test |
+|---|---|---|---|
+| P1 | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
+| P2 | a store inbox on `main`: seats post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test seat receives and answers a relay with no message |
+| P3 | the lease: take, yield, status; a stable seat name for the cos; a take by a session holding another seat refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
+| P4 | the mode as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
+| P5 | follow into an unseated session: a fresh session takes the mode on your first message; an attended secretary or desk never does | #539 | writing in an attended secretary's chat leaves it a secretary |
+P1 comes first because without the state in the corpus a hand-off loses the cos; P2 before P3 because a lease is
+useless while seats can reach only a session id; P4 is packaging once P1–P3 hold. P1 alone makes today's cos
+crash-safe, and P2 alone lets a terminal host desk (§9) hear the cos.

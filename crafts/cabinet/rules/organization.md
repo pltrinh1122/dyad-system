@@ -41,6 +41,22 @@ disposer anywhere.
   done by a seat. Desks are unbounded: a secretary opens as many as its concurrent work needs, one session each,
   bounded only by its own charter's ceiling (#416 prompt 4); a desk is unattended unless `attended-seats` names it,
   so desks never count against the Operator's span (§6).
+- **Workstations: a cos per Operator, a desk per workstation** (dyad-system #531). A cos belongs to an Operator's
+  attention, never to a machine; a workstation is a place where acts run, so it gets a desk. One cos per Operator,
+  bound to no machine. A workstation is a **topic**, never a function: a function whose acts are machine-bound on a
+  host — operate's host actions, engineer's builds and tests that only that host can run — opens a desk with the host
+  as its topic (`operate-mac-<hp>`, `engineer-mac-<hp>`), standing while the host has a stream of work and opened per
+  act otherwise, on its own function's board, so the charters stay orthogonal and the leader's seven lines do not
+  change. With several Operators, each Operator's leader is `program-<operator>-<hp>` under one cos, and the
+  workstations of each are desks as above. Eight topologies were scored on ten criteria
+  (`../dmc/seat-topology.jsonld`): **a cos per workstation** and **a subordinate workstation cos** fail the gates of
+  one board, one relay and N Operators; **host-first secretaries** fail orthogonal charters; **a cos re-seated
+  onto each workstation** and **a system per workstation** fail N Operators, the second also one board and the same
+  ledgers; **roaming seats** survive and merge into the selected topology as its desks opened per act. Selected:
+  **a cos per Operator and a desk per (function, workstation)**, with **a leader per Operator** as its extension
+  to several Operators. A second live `program` seat of one Operator is a re-seating in progress or a mistake,
+  never a second cos: `guards/seats.py` warns on it. Where the cos itself is headed — a mode any unseated session
+  can hold, rather than one session — is the Guide's (`../docs/operating-guide.md` §10).
 
 ## 2. The precondition: the same ledgers
 Every pair of the tree reads and writes **the same ledgers** — one row store, one provenance store, one presence
