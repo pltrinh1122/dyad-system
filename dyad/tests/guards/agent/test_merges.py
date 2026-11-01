@@ -4,7 +4,8 @@ parent (b). Every case builds a scratch repo whose ledger holds row 9 and merges
 named by a `Y done` passes; a doctored merge (a file added in the merge commit itself) warns, listing the path; a
 conflict resolved warns, listing the conflicted path; a merge no `Y done` names warns; a `Y done` revoked by a later
 `N` warns; a `Y release` written after the merge does not void its `Y`; a ledger-only merge and `main` merged into a
-branch name no `Y`; package mode reads only merges since `SINCE` and skips a clone without it; everything is a
+branch name no `Y`; package mode reads only merges since the sha the instance's `merges_since.local.txt` holds (#544),
+skipping when it is absent or unknown and warning when it is malformed; everything is a
 warning; and the contract holds."""
 import os, subprocess, sys, tempfile, shutil, unittest, unittest.mock
 from pathlib import Path
@@ -131,15 +132,50 @@ class MergeGuardTests(World):
         self.assertEqual(mg.check_transaction(self.d, main, "HEAD"), [])   # a branch push: main brought in
         self.assertNotEqual(tip, side)
 
-    def test_package_mode_reads_merges_since_SINCE_and_skips_without_it(self):
+    def since(self, text):
+        p = self.d / INST / mg.SINCE_FILE
+        if text is None:
+            p.unlink(missing_ok=True)
+        else:
+            p.write_text(text)
+
+    def test_package_mode_reads_merges_since_the_instance_file(self):
+        """#544: the starting sha is instance data, `<instance>/merges_since.local.txt`; comments are allowed."""
         head = self.pr({"dyad/b.txt": "b\n"})
-        self.merge(head)                                           # unnamed: package mode warns once SINCE is here
-        self.assertEqual(mg.check_package(self.d), [])            # the real SINCE is not in this repo: nothing judged
-        self.assertIn("is not in this clone", mg.summary(self.d))
-        with unittest.mock.patch.object(mg, "SINCE", self.base):
+        self.merge(head)                                           # unnamed: package mode warns once the file names a base
+        self.since(f"# where this system's judged range starts\n{self.base}  # main then\n\n")
+        self.assertEqual(mg.since(self.d), (self.base, None))
+        msgs = mg.check_package(self.d)
+        self.assertEqual(len(msgs), 1, msgs); self.assertIn("no operative Y done names", msgs[0])
+        self.assertEqual(mg.summary(self.d), f"1 merge(s) on HEAD since {self.base[:12]}")
+        self.assertEqual(mg.describe(self.d)["observed"], 1)
+
+    def test_an_absent_file_skips_with_one_line(self):
+        head = self.pr({"dyad/b.txt": "b\n"})
+        self.merge(head)
+        self.since(None)
+        self.assertEqual(mg.since(self.d), (None, None))
+        self.assertEqual(mg.check_package(self.d), [])
+        self.assertEqual(mg.summary(self.d), f"skip: no {mg.SINCE_FILE} in the instance (the merges since which this "
+                                             f"system judges); nothing judged")
+
+    def test_an_unknown_sha_skips_as_before(self):
+        head = self.pr({"dyad/b.txt": "b\n"})
+        self.merge(head)
+        self.since("f" * 40 + "\n")
+        self.assertEqual(mg.check_package(self.d), [])
+        self.assertEqual(mg.summary(self.d), f"skip: {'f' * 12} ({mg.SINCE_FILE}) is not in this clone; nothing judged")
+
+    def test_a_malformed_file_warns_and_judges_nothing(self):
+        head = self.pr({"dyad/b.txt": "b\n"})
+        self.merge(head)
+        for text in (self.base[:12] + "\n", f"{self.base}\n{self.base}\n", "not a sha\n", "# only a comment\n"):
+            self.since(text)
+            sha, problem = mg.since(self.d)
+            self.assertIsNone(sha, text); self.assertIn("wants exactly one full 40-hex sha", problem)
             msgs = mg.check_package(self.d)
-            self.assertEqual(len(msgs), 1, msgs); self.assertIn("no operative Y done names", msgs[0])
-            self.assertEqual(mg.summary(self.d), f"1 merge(s) on HEAD since {self.base[:12]}")
+            self.assertEqual(len(msgs), 1, text); self.assertTrue(msgs[0].startswith(f"warning: {mg.SINCE_FILE}: wants"), msgs)
+            self.assertTrue(mg.summary(self.d).startswith("skip: "))
 
     def test_everything_is_a_warning(self):
         head = self.pr({"dyad/b.txt": "b\n"})
@@ -151,7 +187,7 @@ class MergeGuardTests(World):
     def test_contract(self):
         self.assertEqual((mg.ENTITY, mg.CORPUS, mg.TRANSACTION), ("merge", "agent", True))
         self.assertIsNone(dyadlib.contract_problem(mg, "core", "agent"))
-        self.assertEqual(dyadlib.check_invariants(mg), len(mg.INVARIANTS))
+        self.assertEqual(dyadlib.check_invariants(mg), len(mg.INVARIANTS) + len(mg.TREE_INVARIANTS))
         self.assertEqual([f[0] for f in mg.describe(self.d)["fields"]], list(mg.FIELDS))
 
 
