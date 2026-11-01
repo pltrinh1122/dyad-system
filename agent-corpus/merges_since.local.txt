@@ -1,0 +1,2 @@
+# The sha on main since which agent/merges judges merge commits (package mode, #541, #544): main when #541 was planned.
+82f138fe9b082f53f99fd6b521310c01ebe99a50

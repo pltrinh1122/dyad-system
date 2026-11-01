@@ -18,8 +18,11 @@ half of A2 — an allowed verb run from edited local code). For each first-paren
       no `Y` and are not read for it.
 Every finding is a warning, never a failure: detection is the posture the Operator chose (#532 revision 3), and the
 range is bounded so standing history does not flood. Package mode (the registry, CI): first-parent merges of
-`origin/main` (else HEAD) since `SINCE`, the `main` this guard was written against — nothing before it is judged; one
-ledger read per merge (about 0.15 s), so when the range grows slow `SINCE` moves forward by an agent-zone PR.
+`origin/main` (else HEAD) since the instance's own starting point, one full sha in `<instance>/merges_since.local.txt`
+(`SINCE_FILE`; `#` comments and blank lines allowed) — nothing before it is judged, and the core holds no instance sha
+(#544). An absent file skips with one line; a sha this clone lacks skips as before; a file that is not exactly one full
+sha warns and judges nothing. One ledger read per merge (about 0.15 s), so when the range grows slow the instance moves
+its file forward.
 Transaction mode (the kernel-only path, every push): first-parent merges of `base..head`.
 Inference, stated: whether a listed resolution is right, and whether a `Y` named the PR the Operator meant.
   merges.py [repo-root]
@@ -35,13 +38,40 @@ import dyadlib
 ENTITY, CORPUS, TRANSACTION = "merge", "agent", True
 NAME, OWNER = "merge commit on main", "Rule-2"
 FIELDS = ("merge", "parents", "tree", "named_by")
-SINCE = "82f138fe9b082f53f99fd6b521310c01ebe99a50"   # main when #541 was planned: merges after it are judged (package mode)
+SINCE_FILE = "merges_since.local.txt"                # <instance>/: the sha package mode judges merges since (#544), instance data
 TARGETS = ("origin/main", "HEAD")                     # the line package mode walks: the first that resolves
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
-    ("since-is-a-full-sha", lambda: len(SINCE) == 40 and all(c in "0123456789abcdef" for c in SINCE)),
+    ("since-file-is-instance-local", lambda: SINCE_FILE.endswith(".local.txt") and "/" not in SINCE_FILE),
     ("package-mode-prefers-main", lambda: TARGETS[0] == "origin/main"),
+    ("a-full-sha-is-forty-hex", lambda: full_sha("a" * 40) and not full_sha("a" * 39) and not full_sha("g" * 40)),
 ]
+TREE_INVARIANTS = [   # reads the instance file of the live repo: the runner's pass only, never at import
+    ("since-file-is-absent-or-one-full-sha", lambda: since(dyadlib.repo_root())[1] is None),
+]
+
+
+def full_sha(s: str) -> bool:
+    return len(s) == 40 and all(c in "0123456789abcdef" for c in s)
+
+
+def since_path(root: Path) -> Path:
+    return dyadlib.instance(root) / SINCE_FILE
+
+
+def since(root: Path) -> tuple[str | None, str | None]:
+    """(sha, problem): the full sha `<instance>/merges_since.local.txt` holds — its one token once `#` comments and
+    blank lines are dropped. (None, None) when the file is absent; (None, why) when it is not exactly one full sha."""
+    p = since_path(root)
+    if not p.is_file():
+        return None, None
+    try:
+        toks = [t for line in p.read_text(encoding="utf-8").splitlines() for t in line.split("#", 1)[0].split()]
+    except (OSError, UnicodeDecodeError) as e:
+        return None, f"{SINCE_FILE}: unreadable ({e})"
+    if len(toks) != 1 or not full_sha(toks[0]):
+        return None, f"{SINCE_FILE}: wants exactly one full 40-hex sha, holds {len(toks)} token(s): {' '.join(toks)[:80]!r}"
+    return toks[0], None
 
 
 def git(root: Path, *a: str) -> subprocess.CompletedProcess:
@@ -135,16 +165,30 @@ def target(root: Path) -> str | None:
     return next((t for t in TARGETS if out(root, "rev-parse", "--verify", "-q", f"{t}^{{commit}}")), None)
 
 
-def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
-    """Package mode: first-parent merges of `origin/main` (else HEAD) since `SINCE`. A clone without `SINCE` (an
-    installed system, which has its own history) or without a work tree judges nothing."""
-    root = root or dyadlib.repo_root()
+def start(root: Path) -> tuple[str | None, str | None, str]:
+    """(target, since sha, why not) for package mode: both None, and the reason, when nothing is judged."""
+    sha, problem = since(root)
+    if problem:
+        return None, None, problem
+    if sha is None:
+        return None, None, f"no {SINCE_FILE} in the instance (the merges since which this system judges); nothing judged"
     t = target(root)
-    if t is None or out(root, "rev-parse", "--verify", "-q", f"{SINCE}^{{commit}}") is None:
-        return []
-    if git(root, "merge-base", "--is-ancestor", SINCE, t).returncode != 0:
-        return []
-    merges = first_parent_merges(root, SINCE, t)
+    if t is None or out(root, "rev-parse", "--verify", "-q", f"{sha}^{{commit}}") is None:
+        return None, None, f"{sha[:12]} ({SINCE_FILE}) is not in this clone; nothing judged"
+    if git(root, "merge-base", "--is-ancestor", sha, t).returncode != 0:
+        return None, None, f"{sha[:12]} ({SINCE_FILE}) is not on {t}; nothing judged"
+    return t, sha, ""
+
+
+def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
+    """Package mode: first-parent merges of `origin/main` (else HEAD) since the instance's `SINCE_FILE`. An absent
+    file, or a sha this clone lacks (an installed system, with its own history), judges nothing and says so in the
+    summary; a malformed file warns."""
+    root = root or dyadlib.repo_root()
+    t, sha, why = start(root)
+    if t is None:
+        return [f"warning: {why}"] if since(root)[1] else []
+    merges = first_parent_merges(root, sha, t)
     return [] if not merges else judge(root, merges)
 
 
@@ -156,15 +200,16 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     root = root or dyadlib.repo_root()
-    t = target(root)
-    if t is None or out(root, "rev-parse", "--verify", "-q", f"{SINCE}^{{commit}}") is None:
-        return f"skip: {SINCE[:12]} (the guard's base) is not in this clone; nothing judged"
-    return f"{len(first_parent_merges(root, SINCE, t) or [])} merge(s) on {t} since {SINCE[:12]}"
+    t, sha, why = start(root)
+    if t is None:
+        return f"skip: {why}"
+    return f"{len(first_parent_merges(root, sha, t) or [])} merge(s) on {t} since {sha[:12]}"
 
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
+    t, sha, _ = start(root)
     return {"store": "git history: first-parent merge commits of main", "parser": "`merges.first_parent_merges`",
-            "observed": len(first_parent_merges(root, SINCE, target(root) or "HEAD") or []),
+            "observed": len(first_parent_merges(root, sha, t) or []) if t else 0,
             "note": "each merge's tree is git merge-tree of its parents, and its second parent is named by an operative Y done",
             "fields": [("merge", "sha", "40 hex", True, "", "merges.FIELDS"),
                        ("parents", "sha list", "two", True, "", "merges.FIELDS"),
