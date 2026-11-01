@@ -295,7 +295,8 @@ def fence(root: Path, tag: str, cut: str, heads: list[str], tree: Path) -> list[
 
 def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
     """Write `<today> release-ready <tag> at <cut> (archive <sha256>)` on the row, after C2's fence: the row's
-    operative Done-`Y` names the heads the Operator verified; every root the tag carries is that tree at the cut; the
+    operative Done-`Y` names the tag (`(merges PR #a at <head>, releases <tag-a>, <tag-b>)`, Rule-2 Binding) and the
+    heads the Operator verified; every root the tag carries is that tree at the cut; the
     archive the one code path builds at the cut has `sha256`. Refused, with nothing written, on any miss."""
     import datetime
     rg = dyadlib.load_guard("agent", "rows")
@@ -306,6 +307,9 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
     done = rg.operative_done(row.disposed)
     if not done:
         raise Refused(f"row #{row_id}'s last disposition is no Y done: nothing ratifies the release (Rule-2 Binding, #545)")
+    if not re.search(rf"(?<![\w.-]){re.escape(tag)}(?![\w.-])", done.split("releases", 1)[1] if "releases" in done else ""):
+        raise Refused(f"row #{row_id}'s operative Y done names no `releases … {tag}`: a Y binds only to what its question "
+                      f"named (Rule-2 Binding, #545): {done!r}")
     heads = [git(root, "rev-parse", "-q", "--verify", f"{h}^{{commit}}", check=False).stdout.strip() for _, h in rg.PR_AT.findall(done)]
     if not heads or not all(heads):
         raise Refused(f"row #{row_id}'s Y done names no head this clone resolves: {done!r}")

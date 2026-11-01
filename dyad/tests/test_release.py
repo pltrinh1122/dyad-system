@@ -332,7 +332,8 @@ class ReadyTests(World):
         (self.work / "dyad" / "x.py").write_text("x\n"); git(self.work, "add", "-A"); git(self.work, "commit", "-qm", "pr")
         self.head = git(self.work, "rev-parse", "HEAD")
         git(self.work, "checkout", "-q", "main")
-        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})")
+        self.done = f"2026-11-01 Y done (merges PR #9 at {self.head}, releases dyad-operator-v0.1.0, v0.2.0)"
+        self.record(self.done)
         git(self.work, "merge", "-q", "--no-ff", "-m", "merge", self.head)
         self.cut_sha = git(self.work, "rev-parse", "HEAD")
         rel = self.rel
@@ -369,9 +370,9 @@ class ReadyTests(World):
         self.assertNotIn("release-ready", self.row())
 
     def test_a_ledger_commit_after_the_head_does_not_trip_the_fence(self):
-        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})", "2026-11-01 Y plan (noise)")
+        self.record(self.done, "2026-11-01 Y plan (noise)")
         cut = git(self.work, "rev-parse", "HEAD")
-        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})")   # the Done entry last again
+        self.record(self.done)   # the Done entry last again
         self.assertEqual(self.run_ready("1", "dyad-operator-v0.1.0", "--at", cut, "--archive", DIGEST)[0], 0)
 
     def test_a_different_archive_digest_is_refused(self):
@@ -379,9 +380,18 @@ class ReadyTests(World):
         self.assertEqual(rc, 1); self.assertIn(f"has sha256 {DIGEST}, not {'cd' * 32}", err)
 
     def test_no_operative_y_done_is_refused(self):
-        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})", "2026-11-01 N hold")
+        self.record(self.done, "2026-11-01 N hold")
         rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
         self.assertEqual(rc, 1); self.assertIn("last disposition is no Y done", err)
+
+    def test_a_tag_the_y_done_does_not_name_is_refused(self):
+        """Rule-2 Binding: the Done question under the gate names its tags (`releases <tag>`); a tag it did not name is
+        not ratified by it."""
+        rc, _, err = self.run_ready("1", "sysadmin-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 1); self.assertIn("names no `releases … sysadmin-v0.1.0`", err)
+        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})")       # no `releases` clause at all
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 1); self.assertIn("names no `releases … dyad-operator-v0.1.0`", err)
 
     def test_a_short_cut_and_misuse(self):
         rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha[:12], "--archive", DIGEST)
