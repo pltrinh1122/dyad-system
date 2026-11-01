@@ -288,5 +288,113 @@ class InstallTests(World):
         self.assertEqual(self.gh_calls(), [])
 
 
+def ready_line(tag, sha, digest=DIGEST):
+    return f"2026-11-01 release-ready {tag} at {sha} (archive {digest})"
+
+
+class GateTests(World):
+    """#545: under RELEASE_APPROVAL=tap the service reads the Agent's `release-ready` lines only; with the gate off it
+    reads the recorded `Y release` as before."""
+    def test_each_gate_reads_its_own_kind(self):
+        sha = "a" * 40
+        y, r = entry("dyad-operator-v0.1.0", sha), ready_line("dyad-operator-v0.1.0", sha)
+        self.assertEqual(self.rel.parse_entry(y), ("dyad-operator-v0.1.0", sha, DIGEST))
+        self.assertIsNone(self.rel.parse_entry(r))
+        self.assertEqual(self.rel.parse_entry(r, "tap"), ("dyad-operator-v0.1.0", sha, DIGEST))
+        self.assertIsNone(self.rel.parse_entry(y, "tap"))
+        self.assertEqual(self.rel.parse_entry("2026-11-01 release-ready v0.2.0 at abc", "tap"), ("v0.2.0", "", ""))
+
+    def test_scan_under_tap_sees_a_ready_line_and_not_a_y_release(self):
+        self.make_world()
+        self.record(entry("dyad-operator-v0.1.0", self.cut))
+        os.environ["GATE"] = "tap"
+        self.assertEqual(self.run_verb("--scan"), (0, "pending: none\n"))
+        self.record(entry("dyad-operator-v0.1.0", self.cut), ready_line("dyad-operator-v0.1.0", self.cut))
+        self.assertEqual(self.run_verb("--scan"), (0, "pending: dyad-operator-v0.1.0\n"))
+        os.environ["GATE"] = "ledger"
+        self.assertEqual(self.run_verb("--scan"), (0, "pending: dyad-operator-v0.1.0\n"))   # the Y release, read as before
+
+    def test_an_unknown_gate_is_refused(self):
+        self.make_world()
+        os.environ["GATE"] = "maybe"
+        with self.assertRaises(SystemExit):
+            self.rel.context(self.work)
+
+
+class ReadyTests(World):
+    """#545: `dyad release ready` writes the release-ready line only after C2's fence: every root the tag carries is,
+    at the cut, the tree it holds at a head the row's operative Done-`Y` names, and the archive built at the cut has the
+    given sha256. The build is stubbed (a worktree at the cut and a fixed digest); the fence and the write are real."""
+    def setUp(self):
+        super().setUp()
+        self.make_world()
+        git(self.work, "checkout", "-q", "-b", "pr")
+        (self.work / "dyad" / "x.py").write_text("x\n"); git(self.work, "add", "-A"); git(self.work, "commit", "-qm", "pr")
+        self.head = git(self.work, "rev-parse", "HEAD")
+        git(self.work, "checkout", "-q", "main")
+        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})")
+        git(self.work, "merge", "-q", "--no-ff", "-m", "merge", self.head)
+        self.cut_sha = git(self.work, "rev-parse", "HEAD")
+        rel = self.rel
+        def stub_build(ctx, tag, sha, tmp):
+            (tmp / "out").mkdir(exist_ok=True)
+            git(ctx.root, "worktree", "add", "-q", "--detach", str(tmp / "tree"), sha)
+            return "core", DIGEST, []
+        p = unittest.mock.patch.object(rel, "build", stub_build); p.start(); self.addCleanup(p.stop)
+
+    def run_ready(self, *a):
+        o, e = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(o), contextlib.redirect_stderr(e):
+            rc = self.rel.main(["ready", *a], self.work)
+        return rc, o.getvalue(), e.getvalue()
+
+    def row(self):
+        return (self.work / INST / "d-work" / "rows" / "1.md").read_text()
+
+    def test_the_fence_passes_and_the_line_is_written_once(self):
+        rc, out, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"release-ready dyad-operator-v0.1.0 at {self.cut_sha} (archive {DIGEST})", self.row())
+        rows = dyadlib.load_guard("agent", "rows")
+        self.assertTrue(rows.operative_done(dyadlib.parse_row_file(self.row()).disposed))   # the Y done stays operative
+        rc, out, _ = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 0); self.assertTrue(out.startswith("already:"), out)
+        self.assertEqual(self.row().count("release-ready"), 1)
+
+    def test_a_root_changed_after_the_verified_head_is_refused(self):
+        (self.work / "dyad" / "late.py").write_text("late\n"); git(self.work, "add", "-A"); git(self.work, "commit", "-qm", "late")
+        cut = git(self.work, "rev-parse", "HEAD")
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", cut, "--archive", DIGEST)
+        self.assertEqual(rc, 1); self.assertIn("C2's fence: dyad at the cut", err)
+        self.assertNotIn("release-ready", self.row())
+
+    def test_a_ledger_commit_after_the_head_does_not_trip_the_fence(self):
+        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})", "2026-11-01 Y plan (noise)")
+        cut = git(self.work, "rev-parse", "HEAD")
+        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})")   # the Done entry last again
+        self.assertEqual(self.run_ready("1", "dyad-operator-v0.1.0", "--at", cut, "--archive", DIGEST)[0], 0)
+
+    def test_a_different_archive_digest_is_refused(self):
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", "cd" * 32)
+        self.assertEqual(rc, 1); self.assertIn(f"has sha256 {DIGEST}, not {'cd' * 32}", err)
+
+    def test_no_operative_y_done_is_refused(self):
+        self.record(f"2026-11-01 Y done (merges PR #9 at {self.head})", "2026-11-01 N hold")
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 1); self.assertIn("last disposition is no Y done", err)
+
+    def test_a_short_cut_and_misuse(self):
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha[:12], "--archive", DIGEST)
+        self.assertEqual(rc, 1); self.assertIn("full sha", err)
+        self.assertEqual(self.run_ready("1", "dyad-operator-v0.1.0")[0], 2)
+
+    def test_roots_of_each_kind(self):
+        tree = self.work
+        (tree / "crafts" / "a").mkdir(parents=True); (tree / "crafts" / "a" / "VERSION").write_text("0.1.0\n")
+        self.assertEqual(self.rel.roots_of("a-v0.1.0", tree), ["crafts/a"])
+        self.assertEqual(self.rel.roots_of("dyad-operator-v0.1.0", tree), ["dyad"])          # crafts/a declares nothing
+        self.assertEqual(self.rel.roots_of("v0.2.0", tree), ["BUNDLE.md", "dyad", "crafts/a"])
+
+
 if __name__ == "__main__":
     unittest.main()

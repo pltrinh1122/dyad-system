@@ -25,6 +25,17 @@ is not re-run, and re-red, on every later push; a dispatch with `tag` (`ONLY`) r
                         refused | failed, detail), a table appended to GITHUB_STEP_SUMMARY when set, `<n> release
                         entries`; exit 1 when any entry is refused or failed, or `ONLY` names no entry
 
+The release gate (#545, plan revision 2). With GATE `tap` (the repository variable RELEASE_APPROVAL, the publishing job
+then in the `release` environment, whose required reviewer is the Operator) the trigger is not a `Y release` but the
+Agent's `<date> release-ready <tag> at <cut sha> (archive <sha256>)` line on the release d-work's row: the Done-`Y` that
+names the release's cut PR ratifies publication, and the hosting's approval of the run authenticates it — the one input
+no agent can write. `dyad release ready <row> <tag> --at <cut> --archive <sha256>` writes that line only after C2's fence:
+every root the tag carries (`roots_of`) is, at the cut, the tree it holds at a head the row's operative Done-`Y` names,
+and the archive built at the cut by the one code path has that sha256; otherwise it refuses and writes nothing, and the
+release returns to an explicit question. A `Y release` recorded after the approved run is that approval, by reference
+(Rule-7 property 4: `dwork state … --said-ref 'run <id> approved by <login> at <time>'`); under `tap` it is never a
+trigger. With the gate off (`ledger`) the `Y release` is the trigger, as before, and release-ready lines are not read.
+
 Environment: BEFORE (the push's before sha; empty or all-zero on a dispatch), ONLY (one tag), GITHUB_REPOSITORY,
 GATE (default `ledger`), GITHUB_OUTPUT, GITHUB_STEP_SUMMARY, GITHUB_SERVER_URL, GITHUB_RUN_ID, GITHUB_SHA, GH_TOKEN
 (read by `gh`). Every git and Python child runs under `dyadlib.git_env()` (a hook's GIT_VARS dropped, #142).
@@ -42,12 +53,17 @@ import dyadlib
 TAG_RE = re.compile(r"(?:(?P<craft>[a-z0-9][a-z0-9-]*)-)?v(?P<ver>\d+\.\d+\.\d+)")
 ENTRY_RE = re.compile(r"\S+ Y release (?P<tag>\S+) at (?P<sha>[0-9a-f]{7,40}) \(archive (?P<sha256>[0-9a-f]{64})\)")
 DISPOSED_RE = re.compile(r"^disposed:[ \t]*(.*)$", re.M)
+READY_RE = re.compile(r"\S+ release-ready (?P<tag>\S+) at (?P<sha>[0-9a-f]{40}) \(archive (?P<sha256>[0-9a-f]{64})\)")   # #545
+GATES = ("ledger", "tap")
 
 _ENTRY = "2026-10-26 Y release dyad-operator-v0.12.2 at abc1234 (archive " + "0" * 64 + ")"
 INVARIANTS = [   # crafts/syseng/rules/invariants.md: the two shapes the Operator's recorded Y is read through
     ("tag-shape-reads-bundle-core-and-craft", lambda: [TAG_RE.fullmatch(t)["craft"] for t in ("v0.16.2", "dyad-operator-v0.12.2", "sysadmin-v1.0.0")] == [None, dyadlib.CORE_CRAFT, "sysadmin"]),
     ("tag-shape-refuses-a-bare-or-short-version", lambda: not any(TAG_RE.fullmatch(t) for t in ("0.12.2", "v0.12", "dyad-operator-0.12.2"))),
     ("entry-shape-reads-tag-cut-and-archive", lambda: (lambda g: (g["tag"], g["sha"], g["sha256"]) == ("dyad-operator-v0.12.2", "abc1234", "0" * 64))(ENTRY_RE.fullmatch(_ENTRY))),
+    ("ready-shape-reads-tag-full-cut-and-archive", lambda: (lambda g: (g["tag"], g["sha"]) == ("v0.2.0", "a" * 40))(READY_RE.fullmatch("2026-11-01 release-ready v0.2.0 at " + "a" * 40 + " (archive " + "0" * 64 + ")"))),
+    ("ready-shape-needs-a-full-cut", lambda: READY_RE.fullmatch("2026-11-01 release-ready v0.2.0 at abc1234 (archive " + "0" * 64 + ")") is None),
+    ("gates-are-ledger-and-tap", lambda: GATES == ("ledger", "tap")),
     ("entry-shape-needs-the-archive-digest", lambda: ENTRY_RE.fullmatch(_ENTRY.replace("0" * 64, "0" * 63)) is None and ENTRY_RE.fullmatch(_ENTRY.split(" (archive")[0]) is None),
 ]
 
@@ -105,7 +121,10 @@ def context(root: Path, environ=None) -> Ctx:
     old = None
     if before and set(before) != {"0"} and not only:
         old = frozenset(entries_at(root, rows_rel, before))
-    return Ctx(root, rows, rows_rel, only, env.get("GITHUB_REPOSITORY", ""), env.get("GATE", "ledger"), old)
+    gate = env.get("GATE", "ledger") or "ledger"
+    if gate not in GATES:
+        raise SystemExit(f"refused: GATE {gate!r} is not one of {', '.join(GATES)}")
+    return Ctx(root, rows, rows_rel, only, env.get("GITHUB_REPOSITORY", ""), gate, old)
 
 
 def split_disposed(text: str) -> list[str]:
@@ -123,11 +142,19 @@ def entries_at(root: Path, rows_rel: str | None, rev: str) -> set[tuple[str, str
     return seen
 
 
-def parse_entry(e: str) -> tuple[str, str, str] | None:
-    """(tag, sha, sha256) of a release entry; None when `e` is no release entry to read (not `Y release`, or one
-    without `at`, which predates the service); a `Y release … at …` of another shape comes back with the fields it
-    lacks empty, so it is refused rather than skipped."""
+def parse_entry(e: str, gate: str = "ledger") -> tuple[str, str, str] | None:
+    """(tag, sha, sha256) of a release entry the gate reads; None when `e` is no such entry. With the gate off
+    (`ledger`) that is the recorded `Y release` (`Y release <tag> at <cut> (archive <sha256>)`; one without `at`
+    predates the service and is not read). Under `tap` (#545) it is the Agent's `release-ready` line, written after C2's
+    fence, the Done-`Y` that names the cut PR ratifying it and the hosting's approval authenticating it; a `Y release`
+    is then the record of that approval and is never read as a trigger. An entry of the read kind and another shape
+    comes back with the fields it lacks empty, so it is refused rather than skipped."""
     w = e.split()
+    if gate == "tap":
+        if w[1:2] != ["release-ready"]:
+            return None
+        g = READY_RE.fullmatch(e)
+        return (g["tag"], g["sha"], g["sha256"]) if g else ((w[2] if len(w) > 2 else ""), "", "")
     if w[1:3] != ["Y", "release"] or " at " not in e:
         return None
     g = ENTRY_RE.fullmatch(e)
@@ -140,7 +167,7 @@ def entries(ctx: Ctx) -> list[tuple[str, str, str, str]]:
     rows = sorted(ctx.rows.glob("*.md"), key=lambda p: (len(p.stem), p.stem)) if ctx.rows.is_dir() else []
     for p in rows:
         for e in split_disposed(p.read_text()):
-            parsed = parse_entry(e)
+            parsed = parse_entry(e, ctx.gate)
             if parsed is None or (ctx.old is not None and (p.stem, e) in ctx.old):
                 continue                           # not a release entry, or on main before this push: an earlier run's
             out.append((p.stem, *parsed))
@@ -233,6 +260,83 @@ def publish(ctx: Ctx, row: str, tag: str, sha: str, want_sha256: str) -> tuple[s
         git(ctx.root, "worktree", "prune", check=False)
 
 
+# ---- the release-ready line (#545): written by the Agent, under the gate, after C2's fence
+def roots_of(tag: str, tree: Path) -> list[str]:
+    """The repo-relative roots whose bytes a tag's archive carries, read from the cut's own tree: a craft's root; the
+    core's `dyad` and every craft that declares itself bundled with it (Rule-11 property 2, read as the bundle guard
+    reads it); the bundle's `BUNDLE.md` and every component root."""
+    m = TAG_RE.fullmatch(tag)
+    if not m:
+        raise Refused(f"`{tag}` is no release tag (vX.Y.Z, dyad-operator-vX.Y.Z, <craft>-vX.Y.Z)")
+    crafts = sorted(d.name for d in (tree / "crafts").iterdir() if (d / "VERSION").is_file()) if (tree / "crafts").is_dir() else []
+    if m["craft"] and m["craft"] != dyadlib.CORE_CRAFT:
+        return [f"crafts/{m['craft']}"]
+    if m["craft"] == dyadlib.CORE_CRAFT:
+        bg = dyadlib.load_guard("infra", "bundle")
+        return ["dyad"] + [f"crafts/{c}" for c in crafts if bg.declarations(tree / "crafts" / c)]
+    return ["BUNDLE.md", "dyad"] + [f"crafts/{c}" for c in crafts]
+
+
+def tree_at(root: Path, rev: str, path: str) -> str:
+    return git(root, "rev-parse", "-q", "--verify", f"{rev}:{path}", check=False).stdout.strip()
+
+
+def fence(root: Path, tag: str, cut: str, heads: list[str], tree: Path) -> list[str]:
+    """C2 (#545, plan revision 2): each root the tag carries holds, at the cut, the tree it held at a head the
+    operative Done-`Y` names — the bytes the Operator verified. One line per root that holds no such tree."""
+    out = []
+    for r in roots_of(tag, tree):
+        at = tree_at(root, cut, r)
+        if not any(tree_at(root, h, r) == at for h in heads):
+            out.append(f"{r} at the cut {cut[:12]} is not the tree it holds at any head the Done-Y names "
+                       f"({', '.join(h[:12] for h in heads)})")
+    return out
+
+
+def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
+    """Write `<today> release-ready <tag> at <cut> (archive <sha256>)` on the row, after C2's fence: the row's
+    operative Done-`Y` names the heads the Operator verified; every root the tag carries is that tree at the cut; the
+    archive the one code path builds at the cut has `sha256`. Refused, with nothing written, on any miss."""
+    import datetime
+    rg = dyadlib.load_guard("agent", "rows")
+    path = dyadlib.rows_dir(root) / f"{row_id}.md"
+    if not row_id.isdigit() or not path.is_file():
+        raise Refused(f"no row {row_id}")
+    row = dyadlib.parse_row_file(path.read_text())
+    done = rg.operative_done(row.disposed)
+    if not done:
+        raise Refused(f"row #{row_id}'s last disposition is no Y done: nothing ratifies the release (Rule-2 Binding, #545)")
+    heads = [git(root, "rev-parse", "-q", "--verify", f"{h}^{{commit}}", check=False).stdout.strip() for _, h in rg.PR_AT.findall(done)]
+    if not heads or not all(heads):
+        raise Refused(f"row #{row_id}'s Y done names no head this clone resolves: {done!r}")
+    full = git(root, "rev-parse", "-q", "--verify", f"{cut}^{{commit}}", check=False).stdout.strip()
+    if not full or full != cut:
+        raise Refused(f"the cut is a full sha of a commit here, not {cut!r}")
+    if not re.fullmatch(r"[0-9a-f]{64}", sha256):
+        raise Refused(f"the archive digest is 64 hex, not {sha256!r}")
+    ctx = Ctx(root, dyadlib.rows_dir(root), None, "", "", "tap", None)
+    tmp = Path(tempfile.mkdtemp(prefix="dyad-release-ready-"))
+    try:
+        _, observed, _ = build(ctx, tag, full, tmp)
+        miss = fence(root, tag, full, heads, tmp / "tree")
+    finally:
+        git(root, "worktree", "remove", "--force", str(tmp / "tree"), check=False)
+        shutil.rmtree(tmp, ignore_errors=True)
+        git(root, "worktree", "prune", check=False)
+    if miss:
+        raise Refused("C2's fence: " + "; ".join(miss) + " — the release returns to an explicit question (#545)")
+    if observed != sha256:
+        raise Refused(f"C2's fence: the archive built at the cut has sha256 {observed}, not {sha256}")
+    entry = f"{datetime.date.today().isoformat()} release-ready {tag} at {full} (archive {sha256})"
+    if not rg.is_ready(entry):
+        raise Refused(f"internal: {entry!r} is not the release-ready shape")
+    if entry.split(" ", 1)[1] in [e.split(" ", 1)[1] for e in rg.entries(row.disposed)]:
+        return f"already: row #{row_id} holds release-ready {tag} at {full[:12]}; nothing written"
+    new = dyadlib.Row(row.id, row.title, row.opened, row.state, f"{row.disposed}; {entry}" if row.disposed else entry, row.refs, row.mode)
+    dyadlib.write_row(root, new, row.state)
+    return f"ready: row #{row_id} {entry!r}; land it ledger-only (`dyad dwork land {path.relative_to(root)} -m ...`)"
+
+
 def pending(ctx: Ctx) -> list[str]:
     """Entries the publishing job has work for: added by this push (or named by a dispatch) and not already tagged at
     their cut sha with a Release."""
@@ -249,8 +353,19 @@ def pending(ctx: Ctx) -> list[str]:
 
 def main(a: list[str] | None = None, root: Path | None = None) -> int:
     a = sys.argv[1:] if a is None else list(a)
+    if a and a[0] == "ready":   # dyad release ready <row> <tag> --at <cut> --archive <sha256> (#545)
+        r = a[1:]
+        if len(r) != 6 or r[2] != "--at" or r[4] != "--archive":
+            print("usage: dyad release ready <row> <tag> --at <full cut sha> --archive <sha256>", file=sys.stderr)
+            return 2
+        try:
+            print(ready(Path(root) if root else dyadlib.repo_root(), r[0], r[1], r[3], r[5]))
+            return 0
+        except Refused as e:
+            print(f"refused: {e}", file=sys.stderr)
+            return 1
     if [x for x in a if x != "--scan"]:
-        print("usage: dyad release [--scan]", file=sys.stderr)
+        print("usage: dyad release [--scan] | dyad release ready <row> <tag> --at <cut> --archive <sha256>", file=sys.stderr)
         return 2
     ctx = context(Path(root) if root else dyadlib.repo_root())
     if not ctx.repo and entries(ctx):

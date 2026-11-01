@@ -725,6 +725,14 @@ class NamedHeadsTests(unittest.TestCase):
         self.assertEqual(m.heads_naming(self.A, self.rows("open", d)), [])
         self.assertEqual(m.operative_done(f"2026-01-02 Y done (merges PR #1 at {self.A})"), f"2026-01-02 Y done (merges PR #1 at {self.A})")
         self.assertIsNone(m.operative_done(""))
+    def test_a_release_ready_line_is_passed_over_and_admitted(self):
+        """#545: the Agent's release-ready record follows the Done-`Y` without revoking it, and the fence admits its shape."""
+        ready = "2026-01-04 release-ready v0.2.0 at " + "c" * 40 + " (archive " + "d" * 64 + ")"
+        d = f"2026-01-02 Y done (merges PR #1 at {self.A}); {ready}"
+        self.assertTrue(m.is_ready(ready)); self.assertFalse(m.is_ready("2026-01-04 release-ready v0.2.0 at abc (archive x)"))
+        self.assertEqual(m.operative_done(d), f"2026-01-02 Y done (merges PR #1 at {self.A})")
+        self.assertEqual(m.disposed_problems("rows/7.md", f"2026-01-02 Y done (merges PR #1 at {self.A})", d, "commit x"), [])
+        self.assertEqual(len(m.disposed_problems("rows/7.md", "", "2026-01-04 release-ready v0.2.0", "commit x")), 1)
     def test_terminal_rows_are_read_on_request(self):
         d = f"2026-01-02 Y done (merges PR #1 at {self.A})"
         self.assertEqual(m.named_heads(self.rows("done", d)), [])

@@ -1067,6 +1067,21 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual([(x["kind"], x["note"], x["text"]) for x in e], [("disposition", "Y plan, relayed via program-59cec502", "Y")])
         self.assertEqual(pv.check_record(rec / "1.md", row=row), [])
         self.assertFalse(sv.own_disposition(e[0]["note"]))
+    def test_dwork_state_records_a_hosting_approval_by_reference(self):
+        """#545: `--said-ref` records the approved run in place of the Operator's chat words, its note `by reference`."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        ref = "run 41331223332 approved by pltrinh1122 at 2026-11-01T17:02:09Z"
+        for args, msg in ((("-d", "Y plan", "--said-ref", "Y"), "--said-ref is `run <id> approved by"),
+                          (("-d", "Y plan", "--said", "Y", "--said-ref", ref), "not both")):
+            r = self.dwork_state(d, "1", "planned", *args)
+            self.assertNotEqual(r.returncode, 0); self.assertIn(msg, r.stderr)
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said-ref", ref)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        e = pv.parse(rec.joinpath("1.md").read_text())
+        self.assertEqual([(x["kind"], x["note"], x["text"]) for x in e], [("disposition", "Y plan, by reference", ref)])
+        self.assertEqual(pv.check_record(rec / "1.md", row=dyadlib.parse_row_file(rows.joinpath("1.md").read_text())), [])
     # d-work #290: the retirement form — backlog or done → archived over k rows on one Operator question
     def dwork_retire(self, d, *a):
         env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))
