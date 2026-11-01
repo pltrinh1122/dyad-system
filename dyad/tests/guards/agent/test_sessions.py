@@ -602,6 +602,10 @@ class AttendanceTests(unittest.TestCase):
              "mandate-at-start": ("mandate #412, 2026-10-21", False),                      # `dwork new|state --mandate`
              "mandate-inside": ("Y done (mandate #412, 2026-10-21)", False),              # the pre-#422 close workaround
              "relayed": ("plan, relayed via program-59cec502", False)}                    # `--relayed-via` with `--said`
+    def test_own_disposition_excludes_a_by_reference_note(self):
+        """#545: a hosting approval recorded by reference was given on the hosting, in no seat."""
+        self.assertFalse(sv.own_disposition("Y release v0.20.0, by reference"))
+        self.assertEqual(sv._BY_REFERENCE_NOTE, dyadlib.load_guard("agent", "provenance").BY_REFERENCE)
     def test_own_disposition_excludes_a_mandate_or_relayed_note_anywhere(self):
         for form, (note, own) in self.NOTES.items():
             self.assertEqual(sv.own_disposition(note), own, form)
