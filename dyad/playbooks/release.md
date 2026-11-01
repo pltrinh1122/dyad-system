@@ -7,9 +7,11 @@ a release now, and which number that release takes. It exists because the Operat
 not say why it was one: "release should have clear threshold criteria, e.g. a critical bug fix, a significant
 enhancement to an existing capability, a new capability, etc." (#489, plan #493). Steps: `dyad/runbooks/release.md`,
 run through `dyad runbook run release <step>`, the core runner. Nothing here redefines a Rule. That a release is the
-Operator's to ratify, and its two forms, the single `Y/N: release <tag>?` and the batch `Y/N: release <tag-a>, <tag-b>?`
-for tags one d-work's own Done-`Y` verified, are Rule-11's (`dyad/rules/RULE-11-distribution-structure.md`, Ratification
-events). This play-book makes the batch its default (Evidence, below). That a tag equals its craft's `VERSION`, and
+Operator's to ratify, and how — under the release gate by the release d-work's own Done-`Y` behind a fence,
+authenticated by the hosting approval; with the gate off by the single `Y/N: release <tag>?` or the batch
+`Y/N: release <tag-a>, <tag-b>?` for tags one d-work's own Done-`Y` verified — is Rule-11's
+(`dyad/rules/RULE-11-distribution-structure.md`, Ratification events). This play-book says which shape the seat's
+reply takes in each case (Evidence, below). That a tag equals its craft's `VERSION`, and
 the drift guard that forces a `VERSION` bump after a tag, are Rule-11 property 4's. The bundle is property 7's.
 Publishing a ratified release is the `released` service's (`dyad release`, its run-book `released.md`; #461, #470).
 The seat proposes; the Operator disposes (Rule-2).
@@ -62,8 +64,37 @@ now.
 - `changes`: every craft's commits and cited d-works since its last tag, and the bundle's last tag.
 - `number`: the tag `CLASS` implies for `CRAFT`.
 
+Under the release gate (`RELEASE_APPROVAL=tap`, #545) the release runs in this order, each step the act of the party
+named:
+1. **Plan** (seat proposes, Operator disposes): the release d-work's plan names every tag and its number, by class.
+2. **Done** (Operator): the Done question names the PR whose merge is the cut and every tag it releases; the reply
+   carries the Evidence below. The `Y` is recorded before the merge (Rule-3).
+3. **Merge** (seat, clerical): `dyad merge` of the cut PR.
+4. **Fence and release-ready** (seat, clerical): after the merge, the fence is checked per tag — the released craft's
+   root at the cut equals that root at the head the Done-`Y` names, and the archive built at the cut has the sha256
+   the evidence cited — and only then a release-ready entry is written per tag, `dyad release ready <row> <tag> --at <cut> --archive
+   <sha256>`, which checks that fence itself and refuses on a mismatch, then landed by the usual ledger-only commit.
+   A tag whose fence fails gets no entry: it returns to the chat question, with the difference stated.
+5. **Approval** (Operator, on the hosting): the publishing run the entries start waits for the Operator's approval;
+   a rejection or a timeout publishes nothing.
+6. **Record** (cos, clerical): once the run has completed, one `Y release <tag> at <cut> (archive <sha256>)` entry per
+   tag, its provenance entry noted `by reference` with the body `run <id> approved by <login> at <time>` (Rule-7
+   property 4).
+   When neither the run's status nor its jobs can be read, nothing is recorded and the gap is said.
+With the gate off, steps 4 to 6 are replaced by the chat release question (Evidence, below) and its recorded `Y`.
+
 ## Evidence
-**One question per d-work, not per tag.** When the tags come from one d-work's Done-`Y`, the seat asks them as one
+**Under the release gate the evidence goes into the Done reply, and no release question follows it.** The Done
+reply holds everything listed below — classes, d-works, numbers, the cut PR's head and the sha256 each archive will
+have at the cut — and its last line is the Done question naming the cut PR and the tags:
+
+    Y/N: Done with #<id> <title> (merges PR #a, releases dyad-operator-v0.13.0, v0.17.0)?
+
+After the merge the seat reports the fence's result per tag and the publishing run's link; that report carries no
+`Y/N`, because the decision was the Done-`Y` and the approval on the hosting is its authentication. Rule-2's Binding
+still holds: the `Y` covers exactly the tags the question named.
+
+**With the gate off: one question per d-work, not per tag.** When the tags come from one d-work's Done-`Y`, the seat asks them as one
 question in Rule-11's batch form; the usual case is a bundle plus the components it releases. The seat asks single
 questions only for tags of different d-works. The release reply holds the evidence the batch line rests on, before
 that line:

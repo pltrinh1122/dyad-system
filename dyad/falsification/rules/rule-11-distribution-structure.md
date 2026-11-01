@@ -468,3 +468,35 @@ Pairwise (Rule-5):
 
 Coherent, orthogonal.
 Disposition: see ledger #481.
+
+## Amendment — d-work #545 (2026-11-01): Ratification events, the release gate
+**Claim (plan #545 revision 2, the Operator's `Y` of 2026-11-01 on: "i still believe this extra Y isn't necessary because
+the mandate should have carried from when i aligned with your previous question and recommendation to release.
+falsify."):** under the release gate, a release d-work's plan-`Y` (naming the tags) and its Done-`Y` (naming the cut PR
+and the tags) ratify publication behind a mechanical fence; the hosting approval authenticates it; the chat release
+question remains only with the gate off or a failed fence.
+
+| # | attack | result |
+|---|---|---|
+| G1 | A release publishes to the world, so it is the Operator's own question (this Rule's text since #106). | **Survives for the reason, refuted as a need for a second question** (plan C1): the reason is irreversibility — the world must not receive bytes the Operator did not verify. The Done-`Y` verified the bytes of the cut, the archives are deterministic builds of it (property 5), and the plan named every tag and number; the chat question added nothing the Done-`Y` lacked. |
+| G2 | The bytes may change between the Done-`Y` and the build: a merge lands between the last PR and the cut, or the archive is built from a later `main`. | **Survives with the fence** (plan C2): each released craft's root at the cut must equal that root at the head the Done-`Y` names, and the archive's sha256 must be the build of the cut; otherwise no release-ready entry is written and the tag returns to the chat question. Mechanical, which a chat question is not. |
+| G3 | The release questions of #517 and #526 found problems a Done would have missed. | **Refuted** (plan C3): both were found before the Done, in the plan's own execution, and needed a revised plan-`Y`, never a release `Y`. |
+| G4 | Then drop the hosting approval as well. | **Refuted** (plan C4): every `Y`, the Done-`Y` included, reaches the hosting only as a ledger line an agent wrote; for the one irreversible act the Operator-authenticated step is what stops a forged line from publishing (#541, A1). Kept, as authentication, deciding nothing. |
+| G5 | The batch release question (#106, #494) becomes dead text. | **Conceded, scoped** (plan C5): it stands for the gate-off path and for a tag whose fence failed. |
+| G6 | Rule-2 Binding: a `Y` binds only to what its question named, and a Done question names PRs, not tags. | **Confirmed, so the form names them**: under the gate the Done question is `(merges PR #a, releases <tag-a>, <tag-b>)`, so the `Y` names the tags it ratifies. A tag absent from the question is not released by it. |
+| G7 | A forged release-ready entry starts a publishing run. | **Harmless** (plan revision 1 attack 4): every run waits for the Operator's approval; a rejected or expired run publishes nothing. |
+| G8 | The gate is a hosting feature (Rule-14: hosting is a library adapter), so the Rule now depends on the hosting. | **Survives, scoped**: the gate is optional; with it off, or the hosting unreachable, the chat question is the form, and nothing in the kernel-only path depends on the gate. |
+| G9 | A release-ready entry in `disposed` breaks Rule-3's reading of that column as the chain of dispositions. | **Survives, scoped**: it carries no `Y` or `N`, so the guards read it as its own shape — Rule-7's count excludes it and `rows.operative_done` skips it — and the chain of dispositions reads exactly as before; the column now also holds the Agent's fence statement beside the dispositions, which Rule-3's Ledger does not forbid (it states what the column records, not that it holds nothing else). |
+
+**Pairwise (Rule-5).** **11–2**: Binding's never-accretable list now lets a release go exactly under this gate and cites
+this paragraph; Rule-2 owns what a `Y` may bind to, Rule-11 when a release is ratified; coherent (Rule-2 amendment
+#545). **11–3**: **gap, named**: the Done question's `releases` clause is stated here, while Rule-3's Completion
+counter-prompt owns the forms and names only `accreted` and `merges`; Rule-3 is outside plan #545's files, so the gap
+is carried to the Operator as a follow-up (Rule-3 to cite the clause), never closed by widening this PR. Rule-3's
+Boundaries' "release counter-prompts" are the gate-off questions, unchanged. **11–7**: the
+approval is recorded by reference (Rule-7 property 4, amendment #545). **11–14**: the gate is a hosting adapter,
+optional; the kernel-only path is unchanged. **11–6**: `release` reworded; `release gate` and `release-ready entry` added
+(owner 11). **11–8**: a release is not a host action; unchanged. **11–1**: the release d-work's PRs keep one zone each.
+**11–4, 11–5, 11–9, 11–10, 11–12, 11–13, 11–15, 11–16, 11–18, 11–19, 11–20**: unchanged. Coherent and orthogonal but for the 11–3 gap named above.
+
+Disposition: see ledger #545.
