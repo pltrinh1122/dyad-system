@@ -9,7 +9,7 @@ and referenced here by craft name (the sysarch craft's: `projection`, `projector
 `library`, `reference`, `resolver`, `guard contract`, #160; the sysadmin craft's: `read-only`, `reversible`, `destructive`,
 `change log`, `undo`, `ops script`, `postcondition`, `supervisor`, `run-book`, `health command`,
 `run-book command`, `event`, `role`, `scope`; #155; the cabinet craft's (`crafts/cabinet/`, renamed from `cos` by #417): `charter`, `cos`,
-`desk`, `roll-up`, `function`, `topic`, #383). The countersign model's terms are no longer a
+`desk`, `roll-up`, `function`, `topic`, #383; `secretary` and `cos-board`, which this file defined until #560). The countersign model's terms are no longer a
 craft's: the ones an Agent Rule uses are rows below (`mandate`, `mode`, `explicit mode`, `implicit mode`,
 `escalate edge`, `escalation`, `answer grammar`, `amend`, `party`, adopted by #369 C2), the rest are the
 glossary of `dyad/playbooks/countersign-model.md`, five more rows below entering with C3's Rule sentences (`countersign`, `delegate edge`, `mode lifecycle`, `coded check`, `prose claim`; #369 C3; the reconciliation table:
@@ -20,6 +20,12 @@ Conventions (#553, the dyad-native terms; syseng `naming.md` is the case standar
 a literal answer token keeps its case, so `plan-Y` and `done-Y`; "dyad unit" is said whenever the system is also in view.
 History — rows, plans, provenance, presence files — keeps the words it was written in, and `dyad/vocabulary/crosswalk.md`
 maps each old word to its term here; an alias row below names the old word a tool still reads.
+Three layers, three vocabularies (#560; where a term lives is `dyad/dmc/term-home.jsonld`): the core names kinds of
+unit and the acts every system has — unit, dyad unit, solo, auto, home, pair and unpair, holder, hop; an organization
+craft (the cabinet) names roles — cos, secretary, desk, function, charter; the instance names its own positions, in its
+`MANDATES.md` and nowhere in a craft; and no layer defines another's words. A unit is spoken of by its name, then its
+title, then its kind, each only as needed ("`<name>` (secretary, solo)", "`<name>` is paired", "`<name>` is home"); the kind is given only when it changes a route — a dyad unit is asked in its own chat, a solo
+through the home — and dyad and solo say who is present, never what a unit does.
 
 | term | definition | owner | used by |
 |------|------------|-------|---------|
@@ -151,6 +157,4 @@ maps each old word to its term here; an alias row below names the old word a too
 | coded check | a check code runs — a test, a guard or an invariant: mechanical, re-runnable, cheap; one of the two kinds of check the audit play-book's self-diagnostic runs, named for how it checks and never for what it examines | 12 | 12 |
 | prose claim | a sentence a system asserts about itself, checked by reading it against a written attack that names what would make it false; a claim with no attack is no check; the other kind the self-diagnostic runs, which may examine code | 12 | 12 |
 | unit name | the name of a presence file and so of its unit (written seat name before #553): under `organization: m4` the form `<function>[-<topic>]-<hp>` — a function the organization's mandates table lists, an optional topic, and the first eight hex of the holder's harness session id — the installed organization craft's data (`crafts/cabinet/guards/seats_rules.txt`) where one is installed, the bare form of `sessions.py` otherwise; read advisorily by `touch()`, printed with the session title by `dyad session name`; under `flat` any path-safe name (#369 C7) | 16 | 3 16 |
-| cos-board | the board a unit with a function keeps over its scope and reads at every reply: the rows of its charter's domain and the units under it; the home's is the board of programs, a secretary's the board of its function and its desks; its form and reading are the organization craft's Operating Guide, never a Rule (#369) | 16 | 3 16 |
-| secretary | a unit beside the home that keeps a cos-board over one function's domain under a charter (a row of the mandates table), named `<function>-<hp>`; one of the at most seven lines the home reads; it opens desks, units of one topic each, as its concurrent work needs (#368, #369, #416, #417) | 16 | 3 16 |
 | attended | alias of paired (#553, `dyad/vocabulary/crosswalk.md`): of a unit, a dyad unit; `attended-seats` is the alias of the `paired-units` key, both read until the release after next; the check against the records — a live unit holding an own disposition the operator gave there, its note holding neither `mandate #<id>` nor `relayed via`, within the `attendance-window` preference, prints `undeclared` when not paired, a paired unit holding none prints `warn` — is Rule-16's Presence; never written to a presence file (#388, #393, #412, #414, #422) | 16 | 16 |

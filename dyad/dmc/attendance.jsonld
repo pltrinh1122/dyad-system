@@ -12,12 +12,15 @@
   ],
   "identifier": "attendance",
   "name": "Seat attendance",
-  "description": "Whether the Operator attends a seat, and so where its counter-prompts are asked.",
+  "description": "Whether the operator attends a unit, and so where its counter-prompts are asked; and whether pairing a unit is worth its span.",
   "dyad:decides": "Is this seat attended?",
   "dyad:inputs": [
     "the seat name",
     "whether it is the leader",
-    "the attended-seats preference"
+    "the attended-seats preference",
+    "whether the unit's work is a hard context switch for the operator",
+    "whether it is asynchronous, independent of other matters and long-lived",
+    "the operator's span: how many units are already paired"
   ],
   "hasDefinedTerm": [
     {
@@ -33,8 +36,23 @@
       "name": "relayed",
       "dyad:when": "otherwise",
       "dyad:then": "a counter-prompt is relayed through the leader"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pair-worth",
+      "name": "pairs",
+      "dyad:when": "the unit's work is a hard context switch for the operator, asynchronous, independent of other matters and long-lived (#412's exemplar)",
+      "dyad:then": "the operator may pair it; each pairing spends span"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stay-solo",
+      "name": "solo",
+      "dyad:when": "any of the four conditions fails",
+      "dyad:then": "leave it a solo whose questions route home"
     }
   ],
+  "dyad:precedence": "The declaration decides where a question is asked (attended or relayed); the four conditions only advise the operator's act of pairing, which the agent never takes.",
   "dyad:default": "the preference default none: only the leader is attended",
   "dyad:judgedBy": {
     "dyad:kind": "declared",

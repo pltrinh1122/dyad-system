@@ -12,20 +12,21 @@
   ],
   "identifier": "term-home",
   "name": "Term home",
-  "description": "Decides where a term is defined.",
+  "description": "Decides where a term is defined, by the layer it belongs to: core, organization craft or instance.",
   "dyad:decides": "Where is this term defined?",
   "dyad:inputs": [
     "the term",
     "the Agent vocabulary",
     "the craft vocabularies",
-    "the preference keys"
+    "the preference keys",
+    "the term's layer: a kind of unit or an act any system has, a role only a multi-unit organization needs, or this system's own position or value"
   ],
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
       "termCode": "vocabulary",
       "name": "vocabulary",
-      "dyad:when": "a term used by the Agent Rules",
+      "dyad:when": "a term used by the Agent Rules: one naming a kind of unit or an act any system has, whatever its organization (the core layer)",
       "dyad:then": "defined once in the vocabulary; Rules cite it, never redefine it"
     },
     {
@@ -39,8 +40,15 @@
       "@type": "DefinedTerm",
       "termCode": "craft",
       "name": "craft term",
-      "dyad:when": "a Tended craft's term",
+      "dyad:when": "a Tended craft's term, among them a role or routing only a multi-unit organization needs (the cabinet's layer)",
       "dyad:then": "defined in its craft vocabulary; referenced as <craft>:term"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "instance",
+      "name": "terms defined elsewhere",
+      "dyad:when": "a term naming this system's particular position or value (a function's unit, a preference value)",
+      "dyad:then": "defined in the instance's own files, MANDATES.md and the preferences; never in the core or a craft vocabulary"
     },
     {
       "@type": "DefinedTerm",
@@ -50,12 +58,15 @@
       "dyad:then": "one fault, reported once"
     }
   ],
-  "dyad:precedence": "On divergence between a Rule and the vocabulary, the vocabulary wins and the Rule is a bug.",
+  "dyad:precedence": "Read the layer first: core if any system has it whatever its organization, the organization craft if only a multi-unit organization needs it, the instance if only this system has it. On divergence between a Rule and the vocabulary, the vocabulary wins and the Rule is a bug.",
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
     "dyad:implementation": "guards/agent/vocabulary.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "rules/RULE-6-vocabulary.md",
+  "dyad:alsoIn": [
+    "vocabulary/VOCABULARY.md"
+  ],
   "dyad:owner": "Rule-6"
 }

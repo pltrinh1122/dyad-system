@@ -129,3 +129,30 @@ Every edit is of words, not of what a Rule owns, so no concern moves between Rul
 No gap is found beyond D4.
 
 Disposition: see ledger #553.
+
+## Amendment — d-work #560 (2026-11-02: three layers, three vocabularies; the organization's roles leave the core)
+**Claim (plan #560, the operator's plan-`Y` of 2026-11-02, the model C1–C7 and criteria D1–D5 of its provenance entry 1):**
+the core vocabulary names kinds of unit and acts every system has, the organization craft names roles, the instance
+names its own positions, and no layer defines another's words; a unit is spoken of by name, then title, then kind,
+only as needed. Plan #560's attacks A1–A19 are this claim's falsification; the ones this part acts on follow.
+
+| # | attack | result |
+|---|---|---|
+| E1 | (A1, F7) `secretary` and `cos-board` are rows of this vocabulary, owner 16, though only a multi-unit organization has them. | **Confirmed and fixed**: both rows leave the core; the introduction lists them among the cabinet craft's terms, and Rule-3 (Ledger) and Rule-16 (Presence) say "a unit with a function" and cite the organization craft's `secretary` and `cos-board`. The cabinet's `CRAFT.md` gains the two rows in the craft-zone PR that follows this one (`check_craft` refuses a term defined in both, so the core row goes first). |
+| E2 | (A13, F5) Rule-16 named an instance position, "the operate unit's". | **Confirmed and fixed**: "the unit whose charter holds the host". |
+| E3 | The conventions paragraph needs examples, and the natural ones are this system's own units. | **Confirmed and avoided**: examples naming `program` or `engineer` would put instance names into the core, the failure C1 names; the paragraph uses `<name>` placeholders. |
+| E4 | D1 needs its own criterion. | **Refuted** (A15, Rule-13): `term-home.jsonld` already decides where a term is defined; it gains the layer as an input and precedence, its two outcomes' conditions name the core and the cabinet layer, and one outcome for the instance, named by Rule-6's own "terms defined elsewhere". |
+| E5 | D2 belongs in a new criterion beside `attendance.jsonld`. | **Refuted** (A16): the same criterion gains the four conditions and the span as inputs and two advisory outcomes, `pairs` and `solo`; its precedence says the declaration still decides the route and the conditions only advise the operator's act. |
+| E6 | D4 has no prose home in the files the plan named. | **Confirmed, a departure stated**: a criterion's outcome names must appear in its home file, and none of the plan's files states the overhead test; `dyad/playbooks/d-work.md` gains one paragraph after Layers, the place the layers it routes between are defined. Reported in the completion evidence as a departure. |
+| E7 | Core code still says `secretary`: `sessions.seat_kind` returns it, and its tests pin it. | **Survives, scoped**: an identifier and a printed value, not a vocabulary term, like the `seat` entity (crosswalk, D6 of #553); renaming it is code, outside this plan, and a candidate for #554's alias removal. |
+
+**Rule-6: every Agent Rule in a changed term's `used by`.**
+- `secretary` (3 16), `cos-board` (3 16): removed from this file. Rules 3 and 16 now cite them as the organization
+  craft's, by name, and read correctly; the vocabulary guard no longer requires them there.
+- No other term changes; the conventions paragraph defines no term. The crosswalk gains one row, "the cos as a mode" → "home follows you" (F2), which maps and defines nothing.
+
+**Pairwise (Rule-5).** Rules 3 and 16 change words only: the session-start bullet and Presence describe the same boards
+as before, and Rule-16's reconcile owner is named by charter. No concern moves between Rules; every other pair is
+unchanged. No gap is found.
+
+Disposition: see ledger #560.
