@@ -50,6 +50,18 @@ class PreferenceTests(unittest.TestCase):
     def test_value_outside_enumeration_fails(self):
         root, pkg = fixture(HEAD + ROWS.replace("| with-done |", "| sometimes |"))
         msgs = pf.check_package(root, pkg); self.assertEqual(len(msgs), 1); self.assertIn("value `sometimes` is not one of separate | with-done", msgs[0])
+    def test_a_value_differing_only_by_case_warns_and_reads_canonical(self):
+        """L6 (#553): the operator types a value directly, so case is not meaningful; the guard warns, the reader
+        returns the canonical spelling, and a value matching no alternative still fails."""
+        root, pkg = fixture(HEAD + ROWS.replace("| with-done |", "| With-Done |"))
+        msgs = pf.check_package(root, pkg)
+        self.assertEqual(msgs, ["warning: preferences-corpus/PREFERENCES.md: `merge-disposition` value `With-Done` is read as "
+                                "`with-done`; write it `with-done` (L6, #553)"])
+        self.assertEqual(dyadlib.preference("merge-disposition", root), "with-done")
+        self.assertEqual(dyadlib.preference("import-support", root), "release within 12 months")   # free text: unchanged
+        self.assertEqual(dyadlib.canonical_value("ALWAYS", "`off` | `always`"), "always")
+        self.assertEqual(dyadlib.canonical_value("Communicate", "`none`, or seat names"), "Communicate")   # not an enumeration
+        self.assertEqual(dyadlib.canonical_value("never", "`off` | `always`"), "never")
     def test_read_by_must_name_existing_rules(self):
         root, pkg = fixture(HEAD + ROWS.replace("Rule-13 (import criteria)", "Rule-42"))
         msgs = pf.check_package(root, pkg); self.assertEqual(len(msgs), 1); self.assertIn("read by Rule-42, which does not exist", msgs[0])

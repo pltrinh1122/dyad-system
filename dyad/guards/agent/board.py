@@ -11,7 +11,7 @@ table. The board store puts it on `main`:
 
 Each file is `key: value` lines; a value continues on the lines after it that start with two spaces (so a question
 is kept verbatim, newlines and all); blank and `#` lines are skipped. Keys of a row's file: `holder` (the cos session
-that holds the mode), `owner` (the seat doing the work, and its session id), `waiting-on` (`operator` | `seat <name>`
+that holds the mode), `owner` (the seat doing the work, and its session id), `waiting-on` (`operator` | `unit <name>`
 | `external <ref>`), `next` (the next act), `since`, `question` (verbatim, when the Operator owes one), `promised`
 (follow-ups named to the Operator), and `writer`, which `board set` writes and nobody types — the harness session
 that wrote the file last (`sessions.writer`, Rule-16's writer pattern, #350). `_cos.md` takes `queue` and `seats` in
@@ -54,14 +54,15 @@ FIELDS = ("holder", "owner", "waiting-on", "next", "since", "question", "promise
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "writer")
 REQUIRED = ("holder",)
 CONT = "  "                                          # a continuation line's prefix
-WAITING = re.compile(r"operator|seat \S+|external \S.*")
+WAITING = re.compile(r"operator|(?:unit|seat) \S+|external \S.*")   # `seat <name>` is `unit <name>`'s alias (#553)
+UNIT_ALIAS = "seat "                                # read until the release after next; `board set` writes `unit `
 KEY = re.compile(r"[a-z][a-z-]*")
 USAGE = ("usage: dyad board | dyad board set <id>|_cos key=value… [--drop] | dyad board resume")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("holder-is-required-everywhere", lambda: all(k in FIELDS and k in COS_FIELDS for k in REQUIRED)),
     ("writer-is-a-key-of-both", lambda: "writer" in FIELDS and "writer" in COS_FIELDS),
-    ("waiting-on-forms", lambda: all(WAITING.fullmatch(v) for v in ("operator", "seat counsel-015qiPLU", "external run 1"))
+    ("waiting-on-forms", lambda: all(WAITING.fullmatch(v) for v in ("operator", "unit counsel-015qiPLU", "seat counsel-015qiPLU", "external run 1"))
                                  and not WAITING.fullmatch("someone")),
     ("store-under-d-work", lambda: BOARD_REL.startswith("d-work/")),
 ]
@@ -139,7 +140,7 @@ def check_entry(name: str, text: str, states: dict[int, str]) -> list[str]:
     msgs += [f"{where}: unknown key {k!r} (keys: {', '.join(allowed)})" for k in fields if k not in allowed]
     msgs += [f"{where}: '{k}' missing" for k in REQUIRED if not fields.get(k)]
     if "waiting-on" in fields and not WAITING.fullmatch(fields["waiting-on"]):
-        msgs.append(f"{where}: 'waiting-on' is not `operator`, `seat <name>` or `external <ref>` ({fields['waiting-on']!r})")
+        msgs.append(f"{where}: 'waiting-on' is not `operator`, `unit <name>` (alias `seat <name>`) or `external <ref>` ({fields['waiting-on']!r})")
     if "since" in fields and parse_since(fields["since"]) is None:
         msgs.append(f"{where}: 'since' is not an ISO-8601 date or time ({fields['since']!r})")
     if name.isdigit():
@@ -248,7 +249,9 @@ def parse_set(a: list[str]) -> tuple[str, dict[str, str], bool]:
         if k in REQUIRED and v == "":
             raise Refused(f"{k!r} cannot be removed")
         if k == "waiting-on" and v and not WAITING.fullmatch(v):
-            raise Refused(f"waiting-on is `operator`, `seat <name>` or `external <ref>`, not {v!r}")
+            raise Refused(f"waiting-on is `operator`, `unit <name>` or `external <ref>`, not {v!r}")
+        if k == "waiting-on" and v.startswith(UNIT_ALIAS):
+            v = "unit " + v[len(UNIT_ALIAS):]           # the canonical form is written; the alias is only read (#553)
         if k == "since" and v and parse_since(v) is None:
             raise Refused(f"since is an ISO-8601 date or time, not {v!r}")
         pairs[k] = v
@@ -359,7 +362,7 @@ def resume_view(root: Path) -> dict:
     items = [(n, f) for n, f in got if n != COS]
     stale = [(n, f) for n, f in items if states.get(int(n)) in dyadlib.TERMINAL_STATES or int(n) not in states]
     live = [(n, f) for n, f in items if (n, f) not in stale]
-    seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith("seat ")}
+    seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith(("unit ", UNIT_ALIAS))}
                    | {o for _, f in live for o in owners(f)})
     seat = os.environ.get("DYAD_SESSION") or None
     return {"cos": dict(got).get(COS, {}), "live": live, "stale": stale, "states": states,

@@ -67,6 +67,8 @@ LEADER_FUNCTION = "program"                     # the function whose bare seat i
 # line names it holds a disposition given there (a note holding neither `mandate #` nor `relayed via`, #422) within the
 # `attendance-window` preference. A live undeclared seat holding one prints `undeclared`; a declared seat holding none, `warn`.
 ATTENDED_SEATS = "attended-seats"               # the preference key: seat names beside the leader, or `none` (the template seeds `none`)
+PAIRED_UNITS = "paired-units"                   # its new name (#553): read first; `attended-seats` is its alias until the release after next
+UNIT_KINDS = ("dyad", "solo", "auto")           # #553: a paired (attended) unit, an unpaired one, an automaton's (none keeps a presence file yet)
 NO_SEATS = "none"
 ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days (the template seeds 7)
 DEFAULT_ATTENDANCE_DAYS = 7
@@ -88,6 +90,7 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
               ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed") and DEFAULT_ATTENDANCE_DAYS > 0),
               ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
+              ("paired-units-aliases-attended-seats", lambda: PAIRED_UNITS == "paired-units" and UNIT_KINDS[:2] == ("dyad", "solo")),
               ("reconcile-readings-are-four", lambda: len(set(READINGS)) == 4 and bool(TITLE_FORM.match("engineer-1537d8fb: cloud (ds) - ledger")) and not TITLE_FORM.match("dyad-system-ea")),
               ("process-id-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _PROCESS)))]   # crafts/syseng/rules/invariants.md
 
@@ -322,10 +325,17 @@ def attendance_index(root: Path | None = None, now: datetime.date | None = None)
                 out[seat] = e["date"]
     return out
 
+def declared_preference(root: Path | None = None) -> tuple[str, str | None]:
+    """(key, value) of the pairing preference: `paired-units` when the table holds it, else its alias `attended-seats`
+    (#553; both are read until the release after next)."""
+    v = dyadlib.preference(PAIRED_UNITS, root)
+    return (PAIRED_UNITS, v) if v is not None else (ATTENDED_SEATS, dyadlib.preference(ATTENDED_SEATS, root))
+
 def declared_seats(root: Path | None = None) -> list[str]:
-    """The `attended-seats` preference as a sorted list of entries: [] when the key is absent or holds `none` (the
-    default, #412: only the leader attended). Words are split on spaces and commas; `none` beside a name is dropped."""
-    words = str(dyadlib.preference(ATTENDED_SEATS, root) or "").replace(",", " ").split()
+    """The `paired-units` preference (alias `attended-seats`, #553) as a sorted list of entries: [] when the key is
+    absent or holds `none` (the default, #412: only the leader paired). Words are split on spaces and commas; `none`
+    beside a name is dropped."""
+    words = str(declared_preference(root)[1] or "").replace(",", " ").split()
     return sorted({w for w in words if w != NO_SEATS})
 
 def _seat_key(name: str) -> str:
@@ -380,17 +390,17 @@ def route(seat: str, root: Path | None = None, now: datetime.date | None = None)
 
 def attendance_line(a: dict) -> str:
     n_live = len(a["attended"]) + len(a["relayed"])
-    return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live seat(s) attended; declared: "
-            f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{ATTENDED_SEATS}`, Rule-16 Presence; the others' "
-            f"questions are relayed through the leader)")
+    return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live unit(s) dyad, the rest solo; paired: "
+            f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{PAIRED_UNITS}`, alias `{ATTENDED_SEATS}`, Rule-16 "
+            f"Presence; a solo unit's questions are relayed through the leader)")
 
 def fence_lines(a: dict) -> list[str]:
     """The record-derived check against the declared set, one line each (#412): `undeclared` for a disposition given in
     an undeclared seat, `warn` for a declared entry with none within the window. A board reading, not a Rule-3
     incident: the act it shows is the Operator's, and the leader, which tracks attendance, is its one reporter."""
-    return ([f"undeclared: {s} holds an own disposition of {d} but `{ATTENDED_SEATS}` does not declare it (Rule-16 Presence)"
+    return ([f"undeclared: {s} holds an own disposition of {d} but `{PAIRED_UNITS}` does not pair it (Rule-16 Presence)"
              for s, d in a["undeclared"]]
-            + [f"warn: {e} is declared attended but holds no own disposition within {a['window_days']} day(s)"
+            + [f"warn: {e} is paired but holds no own disposition within {a['window_days']} day(s)"
                for e in a["warnings"]])
 
 def system_handle(root: Path) -> str:
@@ -687,8 +697,8 @@ def main(a: list[str]) -> int:
         for s in rows:
             flag = "stale" if is_stale(s.get("seen", "")) else "live"
             name = s.get("session", s["_path"].removesuffix(".md"))
-            att = ((f" attended={a['attended'][name]}" if a["attended"][name] else " attended") if name in a["attended"]
-                   else (" relayed" if name in a["relayed"] else ""))
+            att = ((f" dyad={a['attended'][name]}" if a["attended"][name] else " dyad") if name in a["attended"]
+                   else (" solo" if name in a["relayed"] else ""))   # the unit kind (#553): paired, or not
             same_flag = " [SAME ROOT AS YOU]" if (shares_checkout(s, str(Path(root).resolve())) and s.get("session") != session_id()) else ""
             where = (f" host={s['host']}" if s.get("host") else "") + (f" holder={s['holder']}" if s.get("holder") else "")
             print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{att}{same_flag}")
