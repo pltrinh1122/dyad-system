@@ -11,7 +11,7 @@ The organization is an AI-agent **cabinet**: one chief of staff beside you, secr
 under them. You keep one unit beside you — the home, your **cos**, named `program-<hp>` — and it keeps the board
 of programs: every parent row you opened and the children it was decomposed into, across the member units. Each
 member unit is a **secretary**: it holds one function you want to watch — `counsel`, `audit`, `engineer`,
-`distribute`, `operate` by default — under a **charter** you wrote in the mandates table, and keeps its own board
+`distribute`, `operate`, `orchestrate` by default — under a **charter** you wrote in the mandates table, and keeps its own board
 of the rows and the **desks** under it, a desk being a unit it opens for one topic (`engineer-ledgerd-<hp>`). Every
 unit reads and writes the same ledgers, on the same `main`, so you never need a message to know where anything
 stands: the row's state, its record and its presence file are the report. You dispose, every unit proposes;
@@ -75,9 +75,12 @@ The d-work play-book (`dyad/playbooks/d-work.md`, Layers) splits every d-work in
   layer, and it is the only layer you sit in.
 - **Orchestration and execution — a solo.** The play-book itself: dispatching to units, collecting inbox reports,
   verifying heads and evidence, judging departures, drafting the completion evidence and the Done question for the
-  home to present. Today the home carries it, because no unit is chartered for it yet; the orchestrating secretary
-  is pending its charter (row #557, your `MANDATES.md` change, asked as its own question). Until then, keep the
-  home's share to the five acts and hand the rest on as above.
+  home to present. Its unit is the **orchestrating secretary**, function `orchestrate` (`orchestrate-<hp>`, #557):
+  it orchestrates and never authors — ledger-only commits to the board and the inbox, read-only over the tree,
+  evidence in its own worktree, no branch, PR or merge of its own — and it drafts the Done question while the home
+  presents it and records your `Y`. It runs only once you have chartered it, by your own row in `MANDATES.md`, asked
+  as its own question (§4); until then the home carries this layer, keeping its share to the five acts and handing
+  the rest on as above.
 - **Run-book execution — auto.** The automaton (`dyad automaton run`) runs the clerical edges from ledger lines on
   `main` alone: the merges your recorded Done names, pinned and in order; the close once every named head is on
   `main`; one notice to each owner when a plan is approved. It decides nothing — a moved head or a conflict is one
@@ -133,6 +136,11 @@ chat away for the duration. The posture matters where you are waiting: a solo's 
 on it but the cos, which relays and moves on, so it can spend its time instead of your tokens. If your preferences
 carry neither key, a dyad unit runs `responsive` and a solo one `efficient`. The posture never moves an
 act between units — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
+
+**Opening the orchestrating secretary (#557).** Open it as any unit, once its charter row is in your mandates
+table: `DYAD_SESSION=orchestrate-<hp>`. The home then hands it the rows it routes by inbox relay, and from then on
+the home's own share of a d-work is four acts — record your prompt, relay the plan question, present the Done
+question, record your `Y`.
 
 ## 4. Writing a charter
 A charter is a row of `preferences-corpus/MANDATES.md` (seeded from `../templates/mandates.md`), yours alone, by

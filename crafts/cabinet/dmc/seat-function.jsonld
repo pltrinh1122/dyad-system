@@ -60,6 +60,13 @@
       "name": "operate",
       "dyad:when": "the host",
       "dyad:then": "a secretary delivering the sysadmin practice for the Operator to execute"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "orchestrate",
+      "name": "orchestrate",
+      "dyad:when": "the d-work play-book's orchestration layer for every row the home routes",
+      "dyad:then": "a secretary that orchestrates and never authors, drafting the Done question for the home to present"
     }
   ],
   "dyad:judgedBy": {
