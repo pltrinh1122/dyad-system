@@ -6,7 +6,10 @@ path degrades to the git and ledger timeline, an unmatched or ambiguous entry is
 the window runs through the Done-`Y` (to the Done question in a preview, before one), `--out` writes
 `<instance>/d-work/traces/<id>.md`, the store is well-formed, and no transcript text reaches the output. #216: a
 push's suite/guards kind is read from the gate's skip line, `Ran N tests` or the pushed range in git — never from
-its duration — a hand-run `unittest` is suite only when it ran, and the Bottleneck's agent-side table renders."""
+its duration — a hand-run `unittest` is suite only when it ran, and the Bottleneck's agent-side table renders. #240:
+an opening disposition (`Y open`, `Y backlog`) anchors to a question naming no id or an origin's, never another
+row's, and the window starts at it. #286: a compaction summary is never the Operator's, and neither it nor a harness
+notice between a question and its `Y` breaks the anchor or the wait."""
 import datetime, json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -73,7 +76,7 @@ ENTRIES = [("prompt", "2026-10-05", "", PROMPT), ("disposition", "2026-10-05", "
 def git(root, *a):
     subprocess.run(["git", *a], cwd=root, check=True, capture_output=True, env=dyadlib.git_env())
 
-def fixture(entries=ENTRIES, lines=None, dates=None):
+def fixture(entries=ENTRIES, lines=None, dates=None, disposed="2026-10-05 Y plan", refs=""):
     """(root, transcript path): a git repository with row 7, its record and plan, one ledger commit and one
     work commit citing `d-work #7`; and the transcript, in the scratch directory and never in the repo.
     `dates` (#216): the two commits' author dates as transcript seconds, else now — after any window."""
@@ -82,7 +85,7 @@ def fixture(entries=ENTRIES, lines=None, dates=None):
     dw = root / "agent-corpus" / "d-work"
     for d in ("rows", "plans", "provenance"):
         (dw / d).mkdir(parents=True)
-    (dw / "rows" / "7.md").write_text("id: 7\ntitle: widget\nopened: 2026-10-05\nstate: planned\ndisposed: 2026-10-05 Y plan\nrefs: \n")
+    (dw / "rows" / "7.md").write_text(f"id: 7\ntitle: widget\nopened: 2026-10-05\nstate: planned\ndisposed: {disposed}\nrefs: {refs}\n")
     (dw / "plans" / "7.md").write_text("# Plan #7\n")
     (dw / "provenance" / "7.md").write_text(record(entries))
     when = lambda i: [f"--date={ts(dates[i])}"] if dates else []
@@ -334,6 +337,92 @@ class TraceTests(unittest.TestCase):
         self.assertTrue(any("notes.md: not `<id>.md`" in m for m in msgs))
         self.assertTrue(any("7.md: first line is not `# Trace #7" in m for m in msgs))
         self.assertTrue(any("7.md: sections" in m for m in msgs))
+
+OPEN_ENTRIES = [("disposition", "2026-10-05", "Y backlog (widget defects, from #6's plan-Y)", "Y"),
+                ("disposition", "2026-10-05", "Y plan", "Y")]
+
+def opening(question: str) -> list[dict]:
+    """A row opened by a question (asked at -50 s, answered at -10 s), then planned (asked 80 s, answered 200 s)."""
+    return [text(-50, f"{SECRET}\n{question}", "o0", "mo0"), user(-10, "Y", "o1"),
+            text(80, "Y/N: proceed with #7 as planned?", "o2", "mo1"), user(200, "Y", "o3")]
+
+
+class OpeningAndWakeTests(unittest.TestCase):
+    """#240 and #286."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+
+    def test_an_opening_y_anchors_to_a_question_naming_no_id(self):
+        root, path = fixture(OPEN_ENTRIES, lines=opening("Y/N: open a backlog row for the widget defects?"))
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([a["status"] for a in got], ["anchored", "anchored"])
+        self.assertEqual((got[0]["ts"], got[0]["asked_ts"]), (tr.ms(ts(-10)), tr.ms(ts(-50))))
+
+    def test_an_opening_y_never_anchors_to_another_rows_question(self):
+        root, path = fixture(OPEN_ENTRIES, lines=opening("Y/N: open the widget row, as #6's plan names?"))
+        recs = tr.load([path])[0]
+        self.assertEqual([a["status"] for a in tr.anchor(tr.provenance(7, root), recs, 7)], ["unmatched", "anchored"])
+        got = tr.anchor(tr.provenance(7, root), recs, 7, origins={6})                 # unless that row is its origin
+        self.assertEqual([a["status"] for a in got], ["anchored", "anchored"])
+        root, path = fixture(OPEN_ENTRIES, lines=opening("Y/N: proceed with #6 as planned?"))
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7, origins={6})   # an origin's plan question: never
+        self.assertEqual([a["status"] for a in got], ["unmatched", "anchored"])
+
+    def test_entry_1_of_a_row_born_backlog_is_an_opening(self):
+        entries = [("disposition", "2026-10-05", "", "Y")] + OPEN_ENTRIES[1:]          # a bare note, the row says backlog
+        root, path = fixture(entries, lines=opening("Y/N: open a backlog row for the widget defects?"))
+        recs = tr.load([path])[0]
+        got = tr.anchor(tr.provenance(7, root), recs, 7)                              # read as any `Y`: takes the plan's
+        self.assertEqual([(a["status"], a["ts"]) for a in got], [("anchored", tr.ms(ts(200))), ("unmatched", None)])
+        got = tr.anchor(tr.provenance(7, root), recs, 7, opened=True)
+        self.assertEqual([a["ts"] for a in got], [tr.ms(ts(-10)), tr.ms(ts(200))])
+
+    def test_a_backlog_rows_window_starts_at_its_question(self):
+        root, path = fixture(OPEN_ENTRIES, lines=opening("Y/N: open a backlog row for the widget defects?"),
+                             disposed="2026-10-05 Y backlog (widget defects, from #6's plan-Y); 2026-10-05 Y plan", refs="6")
+        out = tr.trace(7, root, [path])
+        self.assertIn("Window: 2026-10-05 09:59:10 → ", out)                         # the opening question, -50 s
+        self.assertNotIn(SECRET, out)
+
+    def test_an_evidence_run_is_suite_whatever_its_length(self):
+        """Observation 3 of #240 (a 196 s evidence run booked `guards`) does not reproduce: pinned here."""
+        lines = [tool(0, "e1", "Bash", "e0", "n0", command="./dyad/bin/dyad check --evidence --brief"),
+                 result(196, "e1", "e2", content="ok   [guards] agent/rows")]
+        path = Path(tempfile.mkdtemp()) / "t.jsonl"
+        path.write_text("".join(json.dumps(l) + "\n" for l in lines))
+        self.assertEqual([r["tkind"] for r in tr.load([path])[0] if r["kind"] == "tool_use"], ["suite"])
+
+    def wake(self, rec):
+        lines = transcript(); lines.insert(len(lines) - 1, rec)                      # between the Done question and its `Y`
+        root, path = fixture(lines=lines)
+        recs = tr.load([path])[0]
+        got = tr.anchor(tr.provenance(7, root), recs, 7)
+        self.assertEqual([a["status"] for a in got], ["anchored"] * 3)
+        self.assertEqual((got[2]["ts"], got[2]["asked_ts"]), (tr.ms(ts(400)), tr.ms(ts(230))))
+        start, end = tr.ms(ts(0)), tr.ms(ts(400))
+        b, _ = tr.buckets(tr.intervals(recs, start, end)[0], start, end)
+        self.assertEqual(b["operator"] // 1000, 120 + 170)                           # 80→200 and 230→400, across the wake
+        self.assertEqual(b["background"], 0)
+        return recs
+
+    def test_a_compaction_keeps_the_anchor_and_the_wait(self):
+        compact = {"type": "user", "timestamp": ts(300), "uuid": "c0", "sessionId": "s1", "isCompactSummary": True,
+                   "message": {"role": "user", "content": f"{SECRET} This session is being continued ..."}}
+        recs = self.wake(compact)
+        self.assertEqual([r["kind"] for r in recs if r["ts"] == tr.ms(ts(300))], ["compact"])   # never the Operator's
+        self.assertEqual(sum(r["kind"] == "operator" for r in recs), 4)
+
+    def test_a_notice_keeps_the_anchor_and_the_wait(self):
+        self.wake(user(300, "<task-notification>done</task-notification>", "n0", origin="task-notification"))
+
+    def test_a_notice_answered_by_the_agent_is_background(self):
+        lines = [text(0, "launched", "b0", "mb0"), user(50, "<task-notification>done</task-notification>", "b1", origin="task-notification"),
+                 tool(60, "b2", "Bash", "b3", "mb1", command="ls")]
+        path = Path(tempfile.mkdtemp()) / "t.jsonl"
+        path.write_text("".join(json.dumps(l) + "\n" for l in lines))
+        self.assertEqual(tr.intervals(tr.load([path])[0], 0, tr.ms(ts(100)))[0][-1:],
+                         [(tr.ms(ts(0)), tr.ms(ts(50)), "background")])
+
 
 class LiveTests(unittest.TestCase):
     def test_refusals(self):
