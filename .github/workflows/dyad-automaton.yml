@@ -1,0 +1,41 @@
+name: d-work automaton
+# The d-work automaton (d-work #556; backlog #542 absorbed): the d-work's clerical edges run from ledger lines by a
+# party that decides nothing, the countersign model's executor (#553's automaton). On a push to main touching the
+# ledger's rows or board, it runs `dyad automaton run` at main's own reviewed code (never a seat's working tree, A2):
+#   (a) merges every PR a recorded operative `Y done` names, pinned to the head it names and in its order, by the
+#       record-bound `dyad merge` (a race to main retried with backoff);
+#   (b) closes a row whose every named head landed, with its accreted rows and its board entry
+#       (`dyad steps close-landed --land`);
+#   (c) posts one inbox notice to each board owner of a row just planned.
+# A refusal decides nothing: one notice to the home's inbox. Stateless and idempotent: every run re-reads main, so a
+# run may be retried and a run that dies loses nothing. Its pushes go through the same pre-push gate as a seat's
+# (core.hooksPath dyad/hooks, Rule-14 property 3), and its commits carry the workflow's identity.
+# The switch is the operator's: the repository variable DYAD_AUTOMATON must be `on`, or the job is skipped.
+on:
+  push:
+    branches: [main]
+    paths: ["agent-corpus/d-work/rows/**", "agent-corpus/d-work/board/**"]
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+concurrency: { group: dyad-automaton, cancel-in-progress: false }
+jobs:
+  run:
+    if: vars.DYAD_AUTOMATON == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0, fetch-tags: true }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: run the d-work automaton
+        env:
+          DYAD_SESSION: automaton   # the inbox sender's seat
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
+          python3 dyad/scripts/package.py automaton scan
+          python3 dyad/scripts/package.py automaton run
