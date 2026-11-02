@@ -275,7 +275,7 @@ and by many over time. You open any session on any machine, say "cos", and you a
 | phase | what lands | row | exit test |
 |---|---|---|---|
 | P1 — **delivered** (#535) | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
-| P2 | a store inbox on `main`: seats post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test seat receives and answers a relay with no message |
+| P2 — **delivered** (#536) | a store inbox on `main`: seats post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test seat receives and answers a relay with no message |
 | P3 | the lease: take, yield, status; a stable seat name for the cos; a take by a session holding another seat refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
 | P4 | the mode as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
 | P5 | follow into an unseated session: a fresh session takes the mode on your first message; an attended secretary or desk never does | #539 | writing in an attended secretary's chat leaves it a secretary |
@@ -295,8 +295,19 @@ another takes over — a **hop** — nothing in flight is lost:
    questions you owe verbatim, the dispatched work and its waits, the external gates and the seats to announce to.
 2. It re-presents an open question unchanged, or tells you it is still pending; it never re-derives one, and asks
    you nothing about state. What you see of the hop is one line: "cos resumed in <session>".
-3. It announces itself to every seat in `_cos.md`'s table, by session id, until P2's inbox makes that unnecessary.
+3. It reads its inbox (`dyad inbox read`): every report a seat posted while the cos was between sessions is there,
+   addressed to the seat `program`, not to the old session, so nothing a seat sent is lost and no seat needs to be
+   told where the cos now is (P2, #536).
 4. `dyad board` renders your board from the rows and the board store; it warns when the board's last `writer` is not
    this session, the sign of two holders, which P3's lease will arbitrate.
+**The inbox, as P2 delivers it (#536).** Seats and the cos write to each other through the inbox store
+(`<instance>/d-work/inbox/<seat>/`, Rule-16 Store), one file per message, addressed by seat: a report is `dyad inbox
+post program --row <id> --kind report …`, a relay `dyad inbox post <seat> --row <id> --kind relay …`. Every seat reads
+its inbox at the start of every turn; `dyad board resume` and `dyad session touch` print the unread count. A chat
+message to a session becomes a doorbell only, so a terminal desk (§9), which receives no chat message, hears the cos
+by reading its inbox, and a report reaches the cos however many hops it has made. The inbox carries information
+only: a body shaped like a disposition is refused — a report names the row whose ledger entry it means and
+never quotes the entry — and your words reach a seat verbatim with the record entry they
+were given in.
 P1's exit test is the **hop drill**: mid-flight, with a seat dispatched and a question open, a fresh session resumes
 and closes the row with no lost item and no question about state; you observe it and are asked nothing.

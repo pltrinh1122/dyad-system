@@ -199,3 +199,15 @@ merges sentence and its "never done at the cos" list. VERSION stays 0.3.2 (uncut
 | 42 | `dyad board` restates the core's verbs in a craft. | **Refuted**: the Guide describes the Operator's view of the verbs and cites Rules 3 and 16; it defines nothing. |
 
 **Survivor:** the Guide's §10 as amended. VERSION 0.4.1 (the drift guard requires it, `cabinet-v0.4.0` being cut). Disposition: see ledger #535.
+
+## Amendment — dyad-system #536 (2026-11-02: report by inbox; the Guide marks P2 delivered)
+**Claim (plan #536, the Operator's `Y` of 2026-11-02):** §5 gains "Report by inbox"; the Guide's §10 marks P2 delivered,
+describes the inbox and replaces the hop's announcement step by reading the inbox.
+
+| # | attack | result |
+|---|---|---|
+| 43 | "Report by inbox" contradicts "announce, never order": a relay is an order. | **Refuted**: a relay carries the Operator's words verbatim, never the cos's own order; the inbox changes the carrier only, and a message never authorizes. |
+| 44 | Dropping the hop's announcement step leaves a seat still messaging the old session. | **Survives, scoped**: a seat now posts to the seat `program`, which the new holder reads; a doorbell to an old session is harmless because the inbox, not the message, carries the report. |
+| 45 | The Guide marks P2 delivered before its acceptance (#546's S5, S6, S18, S26) runs. | **Refuted**: the acceptance is engineer's PR's simulator tests, which the Done verifies with this PR. |
+
+**Survivor:** §5's "Report by inbox"; the Guide's §10 as amended. Disposition: see ledger #536.
