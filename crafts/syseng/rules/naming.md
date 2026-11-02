@@ -128,11 +128,13 @@ token `Y` (and `N`) keeps its capital wherever it appears in a term, so the term
 ledger records `Y plan` and `Y done`. Do not use "bond" for the pair: dyad-bond is another system.
 
 **The closed uppercase list.** These names keep their case and nothing new joins them without a change to this list:
-`RULE-<n>-<slug>.md`, `VERSION`, `README.md`, `LICENSE`, `CLAUDE.md`, `MANIFEST.md`, `CRAFT.md`, `VOCABULARY.md`,
+the ecosystem names `README.md`, `LICENSE`, `CLAUDE.md` and `CHANGELOG.md`, which tools outside this system expect
+spelled so; and `RULE-<n>-<slug>.md`, `VERSION`, `MANIFEST.md`, `CRAFT.md`, `VOCABULARY.md`,
 `PREFERENCES.md`, `MANDATES.md`, `INCIDENTS.md`, `LEDGER.md` (rendered), `BUNDLE.md`, `INFRASTRUCTURE.md`,
 `REGISTRY.md`. Renaming them would move about 1,250 references and the patterns guards match; a rename is its own
 later d-work. Python class names and constants, and environment variables (`DYAD_<NAME>`), keep Python's and the
-shell's conventions.
+shell's conventions. An ISO 8601 basic UTC stamp keeps its `T` and `Z` (`20261102T182557Z`, the inbox's
+message names), because that standard defines the designators' case (L1 below).
 
 ## Case: who must type it exactly (dyad-system #553)
 Case and spelling matter only where a machine compares a string literally. The operator's text is **read**: prompts
@@ -144,7 +146,7 @@ plan's intent as read, the row, the board).
 The decision for one label (the criterion record `dyad/dmc/label-case.jsonld`, inputs L1–L6), first match wins:
 | # | question | outcome |
 |---|---|---|
-| L1 | Does an outside system define its case (an environment variable, a Python identifier, a JSON-LD or schema.org key, a git hex sha)? | **outside case kept**: the outside system's case, listed among the exceptions above |
+| L1 | Does an outside system define its case (an environment variable, a Python identifier, a JSON-LD or schema.org key, a git hex sha, an ISO 8601 basic stamp's `T` and `Z`)? | **outside case kept**: the outside system's case, listed among the exceptions above |
 | L2 | Is it ledger grammar the agent's tooling writes (`Y plan`, `Y done`, `N amend`)? | **ledger grammar exact**: exact case, written only by tooling, never typed by the operator |
 | L3 | Is it an ecosystem file name or on the closed uppercase list? | **listed exception**: kept as it is |
 | L4 | Anything else: files, keys, flags, unit names, tags, branches, terms | **lowercase kebab-case**: canonical lowercase, stored lowercase |
