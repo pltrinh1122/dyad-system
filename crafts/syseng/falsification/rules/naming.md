@@ -96,6 +96,8 @@ and never needs exact case, the agent's is written canonically; L1–L6 decide o
 | 4 | Normalizing `yes` into `Y` puts words in the operator's mouth. | **Refuted** (R2): provenance keeps `yes` verbatim; the row records the token the answer grammar defines. A reading, not an edit. |
 | 5 | Casefold-uniqueness breaks an existing pair of labels. | **Checked when built** (R3): the guard reports any existing collision once, as a warning. |
 | 6 | "bond" is a fine English word. | **Survives**: it names another system (dyad-bond), so in this system's text it would be read as that system. |
+| 7 | The inbox's message names (`20261102T182557Z-…`) carry an uppercase `T` and `Z`, so L4 fails every new message. | **Confirmed, and placed under L1**: ISO 8601 defines the designators' case; the standard says so beside the closed list, and the guard carries it as data. |
+| 8 | `CHANGELOG.md` is outside the standard (two files on `main`). | **Survives as an ecosystem name**, beside `README.md`: tools outside this system expect it so; it joins the closed list's ecosystem names. |
 
 **Survivor:** the two sections "Case and separators" and "Case: who must type it exactly". The guard's checks (the
 casefold collision and the refused term) are the engineer's step 3, read against this text. VERSION 0.6.1 (the drift
