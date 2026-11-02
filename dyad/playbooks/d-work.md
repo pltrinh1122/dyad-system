@@ -122,7 +122,9 @@ report + proposal (done) → countersignature — realized as, in order:
    the merges as clerical execution (the ledger's record of the `Y` — the `disposed` entry and the
    provenance entry — precedes every merge it ratifies); then `dyad dwork state <id> done`, a second
    commit with no disposition, once git shows every head those entries name on `main`. A done-`Y` that
-   names no merge is recorded `done` at once. Anything else: the d-work stays as it was.
+   names no merge is recorded `done` at once. Anything else: the d-work stays as it was. When the automaton is
+   on, the record is the last act an inferring unit takes: the automaton runs the merges and the close from
+   that ledger line (Layers, below).
 
 Branches. An **accreted row** (implicit mode) skips 2 and 3: born `open` carrying the mandate's plan-`Y`, no
 plan file of its own (Rule-15), its Done riding the mandate's done-`Y`, which names it. A **`backlog`** row is
@@ -130,6 +132,23 @@ born by a disposition and enters at 1 on a later prompt, or leaves by the retire
 row waits on the row its `refs` names and re-enters at 4 when that row is `done`. **`archived`** is the exit
 from `done` and `backlog`, by the retirement form only; a retired or done row is never reopened — a new row
 refs it.
+
+Layers. The lifecycle is executed in three layers, one per unit kind (Rule-16 Presence; #556 revision 2), and a
+step belongs to the layer whose inputs it needs:
+
+| layer | unit kind | what it executes | its inputs |
+|---|---|---|---|
+| interaction | dyad unit — the home | 1, 3 and 6 as the operator's: reading the intent from the operator's words, presenting the plan's and the Done's questions at the operator's altitude (`relay-form`), transcribing every disposition verbatim (Rule-7) and recording it (`record`, `done-record`) | the operator, live |
+| orchestration and execution | solo | 2, 4 and 5: this play-book — drafting the plan, dispatching to units, collecting inbox reports, verifying heads and evidence (`verify-prs`), judging departures and incidents, drafting the completion evidence and the Done question for the home to present | the ledger and the inbox, never a live disposition |
+| run-book execution | auto — the automaton | the clerical edges of 6 and the plan notice: merging the PRs a recorded `Y done` names, pinned and in order; `close-landed` once every named head is on `main`; one inbox notice to each board owner of a row whose last disposition is a `Y plan`; a refusal posted once to the home's inbox | ledger lines on `main` only |
+
+The automaton is `dyad automaton scan|run` (`dyad/scripts/automaton.py`), run server-side on every push to
+`main` from `main`'s own code by `.github/workflows/dyad-automaton.yml` while the operator's repository variable
+`DYAD_AUTOMATON` is `on`, and by hand by any unit for recovery. It is stateless — every run re-reads the ledger
+and every act is idempotent — and it decides nothing: it executes a `Y` the ledger already holds, the countersign
+model's executor (Rule-2 Enforcement; Rule-3 Completion counter-prompt). Until an orchestrating solo is chartered
+(row #557, the operator's `MANDATES.md`), the home executes the orchestration layer as it does today; with the
+automaton off, the home or the unit that owns a PR runs the merges and the close by hand, as before.
 
 ## Reading
 - **The machine before the forms.** What a row may do next is its state's rows of δ: the input named there
@@ -147,6 +166,11 @@ revisions, the record's entry count, the trace), and every accreted row with its
 the runner names its event id; the native command is the default and needs no statement.
 
 ## Conduct
+Units run the run-book's steps by name, with their parameters (`DWORK`, `PRS`, `SAID`, …), and never re-author
+them: a hand-written script that repeats a step is the recurring task Rule-13 property 1 turns into code, and a
+new recurring script becomes a run-book step through its own row, never inline in another d-work (#556
+revision 3).
+
 The play-book decides and records; it never disposes (frame: detect, don't dispose; Rule-2 — the agent
 proposes). It never moves a row on an input the table does not name, never writes a disposition the operator
 did not give, and never reopens a terminal row. What it cannot do is make a transition the fence refuses
