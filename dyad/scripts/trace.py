@@ -612,11 +612,13 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
                   f"| tool calls | {len(tools)} | transcript |",
                   f"| output tokens | {sum(tokens.values())} | transcript |"]
         n_rep = replies(recs, start, end)                # #560 D5: what the Operator reads per decision it makes
-        n_disp = sum(a["kind"] == "disposition" and start <= a["ts"] <= end for a in anchored)
+        days = (utc(start)[:10], utc(end)[:10])         # the ledger's own count, not the transcript's anchors
+        n_disp = sum(e["kind"] == "disposition" and days[0] <= e["date"] <= days[1] for e in entries)
         lines.append(f"| replies per disposition | {n_rep / n_disp:.1f} ({n_rep} replies, {n_disp} dispositions) | transcript |"
                      if n_disp else f"| replies per disposition | no disposition in the window ({n_rep} replies) | transcript |")
         limits.append("replies per disposition counts the replies the Operator was shown (a turn's last text), never what "
-                      "was read: an inference (#560 D5)")
+                      "was read: an inference; its dispositions are the provenance record's, dated on the window's days "
+                      "(a record holds dates, not times), anchored or not (#560 D5)")
         ranged = [r for r in tools if r.get("ranged")]   # #216: pushes booked from the pushed range, not the result text
         if ranged:
             limits.append(f"{len(ranged)} push gate(s) booked from the pushed range read from git (no skip line and no `Ran N tests` "

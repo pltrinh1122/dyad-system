@@ -447,6 +447,16 @@ class RepliesPerDispositionTests(unittest.TestCase):
         self.assertIn("| replies per disposition | 1.0 (2 replies, 2 dispositions) | transcript |", out)
         self.assertIn("replies per disposition counts the replies the Operator was shown", out)
 
+    def test_the_denominator_is_the_records_not_the_anchors(self):
+        lines = [l for l in transcript() if l["uuid"] not in ("u5", "u6")]           # the plan `Y` never anchors
+        root, path = fixture(lines=lines)
+        out = tr.trace(7, root, [path])
+        self.assertIn("unmatched in the transcript", out)
+        self.assertIn("| replies per disposition | 0.5 (1 replies, 2 dispositions) | transcript |", out)   # both counted
+        entries = ENTRIES[:2] + [("disposition", "2026-10-06", "Y done merges PR #1", "Y")]   # dated after the window
+        root, path = fixture(entries, lines=transcript()[:-1])
+        self.assertIn("(2 replies, 1 dispositions)", tr.trace(7, root, [path]))
+
     def test_no_disposition_in_the_window(self):
         lines = transcript()[:-1]                                                          # a preview before the Done-`Y`
         root, path = fixture(ENTRIES[:1], lines=lines)
