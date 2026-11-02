@@ -690,3 +690,28 @@ transition is added. **3–6**: no new term; `d-work` still reads correctly ("op
 opens, not that every prompt opens one). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #492.
+
+## Amendment — d-work #535 (2026-11-02, Batch disposition: the pending queue recorded in the board store, written ahead)
+**Claim (plan #535, the Operator's `Y` of 2026-11-02 on: "if `cos` is a mode, the orchestration needs to be continuous and
+seamless during seat-hops."):** the pending queue, and every open row's orchestration in flight, is recorded in the board
+store (Rule-16), written before the act it records, so a hop of the session holding it loses nothing and asks the
+Operator nothing about state.
+
+| # | attack | result |
+|---|---|---|
+| B1 | The rows and plans already hold the orchestration. | **Refuted** (plan attack 1): a row says `planned`, never who holds the work, what it waits on, the next act or the question outstanding; the plan's inventory of 2026-11-01/02 found six kinds of item in no store. |
+| B2 | "Conversational, not a corpus file" was chosen deliberately (#17): recording the queue costs a commit per change. | **Survives, priced** (plan attack 7): a board write is a ledger-only commit, which runs no suite (Rule-12 property 2); turns already make one to three, and the board adds about one. What #17 bought — no file to drift — is kept by overwriting, never accumulating. |
+| B3 | A hop mid-turn loses what the old holder had not yet written. | **Survives with write-ahead** (plan attack 3): the entry precedes the act, so a hop loses at most the reply being composed. |
+| B4 | A new holder re-asks or re-derives the Operator's question. | **Survives, procedure** (plan attack 4): the question is stored verbatim with when it was asked; the new holder re-presents it unchanged or reports it pending. |
+| B5 | Recording the queue makes it a check, and a wrong entry a failing one. | **Refuted, stated**: the guard checks shape only (Rule-16); whether an entry is true of the work stays inference, as the sentence it replaces said of the queue. |
+| B6 | The board is the cos's, so it belongs to the cabinet craft, not a core Rule. | **Survives, scoped**: the queue is Rule-3's own concept and exists under `organization: flat` too, where the one pair's Agent holds the board; the cos is named only as the m4 case. The Guide (§10) carries the hop's practice. |
+
+**Pairwise (Rule-5).** **3–16**: Rule-16 owns the store, its path, keys, guard and its overwrite semantics; Rule-3
+owns the queue and the write-ahead conduct, and cites the store. **3–2**: a board write is clerical, ledger-only (Not
+ratification), and records no disposition; unchanged. **3–7**: a board entry quotes a question the Agent asked, never
+the Operator's words, so it is no provenance record; unchanged. **3–1**: one zone, the agent zone. **3–6**: `board
+store`, `write-ahead` and `hop` added, `pending queue` reworded. **3–10**: concise-mode's single reply still carries the
+counts; unchanged. **3–12**: no suite for a ledger-only range; unchanged. **3–15**, **3–20**: plans and references
+untouched (the board is not a reference kind; the guard resolves its ids itself). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #535.

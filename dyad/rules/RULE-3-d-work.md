@@ -314,8 +314,15 @@ Once engaged, the Agent holds a **pending queue**: every plan-ready d-work (its 
 written, Rule-15, counter-prompt not yet asked as part of a batch) and, separately, every
 done-ready d-work (its completion evidence gathered, Done question not yet asked as part of a
 batch). Both counts are reported at the end of every reply while either is non-empty, so an
-unintended engagement is visible within one turn. The queue is conversational, derived from the
-ledger and the stored plan files — not a corpus file, nothing here is mechanically checked.
+unintended engagement is visible within one turn. The queue is recorded, not conversational: its
+counts and the last question asked live in the **board store** (Rule-16 Store), beside every open row's
+orchestration in flight — who holds the work, what it waits on, its next act, the question the Operator
+owes verbatim, the follow-ups promised — so a **hop** of the session holding the board (under
+`organization: m4`, the cos) loses none of it and asks the Operator nothing about state. The board is
+written **write-ahead**: a turn that changes orchestration writes the board entry before it dispatches the
+work, sends the relay or asks the question that entry records, so a hop at any moment loses at most the
+reply being composed, never an act already taken. Its guard checks the files' shape only; whether an entry
+is true of the work is inference, as before (#535).
 
 The batch forms replace the single forms above, one kind at a time — a plan batch and a done
 batch are never the same question:
@@ -460,6 +467,9 @@ Rule-2's Binding does, by its sha256 and its brief form, 2026-10-26 (d-work #476
 record, amendment #476. Scope gains the read-only answer
 2026-10-27 (d-work #492): a board shown on request had cost a row, a provenance record, a trace, two ledger pushes
 and a Done question for a pure read (#490), while a read's own proposal had been given a `Y` with no row to land on
-(#491); see the same record, amendment #492.
+(#491); see the same record, amendment #492. Batch disposition records
+the pending queue in the board store, written ahead, 2026-11-02 (d-work #535): the orchestration in flight — the
+queue, every question owed, every dispatched act and its wait — lived only in the cos's chat, and a hop of the cos
+from one session to another would have lost it; see the same record, amendment #535.
 
 Set: System Requirements.
