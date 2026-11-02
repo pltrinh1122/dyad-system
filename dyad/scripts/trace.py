@@ -64,6 +64,7 @@ HEADER = re.compile(r"^# Trace #(\d+) — \S")
 SECTIONS = ("Timeline", "Buckets", "Counts", "Bottleneck", "Limits")   # a trace's parts, in order (the store check)
 DONE = re.compile(r"\bdone\b", re.I)       # a disposition note naming the Done-`Y` (Rule-3 Ledger: `Y done …`)
 PLAN = re.compile(r"\bplan\b", re.I)       # a disposition note naming a plan-`Y` (`Y plan …`)
+OPENING = re.compile(r"\s*Y (?:open|backlog)\b", re.I)   # a note (or a row's first `disposed` entry) opening the row (#240)
 PROCEED = re.compile(r"^Y/N:\s*proceed with\b", re.I)    # the plan counter-prompt's form (Rule-3 Plan)
 DONE_ASKED = re.compile(r"^Y/N:\s*Done with\b", re.I)    # the completion counter-prompt's form (Rule-3)
 
@@ -142,8 +143,10 @@ def _yn_kind(text: str) -> str | None:
     return "plan" if PROCEED.search(last) else "done" if DONE_ASKED.search(last) else None
 
 def _note_kind(note: str) -> str | None:
-    """`plan` or `done`: which counter-prompt a disposition note answers (`Y plan …`, `Y done …`), else None."""
-    return "done" if DONE.search(note) else "plan" if PLAN.search(note) else None
+    """`open`, `plan` or `done`: which counter-prompt a disposition note answers (`Y open …` or `Y backlog …`, the
+    question that opens a row, read first since its note may name another row's plan; `Y plan …`; `Y done …`), else
+    None (#240)."""
+    return "open" if OPENING.match(note) else "done" if DONE.search(note) else "plan" if PLAN.search(note) else None
 
 def tool_kind(name: str, inp: dict) -> str:
     if name in SUBAGENT_TOOLS:
@@ -250,6 +253,8 @@ def _derive(o: dict) -> list[dict]:
             return [_rec("tool_result", t, sess, tool=b.get("tool_use_id"), ran=bool(SUITE_RAN.search(_flat(b.get("content")))),
                          skipped=bool(SUITE_SKIP.search(_flat(b.get("content")))))   # two flags, never the text (#216)
                     for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
+        if o.get("isCompactSummary"):                    # a compaction's summary: never the Operator's (#286)
+            return [_rec("compact", t, sess)]
         if o.get("isMeta"):
             return []
         text, origin = _text(content), (o.get("origin") or {}).get("kind") if isinstance(o.get("origin"), dict) else None
@@ -330,23 +335,31 @@ def _matches(entry_text: str, msg_text: str) -> bool:
     e, m = norm(entry_text), norm(msg_text)
     return bool(e) and (e == m or (len(e) >= SHORT and e in m))
 
-def anchor(entries: list[dict], recs: list[dict], rid: int) -> list[dict]:
+def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = frozenset(),
+           opened: bool = False) -> list[dict]:
     """One result per entry, in order: {n, kind, note, date, ts|None, status, asked_ts}. Status is `anchored`,
-    `unmatched` or `ambiguous`; only an anchored entry carries a timestamp."""
-    ops, last_any = [], None
-    for r in recs:                                       # each Operator message with the reply it answers
-        if r["kind"] == "operator":
-            ans = last_any if last_any is not None and last_any["kind"] == "text" and last_any.get("yn") is not None else None
-            ops.append((r, ans))
-        last_any = r
+    `unmatched` or `ambiguous`; only an anchored entry carries a timestamp. `origins` are the ids the row refs and
+    `opened` says its first `disposed` entry opened it (`Y open`, `Y backlog`): an opening disposition is asked before
+    the row exists, so it may anchor to a `Y/N:` reply naming no id or an origin's id (#240)."""
+    ops, last_text = [], None
+    for r in recs:                                       # each Operator message with the reply it answers: the last
+        if r["kind"] == "operator":                      # text since the previous Operator message, across harness
+            ans = last_text if last_text is not None and last_text.get("yn") is not None else None   # notices,
+            ops.append((r, ans)); last_text = None       # compactions, thinking and tools (#286)
+        elif r["kind"] == "text":
+            last_text = r
     out, pos = [], 0
     for e in entries:
         res = {"n": e["n"], "kind": e["kind"], "note": e["note"], "date": e["date"], "ts": None, "status": "unmatched", "asked_ts": None}
         cands = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos and _matches(e["text"], m["text"])]
         if e["kind"] == "disposition":
             want = _note_kind(e["note"])                 # a plan `Y` answers a plan question, a Done `Y` a Done one
-            cands = [c for c in cands if c[2] is not None and rid in c[2]["yn"]
-                     and (want is None or c[2].get("ynk") == want)]
+            if want == "open" or (opened and str(e["n"]) == "1" and want is None):   # never a plan or Done question
+                cands = [c for c in cands if c[2] is not None and c[2].get("ynk") is None
+                         and (not c[2]["yn"] or rid in c[2]["yn"] or c[2]["yn"] & set(origins))]
+            else:
+                cands = [c for c in cands if c[2] is not None and rid in c[2]["yn"]
+                         and (want is None or c[2].get("ynk") == want)]
             cands = [c for c in cands if utc(c[1]["ts"])[:10] == e["date"]]   # a wrong date is unmatched, never guessed
             cands = cands[:1]                            # dispositions are taken in sequence (plan #213, attack 4)
         if len(cands) > 1:
@@ -374,12 +387,19 @@ def intervals(recs: list[dict], start: int, end: int) -> tuple[list[tuple[int, i
                 bg.append({"ts": r["ts"], "name": r["name"], "tkind": r["tkind"]})
             if done is not None and done > r["ts"]:
                 out.append((r["ts"], done, r["tkind"]))
-    prev = None
-    for r in recs:
-        if prev is not None and prev["kind"] == "text" and r["kind"] in ("operator", "notify") and r["ts"] > prev["ts"]:
-            label = "background" if r["kind"] == "notify" else "operator" if prev.get("yn") is not None else "idle"
-            out.append((prev["ts"], r["ts"], label))
-        prev = r
+    for i, r in enumerate(recs):                         # a reply's wait: to the next real Operator message across any
+        if r["kind"] != "text":                          # notice or compaction; else, when an agent act follows a
+            continue                                     # notice unanswered, to the first notice (#286)
+        j, first_notify = i + 1, None
+        while j < len(recs) and recs[j]["kind"] in ("notify", "compact"):
+            if recs[j]["kind"] == "notify" and first_notify is None:
+                first_notify = recs[j]
+            j += 1
+        nxt = recs[j] if j < len(recs) else None
+        if nxt is not None and nxt["kind"] == "operator" and nxt["ts"] > r["ts"]:
+            out.append((r["ts"], nxt["ts"], "operator" if r.get("yn") is not None else "idle"))
+        elif first_notify is not None and first_notify["ts"] > r["ts"]:
+            out.append((r["ts"], first_notify["ts"], "background"))
     return [(max(a, start), min(b, end), lab) for a, b, lab in out if b > start and a < end], bg
 
 def buckets(ivs: list[tuple[int, int, str]], start: int, end: int) -> tuple[dict[str, int], list[tuple[int, int, str]]]:
@@ -460,7 +480,9 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
     commits, merges = git_events(rid, root)
     paths = transcripts if transcripts is not None else default_transcripts(root)
     recs, problems = load(paths, commits) if paths else ([], [])
-    anchors = anchor(entries, recs, rid) if recs else []
+    first = (row.disposed or "").split(";")[0]
+    anchors = anchor(entries, recs, rid, {int(i) for i in re.findall(r"\d+", row.refs or "")} - {rid},
+                     bool(OPENING.match(re.sub(r"^\s*\d{4}-\d{2}-\d{2}", "", first)))) if recs else []
     limits: list[str] = list(problems)
     home = str(Path.home())
     shown = ", ".join("`" + (str(p).replace(home, "~", 1) if str(p).startswith(home) else str(p)) + "`" for p in paths)
@@ -476,7 +498,8 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
     done_ts, preview = None, False
     anchored = [a for a in anchors if a["status"] == "anchored"]
     if anchored:
-        start = min(a["ts"] for a in anchored)
+        start = min([a["ts"] for a in anchored] + [a["asked_ts"] for a in anchored    # from the opening question,
+                     if a["kind"] == "disposition" and str(a["n"]) == "1" and a["asked_ts"]])   # its wait booked (#240)
         dones = [a for a in anchored if a["kind"] == "disposition" and DONE.search(a["note"])]
         if dones:                                        # the trace proper: through the Done-`Y` (plan #213 revision 2)
             done_ts = end = dones[-1]["ts"]
