@@ -424,6 +424,35 @@ class OpeningAndWakeTests(unittest.TestCase):
                          [(tr.ms(ts(0)), tr.ms(ts(50)), "background")])
 
 
+class RepliesPerDispositionTests(unittest.TestCase):
+    """#560 D5: the replies the Operator was shown per disposition it gave, in the window."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+
+    def test_a_reply_is_a_turns_last_text(self):
+        lines = [text(0, "working", "r0", "m0"), tool(1, "t1", "Bash", "r1", "m1", command="ls"), result(2, "t1", "r2"),
+                 text(3, "done: Y/N: proceed with #7 as planned?", "r3", "m2"),           # ends a turn: a reply
+                 user(10, "<task-notification>x</task-notification>", "r4", origin="task-notification"),
+                 text(11, "noted", "r5", "m3"),                                            # ends at the next prompt: a reply
+                 user(20, "Y", "r6"), text(21, "last", "r7", "m4")]                        # the transcript's end: a reply
+        path = Path(tempfile.mkdtemp()) / "t.jsonl"
+        path.write_text("".join(json.dumps(l) + "\n" for l in lines))
+        recs = tr.load([path])[0]
+        self.assertEqual(tr.replies(recs, tr.ms(ts(0)), tr.ms(ts(30))), 3)
+        self.assertEqual(tr.replies(recs, tr.ms(ts(4)), tr.ms(ts(30))), 2)                 # the window bounds it
+
+    def test_the_counts_carry_the_ratio(self):
+        root, path = fixture()
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | 1.0 (2 replies, 2 dispositions) | transcript |", out)
+        self.assertIn("replies per disposition counts the replies the Operator was shown", out)
+
+    def test_no_disposition_in_the_window(self):
+        lines = transcript()[:-1]                                                          # a preview before the Done-`Y`
+        root, path = fixture(ENTRIES[:1], lines=lines)
+        self.assertIn("| replies per disposition | no disposition in the window (2 replies) | transcript |", tr.trace(7, root, [path]))
+
+
 class LiveTests(unittest.TestCase):
     def test_refusals(self):
         root, path = fixture()
