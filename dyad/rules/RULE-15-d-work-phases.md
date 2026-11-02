@@ -19,7 +19,9 @@ that can start in any later session.
 ## Phases
 1. **Planning.** The plan is written to `agent-corpus/d-work/plans/<id>.md` before the
    counter-prompt: intent as read, mutation, files touched, base commit of `main`,
-   falsification pointer. The reply reproduces it. The plan-`Y` binds to the file.
+   falsification pointer. The reply reproduces it. The plan-`Y` binds to the file. A plan that
+   needs an order of its steps or a split of its PRs says so as a requirement (`order: required`);
+   otherwise order and split are execution detail (Rule-3 Plan, #555).
 2. **Execution.** Begins by reading the plan file, in the same or any later session. If
    `main` has moved past a touched file, the Agent re-plans (new plan-`Y`); otherwise it
    executes as written. Done-`Y` as Rule-3.
@@ -43,6 +45,8 @@ the plan file the collision-free unit for a second session.
 Operator rule, 2026-09-13. Falsified; see `../falsification/rules/rule-15-d-work-phases.md`.
 Phases gains the accreted-row bullet 2026-10-14 (d-work #290): a row accreted under another row's
 mandate has no plan file, so phase 1 has nothing to write and phase 2's drift check nothing to
-read, and that gap had been silent rather than stated; see the same record, amendment #290.
+read, and that gap had been silent rather than stated; see the same record, amendment #290. Phase 1 gains the
+stated requirement of order or split 2026-11-02 (d-work #555): without it an order the plan only narrated could not be
+told from one it needed; see the same record, amendment #555.
 
 Set: System Requirements.
