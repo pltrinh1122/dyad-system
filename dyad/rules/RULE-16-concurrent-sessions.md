@@ -48,6 +48,21 @@ files and almost never merge.
   Its guard, `dyad/guards/agent/board.py`, checks only that each file is well-formed, names a row that is not
   terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
   runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535).
+- Beside the board, the **inbox**: `<instance>/d-work/inbox/<seat>/<stamp>-<from-seat>-<n>.md` (stamp
+  `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by seat
+  name and never by session id, so a hop changes nothing for the sender and concurrent senders never collide.
+  `key: value` lines: `from`, `to`, `row`, `kind` (`report`, `relay`, `ack` or `notice`), `sent`, a verbatim `body`,
+  and `writer`, written by `dyad inbox post` as presence's is (#350). Unlike the board it is **append-only**: a
+  message is never edited or deleted, and reading it writes a marker beside it, the same name ending `.read`
+  (`read`, `reader` — the box's own seat — and `writer`), so what was read and when is git's. It carries
+  information, never authority: a body shaped like a disposition — a line opening `Y/N:`, a dated ledger entry
+  (`<date> Y|N plan|done|release|backlog`), or a `Y plan (`, `Y done (` or `Y release (` entry — is refused at post
+  and by the guard, because authority is read from the rows and the provenance store alone; a report therefore names
+  the row whose entry it means and never quotes the entry. It is written by `dyad inbox post` (the sender is
+  `DYAD_SESSION`) as a ledger-only commit, read by `dyad inbox read` (its markers one ledger-only commit) and
+  `dyad inbox list`, and its unread count is printed by `dyad board resume` and `dyad session touch`. Its guard,
+  `dyad/guards/agent/inbox.py` (entity `message`), checks shape — `to` the box, `from` the sender in the name, `row`
+  an existing row, no marker without its message — the refusal, and, on each commit pushed, append-only (#536).
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,
@@ -169,6 +184,8 @@ holder from the same one; see the same record, amendment #350. Enforcement
 names the row-id contiguity fence 2026-10-29 (d-work #525): the fence refused a range whose new ids skipped or were
 typed by hand since #560, and no Rule named it; see the same record, amendment #525. Store gains the board
 store 2026-11-02 (d-work #535): the orchestration in flight had no store, and a row, append-only and fenced, is the
-wrong one for state overwritten many times a day; see the same record, amendment #535.
+wrong one for state overwritten many times a day; see the same record, amendment #535. Store gains the inbox
+2026-11-02 (d-work #536): seats reported by message to a session id, so a report sent after a hop reached the old
+session and a terminal holder could receive none (#546, S5, S6, S18, S26); see the same record, amendment #536.
 
 Set: System Requirements.

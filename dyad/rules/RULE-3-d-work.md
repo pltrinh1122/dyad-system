@@ -322,7 +322,12 @@ owes verbatim, the follow-ups promised — so a **hop** of the session holding t
 written **write-ahead**: a turn that changes orchestration writes the board entry before it dispatches the
 work, sends the relay or asks the question that entry records, so a hop at any moment loses at most the
 reply being composed, never an act already taken. Its guard checks the files' shape only; whether an entry
-is true of the work is inference, as before (#535).
+is true of the work is inference, as before (#535). What a seat reports and what the cos relays to a seat
+travel by the **inbox** (Rule-16 Store), addressed by seat, read at the start of every turn: a message to a
+session is at most a doorbell saying one waits, never the carrier, so a report survives a hop and reaches a
+holder that receives no messages. The inbox carries information, never authority; a disposition is read from
+the row and its provenance record, and the Operator's words relayed to a seat still travel verbatim, citing
+the provenance entry they were given in (#536).
 
 The batch forms replace the single forms above, one kind at a time — a plan batch and a done
 batch are never the same question:
@@ -470,6 +475,8 @@ and a Done question for a pure read (#490), while a read's own proposal had been
 (#491); see the same record, amendment #492. Batch disposition records
 the pending queue in the board store, written ahead, 2026-11-02 (d-work #535): the orchestration in flight — the
 queue, every question owed, every dispatched act and its wait — lived only in the cos's chat, and a hop of the cos
-from one session to another would have lost it; see the same record, amendment #535.
+from one session to another would have lost it; see the same record, amendment #535. Batch disposition gains the
+inbox 2026-11-02 (d-work #536): reports and relays travelled as messages to session ids, lost on a hop and
+unreceivable by a terminal holder; see the same record, amendment #536.
 
 Set: System Requirements.
