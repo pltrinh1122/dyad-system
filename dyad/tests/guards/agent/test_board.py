@@ -125,6 +125,23 @@ class GuardTests(unittest.TestCase):
         self.assertIn("external gates (1): #5 external run 41331223332", text)
         self.assertIn("announce to (1): engineer-1537d8fb; seat table: counsel=session_015q", text)
 
+    def test_resume_marks_a_terminal_rows_entry_stale_and_announces_every_owner(self):
+        """#547: an entry whose row is done owes nothing; #551: every co-owner is announced to."""
+        self.put("6", ENTRY)                                                   # row 6 is done: stale
+        self.put("5", ENTRY.replace("owner: engineer-1537d8fb session_01x",
+                                    "owner: engineer-1537d8fb session_01x; counsel-0032b4c0 session_015q")
+                           .replace("waiting-on: operator", "waiting-on: seat distribute-a603e150").replace("question:", "promised:"))
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
+            v = bd.resume_view(self.root)
+            text = "\n".join(bd.resume_lines(self.root))
+        self.assertEqual(([n for n, _ in v["live"]], [n for n, _ in v["stale"]], v["owed"]), (["5"], ["6"], []))
+        self.assertEqual(v["seats"], ["counsel-0032b4c0", "distribute-a603e150", "engineer-1537d8fb"])
+        self.assertIn("#6: stale — row #6 is done; nothing here is owed (`dyad board set 6 --drop`, #547)", text)
+        self.assertIn("owed to the Operator (0)", text)
+        self.assertIn("announce to (3): counsel-0032b4c0, distribute-a603e150, engineer-1537d8fb", text)
+        self.assertIn("inbox program-bbbbbbbb: 0 unread", text)
+        self.assertEqual(bd.owners({"owner": "a-1 s1; b-2 s2;  ; c-3"}), ["a-1", "b-2", "c-3"])
+
     def test_contract(self):
         self.assertEqual((bd.ENTITY, bd.CORPUS, bd.TRANSACTION), ("board", "agent", False))
         self.assertIsNone(dyadlib.contract_problem(bd, "core", "agent"))

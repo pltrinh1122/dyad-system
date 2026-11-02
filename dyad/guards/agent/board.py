@@ -24,8 +24,10 @@ place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely;
                                      moved `main` re-merges from the inputs). `holder` defaults to this seat
                                      (`DYAD_SESSION`), `since` to now when `waiting-on` changes, `writer` is always this
                                      session; `key=` removes a key; `--drop` removes the file
-  dyad board resume                  what a new holder needs: every entry in full, the questions owed verbatim, the
-                                     gates, the seats to announce to
+  dyad board resume                  what a new holder needs: this seat's unread inbox count (#536), every entry in
+                                     full, the questions owed verbatim, the gates, the seats to announce to (every
+                                     owner, co-owners included, #551); an entry whose row is terminal is marked stale
+                                     and owes nothing (#547)
 
 `dyad board` and `board set` warn when the file's last `writer` is not this session: two holders may be writing
 (plan #535 attack 6; the lease, #537, arbitrates later). A warning, never a refusal. The cos writes the board before
@@ -341,13 +343,38 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
     return out
 
 
-def resume_lines(root: Path) -> list[str]:
+def owners(f: dict[str, str]) -> list[str]:
+    """Every seat an entry's `owner` names: `<seat> [<session>]` parts separated by `;` (co-owners, #551)."""
+    return [part.split()[0] for part in f.get("owner", "").split(";") if part.split()]
+
+
+def resume_view(root: Path) -> dict:
+    """What a new holder resumes from, as data (`resume_lines` prints it; a caller acts on it):
+    - `cos` (the `_cos` entry), `live` and `stale` entries (`stale`: the row is terminal or gone, #547);
+    - `owed` (the live entries waiting on the Operator), `gates` (on an external ref) and `seats` (every seat a live
+      entry waits on or names as an owner, co-owners included, #551);
+    - `unread`: this seat's unread inbox messages (#536)."""
     got = load(root)
-    cos = dict(got).get(COS, {})
+    states = row_states(root)
     items = [(n, f) for n, f in got if n != COS]
+    stale = [(n, f) for n, f in items if states.get(int(n)) in dyadlib.TERMINAL_STATES or int(n) not in states]
+    live = [(n, f) for n, f in items if (n, f) not in stale]
+    seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith("seat ")}
+                   | {o for _, f in live for o in owners(f)})
+    seat = os.environ.get("DYAD_SESSION") or None
+    return {"cos": dict(got).get(COS, {}), "live": live, "stale": stale, "states": states,
+            "owed": [(n, f) for n, f in live if f.get("waiting-on") == "operator"],
+            "gates": [(n, f["waiting-on"]) for n, f in live if f.get("waiting-on", "").startswith("external ")],
+            "seats": seats, "unread": dyadlib.load_guard("agent", "inbox").unread(root, seat) if seat else 0}
+
+
+def resume_lines(root: Path) -> list[str]:
+    v = resume_view(root)
+    cos = v["cos"]
     me, seat = sessions().writer(), os.environ.get("DYAD_SESSION") or "?"
     out = [f"resume: this session {seat} (writer {me}); the board's holder {cos.get('holder') or '?'}, "
-           f"last written by {cos.get('writer') or '?'}"]
+           f"last written by {cos.get('writer') or '?'}",
+           f"inbox {seat}: {v['unread']} unread — `dyad inbox read` before any other act"]
     def block(title, f, keys):
         out.append(title)
         for k in keys:
@@ -356,18 +383,17 @@ def resume_lines(root: Path) -> list[str]:
                 out.append(f"  {k}: {first}"); out.extend(f"    {r}" for r in rest)
     if cos:
         block(f"{COS}:", cos, COS_FIELDS)
-    for n, f in items:
+    for n, f in v["live"]:
         block(f"#{n}:", f, FIELDS)
-    owed = [(n, f) for n, f in items if f.get("waiting-on") == "operator"]
-    out.append(f"owed to the Operator ({len(owed)}): re-present each question verbatim, or report it pending")
-    for n, f in owed:
+    for n, f in v["stale"]:
+        out.append(f"#{n}: stale — row #{n} is {v['states'].get(int(n), 'not a row')}; nothing here is owed "
+                   f"(`dyad board set {n} --drop`, #547)")
+    out.append(f"owed to the Operator ({len(v['owed'])}): re-present each question verbatim, or report it pending")
+    for n, f in v["owed"]:
         out.append(f"  #{n} since {f.get('since', '?')}:")
         out += [f"    {line}" for line in (f.get("question") or "(no question recorded)").split("\n")]
-    gates = [(n, f["waiting-on"]) for n, f in items if f.get("waiting-on", "").startswith("external ")]
-    out.append(f"external gates ({len(gates)}): " + ("; ".join(f"#{n} {w}" for n, w in gates) or "none"))
-    seats = sorted({f["waiting-on"].split()[1] for _, f in items if f.get("waiting-on", "").startswith("seat ")}
-                   | {f["owner"].split()[0] for _, f in items if f.get("owner")})
-    out.append(f"announce to ({len(seats)}): {', '.join(seats) or 'none'}" + (f"; seat table: {' / '.join(cos['seats'].splitlines())}" if cos.get("seats") else ""))
+    out.append(f"external gates ({len(v['gates'])}): " + ("; ".join(f"#{n} {w}" for n, w in v["gates"]) or "none"))
+    out.append(f"announce to ({len(v['seats'])}): {', '.join(v['seats']) or 'none'}" + (f"; seat table: {' / '.join(cos['seats'].splitlines())}" if cos.get("seats") else ""))
     out.append("then: `dyad board set _cos holder=<this seat>` before any other act (write-ahead)")
     return out
 

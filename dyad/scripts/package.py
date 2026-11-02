@@ -221,6 +221,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
                                 fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs
+  dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [--all] | list [<seat>]
+                                messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
+                                lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
+                                unread and marks them read; `list` is read-only
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
                                 the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
@@ -2031,6 +2035,11 @@ def cmd_board(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     return dyadlib.load_guard("agent", "board").cli(a, REPO)
 
+def cmd_inbox(a):
+    """The inbox's CLI lives at guards/agent/inbox.py (it is also the guard); this is dispatch only (S4, d-work #536)."""
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    return dyadlib.load_guard("agent", "inbox").cli(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2057,6 +2066,8 @@ if __name__ == "__main__":
         sys.exit(cmd_merge(a[1:]))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
+    if a and a[0] == "inbox":
+        sys.exit(cmd_inbox(a[1:]))
     if a and a[0] == "ledger":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":

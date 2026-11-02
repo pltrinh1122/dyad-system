@@ -1,0 +1,204 @@
+"""inbox.py (the inbox store, entity `message`; d-work #536, cos mode P2).
+
+The form and the check:
+- a message names its box as `to` and its file name's sender as `from`, with one of four kinds, a UTC `sent` and an
+  existing row; each defect fails;
+- a disposition-shaped body fails: a `Y/N:` line, or a ledger entry;
+- a read marker needs its message and its box's seat;
+- the transaction check fails a commit that modifies or deletes a message or a marker, and passes one that only adds.
+
+Over a scratch world (a bare origin, two seat clones whose pre-push hook only logs):
+- `post` lands one ledger-only commit holding one file in the addressee's box, addressed by seat and written by this
+  session;
+- `post` refuses a disposition-shaped body, an unknown row, a missing seat and a bad kind before anything lands;
+- `read` prints the unread messages verbatim and marks them read in one land; a second read finds none; `--all` shows
+  the read ones again;
+- `list` reads the working tree;
+- `session touch` prints the unread count."""
+import contextlib, io, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
+from pathlib import Path
+PKG = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(PKG / "scripts"))
+import dyadlib, livetest
+ib = dyadlib.load_guard("agent", "inbox")
+
+SCRATCH = livetest.ScratchInstalls()
+tearDownModule = SCRATCH.cleanup
+INST = "agent-corpus"
+ROW = "id: {id}\ntitle: row {id}\nopened: 2026-11-01\nstate: planned\ndisposed: 2026-11-01 Y plan\nrefs: \n"
+BODY = "PR #591 landed on main as 4157033.\n\n  indented: kept\n# not a comment"
+MSG = ("from: engineer-1537d8fb\nto: program-59cec502\nrow: 5\nkind: report\nsent: 2026-11-02T17:44:00Z\n"
+       "body: PR #591 landed on main as 4157033.\n  \n    indented: kept\n  # not a comment\nwriter: h1\n")
+NAME = "20261102T174400Z-engineer-1537d8fb-1"
+
+
+def git(d, *a):
+    r = subprocess.run(["git", *a], cwd=d, capture_output=True, text=True, env=dyadlib.git_env())
+    if r.returncode:
+        raise RuntimeError(f"git {' '.join(a)} in {d}: {r.stdout}{r.stderr}")
+    return r.stdout.strip()
+
+
+class FormTests(unittest.TestCase):
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+        rows = self.root / INST / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "5.md").write_text(ROW.format(id=5))
+        self.box = self.root / INST / "d-work" / "inbox" / "program-59cec502"; self.box.mkdir(parents=True)
+
+    def put(self, name, text, box=None):
+        d = box or self.box; d.mkdir(parents=True, exist_ok=True); (d / name).write_text(text)
+
+    def test_a_well_formed_message_and_marker_pass_and_keep_the_body(self):
+        self.put(f"{NAME}.md", MSG)
+        self.put(f"{NAME}.read", "read: 2026-11-02T17:50:00Z\nreader: program-59cec502\nwriter: h2\n")
+        self.assertEqual(ib.check_package(self.root), [])
+        (_, f, read), = ib.messages(self.root, "program-59cec502")
+        self.assertEqual((f["body"], read), (BODY, True))
+        self.assertEqual(ib.unread(self.root, "program-59cec502"), 0)
+        self.assertEqual(ib.summary(self.root), "1 message(s) in 1 box(es)")
+
+    def test_each_defect_fails(self):
+        cases = {"to": (MSG.replace("to: program-59cec502", "to: counsel-0032b4c0"), "not its box"),
+                 "from": (MSG.replace("from: engineer-1537d8fb", "from: counsel-0032b4c0"), "not its name's"),
+                 "kind": (MSG.replace("kind: report", "kind: order"), "'kind' 'order'"),
+                 "sent": (MSG.replace("2026-11-02T17:44:00Z", "today"), "'sent' is not"),
+                 "row": (MSG.replace("row: 5", "row: 9"), "no row #9"),
+                 "missing": (MSG.replace("kind: report\n", ""), "'kind' missing"),
+                 "unknown": (MSG + "colour: red\n", "unknown key 'colour'"),
+                 "ask": (MSG.replace("  # not a comment", "  Y/N: Done with #5?"), "disposition-shaped"),
+                 "entry": (MSG.replace("body: PR #591", "body: 2026-11-02 Y done (merges PR #591 at abc) — PR #591"), "disposition-shaped")}
+        for label, (text, says) in cases.items():
+            shutil.rmtree(self.box); self.put(f"{NAME}.md", text)
+            msgs = ib.check_package(self.root)
+            self.assertTrue(any(says in m for m in msgs), (label, msgs))
+        shutil.rmtree(self.box)
+        self.put("notes.txt", "x")
+        self.assertIn("not `<stamp>-<from-seat>-<n>.md` or `.read`", ib.check_package(self.root)[0])
+        shutil.rmtree(self.box)
+        self.put(f"{NAME}.read", "read: 2026-11-02T17:50:00Z\nreader: someone-else\n")
+        msgs = ib.check_package(self.root)
+        self.assertTrue(any("a read marker with no message" in m for m in msgs), msgs)
+        self.assertTrue(any("'reader' is 'someone-else'" in m for m in msgs), msgs)
+
+    def test_parse_post_refuses_misuse(self):
+        for argv, says in ((["program-x", "--row", "5", "--kind", "report"], "not both and not neither"),
+                           (["program-x", "--row", "5", "--kind", "order", "b"], "usage"),
+                           (["program-x", "--kind", "report", "b"], "usage"),
+                           (["program-x", "--row", "5", "--kind", "report", "Y/N: Done with #5?"], "disposition-shaped"),
+                           (["program-x", "--row", "5", "--kind", "report", " \n"], "an empty body"),
+                           (["a/b", "--row", "5", "--kind", "report", "b"], "usage")):
+            with self.assertRaises(ib.Refused, msg=argv) as e:
+                ib.parse_post(argv)
+            self.assertIn(says, str(e.exception))
+        self.assertEqual(ib.parse_post(["program-x", "--row", "5", "--kind", "ack", "seen\n"]), ("program-x", 5, "ack", "seen"))
+
+    def test_contract(self):
+        self.assertEqual((ib.ENTITY, ib.CORPUS, ib.TRANSACTION), ("message", "agent", True))
+        self.assertIsNone(dyadlib.contract_problem(ib, "core", "agent"))
+        self.assertEqual(dyadlib.check_invariants(ib), len(ib.INVARIANTS))
+        self.assertEqual([f[0] for f in ib.describe(self.root)["fields"]], list(ib.FIELDS))
+
+
+class World(unittest.TestCase):
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        top = SCRATCH.mkdtemp()
+        seed, self.origin, hooks = top / "seed", top / "origin.git", top / "hooks"
+        seed.mkdir(); git(seed, "init", "-q", "-b", "main")
+        rows = seed / INST / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "5.md").write_text(ROW.format(id=5))
+        git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "seed")
+        git(top, "clone", "-q", "--bare", str(seed), str(self.origin))
+        hooks.mkdir(); (hooks / "pre-push").write_text("#!/bin/sh\ncat >/dev/null\nexit 0\n"); (hooks / "pre-push").chmod(0o755)
+        self.clones = {}
+        for seat in ("engineer-1537d8fb", "program-59cec502"):
+            d = top / seat
+            git(top, "clone", "-q", str(self.origin), str(d))
+            for k, v in (("user.email", "t@example.com"), ("user.name", "t"), ("core.hooksPath", str(hooks))):
+                git(d, "config", k, v)
+            self.clones[seat] = d
+
+    def as_seat(self, seat, *argv, harness="h1"):
+        out, err = io.StringIO(), io.StringIO()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": seat, "CLAUDE_CODE_SESSION_ID": harness}), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = ib.cli(list(argv), self.clones[seat])
+        return rc, out.getvalue(), err.getvalue()
+
+
+class CliTests(World):
+    def test_post_lands_one_message_in_the_addressees_box(self):
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", BODY)
+        self.assertEqual(rc, 0, err)
+        head = git(self.origin, "rev-parse", "main")
+        (path,) = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertRegex(path, rf"^{INST}/d-work/inbox/program-59cec502/\d{{8}}T\d{{6}}Z-engineer-1537d8fb-1\.md$")
+        f = dyadlib.load_guard("agent", "board").parse(git(self.origin, "show", f"main:{path}"))[0]
+        self.assertEqual((f["from"], f["to"], f["row"], f["kind"], f["body"], f["writer"]),
+                         ("engineer-1537d8fb", "program-59cec502", "5", "report", BODY, "h1"))
+        self.assertTrue(git(self.origin, "log", "-1", "--format=%s", head).startswith("ledger: inbox program-59cec502"))
+        git(self.clones["engineer-1537d8fb"], "fetch", "-q", "origin")
+        self.assertTrue(dyadlib.ledger_only(self.clones["engineer-1537d8fb"], before, head))
+        self.assertEqual(ib.check_transaction(self.clones["engineer-1537d8fb"], before, head), [])
+
+    def test_post_refuses_before_anything_lands(self):
+        before = git(self.origin, "rev-parse", "main")
+        for argv, says in ((["post", "program-59cec502", "--row", "5", "--kind", "report", "2026-11-02 Y plan"], "disposition-shaped"),
+                           (["post", "program-59cec502", "--row", "9", "--kind", "report", "x"], "no row #9")):
+            rc, _, err = self.as_seat("engineer-1537d8fb", *argv)
+            self.assertEqual(rc, 1, argv); self.assertIn(says, err)
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": ""}):
+            self.assertEqual(ib.cli(["post", "program-59cec502", "--row", "5", "--kind", "ack", "x"], self.clones["engineer-1537d8fb"]), 1)
+        self.assertEqual(self.as_seat("engineer-1537d8fb", "bogus")[0], 2)
+        self.assertEqual(git(self.origin, "rev-parse", "main"), before)
+
+    def test_read_marks_read_once_and_all_shows_again(self):
+        for body in ("first", "second\n  kept"):
+            self.assertEqual(self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", body)[0], 0)
+        rc, out, err = self.as_seat("program-59cec502", "read", harness="h2")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("    first", out); self.assertIn("    second\n      kept", out)
+        self.assertIn("inbox program-59cec502: 2 marked read", out)
+        reads = git(self.origin, "ls-tree", "-r", "--name-only", "main", f"{INST}/d-work/inbox/program-59cec502").splitlines()
+        self.assertEqual(sum(p.endswith(".read") for p in reads), 2)
+        rc, out, _ = self.as_seat("program-59cec502", "read", harness="h2")
+        self.assertEqual(rc, 0); self.assertIn("inbox program-59cec502: 0 unread", out); self.assertNotIn("first", out)
+        rc, out, _ = self.as_seat("program-59cec502", "read", "--all", harness="h2")
+        self.assertIn("  " + out.splitlines()[0].lstrip(), out); self.assertIn("    first", out)
+        git(self.clones["program-59cec502"], "pull", "-q", "--ff-only", "origin", "main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}):
+            self.assertEqual(ib.check_package(self.clones["program-59cec502"]), [])
+        rc, out, _ = self.as_seat("program-59cec502", "list", harness="h2")
+        self.assertIn("inbox program-59cec502: 2 message(s), 0 unread", out)
+
+    def test_the_transaction_check_is_append_only(self):
+        self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "first")
+        d = self.clones["program-59cec502"]
+        git(d, "pull", "-q", "--ff-only", "origin", "main")
+        base = git(d, "rev-parse", "HEAD")
+        (msg,) = (d / INST / "d-work" / "inbox" / "program-59cec502").glob("*.md")
+        msg.write_text(msg.read_text().replace("first", "edited"))
+        git(d, "commit", "-qam", "edit")
+        got = ib.check_transaction(d, base, "HEAD")
+        self.assertEqual(len(got), 1); self.assertIn("is modified; the inbox is append-only", got[0])
+        git(d, "rm", "-q", str(msg)); git(d, "commit", "-qm", "delete")
+        self.assertIn("is deleted", ib.check_transaction(d, base, "HEAD")[-1])
+
+    def test_session_touch_prints_the_unread_count(self):
+        self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "notice", "hello")
+        d = self.clones["program-59cec502"]
+        git(d, "pull", "-q", "--ff-only", "origin", "main")
+        sg = dyadlib.load_guard("agent", "sessions")
+        out = io.StringIO()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502", "CLAUDE_CODE_SESSION_ID": "h2"}), \
+             unittest.mock.patch.object(sg.dyadlib, "repo_root", lambda *a: d), contextlib.redirect_stdout(out), \
+             contextlib.redirect_stderr(io.StringIO()):
+            sg.main(["touch", "-r", "5"])
+        self.assertIn("inbox program-59cec502: 1 unread — `dyad inbox read`", out.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()

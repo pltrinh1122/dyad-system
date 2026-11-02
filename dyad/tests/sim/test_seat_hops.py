@@ -1,6 +1,6 @@
 """Seat-hop stress test by simulation (d-work #546; the subject is #535's board store and `dyad board resume`, P1 of
 the cos as a mode). Each scenario scripts a hop of the cos mode from one session to another over the simulator's world
-(`world.py`: a bare origin, one clone per session, a mailbox a terminal holder cannot read, seats, the Operator's log)
+(`world.py`: a bare origin, one clone per session, the inbox (#536), seats, the Operator's log)
 and then judges the plan's oracle:
 - no item in flight is lost;
 - no act is executed twice;
@@ -17,8 +17,8 @@ A **known gap** is a scenario whose oracle P1 does not meet, by design or by a f
 - `test_Sn_oracle` is an `expectedFailure` asserting none.
 
 So when the gap is fixed, the first fails and the second turns into an unexpected success: both are red until the
-expectation is updated. Gaps S5, S6 and S8 are #536's (inbox) and #537's (lease) acceptance tests. The others are
-findings of this run (`KNOWN_GAPS`), each a candidate backlog row under #546's mandate.
+expectation is updated. #536 (the inbox, with #547 and #551) turned S5, S6, S9, S18 and S26 from gaps into passes. S8
+stays #537's (lease) acceptance test, and S13 is finding F2 (#548), both in `KNOWN_GAPS`; S15's skew report is F3.
 
 Not simulated, stated: the real harness's classifier, a real Remote Control attach, and a real `send_message`
 transport.
@@ -63,23 +63,16 @@ SCENARIOS = [
     ("tc", "before-wa", "promised"), ("tc", "release", "question"), ("cc", "idle", "gate"), ("cc", "after-wa", "promised"),
     ("cc", "merge", "question"), ("cc", "release", "relay")])]
 
-GAP_536 = "#536 (inbox): a report sent by message never reaches a holder that cannot read it"
 GAP_537 = "#537 (lease): two live holders both act on one written-ahead entry"
 KNOWN_GAPS = {
-    "S5": GAP_536 + " — here the old holder's id, which P1 seats keep until an announcement, and do not re-send to",
-    "S6": GAP_536 + " — a terminal holder reads no `send_message`",
     "S8": GAP_537,
-    "S9": "F1 (finding, #546): `board resume` lists an entry whose row is terminal, so the new holder re-presents a stale question",
-    "S13": "F2 (finding, #546): one board store and one `_cos.md` for two cabinets: resume lists the other leader's rows and the new holder re-presents its questions to this Operator",
+    "S13": "F2 (finding, #546; row #548): one board store and one `_cos.md` for two cabinets: resume lists the other leader's rows and the new holder re-presents its questions to this Operator",
 }
-# The fill's known gaps follow the same mechanism as S6: a terminal new holder with a report owed by message.
-for sid, a, b, c, *_ in SCENARIOS[15:]:
-    if A[a][1] == "terminal" and c in ("dispatch", "relay") and b != "before-wa":
-        KNOWN_GAPS[sid] = GAP_536 + " — a terminal holder reads no `send_message`"
 
 QUESTION = "Y/N: approve the release of row 5?\n(evidence 3f1c…; the run waits at its gate)"
 PROMISE = "report #514 after season 1"
-OLD, NEW, SEAT = "program-aaaaaaaa", "program-bbbbbbbb", "engineer-11111111"
+OLD, SEAT = "program-aaaaaaaa", "engineer-11111111"
+NEW = OLD   # the mode keeps its seat across a hop; only the holder (the harness session) changes
 
 
 def host(kind: str, name: str, **kw) -> Host:
@@ -89,13 +82,13 @@ def host(kind: str, name: str, **kw) -> Host:
 class Run:
     """One scripted hop: the old holder puts `c` in flight on row 5, the hop happens at `b`, the new holder resumes and
     the world settles; then the oracle."""
-    def __init__(self, a="cc", b="idle", c=None, *, seat_kind="cloud", new_os="linux", report_before_announce=False,
+    def __init__(self, a="cc", b="idle", c=None, *, seat_kind="cloud", new_os="linux", report_at_hop=False,
                  two_holders=False, outage=False, skew=0, race=False):
         self.w = W.World(SCRATCH, rows={5: "planned", 6: "done", 8: "planned"}, pr=(b == "merge"))
         self.op = Operator()
         old_kind, new_kind = A[a]
         self.old = self.w.cos(OLD, host(old_kind, "old", skew_minutes=skew), "h-old", self.op)
-        self.seat = self.w.seat(SEAT, host(seat_kind, "seat"), "h-seat", self.old)
+        self.seat = self.w.seat(SEAT, host(seat_kind, "seat"), "h-seat")
         self.truth, self.owed = [], []
         crash = b if b in ("before-wa", "after-wa") else None
         self.put(c, crash)
@@ -106,8 +99,8 @@ class Run:
             self.w.runs["42"] = "pending"
             self.old.gate(8, "42")
             self.truth.append(Item("gate", "42", 8))
-        if report_before_announce:
-            self.seat.step()                                      # the seat acts and reports to the old id at the hop
+        if report_at_hop:
+            self.seat.step()                                      # the seat acts and reports while the old holder dies
         self.mark = len(self.op.lines)
         self.new = self.w.cos(NEW, host(new_kind, "new", os=new_os), "h-new", self.op)
         if outage:
@@ -187,27 +180,18 @@ class SeatHopTests(unittest.TestCase):
         self.assertEqual(r.w.acts["task-5"], 1)
         self.assertEqual(r.violations(), [])
 
-    def test_S5(self):
-        r = Run("cc", "idle", "dispatch", report_before_announce=True)
+    def test_S5_a_report_sent_at_the_hop_reaches_the_new_holder(self):
+        r = Run("cc", "idle", "dispatch", report_at_hop=True)
         self.assertEqual(r.w.acts["task-5"], 1)
-        self.assertIn(("h-old", ("report", "task-5")), r.w.mailbox.unread())      # sitting in the old holder's box
-        self.assertIn("announce to (1): engineer-11111111", r.resumed)           # detected only as a seat still owed
-        self.gap("S5", r.violations(), ["lost: dispatch task-5 (its report never reached the holder)"])
+        self.assertIn("task-5", r.w.completed)                    # addressed to the mode's seat, read by the new holder
+        self.assertEqual(r.violations(), [])
 
-    @unittest.expectedFailure
-    def test_S5_oracle(self):
-        self.assertEqual(Run("cc", "idle", "dispatch", report_before_announce=True).violations(), [])
-
-    def test_S6(self):
+    def test_S6_a_terminal_holder_reads_its_inbox(self):
         r = Run("ct", "idle", "dispatch", new_os="mac")
-        self.assertIn(("h-new", ("report", "task-5")), r.w.mailbox.unread())
-        self.gap("S6", r.violations(), ["lost: dispatch task-5 (its report never reached the holder)"])
+        self.assertIn("task-5", r.w.completed)
+        self.assertEqual(r.violations(), [])
 
-    @unittest.expectedFailure
-    def test_S6_oracle(self):
-        self.assertEqual(Run("ct", "idle", "dispatch", new_os="mac").violations(), [])
-
-    def test_S7_a_terminal_desk_reports_by_the_board(self):
+    def test_S7_a_terminal_desk_reports_by_its_inbox(self):
         r = Run("cc", "idle", "dispatch", seat_kind="terminal")
         self.assertEqual(r.w.acts["task-5"], 1)
         self.assertIn("task-5", r.w.completed)
@@ -238,20 +222,17 @@ class SeatHopTests(unittest.TestCase):
         new.resume()
         return w, op, mark, new
 
-    def test_S9(self):
+    def test_S9_a_stale_entry_is_marked_and_owes_nothing(self):
         w, op, mark, new = self.stale()
         with new.s.acting():
             msgs = W.bd.check_package(new.s.dir)
+            view = W.bd.resume_view(new.s.dir)
         self.assertEqual([m.split(";")[0] for m in msgs], ["warning: board/5.md: row #5 is done"])   # the guard warns
-        self.gap("S9", oracle(w, [], op, mark, new, []), [f"visible: {QUESTION!r} (not owed at the hop)"])
+        self.assertEqual(([n for n, _ in view["stale"]], view["owed"]), (["5"], []))                 # #547
+        self.assertEqual(oracle(w, [], op, mark, new, []), [])
         self.assertEqual(new.s.board("set", "5", "--drop")[0], 0)                                     # --drop cleans it
         with new.s.acting():
             self.assertEqual(W.bd.check_package(new.s.dir), [])
-
-    @unittest.expectedFailure
-    def test_S9_oracle(self):
-        w, op, mark, new = self.stale()
-        self.assertEqual(oracle(w, [], op, mark, new, []), [])
 
     def test_S10_a_hop_during_dyad_merge_lands_once(self):
         r = Run("cc", "merge", "promised", race=True)            # merged before the hop; the new holder's merge refuses
@@ -278,7 +259,7 @@ class SeatHopTests(unittest.TestCase):
         w = W.World(SCRATCH, rows={5: "planned"})
         op = Operator()
         old = w.cos(OLD, host("cloud", "old"), "h-old", op)
-        comm = w.seat("communicate-22222222", host("cloud", "c"), "h-comm", old)
+        w.seat("communicate-22222222", host("cloud", "c"), "h-comm")
         old.s.set(5, owner="communicate-22222222 h-comm", waiting_on="seat communicate-22222222",
                   next="attended: asks in its own chat")
         op.show(QUESTION)                                          # asked in the attended seat's own chat
@@ -287,7 +268,6 @@ class SeatHopTests(unittest.TestCase):
         new.resume(); w.settle(new)
         self.assertEqual(op.lines[mark:], [W.RESUMED.format(seat=NEW)])
         self.assertEqual(oracle(w, [Item("question", QUESTION, 5)], op, mark, new, []), [])
-        self.assertEqual(comm.cos, "h-new")                        # attendance unchanged; the seat knows the new cos
 
     def cabinets(self):
         """S13: two leaders share the instance; A asks its Operator on row 5, B its own on row 8; A's leader hops."""
@@ -345,7 +325,7 @@ class SeatHopTests(unittest.TestCase):
     def test_every_known_gap_is_named_and_reasoned(self):
         for sid, why in KNOWN_GAPS.items():
             self.assertIn(sid, [s[0] for s in SCENARIOS])
-            self.assertRegex(why, r"#536|#537|F\d \(finding, #546\)")
+            self.assertRegex(why, r"#537|F\d \(finding, #546; row #\d+\)")
 
 
 def fill_test(sid, a, b, c):

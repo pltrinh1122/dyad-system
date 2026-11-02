@@ -656,6 +656,8 @@ def main(a: list[str]) -> int:
         except SessionUnset as e:
             print(e, file=sys.stderr); return 2
         print(f"touched {p.relative_to(root)}")
+        n = dyadlib.load_guard("agent", "inbox").unread(root, p.stem)   # #536: the inbox is read at every turn start
+        print(f"inbox {p.stem}: {n} unread" + (" — `dyad inbox read`" if n else ""))
         if n := behind_origin(root):   # #482 P4: the session-start report states its base; nothing when 0
             print(f"behind origin/main by {n}")
         same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call
