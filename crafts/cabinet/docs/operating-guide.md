@@ -1,48 +1,48 @@
-# Operating Guide — running a dyad system as a tree of seats (M4)
+# Operating Guide — running a dyad system as a tree of units (M4)
 
-For the Operator. Written by the counsel seat of dyad-system during #369, the first program run under M4 (the
-Operator's words: provenance #366–#369; the practice: `../rules/organization.md`; the names: `../rules/naming.md`).
+For the operator. Written by the counsel unit of dyad-system during #369, the first program run under M4 (the
+operator's words: provenance #366–#369; the practice: `../rules/organization.md`; the names: `../rules/naming.md`).
 It tells you what the organization asks of you, what it gives back, and what it cost the first time. It binds
-nothing: your Rules do (`dyad/rules/`), and every sentence here that says "a seat may" means "its charter, which
+nothing: your Rules do (`dyad/rules/`), and every sentence here that says "a unit may" means "its charter, which
 you wrote, lets it".
 
 ## 1. What M4 is, in one paragraph
 The organization is an AI-agent **cabinet**: one chief of staff beside you, secretaries over the functions, desks
-under them. You keep one seat beside you — the leader, your **cos**, named `program-<hp>` — and it keeps the board
-of programs: every parent row you opened and the children it was decomposed into, across the member seats. Each
-member seat is a **secretary**: it holds one function you want to watch — `counsel`, `audit`, `engineer`,
+under them. You keep one unit beside you — the home, your **cos**, named `program-<hp>` — and it keeps the board
+of programs: every parent row you opened and the children it was decomposed into, across the member units. Each
+member unit is a **secretary**: it holds one function you want to watch — `counsel`, `audit`, `engineer`,
 `distribute`, `operate` by default — under a **charter** you wrote in the mandates table, and keeps its own board
-of the rows and the **desks** under it, a desk being a seat it opens for one topic (`engineer-ledgerd-<hp>`). Every
-seat reads and writes the same ledgers, on the same `main`, so you never need a message to know where anything
-stands: the row's state, its record and its presence file are the report. You dispose, every seat proposes;
-nothing moves on silence. The leader holds your attention, not authority; the members hold authority you granted
+of the rows and the **desks** under it, a desk being a unit it opens for one topic (`engineer-ledgerd-<hp>`). Every
+unit reads and writes the same ledgers, on the same `main`, so you never need a message to know where anything
+stands: the row's state, its record and its presence file are the report. You dispose, every unit proposes;
+nothing moves on silence. The home holds your attention, not authority; the members hold authority you granted
 by content — paths and kinds of act — never by who they are, because who they are is the one thing the system
 cannot check.
 
 ## 2. Reading a board
-- **Your board is the leader's roll-up**: one line per member seat — children held, open questions, the oldest,
-  the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a seat to
+- **Your board is the home's roll-up**: one line per member unit — children held, open questions, the oldest,
+  the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a unit to
   retire or re-home, each by its own row that you dispose.
-- **Desks are not on your board.** A secretary opens desks as its concurrent work needs; a desk is unattended
-  unless `attended-seats` names it; the leader reads secretaries, never desks. There is no count of desks to keep
+- **Desks are not on your board.** A secretary opens desks as its concurrent work needs; a desk is solo
+  unless `paired-units` (its alias `attended-seats`, read until the release after next) names it; the home reads secretaries, never desks. There is no count of desks to keep
   under seven: what bounds them is the secretary's charter, its ceiling read per plan (#416).
-- **A seat's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
+- **A unit's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
   of your answers), `dyad session list` (every presence file: who holds what, how fresh). A PR number in a row's
   `disposed` entry names the head you said `Y` on.
-- **The leader relays, you dispose acts, never merges.** Your own invariant (#384): you dispose the plan review and
+- **The home relays, you dispose acts, never merges.** Your own invariant (#384): you dispose the plan review and
   the execution review, never an individual merge, push or pull. Under a mandate the execution review is one
-  question: when the member seats' children are done, their evidence travels through the leader into the
+  question: when the member units' children are done, their evidence travels through the home into the
   parent's completion reply, and you answer once over the set that reply lists (the mandate form of Rule-3:
   `Y/N: Done with #<id> … (accreted #a, #b, …, merges PR #w, #x, …)?`). A `Y` ratifies exactly that set — the rows
-  and the PRs — and a child or a PR left out of the list is left out of the `Y`. After it, each seat executes its
+  and the PRs — and a child or a PR left out of the list is left out of the `Y`. After it, each unit executes its
   own merges clerically, referent before referrer (Rule-2: execution is clerical, never disposal), with `dyad merge
-  <pr> --head <sha>` once your `Y` is recorded on `main` — whether you gave it in the seat's chat or the cos's; the
+  <pr> --head <sha>` once your `Y` is recorded on `main` — whether you gave it in the unit's chat or the cos's; the
   verb reads only that record and the PR's live head, and runs from `main`'s code (#532, #540). The first run passed
   with no refusal; whether your allow rule or the harness's own judgement admitted it is not yet established (the
-  seat's session predated the rule). If a seat's harness
-  refuses it, the seat stops and reports the refusal word for word, and the cos executes that merge as the fallback,
-  reported to you. The leader
-  closes the parent once every named head is on `main` (Rule-3's three acts, #202). No seat asks you a Done of its
+  unit's session predated the rule). If a unit's harness
+  refuses it, the unit stops and reports the refusal word for word, and the cos executes that merge as the fallback,
+  reported to you. The home
+  closes the parent once every named head is on `main` (Rule-3's three acts, #202). No unit asks you a Done of its
   own, and no merge is asked separately; a release (Rule-11) and a destructive host action (Rule-8) stay their own
   questions whatever the mandate says. How the Rules' text is reconciled with that invariant is #384's work.
 
@@ -54,165 +54,165 @@ commit or a line of chat:
 2. **Route** — dispatch each new row to the secretary whose charter covers it, with your words verbatim (R29):
    counsel for falsifications, Rule and vocabulary text; engineer for the machine; distribute for releases and
    ports; audit for findings and hardening; operate for the host.
-3. **Present** — one question per reply, in the form `relay-form` names (§3 item 4), the seat's text as evidence;
+3. **Present** — one question per reply, in the form `relay-form` names (§3 item 4), the unit's text as evidence;
    a preference or a charter as its own question, presented and never pushed (§3 item 5).
-4. **Relay back** — each of your dispositions to its seat verbatim; the seat executes it (record, merge, close).
+4. **Relay back** — each of your dispositions to its unit verbatim; the unit executes it (record, merge, close).
 5. **Board** — read the board of programs and report it to you; keep the check-in armed.
 
 Never done at the cos, always handed on: drafting a plan file (a fork of the cos or the owning secretary writes it;
-the cos asks you the `Y`); a falsification analysis (counsel); an evidence run and a merge (the seat that holds the
-row, by `dyad merge` — the cos merges only as the reported fallback when that seat's harness refused, #540); a branch push or a PR of any zone, preferences included (the secretary whose row needs it); an incident row
-(the seat whose act it was); cutting a release (distribute); rendering the board and verifying a head (the cos's own
+the cos asks you the `Y`); a falsification analysis (counsel); an evidence run and a merge (the unit that holds the
+row, by `dyad merge` — the cos merges only as the reported fallback when that unit's harness refused, #540); a branch push or a PR of any zone, preferences included (the secretary whose row needs it); an incident row
+(the unit whose act it was); cutting a release (distribute); rendering the board and verifying a head (the cos's own
 fork, #425). **Availability:** the cos's checkout runs nothing longer than a ledger-only push; anything that runs the
-suite runs in a seat or in a worktree. The price when it did not: the cos was away from you for ten to twenty
+suite runs in a unit or in a worktree. The price when it did not: the cos was away from you for ten to twenty
 minutes at a time while a hook or an evidence run held its one checkout (#432).
 
-## 3. Opening a seat
+## 3. Opening a unit
 1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a desk, the topic.
-   The seat's own handle (`<hp>`) is the first eight hex characters of the harness session you are about to create,
+   The unit's own handle (`<hp>`) is the first eight hex characters of the harness session you are about to create,
    so the full name is known only once the session exists.
 2. **Create the session** (a cloud or terminal session of your harness with the repository attached) and **title
-   it** `<seat>: cloud (ds) - <topic>` — the seat name first, then the kernel, your system's handle and what the
-   seat is on. Your harness's session list then reads as your board does.
-3. **The seat's first act is its registration row**, accreted under the program that opens it or under your own
-   prompt: `dyad dwork new "registration of seat <seat>: …"` and `DYAD_SESSION=<seat> dyad session touch -r
+   it** `<unit>: cloud (ds) - <topic>` — the unit name first, then the kernel, your system's handle and what the
+   unit is on. Your harness's session list then reads as your board does.
+3. **The unit's first act is its registration row**, accreted under the program that opens it or under your own
+   prompt: `dyad dwork new "registration of seat <seat>: …"` and `DYAD_SESSION=<unit> dyad session touch -r
    <row>` — always `-r`: a bare touch claims every open row on the board (#130, #325). The presence file now
    carries `host` and `holder`, and `seats.py` reads its name against the form.
-4. **Relay has two directions, and only one is verbatim.** *To a seat:* the words, not a summary — what a seat acts
-   on is your verbatim prompt and the plan disposition that authorized it, carried by the leader with the row and
-   date they were given on (R29); a seat never acts on the leader's paraphrase. *To you:* a question a seat that is
-   not attended owes you reaches you in the form your preference `relay-form` names (#424). Under `verbatim` the
-   seat's question and evidence pass through as written. Under `brief` the cos meets you at your altitude: WHAT —
-   the matter and its state; WHY — what it bears on, in your terms rather than the seat's; HOW — the path, its
-   strongest counter and the reconciliation (Rule-10's form, applied by the cos to the seat's question); then the
-   seat's own question as the last line, so your `Y` binds to what the seat asked. The seat's text is citation and
+4. **Relay has two directions, and only one is verbatim.** *To a unit:* the words, not a summary — what a unit acts
+   on is your verbatim prompt and the plan disposition that authorized it, carried by the home with the row and
+   date they were given on (R29); a unit never acts on the home's paraphrase. *To you:* a question a unit that is
+   not paired owes you reaches you in the form your preference `relay-form` names (#424). Under `verbatim` the
+   unit's question and evidence pass through as written. Under `brief` the cos meets you at your altitude: WHAT —
+   the matter and its state; WHY — what it bears on, in your terms rather than the unit's; HOW — the path, its
+   strongest counter and the reconciliation (Rule-10's form, applied by the cos to the unit's question); then the
+   unit's own question as the last line, so your `Y` binds to what the unit asked. The unit's text is citation and
    evidence, its evidence block quoted verbatim, never the body.
-5. **Preferences and charters are presented by the cos, pushed by the seat that needs them.** A preference value
+5. **Preferences and charters are presented by the cos, pushed by the unit that needs them.** A preference value
    or a charter (a row of `MANDATES.md`) reaches you from the cos, each as its own question (WHAT / WHY / HOW, item
-   4), never folded into a seat's plan or Done; a secretary never asks you for one itself. The secretary whose row
+   4), never folded into a unit's plan or Done; a secretary never asks you for one itself. The secretary whose row
    needs it drafts the exact `preferences-corpus/` diff, pushes the branch and opens the preferences-zone PR; the cos
    presents it and never pushes it — its name is on the question, not on the push (#427, as amended by #432).
-Four seats were opened this way in #369 — the leader renamed twice as the name form was falsified (`cos-1` →
+Four units were opened this way in #369 — the home renamed twice as the name form was falsified (`cos-1` →
 `cos-59cec502` → `program-59cec502`; the old files stay, that is the store's memory), then `counsel`, `engineer`,
 `distribute` — each registering itself within minutes of creation.
 
-**Posture.** Every seat you open, the cos included, splits its own work between its main chat and the sub-agents it
-spawns (forks, worktrees). Which posture it takes depends on whether you attend it (§8): an attended seat — the cos
-always, and any seat your `attended-seats` names — reads your preference `delegation-posture`; every other seat
+**Posture.** Every unit you open, the cos included, splits its own work between its main chat and the sub-agents it
+spawns (forks, worktrees). Which posture it takes depends on whether you attend it (§8): a dyad unit — the cos
+always, and any unit your `paired-units` names — reads your preference `delegation-posture`; every other unit
 reads `delegation-posture-unattended` (#436, #441). The floor never moves: the main chat alone writes rows, asks and
 answers questions, pushes, opens PRs, merges and runs host actions (Rule-3's subagent clause). Above it,
 `responsive` keeps the chat to the floor and sends every draft, evidence run and board rendering to a sub-agent —
 most tokens, an answer at once; `balanced` keeps work the chat can finish in 2 minutes of tool time per act and
 sends the rest; `efficient` keeps its own drafting and verification and spawns only for work that must run in
 parallel or in its own worktree, or that Rule-10 hands to a sub-agent under `concise-mode: on` — fewest tokens, the
-chat away for the duration. The posture matters where you are waiting: an unattended seat's chat has nobody waiting
+chat away for the duration. The posture matters where you are waiting: a solo's chat has nobody waiting
 on it but the cos, which relays and moves on, so it can spend its time instead of your tokens. If your preferences
-carry neither key, an attended seat runs `responsive` and an unattended one `efficient`. The posture never moves an
-act between seats — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
+carry neither key, a dyad unit runs `responsive` and a solo one `efficient`. The posture never moves an
+act between units — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
 
 ## 4. Writing a charter
 A charter is a row of `preferences-corpus/MANDATES.md` (seeded from `../templates/mandates.md`), yours alone, by
 the ordinary preferences-zone PR. Write the **fence as paths and kinds of act**, because that is what the zone
 guard and the plan gate can read; write the **ceiling as a number**, because an accreting plan states a ceiling
-and the seat's rows are counted against it; write the **escalations** as the things you want asked whatever a plan
+and the unit's rows are counted against it; write the **escalations** as the things you want asked whatever a plan
 says. Under every charter stand the acts no plan may ever cover — a merge or push to `main`, a destructive host
 action, a release, a preference value, an intake's words, any mutation the plan did not describe — so you never
 need to write them into a fence. A charter narrows; if you find yourself widening one, you are describing a new
-seat. Revoke by removing or rewriting the row; a seat acts on the table as it stands on `main` and on nothing
+unit. Revoke by removing or rewriting the row; a unit acts on the table as it stands on `main` and on nothing
 else.
 
 ## 5. What only you dispose
 Every plan (`Y/N: proceed with #<id> as planned?`), every completion — the execution review, which under a
 mandate names every accreted row and every PR of the program at once (§2) — every release tag, every destructive
-host action, every preference value, every seat opened or retired, every intake's admission. Not the merges,
-pushes and pulls themselves (#384): a leader or member *executes* what you ratified — a merge after your Done-`Y`
-is clerical — and may never decide it. When a seat finds that the plan it holds cannot be done as written (the first run found three such cases,
+host action, every preference value, every unit opened or retired, every intake's admission. Not the merges,
+pushes and pulls themselves (#384): a leader or member *executes* what you ratified — a merge after your done-`Y`
+is clerical — and may never decide it. When a unit finds that the plan it holds cannot be done as written (the first run found three such cases,
 §7), it does not improvise: it records the finding, states the shapes that would work, and waits for your word,
 while doing everything the finding does not block.
 
 ## 6. The one-pair case
-With one seat beside you, you are already running M4: that seat is the leader, your ledger is its board, and the
-core's Rules are its charter. Install this craft when you open the second seat; until then nothing here applies
+With one unit beside you, you are already running M4: that unit is the home, your ledger is its board, and the
+core's Rules are its charter. Install this craft when you open the second unit; until then nothing here applies
 and nothing in the core waits for it (`dyad session touch` prints one advisory line about the name form when the
 craft is absent, and checks nothing).
 
 ## 7. What the first run cost (dyad-system #369, 2026-10-21 → 22), so you can price the next
-- **Three seats idle while a chain is sequential.** The program's children were a chain (C1 → C9) with two
-  seats' work gated on the first's; the leader's plan said so and chose the seats anyway, because the organization
-  was the point. Expect it: a seat whose predecessor has not landed waits *by state* and says so, which is cheap,
+- **Three units idle while a chain is sequential.** The program's children were a chain (C1 → C9) with two
+  units' work gated on the first's; the home's plan said so and chose the units anyway, because the organization
+  was the point. Expect it: a unit whose predecessor has not landed waits *by state* and says so, which is cheap,
   and starts the children that need nothing of the chain (C4's data rows, C8's notice) which is where the parallel
   time went.
-- **A fence the plan did not foresee stops a child without stopping the seat.** Counsel found that the core's
-  vocabulary guard refuses a craft term equal to an Agent term, so the words the program adopts could not enter the
+- **A fence the plan did not foresee stops a child without stopping the unit.** Counsel found that the core's
+  vocabulary guard refuses a craft term equal to an agent term, so the words the program adopts could not enter the
   vocabulary while the craft still defined them. The child landed its table, held its rows, recorded the two
   shapes that satisfy the fence, and went on to the next child; you dispose the shape. Budget one such finding per
   program and read it as the program working, not failing.
 - **Corrections travel as state, not as orders.** A member found that a tag the plan cited had never been cut;
-  the leader wrote a Corrections section into the plan on `main`, announced it to every seat, and ordered nothing.
-  Each seat read it at its next push. The cost was one ledger commit and one message; the alternative — a plan
+  the home wrote a Corrections section into the plan on `main`, announced it to every unit, and ordered nothing.
+  Each unit read it at its next push. The cost was one ledger commit and one message; the alternative — a plan
   revision needing your `Y` — would have cost you a question for a fact.
 - **Stacked PRs are the price of a shared record — and the rule for dependent children.** Two children of one
-  seat edit one record (C1 writes it, C2 appends); the second PR stacks on the first and rebases when it lands.
+  unit edit one record (C1 writes it, C2 appends); the second PR stacks on the first and rebases when it lands.
   The program made it the rule (plan #385, revision 2): within one mandate, a child that depends on another
   child's output stacks on that child's branch, with the predecessor's branch as its PR base; merge order is
   stack order; a head that moves is re-asked. You see two PRs; you dispose both in one Done over the set. What
   it cost before the rule: a stacked copy of a commit beside its merged original is an add/add conflict at the
   merge (the C2 case), paid once.
-- **Names are rewritten until they carry the model.** Four falsifications of the seat names in one day (`cos-1`,
-  `cos-counsel`, `cos-engineering`, `build` for the machine's seat) ended at `program, counsel, audit, engineer,
-  distribute, operate`; each rename cost the leader a presence file and the Operator one question. The names you
+- **Names are rewritten until they carry the model.** Four falsifications of the unit names in one day (`cos-1`,
+  `cos-counsel`, `cos-engineering`, `build` for the machine's unit) ended at `program, counsel, audit, engineer,
+  distribute, operate`; each rename cost the home a presence file and the operator one question. The names you
   see on your board are the mental model; spend the questions.
-- **What a seat never did.** No seat merged, released, wrote a preference, touched another's presence file, or
+- **What a unit never did.** No unit merged, released, wrote a preference, touched another's presence file, or
   acted on the host. Every row of the program was accreted under the one plan-`Y` you gave on revision 10, and
   every one is named in the Done question you will be asked.
 
 ## 8. The three modes of attendance, and where a question is asked
-You are not at every seat at once. The organization has three **modes**, read from the seats you declare you
+You are not at every unit at once. The organization has three **modes**, read from the units you declare you
 attend and checked against what you did (#388, #412; the rule's own sentence: `../rules/organization.md` §6):
-- **pure M3** — only the program seat is attended: every member seat's question comes to you through the
-  leader;
-- **pure M4** — every live seat is attended: each seat asks you in its own chat;
-- **hybrid** — the program seat and some of the others are attended: the attended ones ask you directly, the
-  rest through the leader.
+- **pure M3** — only the program unit is paired: every member unit's question comes to you through the
+  home;
+- **pure M4** — every live unit is paired: each unit asks you in its own chat;
+- **hybrid** — the program unit and some of the others are paired: the paired ones ask you directly, the
+  rest through the home.
 
-**Two spans, two numbers.** Your span is how many seats you attend — sit at, read, answer in their own chat.
-The leader's span is how many member seats it reads directly: at most seven lines (§2). They are different
-numbers over different sets, and neither is how many seats run. A hundred seats are one span for you while you
-attend only the program seat and it orchestrates the rest through its members; what you would feel is a second
-or a third seat you have to watch, never the hundredth you do not (#412).
+**Two spans, two numbers.** Your span is how many units you attend — sit at, read, answer in their own chat.
+The home's span is how many member units it reads directly: at most seven lines (§2). They are different
+numbers over different sets, and neither is how many units run. A hundred units are one span for you while you
+attend only the program unit and it orchestrates the rest through its members; what you would feel is a second
+or a third unit you have to watch, never the hundredth you do not (#412).
 
-**Attendance is declared, and the records check it.** The seats you attend beside the program seat are the
-preference `attended-seats`, yours to set: seat names, or seat names without their `-<hp>` (`counsel` covers every
-holder of the counsel seat), or `none`. Its default is `none`: only the program seat is attended, and every
-other seat's question reaches you through the leader. Declaring a seat is a preferences-zone PR you dispose, like
-any preference; nothing a seat writes about itself makes it attended (#295: a holder is what the process says).
+**Attendance is declared, and the records check it.** The units you attend beside the program unit are the
+preference `paired-units`, yours to set: unit names, or unit names without their `-<hp>` (`counsel` covers every
+holder of the counsel unit), or `none`. Its default is `none`: only the program unit is paired, and every
+other unit's question reaches you through the home. Pairing a unit — or unpairing it — is a preferences-zone PR you dispose, like
+any preference; nothing a unit writes about itself makes it paired (#295: a holder is what the process says).
 The records are the check, read over the **attendance window** (the preference `attendance-window`, default 7
-days): a disposition you gave in a live seat's own chat — not a mandate's inherited `Y`, not a relayed one — that
+days): a disposition you gave in a live unit's own chat — not a mandate's inherited `Y`, not a relayed one — that
 the preference does not declare prints `undeclared`, because you answered where you said you were not — the
-leader reports it to you once, and no member seat reports it as an incident of its own; a declared
-seat with no disposition of yours within the window prints `warn`, because you said you were there and have not
-been. The mode is read over the live seats (presence files within the stale window): only the program seat
-attended → M3, the default; every live seat → M4; otherwise hybrid. `dyad session list` prints the declared set,
-the mode, each seat's `attended` or `relayed`, and the two check lines.
-The check is only as true as the notes a seat writes, so a seat records the two dispositions that are not its
-own in the forms that say so: an accreted row closes on its mandate's Done-`Y` with `dyad dwork state <id> done
---mandate <parent>` (the note `mandate #<parent>, <date>`), and a disposition you gave in another seat's chat is
-entered with `--relayed-via <seat>` beside `--said` (the note `… relayed via <seat>`). Either note, anywhere in
-it, keeps the entry out of the seat's own attendance (#422).
+home reports it to you once, and no member unit reports it as an incident of its own; a declared
+unit with no disposition of yours within the window prints `warn`, because you said you were there and have not
+been. The mode is read over the live units (presence files within the stale window): only the program unit
+paired → M3, the default; every live unit → M4; otherwise hybrid. `dyad session list` prints the declared set,
+the mode, each unit's kind (`dyad` or `solo`) and route (`chat` or `relayed`), and the two check lines.
+The check is only as true as the notes a unit writes, so a unit records the two dispositions that are not its
+own in the forms that say so: an accreted row closes on its mandate's done-`Y` with `dyad dwork state <id> done
+--mandate <parent>` (the note `mandate #<parent>, <date>`), and a disposition you gave in another unit's chat is
+entered with `--relayed-via <unit>` beside `--said` (the note `… relayed via <unit>`). Either note, anywhere in
+it, keeps the entry out of the unit's own attendance (#422).
 
-**The route table.** An escalation — a counter-prompt a seat owes you (a plan, a Done, a fence it cannot cross,
+**The route table.** An escalation — a counter-prompt a unit owes you (a plan, a Done, a fence it cannot cross,
 a release or destructive action that is always its own question) — is asked where you will see it:
 
-| the seat is | the question is asked | the answer travels | the record |
+| the unit is | the question is asked | the answer travels | the record |
 |---|---|---|---|
-| attended | in the seat's own chat, by the seat | directly: your words in that seat's provenance | the seat's provenance record (Rule-7) |
-| not attended | in the leader's chat, by the leader, with the seat named, in the form `relay-form` names (§3 item 4) | relayed back to the seat verbatim (R29: a cos relays, never answers) | the seat's plan file quotes the question; the leader's provenance carries your answer; the seat's row cites it (#314's shape, until the bus of #303 lands) |
-| the leader itself | in the leader's chat | — | the leader's provenance |
+| paired | in the unit's own chat, by the unit | directly: your words in that unit's provenance | the unit's provenance record (Rule-7) |
+| not paired | in the home's chat, by the home, with the unit named, in the form `relay-form` names (§3 item 4) | relayed back to the unit verbatim (R29: a cos relays, never answers) | the unit's plan file quotes the question; the home's provenance carries your answer; the unit's row cites it (#314's shape, until the bus of #303 lands) |
+| the home itself | in the home's chat | — | the home's provenance |
 
 The board lists every outstanding question with its route (R17), so you see in one place what to answer and
-where. What never changes with the mode: who disposes (you), what a seat may do without asking (its charter,
+where. What never changes with the mode: who disposes (you), what a unit may do without asking (its charter,
 §4), and what is never accretable (§5). What changes is only the chat a question reaches you in — and the
-seats never guess it: the route follows the set you declared, the same set the mode is read from.
+units never guess it: the route follows the set you declared, the same set the mode is read from.
 
 ## 9. Opening a host desk (dyad-system #531)
 You work on more than one machine — a Linux workstation, a MacBook — and your cos is a cloud session bound to
@@ -230,7 +230,7 @@ is owned by two charters.
      at start and at each of your prompts, and reports by row state, events and its presence file on `main`, where
      the cos reads them (§2's precondition: no message is needed to know where anything stands);
    - **a cloud session attached to the host by Remote Control** — it receives the cos's messages like any cloud
-     seat. Remote Control ties a session to the first computer it attaches to, so a desk serves one host for its
+     unit. Remote Control ties a session to the first computer it attaches to, so a desk serves one host for its
      whole life, and a second host is a second desk.
 3. **Title it** with the host as topic, `operate-mac-<hp>: terminal (ds) - <what>`, and register it with
    `dyad session touch -r <row>`; its presence file records `host` and `holder`, so you can see which machine it
@@ -242,32 +242,32 @@ and the id allocator's contiguity fence rejects a true collision of row ids.
 
 ## 10. The cos as a mode: the destination (dyad-system #531)
 Today your cos is one session. Where it is headed is a **mode**: an office any session can hold, whose holder
-changes while the office persists — what the core already says of every seat, held by one harness session at a time
+changes while the office persists — what the core already says of every unit, held by one harness session at a time
 and by many over time. You open any session on any machine, say "cos", and you are talking to your cos.
 - **Continuity lives in the corpus, never in a chat.** Everything a cos knows is readable from `main` — the board,
-  the pending queue, every question in flight and whose it is, every relay and its answer, every seat and its state
+  the pending queue, every question in flight and whose it is, every relay and its answer, every unit and its state
   — so a fresh session that takes the mode reconstructs the cos with nothing told to it.
-- **One holder at a time, by a lease.** The mode is the seat `program` (`program-<operator>` with several
+- **One holder at a time, by a lease.** The mode is the unit `program` (`program-<operator>` with several
   Operators); taking it is an explicit act that records the new holder and makes the old one yield. The lease is
   advisory, as presence is: a second holder is warned on, never locked out, because the order of pushes to `main`
   is the only arbiter the kernel has.
-- **Seats reach the mode, not a session**, through an inbox on `main` the holder reads every turn, so a terminal
+- **Units reach the mode, not a session**, through an inbox on `main` the holder reads every turn, so a terminal
   holder that receives no message is reachable and a hand-off loses nothing in transit.
 - **Its acts are unchanged**: the five of §2. Host work stays with the host desks (§9); a mode sitting on your Mac
   may open a Mac desk, and never becomes one.
-- **Authority is unchanged.** You dispose wherever the mode is; your words are recorded verbatim with the seat that
+- **Authority is unchanged.** You dispose wherever the mode is; your words are recorded verbatim with the unit that
   received them.
 
 **The conditions it must keep** (plan #531 revision 4, the mode stress-tested against this cabinet's own text):
 | # | the model says | the mode keeps it by |
 |---|---|---|
 | S1 | one chief of staff beside you (§1) | the mode is that office, the lease its holder |
-| S2 | the leader holds your attention, not authority | **exclusive**: only a session holding no other seat may take the mode, and taking it never carries a charter |
-| S3 | attendance is not leadership (`organization.md` §6) | the mode follows you only into a session holding no seat; an attended secretary or desk stays what it is |
+| S2 | the home holds your attention, not authority | **exclusive**: only a session holding no other unit may take the mode, and taking it never carries a charter |
+| S3 | attendance is not leadership (`organization.md` §6) | the mode follows you only into a session holding no unit; a paired secretary or desk stays what it is |
 | S4 | authority by content, never by identity | the lease grants nothing: a wrongly held lease confers no authority, because the cos has none |
-| S5 | every seat reads and writes the same ledgers (§2 of the rule) | the mode requires it: the queue and relays move from chat into the corpus |
-| S6 | one leader per Operator, at most seven lines | one mode per Operator; no seat count changes |
-| S7 | a relayed question is asked in the leader's chat, checked from records naming the seat | the leader's chat is the holder's session, and the records name the seat `program`, never the harness session |
+| S5 | every unit reads and writes the same ledgers (§2 of the rule) | the mode requires it: the queue and relays move from chat into the corpus |
+| S6 | one leader per operator, at most seven lines | one mode per operator; no unit count changes |
+| S7 | a relayed question is asked in the home's chat, checked from records naming the unit | the home's chat is the holder's session, and the records name the unit `program`, never the harness session |
 | S8 | the cos does only its five short acts (#432) | the mode's act list stays the five; host work goes to the host desk |
 
 **The roadmap.** Each phase leaves a working system and is planned as its own d-work when you ask for it; each is a
@@ -275,39 +275,39 @@ and by many over time. You open any session on any machine, say "cos", and you a
 | phase | what lands | row | exit test |
 |---|---|---|---|
 | P1 — **delivered** (#535) | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
-| P2 — **delivered** (#536) | a store inbox on `main`: seats post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test seat receives and answers a relay with no message |
-| P3 | the lease: take, yield, status; a stable seat name for the cos; a take by a session holding another seat refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
+| P2 — **delivered** (#536) | a store inbox on `main`: units post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test unit receives and answers a relay with no message |
+| P3 | the lease: take, yield, status; a stable unit name for the cos; a take by a session holding another unit refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
 | P4 | the mode as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
-| P5 | follow into an unseated session: a fresh session takes the mode on your first message; an attended secretary or desk never does | #539 | writing in an attended secretary's chat leaves it a secretary |
+| P5 | follow into an unseated session: a fresh session takes the mode on your first message; a paired secretary or desk never does | #539 | writing in a paired secretary's chat leaves it a secretary |
 P1 comes first because without the state in the corpus a hand-off loses the cos; P2 before P3 because a lease is
-useless while seats can reach only a session id; P4 is packaging once P1–P3 hold. P1 alone makes today's cos
+useless while units can reach only a session id; P4 is packaging once P1–P3 hold. P1 alone makes today's cos
 crash-safe, and P2 alone lets a terminal host desk (§9) hear the cos.
 
 **The hop, as P1 delivers it (#535).** The cos's orchestration in flight lives in the **board store**,
 `<instance>/d-work/board/` (Rule-16 Store): one file per open row — who holds the work and in which session (`owner`),
-what it waits on (`waiting-on`: you, a seat, or something external such as a release run), its next act (`next`), the
+what it waits on (`waiting-on`: you, a unit, or something external such as a release run), its next act (`next`), the
 question you owe word for word (`question`), and the follow-ups promised you (`promised`) — and `_cos.md` for the
-pending queue's counts, the seat table with each seat's session id, and the last question asked. The cos writes it
+pending queue's counts, the unit table with each unit's session id, and the last question asked. The cos writes it
 **write-ahead** (Rule-3, Batch disposition): the entry first, then the dispatch, the relay or the question it
 records, each write one ledger-only commit (`dyad board set <id> key=value…`). So when the cos's session ends and
 another takes over — a **hop** — nothing in flight is lost:
-1. The new session takes the seat (`DYAD_SESSION=program-<hp>`, as §3) and runs `dyad board resume`, which prints the
-   questions you owe verbatim, the dispatched work and its waits, the external gates and the seats to announce to.
+1. The new session takes the unit (`DYAD_SESSION=program-<hp>`, as §3) and runs `dyad board resume`, which prints the
+   questions you owe verbatim, the dispatched work and its waits, the external gates and the units to announce to.
 2. It re-presents an open question unchanged, or tells you it is still pending; it never re-derives one, and asks
    you nothing about state. What you see of the hop is one line: "cos resumed in <session>".
-3. It reads its inbox (`dyad inbox read`): every report a seat posted while the cos was between sessions is there,
-   addressed to the seat `program`, not to the old session, so nothing a seat sent is lost and no seat needs to be
+3. It reads its inbox (`dyad inbox read`): every report a unit posted while the cos was between sessions is there,
+   addressed to the unit `program`, not to the old session, so nothing a unit sent is lost and no unit needs to be
    told where the cos now is (P2, #536).
 4. `dyad board` renders your board from the rows and the board store; it warns when the board's last `writer` is not
    this session, the sign of two holders, which P3's lease will arbitrate.
-**The inbox, as P2 delivers it (#536).** Seats and the cos write to each other through the inbox store
-(`<instance>/d-work/inbox/<seat>/`, Rule-16 Store), one file per message, addressed by seat: a report is `dyad inbox
-post program --row <id> --kind report …`, a relay `dyad inbox post <seat> --row <id> --kind relay …`. Every seat reads
+**The inbox, as P2 delivers it (#536).** Units and the cos write to each other through the inbox store
+(`<instance>/d-work/inbox/<seat>/`, Rule-16 Store), one file per message, addressed by unit: a report is `dyad inbox
+post program --row <id> --kind report …`, a relay `dyad inbox post <unit> --row <id> --kind relay …`. Every unit reads
 its inbox at the start of every turn; `dyad board resume` and `dyad session touch` print the unread count. A chat
 message to a session becomes a doorbell only, so a terminal desk (§9), which receives no chat message, hears the cos
 by reading its inbox, and a report reaches the cos however many hops it has made. The inbox carries information
 only: a body shaped like a disposition is refused — a report names the row whose ledger entry it means and
-never quotes the entry — and your words reach a seat verbatim with the record entry they
+never quotes the entry — and your words reach a unit verbatim with the record entry they
 were given in.
-P1's exit test is the **hop drill**: mid-flight, with a seat dispatched and a question open, a fresh session resumes
+P1's exit test is the **hop drill**: mid-flight, with a unit dispatched and a question open, a fresh session resumes
 and closes the row with no lost item and no question about state; you observe it and are asked nothing.

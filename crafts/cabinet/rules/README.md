@@ -2,7 +2,7 @@
 
 One file per rule, any form, no Rule-4 block, no sweep (Rule-4 Boundaries); each opens with the core Rule whose
 kernel reads it, if any. The core keeps the process — what a row is, who disposes, what a presence file holds
-(Rules 2, 3, 16) — and this craft keeps the practice: how the seats beside one or many Operators are organized
+(Rules 2, 3, 16) — and this craft keeps the practice: how the seats beside one or many operators are organized
 and named. Terms: `../vocabulary/CRAFT.md`. Records: `../falsification/rules/`.
 
 | rule | read by | what it holds |

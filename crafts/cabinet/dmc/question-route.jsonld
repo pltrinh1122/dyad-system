@@ -12,34 +12,34 @@
   ],
   "identifier": "question-route",
   "name": "Question route",
-  "description": "Where a question a seat owes the Operator is asked, by whether the seat is attended.",
-  "dyad:decides": "Where is this seat's question asked?",
+  "description": "Where a question a unit owes the operator is asked: in its own chat when it is paired (a dyad unit), relayed through the home when it is a solo.",
+  "dyad:decides": "Where is this unit's question asked?",
   "dyad:inputs": [
-    "the seat",
-    "the preference attended-seats",
-    "whether the seat is the leader"
+    "the unit",
+    "the preference paired-units (alias attended-seats)",
+    "whether the unit is the home"
   ],
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
       "termCode": "attended",
-      "name": "attended",
-      "dyad:when": "the seat is attended",
-      "dyad:then": "asked in the seat's own chat; the answer lands in that seat's provenance"
+      "name": "paired",
+      "dyad:when": "the unit is paired (a dyad unit)",
+      "dyad:then": "asked in the unit's own chat; the answer lands in that unit's provenance"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "relayed",
-      "name": "not attended",
-      "dyad:when": "the seat is not attended",
-      "dyad:then": "asked in the leader's chat, seat named, in the form relay-form names; the answer is relayed back verbatim"
+      "name": "not paired",
+      "dyad:when": "the unit is not paired (a solo)",
+      "dyad:then": "asked in the home's chat, unit named, in the form relay-form names; the answer is relayed back verbatim"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "leader",
-      "name": "the leader itself",
-      "dyad:when": "the seat is the leader",
-      "dyad:then": "asked in the leader's chat"
+      "name": "the home itself",
+      "dyad:when": "the unit is the home",
+      "dyad:then": "asked in the home's chat"
     }
   ],
   "dyad:judgedBy": {
