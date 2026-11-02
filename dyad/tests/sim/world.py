@@ -150,7 +150,7 @@ class Cos:
     def dispatch(self, row: int, seat: Seat, task: str, crash: str | None = None) -> None:
         if crash == "before-wa":
             return
-        self.s.set(row, owner=f"{seat.name} {seat.session.harness}", waiting_on=f"seat {seat.name}", next=f"send {task}")
+        self.s.set(row, owner=f"{seat.name} {seat.session.harness}", waiting_on=f"unit {seat.name}", next=f"send {task}")
         if crash == "after-wa":
             return
         self.send_pending(row)

@@ -399,8 +399,20 @@ def preference(key: str, root: Path | None = None) -> str | None:
         return None
     for r in table_rows(p.read_text()):   # `table_rows` keeps an escaped `\\|` inside its cell (#171)
         if len(r) >= 2 and plain(r[0]).strip() == key:
-            return plain(r[1]).strip()
+            return canonical_value(plain(r[1]).strip(), r[2] if len(r) >= 3 else "")
     return None
+
+_PREF_ALT = re.compile(r"`([^`]+)`")
+
+def canonical_value(value: str, allowed: str) -> str:
+    """L6 (#553): an operator types a preference value directly, so its case is not meaningful. When `allowed` is an
+    enumeration (every `|`-separated part one backticked value) and `value` matches one of them under casefold, that
+    canonical spelling is returned; otherwise `value` unchanged. The preferences guard warns on the difference."""
+    parts = [p.strip() for p in allowed.split("|")] if allowed else []
+    alts = [m.group(1).strip() for m in (_PREF_ALT.fullmatch(p) for p in parts) if m] if parts else []
+    if not alts or len(alts) != len(parts) or value in alts:
+        return value
+    return next((a for a in alts if a.casefold() == value.casefold()), value)
 
 def host_path(root: Path | None = None) -> str:
     """The host path, repo-relative, no trailing `/`: `DYAD_HOST`, else preference `host-path`, else
