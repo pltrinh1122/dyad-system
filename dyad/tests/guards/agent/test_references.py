@@ -159,10 +159,10 @@ class FixtureTests(Fixtured):
 
     def test_register_shape(self):
         kinds = [r[0] for r in refint.REFERENCES]
-        self.assertEqual(len(kinds), 33); self.assertEqual(len(set(kinds)), 33, "one entry per kind")   # +trace.id->row (#227), +3 dmc (#507), +merge (#541)
-        self.assertEqual(kinds[-9:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft",
-                                      "provenance.legacy->row", "trace.id->row", "dmc.home->file", "dmc.also_in->file",
-                                      "dmc.implementation->file", "merge.parent->row"])   # #177, #196, #191, #227, #507, #541 appended; order stable
+        self.assertEqual(len(kinds), 34); self.assertEqual(len(set(kinds)), 34, "one entry per kind")   # +trace.id->row (#227), +3 dmc (#507), +merge (#541), +board (#535)
+        self.assertEqual(kinds[-10:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft",
+                                       "provenance.legacy->row", "trace.id->row", "dmc.home->file", "dmc.also_in->file",
+                                       "dmc.implementation->file", "merge.parent->row", "board.id->row"])   # #177, #196, #191, #227, #507, #541, #535 appended; order stable
         for kind, src, field, ext, tgt, res in refint.REFERENCES:
             self.assertRegex(kind, r"^[a-z_]+\.[a-z_#]+->[a-z]+$")
             self.assertTrue(callable(res) or res == "world" or res.startswith("guard:"), kind)

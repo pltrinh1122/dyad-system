@@ -441,6 +441,7 @@ REFERENCES = [
     ("dmc.also_in->file",         "dmc",        "dyad:alsoIn",   None,              "file",       "guard:agent/dmc.py"),          # plan #507
     ("dmc.implementation->file",  "dmc",        "dyad:implementation", None,        "file",       "guard:agent/dmc.py"),          # plan #507
     ("merge.parent->row",         "merge",      "second parent", None,              "row",        "guard:agent/merges.py"),       # #541: a merge executes a row's Y done
+    ("board.id->row",             "board",      "<id>",          None,              "row",        "guard:agent/board.py"),        # #535: an entry orchestrates a row
 ]
 
 def craft_references_contrib(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple]]:
