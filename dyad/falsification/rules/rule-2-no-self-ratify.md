@@ -152,3 +152,20 @@ guard passes. **2–5**: this record is the sweep's statement. **2–6**: no ter
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #543.
+
+## Amendment — d-work #545 (2026-11-01: a release leaves the never-accretable list under the release gate)
+**Claim (plan #545 revision 2, the Operator's `Y` of 2026-11-01):** a release stays never-accretable except under the
+release gate, where the release d-work's own Done-`Y` names the cut PR and the tags and, with its fence, ratifies the
+release (Rule-11), the hosting approval authenticating it.
+
+| # | attack | result |
+|---|---|---|
+| 31 | The never-accretable list exists because a plan cannot see what it will publish. | **Survives, and the exception keeps it**: the release is not accreted by a plan; it is ratified by a Done-`Y` given on the bytes, named tag by tag in the question (Rule-11 G6). A plan-`Y` alone still never releases. |
+| 32 | The exception widens what an agent can publish. | **Refuted**: nothing publishes without the Operator's approval on the hosting, which no agent can forge (#541 A1); the gate removes a question, not a check. With the gate off, the list is unchanged. |
+| 33 | Binding's first sentence: a `Y` binds only to what its question named. | **Survives**: the Done question names the tags; a tag outside it is not bound. |
+
+**Pairwise (Rule-5).** **2–11**: Rule-11 owns when a release is ratified and its fence; Rule-2 owns that the Done-`Y`
+may bind to it; each cites the other. **2–3**: the Done question's `releases` clause is stated in Rule-11, while Rule-3 owns the forms; that gap is named in Rule-11's amendment #545 and carried as a follow-up. **2–7**: the
+approval's record is Rule-7's. **2–6**: `release gate` used by 2. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #545.

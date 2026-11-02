@@ -61,7 +61,11 @@ built on.
    and the date because the writer stamps the day it writes, so without it the record misdates the
    Operator. The note is what discloses that the words predate the row they open; the Agent's own
    account of why the row exists stays in the mandate's plan file (#290). The same holds of the
-   entry that closes it, the mandate's Done-`Y` words under the same note (#422).
+   entry that closes it, the mandate's Done-`Y` words under the same note (#422). A disposition the Operator gives
+   on the hosting rather than in words — the approval of a publishing run under Rule-11's release gate — has no
+   words to copy, so its entry holds the reference instead, noted `by reference`, its fenced body
+   `run <run id> approved by <login> at <ISO-8601 UTC time>` as the hosting reports them. The reference is verifiable on the hosting,
+   which a transcription of a tap could not be; the Agent writes nothing of its own into it (#545).
 5. **Checked against the row.** The `disposition` entries of a record correspond one-to-one, in
    order, with the entries of its row's `disposed` column; a mismatch is a failing check, so a
    dropped or invented disposition is visible without reading the chat. A row the instance lists as
@@ -124,6 +128,8 @@ closing entry 2026-10-25 (d-work #422): the attendance reading excludes a note n
 and no CLI form wrote either note on a close or on a relayed disposition, so every mandate close read as a
 disposition given in the closing seat; see the same record, amendment #422. Enforcement's credential shapes read
 `gh[pousr]_` and gain `sk-ant-` 2026-10-29 (d-work #525): the guard had matched `gh[pousr]_` from the start and
-added the Anthropic key in #558, and the Rule named neither; see the same record, amendment #525.
+added the Anthropic key in #558, and the Rule named neither; see the same record, amendment #525. Property 4 gains the
+disposition recorded by reference 2026-11-01 (d-work #545): under the release gate the Operator's approval of a
+publishing run is a tap with no words; see the same record, amendment #545.
 
 Set: System Requirements.

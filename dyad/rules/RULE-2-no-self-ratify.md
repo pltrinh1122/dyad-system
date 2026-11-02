@@ -72,7 +72,9 @@ not edited when they are added (G5).
   stated rule does not cover, or one past the stated ceiling, was not named by the question and so
   is not bound by the `Y`: it returns to explicit mode and is asked. Never accretable, whatever a
   plan says: a destructive host action (Rule-8 keeps its own counter-prompt), a release (Rule-11:
-  it publishes to the world), a Rule-3 Intake (its words are another Operator's, Rule-7 property
+  it publishes to the world) — except under the release gate, where the release d-work's own Done-`Y`
+  names the PR whose merge is the cut and the tags it publishes, and Rule-11 makes that `Y`, with its
+  fence, the release's ratification and the hosting approval its authentication (#545) — a Rule-3 Intake (its words are another Operator's, Rule-7 property
   4), a change to a preference value (*Not ratification*, above: the operator disposes that as its
   own PR), and any mutation the plan did not describe, which Rule-3 already calls a new plan. The
   preference `accretion` (`preferences-corpus/PREFERENCES.md`) selects between the two: under
@@ -115,6 +117,8 @@ line and the Operator could re-run it; see
 `../falsification/rules/rule-2-no-self-ratify.md`, amendment #476. Enforcement names its three mechanical checks 2026-10-31 (d-work #543):
 it said "one mechanical fence" after #541 had added a merge guard that names this Rule its owner and #532 a merge
 verb that refuses an unbound merge, so a guard claimed an owner whose text denied having one; see the same record,
-amendment #543.
+amendment #543. Binding's never-accretable list lets a release go under the release gate 2026-11-01 (d-work #545): the
+chat release question after a Done-`Y` that had verified the very bytes of the cut added no information, while the
+hosting approval, the one input no agent can forge, stays; see the same record, amendment #545.
 
 Set: System Requirements.

@@ -139,6 +139,21 @@ dyad system without clashes or hand-editing.
   discipline Rule-3's own Done-batch items already carry). Never a tag of a different d-work;
   never folded into Rule-3's plan or Done batch, so a release stays its own, visibly-a-publication
   moment. A `Y` ratifies exactly the named tags; anything else, none of them (Rule-2, Binding).
+- Under the **release gate** (the hosting's required approval of the publishing run, on while the repository
+  variable `RELEASE_APPROVAL` is `tap`), neither question is asked. A release d-work's plan-`Y` names its tags and
+  numbers; its Done question names the PR whose merge is the cut and those tags — `Y/N: Done with #<id> <title>
+  (merges PR #a, releases <tag-a>, <tag-b>)?` — and that Done-`Y` ratifies the release, because it verified the
+  bytes the cut holds. It ratifies only behind a mechanical **fence**: the tree under each released craft's root at
+  the cut equals that root at the head the Done-`Y` names, and each archive's sha256 is the build of the cut
+  (property 5, deterministic). Only then is a **release-ready entry** written for each tag in the row's `disposed`
+  column, `<date> release-ready <tag> at <cut sha> (archive <sha256>)` (`dyad release ready`, which checks the
+  fence): the Agent's statement that the fence held, carrying no `Y` or `N`, so never a disposition and never
+  counted as one (Rule-7 property 5). The publishing
+  run it starts waits for the Operator's approval on the hosting, which **authenticates** the Done-`Y` for the one
+  irreversible act — the one input no agent can forge, since every other `Y` reaches the hosting as a ledger line
+  an agent wrote (#541, A1) — and decides nothing new; a rejected or expired run publishes nothing. The approval is
+  recorded as one `Y release` entry per tag, by reference (Rule-7 property 4). When the gate is off, or the fence
+  fails for any tag, the release returns to the question above, asked in chat.
 
 ## Enforcement
 `dyad/scripts/package.py check` on every push and PR (A5): a runner that first runs the invariant
@@ -202,6 +217,9 @@ and the one reason written down named a symptom of the system's purpose rather t
 the same record, amendment #504. Property 7 gains the untagged-row sentence 2026-10-29 (d-work #481, mandate
 #527): a row naming a version no tag held pinned `VERSION`, since any bump past it failed and Rule-1 forbade the row's
 fix in the same PR, the version/zone face of mode M one state further (incident row 216); see the same record,
-amendment #481.
+amendment #481. Ratification events gains the release gate 2026-11-01 (d-work #545): a release
+d-work's Done-`Y` had already verified the bytes of the cut, so the chat question after it was a second ask of the same
+decision, while the hosting approval stays as the authentication no agent can forge; see the same record, amendment
+#545.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

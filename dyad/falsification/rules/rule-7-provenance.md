@@ -201,3 +201,21 @@ Pairwise (Rule-5): 7–14 is unchanged; the shapes are property 2's residue, not
 no trigger and no store changes. 7–6: no term is added. 7–11 and 7–12: the guard and its tests are unchanged. 7–20: no
 reference kind. All other pairs are untouched. Coherent and orthogonal.
 Disposition: see ledger #525.
+
+## Amendment — d-work #545 (2026-11-01): property 4, a disposition recorded by reference
+**Claim (plan #545, revision 1 attack 3, kept by revision 2):** the Operator's approval of a publishing run under
+Rule-11's release gate has no words; its entry is noted `by reference` and its fenced body is
+`run <run id> approved by <login> at <ISO-8601 UTC time>`.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Property 4 holds the Operator's words only; a reference is not words. | **Survives, scoped**: there are no words to copy, and a reference written by the Agent is still the hosting's record of the Operator's act, not the Agent's text; it is verifiable on the hosting, which a transcription of a tap would not be. |
+| 2 | Property 5 counts dispositions; the release-ready entry sits in `disposed` with no provenance entry, or the approval would be a disposition with no row entry. | **Refuted by shape**: a release-ready entry carries no `Y` or `N`, so it is no disposition and the count excludes it (the guard reads it as its own shape); the `Y release` entry and its by-reference body are written together, one-to-one. |
+| 3 | The approver cannot always be read (the proxy refuses the environments API). | **Survives, procedure** (plan revision 1 attack 6): a run that waited and then completed was released by a required reviewer, and only the Operator is one; where neither the run's status nor its jobs can be read, nothing is recorded and the gap is said. |
+| 4 | The run id is a credential-like string the state check flags. | **Refuted**: a run id is a decimal number; the credential shapes are unchanged. |
+
+**Pairwise (Rule-5).** **7–11**: Rule-11 says the approval is recorded by reference and cites this property. **7–3**: the
+record is written in the clerical commit of the event, as before. **7–2**: unchanged. **7–6**: `release gate` used by 7.
+Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #545.
