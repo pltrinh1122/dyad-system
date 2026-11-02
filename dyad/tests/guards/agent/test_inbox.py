@@ -200,5 +200,37 @@ class CliTests(World):
         self.assertIn("inbox program-59cec502: 1 unread — `dyad inbox read`", out.getvalue())
 
 
+class WriteAheadTests(World):
+    """The write-ahead fence on a relay (d-work #552, mode A): `post --kind relay <seat> --row N` lands only when
+    `board/N.md` on origin/main names <seat> among its owners and this session wrote it last."""
+    def board_set(self, *pairs, harness="h2"):
+        bd = dyadlib.load_guard("agent", "board")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502", "CLAUDE_CODE_SESSION_ID": harness}), \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(bd.cli(["set", "5", *pairs], self.clones["program-59cec502"]), 0)
+
+    def relay(self, to="engineer-1537d8fb", harness="h2"):
+        return self.as_seat("program-59cec502", "post", to, "--row", "5", "--kind", "relay", "do task-5", harness=harness)
+
+    def test_a_relay_without_its_board_entry_is_refused(self):
+        before = git(self.origin, "rev-parse", "main")
+        rc, _, err = self.relay()
+        self.assertEqual(rc, 1); self.assertIn("board/5.md is not on origin/main", err)
+        self.assertEqual(git(self.origin, "rev-parse", "main"), before)
+        rc, _, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "done")
+        self.assertEqual(rc, 0, err)                                         # a report needs no board entry
+
+    def test_the_entry_must_name_the_seat_and_be_this_sessions(self):
+        self.board_set("owner=engineer-1537d8fb session_x; counsel-0032b4c0 session_y", "waiting-on=seat engineer-1537d8fb", "next=send task-5")
+        rc, _, err = self.relay(to="distribute-a603e150")
+        self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, counsel-0032b4c0, not distribute-a603e150", err)
+        rc, _, err = self.relay(harness="h3")                                # the same seat, another holder
+        self.assertEqual(rc, 1); self.assertIn("was last written by h2, not this session (h3)", err)
+        rc, out, err = self.relay()
+        self.assertEqual(rc, 0, err); self.assertIn("posted ", out)
+        rc, _, err = self.relay(to="counsel-0032b4c0")                       # a co-owner is an owner
+        self.assertEqual(rc, 0, err)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -63,7 +63,8 @@ SCENARIOS = [
     ("tc", "before-wa", "promised"), ("tc", "release", "question"), ("cc", "idle", "gate"), ("cc", "after-wa", "promised"),
     ("cc", "merge", "question"), ("cc", "release", "relay")])]
 
-GAP_537 = "#537 (lease): two live holders both act on one written-ahead entry"
+GAP_537 = ("#537 (lease): two live holders both act on one written-ahead entry — since #552's write-ahead fence, only "
+           "when the old holder relays and stops before recording it sent, so the new holder relays again")
 KNOWN_GAPS = {
     "S8": GAP_537,
     "S13": "F2 (finding, #546; row #548): one board store and one `_cos.md` for two cabinets: resume lists the other leader's rows and the new holder re-presents its questions to this Operator",
@@ -83,6 +84,7 @@ class Run:
     """One scripted hop: the old holder puts `c` in flight on row 5, the hop happens at `b`, the new holder resumes and
     the world settles; then the oracle."""
     def __init__(self, a="cc", b="idle", c=None, *, seat_kind="cloud", new_os="linux", report_at_hop=False,
+                 relayed_unrecorded=False,
                  two_holders=False, outage=False, skew=0, race=False):
         self.w = W.World(SCRATCH, rows={5: "planned", 6: "done", 8: "planned"}, pr=(b == "merge"))
         self.op = Operator()
@@ -99,6 +101,8 @@ class Run:
             self.w.runs["42"] = "pending"
             self.old.gate(8, "42")
             self.truth.append(Item("gate", "42", 8))
+        if relayed_unrecorded:
+            self.old.send_pending(5, finish=False)                # relayed, then stopped before recording it sent
         if report_at_hop:
             self.seat.step()                                      # the seat acts and reports while the old holder dies
         self.mark = len(self.op.lines)
@@ -197,15 +201,22 @@ class SeatHopTests(unittest.TestCase):
         self.assertIn("task-5", r.w.completed)
         self.assertEqual(r.violations(), [])
 
-    def test_S8(self):
+    def test_S8_a_stale_holders_relay_is_refused(self):
+        """Two live holders: the old one finishes its turn after the new one resumed. Its relay is refused by the
+        write-ahead fence, since the entry is the new holder's now (#552); the act runs once."""
         r = Run("cc", "after-wa", "dispatch", two_holders=True)
-        self.assertTrue(any("was last written by h-new, not this session (h-old)" in l for l in r.old.s.warnings),
-                        r.old.s.warnings)                       # the writer warning fires on the second holder's write
+        self.assertTrue(any("was last written by h-new, not this session (h-old)" in l for l in r.old.refused), r.old.refused)
+        self.assertEqual(r.old.s.warnings, [])                   # it never wrote: its stale view called the entry its own
+        self.assertEqual(r.w.acts["task-5"], 1)
+        self.assertEqual(r.violations(), [])
+
+    def test_S8(self):
+        r = Run("cc", "after-wa", "dispatch", relayed_unrecorded=True)
         self.gap("S8", r.violations(), ["executed twice: task-5 (2 times)"])
 
     @unittest.expectedFailure
     def test_S8_oracle(self):
-        self.assertEqual(Run("cc", "after-wa", "dispatch", two_holders=True).violations(), [])
+        self.assertEqual(Run("cc", "after-wa", "dispatch", relayed_unrecorded=True).violations(), [])
 
     def stale(self):
         """S9: row 5 carries an open question on the board, then the row is closed under it; then the hop."""
