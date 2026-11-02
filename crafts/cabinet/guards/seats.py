@@ -84,7 +84,7 @@ def check_names(names: list[str], form: re.Pattern, functions: list[str]) -> lis
     outside = [n for n in names if parse_seat(n, form) is None]
     msgs = []
     if outside:
-        msgs.append(f"warning: {len(outside)} of {len(names)} presence file(s) are outside the seat form `<function>[-<topic>]-<hp>` "
+        msgs.append(f"warning: {len(outside)} of {len(names)} presence file(s) are outside the unit-name form `<function>[-<topic>]-<hp>` "
                     f"(history the store keeps, Rule-16; first: {', '.join(outside[:3])})")
     unknown = [n for n in names if (s := parse_seat(n, form)) and kind(s, functions) == "unknown-function"]
     if unknown:
@@ -105,7 +105,7 @@ def check_leaders(records: list[dict[str, str]], form: re.Pattern, functions: li
         s = parse_seat(Path(r.get("_path", "")).stem, form)
         if s and kind(s, functions) == "leader" and not stale(r.get("seen", "")):
             by_operator.setdefault(s["topic"], []).append(s["seat"])
-    return [f"warning: {len(seats)} live {LEADER} seats for {'Operator ' + repr(op) if op else 'one Operator'} "
+    return [f"warning: {len(seats)} live {LEADER} units for {'Operator ' + repr(op) if op else 'one Operator'} "
             f"({', '.join(sorted(seats))}): a cos per Operator, never per machine — a re-seating in progress or a "
             f"mistake (organization.md §1, Workstations)"
             for op, seats in sorted(by_operator.items()) if len(seats) > 1]
@@ -144,7 +144,7 @@ def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     form, functions = rules()
     names = presence_names(root)
     inside = [n for n in names if parse_seat(n, form)]
-    return f"{len(inside)} seat(s) in the form of {len(names)} presence file(s), {len(functions)} standing functions"
+    return f"{len(inside)} unit(s) in the form of {len(names)} presence file(s), {len(functions)} standing functions"
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     form, functions = rules()

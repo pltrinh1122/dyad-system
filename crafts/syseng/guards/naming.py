@@ -16,7 +16,12 @@ selected module defines each plain name at top level and at least one top-level 
 `guards/`, `projectors/`, `scripts/`) equal the listed set (fail either way: unlisted or stale); `allow: <path> #
 <reason>` — a path a kind claims but that does not match it: no reason fails, a gone package path (`dyad/`, `crafts/`)
 fails (the list only shrinks), a gone instance path warns (the data travels to installs whose instance differs), a path
-that matches again warns. Whether a name is apt is inference.
+that matches again warns; `upper: <basename glob> …` — the closed uppercase list of `rules/naming.md` (L3): any path
+segment carrying an uppercase letter that no listed glob names warns when the path is already on `origin/main` and
+fails when it is new (L4, #553); every path is unique under casefold (L5, fail); `refuse: <word> = <glob> … # <reason>`
+— the word, standalone, in a selected file fails (`dyad-<word>` and a namespaced `<word>:x` are the other system's
+names; a quoted or backticked mention is no use). Whether a name is apt, and its separators (kebab, snake), are
+inference.
   naming.py [repo-root]
 """
 import sys
@@ -49,7 +54,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
 def parse_rules(text: str) -> dict[str, list]:
     """{'kind': [(pattern, glob, regex)], 'mode': [(pattern, glob, tracked mode)], 'symbol': [(glob, [tokens])],
     'env': [names], 'allow': [(path, reason)]}. Malformed lines are kept under 'bad' with their text."""
-    out = {"kind": [], "mode": [], "symbol": [], "env": [], "allow": [], "bad": []}
+    out = {"kind": [], "mode": [], "symbol": [], "env": [], "allow": [], "upper": [], "refuse": [], "bad": []}
     for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -67,6 +72,12 @@ def parse_rules(text: str) -> dict[str, list]:
         elif key == "allow":
             path, _, reason = rest.partition("#")
             out["allow"].append((path.strip(), reason.strip()))
+        elif key == "upper" and rest:
+            out["upper"].extend(rest.split())
+        elif key == "refuse" and " = " in rest and "#" in rest:
+            spec, _, reason = rest.partition("#")
+            word, _, globs = spec.partition(" = ")
+            out["refuse"].append((word.strip(), globs.split(), reason.strip()))
         else:
             out["bad"].append(line)
     return out
@@ -303,6 +314,49 @@ def check_allow(allow: list[tuple[str, str]], paths: set[str], used: set[str], l
             msgs.append(f"warning: {label}: allow {path} is no longer needed (the path matches its pattern)")
     return msgs
 
+def base_paths(root: Path, base: str = "origin/main") -> set[str] | None:
+    """The paths `base` holds, or None when it does not resolve here (then nothing counts as new)."""
+    r = subprocess.run(["git", "ls-tree", "-r", "--name-only", base], cwd=root, capture_output=True, text=True,
+                       env=dyadlib.git_env())
+    return set(r.stdout.split("\n")) - {""} if r.returncode == 0 else None
+
+def check_case(paths: list[str], upper: list[str], base: set[str] | None) -> list[str]:
+    """L4 (#553): a path segment with an uppercase letter is on the closed list (`upper:` basename globs) or it is
+    outside the standard — a warning for a path `base` already holds, a failure for a new one."""
+    msgs = []
+    for p in paths:
+        odd = [seg for seg in p.split("/") if seg != seg.lower() and not any(fnmatch.fnmatchcase(seg, g) for g in upper)]
+        if odd:
+            new = base is not None and p not in base
+            msgs.append(f"{'' if new else 'warning: '}{p}: {odd[0]!r} is not lowercase and not on the closed uppercase list "
+                        f"(rules/naming.md L4{'; a new name' if new else '; an existing name, kept'})")
+    return msgs
+
+def check_casefold(paths: list[str]) -> list[str]:
+    """L5 (#553): no two paths differ only by case; a case-insensitive filesystem would merge them."""
+    seen: dict[str, str] = {}
+    msgs = []
+    for p in paths:
+        k = p.casefold()
+        if k in seen:
+            msgs.append(f"{p}: differs from {seen[k]} only by case (rules/naming.md L5)")
+        seen.setdefault(k, p)
+    return msgs
+
+def refused_re(word: str) -> re.Pattern:
+    """The word as a standalone use: not inside a longer name (`dyad-bond`), not a namespace (`bond:x`), not quoted."""
+    return re.compile(rf"(?<![\w\"'`-]){re.escape(word)}(?![\w\"'`:-])", re.IGNORECASE)
+
+def check_refused(paths: list[str], refuse, root: Path) -> list[str]:
+    msgs = []
+    for word, globs, reason in refuse:
+        rx, sels = refused_re(word), [glob_re(g) for g in globs]
+        for p in (q for q in paths if any(s.match(q) for s in sels)):
+            for n, line in enumerate((root / p).read_text(errors="ignore").splitlines(), 1):
+                if rx.search(line):
+                    msgs.append(f"{p}:{n}: the term {word!r} is refused here ({reason})")
+    return msgs
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path = DATA, table: Path = TABLE) -> list[str]:
     root = Path(root or dyadlib.repo_root())
     r = load_rules(data)
@@ -329,6 +383,9 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, data: Path 
     found = env_names(paths, root)
     msgs += check_env(found, r["env"], installed, all_listed=all_env)
     msgs += check_allow(r["allow"], set(paths), used)
+    if r["upper"]:   # the case standard is checked where the data declares its closed list (#553)
+        msgs += check_case(paths, r["upper"], base_paths(root))
+    msgs += check_casefold(paths) + check_refused(paths, r["refuse"], root)
     for craft, cr in contrib:
         label = f"crafts/{craft}/guards/naming_contrib.txt"
         msgs += check_env(found, cr["env"], installed, label=label, check_unlisted=False)   # the unlisted check already ran above; this call is stale/deferred only
