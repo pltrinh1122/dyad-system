@@ -12,6 +12,9 @@
 #   env: NAME …                                — every DYAD_<NAME> package code reads, no more, no less
 #   allow: <path> # <reason>                   — a path a kind claims but that does not match; reasoned; stale fails for a package path
 #                                                (dyad/, crafts/) and warns for an instance path (this file travels to other installs); unneeded warns
+#   upper: <basename glob> …                   — the closed uppercase list (rules/naming.md, L3): a segment with an uppercase letter
+#                                                outside it warns when already on origin/main, fails when new (L4, #553)
+#   refuse: <word> = <glob> … # <reason>        — the standalone word fails in a selected file (#553)
 #
 # An installed craft may contribute its own kind/mode/symbol/env/allow rows directly:
 # crafts/<craft>/guards/naming_contrib.txt, same line format as this file, discovered by
@@ -62,3 +65,9 @@ env: DYAD_INSTANCE DYAD_OPS@sysadmin DYAD_RUNBOOKS DYAD_ROLE DYAD_NO_NESTED_TEST
 allow: .github/workflows/lan-git.yml # the lan-git craft's own CI (instance workflow, run by the hosting on the craft's server tree), not a package wrapper; unprefixed by design (#150; server.yml before it, #181)
 allow: .github/workflows/lan-git-image.yml # publishes the lan-git craft's image to GHCR (corroboration, kernel-only is the real path, #181); same reason, unprefixed by design
 allow: dyad/falsification/rules/rule-sets.md # the record of the two Rule sets (frame, #71), not of one Rule; predates the rule-<n>- pattern
+
+# The case standard (rules/naming.md, Case and separators; d-work #553). The list is closed: nothing joins it without a change there.
+upper: RULE-*-*.md VERSION README.md LICENSE CLAUDE.md MANIFEST.md CRAFT.md VOCABULARY.md PREFERENCES.md MANDATES.md INCIDENTS.md LEDGER.md BUNDLE.md INFRASTRUCTURE.md REGISTRY.md CHANGELOG.md
+# L1, an outside standard's case: an ISO 8601 basic UTC stamp keeps its `T` and `Z` designators (the inbox's message names, #536).
+upper: ????????T??????Z-*
+refuse: bond = dyad/rules/* dyad/vocabulary/* dyad/playbooks/* dyad/CLAUDE.md # dyad-bond is another system; do not use "bond" for the pair (rules/naming.md, #553)
