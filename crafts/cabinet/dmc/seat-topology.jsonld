@@ -65,7 +65,7 @@
     {
       "@type": "DefinedTerm",
       "termCode": "F",
-      "name": "roaming seats",
+      "name": "roaming units",
       "dyad:when": "no standing workstation seat; whatever seat an act needs attaches to the machine for that act",
       "dyad:then": "survives the gates and merges into the selected topology as its desks opened per act; K4 decides against it alone, since an attached session stays tied to its first computer"
     },
