@@ -117,6 +117,11 @@ who disposes — stays the core's):
 - **Announce, never order.** A seat reports by state — the row on `main`, its presence file, the PR — and by one
   roll-up line; it asks the Operator and never another seat; it tells another seat what it found and never what
   to do.
+- **Report by inbox.** A seat's report to the cos, and the cos's relay to a seat, is a message in the addressee's
+  inbox (the core's inbox store, `dyad inbox post <seat> --row <id> --kind <kind>`), addressed by seat name and read at
+  the start of every turn; a chat message to a session is at most a doorbell that one is waiting. A message informs
+  and never authorizes: a disposition is read from the row and its record, and the Operator's words relayed to a seat
+  travel verbatim, citing the record entry they were given in (dyad-system #536).
 - **Hold the question.** The leader relays each seat's completion evidence into the parent's own completion reply;
   the Operator disposes once, over the set the evidence lists (Rule-3's Completion clause, the mandate
   form). No seat merges on another seat's reading, and no seat reads silence as consent.
