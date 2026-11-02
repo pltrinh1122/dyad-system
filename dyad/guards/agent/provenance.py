@@ -89,9 +89,19 @@ def parse(text: str) -> list[dict[str, str]]:
             out.append({"n": n, "kind": kind, "date": date, "note": note, "text": ""})
     return out
 
+# #545: a `Y release` recorded after the hosting's approved run is that approval, recorded by reference — the run, the
+# approver the hosting authenticated and the time — never words the Operator typed in a chat
+BY_REFERENCE = "by reference"
+REF_BODY = re.compile(r"run \d+ approved by [A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])? at \d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z")
+
+def by_reference(note: str) -> bool:
+    return BY_REFERENCE in note
+
 def dispositions(disposed: str) -> list[str]:
-    """The row's `disposed` cell as its ordered entries (Rule-3)."""
-    return [s.strip() for s in disposed.split(";") if s.strip()]
+    """The row's `disposed` cell as its ordered dispositions (Rule-3): a `release-ready` line is the Agent's record
+    and holds no Operator words, so property 5 does not count it (#545)."""
+    ready = dyadlib.load_guard("agent", "rows").is_ready
+    return [s.strip() for s in disposed.split(";") if s.strip() and not ready(s)]
 
 def check_record(path: Path, text: str | None = None, row: dyadlib.Row | None = None, lost: int = 0) -> list[str]:
     """One record's shape, and property 5 against its row: its disposition entries equal the row's
@@ -114,6 +124,9 @@ def check_record(path: Path, text: str | None = None, row: dyadlib.Row | None = 
             msgs.append(f"{path.name}: entry {e['n']} kind {e['kind']!r} (one of {', '.join(KINDS)})")
         if not e["text"].strip():
             msgs.append(f"{path.name}: entry {e['n']} has no fenced body (Rule-7 property 1)")
+        if e["kind"] == "disposition" and by_reference(e["note"]) and not REF_BODY.fullmatch(e["text"].strip()):
+            msgs.append(f"{path.name}: entry {e['n']} is noted `{BY_REFERENCE}` but its body is not `run <id> approved by "
+                        f"<login> at <YYYY-MM-DDTHH:MM[:SS]Z>` (Rule-7 property 4, #545)")
         for what, pat in FAIL_SHAPES:
             if pat.search(e["text"]):
                 msgs.append(f"{path.name}: entry {e['n']} carries a {what} (Rule-7 property 2)")

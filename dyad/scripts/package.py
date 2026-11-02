@@ -95,7 +95,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 no disposition of its own, so --mandate refuses -d, --said, --prompt
                                 and --backlog, and refuses a target that is no row or carries no
                                 `Y plan`. refs defaults to `parent #<id>`
-  dyad dwork state <id> <state> [-d text --said[-file] <s>] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
+  dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
@@ -104,7 +104,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 (`dwork trace <id> --out`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191).
                                 --relayed-via notes the entries as relayed from <seat> (`relayed via
-                                <seat>`, appended to a disposition's note), with --prompt or --said (#422)
+                                <seat>`, appended to a disposition's note), with --prompt or --said (#422).
+                                --said-ref records a hosting approval in place of --said: `run <id> approved
+                                by <login> at <YYYY-MM-DDTHH:MM[:SS]Z>`, noted `by reference` (#545)
   dyad dwork state … --check    the same call, every refusal it would make — flags, words, fences, the
                                 Done order, the head and trace tests, landing, the transition — and no
                                 write: no row, no record, no trace. Prints `ok <id>: <from> -> <to>` and
@@ -203,6 +205,13 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 refused, nothing written to the repo (Rule-11 Ratification events: clerical
                                 execution of the recorded Y). --scan is read-only: `pending: <tags>|none`, and
                                 `pending=true|false` appended to GITHUB_OUTPUT when set
+                                Under GATE=tap (repository variable RELEASE_APPROVAL, #545) it reads the Agent's
+                                `<date> release-ready <tag> at <cut> (archive <sha256>)` lines instead, never `Y release`
+  dyad release ready <row> <tag> --at <cut> --archive <sha256>
+                                write that release-ready line on the row, only after C2's fence (#545): every root the
+                                tag carries is, at the cut, the tree it holds at a head the row's operative Y done names,
+                                and the archive built at the cut by the one code path has <sha256>; refused, with
+                                nothing written, otherwise. The line is landed ledger-only (`dyad dwork land`)
   dyad merge <pr> --head <sha>  merge a PR on the record alone (scripts/merge.py, d-work #532): only when origin/main
                                 holds an operative `Y done` naming `PR #<pr> at <sha>` in full, the PR's live head is
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
@@ -1572,10 +1581,10 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--state", "--craft", "--mandate", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
+DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--state", "--craft", "--mandate", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
     "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--check"}, 3),   # #464
+    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--mandate"}, {"--check"}, 3),   # #464; --said-ref #545
     "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
     "list": ({"--state", "--craft"}, set(), 1)}
 
@@ -1759,6 +1768,15 @@ def cmd_dwork(a):
         # Python list written into the row — the fence's `rows.refs_shape_problems` clause, said where it costs a line
         sys.exit(f"refused: refs holds one of {' '.join(refused)}; write space-separated tokens, e.g. '7 parent #3 PR #9'")
     prompt, said = words(vals, "prompt"), words(vals, "said")
+    ref = vals.get("--said-ref")
+    if ref is not None:
+        # #545: the hosting's approval of a gated release run, recorded by reference (Rule-7 property 4): the run, the
+        # approver the hosting authenticated and the time, never words typed in a chat; the record's note says so
+        if said is not None:
+            sys.exit("refused: give --said[-file] (the Operator's words) or --said-ref (a hosting approval), not both")
+        if not dyadlib.load_guard("agent", "provenance").REF_BODY.fullmatch(ref):
+            sys.exit("refused: --said-ref is `run <id> approved by <login> at <YYYY-MM-DDTHH:MM[:SS]Z>` (#545)")
+        said = ref
     if d is not None and said is None:
         # d-work #191: a disposition written to the row without its words is property 5's gap at birth
         sys.exit("refused: -d records a disposition; give its words verbatim with --said or --said-file (Rule-7)")
@@ -1771,6 +1789,8 @@ def cmd_dwork(a):
     # attendance reading (`sessions.own_disposition`) does not count it as given in this seat.
     relayed = f"relayed via {vals['--relayed-via']}" if "--relayed-via" in vals else ""
     dnote = f"{d}, {relayed}" if relayed and d else (d or relayed)
+    if ref is not None:
+        dnote = f"{dnote}, {dyadlib.load_guard('agent', 'provenance').BY_REFERENCE}" if dnote else dyadlib.load_guard("agent", "provenance").BY_REFERENCE
     entries = ([("prompt", prompt, relayed)] if prompt is not None else []) + ([("disposition", said, dnote)] if said is not None else [])
     for kind, text, _ in entries:
         fence_for(kind, text)                  # every refusal before the first write (#191): nothing half-written

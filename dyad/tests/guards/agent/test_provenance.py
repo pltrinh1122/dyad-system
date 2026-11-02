@@ -169,6 +169,30 @@ class ProvenanceTests(unittest.TestCase):
         self.assertIn("1 records", pv.summary(root))
 
 
+class ReleaseRecordTests(unittest.TestCase):
+    """#545: a `release-ready` line is the Agent's record and is not counted as a disposition (property 5); a
+    disposition noted `by reference` records a hosting approval, and its body is `run <id> approved by <login> at
+    <time>`."""
+    def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
+    READY = "2026-11-01 release-ready v0.2.0 at " + "a" * 40 + " (archive " + "b" * 64 + ")"
+
+    def test_a_release_ready_line_is_no_disposition(self):
+        self.assertEqual(pv.dispositions(f"2026-09-14 Y plan; {self.READY}"), ["2026-09-14 Y plan"])
+        root = fixture({"7.md": GOOD}, {"7.md": ROW.replace("disposed: 2026-09-14 Y plan", f"disposed: 2026-09-14 Y plan; {self.READY}")})
+        self.assertEqual(fails(pv.check_package(root)), [])
+
+    def test_a_by_reference_disposition_has_the_reference_shape(self):
+        ref = "run 41331223332 approved by pltrinh1122 at 2026-11-01T17:02:09Z"
+        self.assertTrue(pv.REF_BODY.fullmatch(ref)); self.assertTrue(pv.REF_BODY.fullmatch(ref[:-4] + "Z"))
+        for bad in ("Y", "run x approved by p at 2026-11-01T17:02Z", "run 1 approved by p at 2026-11-01", "run 1 approved by -p at 2026-11-01T17:02Z"):
+            self.assertIsNone(pv.REF_BODY.fullmatch(bad), bad)
+        row = ROW.replace("disposed: 2026-09-14 Y plan", "disposed: 2026-09-14 Y plan; 2026-11-01 Y release v0.2.0 at " + "a" * 40 + " (archive " + "b" * 64 + ")")
+        rec = GOOD + "\n## 3 disposition 2026-11-01 Y release v0.2.0, by reference\n```text\n" + ref + "\n```\n"
+        self.assertEqual(fails(pv.check_package(fixture({"7.md": rec}, {"7.md": row}))), [])
+        bad = rec.replace(ref, "Y")
+        self.assertIn("is noted `by reference` but its body is not", " ".join(fails(pv.check_package(fixture({"7.md": bad}, {"7.md": row})))))
+
+
 class TransactionTests(unittest.TestCase):
     """#191: each commit of the range's own history, against its parent — the gap is refused on the push
     that creates it, never left for a state check to find on everyone's `main` (Rule-7 property 3)."""

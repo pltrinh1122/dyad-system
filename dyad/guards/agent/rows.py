@@ -69,6 +69,13 @@ INVARIANTS = [("fields-are-dyadlib-fields", lambda: FIELDS is dyadlib.FIELDS)]  
 # facts — `mode` is a Row field, and FIELDS and OPTIONAL_FIELDS are disjoint — are `dyadlib`'s own invariants
 # (`row-fields-match-dataclass`, `row-optional-fields-disjoint`), which the runner's pass runs all the same.
 ENTRY = re.compile(r"\d{4}-\d{2}-\d{2} [YN](?: |$)")   # Rule-3 Ledger: `<date> <Y|N> <plan|done|merge #n|reason>`
+# #545: the Agent's release-ready record beside the dispositions, never one: `<date> release-ready <tag> at <cut> (archive <sha256>)`
+READY = re.compile(r"\d{4}-\d{2}-\d{2} release-ready (?P<tag>\S+) at (?P<sha>[0-9a-f]{40}) \(archive (?P<sha256>[0-9a-f]{64})\)")
+
+def is_ready(e: str) -> bool:
+    """A `release-ready` entry (#545): written by the Agent after C2's fence, read by the release service under the
+    release gate; no disposition, so no provenance entry (Rule-7 property 5 counts dispositions only)."""
+    return bool(READY.fullmatch(e.strip()))
 MANDATE = re.compile(r"\d{4}-\d{2}-\d{2} Y plan \(mandate #\d+\)$")   # the one entry an implicit-mode row is born with (Rule-3, #290)
 PLAN_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y plan(?:$|[ ,])")              # a *given* plan disposition, matched on one parsed entry (the plan gate, #250)
 DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")                    # a *given* completion disposition (Rule-3 Completion, #202)
@@ -134,7 +141,7 @@ def disposed_problems(path: str, before: str, after: str, label: str) -> list[st
     disposition's text leaves a fragment (`falsify extensibility first)`, #100) that fails here."""
     return [f"FAIL [disposed]: {label} {path} adds entry {e!r}: not `<YYYY-MM-DD> <Y|N> <text>` with balanced "
             f"parentheses — a `;` inside disposition text splits one entry in two (Rule-3 Ledger)"
-            for e in added_entries(before, after) if not ENTRY.match(e) or e.count("(") != e.count(")")]
+            for e in added_entries(before, after) if not (ENTRY.match(e) or is_ready(e)) or e.count("(") != e.count(")")]
 
 # ---- the Done state follows the merge (d-work #202)
 def done_order_problems(path: str, before, after, label: str) -> list[str]:
@@ -289,8 +296,9 @@ def operative_done(disposed: str) -> str | None:
     """The row's operative Done-`Y` for a merge: its *last* disposition when that is a `Y done`, else None (#541,
     R4 of A4). A later `Y done` on a new head supersedes the earlier (Rule-2, Binding), and so does any later
     disposition at all — an `N hold` after the `Y` revokes it — since a row whose Done is recorded takes no further
-    plan entry while its merge is pending (Rule-3's three acts): whatever follows the `Y` is about that merge."""
-    es = entries(disposed)
+    plan entry while its merge is pending (Rule-3's three acts): whatever follows the `Y` is about that merge. A
+    `release-ready` line (#545) is the Agent's record, not a disposition, and is passed over."""
+    es = [e for e in entries(disposed) if not is_ready(e)]   # a release-ready line is the Agent's, no disposition (#545)
     return es[-1] if es and DONE_Y.search(es[-1]) else None
 
 def named_heads(rows: list, terminal: bool = False) -> list[tuple[int, str | None, str, str]]:
