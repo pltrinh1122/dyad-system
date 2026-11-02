@@ -57,3 +57,25 @@ sentence names the new file and step, meaning unchanged.
 **Pairwise (Rule-5).** **6–1**: the wrapper stays infra zone. **6–20**: the new path resolves on today's `main`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #477.
+
+## Amendment — d-work #553 (2026-11-02, part B: the crosswalk and the label-case criterion)
+**Claim (plan #553 revisions 1–2, the operator's `Y` of 2026-11-02 with the four recommendations):** the dyad-native
+vocabulary replaces `seat`, `attended`/`unattended`, `executor`, the structural `cos` and "a unit of work"; a crosswalk
+beside the vocabulary maps every old term, key, form and file to its new one, so history stays readable unrewritten;
+the criterion `label-case` (L1–L6) decides a label's case. This part adds the crosswalk and the criterion; the new
+vocabulary rows enter with the Rule text that uses them (part D), because this Rule's guard fails a row whose `used by`
+Rules do not mention it.
+
+| # | attack | result |
+|---|---|---|
+| V1 | The crosswalk defines terms beside the vocabulary, so there are two master records. | **Refuted**: it maps and defines nothing; every new term's one definition is its vocabulary row (Master record). Its header says so. |
+| V2 | Adding the rows first, as the plan's step 1 orders, keeps the plan's order. | **Confirmed impossible**: `vocabulary.py` fails a row whose `used by` Rules do not mention it, and no Rule mentions `solo`, `home`, `pair` or `dyad unit` yet; Rule-6 Conditions puts a term a Rule introduces in the same PR. The rows ride part D; the order change was put to the cos before any push. |
+| V3 | "dyad" is overloaded: the system, the pair, a unit kind. | **Survives with the operator's convention** (plan attack 1): "dyad unit" where the system is also in view; the row (part D) states the three senses. |
+| V4 | "unit" collides with "unit test". | **Survives, scoped** (plan attack 2): "unit test" is its own compound; the freed "unit of work" leaves live text only. |
+| V5 | History in old terms becomes unreadable. | **Refuted** (plan attack 6): the crosswalk maps it; history is append-only and never rewritten. |
+| V6 | `label-case` lives in the core but its home is a craft's rule. | **Survives, scoped**: syseng is a bundled craft (Rule-11 property 2), so the home ships with the core; the DMC schema admits a `../crafts/…` home and warns, never fails, where a craft is absent. |
+
+**Pairwise (Rule-5).** No Rule changes in this part; the pairwise statements for the Rules part D edits are written
+there.
+
+Disposition: see ledger #553.
