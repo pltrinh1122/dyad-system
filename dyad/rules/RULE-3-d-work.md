@@ -261,6 +261,12 @@ that the event store only grows is, on `main`, the sysadmin craft's events guard
   in one clerical ledger commit, the commit that carries the trace, the entry naming each PR and the
   head its `Y` was given on — `-d 'Y done (merges PR #a at <head-a>)'`. That entry *is* the ledger's
   record of the `Y`; the state never was. (2) **Merge**, as clerical execution of it. (3) **Close.**
+  The merge and the close may be executed by the **automaton** (`dyad automaton run`,
+  `dyad/scripts/automaton.py`; the d-work play-book's run-book layer) while the operator's repository variable
+  `DYAD_AUTOMATON` is `on`: it runs from the recorded entry on `main` alone, executes the merges that entry names
+  pinned and in order and the close once every named head is on `main`, and decides nothing — a moved head or a
+  conflict is a refusal posted to the home's inbox, never a resolution — so the reply that records the `Y` is
+  the last act an inferring unit takes for it (#556).
   A second, dispositionless ledger commit sets `done`, once git shows the head the **operative**
   entry names — the last `Y done`, since a resolution that changes a head voids the `Y` given against it
   (Rule-2, Binding) and the question is asked again — on `main` — the hosting's merge, or the local merge of Rule-14 property 3; where a hosting squashes or
@@ -499,6 +505,9 @@ Completion counter-prompt and Batch disposition move to the dyad-native terms 20
 a body of work, `unit` now naming a position; a seat is a unit, the leader the home and an unattended seat a solo;
 done-`Y`, operator and agent are lowercase in prose; and Answer grammar reads an answer by meaning, because the
 operator's case and spelling reach no machine directly; history keeps the old words and
-`dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+`dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Completion counter-prompt lets the automaton execute the merge and the close
+2026-11-02 (d-work #556): after each done-`Y` the home spent six to ten turns dispatching merges, reading reports,
+verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
+`../falsification/rules/rule-3-d-work.md`, amendment #556.
 
 Set: System Requirements.
