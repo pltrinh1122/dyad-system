@@ -280,3 +280,23 @@ the operator's charter row in `MANDATES.md` follows as the cos's own preferences
 
 **Survivor:** the function listed in the craft's data, its §4 row, and the Guide's §2 and §3 sentences, as amended.
 VERSION stays 0.4.1: `cabinet-v0.4.1` is not yet tagged, so this rides the same untagged version. Disposition: see ledger #557.
+
+## Amendment — dyad-system #560 (2026-11-02: attention and organization; the roles return to the craft)
+**Claim (plan #560, the operator's plan-`Y` of 2026-11-02):** the cabinet holds roles and no state; the operator's
+attention is two problems plus a work axis; the organization concentrates attention without reducing decisions; and the
+model is stated in the Guide's §12 with its criteria (D1, D2 and D4 the core's, D3 `dmc/attention-problem.jsonld`, D5
+engineer's trace metric). Decisions bound by the plan-`Y`: the cabinet stays a separate craft; "home follows you"
+replaces "the cos as a mode"; the auto unit's form is deferred.
+
+| # | attack | result |
+|---|---|---|
+| 64 | (F1) "AI-agent cabinet" says there are several agents; the dyad has one agent party and the cabinet holds units. | **Confirmed and fixed**: the README's first line and the Guide's §1 say "a cabinet of units". The record's earlier lines keep their words (history). |
+| 65 | (F2) "The cos as a mode" collides with the core's `mode` and the harness's auto mode. | **Confirmed and fixed**: §10 is "Home follows you", and the office it describes is called an office; the core's crosswalk maps the old phrase. Backlog titles #537–#539 keep "cos mode": titles are immutable. |
+| 66 | (F7) `secretary` and `cos-board` were defined in the core, though only a multi-unit organization has them. | **Confirmed and fixed**: `CRAFT.md` gains both rows, landing after the core's removal (`check_craft` refuses a term defined in both). |
+| 67 | (F3) An auto unit can be neither named nor chartered: the name form's `-<hp>` assumes a harness session. | **Survives, deferred by the plan-`Y`**: today's automaton is stateless and keeps no presence file, so a form with no instance would pin a guess. Trigger for the form and the charter shape: an automaton keeps a presence file. |
+| 68 | (F4) The craft's `seat` identifiers (`seats.py`, `seats_rules.txt`, the guard entity `seat`) keep the old word. | **Survives, handed to #554**: renaming them now breaks the alias window #553 set; #554's alias removal is where they go. |
+| 69 | (C4) Folding the cabinet into the core removes a craft. | **Refuted** (plan attack A5): `organization: flat` is live, a one-pair system needs no roles, and folding would put roles into the core, the failure D1 names; bundling already makes installing it free. |
+| 70 | (C6, C7) §12 claims the organization concentrates attention. | **Survives, stated, not verified**: §12 item 7 says so in its own words until engineer's replies-per-disposition count exists (D5, plan #560 PR 3). |
+
+**Survivor:** the README line, §1's sentence, §10's title and wording, `CRAFT.md`'s two rows, §12 and
+`dmc/attention-problem.jsonld`, as amended. VERSION stays 0.4.1 (untagged). Disposition: see ledger #560.

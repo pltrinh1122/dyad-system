@@ -1,4 +1,4 @@
-# cabinet — the AI-agent cabinet: one chief of staff beside the Operator, secretaries over the functions, desks under them (Tended craft, `crafts/cabinet/`, zone `craft`)
+# cabinet — the cabinet: units beside the operator, one chief of staff among them, secretaries over the functions, desks under them (Tended craft, `crafts/cabinet/`, zone `craft`)
 
 M4 as the default organization: a tree of Operator–seat pairs in which the cos and every secretary keep a board, authority is
 granted by content-scoped charters in the Operator's hand, and every pair reads and writes the same ledgers
