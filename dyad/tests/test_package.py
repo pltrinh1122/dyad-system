@@ -1707,6 +1707,8 @@ class SpawnSiteTests(unittest.TestCase):
                 "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
                 "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
+        "checkout_snapshot": "status of the live checkout before and after the suite, under dyadlib.git_env(); no write "
+                             "(the cleanliness fence, #552)",
         "evidence_in_worktree": "rev-parse of the common dir, then `worktree add --detach` and `worktree remove`/`prune` "
                                 "of its own dyad-evidence-* worktree, under dyadlib.git_env(); the caller's checkout, "
                                 "HEAD and index are never written (#448, shared with the baseline by #476)",
@@ -2540,6 +2542,72 @@ class TransactionWarningTests(unittest.TestCase):
     def test_a_failure_still_fails(self):
         rc, out = self.run_pr(["warning: w", "FAIL [main-fence]: x"])
         self.assertEqual(rc, 1, out); self.assertIn("FAIL [pr] agent/row [main-fence]: x", out); self.assertIn("warn [pr]", out)
+
+class CleanlinessTests(unittest.TestCase):
+    """The suite-cleanliness fence (d-work #552, mode W): a run whose tests change the live checkout fails, naming the
+    paths. An edit made before the run is in both snapshots, so it is never the tests'; a second change to an
+    already-dirty file still is. #536's deletion — a test removing a tracked presence file — is reproduced as a real
+    failing `check --tests` run in a scratch install, beside a clean run of the same shape that passes."""
+    def setUp(self):
+        self.pkg = load_package()
+
+    def test_changes_are_status_or_bytes(self):
+        d = scratch_repo(["a.txt", "b.txt"])
+        (d / "a.txt").write_text("edited before the run\n")
+        before = self.pkg.checkout_snapshot(d)
+        self.assertEqual(self.pkg.checkout_changes(before, self.pkg.checkout_snapshot(d)), [])   # the user's edit is no change
+        (d / "a.txt").write_text("edited again by a test\n")                                     # dirty before, changed again
+        (d / "b.txt").unlink()
+        (d / "new.txt").write_text("x\n")
+        changes = self.pkg.checkout_changes(before, self.pkg.checkout_snapshot(d))
+        self.assertEqual(changes, ["a.txt", "b.txt", "new.txt"])
+        self.assertIn("the suite changed the live checkout (3 path(s)): a.txt, b.txt, new.txt", self.pkg.cleanliness_problem(changes))
+        self.assertIsNone(self.pkg.cleanliness_problem([]))
+        self.assertEqual(self.pkg.checkout_changes(None, {}), [])
+
+    def run_target(self, body):
+        """`check --tests` of one scratch test module whose one test runs `body`, in a scratch install holding a
+        tracked presence file; (returncode, stderr)."""
+        d = scratch_install(False)
+        presence = d / "agent-corpus" / "d-work" / "sessions" / "program-59cec502.md"
+        presence.parent.mkdir(parents=True, exist_ok=True); presence.write_text("session: program-59cec502\n")
+        subprocess.run(["git", "-C", str(d), "add", "-A"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(d), *livetest.IDENTITY, "commit", "-qm", "presence"], check=True, capture_output=True)
+        t = d / "dyad" / "tests" / "test_zz_552.py"
+        t.write_text("import pathlib, tempfile, unittest\n"
+                     "ROOT = pathlib.Path(__file__).resolve().parents[2]\n"
+                     "class T(unittest.TestCase):\n"
+                     f"    def test_it(self):\n        {body}\n")
+        env = {k: v for k, v in dyadlib.git_env().items() if k != "DYAD_NO_NESTED_TESTS"}
+        r = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--tests",
+                            "dyad/tests/test_zz_552.py"], cwd=d, capture_output=True, text=True, env=env)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_536s_deletion_fails_the_run_naming_the_path(self):
+        rc, out = self.run_target("(ROOT / 'agent-corpus/d-work/sessions/program-59cec502.md').unlink()")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Ran 1 test", out)                                                          # the test itself passed
+        self.assertIn("FAIL [Rule-12] the suite changed the live checkout (1 path(s)): "
+                      "agent-corpus/d-work/sessions/program-59cec502.md", out)
+
+    def test_a_test_writing_only_its_scratch_passes(self):
+        rc, out = self.run_target("pathlib.Path(tempfile.mkdtemp(), 'x').write_text('x')")
+        self.assertEqual(rc, 0, out); self.assertNotIn("changed the live checkout", out)
+
+    def test_check_rule_12_reports_it_too(self):
+        """The evidence run and the push gate's full run: `check_rule_12` adds the same line to its failures."""
+        d = scratch_repo(["keep.md"])
+        def fake(suites):
+            (d / "keep.md").unlink()
+            return [(0, ["Ran 1 test", "OK"], "")]
+        with unittest.mock.patch.dict(os.environ), unittest.mock.patch.object(self.pkg, "REPO", d), \
+             unittest.mock.patch.object(self.pkg, "test_suites", lambda: [d / "tests"]), \
+             unittest.mock.patch.object(self.pkg, "run_suites", fake), contextlib.redirect_stdout(io.StringIO()):
+            os.environ.pop("DYAD_NO_NESTED_TESTS", None)
+            msgs = self.pkg.check_rule_12()
+        self.assertEqual(len(msgs), 1, msgs)
+        self.assertIn("the suite changed the live checkout (1 path(s)): keep.md", msgs[0])
+
 
 if __name__ == "__main__":
     unittest.main()

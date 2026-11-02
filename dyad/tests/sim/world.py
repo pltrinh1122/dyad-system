@@ -145,6 +145,7 @@ class Cos:
     """The cos mode in one session: the P1 protocol, write-ahead, on the board."""
     def __init__(self, world: "World", session: Session, operator: "Operator"):
         self.world, self.s, self.operator = world, session, operator
+        self.refused: list[str] = []
 
     # ---- acts before a hop; `crash` stops the turn at "before-wa" or "after-wa"
     def dispatch(self, row: int, seat: Seat, task: str, crash: str | None = None) -> None:
@@ -155,13 +156,23 @@ class Cos:
             return
         self.send_pending(row)
 
-    def send_pending(self, row) -> None:
+    def send_pending(self, row, finish: bool = True) -> None:
+        """Relay what the entry says is written but unsent, then record it sent (`finish`; a holder that stops between
+        the two leaves `send` on the board). A relay the write-ahead fence refuses (#552) is not sent: the entry is
+        another holder's now, which is how a stale holder learns it lost the mode."""
         f = self.s.entries().get(str(row), {})
         nxt = f.get("next", "")
         if nxt.startswith("send "):
             task = nxt[5:]
-            self.s.post(f["owner"].split()[0], row, "relay", task)
-            self.s.set(row, next=f"await {task}")
+            if f.get("writer") != self.s.harness:              # write-ahead (#552): the relay's entry is this holder's first
+                self.s.set(row, waiting_on=f.get("waiting-on", ""))
+            try:
+                self.s.post(f["owner"].split()[0], row, "relay", task)
+            except WriteRefused as e:
+                self.refused.append(str(e))
+                return
+            if finish:
+                self.s.set(row, next=f"await {task}")
 
     def ask(self, row: int, question: str, crash: str | None = None) -> None:
         if crash == "before-wa":

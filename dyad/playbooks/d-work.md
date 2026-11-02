@@ -7,7 +7,9 @@ decision Rule-3, Rule-7, Rule-15 and Rule-16 each own one part of, and that the 
 against the CLI help at every row write (Rule-13 property 1: the recurrence proposes code — the machine's
 input alphabet is `dyadlib.INPUTS`, and this play-book's two tables are pinned to it and to the guards by
 `dyad/tests/test_playbooks.py`). Read by Rule-3's Ledger clause. Steps: `dyad/runbooks/d-work.md` —
-`open`, `plan`, `authorize`, `execute`, `evidence`, `record`, `complete`, `defer`, `resume` — run through
+`open`, `plan`, `authorize`, `execute`, `verify-prs`, `evidence`, `record`, `done-record`, `complete`,
+`close-landed`, `defer`, `resume`, `sync-mirror` (the four harvested from recurring hand-written scripts, #556,
+implemented by `dyad steps`) — run through
 `DWORK=<id> dyad runbook run d-work <step>`, the core runner, so each step leaves an event. The native
 commands stay the default for a ledger commit, for the reason `dwork-trace.md` records (#247: a runner
 event is a workstation-zone file the ledger commit cannot carry).

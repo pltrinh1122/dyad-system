@@ -20,7 +20,9 @@ guard after: a `Y/N:` counter-prompt line, or a ledger entry such as `2026-11-02
 is read in the ledger (rows, provenance) and nowhere else. A report names the row; it does not quote the entry.
 
   dyad inbox post <seat> --row <id> --kind <kind> (<body> | --body-file <path>)
-                          from this seat (`DYAD_SESSION`): one message, landed ledger-only through land's loop
+                          from this seat (`DYAD_SESSION`): one message, landed ledger-only through land's loop; a
+                          `relay` lands only when `board/<id>.md` on origin/main names <seat> among its owners and
+                          this session wrote it last (write-ahead, #552)
   dyad inbox read [--all]  this seat's unread messages on a freshly fetched origin/main, printed in order and marked
                           read in one ledger-only land; `--all` prints the read ones too
   dyad inbox list [<seat>] read-only, from the working tree: every message of the box, unread first marked `*`
@@ -221,11 +223,32 @@ def now() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+def write_ahead_problem(wt: Path, inst: str, row: int, to: str, me: str) -> str | None:
+    """The write-ahead fence on a relay (d-work #552, mode A): None when `board/<row>.md` on origin/main names `to`
+    among its owners and this session wrote it last; else why not. A dispatch then cannot precede its board entry."""
+    path = wt / inst / board().BOARD_REL / f"{row}.md"
+    if not path.is_file():
+        return (f"a relay needs its board entry first (write-ahead, #552): board/{row}.md is not on origin/main — "
+                f"`dyad board set {row} owner=\"{to} <session>\" waiting-on=\"seat {to}\" next=…`")
+    f = board().parse(path.read_text(errors="replace"))[0]
+    if to not in board().owners(f):
+        return (f"a relay needs its board entry first (write-ahead, #552): board/{row}.md names owner(s) "
+                f"{', '.join(board().owners(f)) or 'none'}, not {to}")
+    if f.get("writer") != me:
+        return (f"a relay needs its board entry first (write-ahead, #552): board/{row}.md was last written by "
+                f"{f.get('writer') or 'nobody recorded'}, not this session ({me})")
+    return None
+
+
 def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str):
     me = sessions().writer()
     def build(wt: Path):
         if row not in {r.id for r in dyadlib.read_rows(wt)}:
             raise Refused(f"no row #{row} on origin/main")
+        if kind == "relay":
+            why = write_ahead_problem(wt, inst, row, to, me)
+            if why:
+                raise Refused(why)
         t = now()
         stamp = t.strftime(STAMP)
         d = wt / inst / INBOX_REL / to

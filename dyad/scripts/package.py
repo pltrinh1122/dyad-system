@@ -225,6 +225,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
                                 lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
                                 unread and marks them read; `list` is read-only
+  dyad automaton scan|run      the d-work automaton (scripts/automaton.py, d-work #556): from ledger lines on origin/main
+                                only, merge the PRs a recorded Y done names (pinned, in order, retried with backoff on a
+                                race), close rows whose heads landed, notify board owners of a Y plan; a refusal is one
+                                notice to the home's inbox. Stateless and idempotent; `scan` is read-only
+  dyad steps verify-prs|done-record|close-landed|sync-mirror [--land]
+                                the d-work run-book's harvested steps (scripts/steps.py, d-work #556), parameters from
+                                the environment (PRS, DWORK, SAID, ACCRETED, MIRROR); idempotent; run by name through
+                                `dyad runbook run d-work <step>` or directly
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
                                 the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
@@ -368,6 +376,43 @@ _SUITE_RAN = False   # d-work #155: the suite runs at most once per process — 
                      # both `cmd_check` and `cmd_guards`, and without this the evidence block paid
                      # for the whole suite twice (caught by the pre-merge evidence run, #155)
 
+# ---- the suite-cleanliness fence (d-work #552, mode W): a test changes nothing in the live checkout. #536: a test
+# run rewrote the cos's presence file in a worktree, and the cleanup that followed deleted it; nothing noticed, because
+# no check compared the checkout before and after. The snapshot is the checkout's status with each listed path's
+# bytes hashed, so an edit made before the run, present in both snapshots, is never the tests', and a second change to
+# an already-dirty file still is.
+def checkout_snapshot(repo=None):
+    """{path: "<XY> <sha256 or ->"} for every path `git status --porcelain=v1 -z --untracked-files=all
+    --no-renames` lists in the live checkout; None when git cannot say."""
+    repo = Path(repo or REPO)
+    try:
+        r = subprocess.run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames"], cwd=repo,
+                           capture_output=True, env=dyadlib.git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode:
+        return None
+    snap = {}
+    for e in r.stdout.decode("utf-8", "surrogateescape").split("\0"):
+        if len(e) > 3:
+            path = repo / e[3:]
+            digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "-"
+            snap[e[3:]] = f"{e[:2]} {digest}"
+    return snap
+
+def checkout_changes(before, after):
+    """Pure: the paths whose status or bytes differ between two snapshots, sorted; [] when either is None."""
+    if before is None or after is None:
+        return []
+    return sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))
+
+def cleanliness_problem(changes):
+    """The failure line for a run that changed the live checkout, or None (d-work #552)."""
+    if not changes:
+        return None
+    return (f"the suite changed the live checkout ({len(changes)} path(s)): {', '.join(changes[:10])}"
+            f"{' …' if len(changes) > 10 else ''} — a test wrote outside its scratch directories (Rule-12 p2; #552, mode W)")
+
 def check_rule_12():
     """Rule-12's kernel: the tests pass — `unittest discover` once per test root (the core's, then every Tended
     craft's; guards/ subdirectories are packages). Which module maps to which test file is the syseng craft's
@@ -378,6 +423,7 @@ def check_rule_12():
         return msgs  # already inside a test run (test_package.py calls `check`); do not recurse
     _SUITE_RAN = True
     memo = suite_memo_parts()   # read before the run, compared after it: a tree that moved mid-run is never memoized
+    before = checkout_snapshot()   # the cleanliness fence (#552): the roots run at once, so one snapshot spans them all
     suites = test_suites()
     # #326: through `run_suite`, the one child, so the temp-root sweep covers the push gate and the
     # evidence run too. This loop used to spawn its own `unittest` with no sweep, which is why the
@@ -388,6 +434,9 @@ def check_rule_12():
         print(f"     [Rule-12] {suite.relative_to(REPO)}: " + " ".join(summary))  # `Ran N tests … OK (skipped=k)`: skips are visible in CI
         if code != 0:
             msgs.append(f"tests failed ({suite.relative_to(REPO)}):\n" + "\n".join(suite_failures(err) + err.strip().splitlines()[-1:]))
+    dirty = cleanliness_problem(checkout_changes(before, checkout_snapshot()))
+    if dirty:
+        msgs.append(dirty)
     if not msgs and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)   # a full, all-roots pass on a clean tree (d-work #162)
     return msgs
@@ -763,17 +812,25 @@ def cmd_tests(target=None, roots=None):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
     _SUITE_RAN = True
     memo = None if target or roots is not None else suite_memo_parts()   # only a full, all-roots run is memoized (#162)
+    before = checkout_snapshot()   # the cleanliness fence (#552): a targeted run, the push gate's roots and a full run alike
+    def clean(rc):
+        dirty = cleanliness_problem(checkout_changes(before, checkout_snapshot()))
+        if dirty:
+            print(f"FAIL [Rule-12] {dirty}", file=sys.stderr)
+            return 1
+        return rc
     if target and not Path(target).is_dir():
         code, summary, err = run_suite(None, target)
         print(f"     [Rule-12] {target}: " + " ".join(summary))
         if code:
             print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
-        return rc
+        return clean(rc)
     suites = [Path(target)] if target else test_suites() if roots is None else list(roots)
     for suite, (code, summary, err) in zip(suites, run_suites(suites)):
         print(f"     [Rule-12] {suite.relative_to(REPO) if suite.is_absolute() else suite}: " + " ".join(summary))
         if code:
             print("\n".join(suite_failures(err) + err.strip().splitlines()[-1:]), file=sys.stderr); rc = 1
+    rc = clean(rc)
     if rc == 0 and memo and suite_memo_parts() == memo:
         suite_memo_write(memo)
     return rc
@@ -2040,6 +2097,14 @@ def cmd_inbox(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     return dyadlib.load_guard("agent", "inbox").cli(a, REPO)
 
+def cmd_steps(a):
+    """The d-work run-book's harvested steps live in scripts/steps.py (d-work #556); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "steps.py", "steps").main(a, REPO)
+
+def cmd_automaton(a):
+    """The d-work automaton lives in scripts/automaton.py (d-work #556); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton").main(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2064,6 +2129,10 @@ if __name__ == "__main__":
         sys.exit(cmd_bootstrap(a[1:]))
     if a and a[0] == "merge":
         sys.exit(cmd_merge(a[1:]))
+    if a and a[0] == "steps":
+        sys.exit(cmd_steps(a[1:]))
+    if a and a[0] == "automaton":
+        sys.exit(cmd_automaton(a[1:]))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
     if a and a[0] == "inbox":
