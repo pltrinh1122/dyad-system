@@ -244,3 +244,22 @@ interaction at the home, orchestration and execution at a solo, run-book executi
 
 **Survivor:** §2's "Three layers" subsection and §5's sentence, as amended. VERSION stays 0.4.1 (untagged).
 Disposition: see ledger #556.
+
+## Amendment — dyad-system #559 (2026-11-02: the scale-out criteria, solo or subagent)
+**Claim (plan #559, the operator's `Y` of 2026-11-02, "ensure that the decision-making criteria is codified as
+presented"):** whether to expedite outstanding work by a solo, by subagents or by neither is decided in two steps —
+what holds the work up, then seven criteria and two tie-breaks — stated verbatim as presented (the cos's relay on row 559) in the Guide's §11 and as data in
+`dmc/scale-out.jsonld`.
+
+| # | attack | result |
+|---|---|---|
+| 55 | The answer as presented also applied the criteria to this instance's units and rows; codifying that puts instance state inside a craft (Rule-11 property 1). | **Confirmed and fixed**: only the two steps and the tie-breaks are codified; the application stays in plan #558. |
+| 56 | `solo` is #553's term, not yet on `main`. | **Survives as an order**: this PR is stacked on #553's craft PR (through #556's), and merges after it. |
+| 57 | Step 0 holds in a one-pair system too, so the criterion is the core's. | **Survives, scoped**: adding a solo exists only under `organization: m4`; the one-pair case is one term of the DMC, reducing Step 1 to subagents. |
+| 58 | The criterion authorizes opening a unit. | **Refuted**: it decides only which to propose; opening a unit stays §3's and a charter §4's. |
+| 59 | It overlaps `delegation-posture`, which already decides main chat against subagent. | **Refuted**: posture decides who inside a unit does an act; this decides how many lanes to add. §11 names Posture as its neighbour. |
+
+**Survivor:** §11 and `dmc/scale-out.jsonld`, as amended. No Agent Rule is touched, so Rules 4 and 5 are unaffected.
+VERSION is unchanged; the bump rides the release cut (#558). Disposition: see ledger #559.
+Wording: the presented text is kept verbatim. "You" stays, because this Guide speaks to the operator in the second
+person throughout; "this release" in Cost to the home stays, because no guard refused it.

@@ -335,3 +335,38 @@ never quotes the entry — and your words reach a unit verbatim with the record 
 were given in.
 P1's exit test is the **hop drill**: mid-flight, with a unit dispatched and a question open, a fresh session resumes
 and closes the row with no lost item and no question about state; you observe it and are asked nothing.
+
+## 11. Expediting outstanding work: solo or subagent (dyad-system #559)
+Choose by what is actually holding the work back. Add a solo when that is the number of independent PR streams that
+have to land. Add subagents inside a solo when it is drafting, verifying or searching inside one solo's charter. When
+the hold-up is the dependency order or a decision waiting on you, neither helps. The criterion is data in
+`dmc/scale-out.jsonld`.
+
+**Step 0: find what is holding the work up.** The board's `waiting-on` field and its age already show this (§2).
+Concurrency only helps with the last of these four:
+
+| what's holding it up | add solos? | add subagents? | what helps instead |
+|---|---|---|---|
+| A decision waiting on you | no | no | batch the questions, put them in front of you sooner |
+| Dependency order (A must land before B) | no | no | draft B ahead on A's branch, merge in order |
+| Merge races on `main` | no, it gets worse | no | fewer PRs landing at once, `dyad merge` retry |
+| Work inside a unit | maybe | maybe | the criteria below |
+
+**Step 1: solo or subagent.**
+
+| criterion | add a solo | add subagents to an existing solo |
+|---|---|---|
+| Charter and files | its own charter and files no other solo writes | the same charter or the same files; one writer per file |
+| Acts needed | it must write rows, push, open PRs or merge in its own stream (Rule-3 keeps these out of subagents) | drafting, analysis, evidence runs, search |
+| Lifetime | a recurring stream that outlives one d-work and needs its own board and inbox | a bounded task that is finished when it returns |
+| Where the solo is stuck | its main chat is saturated with pushes, PRs and asks | its drafting is the queue |
+| Cost to the home | relay and collect turns at the home: the orchestration tokens this release removes | none at the home; tokens inside the solo only |
+| Context | a clean, separately held view (separate charter, separate state) | needs the solo's own context (cheap to hand down), or wants an independent second read |
+| Isolation | its own container: heavy test runs, its own checkout | a worktree inside the solo is enough |
+
+**Tie-breaks.** Use an idle solo before opening a new one. A new solo also has to be chartered, needs a seat name and
+adds to the board. One writer per file.
+
+In the one-pair case (§6, `organization: flat`) there is no solo to add: Step 1 reduces to "subagent". The criterion
+decides only which to propose — opening a unit stays §3's and a charter §4's — and Posture (§3) still decides, inside
+a unit, which acts its main chat keeps.
