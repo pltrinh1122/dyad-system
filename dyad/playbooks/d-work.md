@@ -150,6 +150,12 @@ model's executor (Rule-2 Enforcement; Rule-3 Completion counter-prompt). Until a
 (row #557, the operator's `MANDATES.md`), the home executes the orchestration layer as it does today; with the
 automaton off, the home or the unit that owns a PR runs the merges and the close by hand, as before.
 
+Overhead test (`dyad/dmc/message-overhead.jsonld`, #560). A message from any layer **reaches the operator** only when
+it asks a decision, reports a blocker only the operator can lift, or replaces more messages or decisions than it adds;
+every other message — a hold, an acknowledgement, a still-running note — **stays out of the operator's chat** and goes
+to the inbox, the automaton or the orchestrating solo. A mechanism that sends the operator messages is kept only if it
+passes the same test.
+
 ## Reading
 - **The machine before the forms.** What a row may do next is its state's rows of δ: the input named there
   is the only thing that moves it, and the kind says whose act it is.

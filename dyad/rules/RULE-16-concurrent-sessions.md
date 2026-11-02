@@ -91,8 +91,8 @@ files and almost never merge.
   and the bare form of `sessions.py` otherwise; `touch()` prints one advisory line when a name is outside
   it, names a function the craft does not list, or carries an `<hp>` that is not the holder's, and
   `dyad session name` prints the name and the harness session title from the environment, setting
-  nothing (#369 C7). What the names describe — the **home**'s board of programs (the home is titled cos there) and each
-  **secretary**'s **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
+  nothing (#369 C7). What the names describe — the **home**'s board of programs (the home is titled cos there) and the board
+  each unit with a function keeps over its charter's domain (the organization craft's `secretary` and `cos-board`) — is the organization craft's and its Operating Guide's
   (`crafts/cabinet/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
   Which units an operator sits at is declared by the preference, checked against the records. The operator
@@ -132,7 +132,7 @@ files and almost never merge.
   cross-check: it compares the live presence files with the harness's own session list, read through
   `hostadapter.harness_sessions()` (`dyad/scripts/hostadapter.py`), and prints one line per mismatch
   (`no harness session`, `no presence`, `title differs`, `stale while titled`) — advisory, a run-book's
-  health command (the operate unit's), never a guard failure; the remedy is the writer's (#434).
+  health command (the unit whose charter holds the host), never a guard failure; the remedy is the writer's (#434).
 - **A plan-less row is invisible to the `files` union.** `sessions.touch_from_open_rows`
   (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of this session's
   `open` and `planned` rows; an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
@@ -196,6 +196,8 @@ wrong one for state overwritten many times a day; see the same record, amendment
 session and a terminal holder could receive none (#546, S5, S6, S18, S26); see the same record, amendment #536. Store and Presence move to the
 dyad-native terms 2026-11-02 (d-work #553): seat becomes unit, attended a dyad unit and the rest solo, toggling
 `attended-seats` pairing (`paired-units`, the old key its alias), the leader the home, an automaton's kind `auto`
-reserved; history keeps the old words and `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+reserved; history keeps the old words and `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Presence cites the organization
+craft's roles and names the reconcile check's owner by charter 2026-11-02 (d-work #560): `secretary` and `cos-board` are the
+cabinet's, and "the operate unit's" named an instance position; see the same record, amendment #560.
 
 Set: System Requirements.

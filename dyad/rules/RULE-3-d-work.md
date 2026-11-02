@@ -194,8 +194,8 @@ its revision 5.
   its own presence file and reads every other session's (Rule-16); an overlap found there is
   reported when it bears on the prompt at hand, not narrated for its own sake. Under
   `organization: m4` (`preferences-corpus/PREFERENCES.md`) what a session reads and reports is its
-  unit's: the home — titled cos — reads the cos-board of programs, a secretary the cos-board of its
-  charter's domain, and the unit name says which (Rule-16 Presence); how a board is read, a unit opened or a
+  unit's: the home — titled cos — reads the board of programs, a unit with a function the board of its
+  charter's domain (the organization craft's `secretary` and `cos-board`), and the unit name says which (Rule-16 Presence); how a board is read, a unit opened or a
   charter written is the organization craft's Operating Guide (`crafts/cabinet/docs/operating-guide.md`),
   read beside the d-work play-book and never a Rule (#369 C7).
 - PR bodies — and, on a branch, the commit messages `dyad/guards/agent/prs.py` reads as the body —
@@ -508,6 +508,8 @@ operator's case and spelling reach no machine directly; history keeps the old wo
 `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Completion counter-prompt lets the automaton execute the merge and the close
 2026-11-02 (d-work #556): after each done-`Y` the home spent six to ten turns dispatching merges, reading reports,
 verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
-`../falsification/rules/rule-3-d-work.md`, amendment #556.
+`../falsification/rules/rule-3-d-work.md`, amendment #556. Ledger's session-start bullet cites the organization craft's roles
+2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
+organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560.
 
 Set: System Requirements.

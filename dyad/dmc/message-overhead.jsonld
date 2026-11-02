@@ -1,0 +1,46 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/message-overhead",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "message-overhead",
+  "name": "Message overhead",
+  "description": "Whether a message belongs in the operator's chat or elsewhere: it must replace more messages or decisions than it adds.",
+  "dyad:decides": "Does this message go to the operator's chat?",
+  "dyad:inputs": [
+    "what the message asks of the operator",
+    "whether it reports a blocker only the operator can lift",
+    "the messages or decisions it replaces against those it adds"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pass",
+      "name": "reaches the operator",
+      "dyad:when": "it asks a decision, reports a blocker only the operator can lift, or replaces more messages or decisions than it adds",
+      "dyad:then": "it goes to the operator's chat"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "stays out of the operator's chat",
+      "dyad:when": "a hold, an acknowledgement, a still-running note, or any message that adds more than it replaces",
+      "dyad:then": "it goes to the inbox, the automaton or the orchestrating solo"
+    }
+  ],
+  "dyad:default": "stays out of the operator's chat",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:owner": "Rule-3"
+}
