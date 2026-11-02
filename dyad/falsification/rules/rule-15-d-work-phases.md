@@ -48,3 +48,17 @@ text and still not a provenance record. **15–20**: an accreted row has no `pla
 reference, so no kind is added and none is left unresolved. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #290.
+
+## Amendment — d-work #555 (2026-11-02, phase 1: a required order or split is stated)
+**Claim (plan #555):** a plan that needs an order of its steps or a split of its PRs states it as a requirement;
+otherwise both are execution detail (Rule-3 Plan).
+
+| # | attack | result |
+|---|---|---|
+| P1 | Every plan narrates an order; requiring a marker adds ceremony. | **Survives, scoped**: only the plan that *needs* its order writes `order: required`; one that merely narrates writes nothing new. |
+| P2 | A forgotten marker loses a needed order. | **Survives, bounded**: Rule-3's condition 3 still refuses any reordering whose intermediate state is irreversible or outward, the case where an order matters most. |
+
+**Pairwise (Rule-5).** **15–3**: Rule-3 owns the execution detail; this phase only states where a requirement is
+written. **15–16**: plan files unchanged in store and presence. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #555.

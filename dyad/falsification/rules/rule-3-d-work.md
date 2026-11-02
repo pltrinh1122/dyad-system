@@ -737,3 +737,27 @@ agent zone. **3–20**: the message's `row` is resolved by its own guard, not a 
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #536.
+
+## Amendment — d-work #555 (2026-11-02, Plan: an execution detail is not a departure)
+**Claim (plan #555, the Operator's `Y` of 2026-11-02, on: "I agree that execution order (unless explicitly stated as
+requirement) is execution details that is covered in the original mandate."):** a change of order, PR split or
+stacking, executing seat within its charter, or tooling route, with the mutation's content unchanged, no such
+requirement stated, the same end state and no irreversible or outward intermediate state, is covered by the plan-`Y`,
+never asked, and reported at the Done.
+
+| # | attack | result |
+|---|---|---|
+| X1 | Order can change an outcome (#526: the bundle PR before the evidence fix could not cut). | **Survives with condition 3** (plan attack 1): where an intermediate state is outward or irreversible, order is not detail; #526's cut order fell under it and was rightly asked. |
+| X2 | "Same end state" is the Agent's own judgment. | **Survives, priced** (plan attack 2): it is a departure line in the completion evidence, and the Done verifies it; a wrong judgment costs one amend, not an unauthorized outcome, since the content was authorized. |
+| X3 | A plan could omit requirements to widen the Agent's latitude. | **Refuted** (plan attack 3): the latitude covers order, split, executing seat and route only, never content; a content change stays a new plan. |
+| X4 | Rule-2 Binding: a `Y` binds only to what its question named. | **Refuted** (plan attack 4): the question named the mutation; the order was the plan's narration of how, unless marked a requirement. |
+| X5 | "Executing seat within its charter" lets a plan's work move to a seat the Operator did not expect. | **Survives, bounded**: only within the charter that already owns the act (the cabinet's mandates table); a seat outside it is a new plan. |
+
+**Pairwise (Rule-5).** **3–2**: Binding is unchanged; the plan-`Y` binds the mutation, and the execution detail sits
+inside what it named. **3–15**: Rule-15 phase 1 states the requirement that removes the latitude; Rule-3 owns what
+departs. **3–8**: a destructive host action is excluded by condition 3 and keeps its own counter-prompt. **3–11**: a
+release cut or tag is excluded by condition 3. **3–1**: one zone per PR is unchanged; re-splitting never mixes zones.
+**3–7**: no provenance change. **3–6**: no new vocabulary row ("execution detail" is the criterion's outcome, defined in
+the DMC record and named here). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #555.

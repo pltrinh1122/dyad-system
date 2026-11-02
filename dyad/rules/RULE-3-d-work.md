@@ -92,6 +92,14 @@ its revision 5.
 - `Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs
   from the plan is a new plan and needs a new `Y`. Any other response leaves the d-work
   open with no mutation authorized; the Agent revises the plan.
+- An **execution detail** is not a departure: a change of the order of the plan's steps, of how its
+  PRs are split or stacked, of which seat executes a step within its charter, or of the tooling route,
+  where the plan's mutation is unchanged in content, the plan stated none of these as a requirement
+  (Rule-15 phase 1), the end state is the same, and no intermediate state is irreversible or reaches
+  the world (a release cut, a tag, a publish, a destructive host action, a preference value). The
+  plan-`Y` covers it, it is never asked, and the completion evidence reports it as a departure line,
+  so the Operator verifies it at the Done; if any condition fails it is a new plan
+  (`dyad/dmc/plan-departure.jsonld`, #555).
 - No exemptions, with one: the row the plan-`Y` has already authorized. A plan may be one line,
   and a PR may accompany it, but the question is asked — and a row accreted inside the plan's own
   **mandate scope** (next bullet) is not asked for a second time, because the question was asked
@@ -477,6 +485,9 @@ the pending queue in the board store, written ahead, 2026-11-02 (d-work #535): t
 queue, every question owed, every dispatched act and its wait — lived only in the cos's chat, and a hop of the cos
 from one session to another would have lost it; see the same record, amendment #535. Batch disposition gains the
 inbox 2026-11-02 (d-work #536): reports and relays travelled as messages to session ids, lost on a hop and
-unreceivable by a terminal holder; see the same record, amendment #536.
+unreceivable by a terminal holder; see the same record, amendment #536. Plan gains the execution detail
+2026-11-02 (d-work #555): a change of order with the content unchanged had been read as a departure and cost the
+Operator a question (#553 revision 3, #532 revision 6), while the Operator holds that execution order not stated as a
+requirement is covered by the original mandate; see the same record, amendment #555.
 
 Set: System Requirements.
