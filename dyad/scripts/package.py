@@ -217,6 +217,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
+  dyad board [set <id>|_cos key=value… [--drop] | resume]
+                                the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
+                                board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
+                                fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
                                 the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
@@ -2021,6 +2025,12 @@ def cmd_merge(a):
     """The record-bound merge lives in scripts/merge.py (d-work #532); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "merge.py", "merge").main(a, REPO)
 
+def cmd_board(a):
+    """The board store's CLI lives at guards/agent/board.py (it is also the guard); this is dispatch only (S4, d-work
+    #535)."""
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    return dyadlib.load_guard("agent", "board").cli(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2045,6 +2055,8 @@ if __name__ == "__main__":
         sys.exit(cmd_bootstrap(a[1:]))
     if a and a[0] == "merge":
         sys.exit(cmd_merge(a[1:]))
+    if a and a[0] == "board":
+        sys.exit(cmd_board(a[1:]))
     if a and a[0] == "ledger":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":
