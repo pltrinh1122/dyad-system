@@ -1,5 +1,5 @@
 # Run-book: d-work (one d-work from its prompt to its Done-Y) — play-book `dyad/playbooks/d-work.md`, #309
-# sections: Open, Plan, Authorize, Execute, Evidence, Record, Complete, Defer, Resume
+# sections: Open, Plan, Authorize, Execute, Evidence, Record, Complete, Defer, Resume, Mirror
 
 A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the d-work play-book as `dyad-cmd`
 blocks, run by either party through the core runner, which prints the native line, records an event in the
@@ -76,6 +76,20 @@ scope: the checked-out branch's diff against origin/main (read)
 
 dyad/bin/dyad check --pr origin/main HEAD
 ```
+The PRs a Done question is about to name, judged together (#556, harvested: a seat wrote this check by hand 69 times in
+one session). `PRS` names them in merge order. For each it prints the live head, its files and zones, and whether it is
+stacked on the one before; then every head is merged in order onto `origin/main` with `git merge-tree`, touching no
+worktree:
+```dyad-cmd
+name: verify-prs
+class: read-only
+role: any
+undo: none
+postcondition: none
+scope: origin/main and refs/pull/<n>/head of every PR in PRS (read)
+
+PRS="${PRS:?PR numbers in merge order}" dyad/bin/dyad steps verify-prs
+```
 
 ## Evidence
 The evidence block of the exact head the Done question is asked on (Rule-14 property 3), pasted verbatim in
@@ -107,6 +121,19 @@ scope: <instance>/d-work/{rows,provenance,traces}/<DWORK>.md
 
 D="${DWORK:?d-work id}"; I="${DYAD_INSTANCE:-agent-corpus}"; S="$(sed -n 's/^state: //p' "$I/d-work/rows/$D.md")"; dyad/bin/dyad dwork state "$D" "$S" -d "${DISPOSED:?the entry, e.g. 'Y done (merges PR #9 at <head>)'}" --said-file "${SAID:?disposition file}" && dyad/bin/dyad dwork trace "$D" --out
 ```
+The same act with the entry composed rather than typed (#556, harvested): `PRS` in merge order, each named at its live
+head, and `ACCRETED` the rows the mandate accreted, read from origin/main's ledger, so the entry names exactly the heads
+the question was asked on. It refuses when the row's operative entry is already that one:
+```dyad-cmd
+name: done-record
+class: reversible
+role: any
+undo: I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; git restore --source=HEAD --worktree -- "$I/d-work/rows/$D.md" "$I/d-work/provenance/$D.md"; rm -f "$I/d-work/traces/$D.md"
+postcondition: grep -q '^disposed:.*Y done' "${DYAD_INSTANCE:-agent-corpus}/d-work/rows/${DWORK:?d-work id}.md"
+scope: <instance>/d-work/{rows,provenance,traces}/<DWORK>.md
+
+DWORK="${DWORK:?d-work id}" SAID="${SAID:?disposition file}" PRS="${PRS:-}" ACCRETED="${ACCRETED:-}" dyad/bin/dyad steps done-record
+```
 
 ## Complete
 The state, once every head the recorded entry names is on `main` (#202): a second ledger commit with no
@@ -120,6 +147,19 @@ postcondition: grep -qx 'state: done' "${DYAD_INSTANCE:-agent-corpus}/d-work/row
 scope: <instance>/d-work/rows/<DWORK>.md
 
 D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" done
+```
+The close in full once it is due (#556, harvested): only when every head the row's operative `Y done` names is an
+ancestor of `origin/main`. It sets the row `done` and closes every row the entry names as accreted under it
+(`--mandate`); the board entry is dropped by the automaton's landing form (`--land`), since a board write always lands:
+```dyad-cmd
+name: close-landed
+class: reversible
+role: any
+undo: I="${DYAD_INSTANCE:-agent-corpus}"; git restore --source=HEAD --worktree -- "$I/d-work/rows/" "$I/d-work/provenance/"
+postcondition: grep -qx 'state: done' "${DYAD_INSTANCE:-agent-corpus}/d-work/rows/${DWORK:?d-work id}.md"
+scope: <instance>/d-work/{rows,provenance}/<DWORK>.md and the rows its entry accreted
+
+DWORK="${DWORK:?d-work id}" dyad/bin/dyad steps close-landed
 ```
 
 ## Defer
@@ -148,4 +188,19 @@ postcondition: grep -qx 'state: open' "${DYAD_INSTANCE:-agent-corpus}/d-work/row
 scope: <instance>/d-work/{rows,provenance}/<DWORK>.md
 
 I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; if grep -qx 'state: backlog' "$I/d-work/rows/$D.md"; then dyad/bin/dyad dwork state "$D" open --prompt-file "${PROMPT:?prompt file}"; else dyad/bin/dyad dwork state "$D" open; fi
+```
+
+## Mirror
+A seat's branch kept equal to `origin/main` (#556, harvested: run by hand 391 times in one session), fast-forward only;
+a branch holding work `main` lacks is refused, never forced. Its undo is the step's own output line, which names the
+previous sha as `MIRROR_WAS`:
+```dyad-cmd
+name: sync-mirror
+class: reversible
+role: any
+undo: git push -q origin "+${MIRROR_WAS:?the branch's previous sha, from this step's output}:refs/heads/${MIRROR:?branch}"
+postcondition: test "$(git ls-remote origin "refs/heads/${MIRROR:?branch}" | cut -f1)" = "$(git rev-parse origin/main)"
+scope: origin's refs/heads/<MIRROR>
+
+MIRROR="${MIRROR:?branch}" dyad/bin/dyad steps sync-mirror
 ```

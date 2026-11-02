@@ -170,7 +170,8 @@ class AuditPlaybookTests(unittest.TestCase):
 
 DWORK_PLAYBOOK = PKG / "playbooks" / "d-work.md"
 DWORK_RUNBOOK = PKG / "runbooks" / "d-work.md"
-DWORK_STEPS = ("open", "plan", "authorize", "execute", "evidence", "record", "complete", "defer", "resume")
+DWORK_STEPS = ("open", "plan", "authorize", "execute", "verify-prs", "evidence", "record", "done-record", "complete",
+               "close-landed", "defer", "resume", "sync-mirror")   # #556: four harvested steps
 DWORK_GUARDS = ("rows", "plans", "provenance", "sessions", "traces")   # the agent guards whose stores lie under <instance>/d-work/
 
 def _ticks(cell: str) -> list[str]:
@@ -210,15 +211,15 @@ class DworkPlaybookTests(unittest.TestCase):
         text = DWORK_RUNBOOK.read_text()
         cmds = rb.parse_text(text)
         self.assertEqual([c.name for c in cmds], list(DWORK_STEPS))
-        self.assertEqual(rb.declared_sections(text), ["Open", "Plan", "Authorize", "Execute", "Evidence", "Record", "Complete", "Defer", "Resume"])
+        self.assertEqual(rb.declared_sections(text), ["Open", "Plan", "Authorize", "Execute", "Evidence", "Record", "Complete", "Defer", "Resume", "Mirror"])
         self.assertEqual({c.section for c in cmds}, set(rb.declared_sections(text)))
         self.assertEqual(rb.prose_blocks(text), [])
-        self.assertEqual({c.name for c in cmds if c.cls == "read-only"}, {"plan", "execute", "evidence"})
+        self.assertEqual({c.name for c in cmds if c.cls == "read-only"}, {"plan", "execute", "verify-prs", "evidence"})
         for c in cmds:
             self.assertTrue(c.cmd, c.name); self.assertEqual(c.role, "any", c.name)
             if c.cls != "read-only":
                 self.assertNotIn(c.undo, ("", rb.NONE), c.name); self.assertNotIn(c.postcondition, ("", rb.NONE), c.name)
-                self.assertIn("DWORK", c.cmd + c.postcondition, c.name) if c.name != "open" else self.assertIn("TITLE", c.cmd)
+                self.assertIn({"open": "TITLE", "sync-mirror": "MIRROR"}.get(c.name, "DWORK"), c.cmd + c.postcondition, c.name)
         self.assertIn("d-work", rb.core_runbooks(PKG.parent))
     def test_runbook_passes_the_craft_check_when_present(self):
         os.environ.pop("DYAD_RUNBOOKS", None)
