@@ -7,7 +7,7 @@ nothing: your Rules do (`dyad/rules/`), and every sentence here that says "a uni
 you wrote, lets it".
 
 ## 1. What M4 is, in one paragraph
-The organization is an AI-agent **cabinet**: one chief of staff beside you, secretaries over the functions, desks
+The organization is a **cabinet** of units: one chief of staff beside you, secretaries over the functions, desks
 under them. You keep one unit beside you — the home, your **cos**, named `program-<hp>` — and it keeps the board
 of programs: every parent row you opened and the children it was decomposed into, across the member units. Each
 member unit is a **secretary**: it holds one function you want to watch — `counsel`, `audit`, `engineer`,
@@ -272,35 +272,35 @@ is owned by two charters.
 Two checkouts on two machines cannot collide: each has its own clone, both push to the one `main` through the fence,
 and the id allocator's contiguity fence rejects a true collision of row ids.
 
-## 10. The cos as a mode: the destination (dyad-system #531)
-Today your cos is one session. Where it is headed is a **mode**: an office any session can hold, whose holder
+## 10. Home follows you: the destination (dyad-system #531)
+Today your cos is one session. Where it is headed is an **office** any session can hold, whose holder
 changes while the office persists — what the core already says of every unit, held by one harness session at a time
 and by many over time. You open any session on any machine, say "cos", and you are talking to your cos.
 - **Continuity lives in the corpus, never in a chat.** Everything a cos knows is readable from `main` — the board,
   the pending queue, every question in flight and whose it is, every relay and its answer, every unit and its state
-  — so a fresh session that takes the mode reconstructs the cos with nothing told to it.
-- **One holder at a time, by a lease.** The mode is the unit `program` (`program-<operator>` with several
+  — so a fresh session that takes the office reconstructs the cos with nothing told to it.
+- **One holder at a time, by a lease.** The office is the unit `program` (`program-<operator>` with several
   Operators); taking it is an explicit act that records the new holder and makes the old one yield. The lease is
   advisory, as presence is: a second holder is warned on, never locked out, because the order of pushes to `main`
   is the only arbiter the kernel has.
-- **Units reach the mode, not a session**, through an inbox on `main` the holder reads every turn, so a terminal
+- **Units reach the office, not a session**, through an inbox on `main` the holder reads every turn, so a terminal
   holder that receives no message is reachable and a hand-off loses nothing in transit.
-- **Its acts are unchanged**: the five of §2. Host work stays with the host desks (§9); a mode sitting on your Mac
+- **Its acts are unchanged**: the five of §2. Host work stays with the host desks (§9); an office sitting on your Mac
   may open a Mac desk, and never becomes one.
-- **Authority is unchanged.** You dispose wherever the mode is; your words are recorded verbatim with the unit that
+- **Authority is unchanged.** You dispose wherever the office is; your words are recorded verbatim with the unit that
   received them.
 
-**The conditions it must keep** (plan #531 revision 4, the mode stress-tested against this cabinet's own text):
-| # | the model says | the mode keeps it by |
+**The conditions it must keep** (plan #531 revision 4, the office stress-tested against this cabinet's own text):
+| # | the model says | the office keeps it by |
 |---|---|---|
-| S1 | one chief of staff beside you (§1) | the mode is that office, the lease its holder |
-| S2 | the home holds your attention, not authority | **exclusive**: only a session holding no other unit may take the mode, and taking it never carries a charter |
-| S3 | attendance is not leadership (`organization.md` §6) | the mode follows you only into a session holding no unit; a paired secretary or desk stays what it is |
+| S1 | one chief of staff beside you (§1) | the office is that office, the lease its holder |
+| S2 | the home holds your attention, not authority | **exclusive**: only a session holding no other unit may take the office, and taking it never carries a charter |
+| S3 | attendance is not leadership (`organization.md` §6) | the office follows you only into a session holding no unit; a paired secretary or desk stays what it is |
 | S4 | authority by content, never by identity | the lease grants nothing: a wrongly held lease confers no authority, because the cos has none |
-| S5 | every unit reads and writes the same ledgers (§2 of the rule) | the mode requires it: the queue and relays move from chat into the corpus |
-| S6 | one leader per operator, at most seven lines | one mode per operator; no unit count changes |
+| S5 | every unit reads and writes the same ledgers (§2 of the rule) | the office requires it: the queue and relays move from chat into the corpus |
+| S6 | one leader per operator, at most seven lines | one office per operator; no unit count changes |
 | S7 | a relayed question is asked in the home's chat, checked from records naming the unit | the home's chat is the holder's session, and the records name the unit `program`, never the harness session |
-| S8 | the cos does only its five short acts (#432) | the mode's act list stays the five; host work goes to the host desk |
+| S8 | the cos does only its five short acts (#432) | the office's act list stays the five; host work goes to the host desk |
 
 **The roadmap.** Each phase leaves a working system and is planned as its own d-work when you ask for it; each is a
 `backlog` row of the ledger.
@@ -309,8 +309,8 @@ and by many over time. You open any session on any machine, say "cos", and you a
 | P1 — **delivered** (#535) | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
 | P2 — **delivered** (#536) | a store inbox on `main`: units post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test unit receives and answers a relay with no message |
 | P3 | the lease: take, yield, status; a stable unit name for the cos; a take by a session holding another unit refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
-| P4 | the mode as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
-| P5 | follow into an unseated session: a fresh session takes the mode on your first message; a paired secretary or desk never does | #539 | writing in a paired secretary's chat leaves it a secretary |
+| P4 | the office as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
+| P5 | follow into an unseated session: a fresh session takes the office on your first message; a paired secretary or desk never does | #539 | writing in a paired secretary's chat leaves it a secretary |
 P1 comes first because without the state in the corpus a hand-off loses the cos; P2 before P3 because a lease is
 useless while units can reach only a session id; P4 is packaging once P1–P3 hold. P1 alone makes today's cos
 crash-safe, and P2 alone lets a terminal host desk (§9) hear the cos.
@@ -378,3 +378,37 @@ adds to the board. One writer per file.
 In the one-pair case (§6, `organization: flat`) there is no solo to add: Step 1 reduces to "subagent". The criterion
 decides only which to propose — opening a unit stays §3's and a charter §4's — and Posture (§3) still decides, inside
 a unit, which acts its main chat keeps.
+
+## 12. Attention and organization (dyad-system #560)
+What this organization does for your attention, and what it does not, as falsified in plan #560 (C1–C7) with the
+criteria it decides by (D1–D5):
+1. **Three layers, three vocabularies.** The core names kinds of unit by who is present — unit, dyad unit, solo, auto,
+   home, pair and unpair, holder, hop. This craft names roles — cos (the home's title), secretary, desk, function,
+   charter. Your instance names its actual positions in `MANDATES.md`. No layer defines another's words, and your
+   positions never enter a craft or the core. Where a term belongs is the core's `term-home` criterion (D1): the core
+   if any system has it whatever its organization, this craft if only a multi-unit organization needs it, your
+   instance if only your system has it.
+2. **Say a unit by name, then title, then kind, only as needed** — "engineer (secretary, solo)", "communicate is
+   paired", "program is home". Give the kind only when it changes the route: a dyad unit is asked in its own chat, a
+   solo through the home. Dyad and solo say who is present, never what a unit does.
+3. **Which units are dyads is your declaration** (§8): the home always, and every unit `paired-units` names. Pair a
+   unit when its work is a hard context switch for you, asynchronous, independent of other matters and long-lived;
+   otherwise leave it a solo that routes home. Each pairing spends span. That is the core's `attendance` criterion
+   (D2), which advises your act and never takes it.
+4. **This craft holds no state.** Every store is the core's (rows, board, inbox, presence) or yours (`MANDATES.md`,
+   `PREFERENCES.md`); the craft supplies the functions, the name form, these rules, the `seat` guard, this Guide, its
+   criteria and the mandates template. It stays a separate craft, bundled with the core so installing it costs
+   nothing, and a one-pair system (`organization: flat`) ignores it (§6).
+5. **Your attention is two problems, not one** (`dmc/attention-problem.jsonld`, D3). Several dyads is **allocation**:
+   which units to pair, where each question is asked, switches, span. One dyad with many solos is **one channel to
+   protect**: the brief relay form, the seven-line board, batching, the inbox rather than chat. Fix the one that
+   applies; add no mechanism for the other. Charters, functions, scale-out (§11) and orchestration (§2) organize the
+   work, a third axis that serves neither directly.
+6. **The organization concentrates your attention; it does not reduce your decisions.** Every plan-`Y` and done-`Y`
+   is still yours. Its own overhead can cancel the gain — relayed acknowledgements, mechanical failures surfacing to
+   you, its own vocabulary — so every message that reaches you passes the core's overhead test (`message-overhead`,
+   D4): it asks a decision, reports a blocker only you can lift, or replaces more messages than it adds; anything else
+   goes to the inbox, the automaton or the orchestrating solo.
+7. **The claim is measured, or it is not claimed** (D5). The d-work trace measures your waiting time; a count of the
+   replies you are shown per disposition you give measures attention, read before and after the automaton and the
+   orchestrating solo. Until that count exists, items 5 and 6 are stated, not verified.

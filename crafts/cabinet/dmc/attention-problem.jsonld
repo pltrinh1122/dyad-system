@@ -1,0 +1,53 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/attention-problem",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "attention-problem",
+  "name": "Attention problem",
+  "description": "Which of the operator's two attention problems a system has, so the fix goes to the one that applies.",
+  "dyad:decides": "Is this an allocation problem or a channel to protect?",
+  "dyad:inputs": [
+    "how many units are dyad units",
+    "how many solos route through one home",
+    "which cost the d-work trace shows"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "allocation",
+      "name": "allocation",
+      "dyad:when": "several dyad units",
+      "dyad:then": "fix pairing, routes, switches and span"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "channel",
+      "name": "one channel to protect",
+      "dyad:when": "one dyad unit with many solos",
+      "dyad:then": "fix the relay form, the board's line limit, batching and the inbox"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "both",
+      "name": "fix the one that applies",
+      "dyad:when": "several dyad units, each with solos",
+      "dyad:then": "fix the one whose cost the trace shows; until it can, the one the operator names; add no mechanism for the other"
+    }
+  ],
+  "dyad:precedence": "Fix only the problem that applies; charters, functions, scale-out and orchestration organize work, a third axis, and answer neither.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "docs/operating-guide.md",
+  "dyad:owner": "cabinet:organization"
+}
