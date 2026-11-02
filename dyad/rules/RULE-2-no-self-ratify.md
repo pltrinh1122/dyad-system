@@ -92,6 +92,12 @@ Three mechanical checks read the record; the binding itself stays inference.
   refuses unless `origin/main` holds the operative `Y done` naming that PR at that head, the PR's live head is that
   head, and the head is not yet on `main` — Binding's "only if their heads are unchanged" applied at the moment of
   execution (d-work #532).
+- **The automaton**, `dyad automaton scan|run` (`dyad/scripts/automaton.py`), is execution too, never a disposer:
+  while the operator's repository variable `DYAD_AUTOMATON` is `on` it runs from ledger lines on `main` alone,
+  merges each PR an operative `Y done` names through the merge verb above, so under the same refusals, and closes a
+  row once its named heads are on `main`; anything else it posts to the home's inbox and leaves (Rule-3 Completion
+  counter-prompt; d-work #556). Its commits carry the identity of whoever runs it; its inbox messages come from the unit
+  `automaton`.
 Everything else is inference: whether a `Y` was given to the question it is recorded against, because all commits
 carry the operator's git identity and the platform cannot distinguish proposer from disposer. Any mechanical check lives in the package (`dyad/guards/`, agent zone; Rule-11 property 1) and its
 workflow wrapper in the infra zone — a dependency on Rule-1, not an overlap (A1).
@@ -119,7 +125,8 @@ it said "one mechanical fence" after #541 had added a merge guard that names thi
 verb that refuses an unbound merge, so a guard claimed an owner whose text denied having one; see the same record,
 amendment #543. Binding's never-accretable list lets a release go under the release gate 2026-11-01 (d-work #545): the
 chat release question after a done-`Y` that had verified the very bytes of the cut added no information, while the
-hosting approval, the one input no agent can forge, stays; see the same record, amendment #545. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+hosting approval, the one input no agent can forge, stays; see the same record, amendment #545. Enforcement names the automaton as execution 2026-11-02 (d-work #556): it executes the merges a
+recorded done-`Y` names, through the merge verb, and decides nothing; see the same record, amendment #556. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

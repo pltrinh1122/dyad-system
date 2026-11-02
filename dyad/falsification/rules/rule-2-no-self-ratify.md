@@ -169,3 +169,19 @@ may bind to it; each cites the other. **2–3**: the Done question's `releases` 
 approval's record is Rule-7's. **2–6**: `release gate` used by 2. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #545.
+
+## Amendment — d-work #556 (2026-11-02: Enforcement names the automaton as execution)
+**Claim (plan #556, the operator's `Y` of 2026-11-02):** the d-work automaton is a fourth mechanism beside the fence,
+the merge guard and the merge verb: execution, never disposition.
+
+| # | attack | result |
+|---|---|---|
+| 34 | An automaton with `contents: write` can merge anything. | **Survives, bounded**: it merges only through `dyad merge`, whose refusals bind it to an operative `Y done` on `main` naming that PR at that head; a forged entry stays detection (the merge guard, the fence), as for any writer. It runs `main`'s reviewed code, never a unit's working tree. |
+| 35 | The automaton is a third party, contradicting "never the same party" and the two-party dyad. | **Refuted**: it disposes nothing, so it is neither proposer nor disposer; the vocabulary's `party` row states it as the countersign model's executor. |
+| 36 | The switch is a preference by another name. | **Survives, scoped**: `DYAD_AUTOMATON` is a repository variable the operator sets, as `RELEASE_APPROVAL` is; it authorizes nothing (each merge still needs its recorded `Y`), so it is a form setting, not a mandate. |
+
+**Pairwise (Rule-5).** **2–3**: Rule-3 owns when the automaton may merge and close; Rule-2 owns that it is execution
+and how it is bounded. **2–14**: the gate it pushes through is Rule-14 property 3's. **2–6**: `automaton` used by 2.
+Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #556.

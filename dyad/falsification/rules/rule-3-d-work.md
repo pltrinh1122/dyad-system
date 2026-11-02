@@ -737,3 +737,27 @@ agent zone. **3–20**: the message's `row` is resolved by its own guard, not a 
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #536.
+
+## Amendment — d-work #556 (2026-11-02: the automaton executes the merge and the close)
+**Claim (plan #556 revisions 1–3, the operator's `Y` of 2026-11-02):** after a done-`Y` is recorded, the merges it
+names and the close are clerical execution of a ledger line, so a non-inferring automaton may run them; the record
+stays the inferring unit's, and the d-work play-book states the three layers — interaction (the home), orchestration
+and execution (a solo), run-book execution (auto) — and that units run run-book steps by name.
+
+| # | attack | result |
+|---|---|---|
+| 1 | A merge by code is self-ratification moved into a workflow. | **Refuted**: the `Y` is the operator's, recorded before the merge (the Record act); the automaton merges only what the operative entry names, through `dyad merge`, which refuses a moved head, a missing entry or a head already on `main` (Rule-2 Enforcement). It decides nothing. |
+| 2 | The three-act order breaks: the automaton could close before it merges. | **Refuted**: it closes only a row whose every named head is an ancestor of `main` (`close-landed`), the same test the fence applies (`rows.landing_problems`); a close it writes is judged by the fence like any other. |
+| 3 | The completion reply's evidence no longer covers the merge. | **Survives, scoped**: the reply asks before any merge, as before; the merge evidence is the evidence block on the head the `Y` names, which the automaton does not re-run, and the hosting's CI corroborates on `main` (Rule-14 property 3). |
+| 4 | A conflict or a moved head stalls the row silently. | **Refuted**: every refusal is one notice to the home's inbox, and the row keeps its state, so the board and the home see it; resolving it is inference, the home's or a solo's. |
+| 5 | With the switch off, the Rule now describes a mechanism that does not run. | **Survives**: the sentence is permissive ("may be executed … while `DYAD_AUTOMATON` is `on`"); off, the acts stay with the agent as before. |
+| 6 | The layer table puts orchestration on a solo no charter names. | **Survives, scoped**: the play-book says the home executes that layer until row #557's charter exists; the charter is the operator's `MANDATES.md` change, never accreted (Rule-2 Binding). |
+
+**Pairwise (Rule-5).** **3–2**: Rule-2 Enforcement names the automaton as execution and its refusals; Rule-3 owns when
+the merge and the close happen; each cites the other. **3–14**: the merge evidence stays Rule-14 property 3's block,
+unchanged. **3–16**: the automaton reads and writes the board and the inbox as any writer does; Rule-16 owns their
+shape, unchanged. **3–13**: the play-book's conduct rule — run steps by name, harvest a recurring script into a step by
+its own row — is Rule-13 property 1 applied, stated in the play-book, not a Rule. **3–6**: `automaton` used by 3.
+**3–1**: agent zone; the workflow is infra zone, in engineer's PR. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #556.
