@@ -423,6 +423,17 @@ def buckets(ivs: list[tuple[int, int, str]], start: int, end: int) -> tuple[dict
                 segs.append((t, edges[i + 1], lab))
     return out, segs
 
+def replies(recs: list[dict], start: int, end: int) -> int:
+    """Agent replies in [start, end]: text records that end a turn, the next record being an Operator message, a
+    harness notice, a compaction or none. What the Operator was shown, the metric's stand-in for what was read
+    (#560 D5)."""
+    out = 0
+    for i, r in enumerate(recs):
+        if r["kind"] == "text" and start <= r["ts"] <= end:
+            nxt = recs[i + 1] if i + 1 < len(recs) else None
+            out += nxt is None or nxt["kind"] in ("operator", "notify", "compact")
+    return out
+
 def turns_naming_others(recs: list[dict], rid: int, start: int, end: int) -> tuple[list[tuple[int, set]], list[int]]:
     """(shared, others): turns in the window ending in a `Y/N:` line that names #rid with other ids (shared, with
     the ids), and turns whose `Y/N:` names only other ids (their milliseconds)."""
@@ -600,6 +611,14 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
                   f"| guards-only push gates | {len(gates)} | transcript |",
                   f"| tool calls | {len(tools)} | transcript |",
                   f"| output tokens | {sum(tokens.values())} | transcript |"]
+        n_rep = replies(recs, start, end)                # #560 D5: what the Operator reads per decision it makes
+        days = (utc(start)[:10], utc(end)[:10])         # the ledger's own count, not the transcript's anchors
+        n_disp = sum(e["kind"] == "disposition" and days[0] <= e["date"] <= days[1] for e in entries)
+        lines.append(f"| replies per disposition | {n_rep / n_disp:.1f} ({n_rep} replies, {n_disp} dispositions) | transcript |"
+                     if n_disp else f"| replies per disposition | no disposition in the window ({n_rep} replies) | transcript |")
+        limits.append("replies per disposition counts the replies the Operator was shown (a turn's last text), never what "
+                      "was read: an inference; its dispositions are the provenance record's, dated on the window's days "
+                      "(a record holds dates, not times), anchored or not (#560 D5)")
         ranged = [r for r in tools if r.get("ranged")]   # #216: pushes booked from the pushed range, not the result text
         if ranged:
             limits.append(f"{len(ranged)} push gate(s) booked from the pushed range read from git (no skip line and no `Ran N tests` "
