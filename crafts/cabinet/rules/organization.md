@@ -132,6 +132,9 @@ who disposes — stays the core's):
   fresh worktree of `origin/main` when the unit's checkout predates it), never from its own branch's. A unit whose
   harness refuses the verb stops, reports the refusal word for word, and the cos executes that merge as the
   fallback, reported to the operator — never a way around the refusal, and never the cos's merge by default.
+  While the operator's repository variable `DYAD_AUTOMATON` is `on`, the automaton executes the merge and the close
+  from the recorded entry instead (the d-work play-book's run-book layer, dyad-system #556): no unit merges a row it
+  serves, and a refusal it posts to the home's inbox is resolved by the owning unit, never merged around.
 - **Keep the board short.** A roll-up line is children held, open questions, the oldest, the stale — and nothing a
   reader could get from the row itself.
 - **Escalate at the fence.** A row whose work leaves the charter's fence, or that the charter's ceiling does not

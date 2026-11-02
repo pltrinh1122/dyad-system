@@ -56,7 +56,8 @@ commit or a line of chat:
    ports; audit for findings and hardening; operate for the host.
 3. **Present** — one question per reply, in the form `relay-form` names (§3 item 4), the unit's text as evidence;
    a preference or a charter as its own question, presented and never pushed (§3 item 5).
-4. **Relay back** — each of your dispositions to its unit verbatim; the unit executes it (record, merge, close).
+4. **Relay back** — each of your dispositions to its unit verbatim; the unit executes it (record, merge, close —
+   the merge and the close the automaton's when it is on, below).
 5. **Board** — read the board of programs and report it to you; keep the check-in armed.
 
 Never done at the cos, always handed on: drafting a plan file (a fork of the cos or the owning secretary writes it;
@@ -66,6 +67,29 @@ row, by `dyad merge` — the cos merges only as the reported fallback when that 
 fork, #425). **Availability:** the cos's checkout runs nothing longer than a ledger-only push; anything that runs the
 suite runs in a unit or in a worktree. The price when it did not: the cos was away from you for ten to twenty
 minutes at a time while a hook or an evidence run held its one checkout (#432).
+
+### Three layers, and which unit runs each (dyad-system #556)
+The d-work play-book (`dyad/playbooks/d-work.md`, Layers) splits every d-work into three layers, one per unit kind:
+- **Interaction — the home.** Reading your intent, presenting the plan's and the Done's questions at your altitude,
+  transcribing your words and recording each disposition. This is all the home holds: its five acts above are this
+  layer, and it is the only layer you sit in.
+- **Orchestration and execution — a solo.** The play-book itself: dispatching to units, collecting inbox reports,
+  verifying heads and evidence, judging departures, drafting the completion evidence and the Done question for the
+  home to present. Today the home carries it, because no unit is chartered for it yet; the orchestrating secretary
+  is pending its charter (row #557, your `MANDATES.md` change, asked as its own question). Until then, keep the
+  home's share to the five acts and hand the rest on as above.
+- **Run-book execution — auto.** The automaton (`dyad automaton run`) runs the clerical edges from ledger lines on
+  `main` alone: the merges your recorded Done names, pinned and in order; the close once every named head is on
+  `main`; one notice to each owner when a plan is approved. It decides nothing — a moved head or a conflict is one
+  notice to the home's inbox — and it runs only while your repository variable `DYAD_AUTOMATON` is `on`, which is
+  yours to set, as `RELEASE_APPROVAL` is.
+
+**When the automaton is on, units stop merging.** The record of your Done is the last act an inferring unit takes:
+no unit runs `dyad merge` on a row the automaton serves, and the cos's fallback merge above becomes the automaton's
+refusal notice, read by the home and handed to the owning unit to resolve. With the switch off, every unit merges its
+own PR as before. Every unit, the home included, runs the run-book's steps by name (`verify-prs`, `done-record`,
+`close-landed`, `sync-mirror`), never a hand-written copy of one; a new recurring script becomes a step by its own
+row.
 
 ## 3. Opening a unit
 1. **Name it before it exists.** Pick the function (a row of your mandates table) and, for a desk, the topic.
