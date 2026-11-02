@@ -302,3 +302,24 @@ coherent. 16–1 and 16–2 have no zone or ratification change. 16–7: provena
 plan files are unaffected. 16–20: no reference kind. 16–6: no term is added. All other pairs are untouched. Coherent and
 orthogonal.
 Disposition: see ledger #525.
+
+## Amendment — d-work #535 (2026-11-02): Store gains the board store
+**Claim (plan #535, the Operator's `Y` of 2026-11-02):** beside the rows, `<instance>/d-work/board/` holds the
+orchestration in flight — one file per row not terminal, `_cos.md` for what crosses rows — overwritten, not append-only,
+written by `dyad board set` as a ledger-only commit and read by `dyad board` and `dyad board resume` after a hop.
+
+| # | attack | result |
+|---|---|---|
+| H1 | Write it into each row file. | **Refuted** (plan attack 2): rows are append-only and fenced, and this state is overwritten many times a day. |
+| H2 | Two holders write the board at once. | **Conceded to P3** (plan attack 6): the lease (#537) arbitrates; until then `writer` is recorded, as presence's is (#350), and the verbs warn when the last writer is not this session. A guard cannot, because it runs where "this session" means nothing. |
+| H3 | Seats address the old session after a hop. | **Conceded to P2** (plan attack 5): the inbox (#536) removes it; until then `_cos.md`'s seat table holds each seat's session id, so the new holder's announcement to each is mechanical. |
+| H4 | An overwritten store breaks this Rule's promise that concurrent sessions almost never merge. | **Survives**: one board file per row, written by one holder; two holders are the H2 case, warned. History is git's, so an overwrite loses nothing a reader could need. |
+| H5 | The board store needs its own fence. | **Refuted**: it sits under `<instance>/d-work/`, so the main fence admits it as ledger-only and the plan gate exempts a board-only range; no `rows.py` change. |
+
+**Pairwise (Rule-5).** **16–3**: Rule-3 owns the queue and write-ahead and cites this store; this Rule owns the store.
+**16–2**: ledger-only, not ratification; unchanged. **16–7**: the board is no provenance record. **16–11**: the guard is
+placed under `dyad/guards/agent/`; unchanged. **16–12**: the guard carries its tests (engineer's PR). **16–20**: the
+board's row ids are resolved by its own guard, not a registered reference kind. **16–1**: agent zone. **16–6**: `board
+store`, `write-ahead`, `hop` added. Others unchanged. Coherent and orthogonal.
+
+Disposition: see ledger #535.

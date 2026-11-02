@@ -37,6 +37,17 @@ files and almost never merge.
 - A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
   Scope). Optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it.
+- Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
+  orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the seat table
+  with each seat's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
+  (`operator`, `seat <name>` or `external <ref>`), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
+  written by `dyad board set` as presence's is (#350), never typed. Unlike a row it is **overwritten**, never
+  append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
+  ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
+  session holding the board replaced by another — by `dyad board resume`, which prints what the new holder resumes.
+  Its guard, `dyad/guards/agent/board.py`, checks only that each file is well-formed, names a row that is not
+  terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
+  runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535).
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,
@@ -156,6 +167,8 @@ writer sentence 2026-10-25 (d-work #350, ported by #453 from PR #425): the F1 fe
 computed per `dyad` invocation, so it warned on a session's own previous command and could not tell a second
 holder from the same one; see the same record, amendment #350. Enforcement
 names the row-id contiguity fence 2026-10-29 (d-work #525): the fence refused a range whose new ids skipped or were
-typed by hand since #560, and no Rule named it; see the same record, amendment #525.
+typed by hand since #560, and no Rule named it; see the same record, amendment #525. Store gains the board
+store 2026-11-02 (d-work #535): the orchestration in flight had no store, and a row, append-only and fenced, is the
+wrong one for state overwritten many times a day; see the same record, amendment #535.
 
 Set: System Requirements.
