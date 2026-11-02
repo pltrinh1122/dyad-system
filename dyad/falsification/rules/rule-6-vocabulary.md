@@ -79,3 +79,53 @@ Rules do not mention it.
 there.
 
 Disposition: see ledger #553.
+
+## Amendment — d-work #553 (2026-11-02, part D: the dyad-native terms in the Rules and the play-books)
+
+**Claim (plan #553 revisions 1–3, the operator's `Y` of 2026-11-02 with the four recommendations):** the Agent Rules
+and the four play-books move to the dyad-native vocabulary — `unit` for the generic seat, `dyad unit` and `solo` for
+an attended and an unattended seat, `pair`/`unpair` for declaring attendance, `home` for the structural cos,
+`automaton`/`auto` for the countersign model's executor, `d-work` redefined as a body of work, `done-Y` for Done-Y, and
+`operator`/`agent` lowercase in prose — with the vocabulary rows entering in the same PR as the Rule text that uses
+them (Rule-6 Conditions), alias rows for `seat`, `attended` and `executor`, and Rule-3's answer grammar reading an
+answer by meaning. Mechanisms, the Rules' force and history are unchanged (scope 2): every old word history carries is
+mapped by `dyad/vocabulary/crosswalk.md` (part B), and every form a tool reads keeps its alias (part C).
+
+Rules edited: 2, 3, 7, 8, 9, 11, 12, 14, 15, 16, 18. Play-books edited: audit, countersign-model, d-work, release.
+
+**Attacks.**
+| # | attack | result |
+|---|---|---|
+| D1 | Lowercasing `operator` and `agent` at the start of a sentence breaks English and reads as a typo. | **Refuted, by construction**: the pass lowercases only inside a sentence; a sentence-initial word keeps its capital, as any word does (Rule-8's Provenance "Operator gap E5", Rule-15's "the done-`Y` as Rule-3"). The term is lowercase; the sentence's first letter is typography. |
+| D2 | `Agent Rule` is a term and would be lowercased with `agent`. | **Refuted**: the pass leaves `Agent Rule` and every backticked span untouched; `vocabulary.py` still finds `Agent Rule` in Rules 4, 5 and 6, which this part does not edit. |
+| D3 | The case change alters a guard's reading: `vocabulary.py` matched "Operator" and "Done-Y". | **Refuted**: `vocabulary.fold` lowercases both sides, so `operator` and `done-y` match the same text; the guard's observed line after the edit is `ok [rule-6] 131 terms, owners and used-by resolve`. |
+| D4 | Rules 1, 4, 5, 6, 10, 13, 19 and 20 also carry `Operator`/`Agent`, so the Rule set is now mixed in case. | **Confirmed, reported as a finding**: those Rules are outside plan #553's files touched (Rules 2, 3, 7, 8, 9, 11, 12, 14, 15, 16, 18), so editing them is a departure needing its own `Y`. The mix is case only; no meaning differs, and the vocabulary's conventions paragraph says which form is canonical. A follow-up row can sweep them. |
+| D5 | `unit` names a position now, so "every unit of operator-prompted work" in Rule-3's Intent and "the collision-free unit" in Rule-15 read as positions. | **Confirmed and fixed**: Rule-3's Intent says "every body of operator-prompted work", Rule-15 "the collision-free record", and the play-books' "unit of work" becomes "body of work". |
+| D6 | The cabinet guard's entity is still `seat`, `seats.py`, `seats_rules.txt`; Rule-16 citing them beside `unit` contradicts the rename. | **Survives, scoped** (crosswalk, entity row): identifiers are not vocabulary; renaming them would change the registry, `check --list` and the references register, a mechanism scope 2 excludes. The `seat` alias row says so. |
+| D7 | Rule-16 names the key `paired-units` while the operator's preferences table still holds `attended-seats`. | **Survives**: part C reads `paired-units` first and `attended-seats` as its alias (`sessions.declared_preference`), so the Rule is true of the code either way; renaming the operator's own key is the cos's preferences-zone question (plan step 7), never accretable (Rule-2, Binding). `references.py` resolves no preference key named in prose, and the preferences guard is green. |
+| D8 | Reading `yes` as `Y` lets the agent put a disposition in the operator's mouth. | **Refuted** (plan revision 2, R2): the provenance record keeps the words as typed (Rule-7 property 4), and the row records the token the answer grammar defines; a reading that could lead to two acts is asked, never chosen. |
+| D9 | A mid-row pairing reroutes a question already in flight. | **Survives with the board** (plan decision 3): the board's `question` line records where the question was asked, and Rule-16 says a question already asked keeps that route. |
+| D10 | `home` and the cabinet craft's `cos` define the same thing twice. | **Refuted**: `cos` is the cabinet craft's title for the unit (`crafts/cabinet/vocabulary/CRAFT.md`), `home` the core's structural term for it; `check_craft` compares terms, and none is equal. Rule-16 says "the home is titled cos there". |
+| D12 | The vocabulary's `Operator` and `Agent` rows can be lowercased with the prose. | **Confirmed false at the push gate**: the sysarch craft's schema projector (`crafts/sysarch/projectors/project_schema.py`) selects the party boxes by the exact term `Operator`/`Agent`, and its live test failed. That code is craft zone and outside the plan's files touched, so the two term cells keep their capitals and their definitions say lowercase in prose; a follow-up row can make the projector casefold (L6) and then lowercase the cells. |
+| D11 | `auto` and `automaton` are defined with nothing that realizes them. | **Survives, scoped**: both rows say reserved / none yet; they name the gap the countersign model's automatic mode leaves (the play-book's executor row now points to them), and nothing reads them as live. |
+
+**Rule-6: every Agent Rule in a changed term's `used by`.**
+- `Operator` (2 3 4 5 6), `Agent` (1 2 3 4 5 6): the definition gains the prose convention, the term cells unchanged (D12); each listed Rule still mentions it (the guard folds case) and reads correctly.
+- `done-Y` (2 3): Rules 2 and 3 say done-`Y`; meaning unchanged.
+- `d-work` (2 3 4 6 7): the definition names a body of work and its scope; no use in those Rules depends on "unit", and each reads correctly.
+- `unit` (3 7 16), `seat` (16), `dyad unit` (16), `solo` (3 16), `automaton` (16), `auto` (16), `executor` (16), `home` (3 16), `pair` (16), `unpair` (16), `unit name` (3 16), `attended` (16): Rules 3, 7 and 16 now use them in these senses, and only these Rules list them.
+- `hop`, `inbox`, `cos-board`, `secretary`, `party`: wording inside the definition (home for cos, unit for seat, automaton beside executor); the Rules listing them (3, 16; 2 3 18 19 for `party`) read unchanged.
+
+**Pairwise (Rule-5).**
+Every edit is of words, not of what a Rule owns, so no concern moves between Rules.
+- **3–16**: Rule-3 says the home relays a solo's questions and the inbox is addressed by unit name; Rule-16 defines the kinds and the inbox path with `<unit>`. Coherent: both name one route; Rule-16 owns the store and the kinds, Rule-3 the counter-prompt.
+- **3–7**: Rule-3's answer grammar reads an answer by meaning and cites Rule-7 for the words kept verbatim; Rule-7's property 4 is unchanged in force (`relayed via <unit>`). Coherent, orthogonal.
+- **3–8**: Rule-3 now cites Rule-8's blocking-question form for an ambiguous answer; Rule-8 owns the form. Coherent.
+- **2–3, 2–11, 3–11**: done-`Y` in all three, one sense. Coherent.
+- **16–2**: Rule-16 says pairing is the operator's act through a preference; Rule-2 says a preference value is the operator's to dispose. Coherent.
+- **7–16**: Rule-7's `relayed via <unit>` and Rule-16's attendance check reading the note; same text, unchanged force.
+- **8, 9, 12, 14, 15, 18** with every other Rule: case only (and Rule-15's "record" for "unit"); no instruction differs.
+- **1, 4, 5, 6, 10, 13, 19, 20** with every edited Rule: unchanged; they keep `Operator`/`Agent` capitalized (D4), which differs in case only.
+No gap is found beyond D4.
+
+Disposition: see ledger #553.

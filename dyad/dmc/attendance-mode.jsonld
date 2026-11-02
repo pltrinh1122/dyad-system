@@ -12,36 +12,36 @@
   ],
   "identifier": "attendance-mode",
   "name": "Attendance mode",
-  "description": "The mode attendance reads over the live seats.",
-  "dyad:decides": "Which seats of the live board does the Operator attend?",
+  "description": "The mode attendance reads over the live units (seats before #553).",
+  "dyad:decides": "Which units of the live board does the operator pair with?",
   "dyad:inputs": [
-    "the live seats",
-    "each seat's attendance"
+    "the live units",
+    "each unit's kind"
   ],
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
       "termCode": "all",
-      "name": "every seat attended",
-      "dyad:when": "every live seat is attended",
-      "dyad:then": "the mode is every seat attended"
+      "name": "every unit dyad",
+      "dyad:when": "every live unit is paired",
+      "dyad:then": "the mode is every unit dyad"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "leader",
-      "name": "only the leader",
-      "dyad:when": "only the leader is attended",
-      "dyad:then": "the mode is only the leader"
+      "name": "only the home",
+      "dyad:when": "only the home is a dyad unit",
+      "dyad:then": "the mode is only the home"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "some",
       "name": "some",
-      "dyad:when": "some live seats beside the leader are attended",
+      "dyad:when": "some live units beside the home are paired",
       "dyad:then": "the mode is some"
     }
   ],
-  "dyad:default": "only the leader, with no live seat",
+  "dyad:default": "only the home, with no live unit",
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
     "dyad:implementation": "guards/agent/sessions.py"

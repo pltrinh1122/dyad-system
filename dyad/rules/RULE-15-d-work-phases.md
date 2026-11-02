@@ -11,8 +11,8 @@ that can start in any later session.
 - What a plan proposes — Rules 9, 10, 12, 13 as today.
 
 ## Conditions (triggers)
-- The Agent is about to ask a plan counter-prompt: the plan file exists first.
-- The Operator answers `Y` to a plan: state becomes `planned`.
+- The agent is about to ask a plan counter-prompt: the plan file exists first.
+- The operator answers `Y` to a plan: state becomes `planned`.
 - A session, any session, begins executing a `planned` d-work.
 - `main` has moved past a file the plan touches before execution starts.
 
@@ -21,8 +21,8 @@ that can start in any later session.
    counter-prompt: intent as read, mutation, files touched, base commit of `main`,
    falsification pointer. The reply reproduces it. The plan-`Y` binds to the file.
 2. **Execution.** Begins by reading the plan file, in the same or any later session. If
-   `main` has moved past a touched file, the Agent re-plans (new plan-`Y`); otherwise it
-   executes as written. Done-`Y` as Rule-3.
+   `main` has moved past a touched file, the agent re-plans (new plan-`Y`); otherwise it
+   executes as written; the done-`Y` as Rule-3.
 - A d-work interrupted mid-execution resumes from the plan file and the branch; the
   incident is recorded (Rule-3).
 - An **accreted row** (Rule-3, Scope) has no planning phase of its own: its plan *is* the
@@ -37,12 +37,13 @@ that can start in any later session.
 
 ## Enforcement
 The PR guard (`dyad/guards/agent/prs.py`, Rule-3) accepts state `planned` at the plan gate. Inference otherwise; Rule-16 makes
-the plan file the collision-free unit for a second session.
+the plan file the collision-free record for a second session.
 
 ## Provenance
 Operator rule, 2026-09-13. Falsified; see `../falsification/rules/rule-15-d-work-phases.md`.
 Phases gains the accreted-row bullet 2026-10-14 (d-work #290): a row accreted under another row's
 mandate has no plan file, so phase 1 has nothing to write and phase 2's drift check nothing to
-read, and that gap had been silent rather than stated; see the same record, amendment #290.
+read, and that gap had been silent rather than stated; see the same record, amendment #290. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

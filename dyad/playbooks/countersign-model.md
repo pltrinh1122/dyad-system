@@ -12,7 +12,7 @@ its words adopted rather than coined (Rule-13 property 1). Its records travel wi
 
 **Non-normative where the vocabulary carries no term.** This play-book binds nothing by itself: in a dyad system
 only the Agent Rules bind, and a Rule that uses one of the model's words cites the vocabulary row for it (Rule-6).
-Where a Rule and this model differ, the Rule is what the Agent obeys and the difference is a row of Part II §7.
+Where a Rule and this model differ, the Rule is what the agent obeys and the difference is a row of Part II §7.
 It is not a procedure and has no run-book of its own: the d-work play-book (`dyad/playbooks/d-work.md`) is the
 procedure that realizes Part II's explicit-mode lifecycle, and the audit play-book's self-diagnostic reads I1–I8
 as its L4 claims. The projector that maps this system onto Part I and the levels check are code with tests
@@ -34,7 +34,7 @@ Logical, not a storage format. A system's stores stay as they are; a projector m
 | entity | fields (core) | meaning |
 |---|---|---|
 | **Party** | `id`, `kind` ∈ {human, agent, executor} | who acts; only a `human` countersigns |
-| **Act** | `id`, `title`, `mode` ∈ {explicit, implicit, automatic}, `processor` → Party, `state`, `refs` | one consequential unit of work, in exactly one mode at a time |
+| **Act** | `id`, `title`, `mode` ∈ {explicit, implicit, automatic}, `processor` → Party, `state`, `refs` | one consequential body of work, in exactly one mode at a time |
 | **Proposal** | `id`, `act` → Act, `author` → Party (agent), `body_ref`, `artifact_hash` (nullable) | what is put up for countersignature |
 | **Countersignature** | `id`, `subject` → Proposal \| Escalation, `signer` → Party (human), `answer` ∈ {yes, no, amend}, `basis` ∈ {per-act, mandate, release}, `text` (verbatim), `bound_hash` (nullable), `at` | the human act; `basis` is *how* it covers the act |
 | **Mandate** | `id`, `scope` (event class, plan template, budget, rights), `countersignature` → Countersignature | a standing countersignature (implicit mode) |
@@ -193,7 +193,7 @@ order:
 1. a `prompt` entry of the act's provenance record (Rule-7) → kind `prompt`, source `provenance`;
 2. an intake origin `<system>-<id>` in the row's refs (Rule-3 Intake; the D7 heuristic) → kind `signal`, source
    `intake`;
-3. a first disposition whose first word is `backlog`, `intake` or `opened` (a row opened by the Operator's own
+3. a first disposition whose first word is `backlog`, `intake` or `opened` (a row opened by the operator's own
    disposition, Rule-3) → kind `prompt`, source `opening-disposition`.
 
 None found → `kind: null` and `missing` names what was looked for ("no provenance record", "no prompt entry in the
@@ -207,7 +207,7 @@ projection is the wrong way to learn what a heuristic only suspects. The gaps th
 already: rows opened before it carry no prompt entry, and the instance names exactly those rows — the ones whose
 initiation words were never written — in `<instance>/provenance_legacy.local.txt`; any other row without its
 record fails Rule-7's own check at the push that creates it (core d-work #191). A failing I6 would only repeat
-that failure. What a warning names is a candidate for the Operator, never a verdict: a row opened by the agent's
+that failure. What a warning names is a candidate for the operator, never a verdict: a row opened by the agent's
 own finding (a backlog row with an empty `disposed`) is exactly what I6 forbids, and the warning makes it visible.
 
 ### 4. Lifecycles, one per mode, built only from the primitives
@@ -260,7 +260,7 @@ under any kernel; the command is one kernel's way to *offer* it. Templates: `dya
 | `/sc-author` | — | **deferred**: meta-authoring, needed once commands multiply |
 
 Every adapter: (a) reads the procedure's file before acting and follows it, never a paraphrase in the command;
-(b) is itself an Initiation — invoking it is a prompt, so it opens that system's unit of work and proposes
+(b) is itself an Initiation — invoking it is a prompt, so it opens that system's body of work and proposes
 before it mutates; (c) never answers its own question: it ends with one question, the last line (I1, I2).
 No dsys text is copied (dsys has no licence); the pattern is cited by name only (R6).
 
@@ -269,7 +269,7 @@ Installing: copy the command templates into the system's `.claude/commands/`. In
 command is an unclassified path, which Rule-1 forbids (R4).
 
 ### 7. Adoption: refactors each system still needs
-Listed, not authorized here: each is its own unit of work in its own system, because each changes a Rule or a
+Listed, not authorized here: each is its own body of work in its own system, because each changes a Rule or a
 deployed core (plan #152 §6). The dyad-system rows are read against the corpus at #381 (2026-10-22).
 
 | system | refactor | imperative | state at #381 |
@@ -295,10 +295,10 @@ dsys by name only: its decision-record and CTA specification (answers yes / no /
 its "three keys" invariant, its E3 and E5 rules, and its slash commands `pb-decide`, `pb-extend`, `eval-meta`,
 `eval-pb`, `eval-rb`, `eval-sc`, `sc-author`.
 
-## Glossary — the model's own terms, outside the Agent vocabulary
+## Glossary — the model's own terms, outside the agent vocabulary
 The terms below are **model-only** by the reconciliation table (`agent-corpus/falsification/countersign-consolidation.md`,
 C2): no Agent Rule uses them, so Rule-6 keeps them out of `dyad/vocabulary/VOCABULARY.md`; they are defined here,
-once, for the model's reader. The terms a Rule uses are Agent vocabulary rows (`mandate`, `mode`, `explicit mode`,
+once, for the model's reader. The terms a Rule uses are agent vocabulary rows (`mandate`, `mode`, `explicit mode`,
 `implicit mode`, `escalate edge`, `delegate edge`, `escalation`, `answer grammar`, `amend`, `party`, `mode
 lifecycle`, `countersign`, `coded check`, `prose claim`) and the vocabulary wins on divergence. Seven of the
 model's words are **aliases** of core terms, recorded on the core row: `act` = `d-work` (by projection), `countersign
@@ -310,7 +310,7 @@ the sysadmin craft's `event` (a run-book event; recorded here because the core n
 |---|---|
 | Countersign core | the eight entities — party, act, countersign proposal, countersignature, mandate, countersign release, countersign event, escalation — and the check attribute, as the schema file; logical, reached by projection, never a storage format |
 | automatic mode | countersigned beforehand by a countersigned release; a non-inferring executor processes; the dyad realizes no automatic act |
-| executor | the non-inferring party that processes automatic acts; the one mode-exclusive sub-system |
+| executor | the non-inferring party that processes automatic acts; the one mode-exclusive sub-system; the dyad's word for it is automaton, whose unit kind is auto (#553) |
 | basis | how a countersignature covers its act: `per-act`, `mandate` or `release`; in the dyad, the `(mandate #<id>)` note on a `disposed` entry, derived by the projector |
 | codify edge | the mode change explicit or implicit → automatic: a practice becomes a countersigned release |
 | check timing | when a check judges its target: `before` (it blocks, as the dyad's guards do) or `after` (it judges); a policy attribute, not a structure |
@@ -318,7 +318,7 @@ the sysadmin craft's `event` (a run-book event; recorded here because the core n
 | derivation rule | a stated rule by which a projector fills a core field a system does not store (D1–D8) |
 | Countersign Interaction Model | Part II: five primitives, the imperatives I1–I8, one mode lifecycle per mode |
 | interaction primitive | one of the five kinds of exchange the model is built from: initiation, countersign proposal, countersignature, countersign report, escalation |
-| initiation | the origin of an act, kept verbatim: a prompt (human → system), a signal (a registered source → system) or a release trigger; in the dyad an Operator prompt, a relayed prompt, the `Y` that admits an intake, or the mandate's plan-`Y` for an accreted row, each already a core term; derived by the projector (D8) |
+| initiation | the origin of an act, kept verbatim: a prompt (human → system), a signal (a registered source → system) or a release trigger; in the dyad an operator prompt, a relayed prompt, the `Y` that admits an intake, or the mandate's plan-`Y` for an accreted row, each already a core term; derived by the projector (D8) |
 | release trigger | the initiation of an automatic act: the occasion on which the executor runs a countersigned release |
 | interaction imperative | one of I1–I8, binding in all three modes; in the dyad, Rules 2, 3, 7, 9, 10 and the frame |
 | form preference | a standing countersignature that shapes how proposals and reports look and authorizes nothing (`concise-mode`, `batch-disposition-mode`, `merge-disposition`, `delegation`, `dwork-trace`) |

@@ -7,7 +7,7 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
 ## Boundaries (out of scope)
 - Which library to import and on what criteria — Rule-13.
 - Which implementation path to take — Rule-12. Package layout — Rule-11. Zones — Rule-1.
-- The Dyad System itself (Operator, Agent, the core craft, the Tended crafts, the instance):
+- The Dyad System itself (operator, agent, the core craft, the Tended crafts, the instance):
   Rule-14 governs its surface, not its content.
 - The manifest's form — one manifest of seven cells, library rows replaceable and naming their
   replacement, The World observed and never pinned: the sysarch craft's
@@ -18,7 +18,7 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
   syseng craft's `crafts/syseng/rules/imports.md` property 4 (#162).
 
 ## Conditions (triggers)
-- A craft file or the Agent's workflow invokes anything not in the manifest, or imports a
+- A craft file or the agent's workflow invokes anything not in the manifest, or imports a
   Python package not in the manifest.
 - A kernel version changes on the host, or a library entry is added, replaced or removed.
 - Every push and PR: `dyad/guards/infra/manifest.py` (Rule-14 owns it) runs, registered in
@@ -42,7 +42,7 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    ref already on `origin/main`, carries no new commit and passes (d-work #194). CI, hosting
    and any runner are library adapters; the package must not depend on them to enforce a Rule.
    The kernel-only path is the merge evidence for every merge: `package.py check --evidence`,
-   run by the main Agent on the exact head being merged, prints the evidence block (head sha,
+   run by the main agent on the exact head being merged, prints the evidence block (head sha,
    tree hash, working-tree cleanliness, every check and guard result, and a sha256 of those
    lines). The completion reply cites it by that sha256 and by its brief form, as
    `check --evidence --brief` prints it: head, tree and dirty flag; one count line over the whole block; the
@@ -50,15 +50,15 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    is folded); for each guard, its warnings already standing on that baseline folded into one line; every
    warning of a kind new since the baseline; and every failing, skipped or other line. The full block, from which the sha256 is computed, is
    stored per checkout and never tracked (`<git common dir>/dyad-evidence/<evidence-sha256>.txt`)
-   and shown byte for byte on request (`check --evidence --show <sha256>`), and the Operator may
+   and shown byte for byte on request (`check --evidence --show <sha256>`), and the operator may
    re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). Hosted CI corroborates and never replaces the block, and
    it is never a gate: it runs on `main` after a merge and on manual dispatch, never on a branch
    push or a PR event, and never on a ledger-only commit; the pre-push hook is the only check
    run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
-   --no-ff` of the branch into `main`, commit message citing the PR and the Done-Y — and is
+   --no-ff` of the branch into `main`, commit message citing the PR and the done-Y — and is
    pushed when the hosting returns; the plan gate and the fence read the local `main`, and
    the completion reply states "evidence at <sha>, hosting unreachable" (#138).
-4. **Library and The World.** Everything else the package or the Agent's workflow invokes is a
+4. **Library and The World.** Everything else the package or the agent's workflow invokes is a
    library row; The World is observed, not pinned (`manifest.md`, properties 2 and 3).
 
 ## Enforcement
@@ -82,6 +82,7 @@ manifest had shipped one system's operating rows to every install; see the same 
 Property 3 gains the pre-push sentence 2026-09-29 (d-work #194): the hook judged `origin/main..HEAD`
 and the tree on disk, not the refs git pushes; see the same record, amendment #194. Property 3 cites
 the evidence block by its sha256 and its brief form, the full block stored per checkout and shown on request,
-2026-10-26 (d-work #476, child C3 of #473); see the same record, amendment #476.
+2026-10-26 (d-work #476, child C3 of #473); see the same record, amendment #476. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
