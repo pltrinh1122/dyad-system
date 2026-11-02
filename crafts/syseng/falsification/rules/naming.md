@@ -82,3 +82,21 @@ or `.md` only).
 Three `kind:` rows in `naming_rules.txt` and the matching rows of the table. `VERSION` 0.4.0 → 0.4.1.
 
 Disposition: see ledger #378 (accreted under mandate #369; Done rides its Done-`Y`).
+
+## Amendment — dyad-system #553 (2026-11-02: the case and separator standard, and who must type a label exactly)
+**Claim (plan #553 revisions 1–2, the operator's `Y` of 2026-11-02 with the four recommendations):** every label is
+lowercase with a separator by kind, except a closed list; a literal token keeps its case; the operator's text is read
+and never needs exact case, the agent's is written canonically; L1–L6 decide one label.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Lowercase everything: the uppercase files break the standard. | **Survives as a closed list** (plan decision 4): renaming them moves about 1,250 references and guard patterns, a change of mechanism scope 2 excludes; the list is closed, so nothing new joins it silently. |
+| 2 | `plan-Y` and `done-Y` break "terms are lowercase". | **Survives** (decision 1): `Y` is the literal answer token the ledger records; lowercasing it would make the term disagree with every entry it names. |
+| 3 | Tolerant reading lets a prompt be normalized into the wrong act. | **Survives, procedure** (revision 2, R1): normalization only when every reading gives the same act, else the operator is asked; the intent as read shows the reading before the plan's answer. |
+| 4 | Normalizing `yes` into `Y` puts words in the operator's mouth. | **Refuted** (R2): provenance keeps `yes` verbatim; the row records the token the answer grammar defines. A reading, not an edit. |
+| 5 | Casefold-uniqueness breaks an existing pair of labels. | **Checked when built** (R3): the guard reports any existing collision once, as a warning. |
+| 6 | "bond" is a fine English word. | **Survives**: it names another system (dyad-bond), so in this system's text it would be read as that system. |
+
+**Survivor:** the two sections "Case and separators" and "Case: who must type it exactly". The guard's checks (the
+casefold collision and the refused term) are the engineer's step 3, read against this text. VERSION 0.6.1 (the drift
+guard requires it, `syseng-v0.6.0` being cut). Disposition: see ledger #553.
