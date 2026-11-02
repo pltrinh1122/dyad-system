@@ -114,6 +114,52 @@ at all) needs every one of those to accept, the same as a native-only path. Tigh
 pattern is not supported by this mechanism — no installed craft needs it, and `naming.md` stays
 the place to tighten a native pattern directly.
 
+## Case and separators: the standard (dyad-system #553)
+Every label is lowercase except where one of the exceptions below makes its case meaningful, and its separator
+says what kind of label it is:
+- **kebab-case** (`-`) for files, directories, CLI verbs and flags, preference, row, board and front-matter keys,
+  unit names, tags and branches;
+- **snake_case** (`_`) only for Python identifiers;
+- **`.`** only for extensions, versions and defined suffixes (`.local.txt`, `.read`);
+- **camelCase** only where an outside schema defines it;
+- in prose, a hyphen only where the hyphenated form is the term (`d-work`, `write-ahead`).
+Terms are lowercase nouns, the two parties included (operator, agent). A literal token keeps its case: the answer
+token `Y` (and `N`) keeps its capital wherever it appears in a term, so the terms are `plan-Y` and `done-Y`, as the
+ledger records `Y plan` and `Y done`. Do not use "bond" for the pair: dyad-bond is another system.
+
+**The closed uppercase list.** These names keep their case and nothing new joins them without a change to this list:
+`RULE-<n>-<slug>.md`, `VERSION`, `README.md`, `LICENSE`, `CLAUDE.md`, `MANIFEST.md`, `CRAFT.md`, `VOCABULARY.md`,
+`PREFERENCES.md`, `MANDATES.md`, `INCIDENTS.md`, `LEDGER.md` (rendered), `BUNDLE.md`, `INFRASTRUCTURE.md`,
+`REGISTRY.md`. Renaming them would move about 1,250 references and the patterns guards match; a rename is its own
+later d-work. Python class names and constants, and environment variables (`DYAD_<NAME>`), keep Python's and the
+shell's conventions.
+
+## Case: who must type it exactly (dyad-system #553)
+Case and spelling matter only where a machine compares a string literally. The operator's text is **read**: prompts
+and dispositions go to an inferring reader, so they never need exact case or spelling. The agent's text is
+**written**: it normalizes what it reads into the canonical form of every place a machine reads. A provenance record
+keeps the operator's words as typed and never corrects them; the canonical reading lives in the agent's own text (the
+plan's intent as read, the row, the board).
+
+The decision for one label (the criterion record `dyad/dmc/label-case.jsonld`, inputs L1–L6), first match wins:
+| # | question | outcome |
+|---|---|---|
+| L1 | Does an outside system define its case (an environment variable, a Python identifier, a JSON-LD or schema.org key, a git hex sha)? | **outside case kept**: the outside system's case, listed among the exceptions above |
+| L2 | Is it ledger grammar the agent's tooling writes (`Y plan`, `Y done`, `N amend`)? | **ledger grammar exact**: exact case, written only by tooling, never typed by the operator |
+| L3 | Is it an ecosystem file name or on the closed uppercase list? | **listed exception**: kept as it is |
+| L4 | Anything else: files, keys, flags, unit names, tags, branches, terms | **lowercase kebab-case**: canonical lowercase, stored lowercase |
+| L5 | Could two labels differ only by case? | **unique under casefold**: forbidden, since a case-insensitive filesystem would merge them |
+| L6 | Does a machine compare it where the operator types it directly, without the agent in between? | **casefold and warn**: the comparing tool casefolds the input and warns when it is not canonical, unless L1 makes case meaningful |
+
+**The rare conditions.** The operator's own keystrokes reach a machine without the agent between them only in three
+places: a value entered in a settings file or UI (a preference value, a repository variable such as
+`RELEASE_APPROVAL`, a branch typed in the hosting's editor), where tooling casefolds and warns (L6); a credential or
+secret, exact by nature and never typed into a prompt; and a command the operator runs, which arrives as an ops script
+to paste, never to retype (the sysadmin craft's `ops-scripts.md`). Everywhere else the reader normalizes: `Y`, `y` and
+`yes` are one answer, `N`, `n` and `no` another; `Done-y`, `done-Y` and `done y` name one term; `Cos` and `COS` one
+title. A misspelling is read as the nearest defined term when every reading leads to the same act; only when two
+readings lead to different acts is the operator asked, and never about spelling alone.
+
 ## Inference, stated
 Whether a name is *apt* is inference. The rows marked *no* are checked elsewhere or not at all,
 as the column says.
