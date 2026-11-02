@@ -715,3 +715,25 @@ counts; unchanged. **3–12**: no suite for a ledger-only range; unchanged. **3�
 untouched (the board is not a reference kind; the guard resolves its ids itself). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #535.
+
+## Amendment — d-work #536 (2026-11-02, Batch disposition: reports and relays by the inbox)
+**Claim (plan #536, the Operator's `Y` of 2026-11-02: "proceed as recommended"):** a seat's report and the cos's relay
+travel by the inbox store (Rule-16), addressed by seat and read at every turn start; a message to a session is at most
+a doorbell; the inbox carries information, never authority.
+
+| # | attack | result |
+|---|---|---|
+| I1 | Reading a store at turn start cannot interrupt a busy session (#252 M2). | **Conceded, scoped** (plan attack 1): reports and relays wait for the next turn; interruption stays with the harness's messages, now a doorbell. Write-ahead (#535) means no act waits mid-turn on a report. |
+| I2 | An unread report is invisible, so silence reads as consent. | **Refuted** (plan attack 2): the unread count prints at every resume and touch, and a report the board expects shows as the row's `waiting-on seat` past its `since`; nothing is inferred from silence, as this Rule already says of an unanswered counter-prompt. |
+| I3 | The inbox becomes a channel for authority. | **Refuted** (plan attack 5): a disposition-shaped body is refused by the guard, and a disposition is read from the row and its provenance record only. |
+| I4 | A relay through the inbox paraphrases the Operator. | **Refuted, by the text**: the Operator's words still travel verbatim, citing their provenance entry; the inbox changes the carrier, never the words. |
+| I5 | A report forged as another seat's misleads the cos. | **Survives, detection only** (plan attack 4): the commit records who wrote it, and a report carries no authority, so its worst case is a misleading report audit can trace. |
+
+**Pairwise (Rule-5).** **3–16**: Rule-16 owns the inbox store, its keys, its guard and append-only; Rule-3 owns that
+reports and relays travel by it. **3–2**: an inbox message is ledger-only and records no disposition; the never-
+authority clause keeps Rule-2's events in the ledger. **3–7**: a relayed prompt's verbatim words and their
+provenance entry are unchanged; the inbox cites, never stores, them as provenance. **3–6**: `inbox` added. **3–1**:
+agent zone. **3–20**: the message's `row` is resolved by its own guard, not a registered reference kind. Others
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #536.

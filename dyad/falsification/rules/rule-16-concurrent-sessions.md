@@ -323,3 +323,24 @@ board's row ids are resolved by its own guard, not a registered reference kind. 
 store`, `write-ahead`, `hop` added. Others unchanged. Coherent and orthogonal.
 
 Disposition: see ledger #535.
+
+## Amendment — d-work #536 (2026-11-02): Store gains the inbox
+**Claim (plan #536, the Operator's `Y` of 2026-11-02):** beside the board, `<instance>/d-work/inbox/<seat>/` holds one
+file per message, addressed by seat, append-only, read by a marker beside it, carrying information and never
+authority.
+
+| # | attack | result |
+|---|---|---|
+| J1 | Address by session id, as messages do. | **Refuted** (#546 S5): a hop moves the cos to a new session and a report to the old one is lost; a seat name survives the hop. |
+| J2 | One file per seat, appended. | **Refuted**: concurrent senders would write one file and merge; one file per message keeps writes disjoint, this Rule's purpose. |
+| J3 | Delete a message once read. | **Refuted**: a deletion loses what was read and when; a marker beside it keeps both, history git's. |
+| J4 | Commits per message bloat history. | **Survives, priced** (plan attack 3): one small ledger-only file, no suite; the same traffic today leaves no record at all. |
+| J5 | Two cabinets share one inbox. | **Refuted** (plan attack 6): addressing is per seat, so each leader (`program-<operator>-…`) has its own. |
+| J6 | The refusal is too wide: a report cannot quote the line `dyad merge` prints, which holds a `Y done (` entry. | **Confirmed, and kept**: the report names the row whose entry it means, which the reader reads on `main`; a quoted entry in a message would be a second, unchecked copy of the Operator's authority. Stated in the Store text. |
+
+**Pairwise (Rule-5).** **16–3**: Rule-3 owns that reports and relays travel by the inbox; this Rule owns the store.
+**16–2**: ledger-only, not ratification. **16–7**: no provenance record; a relay cites its entry. **16–11**: the guard
+under `dyad/guards/agent/`. **16–12**: its tests are engineer's PR's. **16–20**: `row` resolved by the guard itself.
+**16–1**: agent zone. **16–6**: `inbox` added. Others unchanged. Coherent and orthogonal.
+
+Disposition: see ledger #536.
