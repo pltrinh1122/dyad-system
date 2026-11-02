@@ -25,8 +25,9 @@ words they were written in — so this table is how a reader of older text finds
 | Operator, Agent (in prose) | operator, agent | term | — | lowercase in prose (decision 2); `Agent Rule` and other names that are themselves terms keep their form |
 | `attended-seats` | `paired-units` | key | the release after next | preferences; both keys are read until the alias is removed; renaming the operator's own value is a preferences-zone question of its own |
 | `waiting-on: seat <name>` | `waiting-on: unit <name>` | form | the release after next | board store; both are accepted, the new one printed |
-| `attended` / `relayed` in `dyad session list` | `dyad` / `solo` / `auto` | form | the release after next | per unit, as printed |
-| `seat` (the cabinet guard's entity) | unchanged | entity | — | Python identifiers and file names (`seats.py`) are not vocabulary; their messages say unit |
+| `dyad session list`, the attendance column (`attended` / not) | the unit kind: `dyad` (paired) or `solo`; `auto` reserved, printed for no presence file yet since no automaton keeps one | form | — | the route column keeps `chat` / `relayed`, its header now `route`; the mode line says units for seats |
+| `seat` (the cabinet guard's entity), `seats.py`, `seats_rules.txt` | not renamed (identifier) | entity | — | renaming them would change the registry, `check --list`, the references register and the tests, a mechanism; only their messages say unit; `function:` lines unchanged |
+| a preference value typed off-canonical (`With-Done`) | casefolded to its canonical spelling | form | — | the preferences guard compares casefolded and warns, naming the canonical spelling; never fails (`label-case` L6) |
 | uppercase files (`RULE-*.md`, `VOCABULARY.md`, `PREFERENCES.md`, …) | unchanged | file | — | kept as the closed uppercase list of syseng `naming.md` (decision 4) |
 | `Y plan`, `Y done`, `Y release`, `N amend` (ledger entries) | unchanged | form | — | ledger grammar, written by tooling in exact case (`label-case` L2); never renamed |
 
