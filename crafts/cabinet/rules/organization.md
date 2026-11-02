@@ -88,7 +88,7 @@ the plan says), `revocation` (the change that ends the charter). `guards/seats.p
 function column; what a charter *permits* is the operator's reading, never a guard's.
 
 ## 4. The default organization
-Six functions, one leader and five members (plan #369 revisions 8–10, falsified there), each named by what the
+Seven functions, one leader and six members (plan #369 revisions 8–10, falsified there; `orchestrate` added by dyad-system #557), each named by what the
 operator watches on its board — verbs for flows, a noun for the portfolio:
 
 | function | kind | domain | the seam it keeps |
@@ -99,8 +99,9 @@ operator watches on its board — verbs for flows, a noun for the portfolio:
 | `engineer` | secretary | the product: the core craft's machine — guards, CLI, stores, trace, board, their tests (`dyad check` is its verb); the standing regression and the self-diagnostic's coded checks (#433) | the machine, never its shipping |
 | `distribute` | secretary | the shipping of every craft: install, port, release, bundle, registry, their tests (`dyad build`, `install`, `export` are its verbs) | the seam `package.py` already draws between `check` and `build/install` |
 | `operate` | secretary | the host: read-before-act, classes, ops scripts the operator runs, run-books, change-log rows, the services behind boards; host documents older than the running kernel and presence past the stale window (#433) | the sysadmin craft's whole practice, delivered by the unit and executed by the operator |
+| `orchestrate` | secretary | the d-work play-book's orchestration layer for every row the home routes: dispatch by inbox relay, collect reports, verify heads and evidence, judge departures and incidents, draft the completion evidence and the Done question for the home to present (#557) | orchestrates, never authors: ledger-only commits to the board and the inbox, read-only over the tree, no branch, PR or merge of its own; accretes nothing |
 
-A system adopts the six by copying the template; it renames, drops or adds a function by editing its own table —
+A system adopts the seven by copying the template; it renames, drops or adds a function by editing its own table —
 the craft ships the default, never the instance.
 
 ## 5. The standing conduct of every unit

@@ -20,7 +20,7 @@ class SeatForm(unittest.TestCase):
     def setUp(self):
         self.form, self.functions = seats.rules()
     def test_rules_file_declares_the_seven_functions(self):
-        self.assertEqual(self.functions, ["program", "counsel", "audit", "engineer", "distribute", "operate", "communicate"])
+        self.assertEqual(self.functions, ["program", "counsel", "audit", "engineer", "distribute", "operate", "communicate", "orchestrate"])
     def test_reading_rule(self):
         k = lambda n: seats.kind(seats.parse_seat(n, self.form), self.functions)
         self.assertEqual(k("program-59cec502"), "leader")

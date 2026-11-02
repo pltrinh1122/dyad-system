@@ -17,7 +17,7 @@ reader nothing (plan #369 revision 10, attack 3).
 ## 1. The form
     <function>[-<topic>]-<hp>
 - `function` — one of the standing functions of the mandates table (`../guards/seats_rules.txt`: `program`,
-  `counsel`, `audit`, `engineer`, `distribute`, `operate` by default); lower-case letters.
+  `counsel`, `audit`, `engineer`, `distribute`, `operate`, `orchestrate` by default); lower-case letters.
 - `topic` — optional: the one subject a desk holds under its function (`engineer-ledgerd-1537d8fb`,
   `operate-host-23d654aa`); lower-case letters and digits, hyphenated. For `program` the middle token is not a
   topic but the operator's handle, naming a member pair's leader in a multi-operator tree (`program-alice-<hp>`);

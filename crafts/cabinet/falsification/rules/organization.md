@@ -263,3 +263,20 @@ what holds the work up, then seven criteria and two tie-breaks — stated verbat
 VERSION is unchanged; the bump rides the release cut (#558). Disposition: see ledger #559.
 Wording: the presented text is kept verbatim. "You" stays, because this Guide speaks to the operator in the second
 person throughout; "this release" in Cost to the home stays, because no guard refused it.
+
+## Amendment — dyad-system #557 (2026-11-02: the orchestrating secretary, function `orchestrate`)
+**Claim (plan #557, the operator's `Y` of 2026-11-02, batch with #559, #240 and #286):** the d-work play-book's
+orchestration layer (#556) belongs to a secretary of its own, function `orchestrate`, which orchestrates and never
+authors. The craft lists the function first (`guards/seats_rules.txt`, §4's table, `dmc/seat-function.jsonld`);
+the operator's charter row in `MANDATES.md` follows as the cos's own preferences-zone question, referent before referrer
+(Rule-1).
+
+| # | attack | result |
+|---|---|---|
+| 60 | Listing the function without the charter opens a unit no charter fences. | **Refuted**: a function in the table is a name the guard accepts, not a grant. The Guide's §2 and §3 say it runs only once its charter row is in `MANDATES.md`, and that row is the operator's own question. |
+| 61 | The seat guard's test pins the function list, so this PR breaks it. | **Confirmed and fixed**: `tests/guards/test_seats.py` pins the list and gains `orchestrate` in the same PR. |
+| 62 | "Never authors" contradicts drafting the Done question. | **Refuted**: drafting a question is text handed to the home by inbox. It authors no branch, PR or row; the home presents and records (plan #557, O3, O5). |
+| 63 | §4 counted six functions while `seats_rules.txt` already listed `communicate`, a seventh. | **Survives, scoped**: `communicate` is this instance's own function, not the default organization's table; §4 now counts its own rows, seven with `orchestrate`. Whether `communicate` belongs in the craft's list is out of scope here. |
+
+**Survivor:** the function listed in the craft's data, its §4 row, and the Guide's §2 and §3 sentences, as amended.
+VERSION stays 0.4.1: `cabinet-v0.4.1` is not yet tagged, so this rides the same untagged version. Disposition: see ledger #557.
