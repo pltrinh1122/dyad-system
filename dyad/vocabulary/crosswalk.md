@@ -18,6 +18,7 @@ words they were written in — so this table is how a reader of older text finds
 | executor (the countersign model's party kind) | automaton (party); auto (unit kind) | term | — | a non-inferring party running a released definition: automatic, not autonomous; `executor` stays in the countersign play-book as the model's word |
 | cos (as the structural name) | home | term | — | the dyad unit the operator always returns to; every solo's questions reach the operator through it; `cos` stays as its title |
 | cos-board | home board | term | — | optional, as the operator allowed; `cos-board` is still read |
+| the cos as a mode (cabinet Guide §10) | home follows you | term | — | "mode" collided with the vocabulary's `mode` and the harness's auto mode; the office the home is, held by one session at a time (#560, F2) |
 | toggling `attended-seats` | pair / unpair | term | — | the operator starts or stops attending a unit; a unit's kind follows (decision 3) |
 | a unit of work (as d-work's definition) | d-work (redefined) | term | — | a body of work opened by an operator prompt and closed only by done-Y; its scope is set by its plan and widens under a mandate |
 | Done-Y, Done-`Y` | done-Y | term | — | the answer token `Y` keeps its case (decision 1) |

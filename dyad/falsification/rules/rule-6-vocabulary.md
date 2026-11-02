@@ -149,7 +149,7 @@ only as needed. Plan #560's attacks A1–A19 are this claim's falsification; the
 **Rule-6: every Agent Rule in a changed term's `used by`.**
 - `secretary` (3 16), `cos-board` (3 16): removed from this file. Rules 3 and 16 now cite them as the organization
   craft's, by name, and read correctly; the vocabulary guard no longer requires them there.
-- No other term changes; the conventions paragraph defines no term.
+- No other term changes; the conventions paragraph defines no term. The crosswalk gains one row, "the cos as a mode" → "home follows you" (F2), which maps and defines nothing.
 
 **Pairwise (Rule-5).** Rules 3 and 16 change words only: the session-start bullet and Presence describe the same boards
 as before, and Rule-16's reconcile owner is named by charter. No concern moves between Rules; every other pair is
