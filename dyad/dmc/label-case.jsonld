@@ -1,0 +1,78 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/label-case",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "label-case",
+  "name": "Label case",
+  "description": "Decides the case and form a label takes, and whether anyone must type it exactly.",
+  "dyad:decides": "What case does this label take, and must the operator type it exactly?",
+  "dyad:inputs": [
+    "who defines the label's case: an outside system, the ledger grammar, the closed uppercase list, or the standard",
+    "whether another label differs from it only by case",
+    "whether a machine compares it where the operator types it directly"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L1",
+      "name": "outside case kept",
+      "dyad:when": "an outside system defines the label's case: an environment variable, a Python identifier, a JSON-LD or schema.org key, a git hex sha",
+      "dyad:then": "keep the outside system's case; the label is listed among the standard's exceptions"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L2",
+      "name": "ledger grammar exact",
+      "dyad:when": "the label is ledger grammar the agent's tooling writes, such as the Y plan and Y done entries",
+      "dyad:then": "exact case, written only by tooling and never typed by the operator"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L3",
+      "name": "listed exception",
+      "dyad:when": "the label is an ecosystem file name or on the closed uppercase list",
+      "dyad:then": "keep it as it is; nothing new joins the list without changing it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L4",
+      "name": "lowercase kebab-case",
+      "dyad:when": "none of the above: files, keys, flags, unit names, tags, branches, terms",
+      "dyad:then": "canonical lowercase with the separator its kind takes, stored lowercase"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L5",
+      "name": "unique under casefold",
+      "dyad:when": "two labels would differ only by case",
+      "dyad:then": "forbidden: a case-insensitive filesystem would merge them, so one of them is renamed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "L6",
+      "name": "casefold and warn",
+      "dyad:when": "a machine compares the label where the operator types it directly, without the agent in between",
+      "dyad:then": "the comparing tool casefolds the input and warns when it is not canonical, unless L1 makes case meaningful"
+    }
+  ],
+  "dyad:precedence": "first match wins in the order L1, L2, L3, L4; L5 and L6 then apply to whatever form the first four gave",
+  "dyad:default": "lowercase kebab-case",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "../crafts/syseng/rules/naming.md",
+  "dyad:alsoIn": [
+    "vocabulary/crosswalk.md"
+  ],
+  "dyad:owner": "syseng:naming"
+}

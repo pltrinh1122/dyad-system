@@ -77,8 +77,13 @@ def check_text(text: str, where: str, rules: dict[int, Path]) -> list[str]:
             if not d[f]:
                 msgs.append(f"{where}: `{d['key']}` has an empty `{f}` cell")
         alts = alternatives(d["allowed"])
-        if alts is not None and dyadlib.plain(d["value"]).strip() not in alts:
-            msgs.append(f"{where}: `{d['key']}` value `{d['value']}` is not one of {' | '.join(alts)}")
+        value = dyadlib.plain(d["value"]).strip()
+        if alts is not None and value not in alts:
+            canon = next((a for a in alts if a.casefold() == value.casefold()), None)
+            if canon:   # L6 (#553): the operator's case is not meaningful here; read as the canonical spelling
+                msgs.append(f"warning: {where}: `{d['key']}` value `{value}` is read as `{canon}`; write it `{canon}` (L6, #553)")
+            else:
+                msgs.append(f"{where}: `{d['key']}` value `{d['value']}` is not one of {' | '.join(alts)}")
         ns = _RULE.findall(d["read by"])
         if d["read by"] and not ns:
             msgs.append(f"{where}: `{d['key']}` read by names no Rule")
@@ -119,9 +124,11 @@ def main(argv=None) -> int:
     a = argv if argv is not None else sys.argv[1:]
     root = Path(a[0]).resolve() if a else dyadlib.repo_root()
     msgs = check_package(root)
-    for m in msgs: print(f"FAIL [preferences] {m}", file=sys.stderr)
-    if not msgs: print(f"ok   [preferences] {summary(root)}, read-by Rules resolve")
-    return 1 if msgs else 0
+    fails = [m for m in msgs if not m.startswith("warning:")]
+    for m in msgs:
+        print(f"{'warn' if m.startswith('warning:') else 'FAIL'} [preferences] {m.removeprefix('warning:').strip()}", file=sys.stderr)
+    if not fails: print(f"ok   [preferences] {summary(root)}, read-by Rules resolve")
+    return 1 if fails else 0
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
 

@@ -42,8 +42,8 @@ behind reusable code carrying a mechanical check.
    `crafts/syseng/rules/verifiable-code.md`); the runner runs both.
 2. The suite is run by the runner, not by hand. Rule-14 property 3's pre-push path runs it on every
    push whose range touches anything outside `<instance>/d-work/` and is not events-only (Rule-3,
-   Ledger: every commit touching nothing outside `<runbooks>/events/`, #438), so by the time the Agent asks for
-   a Done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
+   Ledger: every commit touching nothing outside `<runbooks>/events/`, #438), so by the time the agent asks for
+   a done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
    suite when a suite memo on this checkout proves the same tree already passed every root in the
    same environment; `check --evidence` never reads one, so the merge evidence always observes
    (Rule-2, Binding; Rule-14 property 3). That path also skips a test root whose installed tree is
@@ -85,13 +85,14 @@ push gate ran the suite on it again (#161, C2); see the same record, amendment #
 gains the installed-root skip 2026-10-01 (d-work #199, node N5 for backlog row #176): a system that
 installs the crafts ran their authoring suites on every push (countersign-system: 494 core tests);
 see the same record, amendment #199 (N5). Property 1 gains the fail-loud check 2026-10-02 (d-work
-#203): the Operator asked for checks in the code itself, at import or on every use, at strategic
+#203): the operator asked for checks in the code itself, at import or on every use, at strategic
 points, in place of the tests that only exercise them; pure `INVARIANTS` are enforced at import and
 `TREE_INVARIANTS` stay in the runner's pass; see the same record, amendment #203. Boundaries gain the audit
 play-book's two kinds of check, coded check and prose claim, 2026-10-22 (d-work #381, child C3 of #369): the
 countersign craft's self-diagnostic is carried by the core's audit play-book; see the same record, amendment #381.
 Property 2 gains the events-only range 2026-10-25 (d-work #438): a push of read-only run-book events
 paid about four minutes of suite for a change no test root's code depends on, while the guards, the
-events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438.
+events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

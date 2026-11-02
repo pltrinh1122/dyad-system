@@ -696,7 +696,7 @@ class AttendanceTests(unittest.TestCase):
         a = self._read(root)
         self.assertEqual((a["mode"], a["undeclared"]), ("M3", [("counsel-0032b4c0", "2026-10-22")]))
         self.assertEqual(sv.route("counsel-0032b4c0", root, self.TODAY), "relayed")   # the declaration decides, never the record
-        self.assertEqual(sv.fence_lines(a), ["undeclared: counsel-0032b4c0 holds an own disposition of 2026-10-22 but `attended-seats` does not declare it (Rule-16 Presence)"])
+        self.assertEqual(sv.fence_lines(a), ["undeclared: counsel-0032b4c0 holds an own disposition of 2026-10-22 but `paired-units` does not pair it (Rule-16 Presence)"])
     def test_fence_declared_seat_silent_past_the_window_is_a_warning(self):
         root = self._repo(declared="engineer-1537d8fb counsel")
         for s in ("program-59cec502", "counsel-0032b4c0", "engineer-1537d8fb"):
@@ -705,13 +705,24 @@ class AttendanceTests(unittest.TestCase):
         a = self._read(root)
         self.assertEqual((a["mode"], a["relayed"], a["undeclared"]), ("M4", [], []))
         self.assertEqual(a["warnings"], ["counsel", "engineer-1537d8fb"])
-        self.assertEqual(sv.fence_lines(a)[0], "warn: counsel is declared attended but holds no own disposition within 7 day(s)")
+        self.assertEqual(sv.fence_lines(a)[0], "warn: counsel is paired but holds no own disposition within 7 day(s)")
+    def test_paired_units_is_read_first_and_attended_seats_is_its_alias(self):
+        """#553: both keys are read until the release after next; `paired-units` wins when both are present."""
+        root = self._repo(declared="counsel")                                   # the alias alone
+        self.assertEqual((sv.declared_seats(root), sv.declared_preference(root)[0]), (["counsel"], "attended-seats"))
+        p = root / "preferences-corpus" / "PREFERENCES.md"
+        p.write_text(p.read_text() + "| paired-units | engineer, communicate | unit names | Rule-16 |\n")
+        self.assertEqual((sv.declared_seats(root), sv.declared_preference(root)[0]), (["communicate", "engineer"], "paired-units"))
+        for seat in ("program-59cec502", "engineer-1537d8fb", "counsel-0032b4c0"):
+            self._presence(root, seat)
+        a = self._read(root)
+        self.assertEqual((sorted(a["attended"]), a["relayed"]), (["engineer-1537d8fb", "program-59cec502"], ["counsel-0032b4c0"]))
     def test_no_live_seat_reads_m3(self):
         root = self._repo()
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
             a = sv.attendance(root, self.TODAY)
         self.assertEqual((a["mode"], a["attended"], a["relayed"]), ("M3", {}, []))
-        self.assertIn("mode: M3 — 0 of 0 live seat(s) attended; declared: none beside the leader", sv.attendance_line(a))
+        self.assertIn("mode: M3 — 0 of 0 live unit(s) dyad, the rest solo; paired: none beside the leader", sv.attendance_line(a))
     def test_absent_store_gives_no_attendance(self):
         self.assertEqual(sv.attendance_index(repo(), self.TODAY), {})
 
@@ -727,7 +738,8 @@ class ListCLITests(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue("no session presence files" in r.stdout or "live" in r.stdout or "stale" in r.stdout)
         if "no session presence files" not in r.stdout:
-            self.assertRegex(r.stdout, r"^mode: (M3|M4|hybrid) — \d+ of \d+ live seat\(s\) attended; declared: ")   # #393, #414
+            self.assertRegex(r.stdout, r"^mode: (M3|M4|hybrid) — \d+ of \d+ live unit\(s\) dyad, the rest solo; paired: ")   # #393, #414, #553
+            self.assertNotRegex(r.stdout, r"(?m) (attended|relayed)(=\S+)?$")   # the unit kind is printed as dyad or solo (#553)
 
 if __name__ == "__main__":
     unittest.main()

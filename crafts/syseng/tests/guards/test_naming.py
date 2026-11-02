@@ -30,6 +30,48 @@ GOOD = {"dyad/rules/RULE-1-a.md": "# a\n", "dyad/rules/RULE-2-b.md": "# b\n", "d
 MODE_RULES = "mode: dyad/bin/<name> = dyad/bin/* = 100755\n"
 MODE_TABLE = "# n\n\n| pattern | names | owner | example | checkable |\n|---|---|---|---|---|\n| `dyad/bin/<name>` | the entrypoint | Rule-11 | `dyad/bin/dyad` | yes |\n"
 
+CASE_RULES = ("upper: RULE-*-*.md README.md\n"
+              "refuse: bond = dyad/rules/* dyad/CLAUDE.md # dyad-bond is another system\n")
+
+class CaseTests(unittest.TestCase):
+    """The case standard (rules/naming.md L3–L5, #553) and the refused term: an uppercase segment off the closed list
+    warns for a path `origin/main` holds and fails for a new one; two paths differing only by case fail; `bond`,
+    standalone, fails in a selected file, while `dyad-bond`, `bond:x` and a quoted mention pass."""
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, ignore_errors=True)
+        self.data = self.d / "naming_rules.txt"; self.data.write_text(CASE_RULES)
+        self.table = self.d / "naming.md"; self.table.write_text("# n\n")
+    def test_parse(self):
+        r = naming.parse_rules(CASE_RULES)
+        self.assertEqual(r["upper"], ["RULE-*-*.md", "README.md"])
+        self.assertEqual(r["refuse"], [("bond", ["dyad/rules/*", "dyad/CLAUDE.md"], "dyad-bond is another system")]); self.assertEqual(r["bad"], [])
+    def test_existing_warns_new_fails_listed_passes(self):
+        root = repo({"dyad/rules/RULE-1-a.md": "#\n", "README.md": "#\n", "docs/Old-Name.md": "#\n"})
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], check=True)
+        subprocess.run(["git", "-C", str(root), "update-ref", "refs/remotes/origin/main", "HEAD"], check=True)
+        (root / "docs" / "New-Name.md").write_text("#\n")
+        msgs = naming.check_package(root, data=self.data, table=self.table)
+        self.assertEqual(sorted(msgs), sorted([
+            "warning: docs/Old-Name.md: 'Old-Name.md' is not lowercase and not on the closed uppercase list (rules/naming.md L4; an existing name, kept)",
+            "docs/New-Name.md: 'New-Name.md' is not lowercase and not on the closed uppercase list (rules/naming.md L4; a new name)"]))
+    def test_no_base_means_nothing_is_new(self):
+        self.assertTrue(all(m.startswith("warning:") for m in naming.check_case(["a/B.md"], [], None)))
+    def test_casefold_collision_fails(self):
+        self.assertEqual(naming.check_casefold(["docs/readme.md", "docs/a.md", "docs/README.md"]),
+                         ["docs/README.md: differs from docs/readme.md only by case (rules/naming.md L5)"])
+    def test_refused_term(self):
+        root = repo({"dyad/rules/RULE-1-a.md": "the dyad-bond system\ncraft invariant `bond:no-self-ratify`\nnot \"bond\" for the pair\n",
+                     "dyad/CLAUDE.md": "and the Bond between them\n", "crafts/x/rules/y.md": "a bond elsewhere is not checked\n"})
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        msgs = naming.check_package(root, data=self.data, table=self.table)
+        self.assertEqual([m for m in msgs if "refused" in m], ["dyad/CLAUDE.md:1: the term 'bond' is refused here (dyad-bond is another system)"])
+    def test_live_data_has_the_closed_list_and_the_refusal(self):
+        r = naming.load_rules()
+        for name in ("VERSION", "README.md", "CLAUDE.md", "CHANGELOG.md", "VOCABULARY.md", "REGISTRY.md", "RULE-*-*.md"):
+            self.assertIn(name, r["upper"])
+        self.assertEqual([w for w, *_ in r["refuse"]], ["bond"])
+
 class DataTests(unittest.TestCase):
     def test_parse_rules(self):
         r = naming.parse_rules(RULES + MODE_RULES)

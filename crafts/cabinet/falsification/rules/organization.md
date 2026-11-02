@@ -211,3 +211,21 @@ describes the inbox and replaces the hop's announcement step by reading the inbo
 | 45 | The Guide marks P2 delivered before its acceptance (#546's S5, S6, S18, S26) runs. | **Refuted**: the acceptance is engineer's PR's simulator tests, which the Done verifies with this PR. |
 
 **Survivor:** §5's "Report by inbox"; the Guide's §10 as amended. Disposition: see ledger #536.
+
+## Amendment — dyad-system #553 (2026-11-02, part E: the dyad-native terms in the cabinet craft)
+**Claim (plan #553 revisions 1–3, the operator's `Y` of 2026-11-02):** `naming.md`, `organization.md`, the Operating
+Guide and the craft vocabulary move to the core's dyad-native terms (part D): a seat is a **unit**, an attended seat a
+**dyad unit** and an unattended one a **solo**, the leader the **home**, declaring attendance **pairing** with the key
+`paired-units` (`attended-seats` its alias until the release after next), and operator and agent lowercase in prose.
+The titles cos, secretary and desk are kept; `dyad/vocabulary/crosswalk.md` maps every old word, and history is not
+rewritten.
+
+| # | attack | result |
+|---|---|---|
+| 46 | The craft's `seat` guard, `seats.py` and `seats_rules.txt` keep the old word, so the craft contradicts itself. | **Survives, scoped** (crosswalk, entity row): identifiers are not vocabulary; renaming them would change the registry and the references register, a mechanism. Their messages already say unit (part C). |
+| 47 | "Solo" already meant one operator here ("stress-tested for a solo and an enterprise operator"), so the new term collides. | **Confirmed and fixed**: that sentence says "a single operator"; every remaining "solo" is the unit kind. |
+| 48 | `cos` and the core's `home` define one thing twice. | **Refuted**: `cos` is this craft's title for the home, and its row now says so; the core defines `home`, and `check_craft` finds no equal term. |
+| 49 | The Guide says `paired-units` while the operator's preferences still hold `attended-seats`. | **Survives**: the core reads both keys (part C), and the Guide's first mention names the alias; renaming the operator's own key is the cos's preferences-zone question (plan step 7). |
+| 50 | "Leader" survives in places (a member pair's leader, one leader per operator). | **Survives, scoped**: those name the multi-operator role of a pair's head, not the structural home; the structural uses say home. |
+
+**Survivor:** the four files as amended. VERSION stays 0.4.1 (untagged). Disposition: see ledger #553.

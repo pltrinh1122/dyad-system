@@ -20,7 +20,7 @@ files and almost never merge.
 - A session starts: the ledger view is rendered, never read from the tracked tree.
 - A row file changes state: the transition is in the table (Store, below).
 - A session starts, or answers a plan-`Y`: its presence file is touched (Presence, below).
-- The Agent is about to write a new plan file: every other session's presence file is read first.
+- The agent is about to write a new plan file: every other session's presence file is read first.
 
 ## Store
 - Canonical: `<instance>/d-work/rows/<id>.md`, one file per d-work, `key: value` lines
@@ -32,15 +32,15 @@ files and almost never merge.
   `dyadlib.NEW_STATES`). The fence refuses any other transition on `main`,
   `package.py dwork state` locally; a done d-work is never reopened — a new row refs it;
   `archived` (Rule-3) is its one further step, itself terminal (#37). `backlog → archived` is the
-  board's only other exit: a row the Operator never asked for is retired by the disposition that
+  board's only other exit: a row the operator never asked for is retired by the disposition that
   names it (Rule-3's retirement form) instead of being worked to `done` first (#290).
 - A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
   Scope). Optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it.
 - Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
-  orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the seat table
-  with each seat's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
-  (`operator`, `seat <name>` or `external <ref>`), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
+  orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the unit table
+  with each unit's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
+  (`operator`, `unit <name>` — `seat <name>` its alias until the release after next — or `external <ref>`), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
   written by `dyad board set` as presence's is (#350), never typed. Unlike a row it is **overwritten**, never
   append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
   ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
@@ -48,13 +48,13 @@ files and almost never merge.
   Its guard, `dyad/guards/agent/board.py`, checks only that each file is well-formed, names a row that is not
   terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
   runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535).
-- Beside the board, the **inbox**: `<instance>/d-work/inbox/<seat>/<stamp>-<from-seat>-<n>.md` (stamp
-  `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by seat
+- Beside the board, the **inbox**: `<instance>/d-work/inbox/<unit>/<stamp>-<from-unit>-<n>.md` (stamp
+  `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by unit
   name and never by session id, so a hop changes nothing for the sender and concurrent senders never collide.
   `key: value` lines: `from`, `to`, `row`, `kind` (`report`, `relay`, `ack` or `notice`), `sent`, a verbatim `body`,
   and `writer`, written by `dyad inbox post` as presence's is (#350). Unlike the board it is **append-only**: a
   message is never edited or deleted, and reading it writes a marker beside it, the same name ending `.read`
-  (`read`, `reader` — the box's own seat — and `writer`), so what was read and when is git's. It carries
+  (`read`, `reader` — the box's own unit — and `writer`), so what was read and when is git's. It carries
   information, never authority: a body shaped like a disposition — a line opening `Y/N:`, a dated ledger entry
   (`<date> Y|N plan|done|release|backlog`), or a `Y plan (`, `Y done (` or `Y release (` entry — is refused at post
   and by the guard, because authority is read from the rows and the provenance store alone; a report therefore names
@@ -83,31 +83,38 @@ files and almost never merge.
   present (never failing an absent one, as `writer` is handled): `host` (`<kernel> <os> <arch>`,
   the kernel token what the harness reports — `cloud` when it reports `CLAUDE_CODE_REMOTE=true`,
   `terminal` when it reports nothing — and the OS and arch from Python) and `holder` (the harness
-  session id, `CLAUDE_CODE_SESSION_ID`, absent when unset): who holds the seat now, where the file's
-  name is the seat (`agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
-  That name is the **seat name**, and under `organization: m4` (`preferences-corpus/PREFERENCES.md`; `flat`
+  session id, `CLAUDE_CODE_SESSION_ID`, absent when unset): who holds the unit now, where the file's
+  name is the **unit** (written seat before #553, `dyad/vocabulary/crosswalk.md`; `agent-corpus/falsification/seat-vs-harness-session.md`, #294, #295).
+  That name is the **unit name**, and under `organization: m4` (`preferences-corpus/PREFERENCES.md`; `flat`
   is one pair and reads no form) it has a form, `<function>[-<topic>]-<hp>`: the installed organization
   craft's data where one is installed (`crafts/cabinet/guards/seats_rules.txt`, its `seat` guard the check)
   and the bare form of `sessions.py` otherwise; `touch()` prints one advisory line when a name is outside
   it, names a function the craft does not list, or carries an `<hp>` that is not the holder's, and
   `dyad session name` prints the name and the harness session title from the environment, setting
-  nothing (#369 C7). What the names describe — the cos's board of programs and each **secretary**'s
-  **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
+  nothing (#369 C7). What the names describe — the **home**'s board of programs (the home is titled cos there) and each
+  **secretary**'s **cos-board** over its charter's domain — is the organization craft's and its Operating Guide's
   (`crafts/cabinet/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
-  Which seats an Operator sits at is declared by the preference, checked against the records: a seat is
-  **attended** when it is the leader or the `attended-seats` preference (`preferences-corpus/PREFERENCES.md`,
-  default `none`, so by default only the leader) names it, by its seat name or by that name without its
-  `-<hp>`; read over the live seats this is a mode — every seat attended, only the leader, or some — which
-  `dyad session list` prints with the declared set and each seat's route, since a counter-prompt is asked in
-  an attended seat's own chat and relayed through the leader otherwise (#253 R29; #388). The check is the
-  records': a seat holds an own disposition when a provenance record whose `session:` line names it holds a
-  disposition given there — its note holding neither `mandate #<id>` nor `relayed via`, anywhere — within the
-  `attendance-window` preference (default 7 days); a live seat holding one that is neither the leader nor
-  declared prints `undeclared`, a declared seat holding none prints `warn` — a reading of the board, not a
-  Rule-3 incident: the act is the Operator's, and the leader alone reports it. The constraint the preference
-  bounds is the Operator's span — how many seats the Operator attends — never how many seats run (#412).
-  No presence line is written for either: the preference is the declaration and the record the proof (#295).
+  Which units an operator sits at is declared by the preference, checked against the records. The operator
+  **pairs** a unit by naming it in the `paired-units` preference (`preferences-corpus/PREFERENCES.md`; `attended-seats`
+  its alias until the release after next, both read; default `none`) and **unpairs** it by removing the name, by its
+  unit name or by that name without its `-<hp>`. A unit is then of one kind: a **dyad unit** — the home always, and
+  every unit paired — where the operator and the agent are both present and a live disposition is possible, said
+  "dyad unit" whenever the system is also in view; a **solo** otherwise, where the agent works alone on authority
+  carried verbatim from the ledger and its questions reach the operator through the home; or `auto`, an
+  **automaton**'s unit — a non-inferring party running a released definition, the countersign model's executor —
+  reserved, since no automaton keeps a presence file yet. **Attended** is the alias of paired. Pairing changes a unit's
+  kind and keeps its name and holder; a question already asked keeps the route the board recorded for it. Read over
+  the live units this is a mode — every unit dyad, only the home, or some — which `dyad session list` prints with the
+  paired set and each unit's kind and route, since a counter-prompt is asked in a dyad unit's own chat and relayed
+  through the home otherwise (#253 R29; #388; #553). The check is the records': a unit holds an own disposition when a
+  provenance record whose `session:` line names it holds a disposition given there — its note holding neither
+  `mandate #<id>` nor `relayed via`, anywhere — within the `attendance-window` preference (default 7 days); a live
+  unit holding one that is neither the home nor paired prints `undeclared`, a paired unit holding none prints `warn` —
+  a reading of the board, not a Rule-3 incident: the act is the operator's, and the home alone reports it. The
+  constraint the preference bounds is the operator's span — how many units the operator pairs — never how many units
+  run (#412). No presence line is written for either: the preference is the declaration and the record the proof
+  (#295).
 - **Same root is the sharper signal.** Two sessions whose `root` is identical share one mutable
   checkout: a raw git command from either can clobber the other's uncommitted state regardless
   of which files either is editing — verified live during #185's own execution, when a peer
@@ -125,7 +132,7 @@ files and almost never merge.
   cross-check: it compares the live presence files with the harness's own session list, read through
   `hostadapter.harness_sessions()` (`dyad/scripts/hostadapter.py`), and prints one line per mismatch
   (`no harness session`, `no presence`, `title differs`, `stale while titled`) — advisory, a run-book's
-  health command (the operate seat's), never a guard failure; the remedy is the writer's (#434).
+  health command (the operate unit's), never a guard failure; the remedy is the writer's (#434).
 - **A plan-less row is invisible to the `files` union.** `sessions.touch_from_open_rows`
   (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of this session's
   `open` and `planned` rows; an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
@@ -134,7 +141,7 @@ files and almost never merge.
   file* — and it is stated, not fixed here: those files are named in the mandate's own plan file,
   and reading a child's files through its `refs: parent #N` is the follow-on #290's plan names,
   not a mechanism this Rule yet has.
-- Before writing a *new* plan file, the Agent reads every other session's presence file and, if
+- Before writing a *new* plan file, the agent reads every other session's presence file and, if
   its `files` set overlaps the new plan's own touched files, states the overlap in the plan's
   falsification section as a finding — never a guard FAIL; the judgment of whether it matters
   stays inference, as Rule-5 coherence and Rule-9 falsification already work.
@@ -146,7 +153,7 @@ adds run from the base's highest id + 1 with none skipped, as the allocator writ
 id fails (`rows.contiguity_problems`, #560); the PR guard (`prs.py`) reads rows at the base commit; the
 presence guard (`dyad/guards/agent/sessions.py`) checks only that a presence file is well-formed
 (every field present, `seen` parses) — never overlap, never staleness (Presence, above); inference
-for phase ownership and for whether an overlap the Agent found actually matters.
+for phase ownership and for whether an overlap the agent found actually matters.
 
 ## Provenance
 Operator rule, 2026-09-13. Falsified; see `../falsification/rules/rule-16-concurrent-sessions.md`.
@@ -159,7 +166,7 @@ Store gains `backlog → archived` and the optional `mode` field, and Presence t
 sentence, 2026-10-14 (d-work #290): `archived` had been used 0 times in 280 rows while 75 sat in
 `backlog` with one successor each, a 5.4% drain, and a row accreted under another row's mandate
 carries no plan file for the `files` union to read; see the same record, amendment #290.
-Presence gains the optional `host` and `holder` lines 2026-10-15 (d-work #294): the Operator asked
+Presence gains the optional `host` and `holder` lines 2026-10-15 (d-work #294): the operator asked
 that every registration record carry host information, and a seat's record names its current
 holder (#295); see the same record, amendment #294. Presence gains the seat name and its form
 2026-10-22 (d-work #379, #369 C7): thirteen live seats carried four naming conventions and two name
@@ -168,7 +175,7 @@ organization craft's data and its reading stays advisory; see the same record, a
 attendance, derived from the provenance records, and the mode it reads 2026-10-22 (d-work #393, children 1–3 of
 #388): the relay between seats had been found to fit one attended pair at the leader with every other seat
 unattended (#386), and nothing said which; see the same record, amendment #393. Presence's attendance
-sentence turns from derived to declared 2026-10-25 (d-work #414, child C2 of #412): the Operator's constraint is how
+sentence turns from derived to declared 2026-10-25 (d-work #414, child C2 of #412): the operator's constraint is how
 many seats it attends, not how many run, and by default it attends only the leader, a preference; the record-derived
 reading stays as the check of the declaration; see the same record, amendment #414. Presence's
 seat-name sentence names the cos, a secretary and the cabinet craft's paths 2026-10-25 (d-work #419, child C2 of
@@ -186,6 +193,9 @@ typed by hand since #560, and no Rule named it; see the same record, amendment #
 store 2026-11-02 (d-work #535): the orchestration in flight had no store, and a row, append-only and fenced, is the
 wrong one for state overwritten many times a day; see the same record, amendment #535. Store gains the inbox
 2026-11-02 (d-work #536): seats reported by message to a session id, so a report sent after a hop reached the old
-session and a terminal holder could receive none (#546, S5, S6, S18, S26); see the same record, amendment #536.
+session and a terminal holder could receive none (#546, S5, S6, S18, S26); see the same record, amendment #536. Store and Presence move to the
+dyad-native terms 2026-11-02 (d-work #553): seat becomes unit, attended a dyad unit and the rest solo, toggling
+`attended-seats` pairing (`paired-units`, the old key its alias), the leader the home, an automaton's kind `auto`
+reserved; history keeps the old words and `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

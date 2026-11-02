@@ -47,6 +47,14 @@ class FormTests(unittest.TestCase):
         self.assertEqual(moved["since"], "2026-11-02T14:00Z"); self.assertNotIn("next", moved)
         self.assertEqual(moved["holder"], "program-b")                     # no seat named: the holder stays
 
+    def test_unit_is_the_form_and_seat_its_alias(self):
+        """#553: `waiting-on unit <name>` is the form; `seat <name>` is read until the release after next and written
+        as `unit <name>` by `board set`."""
+        self.assertEqual(bd.parse_set(["5", "waiting-on=seat engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
+        self.assertEqual(bd.parse_set(["5", "waiting-on=unit engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
+        for v in ("unit engineer-1537d8fb", "seat engineer-1537d8fb"):
+            self.assertEqual(bd.check_entry("5", ENTRY.replace("waiting-on: operator", f"waiting-on: {v}"), {5: "planned"}), [])
+
     def test_parse_set_refuses_misuse(self):
         for argv, says in ((["x", "next=a"], "not a row id"), (["5"], "usage"), (["5", "writer=me"], "never typed"),
                            (["5", "owner"], "not key=value"), (["5", "colour=red"], "unknown key"),
