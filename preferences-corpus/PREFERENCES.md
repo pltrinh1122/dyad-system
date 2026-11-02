@@ -50,17 +50,17 @@ defines what each value means.
   main Agent stays free for the next prompt; the main Agent alone writes rows, asks the plan-Y,
   pushes, opens PRs and asks Done. `none`: subagents read, search and draft text only.
 - `delegation-posture` — how much of an **attended** seat's own work — the cos always, and any seat
-  `attended-seats` names (Rule-16 Presence) — runs in its main chat and how much in the sub-agents it spawns (forks,
+  `attended-seats` names (Rule-16 Presence) — runs in its main chat and how much in the subagents it spawns (forks,
   worktrees) (d-work #436, #441). It never routes an act between seats: which seat
   owns an act is the charter's (`MANDATES.md`), unchanged by any value. The floor is Rule-3's subagent clause: a
   seat's main chat alone writes rows, asks and answers counter-prompts, pushes, opens PRs, merges and runs host
-  actions; a sub-agent never. Above the floor: `responsive` — the main chat does only the floor; every draft (plan
+  actions; a subagent never. Above the floor: `responsive` — the main chat does only the floor; every draft (plan
   file, analysis, falsification text, a branch's changes), every evidence run in a worktree and every board
-  rendering runs in a sub-agent, so the chat answers its next message at once. `balanced` — the main chat does
+  rendering runs in a subagent, so the chat answers its next message at once. `balanced` — the main chat does
   work it can finish within a budget, 2 minutes of tool time per act, the one number the Operator tunes; longer
-  work goes to a sub-agent. `efficient` — the main chat drafts and verifies itself and spawns a sub-agent only for
+  work goes to a subagent. `efficient` — the main chat drafts and verifies itself and spawns a subagent only for
   work that must run in parallel or in an isolated worktree, or that Rule-10 delegates (under `concise-mode: on`,
-  execution longer than a few tool calls). The cost is tokens against chat latency: a sub-agent
+  execution longer than a few tool calls). The cost is tokens against chat latency: a subagent
   re-reads its context and is the dear hop, so `responsive` spends the most tokens for the least latency and
   `efficient` the fewest, the chat unavailable for the duration. The cos's availability rule (#432: its checkout
   runs nothing longer than a ledger-only push) holds under every value. It refines `plan-and-execute` and is inert
