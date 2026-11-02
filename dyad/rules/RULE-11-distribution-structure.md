@@ -9,7 +9,7 @@ dyad system without clashes or hand-editing.
 - Zones and transactions — Rule-1; a structural change is an infra-zone PR citing a Rule-11 d-work.
 - The content of Rules, vocabulary, preferences — their owning Rules.
 - The host and Tended Rules' content — instance or a Tended craft's; never the core craft.
-- Which craft a rule belongs to — Rule-4 classifies (an Agent Rule binds the Agent's process and
+- Which craft a rule belongs to — Rule-4 classifies (an Agent Rule binds the agent's process and
   lives in the core craft; a Tended Rule lives in a Tended craft or in `workstation-corpus/rules/`
   until extracted).
 - The design behind these kernels — what is craft and what instance, craft-relative paths, the
@@ -65,10 +65,10 @@ dyad system without clashes or hand-editing.
    **(a) dependency** — a core Rule cites it by path, since what the core ships and what its own
    Rules depend on must not disagree, and `dyad/guards/infra/bundle.py` fails a cited craft in the
    tree that does not declare itself bundled; or **(b) purpose** — it serves the system's purpose
-   (`dyad:purpose` of the identity record in `README.md`, #496) for every installing Operator, never
+   (`dyad:purpose` of the identity record in `README.md`, #496) for every installing operator, never
    one instance's applied domain (`dyad:appliedTo`) alone, and its declaration carries a one-line
    `PURPOSE` reason beside it, which the same guard requires of a declared craft no core Rule cites;
-   that reason is the Operator's to ratify, by the Done-`Y` of the PR that adds it. Those grounds
+   that reason is the operator's to ratify, by the done-`Y` of the PR that adds it. Those grounds
    are the only reasons the core's install may write outside its own root. The registry records the core
    install too: `dyad install` writes the `dyad-operator` row, its `sha256` the installed `dyad/`
    tree by the same computation as a Tended craft's row, rewritten only when it differs (#199).
@@ -131,10 +131,10 @@ dyad system without clashes or hand-editing.
   craft and `<craft>-vMAJOR.MINOR.PATCH` for a Tended craft (property 4). The `Y` binds to that one
   tag only; creating and pushing the tag, exporting the archive, publishing any artifact it names
   (an image, an archive to a distribution repo) are clerical execution of it. Rule-2 applies by
-  reference (S2). A release publishes to the world, so it is the Operator's to ratify however few
-  d-works it gathers — distinct from a d-work's Done-`Y`, which verifies that d-work's own output.
+  reference (S2). A release publishes to the world, so it is the operator's to ratify however few
+  d-works it gathers — distinct from a d-work's done-`Y`, which verifies that d-work's own output.
 - Or, naming several tags in one question — `Y/N: release <tag-a>, <tag-b>, <tag-c>?` — whose
-  content was already verified and ratified by one d-work's own Done-`Y`, each tag already named
+  content was already verified and ratified by one d-work's own done-`Y`, each tag already named
   individually, unmerged, in the same reply's completion evidence before this question (the same
   discipline Rule-3's own Done-batch items already carry). Never a tag of a different d-work;
   never folded into Rule-3's plan or Done batch, so a release stays its own, visibly-a-publication
@@ -142,14 +142,14 @@ dyad system without clashes or hand-editing.
 - Under the **release gate** (the hosting's required approval of the publishing run, on while the repository
   variable `RELEASE_APPROVAL` is `tap`), neither question is asked. A release d-work's plan-`Y` names its tags and
   numbers; its Done question names the PR whose merge is the cut and those tags — `Y/N: Done with #<id> <title>
-  (merges PR #a, releases <tag-a>, <tag-b>)?` — and that Done-`Y` ratifies the release, because it verified the
+  (merges PR #a, releases <tag-a>, <tag-b>)?` — and that done-`Y` ratifies the release, because it verified the
   bytes the cut holds. It ratifies only behind a mechanical **fence**: the tree under each released craft's root at
-  the cut equals that root at the head the Done-`Y` names, and each archive's sha256 is the build of the cut
+  the cut equals that root at the head the done-`Y` names, and each archive's sha256 is the build of the cut
   (property 5, deterministic). Only then is a **release-ready entry** written for each tag in the row's `disposed`
   column, `<date> release-ready <tag> at <cut sha> (archive <sha256>)` (`dyad release ready`, which checks the
-  fence): the Agent's statement that the fence held, carrying no `Y` or `N`, so never a disposition and never
+  fence): the agent's statement that the fence held, carrying no `Y` or `N`, so never a disposition and never
   counted as one (Rule-7 property 5). The publishing
-  run it starts waits for the Operator's approval on the hosting, which **authenticates** the Done-`Y` for the one
+  run it starts waits for the operator's approval on the hosting, which **authenticates** the done-`Y` for the one
   irreversible act — the one input no agent can forge, since every other `Y` reaches the hosting as a ledger line
   an agent wrote (#541, A1) — and decides nothing new; a rejected or expired run publishes nothing. The approval is
   recorded as one `Y release` entry per tag, by reference (Rule-7 property 4). When the gate is off, or the fence
@@ -168,7 +168,7 @@ runs it by hand): `VERSION` one semver line; no instance state inside the tree
 (`distribute.instance_state`, the scan the core uses, with `package_rules.txt` plus the
 craft-specific names — `REGISTRY.md`, `events/`, `rows/`, `*.jsonl`); the craft vocabulary namespaced
 (`vocabulary.py check_craft`, Rule-6's); every craft guard meets the contract (`dyadlib.contract_problem`,
-the one definition `crafts/sysarch/rules/guards.md` describes); Agent-process tokens in a Tended rule
+the one definition `crafts/sysarch/rules/guards.md` describes); agent-process tokens in a Tended rule
 warn (`rules.py check_tended`, Rule-4's); an unmet `requires:` warns at check and fails at install.
 The guard composes those scans by import; it owns only the craft's shape (S4). Property 7's bundle
 is checked the same way: `dyad/guards/infra/bundle.py` (entity `bundle`, corpus `infra`; a missing
@@ -196,7 +196,7 @@ under the superseded convention, never retagged (tags do not move). See
 converse and the drift guard 2026-09-18 (d-work #91); see the same record, amendment #91. Property
 2 gains the craft-contribution sentence 2026-09-20 (d-work #100, per #101's survivor); see the same
 record, amendment #100. Ratification events gains the release-batch form 2026-09-21 (d-work #106):
-several tags whose content one d-work's own Done-`Y` already verified, each already named
+several tags whose content one d-work's own done-`Y` already verified, each already named
 individually beforehand — split from destructive's unconditional one-per-question rule, which
 rested on a different, unaffected basis; see the same record, amendment #106. Property 2 gains the
 bundled craft 2026-09-22 (d-work #114): four core Agent Rules cite `crafts/sysadmin/` by path while
@@ -218,8 +218,9 @@ the same record, amendment #504. Property 7 gains the untagged-row sentence 2026
 #527): a row naming a version no tag held pinned `VERSION`, since any bump past it failed and Rule-1 forbade the row's
 fix in the same PR, the version/zone face of mode M one state further (incident row 216); see the same record,
 amendment #481. Ratification events gains the release gate 2026-11-01 (d-work #545): a release
-d-work's Done-`Y` had already verified the bytes of the cut, so the chat question after it was a second ask of the same
+d-work's done-`Y` had already verified the bytes of the cut, so the chat question after it was a second ask of the same
 decision, while the hosting approval stays as the authentication no agent can forge; see the same record, amendment
-#545.
+#545. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).

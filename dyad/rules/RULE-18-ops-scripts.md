@@ -1,8 +1,8 @@
 # Rule-18: ops scripts
 
-**Intent:** Deliver every command the Operator runs on the Agent's behalf as a committed,
+**Intent:** Deliver every command the operator runs on the agent's behalf as a committed,
 executable, syntax-checked shell file whose text and outcome are provenance.
-**Target:** an Operator-executed command
+**Target:** an operator-executed command
 
 ## Boundaries (out of scope)
 - The class of the action, its authorization and its change-log row — Rule-8. Rule-18 owns
@@ -16,35 +16,35 @@ executable, syntax-checked shell file whose text and outcome are provenance.
 - Which zone the file lands in — Rule-1 (`workstation-corpus/` is workstation zone); package
   layout and the `generated` pattern — Rule-11; the guard's mechanical check — Rule-12.
 - The interpreter: bash is a library row (Rule-14); nothing in the package runs an ops script.
-- Commands the Agent runs itself, and commands already run before this Rule: the change log is
+- Commands the agent runs itself, and commands already run before this Rule: the change log is
   their record; capture is for commands still to run.
 - Recurring operations of a server instance are run-book commands, run by either party through
   Rule-19's runner, which records an event; an ops script is a one-off d-work action delivered for
-  the Operator to run. Both share the craft's header vocabulary (class, undo, postcondition,
+  the operator to run. Both share the craft's header vocabulary (class, undo, postcondition,
   destructive confirmation); Rule-19 adds role, scope and the event and owns the run-book's use of it.
 
 ## Conditions (triggers)
-- A plan names a host action the Agent may not run (privilege, credentials, physical presence):
+- A plan names a host action the agent may not run (privilege, credentials, physical presence):
   the plan names the ops script that delivers it.
 - An ops script is added or edited: the PR carries it in the workstation zone, one file per
   change-log row.
-- The Operator has run an ops script: the pasted output is compared to the script's commit and
+- The operator has run an ops script: the pasted output is compared to the script's commit and
   hash before the change-log row is written.
 - Every push and PR: the active craft's guard (`crafts/sysadmin/guards/ops_scripts.py`, registry
   label `sysadmin/ops_scripts`) runs through `package.py check` (the craft rule owns the check; the
   runner owns none of its semantics).
 
 ## Properties
-1. **Form.** An Operator-executed command is one file `<ops>/<d-work>-<hN>-<slug>.sh` (instance,
+1. **Form.** An operator-executed command is one file `<ops>/<d-work>-<hN>-<slug>.sh` (instance,
    workstation zone; `DYAD_OPS`, default `workstation-corpus/ops`, in the manner of Rule-11
    property 3) in the active craft's ops-script form (`crafts/sysadmin/rules/ops-scripts.md`),
    checked by that craft's guard; the pasted output is compared to the script's commit and hash
    before the change-log row is written; the exit code is completion evidence.
 
 ## Conduct
-- Never an inline block: a command the Operator is asked to run is a file in the PR, or it is
+- Never an inline block: a command the operator is asked to run is a file in the PR, or it is
   not asked.
-- Reading before running is the Operator's; `set -x` and the header make the script legible.
+- Reading before running is the operator's; `set -x` and the header make the script legible.
   Rule-8's plan-`Y` and destructive counter-prompt remain per action.
 - A mismatch between the pasted output's commit or hash and the committed script is reported as
   an incident (Rule-3) before any row is written.
@@ -62,6 +62,7 @@ Rules 13/14); named in the record.
 
 ## Provenance
 Operator rule, 2026-09-14. Falsified; see `../falsification/rules/rule-18-ops-scripts.md`. Kernel
-since #155: properties 1–7 moved to the sysadmin craft.
+since #155: properties 1–7 moved to the sysadmin craft. Operator and agent are lowercase in prose, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

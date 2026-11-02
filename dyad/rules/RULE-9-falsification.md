@@ -4,24 +4,24 @@
 **Target:** a claim
 
 ## Boundaries (out of scope)
-- A disposition is not a claim. The Agent challenges before the Operator disposes and executes
+- A disposition is not a claim. The agent challenges before the operator disposes and executes
   after; it never falsifies a `Y` (Rule-2).
 - The shape of a Rule — Rule-4; relations — Rule-5; terms — Rule-6; host actions — Rule-8.
 - How a proposal is framed once the survivor is known — Rule-10.
 
 ## Conditions (triggers)
-- An Operator prompt asserts or proposes a claim that a Rule, plan, preference or verdict
+- An operator prompt asserts or proposes a claim that a Rule, plan, preference or verdict
   would encode.
-- The Agent is about to plan (Rule-3: the plan is falsified first).
+- The agent is about to plan (Rule-3: the plan is falsified first).
 - An audit or sweep surfaces a claim.
-- Easy agreement: when the Agent agrees with a claim on first reading, at least one attack
+- Easy agreement: when the agent agrees with a claim on first reading, at least one attack
   is pushed to *confirmed* or *refuted* before the claim is accepted.
 
 ## Form
 - A falsification record in `agent-corpus/falsification/`: a table of attack, result
   (confirmed / refuted / survives, scoped), survivor. Only survivors are implemented.
 - "No attack found" is permitted only by naming what was tried.
-- The record is disposed by the Done-`Y` of its d-work (Rule-2); its Disposition line says so
+- The record is disposed by the done-`Y` of its d-work (Rule-2); its Disposition line says so
   by reference.
 
 ## Enforcement
@@ -29,7 +29,8 @@ Inference only, stated. Mechanically: a PR that edits a Rule without a record is
 breach (the pairwise statement lives in the record); nothing else is checked.
 
 ## Provenance
-Frame principle promoted by Operator decision, gap E2 (audit 2026-09-12, completeness).
-Falsified; see `../falsification/rules/rules-9-10-promotion.md`.
+Frame principle promoted by operator decision, gap E2 (audit 2026-09-12, completeness).
+Falsified; see `../falsification/rules/rules-9-10-promotion.md`. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

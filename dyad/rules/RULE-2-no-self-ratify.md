@@ -20,12 +20,12 @@ Disposer ≠ proposer (vocabulary, Rule-6). The agent proposes; the operator dis
 Base events, owned by this rule:
 - Merging any PR into `main`. Asked as its own counter-prompt, or — when the preference
   `merge-disposition` is `with-done` (`preferences-corpus/PREFERENCES.md`) — ratified by the
-  Done-`Y` of a Rule-3 completion counter-prompt that names the PR. Either way the operator
+  done-`Y` of a Rule-3 completion counter-prompt that names the PR. Either way the operator
   ratifies; only the number of questions changes (ledger #41).
 - Pushing directly to `main` — except ledger-only commits, which Rule-3 defines as clerical.
 - Declaring an agent-authored verdict final.
 
-A falsification record or audit is disposed by the Done-`Y` of its d-work (Rule-3); its
+A falsification record or audit is disposed by the done-`Y` of its d-work (Rule-3); its
 *Disposition* line records that by reference (`see ledger #N`) and is updated clerically in
 any later agent-zone PR. It is not a separate ratification event (C2).
 
@@ -46,17 +46,17 @@ not edited when they are added (G5).
 - Writing the per-machine memory cache — it is a cache of ratified corpus; corpus wins on divergence.
 
 ## Binding of approval
-- A "Y" binds only to the PR(s) or action(s) named in the question it answers. A Done-`Y`
+- A "Y" binds only to the PR(s) or action(s) named in the question it answers. A done-`Y`
   merges only the PRs the counter-prompt named, only on the guards' observed passes — the
-  kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main Agent
+  kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main agent
   on the exact head being merged, its evidence block cited in the completion reply (Rule-3) by
   its `evidence-sha256` and its brief form — every failing or skipped line and every warning new
-  since `main`, the standing ones folded per guard — the full block stored and shown on request (Rule-14 property 3), which the Operator may re-run on that head and compare; the hosting's CI
+  since `main`, the standing ones folded per guard — the full block stored and shown on request (Rule-14 property 3), which the operator may re-run on that head and compare; the hosting's CI
   corroborates after the merge, on `main` (Rule-14 property 3, #168), and never substitutes — and only if their heads are unchanged since it
   was asked; otherwise the agent stops and re-prompts. A CI failure that is an account or
   adapter failure (no job started) is not a red check but an absent one, reported as such.
   When the hosting is unreachable, a ratified merge is executed locally (`git merge --no-ff`
-  into `main`, message citing the PR and the Done-`Y`) and pushed on reconnect: clerical
+  into `main`, message citing the PR and the done-`Y`) and pushed on reconnect: clerical
   execution of the given `Y`, exactly as a hosted merge is; the row's `disposed` and the
   completion reply record it (#138).
 - A new PR, including one created to recover from an error, needs a fresh Y.
@@ -67,14 +67,14 @@ not edited when they are added (G5).
 - A plan counter-prompt whose plan states a **mandate scope** (Rule-3, Plan) binds wider than one
   action and no wider than that scope: the plan-`Y` authorizes the mutation *and* the class of row
   the scope names, so an **accreted row** inside it carries that `Y` as its own authorization and
-  is never asked for separately, while the Done-`Y` ratifies the accreted set exactly as the
+  is never asked for separately, while the done-`Y` ratifies the accreted set exactly as the
   completion evidence listed it (Rule-3) — the delivered set, never the promised one. A row the
   stated rule does not cover, or one past the stated ceiling, was not named by the question and so
   is not bound by the `Y`: it returns to explicit mode and is asked. Never accretable, whatever a
   plan says: a destructive host action (Rule-8 keeps its own counter-prompt), a release (Rule-11:
-  it publishes to the world) — except under the release gate, where the release d-work's own Done-`Y`
+  it publishes to the world) — except under the release gate, where the release d-work's own done-`Y`
   names the PR whose merge is the cut and the tags it publishes, and Rule-11 makes that `Y`, with its
-  fence, the release's ratification and the hosting approval its authentication (#545) — a Rule-3 Intake (its words are another Operator's, Rule-7 property
+  fence, the release's ratification and the hosting approval its authentication (#545) — a Rule-3 Intake (its words are another operator's, Rule-7 property
   4), a change to a preference value (*Not ratification*, above: the operator disposes that as its
   own PR), and any mutation the plan did not describe, which Rule-3 already calls a new plan. The
   preference `accretion` (`preferences-corpus/PREFERENCES.md`) selects between the two: under
@@ -87,7 +87,7 @@ Three mechanical checks read the record; the binding itself stays inference.
 - **The merge guard**, `dyad/guards/agent/merges.py` (this Rule's own; entity `merge`, a transaction guard on
   the kernel-only path, Rule-14 property 3), warns — never fails — on a merge commit on `main`'s first-parent line
   whose tree is not the merge of its two parents, or whose second parent no operative `Y done` names: so a merge
-  that executes no recorded Done-`Y`, or carries content neither parent holds, is visible (d-work #541).
+  that executes no recorded done-`Y`, or carries content neither parent holds, is visible (d-work #541).
 - **The merge verb**, `dyad merge <pr> --head <sha>` (`dyad/scripts/merge.py`), is execution, not a guard: it
   refuses unless `origin/main` holds the operative `Y done` naming that PR at that head, the PR's live head is that
   head, and the head is not yet on `main` — Binding's "only if their heads are unchanged" applied at the moment of
@@ -101,24 +101,25 @@ Craft invariant `bond:no-self-ratify` (dyad-bond). Falsified 2026-09-12; see
 `../falsification/rules/rule-2-no-self-ratify.md`. Binding gains one sentence on the batch
 counter-prompt (Rule-3) 2026-09-15 (d-work #17); see `../falsification/rules/rules-2-3-batch-disposition.md`.
 Binding gains the mandate clause 2026-10-14 (d-work #290): a batch `Y` had been found to compress
-73 questions and remove no authorizations at all, so the Operator asked for a disposition that
+73 questions and remove no authorizations at all, so the operator asked for a disposition that
 supersedes the individual ones — which Binding's first sentence forbade in so many words, since a
 row accreted after the question was asked is named by no question; the clause states what a plan-`Y`
 may bind to instead, and the list of what it may never bind to; see
 `../falsification/rules/rule-2-no-self-ratify.md`, amendment #290. Not ratification gains the
 events-only commit 2026-10-25 (d-work #438): a standing health check's events, each a read-only
-command's observation, needed a row, a PR and the full suite to reach `main`, and the Operator asked
+command's observation, needed a row, a PR and the full suite to reach `main`, and the operator asked
 why monitoring should have a row at all; an observation passes the test the ledger-only bullet
 already states — it records, never decides — and only events of read-only commands do; see
 `../falsification/rules/rule-2-no-self-ratify.md`, amendment #438. Binding cites the evidence block by its
 sha256 and its brief form 2026-10-26 (d-work #476, child C3 of #473): a pasted block was read in full at every
 merge (267 lines on that day; the brief form 140, its standing warnings kept), while its sha256 already covered every
-line and the Operator could re-run it; see
+line and the operator could re-run it; see
 `../falsification/rules/rule-2-no-self-ratify.md`, amendment #476. Enforcement names its three mechanical checks 2026-10-31 (d-work #543):
 it said "one mechanical fence" after #541 had added a merge guard that names this Rule its owner and #532 a merge
 verb that refuses an unbound merge, so a guard claimed an owner whose text denied having one; see the same record,
 amendment #543. Binding's never-accretable list lets a release go under the release gate 2026-11-01 (d-work #545): the
-chat release question after a Done-`Y` that had verified the very bytes of the cut added no information, while the
-hosting approval, the one input no agent can forge, stays; see the same record, amendment #545.
+chat release question after a done-`Y` that had verified the very bytes of the cut added no information, while the
+hosting approval, the one input no agent can forge, stays; see the same record, amendment #545. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

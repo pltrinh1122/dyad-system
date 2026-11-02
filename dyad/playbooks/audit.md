@@ -1,10 +1,10 @@
 # Play-book: audit (core craft, `dyad-operator`; #223)
 
-A play-book (vocabulary, Rule-3): an executable procedure of the operator craft the Agent follows for
+A play-book (vocabulary, Rule-3): an executable procedure of the operator craft the agent follows for
 a recurring decision; its steps are a run-book. This one is the **standing audit**: the topic-free,
 whole-system pass that is run again and again, and that the per-change gate leaves to audit — #220's
 survivor, "unit regression of everything else is an audit job", with its cadence an open parameter.
-An audit (vocabulary) is an agent-authored review that elevates gaps for Operator disposition; until
+An audit (vocabulary) is an agent-authored review that elevates gaps for operator disposition; until
 now nothing said what the standing one reads, in what order, what it writes, or when it writes nothing.
 Steps: `dyad/runbooks/audit.md` — `survey`, `regression`, `fences`, `drift`, `incidents`, `record` —
 run through `dyad runbook run audit <step>`, the core runner, so each step leaves an event. Beside it, since
@@ -12,21 +12,21 @@ run through `dyad runbook run audit <step>`, the core runner, so each step leave
 are `dyad/runbooks/self-diagnostic.md`; the two share one observation, the evidence run on the head, and
 nothing else.
 
-Since #433 the standing audit is a composite whose phases are run by their domain owners, and the audit seat keeps
-the incident ledger: Phase 0 and Phase 4 by whichever seat runs the exercise; Phase 1 by engineer; Phase 2 by audit
+Since #433 the standing audit is a composite whose phases are run by their domain owners, and the audit unit keeps
+the incident ledger: Phase 0 and Phase 4 by whichever unit runs the exercise; Phase 1 by engineer; Phase 2 by audit
 (hardening's `verify`, generalized to every shipped fence); Phase 3 split by item; Phase 3b by audit. The
 self-diagnostic's L1–L2 are engineer's and its L3–L4 counsel's: one run, its gate and budget unchanged.
 
-It is not a topic audit. A review the Operator asks for on one subject (a performance profile, a sweep
-of one craft, the subset CI should run) stays an Operator prompt with its own plan; it may borrow the
+It is not a topic audit. A review the operator asks for on one subject (a performance profile, a sweep
+of one craft, the subset CI should run) stays an operator prompt with its own plan; it may borrow the
 Conduct below and nothing else here.
 
 ## Trigger
-An Operator prompt asking for the audit. No Rule requires it: contrast `incident-hardening.md`, which
+An operator prompt asking for the audit. No Rule requires it: contrast `incident-hardening.md`, which
 Rule-3's Incidents clause reads, and like `ds-report-incidents.md` this one is read on a prompt. The play-book
 runs inside the d-work the prompt opened and is planned there (Rule-15 phase 1) before any record is
 written; a d-work of another kind that notices the gate below would open states it as a finding and opens
-nothing, since a d-work opens on an Operator prompt or disposition and never on the Agent's own finding
+nothing, since a d-work opens on an operator prompt or disposition and never on the agent's own finding
 (Rule-3, Scope).
 
 The cadence is #220's open parameter and is not set here. A clock is not the gate: it would add a second,
@@ -115,7 +115,7 @@ phase ingests, sizes and surfaces, and never groups. The `incidents` step:
 ## Phase 4 — Record
 One record, `<instance>/audits/<date>-audit.md`, written only when phase 0 found something to read. It opens
 with the title, the two watermark lines above, and `Disposition:` by reference to the d-work (Rule-2: the
-Done-`Y` of the d-work that ran the audit disposes it); then, in order: the regression block verbatim, fences,
+done-`Y` of the d-work that ran the audit disposes it); then, in order: the regression block verbatim, fences,
 drift, incidents, **findings**, **proposed rows**, **not observed**.
 
 Each finding is a claim and is falsified before it is written (Rule-9, trigger "an audit surfaces a claim"):
@@ -128,12 +128,12 @@ exists to prevent. **Not observed** says what the audit could not read and why. 
 the newest record carries both watermark lines.
 
 ## Conduct
-The audit detects and sizes; it disposes nothing (frame: detect, don't dispose; Rule-2: the Agent proposes). It
-changes no Rule and no code, opens no row and closes no mode and no row: the Operator's prompt or disposition
+The audit detects and sizes; it disposes nothing (frame: detect, don't dispose; Rule-2: the agent proposes). It
+changes no Rule and no code, opens no row and closes no mode and no row: the operator's prompt or disposition
 opens a row, and a finding is "proposed, not opened" until then. Every run-book command is read-only. The first
 exercise on a system is a baseline for the next watermark, and a record of what ran, not a verdict on this
 play-book: the session that authored it and the session that first ran it were the same (no-self-ratify,
-Rule-2; the Operator's Done-`Y` disposes both).
+Rule-2; the operator's done-`Y` disposes both).
 
 ## The self-diagnostic — four levels, coded checks before prose claims
 Authored for countersign-system (its d-work #3) in dyad-system #308 as the countersign craft's
@@ -255,7 +255,7 @@ in the order above, so the gate and the budget stay one.
 
 ### 3. The gate
 L1 always runs; level N runs only when level N−1 passed. A level that does not pass ends the run: every later level
-is recorded `not run (gate)`, and nothing is repaired inside the diagnostic — a repair is its own unit of work in
+is recorded `not run (gate)`, and nothing is repaired inside the diagnostic — a repair is its own body of work in
 the system's own process (§5). The reason is cost and confidence: a reading done over code that already fails reads
 a system other than the one on disk, and the cheap mechanical proof is what says so. The invariant pass is coded
 but sits at the head of L3, not in L2: it is the unit-scope fact L3's reading rests on, and placing it there costs
@@ -369,9 +369,9 @@ procedure.
 - A level, the gate, the budget, a kind of finding or the record's form changes: this section, the run-book and
   the record `dyad/falsification/countersign-self-diagnostic.md` change in the same d-work, and the script with
   them when the levels file's form moves.
-- A test module is added to a system that keeps the levels file: it is classified in the same unit of work, or the
+- A test module is added to a system that keeps the levels file: it is classified in the same body of work, or the
   next run's `health` step fails on it (§6).
-- A system adds an L4 claim: in its own run-book's instance block, by its own unit of work.
+- A system adds an L4 claim: in its own run-book's instance block, by its own body of work.
 
 ### Inference, stated
 - L3 and L4 detect and never prove (D1): an attack that did not land means the reading found nothing, not that
