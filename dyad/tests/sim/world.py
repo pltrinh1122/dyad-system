@@ -5,19 +5,22 @@ What it builds, all in scratch directories:
 - one clone per session; a session is a seat on a host. The host is set by env — `CLAUDE_CODE_REMOTE` (`true` for
   cloud, `false` for a terminal) and `DYAD_SIM_OS` (a label: `linux`, `mac`) — and the holder by
   `CLAUDE_CODE_SESSION_ID`, so `board.py` reads them as it reads a real harness's;
-- a mailbox that models `send_message` between sessions. A terminal holder cannot read it (no inbound messages), but
-  it can send;
-- seats: cloud seats receive a dispatch, run its act once and report to the cos address they know. A terminal desk
-  receives nothing, so it reads the board and reports by writing it;
+- the inbox (#536): a relay or a report is a real `dyad inbox post`, addressed by seat name and landed on the bare
+  origin, and read by `dyad inbox read`, which a terminal holder runs like any other. `send_message`, which a terminal
+  holder could not receive and which followed a session id rather than a seat, carries nothing here: it would only be
+  a doorbell;
+- seats: a seat, cloud or terminal, reads its inbox, runs each relayed act once per message and reports to the seat
+  that sent it;
 - the Operator, as the log of lines the Operator sees;
 - external runs, as a status table.
 
-The cos protocol modelled is P1 as built by #535 (`dyad board set` and `dyad board resume`, write-ahead), and nothing
-else: no inbox (#536), no lease (#537). Every board write is a real `dyad board set`, landed through `land.py` onto the
-bare origin. The merge is the real `dyad merge`.
+The cos protocol modelled is P1 and P2 as built by #535 and #536: `dyad board set` and `dyad board resume`,
+write-ahead, and the inbox; no lease (#537). The mode keeps its seat name across a hop (the drill's `DYAD_SESSION=
+program-…`), and only the holder — the harness session — changes. Every board write and every message is real, landed
+through `land.py` onto the bare origin. The merge is the real `dyad merge`.
 
-Not simulated, stated: the real harness's permission classifier, a real Remote Control attach, and a real
-`send_message` transport — the mailbox stands in for it.
+Not simulated, stated: the real harness's permission classifier, a real Remote Control attach, and the `send_message`
+doorbell.
 """
 import collections, contextlib, dataclasses, datetime, io, os, shutil, subprocess, sys, unittest.mock
 from pathlib import Path
@@ -30,6 +33,7 @@ INST = "agent-corpus"
 ROW = "id: {id}\ntitle: row {id}\nopened: 2026-11-02\nstate: {state}\ndisposed: {disposed}\nrefs: \n"
 RESUMED = "cos resumed in {seat}"
 bd = dyadlib.load_guard("agent", "board")
+ib = dyadlib.load_guard("agent", "inbox")
 
 
 def git(d: Path, *a: str, check: bool = True) -> str:
@@ -49,24 +53,6 @@ class Host:
     @property
     def terminal(self) -> bool:
         return self.kind == "terminal"
-
-
-class Mailbox:
-    """`send_message`: a message goes to a harness id; a terminal holder cannot read its box (Rule-16's hosts; #536)."""
-    def __init__(self):
-        self.boxes: dict[str, list[tuple]] = collections.defaultdict(list)
-
-    def send(self, to: str, msg: tuple) -> None:
-        self.boxes[to].append(msg)
-
-    def read(self, session: "Session") -> list[tuple]:
-        if session.host.terminal:
-            return []
-        got, self.boxes[session.harness] = self.boxes[session.harness], []
-        return got
-
-    def unread(self) -> list[tuple]:
-        return [(to, m) for to, ms in self.boxes.items() for m in ms]
 
 
 class Session:
@@ -120,43 +106,39 @@ class Session:
     def resume_text(self) -> str:
         return self.board("resume")[1]
 
+    def post(self, to: str, row, kind: str, body: str) -> None:
+        """`dyad inbox post <to> --row <row> --kind <kind> <body>`, from this seat."""
+        out, err = io.StringIO(), io.StringIO()
+        with self.acting(), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = ib.cli(["post", to, "--row", str(row), "--kind", kind, body], self.dir)
+        if rc:
+            raise WriteRefused(err.getvalue().strip())
+
+    def read_inbox(self) -> list[dict[str, str]]:
+        """`dyad inbox read`: this seat's unread messages, marked read."""
+        with self.acting(), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return ib.read(self.dir)
+
 
 class WriteRefused(Exception):
     pass
 
 
 class Seat:
-    """A seat the cos dispatches to. A cloud seat receives messages; a terminal desk receives none, so it reads the
-    board. Each act it runs is counted in `world.acts`; its report goes to the cos address it last knew."""
-    def __init__(self, world: "World", session: Session, cos: str):
-        self.world, self.session, self.cos = world, session, cos
-        self.pending: list[str] = []
-        self.done: set[str] = set()
+    """A seat the cos relays to, cloud or terminal: it reads its inbox, runs each relayed act once per message (counted
+    in `world.acts`) and reports to the seat that sent it."""
+    def __init__(self, world: "World", session: Session):
+        self.world, self.session = world, session
 
     @property
     def name(self) -> str:
         return self.session.seat
 
     def step(self) -> None:
-        """Read what reached it, run each act once per message, report each."""
-        if self.session.host.terminal:
-            self.session.sync()
-            for row, f in self.session.entries().items():
-                nxt = f.get("next", "")
-                if row != bd.COS and f.get("owner", "").split()[:1] == [self.name] and nxt.startswith("do "):
-                    task = nxt[3:]
-                    self.world.acts[task] += 1
-                    self.session.set(row, next=f"reported {task}")
-            return
-        for msg in self.world.mailbox.read(self.session):
-            if msg[0] == "announce":
-                self.cos = msg[1]
-            elif msg[0] in ("dispatch", "relay"):
-                self.world.acts[msg[1]] += 1
-                self.pending.append(msg[1])
-        for task in self.pending:
-            self.world.mailbox.send(self.cos, ("report", task))
-        self.pending = []
+        for m in self.session.read_inbox():
+            if m.get("kind") == "relay":
+                self.world.acts[m["body"]] += 1
+                self.session.post(m["from"], m["row"], "report", m["body"])
 
 
 class Cos:
@@ -165,11 +147,10 @@ class Cos:
         self.world, self.s, self.operator = world, session, operator
 
     # ---- acts before a hop; `crash` stops the turn at "before-wa" or "after-wa"
-    def dispatch(self, row: int, seat: Seat, task: str, crash: str | None = None, kind: str = "dispatch") -> None:
+    def dispatch(self, row: int, seat: Seat, task: str, crash: str | None = None) -> None:
         if crash == "before-wa":
             return
-        verb = "do" if seat.session.host.terminal else "send"
-        self.s.set(row, owner=f"{seat.name} {seat.session.harness}", waiting_on=f"seat {seat.name}", next=f"{verb} {task}")
+        self.s.set(row, owner=f"{seat.name} {seat.session.harness}", waiting_on=f"seat {seat.name}", next=f"send {task}")
         if crash == "after-wa":
             return
         self.send_pending(row)
@@ -178,8 +159,8 @@ class Cos:
         f = self.s.entries().get(str(row), {})
         nxt = f.get("next", "")
         if nxt.startswith("send "):
-            task, owner = nxt[5:], f["owner"].split()
-            self.world.mailbox.send(owner[1], ("relay" if task.startswith("relay ") else "dispatch", task))
+            task = nxt[5:]
+            self.s.post(f["owner"].split()[0], row, "relay", task)
             self.s.set(row, next=f"await {task}")
 
     def ask(self, row: int, question: str, crash: str | None = None) -> None:
@@ -205,8 +186,10 @@ class Cos:
 
     # ---- the hop
     def resume(self, retry_until_reachable: bool = True) -> str:
-        """`dyad board resume` and act on it: say the one resume line, take the holder (write-ahead), re-present every
-        question owed verbatim, send what is written but unsent, run what a gate allows, announce to every seat."""
+        """`dyad board resume` and act on what it says: say the one resume line, take the holder (write-ahead), read the
+        inbox, re-present every question owed verbatim, send what is written but unsent, run what a gate allows. A stale
+        entry (#547) owes nothing. The seats are not announced to: they address the mode's seat, which a hop does not
+        change (#536)."""
         self.s.sync()
         text = self.s.resume_text()
         self.operator.show(RESUMED.format(seat=self.s.seat))
@@ -217,19 +200,15 @@ class Cos:
             except WriteRefused:
                 if not retry_until_reachable or not self.world.outage_over():
                     raise
-        for row, f in self.s.entries().items():
-            if row == bd.COS:
-                continue
+        self.read_reports()
+        with self.s.acting():
+            view = bd.resume_view(self.s.dir)
+        for row, f in view["live"]:
             if f.get("waiting-on") == "operator" and f.get("question"):
                 self.operator.show(f["question"])
             self.send_pending(row)
             self.run_gate(row, f)
             self.run_merge(row, f)
-        seats = [l for l in text.splitlines() if l.startswith("announce to")]
-        for name in (seats[0].split(": ", 1)[1].split(";")[0].split(", ") if seats else []):
-            seat = self.world.seats.get(name)
-            if seat:
-                self.world.mailbox.send(seat.session.harness, ("announce", self.s.harness))
         return text
 
     def run_gate(self, row, f) -> None:
@@ -249,13 +228,11 @@ class Cos:
 
     # ---- after the hop
     def read_reports(self) -> None:
-        for msg in self.world.mailbox.read(self.s):
-            if msg[0] == "report":
-                self.world.completed.add(msg[1])
+        for m in self.s.read_inbox():
+            if m.get("kind") == "report":
+                self.world.completed.add(m["body"])
         self.s.sync()
         for row, f in self.s.entries().items():
-            if f.get("next", "").startswith("reported "):
-                self.world.completed.add(f["next"][9:])
             self.run_gate(row, f)
 
 
@@ -296,7 +273,7 @@ class World:
             f"env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C '{self.racer}' push -q origin HEAD:main; fi\n"
             "exit 0\n")
         (self.hooks / "pre-push").chmod(0o755)
-        self.mailbox, self.acts, self.completed = Mailbox(), collections.Counter(), set()
+        self.acts, self.completed = collections.Counter(), set()
         self.seats: dict[str, Seat] = {}
         self.runs: dict[str, str] = {}
         self.sessions: list[Session] = []
@@ -312,8 +289,8 @@ class World:
     def cos(self, seat: str, host: Host, harness: str, operator: Operator) -> Cos:
         return Cos(self, self.session(seat, host, harness), operator)
 
-    def seat(self, name: str, host: Host, harness: str, cos: Cos) -> Seat:
-        s = Seat(self, self.session(name, host, harness), cos.s.harness); self.seats[name] = s
+    def seat(self, name: str, host: Host, harness: str) -> Seat:
+        s = Seat(self, self.session(name, host, harness)); self.seats[name] = s
         return s
 
     def settle(self, cos: Cos, rounds: int = 3) -> None:
