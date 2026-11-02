@@ -36,7 +36,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - id: scan
-        env: { GH_TOKEN: "${{ github.token }}", ONLY: "${{ inputs.tag }}", BEFORE: "${{ github.event.before }}" }
+        # GATE as the publishing step reads it (#545): under `tap` the scan reads the Agent's `release-ready` lines, else
+        # the recorded `Y release`, so the scan and the publish never disagree about what is pending
+        env: { GH_TOKEN: "${{ github.token }}", ONLY: "${{ inputs.tag }}", BEFORE: "${{ github.event.before }}", GATE: "${{ vars.RELEASE_APPROVAL || 'ledger' }}" }
         run: python3 dyad/scripts/package.py release --scan   # the verb `dyad release`; python3 is setup-python's 3.12
   released:
     needs: scan
