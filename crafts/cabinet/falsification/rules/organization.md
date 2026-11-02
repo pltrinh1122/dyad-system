@@ -229,3 +229,18 @@ rewritten.
 | 50 | "Leader" survives in places (a member pair's leader, one leader per operator). | **Survives, scoped**: those name the multi-operator role of a pair's head, not the structural home; the structural uses say home. |
 
 **Survivor:** the four files as amended. VERSION stays 0.4.1 (untagged). Disposition: see ledger #553.
+
+## Amendment — dyad-system #556 (2026-11-02: three layers; units stop merging when the automaton is on)
+**Claim (plan #556 revisions 2–3, the operator's `Y` of 2026-11-02):** the Guide states the d-work's three layers —
+interaction at the home, orchestration and execution at a solo, run-book execution by the automaton — and that while
+`DYAD_AUTOMATON` is `on` no unit merges a row the automaton serves; §5 of this rule says the same of a unit's own merge.
+
+| # | attack | result |
+|---|---|---|
+| 51 | "The home holds interaction only" contradicts today, where the home dispatches and verifies. | **Survives, scoped**: the Guide says the home carries orchestration until the orchestrating secretary is chartered (row #557), and keeps its share to the five acts meanwhile. |
+| 52 | Stopping unit merges leaves a row stuck when the automaton refuses. | **Refuted**: a refusal is one notice to the home's inbox; the home hands it to the owning unit, which resolves the cause (a rebase, a fresh question); the automaton merges on its next run once the entry names the new head. |
+| 53 | Two writers race: a unit's `dyad merge` and the automaton's. | **Refuted**: the merge verb refuses a head already on `main`, so the loser of a race lands nothing; the Guide forbids the unit's merge while the switch is on, so the race is a breach, not a path. |
+| 54 | The switch is the operator's, yet this craft tells units how to read it. | **Survives**: the craft reads the switch; setting it stays the operator's, as `RELEASE_APPROVAL` is. |
+
+**Survivor:** §2's "Three layers" subsection and §5's sentence, as amended. VERSION stays 0.4.1 (untagged).
+Disposition: see ledger #556.
