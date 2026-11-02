@@ -1,0 +1,139 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/scale-out",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "scale-out",
+  "name": "Scale-out: solo or subagent",
+  "description": "Choose by what is actually holding the work back: a solo, subagents inside a solo, or neither.",
+  "dyad:decides": "To expedite outstanding work, add a solo, add subagents to a solo, or neither?",
+  "dyad:inputs": [
+    "the board's waiting-on field and its age",
+    "charter and files",
+    "acts needed",
+    "lifetime",
+    "where the solo is stuck",
+    "cost to the home",
+    "context",
+    "isolation"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hold-decision",
+      "name": "A decision waiting on you",
+      "dyad:when": "Step 0: what's holding it up is a decision waiting on the operator",
+      "dyad:then": "no solos, no subagents; batch the questions, put them in front of the operator sooner"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hold-order",
+      "name": "Dependency order",
+      "dyad:when": "Step 0: A must land before B",
+      "dyad:then": "no solos, no subagents; draft B ahead on A's branch, merge in order"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hold-race",
+      "name": "Merge races on `main`",
+      "dyad:when": "Step 0: landers race on main",
+      "dyad:then": "no solos (it gets worse), no subagents; fewer PRs landing at once, dyad merge retry"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hold-work",
+      "name": "Work inside a unit",
+      "dyad:when": "Step 0: the work inside a unit is the hold-up",
+      "dyad:then": "maybe a solo, maybe subagents: Step 1 decides"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "charter-files",
+      "name": "Charter and files",
+      "dyad:when": "Step 1: its own charter and files no other solo writes, or the same charter or the same files",
+      "dyad:then": "a solo for its own; subagents for the same, one writer per file"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "acts",
+      "name": "Acts needed",
+      "dyad:when": "Step 1: it must write rows, push, open PRs or merge in its own stream, or drafting, analysis, evidence runs, search",
+      "dyad:then": "a solo for the acts Rule-3 keeps out of subagents; subagents for the rest"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "lifetime",
+      "name": "Lifetime",
+      "dyad:when": "Step 1: a recurring stream that outlives one d-work and needs its own board and inbox, or a bounded task finished when it returns",
+      "dyad:then": "a solo for the recurring stream; subagents for the bounded task"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stuck",
+      "name": "Where the solo is stuck",
+      "dyad:when": "Step 1: its main chat is saturated with pushes, PRs and asks, or its drafting is the queue",
+      "dyad:then": "a solo when the main chat is saturated; subagents when drafting is the queue"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cost",
+      "name": "Cost to the home",
+      "dyad:when": "Step 1: relay and collect turns at the home, against none at the home",
+      "dyad:then": "a solo costs the home orchestration turns; subagents cost tokens inside the solo only"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "context",
+      "name": "Context",
+      "dyad:when": "Step 1: a clean, separately held view, or the solo's own context or an independent second read",
+      "dyad:then": "a solo for a separately held view; subagents for the solo's own context or a second read"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "isolation",
+      "name": "Isolation",
+      "dyad:when": "Step 1: its own container (heavy test runs, its own checkout), or a worktree inside the solo is enough",
+      "dyad:then": "a solo for its own container; subagents in a worktree otherwise"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "idle-first",
+      "name": "Use an idle solo before opening a new one",
+      "dyad:when": "tie-break: an idle solo exists",
+      "dyad:then": "use it; a new solo also has to be chartered, needs a seat name and adds to the board"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "one-writer",
+      "name": "One writer per file",
+      "dyad:when": "tie-break: two lanes would write one file",
+      "dyad:then": "one writer, the others stacked"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "one-pair",
+      "name": "the one-pair case",
+      "dyad:when": "organization is flat: one pair, no solo to add",
+      "dyad:then": "Step 1 reduces to subagent"
+    }
+  ],
+  "dyad:precedence": "Step 0 first; Step 1 only for work inside a unit; the tie-breaks decide what Step 1 leaves open",
+  "dyad:default": "neither",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "docs/operating-guide.md",
+  "dyad:alsoIn": [
+    "rules/organization.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}
