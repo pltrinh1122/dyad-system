@@ -225,6 +225,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
                                 lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
                                 unread and marks them read; `list` is read-only
+  dyad automaton scan|run      the d-work automaton (scripts/automaton.py, d-work #556): from ledger lines on origin/main
+                                only, merge the PRs a recorded Y done names (pinned, in order, retried with backoff on a
+                                race), close rows whose heads landed, notify board owners of a Y plan; a refusal is one
+                                notice to the home's inbox. Stateless and idempotent; `scan` is read-only
+  dyad steps verify-prs|done-record|close-landed|sync-mirror [--land]
+                                the d-work run-book's harvested steps (scripts/steps.py, d-work #556), parameters from
+                                the environment (PRS, DWORK, SAID, ACCRETED, MIRROR); idempotent; run by name through
+                                `dyad runbook run d-work <step>` or directly
   dyad bootstrap [--check]      make this clone fit to evidence and push from (scripts/bootstrap.py, d-work #474): set
                                 `core.hooksPath dyad/hooks`, unshallow a shallow clone with its tags, fetch tags when
                                 the core release tag BUNDLE.md's dyad-operator row names (dyad-operator-v<row>) is not
@@ -2089,6 +2097,14 @@ def cmd_inbox(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     return dyadlib.load_guard("agent", "inbox").cli(a, REPO)
 
+def cmd_steps(a):
+    """The d-work run-book's harvested steps live in scripts/steps.py (d-work #556); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "steps.py", "steps").main(a, REPO)
+
+def cmd_automaton(a):
+    """The d-work automaton lives in scripts/automaton.py (d-work #556); this is dispatch only (S4)."""
+    return dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton").main(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2113,6 +2129,10 @@ if __name__ == "__main__":
         sys.exit(cmd_bootstrap(a[1:]))
     if a and a[0] == "merge":
         sys.exit(cmd_merge(a[1:]))
+    if a and a[0] == "steps":
+        sys.exit(cmd_steps(a[1:]))
+    if a and a[0] == "automaton":
+        sys.exit(cmd_automaton(a[1:]))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
     if a and a[0] == "inbox":
