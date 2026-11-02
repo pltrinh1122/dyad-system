@@ -187,3 +187,15 @@ only (ceiling 1), so it is proposed to the Operator as its own row, not written 
 
 **Survivor:** `../../rules/organization.md` §1's cos bullet and §5's "Execute your own merge, on the record"; the Guide's §2
 merges sentence and its "never done at the cos" list. VERSION stays 0.3.2 (uncut). Disposition: see ledger #540.
+
+## Amendment — dyad-system #535 (2026-11-02: the Guide's §10 marks P1 delivered and describes the hop)
+**Claim (plan #535, the Operator's `Y` of 2026-11-02):** P1 is delivered by the board store (Rule-16) written ahead
+(Rule-3); the Guide's §10 says so and describes a hop with `dyad board resume`.
+
+| # | attack | result |
+|---|---|---|
+| 40 | The Guide marks P1 delivered before its exit test, the hop drill, has run. | **Survives, scoped**: the row is delivered by its Done, which follows the drill the cos runs after merge (plan #535, mutation); the Guide describes the drill as P1's exit test, not as passed. |
+| 41 | The hop contradicts §1's "one chief of staff". | **Refuted** (#531 S1): the office persists while its holder changes; the board is the office's memory. |
+| 42 | `dyad board` restates the core's verbs in a craft. | **Refuted**: the Guide describes the Operator's view of the verbs and cites Rules 3 and 16; it defines nothing. |
+
+**Survivor:** the Guide's §10 as amended. VERSION 0.4.1 (the drift guard requires it, `cabinet-v0.4.0` being cut). Disposition: see ledger #535.

@@ -274,7 +274,7 @@ and by many over time. You open any session on any machine, say "cos", and you a
 `backlog` row of the ledger.
 | phase | what lands | row | exit test |
 |---|---|---|---|
-| P1 | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
+| P1 — **delivered** (#535) | the cos's state externalized: the board rendered from the corpus; the pending queue and every question and relay in flight written as records on `main` (a Rule-3 amendment) | #535 | end the cos session mid-work; a fresh session reconstructs board, queue and open questions with no difference |
 | P2 | a store inbox on `main`: seats post there instead of to a session id; the cos reads it every turn | #536 | a terminal session holding a test seat receives and answers a relay with no message |
 | P3 | the lease: take, yield, status; a stable seat name for the cos; a take by a session holding another seat refused (warned); two holders warned | #537 | the cos is handed cloud → Mac terminal → cloud with no lost question, and two holders are warned on |
 | P4 | the mode as one loadable unit the cabinet craft ships: take the lease, render the board, read the inbox, report the queue | #538 | you open any session on any machine, say "cos", and are talking to the cos |
@@ -282,3 +282,21 @@ and by many over time. You open any session on any machine, say "cos", and you a
 P1 comes first because without the state in the corpus a hand-off loses the cos; P2 before P3 because a lease is
 useless while seats can reach only a session id; P4 is packaging once P1–P3 hold. P1 alone makes today's cos
 crash-safe, and P2 alone lets a terminal host desk (§9) hear the cos.
+
+**The hop, as P1 delivers it (#535).** The cos's orchestration in flight lives in the **board store**,
+`<instance>/d-work/board/` (Rule-16 Store): one file per open row — who holds the work and in which session (`owner`),
+what it waits on (`waiting-on`: you, a seat, or something external such as a release run), its next act (`next`), the
+question you owe word for word (`question`), and the follow-ups promised you (`promised`) — and `_cos.md` for the
+pending queue's counts, the seat table with each seat's session id, and the last question asked. The cos writes it
+**write-ahead** (Rule-3, Batch disposition): the entry first, then the dispatch, the relay or the question it
+records, each write one ledger-only commit (`dyad board set <id> key=value…`). So when the cos's session ends and
+another takes over — a **hop** — nothing in flight is lost:
+1. The new session takes the seat (`DYAD_SESSION=program-<hp>`, as §3) and runs `dyad board resume`, which prints the
+   questions you owe verbatim, the dispatched work and its waits, the external gates and the seats to announce to.
+2. It re-presents an open question unchanged, or tells you it is still pending; it never re-derives one, and asks
+   you nothing about state. What you see of the hop is one line: "cos resumed in <session>".
+3. It announces itself to every seat in `_cos.md`'s table, by session id, until P2's inbox makes that unnecessary.
+4. `dyad board` renders your board from the rows and the board store; it warns when the board's last `writer` is not
+   this session, the sign of two holders, which P3's lease will arbitrate.
+P1's exit test is the **hop drill**: mid-flight, with a seat dispatched and a question open, a fresh session resumes
+and closes the row with no lost item and no question about state; you observe it and are asked nothing.
