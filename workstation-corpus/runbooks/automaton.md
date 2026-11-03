@@ -77,7 +77,7 @@ undo: none
 postcondition: none
 scope: every store and the suite (read), origin's tags and Releases and the hosting's workflow runs (read), one notice in the home's inbox when a finding is new
 
-python3 dyad/scripts/package.py automaton sweep --row 564
+dyad/bin/dyad automaton sweep --row 564
 ```
 
 ## Logs
@@ -110,5 +110,5 @@ undo: none
 postcondition: none
 scope: workstation-corpus/runbooks/events/automaton.jsonl (read)
 
-grep -h '"name": "sweep"' workstation-corpus/runbooks/events/automaton.jsonl 2>/dev/null | python3 -c "import json,sys; [print(x['ts'], 'exit', x['exit'], x['output_tail'][-120:]) for x in map(json.loads, sys.stdin)]" || echo "no sweep recorded yet"
+f=workstation-corpus/runbooks/events/automaton.jsonl; if [ -f "$f" ] && grep -q '"name": "sweep"' "$f"; then grep -h '"name": "sweep"' "$f" | python3 -c "import json,sys; [print(x['ts'], 'exit', x['exit'], x['output_tail'][-120:]) for x in map(json.loads, sys.stdin)]"; else echo "no sweep recorded yet"; fi
 ```
