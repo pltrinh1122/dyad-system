@@ -156,3 +156,10 @@ as before, and Rule-16's reconcile owner is named by charter. No concern moves b
 unchanged. No gap is found.
 
 Disposition: see ledger #560.
+
+## Amendment — d-work #564 (2026-11-03: corroboration where the merge ran; the scheduled sweep)
+This Rule names the corroboration step that runs its guard in place of the CI job's own step, which corroboration
+replaced; the claim, its attacks (attack 9) and the pairwise statements are recorded once, in
+`rule-14-system-infrastructure.md`, amendment #564.
+
+Disposition: see ledger #564.

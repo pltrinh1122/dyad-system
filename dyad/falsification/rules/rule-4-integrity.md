@@ -56,3 +56,10 @@ sentence names the new file and step, meaning unchanged.
 **Pairwise (Rule-5).** **4–1**: the wrapper stays infra zone. **4–20**: the new path resolves on today's `main`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #477.
+
+## Amendment — d-work #564 (2026-11-03: corroboration where the merge ran; the scheduled sweep)
+This Rule names the corroboration step that runs its guard in place of the CI job's own step, which corroboration
+replaced; the claim, its attacks (attack 9) and the pairwise statements are recorded once, in
+`rule-14-system-infrastructure.md`, amendment #564.
+
+Disposition: see ledger #564.

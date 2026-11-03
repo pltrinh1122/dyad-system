@@ -231,8 +231,8 @@ absent, a batch passing when an earlier `land <instance>/d-work/traces/<id>.md` 
 Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
 live in `dyad/guards/agent/` (agent zone, Rule-1; placed per Rule-11 property 1) and run on the kernel-only path
 as transaction guards (`package.py check --guards`); their workflow wrapper
-(`.github/workflows/dyad-package.yml`, step `rule-3 d-work — direct commits to main touch only the d-work ledger (Rule-2 exception
-fence)`) is infra zone. Changing a guard is an agent-zone PR, changing
+(`.github/workflows/dyad-package.yml`, whose one step runs corroboration, `dyad check --corroborate`, its step
+`rule-3 fence (push range)`; Rule-14 property 3) is infra zone. Changing a guard is an agent-zone PR, changing
 the wrapper an infra-zone PR, each citing a Rule-3 d-work. The plan gate is enforced before a push
 by the kernel-only path (the PR guard over `origin/main..HEAD` with the commit messages as body);
 the wrapper corroborates on `main` only (#168). A state guard beside them checks the trace store on every
@@ -512,7 +512,8 @@ operator's case and spelling reach no machine directly; history keeps the old wo
 verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
 `../falsification/rules/rule-3-d-work.md`, amendment #556. Ledger's session-start bullet cites the organization craft's roles
 2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
-organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring 2026-11-03 (d-work #564); see
+organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring, and Mechanisms the fence's corroboration step in place of the CI job's,
+2026-11-03 (d-work #564); see
 `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
 
 Set: System Requirements.

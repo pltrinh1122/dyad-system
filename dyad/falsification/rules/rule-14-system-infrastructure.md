@@ -258,13 +258,15 @@ covers the sentences this d-work changes in Rules 2, 3, 7, 12 and 14.
 | 6 | (A6) A missed or disabled sweep goes unnoticed. | Survives with the event: each sweep writes one event (events-only, Rule-3), which is also repository activity, and the automaton's run-book's health command is the last sweep's age. |
 | 7 | The automaton both executes and checks its own merge. | Survives, accepted: it decides nothing in either act; the check is the same `check --corroborate` hosted CI runs, and the sweep re-checks independently. |
 | 8 | The vocabulary already has `sweep` (Rule-5's pairwise check). | Confirmed: the new term is `scheduled sweep`, so neither row is redefined. |
+| 9 | Rules 1, 3, 4 and 6 still name the CI job's steps by their old names, which corroboration replaces. | Confirmed (distribute's finding, the infra-zone PR): the job's steps became one, `check --corroborate`, so each Rule now names corroboration and its own step in it — `rule-1 containment (push range)` and `(tree)`, `rule-3 fence (push range)`, and `check` for the Rule-4 and Rule-6 guards. Same guards, same trigger (`main` pushed), still detecting. |
 
-**Rule-6.** New rows: `corroboration` (owner 14; used by 2, 14) and `scheduled sweep` (owner 14; used by 3, 7, 12, 14);
+**Rule-6.** New rows: `corroboration` (owner 14; used by 1, 2, 3, 4, 6, 14 — Rules 1, 3, 4 and 6 by attack 9) and `scheduled sweep` (owner 14; used by 3, 7, 12, 14);
 each listed Rule now uses the term in this sense.
 **Pairwise (Rule-5).** **14–2**: Binding names corroboration where the merge ran; property 3 owns what it runs. **14–12**:
 property 2 owns what the pre-push path runs and names the sweep as where the whole-store guards and the suite go;
 property 3 owns the sweep's description. **14–3**: Rule-3's monitoring clause classes the sweep as no d-work; the events
 it writes are Rule-3's events-only commits. **14–7**: Rule-7's state check is unchanged in content; only where its alarm
-sounds is named. **14–5**: `sweep` and `scheduled sweep` are distinct terms. Others unchanged. Coherent, orthogonal.
+sounds is named. **14–5**: `sweep` and `scheduled sweep` are distinct terms. **14–1, 14–4, 14–6**: each Rule owns its
+guard and names the corroboration step that runs it; property 3 owns corroboration. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #564.
