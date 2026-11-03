@@ -177,6 +177,25 @@ class MergeGuardTests(World):
             self.assertEqual(len(msgs), 1, text); self.assertTrue(msgs[0].startswith(f"warning: {mg.SINCE_FILE}: wants"), msgs)
             self.assertTrue(mg.summary(self.d).startswith("skip: "))
 
+    def test_rows_are_read_once_then_only_what_changed(self):
+        """#563 C4: across the merges judged, a row blob already parsed is never read again."""
+        for n in range(10, 30):
+            self.write({f"{INST}/d-work/rows/{n}.md": ROW.replace("id: 9", f"id: {n}").format(disposed="2026-10-31 Y plan")}, f"row {n}")
+        first = sh(self.d, "rev-parse", "HEAD")
+        second = self.record("2026-10-31 Y plan; 2026-10-31 N")        # one row changed
+        asked, real = [], subprocess.run
+        def spy(cmd, *a, **k):
+            if cmd[:3] == ["git", "cat-file", "--batch"]:
+                asked.append(len(k.get("input", b"").splitlines()))
+            return real(cmd, *a, **k)
+        cache = {}
+        with unittest.mock.patch.object(mg.subprocess, "run", spy):
+            rows1 = mg.rows_at(self.d, first, cache); rows2 = mg.rows_at(self.d, second, cache)
+            rows3 = mg.rows_at(self.d, second, cache)
+        self.assertEqual(asked, [21, 1])                                  # 21 rows once, then the one that changed, then none
+        self.assertEqual(len(rows1), 21); self.assertEqual(len(rows2), 21); self.assertEqual(rows2, rows3)
+        self.assertEqual([r.disposed for r in rows2 if r.id == 9], ["2026-10-31 Y plan; 2026-10-31 N"])
+
     def test_everything_is_a_warning(self):
         head = self.pr({"dyad/b.txt": "b\n"})
         self.merge(head, extra={"dyad/evil.txt": "x\n"})
