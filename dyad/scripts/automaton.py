@@ -14,6 +14,10 @@ ledger lines only and never from a conversation:
   (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: each owner's inbox
       gets one `notice`, "row #N planned; read plans/N.md". The seat still infers from the plan; this replaces only the
       message saying "go".
+  (d) **corroborate** — after a cut lands, `check --corroborate <before> <after>` runs on the landed tree in the same
+      job: what hosted CI on `main` checks, which a push made with the workflow's token never starts (d-work #564 E1).
+      The suite runs only when the landed code differs from an evidenced PR head. A failure is posted to home and the
+      run exits 1, so the run's conclusion shows it.
 A refusal decides nothing: it is posted once to the home's inbox as a `notice` (the board's `_cos` holder, or
 `AUTOMATON_HOME`), and the home takes it from there by inference. Every message names the row and never quotes an entry
 (the inbox carries information, never authority, #536).
@@ -32,7 +36,7 @@ commits carry the identity of whoever runs it; its inbox messages come from the 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("automaton.py: Python 3.12+ required")
-import os, re
+import os, re, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -179,11 +183,36 @@ def escalate(repo: Path, row: int, what: str, why: str) -> str:
         return f"refused, and the notice to {to} was refused too ({e}): {body}"
 
 
+LANDED = re.compile(r" as ([0-9a-f]{40}):")
+
+def corroborate(repo: Path, before: str, after: str) -> tuple[bool, list[str]]:
+    """Run `check --corroborate <before> <after>` with the landed tree's own runner, in the tool-owned worktree
+    detached at `after` (d-work #564 E1: the corroboration hosted CI cannot give a merge the workflow token pushed).
+    (passed, its lines)."""
+    common = Path(land.out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+    wt = common / land.WORKTREE
+    with land.locked(common):
+        land.prepare(repo, wt, after)
+        r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check", "--corroborate",
+                                 before, after], cwd=wt, capture_output=True, text=True, env=dyadlib.git_env())
+    return r.returncode == 0, (r.stdout + r.stderr).strip().splitlines()
+
 def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, str]:
     what = "merge of " + ", ".join(f"PR #{pr}" for pr, _ in cut)
     for n in range(RACE_TRIES):
         try:
-            return True, "\n".join(merge_mod.merge_all(repo, cut))
+            lines = merge_mod.merge_all(repo, cut)
+            heads = [m.group(1) for m in (LANDED.search(l) for l in lines) if m]
+            if not heads:
+                return True, "\n".join(lines)
+            before = land.out(repo, "rev-parse", f"{heads[0]}^1")
+            ok, out = corroborate(repo, before, heads[-1])
+            fails = [l for l in out if l.startswith("FAIL")]
+            if ok:
+                return True, "\n".join(lines + [f"corroborated row #{rid}'s cut at {heads[-1][:12]} (d-work #564)"])
+            CORROBORATION_FAILED.add(rid)
+            return True, "\n".join(lines + [escalate(repo, rid, "corroboration of the landed cut",
+                                                       (fails or out or ["no output"])[0])])
         except Refused as e:
             msg = str(e)
             if "already on origin/main" in msg:
@@ -202,6 +231,8 @@ def do_close(repo: Path, rid: int) -> str:
             return str(e)
         return escalate(repo, rid, "close", str(e))
 
+
+CORROBORATION_FAILED: set[int] = set()   # rows whose landed cut failed corroboration in this run: the run exits 1
 
 def run(repo: Path) -> list[str]:
     out, stopped = [], set()
@@ -235,8 +266,9 @@ def main(argv: list[str], repo: Path) -> int:
             print("\n".join(describe(x) for x in acts) or "nothing to do")
             return 0
         if a == ["run"]:
+            CORROBORATION_FAILED.clear()
             print("\n".join(run(Path(repo))))
-            return 0
+            return 1 if CORROBORATION_FAILED else 0
         print(USAGE, file=sys.stderr)
         return 2
     except Refused as e:

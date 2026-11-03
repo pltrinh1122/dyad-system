@@ -2367,6 +2367,22 @@ class CodeKeyedSkipTests(unittest.TestCase):
         (d / "code.txt").write_text("changed after the Y\n"); git("commit", "-qam", "more code")
         self.assertTrue(self.pkg.suite_gate("main~2", "HEAD", pre_push=True)[0])      # other code: the suite runs
 
+    def test_corroboration_skips_the_suite_only_for_an_evidenced_head(self):
+        """#564 E2: `check --corroborate` skips the suite when the landed code equals a merged PR head a Y done names."""
+        d, seed, git = self.repo()
+        git("switch", "-qc", "pr")
+        (d / "code.txt").write_text("the pr\n"); git("commit", "-qam", "pr")
+        pr = git("rev-parse", "HEAD")
+        git("switch", "-q", "main")
+        self.row(d, git, f"2026-11-03 Y plan; 2026-11-03 Y done (merges PR #5 at {pr})")
+        before = git("rev-parse", "HEAD")
+        git("merge", "-q", "--no-ff", "-m", "Merge PR #5", pr)
+        line = self.pkg.corroborate_suite_skip(before, "HEAD")
+        self.assertIn(f"the landed code equals PR #5's head {pr[:12]}", line)
+        self.assertIsNone(self.pkg.corroborate_suite_skip(None, "HEAD"))            # no range: the suite runs
+        (d / "code.txt").write_text("changed after the Y\n"); git("commit", "-qam", "more code")
+        self.assertIsNone(self.pkg.corroborate_suite_skip(before, "HEAD"))          # other code: the suite runs
+
     def test_b2_a_void_or_absent_done_y_runs(self):
         d, seed, git = self.repo()
         git("switch", "-qc", "pr")

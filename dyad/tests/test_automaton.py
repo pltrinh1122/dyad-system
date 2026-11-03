@@ -11,6 +11,8 @@ The cases:
 - A planned row with a board entry notifies each owner once.
 - A push race is re-merged at once, without backoff.
 - A row naming two PRs lands them as one cut: one push (#562).
+- A landed cut is corroborated once, before..after; a failed corroboration is posted to home and the run exits 1
+  (#564).
 - Misuse is exit 2."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -25,9 +27,14 @@ am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
 HOME = "program-aaaaaaaa"
 
 
-def run(argv, repo, **envs):
+CORROBORATED = []
+def passing(repo, before, after):
+    CORROBORATED.append((before, after)); return True, ["ok   [corroborate] check"]
+
+def run(argv, repo, corroborate=passing, **envs):
     out, err = io.StringIO(), io.StringIO()
     with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, **envs}), \
+         unittest.mock.patch.object(am, "corroborate", corroborate), \
          contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         rc = am.main(argv, repo)
     return rc, out.getvalue(), err.getvalue()
@@ -131,6 +138,25 @@ class AutomatonTests(unittest.TestCase):
         merges = git(self.w.origin, "rev-list", "--merges", "--first-parent", f"{before}..main").split()
         self.assertEqual(len(merges), 2)
         self.assertIn("state: done", self.on_main(f"{INST}/d-work/rows/9.md"))
+
+    def test_a_landed_cut_is_corroborated_once(self):
+        self.w.write_main(self.files)
+        before = git(self.w.origin, "rev-parse", "main")
+        CORROBORATED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        (b, a), = CORROBORATED
+        self.assertEqual(b, before)
+        self.assertIn(f"corroborated row #9's cut at {a[:12]}", out)
+        self.assertIn(self.sha, git(self.w.origin, "rev-list", "--parents", "-n", "1", a))
+
+    def test_a_failed_corroboration_is_told_and_the_run_exits_1(self):
+        self.w.write_main(self.files)
+        failing = lambda repo, before, after: (False, ["ok   [corroborate] check", "FAIL [corroborate] build: boom"])
+        rc, out, err = run(["run"], self.w.seat, corroborate=failing)
+        self.assertEqual(rc, 1, out + err)
+        (msg,) = self.inbox(HOME)
+        self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
 
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
