@@ -1747,6 +1747,8 @@ class SpawnSiteTests(unittest.TestCase):
                 "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
                 "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
+        "corroborate_git": "init, add and commit of `check --corroborate`'s own scratch repo under a temp dir, under "
+                           "corroborate_env(); never the repo judged (#564)",
         "checkout_snapshot": "status of the live checkout before and after the suite, under dyadlib.git_env(); no write "
                              "(the cleanliness fence, #552)",
         "evidence_in_worktree": "rev-parse of the common dir, then `worktree add --detach` and `worktree remove`/`prune` "
@@ -1758,6 +1760,8 @@ class SpawnSiteTests(unittest.TestCase):
     PY_ALLOWED = {
         "cmd_evidence_at": ("evidence_env", "the evidence block of another head, run by that tree's own runner; "
                                             "GIT_VARS dropped, DYAD_NO_NESTED_TESTS the caller's (#448)"),
+        "corroborate_py": ("corroborate_env", "`check --corroborate`'s steps, what hosted CI on main ran; the suite runs "
+                                              "unless an evidenced head's code equals the landed code (#564)"),
         "evidence_baseline_compute": ("baseline_env", "origin/main's `check` for its warn kinds, run by that tree's own "
                                                       "runner; GIT_VARS dropped and DYAD_NO_NESTED_TESTS set: never the suite (#476)"),
     }
@@ -2367,6 +2371,22 @@ class CodeKeyedSkipTests(unittest.TestCase):
         (d / "code.txt").write_text("changed after the Y\n"); git("commit", "-qam", "more code")
         self.assertTrue(self.pkg.suite_gate("main~2", "HEAD", pre_push=True)[0])      # other code: the suite runs
 
+    def test_corroboration_skips_the_suite_only_for_an_evidenced_head(self):
+        """#564 E2: `check --corroborate` skips the suite when the landed code equals a merged PR head a Y done names."""
+        d, seed, git = self.repo()
+        git("switch", "-qc", "pr")
+        (d / "code.txt").write_text("the pr\n"); git("commit", "-qam", "pr")
+        pr = git("rev-parse", "HEAD")
+        git("switch", "-q", "main")
+        self.row(d, git, f"2026-11-03 Y plan; 2026-11-03 Y done (merges PR #5 at {pr})")
+        before = git("rev-parse", "HEAD")
+        git("merge", "-q", "--no-ff", "-m", "Merge PR #5", pr)
+        line = self.pkg.corroborate_suite_skip(before, "HEAD")
+        self.assertIn(f"the landed code equals PR #5's head {pr[:12]}", line)
+        self.assertIsNone(self.pkg.corroborate_suite_skip(None, "HEAD"))            # no range: the suite runs
+        (d / "code.txt").write_text("changed after the Y\n"); git("commit", "-qam", "more code")
+        self.assertIsNone(self.pkg.corroborate_suite_skip(before, "HEAD"))          # other code: the suite runs
+
     def test_b2_a_void_or_absent_done_y_runs(self):
         d, seed, git = self.repo()
         git("switch", "-qc", "pr")
@@ -2384,6 +2404,38 @@ class CodeKeyedSkipTests(unittest.TestCase):
         self.assertIn(("check",), calls)                                   # the suite ran, memo or not
         self.assertEqual(reads, [])
         self.assertIn(f"code={self.pkg.code_digest()}", out.splitlines()[:4])
+
+
+class GateSplitTests(unittest.TestCase):
+    """d-work #564: on a clerical push (every path under the ledger or the events store) the pre-push gate leaves a
+    guard's state check to the sweep when the guard declares `CLERICAL_READS` and the push touches none of them; a
+    push carrying code, and every run without `--pre-push`, runs them all."""
+    def setUp(self):
+        SuiteMemoTests.setUp(self)
+
+    def test_clerical_paths_and_swept(self):
+        d, seed, git = SuiteMemoTests.repo(self)
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        base = git("rev-parse", "HEAD")
+        (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "row")
+        ledger = git("rev-parse", "HEAD")
+        self.assertEqual(self.pkg.clerical_paths(base, ledger), [f"{inst}/d-work/rows/2.md"])
+        guard = type("G", (), {"CLERICAL_READS": ()}); reads_version = type("V", (), {"CLERICAL_READS": ("d-work/VERSION",)})
+        self.assertTrue(self.pkg.swept(guard, self.pkg.clerical_paths(base, ledger)))
+        self.assertFalse(self.pkg.swept(type("U", (), {}), self.pkg.clerical_paths(base, ledger)))   # undeclared: always runs
+        self.assertFalse(self.pkg.swept(guard, None))                                                # no clerical range
+        (d / inst / "d-work" / "VERSION").write_text("1\n"); git("add", "-A"); git("commit", "-qm", "version")
+        self.assertFalse(self.pkg.swept(reads_version, self.pkg.clerical_paths(base, "HEAD")))       # it touches what it reads
+        self.assertTrue(self.pkg.swept(reads_version, self.pkg.clerical_paths(base, ledger)))
+        (d / "code.txt").write_text("more\n"); git("commit", "-qam", "code")
+        self.assertIsNone(self.pkg.clerical_paths(base, "HEAD"))                                     # code: nothing swept
+        self.assertIsNone(self.pkg.clerical_paths("HEAD", "HEAD"))                                   # empty range
+
+    def test_the_declaring_guards_read_no_ledger(self):
+        declared = {f"{c}/{e}" for c, e, _, _, mod, _ in self.pkg.registry() if mod is not None and hasattr(mod, "CLERICAL_READS")}
+        self.assertTrue({"agent/merges", "infra/manifest", "craft/crafts", "agent/dmc", "infra/bundle"} <= declared)
+        self.assertFalse(declared & {"agent/rows", "agent/provenance", "agent/plans", "agent/traces", "agent/board",
+                                     "agent/inbox", "agent/references", "syseng/naming"})   # these read the ledger: never swept
 
 
 class InstalledRootTests(unittest.TestCase):

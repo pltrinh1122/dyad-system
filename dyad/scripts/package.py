@@ -23,6 +23,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 when the suite memo proves this tree already passed on this checkout (#162),
                                 and a test root is skipped whose craft tree is byte-identical to its
                                 crafts/REGISTRY.md row, an install's, unmodified (#176)
+  dyad check --corroborate [<before> [<after>]]
+                                what hosted CI on main checked, as one command (d-work #564): check, containment
+                                and the fence over the range, build, a scratch install; the suite only when the
+                                landed code differs from an evidenced PR head
   dyad check --pr <base> [<head>]
                                 the PR transaction (Rule-1 binds a commit and a PR; a push range is
                                 neither): the invariant pass, then every transaction guard's `check_pr`
@@ -1121,6 +1125,29 @@ def done_head_refusals(lines, base="origin/main"):
                             f"new head and record it before pushing (Rule-3 Completion, #495)")
     return refusals, notes
 
+def clerical_paths(base, head):
+    """The paths `base..head` changes when every one lies under the ledger (`<instance>/d-work/`) or the events store,
+    else None: the push the gate split serves (d-work #564). None too when the range cannot be read or is empty."""
+    if not head:
+        return None
+    paths = dyadlib.range_paths(REPO, base, head, merge_base=False)
+    if not paths:
+        return None
+    rel, events = dyadlib.instance_rel(REPO), dyadlib.events_rel(REPO)
+    under = tuple(p for p in (f"{rel}/d-work/" if rel else None, f"{events}/" if events else None) if p)
+    return list(paths) if under and all(p.startswith(under) for p in paths) else None
+
+def swept(mod, clerical) -> bool:
+    """Whether the pre-push gate leaves `mod`'s state check to the sweep (d-work #564): it declares `CLERICAL_READS`
+    (the instance-relative ledger or events paths it reads), the push is clerical, and it touches none of them.
+    `check --evidence`, `check` and `check --guards` without `--pre-push` never pass `clerical`."""
+    reads = getattr(mod, "CLERICAL_READS", None)
+    if clerical is None or reads is None:
+        return False
+    rel = dyadlib.instance_rel(REPO) or ""
+    wanted = tuple(f"{rel}/{r}" for r in reads)
+    return not any(p.startswith(wanted) for p in clerical) if wanted else True
+
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -1156,10 +1183,14 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         pushed = None
     rc = cmd_invariants()
     entries = registry()
+    clerical = clerical_paths(base, pushed) if pre_push else None
     for corpus, entity, rel, tx, mod, problem in entries:
         label = f"{corpus}/{entity}"
         if mod is None:
             print(f"FAIL [guards] {label}: {problem}"); rc = 1; continue
+        if swept(mod, clerical):
+            print(f"skip [guards] {label}: a clerical push touches nothing it reads; the sweep runs it (d-work #564)")
+            continue
         msgs = mod.check_package(REPO)
         fails = [m for m in msgs if not m.startswith("warning:")]
         for m in msgs:
@@ -1619,6 +1650,95 @@ def cmd_check():
             print(f"ok   [{name}]")
     print(f"package: {len(package_files())} files")
     return rc
+
+# ---- corroboration (d-work #564 revision 2, E1-E4): what hosted CI on `main` checked, as one command that the CI
+# workflow and the automaton's own job both call, so the two cannot drift apart. Run on the landed tree, once.
+CORROBORATE_CRAFT, CORROBORATE_DWORK = "sysadmin", "156"   # the craft CI has always exported and installed into the scratch repo
+
+def corroborate_suite_skip(before, after):
+    """The skip line when the code landed in `before..after` equals the code of a PR head that the range merged and
+    an operative `Y done` names — its evidence passed every root (Rule-2 Binding) and the sweep runs the suite in the
+    hosting's environment (plan #564, decision 4) — else None."""
+    if not before:
+        return None
+    code = code_digest(after)
+    merged = (_git("rev-list", "--first-parent", "--merges", "--parents", f"{before}..{after}") or "").splitlines()
+    second = {line.split()[2] for line in merged if len(line.split()) >= 3}
+    if not code or not second:
+        return None
+    try:
+        named = dyadlib.load_guard("agent", "rows").named_heads(dyadlib.read_rows(REPO, at=after), terminal=True)
+    except Exception:
+        return None
+    for rid, pr, sha, _ in named:
+        hit = next((h for h in second if h.startswith(sha)), None)
+        if hit and code_digest(hit) == code:
+            return (f"skip [corroborate] Rule-12 suite: the landed code equals PR #{pr}'s head {hit[:12]}, named by row "
+                    f"#{rid}'s Y done, whose evidence passed every root; the sweep runs it here (d-work #564)")
+    return None
+
+def cmd_corroborate(before=None, after="HEAD"):
+    """`check --corroborate [<before> [<after>]]`: the corroboration of a landed tree, the steps hosted CI on `main`
+    ran (`dyad-package.yml`): `check`, Rule-1 containment over the push range and the tree, the Rule-3 fence over
+    the range, `build`, and a scratch install of the core and the sysadmin craft with its guards and an idempotent
+    reinstall. The suite runs, in both `check`s, unless `corroborate_suite_skip` names the evidenced head. One line
+    per step; rc 1 when any step failed."""
+    import tempfile
+    after = _git("rev-parse", "--verify", "-q", f"{after}^{{commit}}") or after
+    skip = corroborate_suite_skip(before, after)
+    if skip:
+        print(skip)
+    rc = 0
+    def corroborate_py(*args, cwd=REPO):
+        return subprocess.run([sys.executable, *map(str, args)], cwd=cwd, capture_output=True, text=True,
+                              env=corroborate_env(bool(skip)))
+    def corroborate_git(*args, cwd=REPO):
+        return subprocess.run(["git", *map(str, args)], cwd=cwd, capture_output=True, text=True,
+                              env=corroborate_env(bool(skip)))
+    def step(name, *runs, expect=None):
+        nonlocal rc
+        for run in runs:
+            r = run()
+            if r.returncode or (expect and expect not in r.stdout):
+                print(f"FAIL [corroborate] {name}: " + " | ".join((r.stdout + r.stderr).strip().splitlines()[-3:])); rc = 1
+                return False
+        print(f"ok   [corroborate] {name}")
+        return True
+    pkg_py, guards = REPO / "dyad" / "scripts" / "package.py", REPO / "dyad" / "guards"
+    step("check", lambda: corroborate_py(pkg_py, "check"))
+    if before:
+        step("rule-1 containment (push range)", lambda: corroborate_py(guards / "infra" / "containment.py", "range", before, after))
+        step("rule-3 fence (push range)", lambda: corroborate_py(guards / "agent" / "rows.py", before, after))
+    step("rule-1 containment (tree)", lambda: corroborate_py(guards / "infra" / "containment.py", "tree"))
+    with tempfile.TemporaryDirectory(prefix="dyad-corroborate-") as tmp:
+        tmp = Path(tmp); arc, craft_arc, t = tmp / "dyad.tar.gz", tmp / f"{CORROBORATE_CRAFT}.tar.gz", tmp / "scratch"
+        t.mkdir()
+        step("build", lambda: corroborate_py(pkg_py, "build", arc))
+        ident = ("-c", "user.email=corroborate@dyad", "-c", "user.name=corroborate")
+        if step("scratch install", lambda: corroborate_git("init", "-q", cwd=t),
+                lambda: corroborate_py(pkg_py, "install", t),
+                lambda: corroborate_py(pkg_py, "craft", "export", CORROBORATE_CRAFT, craft_arc),
+                lambda: corroborate_py(t / "dyad" / "scripts" / "package.py", "craft", "install", craft_arc,
+                                       "--dwork", CORROBORATE_DWORK, cwd=t),
+                lambda: corroborate_git("add", "-A", cwd=t), lambda: corroborate_git(*ident, "commit", "-qm", "scratch", cwd=t)):
+            step("scratch guards", lambda: corroborate_py("dyad/guards/agent/rules.py", cwd=t),
+                 lambda: corroborate_py("dyad/guards/agent/vocabulary.py", cwd=t),
+                 lambda: corroborate_py("dyad/guards/infra/containment.py", "tree", cwd=t),
+                 lambda: corroborate_py("dyad/scripts/package.py", "check", cwd=t),
+                 lambda: corroborate_py("dyad/scripts/package.py", "check", "--guards", cwd=t))
+            step("scratch reinstall is idempotent", lambda: corroborate_py("dyad/scripts/package.py", "craft", "install",
+                                                                           craft_arc, cwd=t), expect=" 0 changes")
+            step("core reinstall is idempotent", lambda: corroborate_py(pkg_py, "install", t), expect=" 0 changes")
+    return rc
+
+def corroborate_env(skip_suite: bool) -> dict:
+    """The environment of every corroboration child: GIT_VARS dropped, no bytecode, and DYAD_NO_NESTED_TESTS set only
+    when `corroborate_suite_skip` named an evidenced head; otherwise the children run the suite, as CI's did."""
+    env = {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
+    env.pop("DYAD_NO_NESTED_TESTS", None)
+    if skip_suite or os.environ.get("DYAD_NO_NESTED_TESTS"):
+        env["DYAD_NO_NESTED_TESTS"] = "1"
+    return env
 
 def cmd_build(out=None):
     """The core craft's export: the one code path (distribute.build; deterministic, p5)."""
@@ -2238,6 +2358,8 @@ if __name__ == "__main__":
         if "--at" in a:                                                  # check --evidence --at <rev> (#448)
             i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None, brief=brief))
         sys.exit(cmd_evidence(brief=brief))
+    if a[0] == "check" and "--corroborate" in a:                       # check --corroborate [<before> [<after>]] (#564)
+        i = a.index("--corroborate"); sys.exit(cmd_corroborate(*a[i + 1:i + 3]))
     if a[0] == "check" and "--pr" in a:
         i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
     if a[0] == "check" and "--guards" in a:

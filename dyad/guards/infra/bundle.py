@@ -56,6 +56,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "bundle", "infra", False
+CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative) its state check reads —
+                          # `BUNDLE.md`, the crafts' VERSION files and the tags; on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "bundle row", "Rule-11"
 CORE_NAME = "dyad-operator"                        # crafts/craft.py's own CORE_NAME; a bundle row uses the same name
 FIELDS = ("component", "version")

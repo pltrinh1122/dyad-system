@@ -30,6 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "dmc", "agent", False
+CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative) its state check reads —
+                          # the DMC stores of the core, the crafts and the instance (`<instance>/dmc/`), none under the ledger or the events; on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "decision-making criterion", "Rule-12"
 FIELDS = ("@context", "@id", "@type", "identifier", "name", "description", "dyad:decides", "dyad:inputs",
           "hasDefinedTerm", "dyad:precedence", "dyad:default", "dyad:judgedBy", "isPartOf", "dyad:home",
