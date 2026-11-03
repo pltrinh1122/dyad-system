@@ -59,11 +59,23 @@ def scratch_repo(paths, tracked=True):
         subprocess.run(["git", "-C", str(d), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], check=True)
     return d
 
+_EVIDENCE = None
+def evidence_in_a_hermetic_clone():
+    """One `check --evidence` in a hermetic clone of HEAD per test process, read by the tests that only read its
+    output (d-work #563 C3): (clone, completed run). Its `check` lines are the ones `check` prints, since
+    `cmd_evidence` runs `cmd_check` then `cmd_guards`."""
+    global _EVIDENCE
+    if _EVIDENCE is None:
+        clone = hermetic_clone()                      # #529: tags under the test's control, not the live repo's
+        _EVIDENCE = clone, subprocess.run([sys.executable, str(clone / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
+                                          cwd=clone, capture_output=True, text=True, env={**env(), **dyadlib.git_env()})
+    return _EVIDENCE
+
 class PackageTests(livetest.LiveCase):
     def run_py(self, *a):
         return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), *a], capture_output=True, text=True)
     def test_check_runs_and_reports_rules_and_guards(self):
-        r = self.run_py("check")
+        _, r = evidence_in_a_hermetic_clone()          # the check lines of the shared run (#563 C3)
         self.assertIn("[Rule-11]", r.stdout); self.assertIn("[Rule-12]", r.stdout)
         pkg = load_package()
         self.assertEqual(list(pkg.CHECKS)[:2], ["Rule-11", "Rule-12"])
@@ -625,9 +637,7 @@ class PackageTests(livetest.LiveCase):
     # The hash property itself is unit-tested separately, on fixed fake lines, in
     # test_evidence_sha256_is_pure_and_deterministic below.
     def test_evidence_block_shape_and_hash(self):
-        clone = hermetic_clone()                      # #529: tags under the test's control, not the live repo's
-        r = subprocess.run([sys.executable, str(clone / "dyad" / "scripts" / "package.py"), "check", "--evidence"],
-                           cwd=clone, capture_output=True, text=True, env={**env(), **dyadlib.git_env()})
+        clone, r = evidence_in_a_hermetic_clone()     # shared with the check-report test (#563 C3)
         lines = r.stdout.splitlines()
         self.assertNotIn("FAIL [evidence]", r.stdout, r.stdout + r.stderr)
         self.assertRegex(lines[0], r"^head=[0-9a-f]{40}$"); self.assertRegex(lines[1], r"^tree=[0-9a-f]{40}$")
@@ -1793,17 +1803,26 @@ class EvidenceAtTests(unittest.TestCase):
         (d / "note.md").write_text("staged\n"); self.git(d, "add", "note.md")
         (d / "stray.txt").write_text("untracked\n")
         return d
+    _full = None
+    def full_at_head_1(self):
+        """One full `--at HEAD~1` run over one fixture, shared by the tests that only read it (d-work #563 C3): (repo,
+        target, tree, the run, the snapshot before, the snapshot after, the leftovers after), all taken at the run."""
+        cls = type(self)
+        if cls._full is None:
+            d = self.fixture()
+            target = self.git(d, "rev-parse", "HEAD~1").strip(); tree = self.git(d, "rev-parse", "HEAD~1^{tree}").strip()
+            before = self.snapshot(d)
+            r = self.at(d, "HEAD~1")
+            cls._full = (d, target, tree, r, before, self.snapshot(d), self.leftovers(d))
+        return cls._full
     def test_a_head_other_than_HEAD_is_evidenced_and_the_checkout_untouched(self):
-        d = self.fixture()
-        target = self.git(d, "rev-parse", "HEAD~1").strip(); tree = self.git(d, "rev-parse", "HEAD~1^{tree}").strip()
-        before = self.snapshot(d)
-        r = self.at(d, "HEAD~1")
+        d, target, tree, r, before, after, leftovers = self.full_at_head_1()
         lines = r.stdout.splitlines()
         self.assertEqual(lines[:3], [f"head={target}", f"tree={tree}", "dirty=no"], r.stdout + r.stderr)
         self.assertTrue(any("[guards] infra/containment" in l for l in lines), r.stdout)
         self.assertEqual(lines[-1], "evidence-sha256=" + load_package().evidence_sha256(lines[:-1]))   # the block's own form
-        self.assertEqual(self.snapshot(d), before)          # files, HEAD, index, status and worktrees as they were
-        self.assertEqual(self.leftovers(d), [])             # the worktree and git's record of it are gone
+        self.assertEqual(after, before)                     # files, HEAD, index, status and worktrees as they were
+        self.assertEqual(leftovers, [])                     # the worktree and git's record of it are gone
         self.assertNotIn("warn [evidence]", r.stderr)
     def test_b_the_worktree_is_removed_when_the_child_fails(self):
         d = self.fixture()
@@ -1837,9 +1856,8 @@ class EvidenceAtTests(unittest.TestCase):
     def test_e_brief_composes_with_at_and_stores_the_childs_block(self):
         """#476: `--brief --at <rev>` reads the child's full block short in the parent, with the full form's hash,
         and stores the full block, which `--show` prints back by a 12-hex prefix."""
-        d = self.fixture()
-        target = self.git(d, "rev-parse", "HEAD~1").strip()
-        full, brief = self.at(d, "HEAD~1"), self.at(d, "HEAD~1", "--brief")
+        d, target, _, full, _, _, _ = self.full_at_head_1()   # the full form's run, shared (#563 C3)
+        brief = self.at(d, "HEAD~1", "--brief")
         self.assertEqual(brief.returncode, full.returncode, brief.stdout + brief.stderr)
         b = brief.stdout.splitlines()
         self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^code=[0-9a-f]{64}$")
