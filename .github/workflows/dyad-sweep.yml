@@ -1,0 +1,51 @@
+name: d-work sweep
+# The automaton's scheduled sweep (d-work #564; run-book `workstation-corpus/runbooks/automaton.md`, operate's,
+# Rule-19). Twice a day, at 6:00 and 18:00 America/Los_Angeles, it runs the run-book's `sweep`
+# (`dyad automaton sweep --row 564`, read-only):
+#   - every guard over every store and the full suite;
+#   - the outside-repo drift checks: archives against BUNDLE.sha256 and their tags, moved tags, the mirror against main;
+#   - code pushes to main with no successful corroboration;
+#   - a Y done whose heads have not landed, and stale board entries.
+# It posts one notice to the home's inbox only for a finding that is new or failing. The core runner records the
+# sweep's event, which this job commits events-only (clerical, Rule-3; no row, no PR) through the pre-push gate.
+# That commit is the heartbeat the run-book's health reads (last sweep under 13 h), and it is the repository activity
+# that keeps GitHub from disabling the schedule. A red sweep notifies; it holds nothing (plan #564, decision 2).
+on:
+  schedule:
+    - cron: '0 6,18 * * *'
+      timezone: 'America/Los_Angeles'
+  workflow_dispatch: {}
+permissions:
+  contents: write   # the events-only commit and the inbox notice
+  actions: read     # the corroboration check reads the workflow runs
+concurrency: { group: dyad-sweep, cancel-in-progress: false }
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0, fetch-tags: true }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: sweep, through the automaton run-book
+        env:
+          DYAD_SESSION: automaton   # the inbox sender's seat
+          GITHUB_TOKEN: "${{ github.token }}"
+          GITHUB_REPOSITORY: "${{ github.repository }}"
+        run: |
+          TZ=America/Los_Angeles printf 'sweep at %(%Y-%m-%d %H:%M %Z)T (scheduled for 06 and 18 Pacific)\n' -1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
+          rc=0
+          python3 dyad/scripts/package.py runbook run automaton sweep || rc=$?
+          ev=workstation-corpus/runbooks/events/automaton.jsonl
+          if [ -n "$(git status --porcelain -- "$ev")" ]; then
+            git add -- "$ev"
+            git commit -qm "events: automaton sweep (d-work #564)"
+            # main may have moved (the sweep's own inbox notice lands first): rebase the event and push, one retry
+            { git pull -q --rebase origin main && git push -q origin HEAD:main; } ||
+              { git pull -q --rebase origin main && git push -q origin HEAD:main; }
+          fi
+          exit $rc

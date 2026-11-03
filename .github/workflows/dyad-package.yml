@@ -1,48 +1,28 @@
 name: rule-11 package
+# Hosted corroboration on `main` (Rule-14 property 3; d-work #564 revision 2): every step this job used to run —
+# `check`, Rule-1 containment over the push range and the tree, the Rule-3 fence over the range, the Rule-4 and
+# Rule-6 guards (inside `check`), `build`, and a scratch install of the core and the sysadmin craft with its guards
+# and an idempotent reinstall — is one command, `check --corroborate`, which the automaton's own job calls too, so the
+# two cannot drift apart. The suite runs unless the landed code equals a head a done-`Y`'s evidence passed (E2).
+# One run per push and only the newest kept (E3): a stack of merges is corroborated once, on the tree that stands.
+# Events-only pushes (the sweep's heartbeat, read-only run-book observations) change no code and start no run (E5).
 on:
   push:
     branches: [main]
-    paths-ignore: ['agent-corpus/d-work/**']
+    paths-ignore: ['agent-corpus/d-work/**', 'workstation-corpus/runbooks/events/**']
   workflow_dispatch:
+concurrency: { group: main, cancel-in-progress: true }
 jobs:
   package:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: check (Rule-11 runner)
-        run: python3 dyad/scripts/package.py check
-      # The four former wrappers, one job (d-work #477, #473 C4): one runner set-up per push instead of five.
-      - name: rule-1 containment — each new commit stays in one zone (push range)
-        if: github.event_name == 'push'
-        run: python3 dyad/guards/infra/containment.py range "${{ github.event.before }}" "${{ github.sha }}"
-      - name: rule-1 containment — every tracked file is classified
-        run: python3 dyad/guards/infra/containment.py tree
-      - name: rule-3 d-work — direct commits to main touch only the d-work ledger (Rule-2 exception fence)
-        if: github.event_name == 'push'
-        run: python3 dyad/guards/agent/rows.py "${{ github.event.before }}" "${{ github.sha }}"
-      - name: rule-4 integrity — every Rule carries a conforming integrity block
-        run: python3 dyad/guards/agent/rules.py
-      - name: rule-6 vocabulary — table well-formed, owners and used-by resolve, no orphans
-        run: python3 dyad/guards/agent/vocabulary.py
-      - name: build
-        run: python3 dyad/scripts/package.py build /tmp/dyad-package.tar.gz
-      - name: install core, then export and install the sysadmin craft, into a scratch repo; run the guards there; install both again (idempotent)
-        # the scratch's own python runs here (`"$T"/dyad/bin/dyad craft install`); without this it writes
-        # bytecode into "$T", `git add -A` tracks it, and the scratch's `check` fails Rule-11 property 6 (#171)
+      - name: corroborate (Rule-11 runner, Rule-1 containment, Rule-3 fence, build, scratch install)
+        # the scratch's own python runs inside it; without this it writes bytecode into the scratch, `git add -A`
+        # tracks it, and the scratch's `check` fails Rule-11 property 6 (#171)
         env: { PYTHONDONTWRITEBYTECODE: "1" }
-        run: |
-          set -e
-          T=$(mktemp -d); git -C "$T" init -q
-          python3 dyad/scripts/package.py install "$T"
-          python3 dyad/scripts/package.py craft export sysadmin /tmp/sysadmin.tar.gz
-          "$T"/dyad/bin/dyad craft install /tmp/sysadmin.tar.gz --dwork 156
-          cd "$T"; git add -A; git -c user.email=ci@dyad -c user.name=ci commit -qm scratch
-          python3 dyad/guards/agent/rules.py; python3 dyad/guards/agent/vocabulary.py; python3 dyad/guards/infra/containment.py tree
-          python3 dyad/scripts/package.py check
-          python3 dyad/scripts/package.py check --guards
-          python3 dyad/scripts/package.py craft install /tmp/sysadmin.tar.gz | grep -q ' 0 changes'
-          cd -; python3 dyad/scripts/package.py install "$T" | grep -q ' 0 changes'
+        run: python3 dyad/scripts/package.py check --corroborate "${{ github.event.before }}" "${{ github.sha }}"
