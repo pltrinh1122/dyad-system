@@ -1686,42 +1686,59 @@ def cmd_corroborate(before=None, after="HEAD"):
     import tempfile
     after = _git("rev-parse", "--verify", "-q", f"{after}^{{commit}}") or after
     skip = corroborate_suite_skip(before, after)
-    env = {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
     if skip:
-        print(skip); env["DYAD_NO_NESTED_TESTS"] = "1"
-    py, rc = sys.executable, 0
-    def step(name, *cmds, cwd=REPO, expect=None):
+        print(skip)
+    rc = 0
+    def corroborate_py(*args, cwd=REPO):
+        return subprocess.run([sys.executable, *map(str, args)], cwd=cwd, capture_output=True, text=True,
+                              env=corroborate_env(bool(skip)))
+    def corroborate_git(*args, cwd=REPO):
+        return subprocess.run(["git", *map(str, args)], cwd=cwd, capture_output=True, text=True,
+                              env=corroborate_env(bool(skip)))
+    def step(name, *runs, expect=None):
         nonlocal rc
-        for cmd in cmds:
-            r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env)
-            out = (r.stdout + r.stderr).strip()
+        for run in runs:
+            r = run()
             if r.returncode or (expect and expect not in r.stdout):
-                print(f"FAIL [corroborate] {name}: {' '.join(str(c) for c in cmd[1:4])} — "
-                      + " | ".join(out.splitlines()[-3:])); rc = 1; return False
+                print(f"FAIL [corroborate] {name}: " + " | ".join((r.stdout + r.stderr).strip().splitlines()[-3:])); rc = 1
+                return False
         print(f"ok   [corroborate] {name}")
         return True
-    scripts, guards = REPO / "dyad" / "scripts", REPO / "dyad" / "guards"
-    step("check", [py, str(scripts / "package.py"), "check"])
+    pkg_py, guards = REPO / "dyad" / "scripts" / "package.py", REPO / "dyad" / "guards"
+    step("check", lambda: corroborate_py(pkg_py, "check"))
     if before:
-        step("rule-1 containment (push range)", [py, str(guards / "infra" / "containment.py"), "range", before, after])
-        step("rule-3 fence (push range)", [py, str(guards / "agent" / "rows.py"), before, after])
-    step("rule-1 containment (tree)", [py, str(guards / "infra" / "containment.py"), "tree"])
+        step("rule-1 containment (push range)", lambda: corroborate_py(guards / "infra" / "containment.py", "range", before, after))
+        step("rule-3 fence (push range)", lambda: corroborate_py(guards / "agent" / "rows.py", before, after))
+    step("rule-1 containment (tree)", lambda: corroborate_py(guards / "infra" / "containment.py", "tree"))
     with tempfile.TemporaryDirectory(prefix="dyad-corroborate-") as tmp:
         tmp = Path(tmp); arc, craft_arc, t = tmp / "dyad.tar.gz", tmp / f"{CORROBORATE_CRAFT}.tar.gz", tmp / "scratch"
-        step("build", [py, str(scripts / "package.py"), "build", str(arc)])
-        t.mkdir(); subprocess.run(["git", "-C", str(t), "init", "-q"], env=env)
-        ident = ["-c", "user.email=corroborate@dyad", "-c", "user.name=corroborate"]
-        if step("scratch install", [py, str(scripts / "package.py"), "install", str(t)],
-                [py, str(scripts / "package.py"), "craft", "export", CORROBORATE_CRAFT, str(craft_arc)],
-                [str(t / "dyad" / "bin" / "dyad"), "craft", "install", str(craft_arc), "--dwork", CORROBORATE_DWORK],
-                ["git", "-C", str(t), "add", "-A"], ["git", "-C", str(t), *ident, "commit", "-qm", "scratch"]):
-            step("scratch guards", [py, "dyad/guards/agent/rules.py"], [py, "dyad/guards/agent/vocabulary.py"],
-                 [py, "dyad/guards/infra/containment.py", "tree"], [py, "dyad/scripts/package.py", "check"],
-                 [py, "dyad/scripts/package.py", "check", "--guards"], cwd=t)
-            step("scratch reinstall is idempotent", [py, "dyad/scripts/package.py", "craft", "install", str(craft_arc)],
-                 cwd=t, expect=" 0 changes")
-            step("core reinstall is idempotent", [py, str(scripts / "package.py"), "install", str(t)], expect=" 0 changes")
+        t.mkdir()
+        step("build", lambda: corroborate_py(pkg_py, "build", arc))
+        ident = ("-c", "user.email=corroborate@dyad", "-c", "user.name=corroborate")
+        if step("scratch install", lambda: corroborate_git("init", "-q", cwd=t),
+                lambda: corroborate_py(pkg_py, "install", t),
+                lambda: corroborate_py(pkg_py, "craft", "export", CORROBORATE_CRAFT, craft_arc),
+                lambda: corroborate_py(t / "dyad" / "scripts" / "package.py", "craft", "install", craft_arc,
+                                       "--dwork", CORROBORATE_DWORK, cwd=t),
+                lambda: corroborate_git("add", "-A", cwd=t), lambda: corroborate_git(*ident, "commit", "-qm", "scratch", cwd=t)):
+            step("scratch guards", lambda: corroborate_py("dyad/guards/agent/rules.py", cwd=t),
+                 lambda: corroborate_py("dyad/guards/agent/vocabulary.py", cwd=t),
+                 lambda: corroborate_py("dyad/guards/infra/containment.py", "tree", cwd=t),
+                 lambda: corroborate_py("dyad/scripts/package.py", "check", cwd=t),
+                 lambda: corroborate_py("dyad/scripts/package.py", "check", "--guards", cwd=t))
+            step("scratch reinstall is idempotent", lambda: corroborate_py("dyad/scripts/package.py", "craft", "install",
+                                                                           craft_arc, cwd=t), expect=" 0 changes")
+            step("core reinstall is idempotent", lambda: corroborate_py(pkg_py, "install", t), expect=" 0 changes")
     return rc
+
+def corroborate_env(skip_suite: bool) -> dict:
+    """The environment of every corroboration child: GIT_VARS dropped, no bytecode, and DYAD_NO_NESTED_TESTS set only
+    when `corroborate_suite_skip` named an evidenced head; otherwise the children run the suite, as CI's did."""
+    env = {**dyadlib.git_env(), "PYTHONDONTWRITEBYTECODE": "1"}
+    env.pop("DYAD_NO_NESTED_TESTS", None)
+    if skip_suite or os.environ.get("DYAD_NO_NESTED_TESTS"):
+        env["DYAD_NO_NESTED_TESTS"] = "1"
+    return env
 
 def cmd_build(out=None):
     """The core craft's export: the one code path (distribute.build; deterministic, p5)."""

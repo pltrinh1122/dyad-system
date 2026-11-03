@@ -1747,8 +1747,8 @@ class SpawnSiteTests(unittest.TestCase):
                 "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
                 "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
-        "cmd_corroborate": "`git init` of its own scratch repo under a temp dir, under dyadlib.git_env(); never the "
-                           "repo judged (#564)",
+        "corroborate_git": "init, add and commit of `check --corroborate`'s own scratch repo under a temp dir, under "
+                           "corroborate_env(); never the repo judged (#564)",
         "checkout_snapshot": "status of the live checkout before and after the suite, under dyadlib.git_env(); no write "
                              "(the cleanliness fence, #552)",
         "evidence_in_worktree": "rev-parse of the common dir, then `worktree add --detach` and `worktree remove`/`prune` "
@@ -1760,6 +1760,8 @@ class SpawnSiteTests(unittest.TestCase):
     PY_ALLOWED = {
         "cmd_evidence_at": ("evidence_env", "the evidence block of another head, run by that tree's own runner; "
                                             "GIT_VARS dropped, DYAD_NO_NESTED_TESTS the caller's (#448)"),
+        "corroborate_py": ("corroborate_env", "`check --corroborate`'s steps, what hosted CI on main ran; the suite runs "
+                                              "unless an evidenced head's code equals the landed code (#564)"),
         "evidence_baseline_compute": ("baseline_env", "origin/main's `check` for its warn kinds, run by that tree's own "
                                                       "runner; GIT_VARS dropped and DYAD_NO_NESTED_TESTS set: never the suite (#476)"),
     }
