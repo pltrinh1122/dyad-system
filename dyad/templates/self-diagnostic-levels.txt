@@ -61,6 +61,7 @@ integration dyad/tests/sim/test_seat_hops.py               # scratch repos, a ba
 integration dyad/tests/test_automaton.py                   # a scratch install, a bare origin, dyad merge and land (#556)
 integration dyad/tests/test_steps.py                       # scratch repos and a scratch install, a bare origin, land (#556)
 integration dyad/tests/test_merge.py                       # scratch repos, a bare origin with refs/pull, merge and push (#532)
+integration dyad/tests/test_hygiene.py                     # scratch repos and git, the backlog hygiene of the sweep (#565)
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
 integration dyad/tests/test_privatecite.py                 # scratch repos, a bare remote, git diffs read by the fence (#518)
 integration dyad/tests/test_playbooks.py                   # git, bash
