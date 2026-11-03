@@ -160,8 +160,9 @@ class AutomatonTests(unittest.TestCase):
         (msg,) = self.inbox(HOME)
         self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
 
-    def sweep(self, check=(), **kw):
+    def sweep(self, check=(), hygiene=((), ()), **kw):
         with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
+             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now: (list(hygiene[0]), list(hygiene[1]))), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
              unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now: []):
             return run(["sweep", "--row", "9"], self.w.seat, **kw)
@@ -182,6 +183,20 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = self.sweep(check=[(True, "FAIL [agent/rows] broken")])
         self.assertEqual(rc, 1, out); self.assertEqual(len(self.inbox(HOME)), 2)           # a new failure is told
         self.assertEqual(run(["sweep", "--row"], self.w.seat)[0], 2)
+
+    def test_the_sweep_tells_new_hygiene_once_grouped_by_kind(self):
+        """#565: hygiene findings and similarity candidates ride the sweep's new-only notice."""
+        self.w.write_main(self.files)
+        hyg = (["hygiene I1 untouched: backlog row #10 (ten), no commit in 40 days"],
+               ["candidate: #9 and #10 similar (0.50): nine / ten"])
+        rc, out, err = self.sweep(hygiene=hyg)
+        self.assertEqual(rc, 0, out + err)                                        # hygiene never fails the sweep
+        self.assertIn("finding: hygiene I1 untouched: backlog row #10", out); self.assertIn("candidate: #9 and #10", out)
+        (msg,) = self.inbox(HOME)
+        body = msg.split("body: ", 1)[1]
+        self.assertLess(body.index("hygiene I1"), body.index("candidate:"))      # findings before candidates
+        rc, out, _ = self.sweep(hygiene=hyg)
+        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)
 
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)

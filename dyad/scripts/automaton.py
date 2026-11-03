@@ -33,7 +33,8 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
                            read-only, twice a day (d-work #564): every guard over every store and the full suite on
                            origin/main, Y dones whose heads never landed, stale board entries, released tags
                            against their entries, the mirror against main, and code pushes to main with no
-                           completed corroboration. One `finding:` line each; a finding not yet told is posted, in
+                           completed corroboration, and the backlog's hygiene (scripts/hygiene.py, #565: findings
+                           and `candidate:` similarity lines). One `finding:` line each; a finding not yet told is posted, in
                            one notice, to the home's inbox on `--row`. Exit 1 when a finding fails
 
 It runs from `main`'s own code: server-side in `.github/workflows/dyad-automaton.yml` on every push to `main`, gated by
@@ -53,6 +54,7 @@ HERE = Path(__file__).resolve().parent
 land = dyadlib.load_module(HERE / "land.py", "land")
 merge_mod = dyadlib.load_module(HERE / "merge.py", "merge")
 steps = dyadlib.load_module(HERE / "steps.py", "steps")
+hygiene_mod = dyadlib.load_module(HERE / "hygiene.py", "hygiene")   # the sweep's backlog hygiene (d-work #565)
 Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
@@ -262,11 +264,14 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
     found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
-    lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found]
+    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
+    found += [(False, f"finding: {h}") for h in hyg]
+    lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
     told = " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
-    new = [l for l in lines if finding_key(l.removeprefix("finding: ")) not in told]
+    new = sorted((l for l in lines if finding_key(l.removeprefix("finding: ")) not in told),
+                 key=lambda l: (l.startswith("candidate:"), "hygiene" in l, l))      # grouped by kind (#565)
     summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {len(new)} new"
     if new and row and to:
         body = f"automaton sweep at {base[:12]}: {len(new)} new: " + " | ".join(finding_key(l.removeprefix('finding: ')) for l in new)
