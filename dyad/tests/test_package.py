@@ -1834,7 +1834,8 @@ class EvidenceAtTests(unittest.TestCase):
         full, brief = self.at(d, "HEAD~1"), self.at(d, "HEAD~1", "--brief")
         self.assertEqual(brief.returncode, full.returncode, brief.stdout + brief.stderr)
         b = brief.stdout.splitlines()
-        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
+        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^code=[0-9a-f]{64}$")
+        self.assertRegex(b[4], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
         self.assertEqual(b[-1], full.stdout.splitlines()[-1])        # the same evidence-sha256 as the full form
         self.assertTrue(b[-2].startswith("stored: ") and b[-2].endswith(b[-1].split("=")[1] + ".txt"), b[-2])
         show = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--show",
@@ -1915,11 +1916,12 @@ class EvidenceBriefTests(unittest.TestCase):
             rc_brief, brief, _ = self.run_out(self.pkg.cmd_evidence, True)
         full, brief = full.splitlines(), brief.splitlines()
         self.assertEqual((rc_full, rc_brief), (1, 1))
-        self.assertEqual(full[3:-1], lines); self.assertEqual(brief[-1], full[-1])
-        self.assertEqual(brief[3], "counts: ok=4 warn=1 skip=1 fail=1")
+        self.assertEqual(full[4:-1], lines); self.assertEqual(brief[-1], full[-1])
+        self.assertTrue(full[3].startswith("code=")); self.assertEqual(brief[3], full[3])   # #562: the code digest
+        self.assertEqual(brief[4], "counts: ok=4 warn=1 skip=1 fail=1")
         stored = self.dir / (full[-1].split("=")[1] + ".txt")
         self.assertEqual(stored.read_text().splitlines(), full); self.assertEqual(brief[-2], f"stored: {stored}")
-        self.assertEqual(brief[4], "baseline: origin/main x (test)")
+        self.assertEqual(brief[5], "baseline: origin/main x (test)")
         self.assertIn("warn [agent/provenance] row 12 unrecorded", brief)    # a kind main lacks: verbatim
 
     # ---- folding against origin/main's warn kinds (#476, the extension the Operator approved)

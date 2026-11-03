@@ -293,7 +293,8 @@ class EvidenceRefusalTests(World):
         lines = out.getvalue().splitlines()
         self.assertEqual((rc, ran), (0, ["check", "guards"]))
         self.assertRegex(lines[0], r"^head=[0-9a-f]{40}$")
-        self.assertEqual(lines[3:-1], ["ok   [Rule-11] fixed", "ok   [guards] infra/containment fixed"])
+        self.assertRegex(lines[3], r"^code=[0-9a-f]{64}$")                       # #562
+        self.assertEqual(lines[4:-1], ["ok   [Rule-11] fixed", "ok   [guards] infra/containment fixed"])
         self.assertEqual(lines[-1], "evidence-sha256=" + pkg.evidence_sha256(lines[:-1]))
         self.assertEqual(err.getvalue().splitlines(),
                          [f"warn [evidence] no {TAG2} tag: BUNDLE.md names dyad-operator 0.2.0, origin/main names 0.1.0, "
