@@ -9,7 +9,8 @@ The cases:
 - A `Y done` naming a head the PR has moved off is refused. The refusal is posted once to the home's inbox (the board
   `_cos` holder), naming the row and quoting no entry; a second run does not post it again.
 - A planned row with a board entry notifies each owner once.
-- A push race is retried.
+- A push race is re-merged at once, without backoff.
+- A row naming two PRs lands them as one cut: one push (#562).
 - Misuse is exit 2."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -26,7 +27,7 @@ HOME = "program-aaaaaaaa"
 
 def run(argv, repo, **envs):
     out, err = io.StringIO(), io.StringIO()
-    with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_BACKOFF": "0", **envs}), \
+    with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, **envs}), \
          contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         rc = am.main(argv, repo)
     return rc, out.getvalue(), err.getvalue()
@@ -102,16 +103,34 @@ class AutomatonTests(unittest.TestCase):
     def test_a_push_race_is_retried(self):
         self.w.write_main(self.files)
         calls = []
-        real = am.merge_mod.merge
-        def flaky(repo, pr, sha):
+        real = am.merge_mod.merge_all
+        def flaky(repo, cut):
             calls.append(1)
             if len(calls) == 1:
                 raise am.Refused("main moved under the push 2 times: nothing landed; run it again")
-            return real(repo, pr, sha)
-        with unittest.mock.patch.object(am.merge_mod, "merge", flaky):
+            return real(repo, cut)
+        with unittest.mock.patch.object(am.merge_mod, "merge_all", flaky):
             rc, out, err = run(["run"], self.w.seat)
         self.assertEqual(rc, 0, out + err); self.assertEqual(len(calls), 2)
         self.assertIn(f"merged PR #7 at {self.sha}", out)
+
+    def test_a_row_with_two_prs_is_one_cut(self):
+        eight = self.w.pr(8, "dyad/zz-eight.txt", "eight\n", base=self.sha)
+        self.files[f"{INST}/d-work/rows/9.md"] = ROW.format(
+            id=9, state="planned", disposed=f"2026-11-02 Y plan; 2026-11-02 Y done (accreted #10, merges PR #7 at {self.sha}, PR #8 at {eight})")
+        self.w.write_main(self.files)
+        before = git(self.w.origin, "rev-parse", "main")
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.splitlines()[0], f"merge PR #7 at {self.sha}, PR #8 at {eight} (row #9)")
+        seen = []
+        real = am.merge_mod.merge_all
+        with unittest.mock.patch.object(am.merge_mod, "merge_all", lambda repo, cut: seen.append(cut) or real(repo, cut)):
+            rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(seen, [[(7, self.sha), (8, eight)]])                         # one call, the row's order
+        merges = git(self.w.origin, "rev-list", "--merges", "--first-parent", f"{before}..main").split()
+        self.assertEqual(len(merges), 2)
+        self.assertIn("state: done", self.on_main(f"{INST}/d-work/rows/9.md"))
 
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)

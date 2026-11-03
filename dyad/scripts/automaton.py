@@ -4,9 +4,11 @@
 The d-work's clerical edges, run by a party that decides nothing: the countersign model's executor, #553's
 automaton. Everything between a recorded disposition and the next inferred act is defined, so it is run here, from
 ledger lines only and never from a conversation:
-  (a) **merge** — every PR an operative `Y done` names, pinned to the head it names, in the order it names them, by the
-      record-bound `dyad merge` (scripts/merge.py: the entry, the live head, a clean merge, one push through the gate).
-      A push that loses a race to `main` is retried with backoff; any other refusal stops that row's later PRs;
+  (a) **merge** — every PR an operative `Y done` names, pinned to the head it names, in the order it names them, as
+      one cut: the record-bound `merge_all` (scripts/merge.py: the entry, the live heads, clean merges, one push through
+      the gate, so the gate judges the cut's final tree once; d-work #562). A cut lands whole or not at all. A push that
+      loses a race to `main` is re-merged at once, without backoff: after a ledger-only drift the gate's code-keyed memo
+      skips the suite, so the retry costs the guards only (#562 (c));
   (b) **close** — a row whose every named head is on `main` goes `done`, its accreted rows close under its mandate and
       its board entry is dropped (`dyad steps close-landed --land`, scripts/steps.py);
   (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: each owner's inbox
@@ -18,7 +20,7 @@ A refusal decides nothing: it is posted once to the home's inbox as a `notice` (
 
 **Stateless.** Every run re-reads `origin/main` (the rows, the board, the inbox) and every act is idempotent: a merged
 head, a closed row and a notice already posted are skipped. Any run may be retried, and a run that dies mid-way loses
-nothing. Memory across runs (a retry, a backoff) lives in the run itself or in the store, never here.
+nothing. Memory across runs (a retry) lives in the run itself or in the store, never here.
 
   dyad automaton scan      read-only: the acts a run would take now, one line each
   dyad automaton run       take them; one line per act and per refusal; exit 0 unless the automaton itself failed
@@ -30,7 +32,7 @@ commits carry the identity of whoever runs it; its inbox messages come from the 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("automaton.py: Python 3.12+ required")
-import os, re, time
+import os, re
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,14 +44,13 @@ merge_mod = dyadlib.load_module(HERE / "merge.py", "merge")
 steps = dyadlib.load_module(HERE / "steps.py", "steps")
 Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
-RACE_TRIES = 5                               # a push that lost a race to main, retried with backoff (#552's merge saw two lose)
-BACKOFF = 2.0                                # seconds, doubled per try; AUTOMATON_BACKOFF overrides (tests set 0)
+RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
 PLANNED = "row #{rid} planned; read plans/{rid}.md"
 USAGE = "usage: dyad automaton scan|run"
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seat-is-path-shaped", lambda: bool(re.fullmatch(r"[A-Za-z0-9._-]+", SEAT))),
-    ("retries-bounded", lambda: 1 < RACE_TRIES <= 10 and BACKOFF >= 0),
+    ("retries-bounded", lambda: 1 < RACE_TRIES <= 10),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import (crafts/syseng/rules/invariants.md)
     ("notice-is-information", lambda: not dyadlib.load_guard("agent", "inbox").DISPOSITION.search(PLANNED.format(rid=1))),
@@ -105,8 +106,8 @@ def posted(repo: Path, base: str, seat: str, row: int, body: str) -> bool:
 
 # ---- the acts a run would take
 def plan(repo: Path) -> tuple[str, list[tuple]]:
-    """(base, acts) on a freshly fetched origin/main: ("merge", rid, pr, sha) in each row's own order, then
-    ("close", rid), then ("notice", rid, owner). Pure reading."""
+    """(base, acts) on a freshly fetched origin/main: ("merge", rid, [(pr, sha), …]) — one cut per row, in the row's
+    own order — then ("close", rid), then ("notice", rid, owner). Pure reading."""
     base = land.fetch(repo)
     rows = dyadlib.read_rows(repo, at=base)
     rg, acts = rows_guard(), []
@@ -117,7 +118,9 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if not named:
             continue
         owed = [(pr, h) for pr, h in named if not steps.ancestor(repo, h, base)]
-        acts += [("merge", r.id, int(pr), h) for pr, h in owed if pr]
+        cut = [(int(pr), h) for pr, h in owed if pr]
+        if cut:
+            acts.append(("merge", r.id, cut))
         if not owed:
             acts.append(("close", r.id))
     for r in rows:
@@ -136,21 +139,13 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
 def describe(act: tuple) -> str:
     kind = act[0]
     if kind == "merge":
-        return f"merge PR #{act[2]} at {act[3]} (row #{act[1]})"
+        return f"merge {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} (row #{act[1]})"
     if kind == "close":
         return f"close row #{act[1]} (every named head is on main)"
     return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
 
 
 # ---- taking them
-def backoff() -> float:
-    v = os.environ.get("AUTOMATON_BACKOFF")
-    try:
-        return float(v) if v is not None else BACKOFF
-    except ValueError:
-        return BACKOFF
-
-
 def post(repo: Path, to: str, row: int, body: str) -> str:
     """One inbox notice from the automaton's seat, landed; information only, so an entry is never quoted."""
     body = inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
@@ -184,20 +179,19 @@ def escalate(repo: Path, row: int, what: str, why: str) -> str:
         return f"refused, and the notice to {to} was refused too ({e}): {body}"
 
 
-def do_merge(repo: Path, rid: int, pr: int, sha: str) -> tuple[bool, str]:
-    wait = backoff()
+def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, str]:
+    what = "merge of " + ", ".join(f"PR #{pr}" for pr, _ in cut)
     for n in range(RACE_TRIES):
         try:
-            return True, merge_mod.merge(repo, pr, sha)
+            return True, "\n".join(merge_mod.merge_all(repo, cut))
         except Refused as e:
             msg = str(e)
             if "already on origin/main" in msg:
-                return True, f"PR #{pr} at {sha[:12]} has landed (row #{rid}); nothing to do"
+                return True, f"row #{rid}: a PR of the cut has landed meanwhile ({msg.splitlines()[0][:200]}); re-read next run"
             if "main moved under the push" in msg and n + 1 < RACE_TRIES:
-                time.sleep(wait); wait *= 2
-                continue
-            return False, escalate(repo, rid, f"merge of PR #{pr}", msg)
-    return False, escalate(repo, rid, f"merge of PR #{pr}", "main kept moving")
+                continue                                   # at once: a ledger-only drift costs the guards only (#562 (c))
+            return False, escalate(repo, rid, what, msg)
+    return False, escalate(repo, rid, what, "main kept moving")
 
 
 def do_close(repo: Path, rid: int) -> str:
@@ -214,10 +208,7 @@ def run(repo: Path) -> list[str]:
     _, acts = plan(repo)
     for act in acts:
         if act[0] == "merge":
-            if act[1] in stopped:
-                out.append(f"skipped: {describe(act)} — an earlier PR of row #{act[1]} was refused")
-                continue
-            ok, line = do_merge(repo, act[1], act[2], act[3])
+            ok, line = do_merge(repo, act[1], act[2])
             out.append(line)
             if not ok:
                 stopped.add(act[1])
