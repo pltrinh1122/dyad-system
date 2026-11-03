@@ -344,3 +344,23 @@ under `dyad/guards/agent/`. **16–12**: its tests are engineer's PR's. **16–2
 **16–1**: agent zone. **16–6**: `inbox` added. Others unchanged. Coherent and orthogonal.
 
 Disposition: see ledger #536.
+
+## Amendment — d-work #567 (2026-11-03): the presence trigger names the acts that hand a unit a row
+**Claim (plan #567, the operator's batch `Y` of 2026-11-03):** a unit's presence file is touched when it starts, when it
+records a plan-`Y` or opens a row for a row it owns, and when it reads the relay or notice that hands it a row; the old
+trigger, "answers a plan-`Y`", is replaced.
+
+| # | attack | result |
+|---|---|---|
+| K1 | Keep "answers a plan-`Y`". | **Refuted**: under `organization: m4` the home answers every plan-`Y` and the owning unit answers none, so the trigger touched the home's file and never the owner's; `files` went stale for every relayed row (#130, #311). |
+| K2 | Touch on every ledger act a unit takes. | **Refuted, scoped**: the home records acts for rows it never works, so a touch per act would claim them for the home; the claim is gated by the board's `owner` (plan #567), and the home's own acts refresh `seen` only. |
+| K3 | A flat system has no board owner to read. | **Survives**: with no owner named the actor claims the row, which is the flat case, where the actor is the executor. |
+| K4 | Reading a relay is not an act of the owner. | **Refuted**: the relay is how a solo receives a row (Rule-3 Batch disposition, the inbox), so it is the solo's first act on it; a notice of `planned` is the same hand-off. |
+| K5 | The Presence bullet "Touched by `dyad session touch` at session start and at every plan-`Y`" now under-describes the trigger. | **Confirmed, left as stated**: the plan changes the Conditions sentence only, and the bullet's "at every plan-`Y`" stays true of the owner's own record; the narrower wording is reported for a later sweep, not widened here. |
+
+**Pairwise (Rule-5).** **16–3**: Rule-3 owns when a plan-`Y` is recorded and how a relay travels; this Rule names those acts
+only as triggers for its store. **16–15**: the plan file's `files touched` feeds `files`, unchanged. **16–2**: a presence write
+rides a ledger-only commit, not ratification. **16–7**: no provenance change. **16–12**: the tests are engineer's PR's.
+**16–1**: agent zone. **16–6**: no new term (`presence file`, `unit`, `inbox` unchanged). Others unchanged. Coherent and orthogonal.
+
+Disposition: see ledger #567.

@@ -19,7 +19,8 @@ files and almost never merge.
 - Two sessions push to `main`: the push rejects only a true collision on one id.
 - A session starts: the ledger view is rendered, never read from the tracked tree.
 - A row file changes state: the transition is in the table (Store, below).
-- A session starts, or answers a plan-`Y`: its presence file is touched (Presence, below).
+- A session starts, records a plan-`Y` or opens a row for a row it owns, or reads the relay or notice that hands it
+  a row: its presence file is touched (Presence, below).
 - The agent is about to write a new plan file: every other session's presence file is read first.
 
 ## Store
@@ -198,6 +199,9 @@ dyad-native terms 2026-11-02 (d-work #553): seat becomes unit, attended a dyad u
 `attended-seats` pairing (`paired-units`, the old key its alias), the leader the home, an automaton's kind `auto`
 reserved; history keeps the old words and `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Presence cites the organization
 craft's roles and names the reconcile check's owner by charter 2026-11-02 (d-work #560): `secretary` and `cos-board` are the
-cabinet's, and "the operate unit's" named an instance position; see the same record, amendment #560.
+cabinet's, and "the operate unit's" named an instance position; see the same record, amendment #560. Conditions'
+presence trigger names the acts that hand a unit a row 2026-11-03 (d-work #567): under `m4` the home answers every plan-`Y`, so
+"answers a plan-`Y`" touched the home's file and never the owner's, and the files-overlap signal went stale; see the same
+record, amendment #567.
 
 Set: System Requirements.
