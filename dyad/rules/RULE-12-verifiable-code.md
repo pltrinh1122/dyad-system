@@ -46,7 +46,13 @@ behind reusable code carrying a mechanical check.
    a done-`Y` the gate has already run what a hand-run would have run. That path alone may skip the
    suite when a suite memo on this checkout proves the same tree already passed every root in the
    same environment; `check --evidence` never reads one, so the merge evidence always observes
-   (Rule-2, Binding; Rule-14 property 3). That path also skips a test root whose installed tree is
+   (Rule-2, Binding; Rule-14 property 3). The memo also records the tree's **code** — the tree with `<instance>/d-work/`
+   and `<runbooks>/events/` pruned — so a pushed tree that differs from a memoized one only there, as a re-merge after a
+   ledger-only drift does, skips with one line naming both trees; and that path skips too when the pushed tree's code
+   equals the code of a head an operative `Y done` on the base names, the head whose evidence the operator ratified the
+   merge on, with one line naming the row and the head. That skip trusts evidence run in another unit's environment for
+   identical code: the operator's decision on plan #562, given with its plan-`Y`. Any path outside those two stores
+   changes the code, so code the evidence did not pass is never skipped, and the guards judge every pushed tree. That path also skips a test root whose installed tree is
    byte-identical to its craft registry row (Rule-11 property 2) — a Tended craft's root only while
    the core's tree is too — unless the pushed range changes the registry; `check --evidence` runs
    every root. One target — a module, a
@@ -92,7 +98,10 @@ play-book's two kinds of check, coded check and prose claim, 2026-10-22 (d-work 
 countersign craft's self-diagnostic is carried by the core's audit play-book; see the same record, amendment #381.
 Property 2 gains the events-only range 2026-10-25 (d-work #438): a push of read-only run-book events
 paid about four minutes of suite for a change no test root's code depends on, while the guards, the
-events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438. Property 2 gains the
+code-keyed skip 2026-11-03 (d-work #562): a cut of three PRs ran the suite three times, about 670 s, on merged trees whose
+code the Done-`Y`'s evidence had already passed, because the memo keyed on the whole tree and a merged tree never equals the
+PR head's; see the same record, amendment #562. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

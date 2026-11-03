@@ -51,7 +51,10 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    warning of a kind new since the baseline; and every failing, skipped or other line. The full block, from which the sha256 is computed, is
    stored per checkout and never tracked (`<git common dir>/dyad-evidence/<evidence-sha256>.txt`)
    and shown byte for byte on request (`check --evidence --show <sha256>`), and the operator may
-   re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). Hosted CI corroborates and never replaces the block, and
+   re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). The block also prints the head's
+   code digest (`code=`), the identity of the tree with `<instance>/d-work/` and `<runbooks>/events/` pruned; under
+   `--pre-push` the hook skips the suite on a pushed tree whose code equals that of a head an operative `Y done` names
+   (Rule-12 property 2; #562), and `check --evidence` itself never skips. Hosted CI corroborates and never replaces the block, and
    it is never a gate: it runs on `main` after a merge and on manual dispatch, never on a branch
    push or a PR event, and never on a ledger-only commit; the pre-push hook is the only check
    run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
@@ -83,6 +86,8 @@ Property 3 gains the pre-push sentence 2026-09-29 (d-work #194): the hook judged
 and the tree on disk, not the refs git pushes; see the same record, amendment #194. Property 3 cites
 the evidence block by its sha256 and its brief form, the full block stored per checkout and shown on request,
 2026-10-26 (d-work #476, child C3 of #473); see the same record, amendment #476. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
-(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 3's
+evidence block gains the code digest and the hook's skip on a head a `Y done` names 2026-11-03 (d-work #562); see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #562.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
