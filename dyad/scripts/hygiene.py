@@ -12,6 +12,28 @@ finds and ranks; it judges nothing (plan #565: the semantic problems are the hom
                       parent skipped and tokens in more than HYGIENE_MAX_DF of rows dropped; the top pairs at or above
                       HYGIENE_SIMILAR, listed as candidates and never as findings
 
+Work in flight (d-work #569), `inflight W…` lines, each read from records alone (plan #569's falsification) and
+worded from fixed record times, never a computed age, so a finding told once is not new again until its record moves:
+
+  W1  relay unread        a `relay` with no `.read` marker, sent over INFLIGHT_W1_HOURS ago (told to home only, A2)
+  W2  planned row quiet   a planned row the board says waits on a unit, with no citing commit, PR update, board write
+                          or plan-`Y` in INFLIGHT_W2_DAYS (A3: rows waiting on the operator are not counted)
+  W3  open, no plan       an open row with no plan file, opened over INFLIGHT_W3_HOURS ago; a child (`refs: parent
+                          #N`) or a row under a mandate is exempt (A4, Rule-15)
+  W4  orphan PR           an open PR citing no `d-work #N` of a live row (prs.py's parse, A5)
+  W5  orphan branch       an origin branch whose tip is not on main, with no open PR and no commit citing a live row (A6)
+  W6  stale PR head       an open PR on a live row whose head commit is over INFLIGHT_W6_DAYS old
+  W7a unit not in table   a unit a live board entry names that `_cos`'s `seats` does not
+  W7b unit stale          a live entry waiting on a unit whose presence file is stale; skipped with one line until the
+                          presence store holds a fresh file (gated on #567, A7)
+  W8  promise kept listed a `promised` entry of a board file listed over INFLIGHT_W8_DAYS (its age: git history, A8)
+  W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
+                          INFLIGHT_W9_HOURS (A9)
+  W10' report after board an owner's report on a row, to home, newer than the row's board `since` (A10)
+
+The hosting's open PRs (W4–W6) are read by the caller with `GITHUB_TOKEN`; without them those kinds print one skip line.
+Clustering waits for typed refs (plan #569 decision 3).
+
 Called only by `dyad automaton sweep` (scripts/automaton.py), which only the scheduled sweep runs. It is not a guard,
 so the runner's discovery never picks it up and neither `check`, `check --evidence`, `check --corroborate`, the
 pre-push gate nor CI runs it (plan #565, Placement). Every line it returns is information: no disposition shape
@@ -34,16 +56,27 @@ HYGIENE_TOP = 10               # ranking: at most this many pairs
 PARENT = re.compile(r"\bparent #(\d+)")
 CITE = re.compile(r"\bd-work #(\d+)\b")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
+INFLIGHT_W1_HOURS = 4          # W1: a relay unread this long (minimum ages: the sweep runs every 12 hours, A11)
+INFLIGHT_W2_DAYS = 3           # W2: a planned row quiet this long
+INFLIGHT_W3_HOURS = 24         # W3: an open row with no plan this long
+INFLIGHT_W6_DAYS = 3           # W6: an open PR's head unchanged this long
+INFLIGHT_W8_DAYS = 3           # W8: a promise listed this long
+INFLIGHT_W9_HOURS = 24         # W9: a recorded question to the operator this old
+INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("thresholds-in-range", lambda: HYGIENE_STALE_DAYS > 0 and 0 < HYGIENE_SIMILAR < 1 and 0 < HYGIENE_MAX_DF < 1 and HYGIENE_TOP > 0),
+    ("inflight-thresholds-positive", lambda: min(INFLIGHT_W1_HOURS, INFLIGHT_W2_DAYS, INFLIGHT_W3_HOURS, INFLIGHT_W6_DAYS,
+                                                 INFLIGHT_W8_DAYS, INFLIGHT_W9_HOURS) > 0 and len(set(INFLIGHT_KINDS)) == 11),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import
     ("lines-are-information", lambda: not any(dyadlib.load_guard("agent", "inbox").DISPOSITION.search(l) for l in (
         "hygiene I1 untouched: backlog row #1 (a title), no commit in 31 days",
         "hygiene I4 orphaned: backlog row #2's parent #1 is done",
         "hygiene I12 worked: backlog row #3 is cited by abc on origin/x",
-        "candidate: #4 and #5 similar (0.40): a / b"))),
+        "candidate: #4 and #5 similar (0.40): a / b",
+        "inflight W1 relay unread: row #6's relay to engineer-1 sent 2026-11-03T10:00:00Z has no read marker",
+        "inflight W9 operator wait: row #7 waits on the operator with no question recorded"))),
 ]
 
 
@@ -133,6 +166,206 @@ def hygiene(repo: Path, base: str, now: float) -> tuple[list[str], list[str]]:
     candidates = [f"candidate: #{a} and #{b} similar ({c:.2f}): {byid[a].title[:50]} / {byid[b].title[:50]}"
                   for c, a, b in ranking(ranked, texts, [r for r in backlog if r.id not in malformed])]
     return findings, candidates
+
+
+# ---- work in flight (d-work #569)
+def _when(v: str):
+    """A record time (`2026-11-03T10:00Z`, an ISO stamp, or a date) as an aware datetime; None when unreadable."""
+    import datetime
+    v = (v or "").strip()
+    try:
+        d = datetime.datetime.fromisoformat(v)
+    except ValueError:
+        try:
+            d = datetime.datetime.combine(datetime.date.fromisoformat(v[:10]), datetime.time())
+        except ValueError:
+            return None
+    return d if d.tzinfo else d.replace(tzinfo=datetime.timezone.utc)
+
+
+def _board_files(repo: Path, base: str, inst: str) -> dict[str, dict[str, str]]:
+    bd = dyadlib.load_guard("agent", "board")
+    d = f"{inst}/d-work/board"
+    return {n[:-3]: bd.parse(git(repo, "show", f"{base}:{d}/{n}"))[0]
+            for n in git(repo, "ls-tree", "--name-only", f"{base}:{d}").split() if n.endswith(".md")}
+
+
+def _units(field: str) -> list[str]:
+    """The unit a `waiting-on` names (`unit <name>`, alias `seat <name>`), as a one-item list, else []."""
+    w = field.split()
+    return [w[1]] if len(w) >= 2 and w[0] in ("unit", "seat") else []
+
+
+def _messages(repo: Path, base: str, inst: str) -> list[dict[str, str]]:
+    """Every inbox message on `base`, each with `_box` and `_read` (its `.read` marker exists)."""
+    bd = dyadlib.load_guard("agent", "board")
+    root = f"{inst}/d-work/inbox/"
+    names = git(repo, "ls-tree", "-r", "--name-only", base, root).split()
+    marks = {n[:-5] for n in names if n.endswith(".read")}
+    out = []
+    for n in names:
+        if n.endswith(".md"):
+            f = bd.parse(git(repo, "show", f"{base}:{n}"))[0]
+            f["_box"], f["_read"] = n[len(root):].split("/")[0], n[:-3] in marks
+            out.append(f)
+    return out
+
+
+def _cited_times(repo: Path) -> dict[int, int]:
+    """{row id: unix time of the newest commit, on any fetched origin ref, whose message cites `d-work #N`}."""
+    out = {}
+    for block in git(repo, "log", "--remotes=origin", "--format=%ct%x00%B%x01").split("\x01"):
+        ct, _, body = block.strip().partition("\x00")
+        if ct.isdigit():
+            for n in CITE.findall(body):
+                out[int(n)] = max(out.get(int(n), 0), int(ct))
+    return out
+
+
+def _promise_since(repo: Path, base: str, rel: str, text: str) -> int | None:
+    """Unix time of the newest commit on `base` that added `text` to `rel` (git's pickaxe), the start of its listing."""
+    ts = git(repo, "log", "--format=%ct", "-S", text, base, "--", rel).split()
+    return int(ts[0]) if ts else None
+
+
+def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
+             presence_fresh=None) -> list[str]:
+    """`inflight W…` lines for the work in flight on `base` (module docstring). `pulls` is the hosting's open PRs as
+    [{number, body, title, head_ref, head_sha}], or None when it was not read (W4–W6 then skip with one line).
+    `presence_fresh(seat, now)` says whether a seat's presence is fresh; None reads the presence store on `base`."""
+    import datetime
+    nowdt = datetime.datetime.fromtimestamp(now, datetime.timezone.utc)
+    inst = dyadlib.instance_rel(repo) or "agent-corpus"
+    rows = {r.id: r for r in dyadlib.read_rows(repo, at=base)}
+    live = {i for i, r in rows.items() if r.state not in dyadlib.TERMINAL_STATES and r.state != "backlog"}
+    boards = _board_files(repo, base, inst)
+    cos = boards.pop("_cos", {})
+    entries = {int(n): f for n, f in boards.items() if n.isdigit() and int(n) in live}
+    bd = dyadlib.load_guard("agent", "board")
+    home = cos.get("holder")
+    msgs = _messages(repo, base, inst)
+    out = []
+    # W1: a relay no one has read
+    for m in msgs:
+        sent = _when(m.get("sent", ""))
+        if m.get("kind") == "relay" and not m["_read"] and sent and (nowdt - sent).total_seconds() > INFLIGHT_W1_HOURS * 3600:
+            out.append(f"inflight W1 relay unread: row #{m.get('row')}'s relay to {m['_box']} sent {m.get('sent')} has no "
+                       f"read marker (over {INFLIGHT_W1_HOURS}h)")
+    # W2: a planned row waiting on a unit, quiet
+    cited = _cited_times(repo)
+    pr_rows = {}
+    for p in pulls or []:
+        for n in CITE.findall(f"{p.get('title', '')}\n{p.get('body') or ''}"):
+            t = _when(p.get("updated_at", ""))
+            if t:
+                pr_rows[int(n)] = max(pr_rows.get(int(n), 0), int(t.timestamp()))
+    for i, f in sorted(entries.items()):
+        r = rows[i]
+        if r.state != "planned" or not _units(f.get("waiting-on", "")):
+            continue
+        plan_y = [e for e in r.disposed.split(";") if " Y plan" in e]
+        marks = [cited.get(i, 0), pr_rows.get(i, 0)]
+        for v in (f.get("since", ""), plan_y[-1].strip()[:10] if plan_y else ""):
+            if (t := _when(v)):
+                marks.append(int(t.timestamp()))
+        last = max(marks)
+        if last and now - last > INFLIGHT_W2_DAYS * 86400:
+            stamp = datetime.datetime.fromtimestamp(last, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+            out.append(f"inflight W2 planned row quiet: row #{i} waits on {f['waiting-on']} with nothing since {stamp} "
+                       f"(no citing commit, PR update, board write or plan-Y; over {INFLIGHT_W2_DAYS} days)")
+    # W3: an open row with no plan file
+    plans = set(git(repo, "ls-tree", "--name-only", f"{base}:{inst}/d-work/plans").split())
+    for i in sorted(live):
+        r = rows[i]
+        if r.state != "open" or f"{i}.md" in plans or PARENT.search(r.refs or "") or "mandate #" in r.disposed:
+            continue
+        added = git(repo, "log", "--diff-filter=A", "--format=%ct", base, "--", f"{inst}/d-work/rows/{i}.md").split()
+        t = int(added[-1]) if added else int(_when(r.opened).timestamp()) if _when(r.opened) else None
+        if t and now - t > INFLIGHT_W3_HOURS * 3600:
+            out.append(f"inflight W3 open, no plan: row #{i} ({r.title[:50]}), opened {r.opened}, has no plan file "
+                       f"(over {INFLIGHT_W3_HOURS}h)")
+    # W4, W6: open PRs; W5: branches
+    if pulls is None:
+        out.append("inflight W4-W6 skipped: the hosting's open PRs were not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")
+    else:
+        for p in sorted(pulls, key=lambda p: p["number"]):
+            ids = {int(n) for n in CITE.findall(f"{p.get('title', '')}\n{p.get('body') or ''}")}
+            ref = f"refs/remotes/origin/{p.get('head_ref', '')}"
+            ids |= {int(n) for n in CITE.findall(git(repo, "log", "--format=%B", f"{base}..{ref}"))} if p.get("head_ref") else set()
+            on = sorted(ids & live)
+            if not on:
+                out.append(f"inflight W4 orphan PR: PR #{p['number']} cites no live row"
+                           + (f" (cites {', '.join(f'#{n}' for n in sorted(ids))})" if ids else " (cites none)"))
+                continue
+            ct = git(repo, "log", "-1", "--format=%ct", p.get("head_sha", "")).strip()
+            if ct.isdigit() and now - int(ct) > INFLIGHT_W6_DAYS * 86400:
+                stamp = datetime.datetime.fromtimestamp(int(ct), datetime.timezone.utc).strftime("%Y-%m-%d")
+                out.append(f"inflight W6 stale PR head: PR #{p['number']} on row #{on[0]} has head {p['head_sha'][:12]} "
+                           f"of {stamp} (over {INFLIGHT_W6_DAYS} days)")
+        open_refs = {p.get("head_ref") for p in pulls}
+        for ref in git(repo, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split():
+            name = ref.removeprefix("origin/")
+            if name in ("main", "HEAD") or ref == "origin" or name in open_refs:
+                continue
+            if subprocess.run(["git", "merge-base", "--is-ancestor", ref, base], cwd=repo, env=dyadlib.git_env(),
+                              capture_output=True).returncode == 0:
+                continue
+            ids = {int(n) for n in CITE.findall(git(repo, "log", "--format=%B", f"{base}..{ref}"))}
+            if ids & live:
+                continue
+            tip = git(repo, "log", "-1", "--format=%h %cs", ref).split()
+            out.append(f"inflight W5 orphan branch: {name} (tip {tip[0] if tip else '?'} of {tip[1] if len(tip) > 1 else '?'}) "
+                       f"is not on main, has no open PR and no commit citing a live row")
+    # W7a: a unit the board names that the unit table does not
+    table = set(bd.owners({"owner": cos.get("seats", "").replace("\n", ";")}))
+    if table:
+        named = {u for f in entries.values() for u in bd.owners(f) + _units(f.get("waiting-on", ""))}
+        for u in sorted(named - table):
+            out.append(f"inflight W7a unit not in table: {u} is named on the board but not in _cos's seats")
+    # W7b: waiting on a unit whose presence is stale, gated on a presence store that holds a fresh file (#567)
+    sv = dyadlib.load_guard("agent", "sessions")
+    if presence_fresh is None:
+        d = f"{inst}/d-work/sessions"
+        seen = {n[:-3]: sv.parse(git(repo, "show", f"{base}:{d}/{n}")).get("seen", "")
+                for n in git(repo, "ls-tree", "--name-only", f"{base}:{d}").split() if n.endswith(".md")}
+        presence_fresh = lambda seat, at: bool(seen.get(seat)) and not sv.is_stale(seen[seat], at)
+        gate = any(not sv.is_stale(v, nowdt) for v in seen.values() if v)
+    else:
+        gate = True
+    if not gate:
+        out.append("inflight W7b skipped: the presence store holds no fresh file (gated on #567)")
+    else:
+        for i, f in sorted(entries.items()):
+            for u in _units(f.get("waiting-on", "")):
+                if not presence_fresh(u, nowdt):
+                    out.append(f"inflight W7b unit stale: row #{i} waits on {u}, whose presence file is stale")
+    # W8: a promise still listed
+    for name, f in [("_cos", cos)] + [(str(i), f) for i, f in sorted(entries.items())]:
+        for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:
+            t = _promise_since(repo, base, f"{inst}/d-work/board/{name}.md", promise)
+            if t and now - t > INFLIGHT_W8_DAYS * 86400:
+                stamp = datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%d")
+                out.append(f"inflight W8 promise still listed: board {name} has promised {promise[:80]!r} since {stamp} "
+                           f"(over {INFLIGHT_W8_DAYS} days)")
+    # W9: waiting on the operator
+    for i, f in sorted(entries.items()):
+        if f.get("waiting-on") != "operator":
+            continue
+        if not f.get("question"):
+            out.append(f"inflight W9 operator wait: row #{i} waits on the operator with no question recorded")
+        elif (t := _when(f.get("since", ""))) and (nowdt - t).total_seconds() > INFLIGHT_W9_HOURS * 3600:
+            out.append(f"inflight W9 operator wait: row #{i}'s question to the operator stands since {f['since']} "
+                       f"(over {INFLIGHT_W9_HOURS}h)")
+    # W10': an owner's report newer than the board
+    for i, f in sorted(entries.items()):
+        since, owners = _when(f.get("since", "")), set(bd.owners(f))
+        late = [m for m in msgs if m["_box"] == home and m.get("kind") == "report" and m.get("row") == str(i)
+                and m.get("from") in owners and since and (t := _when(m.get("sent", ""))) and t > since]
+        if late:
+            m = max(late, key=lambda m: m.get("sent", ""))
+            out.append(f"inflight W10' report after board: row #{i}'s board since {f.get('since')}, but {m['from']} "
+                       f"reported on it at {m.get('sent')}")
+    return out
 
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import

@@ -33,8 +33,9 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
                            read-only, twice a day (d-work #564): every guard over every store and the full suite on
                            origin/main, Y dones whose heads never landed, stale board entries, released tags
                            against their entries, the mirror against main, and code pushes to main with no
-                           completed corroboration, and the backlog's hygiene (scripts/hygiene.py, #565: findings
-                           and `candidate:` similarity lines). One `finding:` line each; a finding not yet told is posted, in
+                           completed corroboration, the backlog's hygiene (scripts/hygiene.py, #565: findings
+                           and `candidate:` similarity lines) and the work in flight (W1-W10', #569, one notice
+                           per kind). One `finding:` line each; a finding not yet told is posted, in
                            one notice, to the home's inbox on `--row`. Exit 1 when a finding fails
 
 It runs from `main`'s own code: server-side in `.github/workflows/dyad-automaton.yml` on every push to `main`, gated by
@@ -252,13 +253,39 @@ def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
     return out
 
+def sweep_pulls() -> list[dict] | None:
+    """The hosting's open PRs for the in-flight kinds W4-W6 (d-work #569), as [{number, title, body, head_ref, head_sha,
+    updated_at}], read with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; None when either is absent or the hosting is
+    unreadable (The World: never a crash), and those kinds then print one skip line."""
+    import json, urllib.request
+    token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+    if not (token and slug):
+        return None
+    out, page = [], 1
+    try:
+        while True:
+            req = urllib.request.Request(f"https://api.github.com/repos/{slug}/pulls?state=open&per_page=100&page={page}",
+                                         headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                got = json.load(resp)
+            out += [{"number": p["number"], "title": p.get("title") or "", "body": p.get("body") or "",
+                     "head_ref": p["head"]["ref"], "head_sha": p["head"]["sha"], "updated_at": p.get("updated_at") or ""}
+                    for p in got]
+            if len(got) < 100:
+                return out
+            page += 1
+    except Exception:
+        return None
+
 NOTICE_CHARS = 3000   # one notice's body at most; a longer group is split, never cut, so nothing new goes untold
 
 def notice_groups(new: list[str]) -> list[tuple[str, list[str]]]:
     """The new lines by kind, as the notices tell them (d-work #565): backlog hygiene first, then similarity candidates,
     then every other finding; each line by its key (`finding_key`), so what is told is what the next sweep compares."""
-    kinds = (("backlog hygiene", lambda l: l.startswith("finding: hygiene ")), ("similarity candidates", lambda l: l.startswith("candidate:")),
-             ("findings", lambda l: True))
+    kinds = ((("backlog hygiene", lambda l: l.startswith("finding: hygiene ")),)
+             + tuple((f"work in flight {k}", lambda l, k=k: l.startswith(f"finding: inflight {k} "))   # one per kind (#569)
+                     for k in hygiene_mod.INFLIGHT_KINDS)
+             + (("similarity candidates", lambda l: l.startswith("candidate:")), ("findings", lambda l: True)))
     out, left = [], list(new)
     for name, test in kinds:
         group = [finding_key(l.removeprefix("finding: ")) for l in left if test(l)]
@@ -290,6 +317,7 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
     hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
     found += [(False, f"finding: {h}") for h in hyg]
+    found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls())]   # #569
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
