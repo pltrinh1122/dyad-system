@@ -170,7 +170,9 @@ On that notice the home judges what no automaton can (the overhead test above: t
 a question reaches the operator):
 - **The candidates.** Whether a ranked pair is the same work twice, whether a row is superseded by work since
   landed, whether its reason is gone, or whether it is still owed; a structural finding is a reason to read the
-  row, never a verdict on it.
+  row, never a verdict on it. An orphaned, untouched or malformed row is not thereby obsolete: a parent may close
+  over a `backlog` child it never delivered (Rule-3 Ledger), so retirement takes one of the grounds of
+  `dyad/dmc/retirement-candidate.jsonld`, and an orphan still owed is a promotion candidate like any other (#568).
 - **The triggers.** A row whose plan or title waits on a named event is read against that event's state; one
   whose event has come is proposed for opening by the operator's prompt, never opened by the home.
 - **A row worked under `backlog`.** Reported to the operator as an incident (Rule-3): work was claimed with no
@@ -192,22 +194,28 @@ A candidate's class, highest first:
 - P3, **a fired trigger**: a row waiting on a named event that has come;
 - P4, **adjacent to the last delivered row** (below);
 - P5, **worked under backlog**: the sweep's finding of a `backlog` row a commit already claims (Backlog hygiene, above)
-  — its other findings argue for retirement, never for promotion;
+  — its other findings are reasons to read a row, never grounds to retire it or to promote it;
 - P6, **the oldest valid row**: the oldest `backlog` row whose reason still holds.
 
-A row that is none of these, or that duplicates another row, is **not a candidate**; a duplicate is replaced by the row
-it duplicates, with the reason stated. **Adjacency**, of a candidate to an anchor (a row on the board, or the row just
+A candidate need not be a row: a promise or a finding is named by its source (`promise on #N`, `I12 on #N`, `finding`)
+and a one-line title. A row that is none of these, that duplicates another row, or that another row's plan names as
+carried by it (**absorbed**) is **not a candidate**: a duplicate is replaced by the row it duplicates, and an absorbed
+row is proposed only through the row that absorbed it, with the reason stated (#568). **Adjacency**, of a candidate to an anchor (a row on the board, or the row just
 delivered): either strong signal alone — S1, the anchor's plan or completion evidence deferred the candidate or named
 it as not built or a follow-up; S2, it was promised while working the anchor — or a score of 3 or more from S3 shared
 files (2), counting only files that under a fifth of the stored plans touch, so a file most plans touch adds nothing;
 S4 a shared mechanism — a verb, a guard or a store (2); S5 a `refs` edge (1); S6 the same owning unit, read from the
-charter that covers the candidate's files (1); S7 the same incident mode, read from the failure-mode derivation (1).
+charter that covers the candidate's files, and counted only when the anchor's board `owner` names exactly one unit (1); S7 the same incident mode, read from the failure-mode derivation (1).
 S1 and S5 are read from records; S2, S3, S4, S6 and S7 are inferred, and the reason is written beside the candidate.
-Ties go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
+Within a class, a candidate another depends on — whose fix the other's assumes, or which the other's refs or plan
+name as a prerequisite — comes first; within P1, impact comes next: a defect that blocks or corrupts work, before one
+that misleads a reading, before a cosmetic one; dependency and impact are inferred and carry their reason (#568).
+Ties then go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
 smaller of 2 and the number of idle units, each candidate with a different owner: a promoted row costs the operator
 three answers. The home judges every class; the sweep supplies only P5. The question is one line naming each candidate,
 its class, its reason and its owner — `Y/N: open #a (P1, <reason>, <owner>), #b (P4, <reason>, <owner>)?` — and a `Y`
-opens each named row (`backlog → open`, the operator's words its `prompt` entry, Rule-7), whose plan follows; nothing
+opens each named row (`backlog → open`, the operator's words its `prompt` entry, Rule-7) and, for each named promise
+or finding, one new row born `open` with the operator's words as its first entry, the plan of each following; nothing
 opens without it, and the overhead test above applies. Under `organization: flat` there is one unit, so S6 and the
 unit tie-breaks drop out. Adjacency moves to its own `dyad/dmc/adjacency.jsonld` when a second decision needs it.
 
