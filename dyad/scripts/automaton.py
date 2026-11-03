@@ -27,7 +27,14 @@ head, a closed row and a notice already posted are skipped. Any run may be retri
 nothing. Memory across runs (a retry) lives in the run itself or in the store, never here.
 
   dyad automaton scan      read-only: the acts a run would take now, one line each
-  dyad automaton run       take them; one line per act and per refusal; exit 0 unless the automaton itself failed
+  dyad automaton run       take them; one line per act and per refusal; exit 1 when a landed cut failed
+                           corroboration, else 0 unless the automaton itself failed
+  dyad automaton sweep [--row <id>]
+                           read-only, twice a day (d-work #564): every guard over every store and the full suite on
+                           origin/main, Y dones whose heads never landed, stale board entries, released tags
+                           against their entries, the mirror against main, and code pushes to main with no
+                           completed corroboration. One `finding:` line each; a finding not yet told is posted, in
+                           one notice, to the home's inbox on `--row`. Exit 1 when a finding fails
 
 It runs from `main`'s own code: server-side in `.github/workflows/dyad-automaton.yml` on every push to `main`, gated by
 the repository variable `DYAD_AUTOMATON` (`on`, the operator's switch), and by hand by any unit for recovery. Its
@@ -50,7 +57,7 @@ Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
 PLANNED = "row #{rid} planned; read plans/{rid}.md"
-USAGE = "usage: dyad automaton scan|run"
+USAGE = "usage: dyad automaton scan|run|sweep [--row <id>]"
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seat-is-path-shaped", lambda: bool(re.fullmatch(r"[A-Za-z0-9._-]+", SEAT))),
@@ -148,6 +155,129 @@ def describe(act: tuple) -> str:
         return f"close row #{act[1]} (every named head is on main)"
     return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
 
+
+# ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
+SWEEP_LANDING_HOURS = 24       # a Y done whose named heads are not on main after this long is a finding
+SWEEP_STALE_DAYS = 3           # a board entry whose `since` is older than this is a finding
+SWEEP_CI_HOURS = 24            # code pushes to main in this window are checked for a completed corroboration
+CI_WORKFLOWS = ("rule-11 package", "d-work automaton")   # the runs that corroborate a code push (#564 E1, E4)
+HEXWORD = re.compile(r"\b[0-9a-f]{7,64}\b")
+
+def finding_key(line: str) -> str:
+    """The line a finding is told under: its shas masked, so a finding that only moved its sha is not new again, and an
+    entry-shaped fragment masked as `post` masks it, so the told text and the key compare equal."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", HEXWORD.sub("<sha>", " ".join(line.split())))
+
+def sweep_check(wt: Path) -> list[tuple[bool, str]]:
+    """(fails, line) for every FAIL and warn line `check` prints on the swept tree (every guard, the full suite)."""
+    r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check"], cwd=wt,
+                       capture_output=True, text=True, env=dyadlib.git_env())
+    out = [(l.startswith("FAIL"), l) for l in (r.stdout + r.stderr).splitlines() if l.startswith(("FAIL", "warn"))]
+    if r.returncode and not any(f for f, _ in out):
+        out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
+    return out
+
+def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
+    """Y dones whose heads never landed, and stale board entries, read from `base`."""
+    import datetime
+    out, rg = [], rows_guard()
+    for r in dyadlib.read_rows(repo, at=base):
+        e = rg.operative_done(r.disposed) if r.state not in dyadlib.TERMINAL_STATES else None
+        if not e:
+            continue
+        m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", e)
+        when = datetime.datetime.fromisoformat(m.group(1)).replace(tzinfo=datetime.timezone.utc) if m else None
+        owed = [(pr, h) for _, pr, h, _ in rg.named_heads([r]) if not steps.ancestor(repo, h, base)]
+        if owed and when and (now - when).total_seconds() > SWEEP_LANDING_HOURS * 3600:
+            out.append((False, f"finding: row #{r.id}'s done answer of {m.group(1)} names heads not on main: "
+                               + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in owed)))
+    d = f"{inst(repo)}/d-work/board"
+    for name in ls(repo, base, d):
+        if not name.endswith(".md"):
+            continue
+        fields = board().parse(show(repo, base, f"{d}/{name}") or "")[0]
+        since = board().parse_since(fields.get("since", "")) if fields.get("since") else None
+        if since and (now - since).days > SWEEP_STALE_DAYS:
+            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {SWEEP_STALE_DAYS} days)"))
+    return out
+
+def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
+    """The world against the record: released tags against their entries (the `released` run-book's health), and
+    the mirror branch (`MIRROR`) against main."""
+    out = []
+    rb = wt / "dyad" / "bin" / "dyad"
+    r = subprocess.run([str(rb), "runbook", "run", "released", "health"], cwd=wt, capture_output=True, text=True,
+                       env=dyadlib.git_env(), timeout=600)
+    gaps = [l for l in r.stdout.splitlines() if l.startswith(("no tag:", "tag not at cut:", "no Release:"))]
+    out += [(True, f"finding: released: {g}") for g in gaps]
+    if r.returncode and not gaps:
+        out.append((False, f"finding: released health not read (exit {r.returncode}): {(r.stdout + r.stderr).strip().splitlines()[-1:] or ['']}"))
+    mirror = os.environ.get("MIRROR")
+    if mirror:
+        at = (land.git(repo, "ls-remote", "origin", f"refs/heads/{mirror}", check=False).stdout.split() or [""])[0]
+        if at != base:
+            out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
+    return out
+
+def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
+    """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
+    hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
+    import datetime, json, urllib.request
+    token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+    since = (now - datetime.timedelta(hours=SWEEP_CI_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
+    code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
+    if not code:
+        return []
+    if not (token and slug):
+        return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")]
+    def runs(sha=None, name=None):
+        q = f"head_sha={sha}" if sha else "per_page=50"
+        req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/runs?{q}",
+                                     headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.load(resp).get("workflow_runs", [])
+    out = []
+    try:
+        recent = [w for w in runs() if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
+        for c in code:
+            ok = any(w.get("name") in CI_WORKFLOWS and w.get("conclusion") == "success" for w in runs(sha=c))
+            if not ok and "Executed by `dyad merge`" in land.out(repo, "log", "-1", "--format=%B", c):
+                t = land.out(repo, "log", "-1", "--format=%cI", c)
+                ok = any(w.get("created_at", "") >= t for w in recent)    # the automaton corroborates in the run that merged
+            if not ok:
+                out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
+    except Exception as e:                               # the hosting is The World: unreadable is a finding, never a crash
+        out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
+    return out
+
+def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
+    """Read-only: (lines, rc). Every finding prints; findings no automaton notice in the home's inbox has told yet are
+    posted in one notice on `row`; rc 1 when any finding fails."""
+    import datetime
+    now = datetime.datetime.now(datetime.timezone.utc)
+    base = land.fetch(repo)
+    common = Path(land.out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+    wt = common / land.WORKTREE
+    with land.locked(common):
+        land.prepare(repo, wt, base)
+        found = sweep_check(wt) + sweep_drift(repo, wt, base)
+    found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
+    lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found]
+    rc = 1 if any(f for f, _ in found) else 0
+    to = home(repo, base)
+    told = " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
+    new = [l for l in lines if finding_key(l.removeprefix("finding: ")) not in told]
+    summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {len(new)} new"
+    if new and row and to:
+        body = f"automaton sweep at {base[:12]}: {len(new)} new: " + " | ".join(finding_key(l.removeprefix('finding: ')) for l in new)
+        try:
+            summary += "; " + post(repo, to, row, body[:3000])
+        except (Refused, inbox().Refused) as e:
+            summary += f"; the notice to {to} was refused ({e})"
+    elif new:
+        summary += "; not told (no --row or no home)"
+    return lines + [summary], rc
 
 # ---- taking them
 def post(repo: Path, to: str, row: int, body: str) -> str:
@@ -265,6 +395,12 @@ def main(argv: list[str], repo: Path) -> int:
             _, acts = plan(Path(repo))
             print("\n".join(describe(x) for x in acts) or "nothing to do")
             return 0
+        if a[:1] == ["sweep"]:
+            rest = a[1:]
+            if rest not in ([],) and not (len(rest) == 2 and rest[0] == "--row" and rest[1].isdigit()):
+                print(USAGE, file=sys.stderr); return 2
+            lines, rc = sweep(Path(repo), int(rest[1]) if rest else None)
+            print("\n".join(lines)); return rc
         if a == ["run"]:
             CORROBORATION_FAILED.clear()
             print("\n".join(run(Path(repo))))

@@ -13,6 +13,8 @@ The cases:
 - A row naming two PRs lands them as one cut: one push (#562).
 - A landed cut is corroborated once, before..after; a failed corroboration is posted to home and the run exits 1
   (#564).
+- The sweep (#564) prints every finding, tells the home only what no automaton notice has told yet, and exits 1
+  when a finding fails.
 - Misuse is exit 2."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -157,6 +159,29 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(rc, 1, out + err)
         (msg,) = self.inbox(HOME)
         self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
+
+    def sweep(self, check=(), **kw):
+        with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
+             unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
+             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now: []):
+            return run(["sweep", "--row", "9"], self.w.seat, **kw)
+
+    def test_the_sweep_tells_only_what_is_new(self):
+        files = dict(self.files)
+        files[f"{INST}/d-work/rows/9.md"] = ROW.format(id=9, state="planned",
+            disposed=f"2026-11-02 Y plan; 2026-11-01 Y done (accreted #10, merges PR #7 at {self.sha})")
+        self.w.write_main(files)
+        rc, out, err = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn(f"finding: row #9's done answer of 2026-11-01 names heads not on main: PR #7 at {self.sha[:12]}", out)
+        self.assertIn("finding: warn [agent/plans] 43.md: an old warning", out)
+        (msg,) = self.inbox(HOME)
+        self.assertIn("automaton sweep at", msg); self.assertIn("2 new", msg); self.assertIn("PR #7 at <sha>", msg)
+        rc, out, _ = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])
+        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)            # told once
+        rc, out, _ = self.sweep(check=[(True, "FAIL [agent/rows] broken")])
+        self.assertEqual(rc, 1, out); self.assertEqual(len(self.inbox(HOME)), 2)           # a new failure is told
+        self.assertEqual(run(["sweep", "--row"], self.w.seat)[0], 2)
 
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
