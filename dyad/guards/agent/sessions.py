@@ -246,7 +246,45 @@ def _path_tokens(text: str) -> list[str]:
 class SessionUnset(Exception):
     """#480 P2 (modes Q/R): a write with no usable `DYAD_SESSION` would mint a stray `unnamed-*` file."""
 
-def touch(root: Path, rows: list[str], files: list[str]) -> Path:
+def plan_files(root: Path, rid: str) -> list[str]:
+    """The files the row's stored plan file names (Rule-15), [] when it has none."""
+    p = dyadlib.instance(root) / "d-work" / "plans" / f"{rid}.md"
+    return files_touched(p.read_text(errors="ignore")) if p.exists() else []
+
+def files_of_rows(root: Path, rows) -> list[str]:
+    """#567 F4 (#311 item 1): the union of `files touched:` over the rows' stored plans — what `files` derives from."""
+    return sorted({f for rid in rows for f in plan_files(root, str(rid).lstrip("#"))})
+
+def board_owners(root: Path, rid: str) -> list[str]:
+    """The seats the row's board entry names as `owner` (#551 co-owners); [] when it has no entry or names none."""
+    b = dyadlib.load_guard("agent", "board")
+    p = b.store(root) / f"{rid}.md"
+    return b.owners(b.parse(p.read_text(errors="replace"))[0]) if p.exists() else []
+
+def claim(root: Path, rows) -> list[str]:
+    """#567 F1/F3: the rows of `rows` this unit may claim — those whose board entry names `DYAD_SESSION` among its
+    owners, or names no owner at all (a flat system, a self-run row). Under m4 the home records the plan-`Y` of rows
+    other units run; the owner gate keeps them off its file, so #130's instance-wide claim does not come back."""
+    sid = os.environ.get("DYAD_SESSION", "")
+    out = []
+    for r in rows:
+        rid = str(r).lstrip("#")
+        o = board_owners(root, rid)
+        if not o or sid in o:
+            out.append(rid)
+    return out
+
+def owned_rows(root: Path) -> list[str]:
+    """The non-terminal rows whose board entry names `DYAD_SESSION` among its owners (the no-argument touch, #130)."""
+    sid = os.environ.get("DYAD_SESSION", "")
+    b = dyadlib.load_guard("agent", "board")
+    states = {str(r.id): r.state for r in dyadlib.read_rows(root)}
+    return sorted((n for n, f in b.load(root) if n != b.COS and sid in b.owners(f)
+                   and states.get(n) not in (None, *dyadlib.TERMINAL_STATES)), key=int)
+
+def touch(root: Path, rows: list[str], files: list[str], here: Path | None = None) -> Path:
+    """Write this unit's presence file under `root`'s instance. `here` is the checkout the unit runs `dyad` from, the
+    `root:` line; it defaults to `root` and differs only when a land writes the file in its own worktree (#567)."""
     if not _SESSION_ID.match(os.environ.get("DYAD_SESSION", "")):   # #480 P2: before any write; reads keep session_id()'s fallback
         raise SessionUnset("refused: set DYAD_SESSION=<seat> (a path-safe name) before `session touch` — nothing written")
     root = root or dyadlib.repo_root()
@@ -261,14 +299,24 @@ def touch(root: Path, rows: list[str], files: list[str]) -> Path:
               f"configured with the same DYAD_SESSION silently merge their presence otherwise "
               f"(F1, d-work #32); recording only this process's rows and files, not unioning "
               f"the other's", file=sys.stderr)
-        row_set = sorted({r.lstrip("#") for r in rows})
-        file_set = sorted(set(files))
+        row_set = {r.lstrip("#") for r in rows}
+        file_set = set(files)
     else:
-        row_set = sorted(set(prev.get("rows", "").split()) | {r.lstrip("#") for r in rows})
-        file_set = sorted(set(prev.get("files", "").split()) | set(files))
+        row_set = set(prev.get("rows", "").split()) | {r.lstrip("#") for r in rows}
+        file_set = set(prev.get("files", "").split()) | set(files)
+    # #567 F3/F4: a row now terminal or gone leaves the file, with the files only its plan named; `files` gains every
+    # claimed row's plan files (#311), so `-r` alone no longer writes it empty
+    states = {str(r.id): r.state for r in dyadlib.read_rows(root)} if dyadlib.rows_dir(root).is_dir() else {}
+    if states:   # a store that holds no row judges nothing
+        dropped = {r for r in row_set if states.get(r) in dyadlib.TERMINAL_STATES or (r.isdigit() and r not in states)}
+        row_set -= dropped
+        file_set -= set(files_of_rows(root, dropped)) - set(files_of_rows(root, row_set)) - set(files)
+    file_set |= set(files_of_rows(root, row_set))
+    row_set = sorted(row_set, key=lambda r: (not r.isdigit(), int(r) if r.isdigit() else 0, r))
+    file_set = sorted(file_set)
     p.write_text(f"session: {sid}\n"
                  f"seen: {datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds')}\n"
-                 f"root: {Path(root).resolve()}\n"
+                 f"root: {Path(here or root).resolve()}\n"
                  f"rows: {' '.join(row_set)}\n"
                  f"files: {' '.join(file_set)}\n"
                  f"writer: {me}\n"
@@ -443,17 +491,29 @@ def seat_name_report(root: Path, args: list[str]) -> tuple[int, list[str]]:
         lines.append(f"note:   DYAD_SESSION is {os.environ['DYAD_SESSION']!r}; the presence file keeps that name until the seat is retaken")
     return 0, lines
 
-def touch_from_open_rows(root: Path | None = None) -> Path:
-    """Session start / plan-Y (Rule-16): every row this instance's own store lists as open or
-    planned, with the files each one's stored plan (if any) names."""
+def refresh_in(wt: Path, inst: str, candidates, here: Path) -> str | None:
+    """#567: refresh this unit's own presence inside a land's worktree `wt` (instance `inst`, repo-relative), claiming
+    only the `candidates` that `claim` gives it against the board as it stands there; the caller's checkout `here` is
+    the `root:` line. Returns the presence path relative to `wt` for the land's commit, or None when `DYAD_SESSION`
+    is unset or not path-safe — a land never fails for want of a presence file (Rule-16: advisory)."""
+    if not _SESSION_ID.match(os.environ.get("DYAD_SESSION", "")):
+        return None
+    saved = os.environ.get("DYAD_INSTANCE")
+    os.environ["DYAD_INSTANCE"] = inst
+    try:
+        p = touch(wt, claim(wt, candidates), [], here=here)
+    finally:
+        if saved is None:
+            os.environ.pop("DYAD_INSTANCE", None)
+        else:
+            os.environ["DYAD_INSTANCE"] = saved
+    return p.relative_to(wt).as_posix()
+
+def touch_owned(root: Path | None = None) -> Path:
+    """The no-argument `session touch` (session start, Rule-16): the rows already claimed ∪ the board rows that name
+    this unit as an owner, with their plans' files — never every open row of the instance (#130, plan #567)."""
     root = root or dyadlib.repo_root()
-    rows = [str(r.id) for r in dyadlib.read_rows(root) if r.state in ("open", "planned")]
-    files = []
-    for rid in rows:
-        p = dyadlib.instance(root) / "d-work" / "plans" / f"{rid}.md"
-        if p.exists():
-            files += files_touched(p.read_text(errors="ignore"))
-    return touch(root, rows, sorted(set(files)))
+    return touch(root, owned_rows(root), [])
 
 def read_all(root: Path | None = None) -> list[dict[str, str]]:
     root = root or dyadlib.repo_root()
@@ -636,7 +696,8 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
             "note": "one file per session, only that session writes it; advisory, never a lock",
             "fields": [(f, "text", _ALLOWED.get(f, "space-separated tokens"), True, "", "sessions.FIELDS") for f in FIELDS]}
 
-TOUCH_USAGE = "usage: dyad session touch [-r <row>]... [-f <file>]... (no word: this session's open and planned rows)"
+TOUCH_USAGE = ("usage: dyad session touch [-r <row>]... [-f <file>]... (no word: the rows already claimed and the "
+               "board rows naming this unit as owner; `files` from their plans)")
 
 def behind_origin(root: Path) -> int | None:
     """#482 P4 (mode T): commits on the local `origin/main` ref that HEAD lacks — counted against the ref as last
@@ -662,7 +723,7 @@ def main(a: list[str]) -> int:
                       f"— nothing written; {TOUCH_USAGE}", file=sys.stderr)
                 return 2
         try:
-            p = touch(root, rows, files) if (rows or files) else touch_from_open_rows(root)
+            p = touch(root, rows, files) if (rows or files) else touch_owned(root)
         except SessionUnset as e:
             print(e, file=sys.stderr); return 2
         print(f"touched {p.relative_to(root)}")

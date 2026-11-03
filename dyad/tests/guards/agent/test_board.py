@@ -150,6 +150,20 @@ class GuardTests(unittest.TestCase):
         self.assertIn("inbox program-bbbbbbbb: 0 unread", text)
         self.assertEqual(bd.owners({"owner": "a-1 s1; b-2 s2;  ; c-3"}), ["a-1", "b-2", "c-3"])
 
+    def test_resume_shows_each_seats_last_ledger_act_as_information(self):
+        """#567 F8: the presence file's `seen` per announced seat, `none` without one; never a state."""
+        self.put("5", ENTRY.replace("owner: engineer-1537d8fb session_01x",
+                                    "owner: engineer-1537d8fb session_01x; counsel-0032b4c0 session_015q"))
+        seen = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2, minutes=5)).isoformat(timespec="seconds")
+        d = self.root / INST / "d-work" / "sessions"; d.mkdir(parents=True)
+        (d / "engineer-1537d8fb.md").write_text(f"session: engineer-1537d8fb\nseen: {seen}\nroot: /x\nrows: 5\nfiles: \n")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
+            v = bd.resume_view(self.root)
+            text = "\n".join(bd.resume_lines(self.root))
+        self.assertEqual(v["last_act"], {"counsel-0032b4c0": "", "engineer-1537d8fb": seen})
+        self.assertIn("last ledger act (presence `seen`, information only, #567): counsel-0032b4c0 none, engineer-1537d8fb 2h", text)
+        self.assertEqual([n for n, _ in v["live"]], ["5"])                    # the board, not presence, says what is live
+
     def test_contract(self):
         self.assertEqual((bd.ENTITY, bd.CORPUS, bd.TRANSACTION), ("board", "agent", False))
         self.assertIsNone(dyadlib.contract_problem(bd, "core", "agent"))

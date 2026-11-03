@@ -859,3 +859,51 @@ class ReconcileTests(unittest.TestCase):
         self._harness(proj, self.A, None)
         with mock.patch.dict(os.environ, {"DYAD_HARNESS_DIR": str(base)}):
             self.assertEqual(sv.check_package(root), [])            # advisory: a mismatch is never a guard failure
+
+
+class ClaimTests(unittest.TestCase):
+    """#567 (#130, #311): which rows a touch claims — the board's `owner`, or no owner named — and the files derived from
+    the claimed rows' plans; a terminal or missing row leaves the file."""
+    ROW = "id: {id}\ntitle: t{id}\nopened: 2026-11-01\nstate: {state}\ndisposed: \nrefs: \n"
+
+    def setUp(self):
+        e = mock.patch.dict(os.environ, {"DYAD_SESSION": "engineer-aaaaaaaa", "DYAD_INSTANCE": "agent-corpus"})
+        e.start(); self.addCleanup(e.stop)
+        os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+        self.root = repo(); d = self.root / "agent-corpus" / "d-work"
+        for sub in ("rows", "plans", "board"):
+            (d / sub).mkdir()
+        for rid, state in ((1, "open"), (2, "planned"), (3, "open"), (4, "done")):
+            (d / "rows" / f"{rid}.md").write_text(self.ROW.format(id=rid, state=state))
+        (d / "plans" / "1.md").write_text("# Plan #1\n\nFiles touched: dyad/a.py, dyad/b.py\n")
+        (d / "plans" / "2.md").write_text("# Plan #2\n\nFiles touched: dyad/c.py\n")
+        (d / "board" / "1.md").write_text("holder: program-x\nowner: engineer-aaaaaaaa s1; counsel-bbbbbbbb s2\n")
+        (d / "board" / "2.md").write_text("holder: program-x\nowner: counsel-bbbbbbbb s2\n")
+        (d / "board" / "4.md").write_text("holder: program-x\nowner: engineer-aaaaaaaa s1\n")
+
+    def test_claim_reads_the_boards_owner(self):
+        self.assertEqual(sv.claim(self.root, ["1", "2", "#3"]), ["1", "3"])   # 2 is counsel's; 3 has no entry
+        self.assertEqual(sv.files_of_rows(self.root, ["1", "2", "9"]), ["dyad/a.py", "dyad/b.py", "dyad/c.py"])
+
+    def test_no_argument_touch_claims_only_board_owned_rows(self):
+        p = sv.touch_owned(self.root)
+        f = sv.parse(p.read_text())
+        self.assertEqual((f["rows"], f["files"]), ("1", "dyad/a.py dyad/b.py"))   # not 2 or 3 (#130), not the done 4
+
+    def test_r_without_f_derives_files(self):
+        f = sv.parse(sv.touch(self.root, ["2"], []).read_text())
+        self.assertEqual((f["rows"], f["files"]), ("2", "dyad/c.py"))           # #311 item 1
+
+    def test_a_terminal_or_missing_row_leaves_the_file_with_its_files(self):
+        sv.touch(self.root, ["1", "2"], ["notes.txt"])
+        d = self.root / "agent-corpus" / "d-work" / "rows"
+        (d / "2.md").write_text(self.ROW.format(id=2, state="done"))
+        f = sv.parse(sv.touch(self.root, ["99"], []).read_text())
+        self.assertEqual((f["rows"], f["files"]), ("1", "dyad/a.py dyad/b.py notes.txt"))   # c.py was only #2's
+
+    def test_the_cli_touch_claims_board_rows(self):
+        import io, contextlib
+        with mock.patch.object(sv.dyadlib, "repo_root", return_value=self.root), \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(sv.main(["touch"]), 0)
+        self.assertEqual(sv.parse((self.root / "agent-corpus" / "d-work" / "sessions" / "engineer-aaaaaaaa.md").read_text())["rows"], "1")

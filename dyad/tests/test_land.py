@@ -132,6 +132,65 @@ class LandTests(unittest.TestCase):
         self.assertEqual(rc, 1); self.assertIn("already landed", err)
         self.assertEqual(self.main_at_origin(), head, "nothing pushed")
 
+    # ---- presence (#567): the acts that hand a unit a row touch that unit's own presence file, in the same land
+    def seed_origin(self, files: dict):
+        """Write `files` (repo-relative) in the seat and put them on origin/main past the hook (setup, not a land)."""
+        for rel, text in files.items():
+            (self.seat / rel).parent.mkdir(parents=True, exist_ok=True); (self.seat / rel).write_text(text)
+        git(self.seat, "add", "-A"); git(self.seat, *livetest.IDENTITY, "commit", "-qm", "ledger: setup")
+        git(self.seat, "-c", "core.hooksPath=/dev/null", "push", "-q", "origin", "HEAD:main")
+        self.log.unlink(missing_ok=True)
+
+    def presence(self, seat, rev="main"):
+        return dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"{rev}:{INST}/d-work/sessions/{seat}.md"))
+
+    def test_an_owners_plan_y_lands_its_presence_with_the_plans_files_and_drops_a_done_row(self):
+        s = f"{INST}/d-work/"
+        self.seed_origin({s + "plans/1.md": "# Plan #1\n\nFiles touched: dyad/scripts/x.py, dyad/tests/test_x.py\n",
+                          s + "board/1.md": "holder: program-aaaaaaaa\nowner: engineer-bbbbbbbb s1\n",
+                          s + "rows/5.md": ROW.format(id=5, title="five").replace("state: open", "state: done"),
+                          s + "sessions/engineer-bbbbbbbb.md": "session: engineer-bbbbbbbb\nseen: 2026-10-01T00:00:00+00:00\n"
+                                                              "root: /old\nrows: 5\nfiles: dyad/old.py\n"})
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "engineer-bbbbbbbb"}):
+            rc, out, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 0, err)
+        head = self.main_at_origin()
+        self.assertEqual(self.files_of(head), [s + "provenance/1.md", s + "rows/1.md", s + "sessions/engineer-bbbbbbbb.md"])
+        self.assertEqual(len(self.hook_runs()), 1, "one commit, one push: the presence rides the record")
+        f = self.presence("engineer-bbbbbbbb")
+        self.assertEqual(f["rows"], "1", "the claimed row in, the done row #5 out")
+        self.assertEqual(f["files"], "dyad/old.py dyad/scripts/x.py dyad/tests/test_x.py")
+        self.assertEqual(f["root"], str(self.seat.resolve()), "the caller's checkout, not land's worktree")
+        self.assertGreater(f["seen"], "2026-10-01T00:00:00+00:00")
+        rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 1); self.assertIn("already landed", err)
+        self.assertEqual(self.main_at_origin(), head, "an entry already landed carries no presence change either")
+
+    def test_the_homes_plan_y_for_another_units_row_claims_nothing(self):
+        s = f"{INST}/d-work/"
+        self.seed_origin({s + "board/1.md": "holder: program-aaaaaaaa\nowner: engineer-bbbbbbbb s1\n"})
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-aaaaaaaa"}):
+            rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 0, err)
+        self.assertIn(s + "sessions/program-aaaaaaaa.md", self.files_of(self.main_at_origin()))
+        f = self.presence("program-aaaaaaaa")
+        self.assertEqual((f["rows"], f["files"]), ("", ""), "seen refreshed, the row left to its owner")
+
+    def test_a_new_row_with_no_owner_is_claimed_and_a_batch_plan_y_touches_once(self):
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "solo-cccccccc"}):
+            rc, out, err = self.dwork("new", "mine", "--prompt", "open mine", "--land")
+            self.assertEqual(rc, 0, err)
+            self.assertEqual(self.presence("solo-cccccccc")["rows"], "2", "no board entry: the flat case, the actor claims")
+            rc, _, err = self.batch("state 1 planned -d 'Y plan' --said Y\n")
+            self.assertEqual(rc, 0, err)
+        self.assertEqual(self.presence("solo-cccccccc")["rows"], "1 2")
+        self.assertEqual(len(self.hook_runs()), 2)
+        with unittest.mock.patch.dict(os.environ, {}):
+            os.environ.pop("DYAD_SESSION", None)
+            rc, _, err = self.dwork("state", "2", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("sessions/", " ".join(self.files_of(self.main_at_origin())), "no DYAD_SESSION: no presence, the land still lands")
+
     def test_land_paths_and_a_path_outside_the_store_is_refused(self):
         before = self.main_at_origin()
         (self.seat / "README.md").write_text("not ledger\n")
