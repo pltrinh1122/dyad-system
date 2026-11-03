@@ -253,7 +253,7 @@ if __name__ == "__main__":
         else:
             _previous(kind, exc, tb)
     sys.excepthook = _invariant_error_one_line
-import os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil, threading
+import collections.abc, os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil, threading
 from concurrent.futures import ThreadPoolExecutor
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
@@ -947,23 +947,28 @@ def guard_check(entry):
         return lambda: [f"{rel}: {problem}"]
     return lambda: mod.check_package(REPO)
 
-def checks():
-    """The check table `check` runs: Rule-11, Rule-12, then one entry per registry guard. Built on first use and kept
-    as the module's `CHECKS` (a caller that sets `CHECKS` itself — a test's patch — is read as set), never at import:
-    building it loads and compiles every guard from source (#185), about 0.2 s, which a CLI call that runs no check
-    (`dwork`, `session`, `inbox`, …) has no use for (d-work #563 C2)."""
-    table = globals().get("CHECKS")
-    if table is None:
-        table = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
-        table.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
-        globals()["CHECKS"] = table
-    return table
+class _Checks(collections.abc.Mapping):
+    """The check table `check` runs: Rule-11, Rule-12, then one entry per registry guard, in that order. A mapping
+    built on first read, never at import: building it loads and compiles every guard from source (#185), about
+    0.2 s, which a CLI call that runs no check (`dwork`, `session`, `inbox`, …) has no use for (d-work #563 C2)."""
+    def __init__(self):
+        self._table = None
+    def _built(self):
+        if self._table is None:
+            table = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
+            table.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
+            self._table = table
+        return self._table
+    def __getitem__(self, key):
+        return self._built()[key]
+    def __iter__(self):
+        return iter(self._built())
+    def __len__(self):
+        return len(self._built())
+    def built(self) -> bool:
+        return self._table is not None
 
-def __getattr__(name):
-    """`package.CHECKS` read from outside (a projector, a test) builds the table on first read (`checks`)."""
-    if name == "CHECKS":
-        return checks()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+CHECKS = _Checks()
 
 # ---- the invariant pass (crafts/syseng/rules/invariants.md p1, p4): before any check, over every model module
 def invariant_modules(failures: list | None = None):
@@ -1602,7 +1607,7 @@ def cmd_evidence_at(rev, brief=False):
 
 def cmd_check():
     rc = cmd_invariants()
-    for name, fn in checks().items():
+    for name, fn in CHECKS.items():
         msgs = fn()
         msgs = [m.removeprefix("FAIL ") for m in msgs]
         hard = [m for m in msgs if not m.startswith("warning:")]

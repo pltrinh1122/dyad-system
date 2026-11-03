@@ -88,11 +88,9 @@ class PackageTests(livetest.LiveCase):
     def test_the_check_table_is_built_on_first_use_not_at_import(self):
         """#563 C2: importing the runner loads no guard; the table is built when a check needs it, then kept."""
         pkg = load_package()
-        self.assertNotIn("CHECKS", vars(pkg))
-        table = pkg.CHECKS
-        self.assertIs(pkg.checks(), table); self.assertEqual(list(table)[:2], ["Rule-11", "Rule-12"])
-        with unittest.mock.patch.object(pkg, "CHECKS", {"Rule-11": lambda: []}):
-            self.assertEqual(list(pkg.checks()), ["Rule-11"])               # a patched table is read as set
+        self.assertFalse(pkg.CHECKS.built())                                 # importing loaded no guard
+        self.assertEqual(list(pkg.CHECKS)[:2], ["Rule-11", "Rule-12"])
+        self.assertTrue(pkg.CHECKS.built()); self.assertEqual(len(pkg.CHECKS), len(pkg.registry()) + 2)
     def test_registry_contract(self):
         pkg = load_package()
         reg = pkg.registry()
@@ -1237,6 +1235,30 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(len(fails), 1, fails); self.assertTrue(fails[0].startswith("agent-corpus/projections/erd.html:"))
         self.assertIn("'projections/*'", fails[0])
 
+
+# d-work #563 C5: the runner runs each test class as its own child, so PackageTests' 146 tests (203.5 s in one child at
+# #561) were the whole suite's critical path. Its tests are dealt round-robin, in definition order, into
+# PACKAGE_SPLIT classes that subclass it and so keep its helpers; PackageTests itself keeps none. The tests that read
+# one shared run (`evidence_in_a_hermetic_clone`) stay in one class, since a child shares a run only with itself.
+# Same file, same root: the Rule-12 test mapping is unchanged.
+PACKAGE_SPLIT = 6
+PACKAGE_TOGETHER = ("test_check_runs_and_reports_rules_and_guards", "test_evidence_block_shape_and_hash")
+def _split(cls, n, together):
+    names = [k for k in vars(cls) if k.startswith("test")]
+    groups = [[] for _ in range(n)]
+    rest = [k for k in names if k not in together]
+    groups[0] += [k for k in names if k in together]
+    for i, k in enumerate(rest):
+        groups[(i % (n - 1)) + 1 if n > 1 else 0].append(k)
+    made = {}
+    for i, group in enumerate(groups, 1):
+        name = f"{cls.__name__}{i}"
+        made[name] = type(name, (cls,), {"__module__": cls.__module__, "__qualname__": name,
+                                         **{k: vars(cls)[k] for k in group}})
+    for k in names:
+        delattr(cls, k)
+    return made
+globals().update(_split(PackageTests, PACKAGE_SPLIT, PACKAGE_TOGETHER))
 
 class BundledCraftTests(unittest.TestCase):
     """Rule-11 property 2's bundled craft (d-work #114). The core keeps no list: a craft is bundled
