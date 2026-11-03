@@ -1121,6 +1121,29 @@ def done_head_refusals(lines, base="origin/main"):
                             f"new head and record it before pushing (Rule-3 Completion, #495)")
     return refusals, notes
 
+def clerical_paths(base, head):
+    """The paths `base..head` changes when every one lies under the ledger (`<instance>/d-work/`) or the events store,
+    else None: the push the gate split serves (d-work #564). None too when the range cannot be read or is empty."""
+    if not head:
+        return None
+    paths = dyadlib.range_paths(REPO, base, head, merge_base=False)
+    if not paths:
+        return None
+    rel, events = dyadlib.instance_rel(REPO), dyadlib.events_rel(REPO)
+    under = tuple(p for p in (f"{rel}/d-work/" if rel else None, f"{events}/" if events else None) if p)
+    return list(paths) if under and all(p.startswith(under) for p in paths) else None
+
+def swept(mod, clerical) -> bool:
+    """Whether the pre-push gate leaves `mod`'s state check to the sweep (d-work #564): it declares `CLERICAL_READS`
+    (the instance-relative ledger or events paths it reads), the push is clerical, and it touches none of them.
+    `check --evidence`, `check` and `check --guards` without `--pre-push` never pass `clerical`."""
+    reads = getattr(mod, "CLERICAL_READS", None)
+    if clerical is None or reads is None:
+        return False
+    rel = dyadlib.instance_rel(REPO) or ""
+    wanted = tuple(f"{rel}/{r}" for r in reads)
+    return not any(p.startswith(wanted) for p in clerical) if wanted else True
+
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -1156,10 +1179,14 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         pushed = None
     rc = cmd_invariants()
     entries = registry()
+    clerical = clerical_paths(base, pushed) if pre_push else None
     for corpus, entity, rel, tx, mod, problem in entries:
         label = f"{corpus}/{entity}"
         if mod is None:
             print(f"FAIL [guards] {label}: {problem}"); rc = 1; continue
+        if swept(mod, clerical):
+            print(f"skip [guards] {label}: a clerical push touches nothing it reads; the sweep runs it (d-work #564)")
+            continue
         msgs = mod.check_package(REPO)
         fails = [m for m in msgs if not m.startswith("warning:")]
         for m in msgs:

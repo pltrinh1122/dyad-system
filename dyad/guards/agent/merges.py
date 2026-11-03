@@ -36,6 +36,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
 
 ENTITY, CORPUS, TRANSACTION = "merge", "agent", True
+CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative) its state check reads —
+                          # its state check judges the first-parent merges since the instance's file; a clerical push brings none (its transaction check judges a pushed merge); on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "merge commit on main", "Rule-2"
 FIELDS = ("merge", "parents", "tree", "named_by")
 SINCE_FILE = "merges_since.local.txt"                # <instance>/: the sha package mode judges merges since (#544), instance data

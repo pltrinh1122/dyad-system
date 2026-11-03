@@ -2386,6 +2386,38 @@ class CodeKeyedSkipTests(unittest.TestCase):
         self.assertIn(f"code={self.pkg.code_digest()}", out.splitlines()[:4])
 
 
+class GateSplitTests(unittest.TestCase):
+    """d-work #564: on a clerical push (every path under the ledger or the events store) the pre-push gate leaves a
+    guard's state check to the sweep when the guard declares `CLERICAL_READS` and the push touches none of them; a
+    push carrying code, and every run without `--pre-push`, runs them all."""
+    def setUp(self):
+        SuiteMemoTests.setUp(self)
+
+    def test_clerical_paths_and_swept(self):
+        d, seed, git = SuiteMemoTests.repo(self)
+        inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        base = git("rev-parse", "HEAD")
+        (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "row")
+        ledger = git("rev-parse", "HEAD")
+        self.assertEqual(self.pkg.clerical_paths(base, ledger), [f"{inst}/d-work/rows/2.md"])
+        guard = type("G", (), {"CLERICAL_READS": ()}); reads_version = type("V", (), {"CLERICAL_READS": ("d-work/VERSION",)})
+        self.assertTrue(self.pkg.swept(guard, self.pkg.clerical_paths(base, ledger)))
+        self.assertFalse(self.pkg.swept(type("U", (), {}), self.pkg.clerical_paths(base, ledger)))   # undeclared: always runs
+        self.assertFalse(self.pkg.swept(guard, None))                                                # no clerical range
+        (d / inst / "d-work" / "VERSION").write_text("1\n"); git("add", "-A"); git("commit", "-qm", "version")
+        self.assertFalse(self.pkg.swept(reads_version, self.pkg.clerical_paths(base, "HEAD")))       # it touches what it reads
+        self.assertTrue(self.pkg.swept(reads_version, self.pkg.clerical_paths(base, ledger)))
+        (d / "code.txt").write_text("more\n"); git("commit", "-qam", "code")
+        self.assertIsNone(self.pkg.clerical_paths(base, "HEAD"))                                     # code: nothing swept
+        self.assertIsNone(self.pkg.clerical_paths("HEAD", "HEAD"))                                   # empty range
+
+    def test_the_declaring_guards_read_no_ledger(self):
+        declared = {f"{c}/{e}" for c, e, _, _, mod, _ in self.pkg.registry() if mod is not None and hasattr(mod, "CLERICAL_READS")}
+        self.assertTrue({"agent/merges", "infra/manifest", "craft/crafts", "agent/dmc", "infra/bundle"} <= declared)
+        self.assertFalse(declared & {"agent/rows", "agent/provenance", "agent/plans", "agent/traces", "agent/board",
+                                     "agent/inbox", "agent/references", "syseng/naming"})   # these read the ledger: never swept
+
+
 class InstalledRootTests(unittest.TestCase):
     """#176 (d-work #199 N5): `dyad install` records the core's tree in the craft registry, and the pre-push
     path skips a test root whose craft tree is byte-identical to its row — never `check --evidence`, never

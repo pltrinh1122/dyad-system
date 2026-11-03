@@ -26,6 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, distribute
 
 ENTITY, CORPUS, TRANSACTION = "component", "infra", False
+CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative) its state check reads —
+                          # the manifests and the code's invocations, none under the ledger or the events; on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "manifest row", "Rule-14"
 RULES_FILE = Path(__file__).resolve().parent / "manifest_rules.txt"
 PARTITIONS = {"kernel", "library", "The World"}

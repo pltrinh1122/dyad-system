@@ -27,6 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib, distribute
 
 ENTITY, CORPUS, TRANSACTION = "craft", "craft", False
+CLERICAL_READS = ("d-work/VERSION",)   # d-work #564: the ledger/events paths (instance-relative) its state check reads —
+                          # the craft trees and the registry; under the ledger only `d-work/VERSION`, a core install's version record; on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "craft", "Rule-11"
 DIRS = ("rules", "vocabulary", "templates", "guards", "docs", "falsification")
 FIELDS = ("name", "version", *DIRS, "requires", "seeds")
