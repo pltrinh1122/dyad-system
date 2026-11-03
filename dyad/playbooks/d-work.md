@@ -183,6 +183,30 @@ a question reaches the operator):
   provenance record and `archived` in the one ledger commit: an archive has no merge between its record and its
   act, so it takes one commit where a Done takes two. Anything else retires none of them.
 
+Work in flight (#569). The same sweep reads the work in flight from records alone — inbox files and their `.read`
+markers, commits and branch tips, PR bodies and heads, the board, presence and the stored plans — and posts what is
+new since its last run, one notice per kind, to the home's inbox. Each threshold is a minimum age, the sweep running
+twice a day. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
+- **A relay or notice left unread** (4 h): the home rings the unit's doorbell, the one act that wakes a session; a
+  reminder in the same unread inbox would go unread too, so the sweep notifies the home alone.
+- **A planned row gone quiet** (3 days, only while its board entry waits on a unit), **an open row with no plan file**
+  (24 h; a child or a row under a mandate has none of its own and is exempt), or **a PR whose head has not moved**
+  (3 days): the home asks the owner by relay what holds it.
+- **A PR citing no live row**, or **a branch** whose tip is not on `main`, with no open PR and no row citing it: the
+  home proposes a close or a delete. Deleting a branch is destructive, so each deletion is its own question to the
+  operator (Rule-8), never folded into another.
+- **A board unit missing from the unit table**, or a row waiting on a unit whose presence is stale (read only once #567's refreshed presence is on `main`, and skipped with one line until then): the home fixes
+  the board (write-ahead, Rule-3).
+- **A promise still listed** (3 days): the home opens its row, by the operator's `Y`, or drops the promise. A promise
+  is written to `promised` in the turn it is made and removed in the turn its row opens or it is dropped, so a listed
+  promise is one still owed; its age is read from the history of `_cos.md`.
+- **A row waiting on the operator with no question recorded**, reported once and again only if it changes, or **a
+  recorded question older than 24 h**: the home asks it, or records the question it is waiting on.
+- **A report newer than the board**: the owner posted a report on the row after the board entry's `since`, so the
+  board may be stale; the home reads the report and fixes the board.
+What cannot be read from records — a unit's chat state, a hold said only in conversation — stays the home's
+inference. Clustering the backlog by `refs` waits for typed refs (#569 A12).
+
 Promotion when the board is empty (#566; `dyad/dmc/promotion.jsonld`). When a unit is **idle** — no row that is not
 terminal waits on it — or **about to be** — its one waiting row's `next` is a Done draft or a review — and nothing is
 **owed** — no counter-prompt the home asked is unanswered (a row routed home with a board `question`, or a pending queue
