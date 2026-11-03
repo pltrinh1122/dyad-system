@@ -181,6 +181,36 @@ a question reaches the operator):
   provenance record and `archived` in the one ledger commit: an archive has no merge between its record and its
   act, so it takes one commit where a Done takes two. Anything else retires none of them.
 
+Promotion when the board is empty (#566; `dyad/dmc/promotion.jsonld`). When a unit is **idle** — no row that is not
+terminal waits on it — or **about to be** — its one waiting row's `next` is a Done draft or a review — and nothing is
+**owed** — no counter-prompt the home asked is unanswered (a row routed home with a board `question`, or a pending queue
+that is not empty; work waiting in a paired unit's own chat does not count) — the home reads the `backlog` rows and
+proposes which to open. An empty board is the case where every unit is idle. Otherwise the answer is **no proposal**.
+A candidate's class, highest first:
+- P1, **a live defect**: a defect in a live mechanism, or a monitoring gap;
+- P2, **a promise**: a `promised` entry of the board made while working an anchor, matched to the row by the home;
+- P3, **a fired trigger**: a row waiting on a named event that has come;
+- P4, **adjacent to the last delivered row** (below);
+- P5, **worked under backlog**: the sweep's finding of a `backlog` row a commit already claims (Backlog hygiene, above)
+  — its other findings argue for retirement, never for promotion;
+- P6, **the oldest valid row**: the oldest `backlog` row whose reason still holds.
+
+A row that is none of these, or that duplicates another row, is **not a candidate**; a duplicate is replaced by the row
+it duplicates, with the reason stated. **Adjacency**, of a candidate to an anchor (a row on the board, or the row just
+delivered): either strong signal alone — S1, the anchor's plan or completion evidence deferred the candidate or named
+it as not built or a follow-up; S2, it was promised while working the anchor — or a score of 3 or more from S3 shared
+files (2), counting only files that under a fifth of the stored plans touch, so a file most plans touch adds nothing;
+S4 a shared mechanism — a verb, a guard or a store (2); S5 a `refs` edge (1); S6 the same owning unit, read from the
+charter that covers the candidate's files (1); S7 the same incident mode, read from the failure-mode derivation (1).
+S1 and S5 are read from records; S2, S3, S4, S6 and S7 are inferred, and the reason is written beside the candidate.
+Ties go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
+smaller of 2 and the number of idle units, each candidate with a different owner: a promoted row costs the operator
+three answers. The home judges every class; the sweep supplies only P5. The question is one line naming each candidate,
+its class, its reason and its owner — `Y/N: open #a (P1, <reason>, <owner>), #b (P4, <reason>, <owner>)?` — and a `Y`
+opens each named row (`backlog → open`, the operator's words its `prompt` entry, Rule-7), whose plan follows; nothing
+opens without it, and the overhead test above applies. Under `organization: flat` there is one unit, so S6 and the
+unit tie-breaks drop out. Adjacency moves to its own `dyad/dmc/adjacency.jsonld` when a second decision needs it.
+
 ## Reading
 - **The machine before the forms.** What a row may do next is its state's rows of δ: the input named there
   is the only thing that moves it, and the kind says whose act it is.
