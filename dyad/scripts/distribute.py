@@ -28,6 +28,7 @@ from pathlib import Path
 import dyadlib, hostadapter
 
 SKIP_DIRS = {"__pycache__", ".git"}
+UPDATE_INDEX_CHUNK = 500   # paths per `git update-index` call: one call per mode for a whole install, under any argv limit (#563 C1)
 INVARIANTS = [("skip-dirs-are-generated-or-git", lambda: SKIP_DIRS <= {"__pycache__", ".git", ".pytest_cache"}),   # crafts/syseng/rules/invariants.md
               ("skip-dirs-non-empty", lambda: bool(SKIP_DIRS))]
 
@@ -209,7 +210,7 @@ def install(src: Path, dest: Path, roots, prune: bool = False, hooks: Hooks | No
         src_modes = archive_modes(src_path) if is_archive else git_modes(root, [*roots, *extra])
         dest_is_repo = _is_work_tree(dest)
         dest_modes = git_modes(dest, [*roots, *extra]) if dest_is_repo else {}
-        changed = 0
+        changed, staged = 0, {"+x": [], "-x": []}
         for rel in wanted:
             s, d = root / rel, dest / rel
             mode = src_modes.get(rel, _mode(s))
@@ -218,9 +219,12 @@ def install(src: Path, dest: Path, roots, prune: bool = False, hooks: Hooks | No
             d.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(s, d); d.chmod(mode)
             if dest_is_repo:   # the disk chmod above is not what `git add` later reads (fileMode=false); stage the bit itself
-                subprocess.run(["git", "update-index", "--add", "--chmod=" + ("+x" if mode == 0o755 else "-x"), "--", rel],
-                                cwd=dest, capture_output=True, env=_git_env())
+                staged["+x" if mode == 0o755 else "-x"].append(rel)
             changed += 1
+        for bit, rels in staged.items():   # one call per mode and chunk, not one per file (d-work #563 C1)
+            for i in range(0, len(rels), UPDATE_INDEX_CHUNK):
+                subprocess.run(["git", "update-index", "--add", f"--chmod={bit}", "--", *rels[i:i + UPDATE_INDEX_CHUNK]],
+                               cwd=dest, capture_output=True, env=_git_env())
         if prune:
             have = set(wanted)
             for rel in files(dest, roots, tracked=False):

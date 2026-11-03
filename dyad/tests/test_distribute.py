@@ -1,7 +1,7 @@
 """distribute.py (the one distribution code path, Rule-11 p5, #156): two builds byte-identical; a modified tree
 differs; install into a scratch repo then again -> 0; prune removes a dropped file; hooks seed templates and the
 import line, hooks=None writes nothing outside the roots; extract refuses unsafe members; instance_state."""
-import hashlib, os, shutil, subprocess, sys, tarfile, tempfile, time, unittest
+import hashlib, os, shutil, subprocess, sys, tarfile, tempfile, time, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -138,6 +138,24 @@ class ModeTests(unittest.TestCase):
             self.assertEqual(index_mode(dst, "crafts/x/bin/run"), "100755")
             self.assertEqual(index_mode(dst, "crafts/x/VERSION"), "100644")
             self.assertEqual(distribute.install(arc, dst, ["crafts/x"]), 0)   # idempotent: index already matches
+        finally:
+            shutil.rmtree(dst, ignore_errors=True)
+    def test_an_install_stages_modes_in_one_call_per_mode(self):
+        """#563 C1: the index bits are staged by one `update-index` call per mode, not one per file."""
+        arc = distribute.build(self.r, ["crafts/x"], self.r / "x.tar.gz")
+        dst = repo({"README.md": "x\n"})
+        subprocess.run(["git", "-C", str(dst), "config", "core.fileMode", "false"], check=True)
+        calls, real = [], subprocess.run
+        def spy(cmd, *a, **k):
+            if cmd[:2] == ["git", "update-index"]:
+                calls.append(cmd)
+            return real(cmd, *a, **k)
+        try:
+            with unittest.mock.patch.object(distribute.subprocess, "run", spy):
+                distribute.install(arc, dst, ["crafts/x"])
+            self.assertEqual(sorted(c[3] for c in calls), ["--chmod=+x", "--chmod=-x"])        # two calls for every file
+            self.assertEqual(index_mode(dst, "crafts/x/bin/run"), "100755")
+            self.assertEqual(index_mode(dst, "crafts/x/VERSION"), "100644")
         finally:
             shutil.rmtree(dst, ignore_errors=True)
     def test_install_idempotent_reads_dest_index_not_dest_disk(self):
