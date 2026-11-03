@@ -1747,6 +1747,8 @@ class SpawnSiteTests(unittest.TestCase):
                 "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
                 "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
+        "cmd_corroborate": "`git init` of its own scratch repo under a temp dir, under dyadlib.git_env(); never the "
+                           "repo judged (#564)",
         "checkout_snapshot": "status of the live checkout before and after the suite, under dyadlib.git_env(); no write "
                              "(the cleanliness fence, #552)",
         "evidence_in_worktree": "rev-parse of the common dir, then `worktree add --detach` and `worktree remove`/`prune` "
