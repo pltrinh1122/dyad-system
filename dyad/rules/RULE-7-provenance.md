@@ -100,7 +100,8 @@ Rule-11's runner as `agent/provenance`). Its two checks are split by what a fail
   no record passes only while its `disposed` holds n. A list line of another shape, an id listed
   twice, a listed id that is no row, or an n above the row's count fails too. With the transaction
   check in place, a gap reaches the tree only around the hook; it then fails this check in every
-  session until it is recorded or listed — the alarm for that bypass, a cost the design accepts.
+  evidence run and in the scheduled sweep, within 12 hours, until it is recorded or listed — the alarm for that bypass,
+  a cost the design accepts; the push gate judges only the records a push touches (#564).
   Naming a row in the list is a decision, made in a reviewed agent-zone PR (the list lies outside
   `<instance>/d-work/`, so no ledger-only commit can touch it). The list is instance data and never
   the core's (Rule-11 property 1). It warns on every unrecorded row while an instance keeps no list
@@ -131,6 +132,7 @@ disposition given in the closing seat; see the same record, amendment #422. Enfo
 added the Anthropic key in #558, and the Rule named neither; see the same record, amendment #525. Property 4 gains the
 disposition recorded by reference 2026-11-01 (d-work #545): under the release gate the operator's approval of a
 publishing run is a tap with no words; see the same record, amendment #545. Property 4
-says unit for seat and lowercases operator and agent 2026-11-02 (d-work #553); see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+says unit for seat and lowercases operator and agent 2026-11-02 (d-work #553); see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Enforcement's alarm moves to the evidence run
+and the scheduled sweep 2026-11-03 (d-work #564); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
 
 Set: System Requirements.

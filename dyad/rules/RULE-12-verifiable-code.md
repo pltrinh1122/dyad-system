@@ -52,7 +52,10 @@ behind reusable code carrying a mechanical check.
    equals the code of a head an operative `Y done` on the base names, the head whose evidence the operator ratified the
    merge on, with one line naming the row and the head. That skip trusts evidence run in another unit's environment for
    identical code: the operator's decision on plan #562, given with its plan-`Y`. Any path outside those two stores
-   changes the code, so code the evidence did not pass is never skipped, and the guards judge every pushed tree. That path also skips a test root whose installed tree is
+   changes the code, so code the evidence did not pass is never skipped, and the guards judge every pushed tree. The
+   pre-push path runs every transaction guard and the state checks of the records the push touches; the whole-store
+   state guards, and the suite in the hosting's environment, run in the scheduled sweep twice a day (Rule-14 property 3,
+   #564), which is also where the suite corroborates the skip above. That path also skips a test root whose installed tree is
    byte-identical to its craft registry row (Rule-11 property 2) — a Tended craft's root only while
    the core's tree is too — unless the pushed range changes the registry; `check --evidence` runs
    every root. One target — a module, a
@@ -101,7 +104,8 @@ paid about four minutes of suite for a change no test root's code depends on, wh
 events guard among them, still run; Rule-3 makes those events clerical as it does the ledger; see the same record, amendment #438. Property 2 gains the
 code-keyed skip 2026-11-03 (d-work #562): a cut of three PRs ran the suite three times, about 670 s, on merged trees whose
 code the Done-`Y`'s evidence had already passed, because the memo keyed on the whole tree and a merged tree never equals the
-PR head's; see the same record, amendment #562. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+PR head's; see the same record, amendment #562. Property 2 moves the whole-store state guards to the scheduled sweep
+2026-11-03 (d-work #564): they re-scanned every record on every ledger push; see the same record, amendment #564. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

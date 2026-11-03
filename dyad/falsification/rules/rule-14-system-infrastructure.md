@@ -238,3 +238,35 @@ Binding's evidence still observes every root. **14–6**: the vocabulary rows `e
 amended (owners 14 and 12); Rules 2, 12 and 14 read them correctly. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #562.
+
+## Amendment — d-work #564 (2026-11-03, property 3: corroboration where the merge ran; the scheduled sweep)
+Claim (plan #564 revision 2, the operator's plan-`Y` after the amend "evaluate expansion of the automaton scope to reduce
+per CI run"): after a merge, corroboration runs where the merge ran — the automaton's own job, or hosted CI for any other
+push to `main` — once per landed tree, the suite only when the landed code differs from code a done-`Y`'s evidence
+passed; a read-only scheduled sweep twice a day runs every whole-store guard and the suite in the hosting's environment;
+the push gate keeps every transaction guard and the checks of the records a push touches; `check --evidence` is
+unchanged. The plan's attacks A1–A8 and E1–E5 are its record; the ones bearing on Rule text follow. One amendment here
+covers the sentences this d-work changes in Rules 2, 3, 7, 12 and 14.
+
+| # | attack | result |
+|---|---|---|
+| 1 | (A1) Hosted CI on `main` can be dropped. | Refuted: it is Binding's after-merge corroboration, and it never ran on the ledger pushes that dominate. It stays, slimmed (E2, E3), for pushes the automaton did not make. |
+| 2 | (Revision 2's finding) The automaton's merges are corroborated. | Confirmed false: a push made with the workflow's token starts no other workflow, so the #558 cut and #562's merges had no corroboration; property 3 said hosted CI does it. Fixed by corroboration in the automaton's own job (E1); recorded as an incident in engineer's PR. |
+| 3 | (E2) Corroboration can skip the suite. | Survives, scoped: only when the landed code equals code a done-`Y`'s evidence passed, the trust of #562 applied after the merge; the scheduled sweep runs the suite in the hosting's environment within 12 hours, the same corroboration of the same trust. The operator's decision 4, bound by the plan-`Y`. |
+| 4 | (E3) Every merge needs its own run. | Refuted: a cut lands as one push (#562 (a)); a newer push cancels the run on the older tree, so the tree that stands is the one corroborated. |
+| 5 | (A4) A whole-store gap goes unalarmed for longer. | Survives, scoped: at most 12 hours (the operator's decision 1); every done-`Y`'s evidence runs every guard, so no unalarmed gap reaches a merge or a release. Rule-7's sentence says where the alarm now sounds. |
+| 6 | (A6) A missed or disabled sweep goes unnoticed. | Survives with the event: each sweep writes one event (events-only, Rule-3), which is also repository activity, and the automaton's run-book's health command is the last sweep's age. |
+| 7 | The automaton both executes and checks its own merge. | Survives, accepted: it decides nothing in either act; the check is the same `check --corroborate` hosted CI runs, and the sweep re-checks independently. |
+| 8 | The vocabulary already has `sweep` (Rule-5's pairwise check). | Confirmed: the new term is `scheduled sweep`, so neither row is redefined. |
+| 9 | Rules 1, 3, 4 and 6 still name the CI job's steps by their old names, which corroboration replaces. | Confirmed (distribute's finding, the infra-zone PR): the job's steps became one, `check --corroborate`, so each Rule now names corroboration and its own step in it — `rule-1 containment (push range)` and `(tree)`, `rule-3 fence (push range)`, and `check` for the Rule-4 and Rule-6 guards. Same guards, same trigger (`main` pushed), still detecting. |
+
+**Rule-6.** New rows: `corroboration` (owner 14; used by 1, 2, 3, 4, 6, 14 — Rules 1, 3, 4 and 6 by attack 9) and `scheduled sweep` (owner 14; used by 3, 7, 12, 14);
+each listed Rule now uses the term in this sense.
+**Pairwise (Rule-5).** **14–2**: Binding names corroboration where the merge ran; property 3 owns what it runs. **14–12**:
+property 2 owns what the pre-push path runs and names the sweep as where the whole-store guards and the suite go;
+property 3 owns the sweep's description. **14–3**: Rule-3's monitoring clause classes the sweep as no d-work; the events
+it writes are Rule-3's events-only commits. **14–7**: Rule-7's state check is unchanged in content; only where its alarm
+sounds is named. **14–5**: `sweep` and `scheduled sweep` are distinct terms. **14–1, 14–4, 14–6**: each Rule owns its
+guard and names the corroboration step that runs it; property 3 owns corroboration. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #564.

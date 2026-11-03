@@ -51,8 +51,8 @@ not edited when they are added (G5).
   kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main agent
   on the exact head being merged, its evidence block cited in the completion reply (Rule-3) by
   its `evidence-sha256` and its brief form — every failing or skipped line and every warning new
-  since `main`, the standing ones folded per guard — the full block stored and shown on request (Rule-14 property 3), which the operator may re-run on that head and compare; the hosting's CI
-  corroborates after the merge, on `main` (Rule-14 property 3, #168), and never substitutes — and only if their heads are unchanged since it
+  since `main`, the standing ones folded per guard — the full block stored and shown on request (Rule-14 property 3), which the operator may re-run on that head and compare; corroboration
+  runs after the merge, on `main`, where the merge ran (Rule-14 property 3, #168, #564), and never substitutes — and only if their heads are unchanged since it
   was asked; otherwise the agent stops and re-prompts. A CI failure that is an account or
   adapter failure (no job started) is not a red check but an absent one, reported as such.
   When the hosting is unreachable, a ratified merge is executed locally (`git merge --no-ff`
@@ -126,7 +126,9 @@ verb that refuses an unbound merge, so a guard claimed an owner whose text denie
 amendment #543. Binding's never-accretable list lets a release go under the release gate 2026-11-01 (d-work #545): the
 chat release question after a done-`Y` that had verified the very bytes of the cut added no information, while the
 hosting approval, the one input no agent can forge, stays; see the same record, amendment #545. Enforcement names the automaton as execution 2026-11-02 (d-work #556): it executes the merges a
-recorded done-`Y` names, through the merge verb, and decides nothing; see the same record, amendment #556. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
+recorded done-`Y` names, through the merge verb, and decides nothing; see the same record, amendment #556. Binding's
+after-merge check is corroboration where the merge ran 2026-11-03 (d-work #564): the automaton's merges started no hosted CI; see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
 
 Set: System Requirements.

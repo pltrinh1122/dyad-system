@@ -785,3 +785,9 @@ its own row — is Rule-13 property 1 applied, stated in the play-book, not a Ru
 **3–1**: agent zone; the workflow is infra zone, in engineer's PR. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #556.
+
+## Amendment — d-work #564 (2026-11-03: corroboration where the merge ran; the scheduled sweep)
+This Rule's sentence changes with property 3 of Rule-14; the claim, its attacks and the pairwise statements for every
+Rule this d-work touches are recorded once, in `rule-14-system-infrastructure.md`, amendment #564.
+
+Disposition: see ledger #564.
