@@ -156,6 +156,31 @@ every other message — a hold, an acknowledgement, a still-running note — **s
 to the inbox, the automaton or the orchestrating solo. A mechanism that sends the operator messages is kept only if it
 passes the same test.
 
+Backlog hygiene (#565). The scheduled sweep (Rule-14 property 3; #564) reads the `backlog` rows on `main` after its `check`, whatever `check`
+returned, and finds only what is structural: a row untouched — no commit to its row, plan or provenance record —
+for `HYGIENE_STALE_DAYS`; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
+terminal row; a row a commit on any `origin` branch claims as `d-work #N` while it is still `backlog`. Beside those
+it ranks pairs by similarity — TF-IDF cosine over the rows, siblings of one parent skipped, tokens common to more
+than a fifth of the rows dropped — at or above `HYGIENE_SIMILAR`. A ranked pair is a candidate for the review, never
+a finding. Hygiene is no guard: the runner never discovers it, and neither CI, the pre-push gate, `check --evidence`
+nor `check --corroborate` runs it. The sweep posts what is new since its last run, and nothing else, in its one
+`notice` to the home's inbox.
+
+On that notice the home judges what no automaton can (the overhead test above: the notice is the inbox's, and only
+a question reaches the operator):
+- **The candidates.** Whether a ranked pair is the same work twice, whether a row is superseded by work since
+  landed, whether its reason is gone, or whether it is still owed; a structural finding is a reason to read the
+  row, never a verdict on it.
+- **The triggers.** A row whose plan or title waits on a named event is read against that event's state; one
+  whose event has come is proposed for opening by the operator's prompt, never opened by the home.
+- **A row worked under `backlog`.** Reported to the operator as an incident (Rule-3): work was claimed with no
+  plan-`Y`, which the plan gate refuses at the push, so a commit on `origin` that claims it went around the hook.
+- **The question.** The rows the home proposes to retire are asked in the retirement form, `Y/N: archive #a, #b,
+  … #k?`, each listed before it with what it holds and the reason for retiring it (Rule-3 Ledger). A `Y` is
+  executed by `dyad dwork retire <id>... -d '<entry>' --said '<the operator's words>'`, which writes the entry, the
+  provenance record and `archived` in the one ledger commit: an archive has no merge between its record and its
+  act, so it takes one commit where a Done takes two. Anything else retires none of them.
+
 ## Reading
 - **The machine before the forms.** What a row may do next is its state's rows of δ: the input named there
   is the only thing that moves it, and the kind says whose act it is.
