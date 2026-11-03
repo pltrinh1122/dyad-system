@@ -134,9 +134,9 @@ files and almost never merge.
   `hostadapter.harness_sessions()` (`dyad/scripts/hostadapter.py`), and prints one line per mismatch
   (`no harness session`, `no presence`, `title differs`, `stale while titled`) — advisory, a run-book's
   health command (the unit whose charter holds the host), never a guard failure; the remedy is the writer's (#434).
-- **A plan-less row is invisible to the `files` union.** `sessions.touch_from_open_rows`
-  (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of this session's
-  `open` and `planned` rows; an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
+- **A plan-less row is invisible to the `files` union.** `sessions.touch_owned`
+  (`dyad/guards/agent/sessions.py`) builds `files` from the stored plan files of the rows this unit
+  owns — those it already claimed and those whose board entry names it an owner (#567); an accreted row (Rule-3, Scope) has no plan file of its own (Rule-15
   phase 2), so it appears in `rows` and contributes nothing to `files`. That is a reduction in
   exactly the coverage this store was built for — two sessions on *different* rows about the *same
   file* — and it is stated, not fixed here: those files are named in the mandate's own plan file,
@@ -200,7 +200,7 @@ dyad-native terms 2026-11-02 (d-work #553): seat becomes unit, attended a dyad u
 reserved; history keeps the old words and `dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Presence cites the organization
 craft's roles and names the reconcile check's owner by charter 2026-11-02 (d-work #560): `secretary` and `cos-board` are the
 cabinet's, and "the operate unit's" named an instance position; see the same record, amendment #560. Conditions'
-presence trigger names the acts that hand a unit a row 2026-11-03 (d-work #567): under `m4` the home answers every plan-`Y`, so
+presence trigger names the acts that hand a unit a row, and the plan-less-row bullet names `touch_owned`, 2026-11-03 (d-work #567): under `m4` the home answers every plan-`Y`, so
 "answers a plan-`Y`" touched the home's file and never the owner's, and the files-overlap signal went stale; see the same
 record, amendment #567.
 

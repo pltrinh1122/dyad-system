@@ -356,6 +356,7 @@ trigger, "answers a plan-`Y`", is replaced.
 | K2 | Touch on every ledger act a unit takes. | **Refuted, scoped**: the home records acts for rows it never works, so a touch per act would claim them for the home; the claim is gated by the board's `owner` (plan #567), and the home's own acts refresh `seen` only. |
 | K3 | A flat system has no board owner to read. | **Survives**: with no owner named the actor claims the row, which is the flat case, where the actor is the executor. |
 | K4 | Reading a relay is not an act of the owner. | **Refuted**: the relay is how a solo receives a row (Rule-3 Batch disposition, the inbox), so it is the solo's first act on it; a notice of `planned` is the same hand-off. |
+| K6 | The plan-less-row bullet still names `sessions.touch_from_open_rows` and "this session's `open` and `planned` rows". | **Confirmed** (the home's relay, engineer's PR #639 renames it): the bullet now names `touch_owned` and the rows the unit owns; the reduction it states — a plan-less row contributes no `files` — is unchanged. |
 | K5 | The Presence bullet "Touched by `dyad session touch` at session start and at every plan-`Y`" now under-describes the trigger. | **Confirmed, left as stated**: the plan changes the Conditions sentence only, and the bullet's "at every plan-`Y`" stays true of the owner's own record; the narrower wording is reported for a later sweep, not widened here. |
 
 **Pairwise (Rule-5).** **16–3**: Rule-3 owns when a plan-`Y` is recorded and how a relay travels; this Rule names those acts
