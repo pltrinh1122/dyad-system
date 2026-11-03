@@ -252,6 +252,30 @@ def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
     return out
 
+NOTICE_CHARS = 3000   # one notice's body at most; a longer group is split, never cut, so nothing new goes untold
+
+def notice_groups(new: list[str]) -> list[tuple[str, list[str]]]:
+    """The new lines by kind, as the notices tell them (d-work #565): backlog hygiene first, then similarity candidates,
+    then every other finding; each line by its key (`finding_key`), so what is told is what the next sweep compares."""
+    kinds = (("backlog hygiene", lambda l: l.startswith("finding: hygiene ")), ("similarity candidates", lambda l: l.startswith("candidate:")),
+             ("findings", lambda l: True))
+    out, left = [], list(new)
+    for name, test in kinds:
+        group = [finding_key(l.removeprefix("finding: ")) for l in left if test(l)]
+        left = [l for l in left if not test(l)]
+        if group:
+            out.append((name, group))
+    return out
+
+def notice_parts(group: list[str]) -> list[list[str]]:
+    """`group` split into parts whose joined body stays under NOTICE_CHARS; a single longer line is its own part."""
+    parts, cur, size = [], [], 0
+    for line in group:
+        if cur and size + len(line) + 3 > NOTICE_CHARS - 80:
+            parts.append(cur); cur, size = [], 0
+        cur.append(line); size += len(line) + 3
+    return parts + ([cur] if cur else [])
+
 def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     """Read-only: (lines, rc). Every finding prints; findings no automaton notice in the home's inbox has told yet are
     posted in one notice on `row`; rc 1 when any finding fails."""
@@ -270,15 +294,18 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
     told = " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
-    new = sorted((l for l in lines if finding_key(l.removeprefix("finding: ")) not in told),
-                 key=lambda l: (l.startswith("candidate:"), "hygiene" in l, l))      # grouped by kind (#565)
+    new = [l for l in lines if finding_key(l.removeprefix("finding: ")) not in told]
     summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {len(new)} new"
     if new and row and to:
-        body = f"automaton sweep at {base[:12]}: {len(new)} new: " + " | ".join(finding_key(l.removeprefix('finding: ')) for l in new)
-        try:
-            summary += "; " + post(repo, to, row, body[:3000])
-        except (Refused, inbox().Refused) as e:
-            summary += f"; the notice to {to} was refused ({e})"
+        sent = []
+        for kind, group in notice_groups(new):
+            for part in notice_parts(group):
+                body = f"automaton sweep at {base[:12]}, {kind}: " + " | ".join(part)
+                try:
+                    sent.append(post(repo, to, row, body))
+                except (Refused, inbox().Refused) as e:
+                    sent.append(f"the notice to {to} was refused ({e})")
+        summary += "; " + "; ".join(sent)
     elif new:
         summary += "; not told (no --row or no home)"
     return lines + [summary], rc

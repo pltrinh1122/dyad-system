@@ -177,7 +177,8 @@ class AutomatonTests(unittest.TestCase):
         self.assertIn(f"finding: row #9's done answer of 2026-11-01 names heads not on main: PR #7 at {self.sha[:12]}", out)
         self.assertIn("finding: warn [agent/plans] 43.md: an old warning", out)
         (msg,) = self.inbox(HOME)
-        self.assertIn("automaton sweep at", msg); self.assertIn("2 new", msg); self.assertIn("PR #7 at <sha>", msg)
+        self.assertIn("automaton sweep at", msg); self.assertIn(", findings: ", msg); self.assertIn("PR #7 at <sha>", msg)
+        self.assertIn("43.md: an old warning", msg)
         rc, out, _ = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])
         self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)            # told once
         rc, out, _ = self.sweep(check=[(True, "FAIL [agent/rows] broken")])
@@ -192,11 +193,20 @@ class AutomatonTests(unittest.TestCase):
         rc, out, err = self.sweep(hygiene=hyg)
         self.assertEqual(rc, 0, out + err)                                        # hygiene never fails the sweep
         self.assertIn("finding: hygiene I1 untouched: backlog row #10", out); self.assertIn("candidate: #9 and #10", out)
-        (msg,) = self.inbox(HOME)
-        body = msg.split("body: ", 1)[1]
-        self.assertLess(body.index("hygiene I1"), body.index("candidate:"))      # findings before candidates
+        msgs = self.inbox(HOME)
+        self.assertEqual(sum(", backlog hygiene: " in m for m in msgs), 1)       # one notice per kind
+        self.assertEqual(sum(", similarity candidates: " in m for m in msgs), 1)
+        self.assertTrue(any(", backlog hygiene: hygiene I1 untouched: backlog row #10" in m for m in msgs), msgs)
+        self.assertTrue(any(", similarity candidates: candidate: #9 and #10" in m for m in msgs), msgs)
         rc, out, _ = self.sweep(hygiene=hyg)
-        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)
+        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
+
+    def test_a_long_group_is_split_never_cut(self):
+        lines = [f"finding: warn [x/y] line {i} " + "z" * 200 for i in range(40)]
+        parts = am.notice_parts([am.finding_key(l.removeprefix("finding: ")) for l in lines])
+        self.assertGreater(len(parts), 1)
+        self.assertEqual(sum(len(p) for p in parts), 40)                          # every line in exactly one part
+        self.assertTrue(all(len(" | ".join(p)) < am.NOTICE_CHARS for p in parts))
 
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
