@@ -120,43 +120,54 @@ def authority_problem(root: Path, sha: str, p1: str, p2: str, heads, base: str |
             f"(no row's last disposition is a `Y done` naming it; Rule-2 Binding, #541 A5)")
 
 
-def rows_at(root: Path, ref: str) -> list:
-    """The ledger's rows as they stood at `ref`, read in one `git cat-file --batch` (a merge is judged against the
-    ledger it was made on: a `Y release` written on the row after its merge must not void the `Y done` it executed).
-    Rows that do not parse are skipped; an unreadable store gives []."""
+def rows_at(root: Path, ref: str, cache: dict | None = None) -> list:
+    """The ledger's rows as they stood at `ref` (a merge is judged against the ledger it was made on: a `Y release`
+    written on the row after its merge must not void the `Y done` it executed). The store is listed with its blob ids
+    and only blobs not already in `cache` (blob id -> parsed row, or None for a row that does not parse) are read, in
+    one `git cat-file --batch`: consecutive merges share all but the few rows a ledger commit changed, so judging n
+    merges reads the store once and then only what changed (d-work #563 C4). Rows that do not parse are skipped; an
+    unreadable store gives []."""
+    cache = {} if cache is None else cache
     rel = dyadlib.rows_dir(root).relative_to(root).as_posix() if dyadlib.rows_dir(root).is_relative_to(root) else None
-    names = out(root, "ls-tree", "--name-only", f"{ref}:{rel}") if rel else None
-    if not names:
+    listing = out(root, "ls-tree", f"{ref}:{rel}") if rel else None
+    if not listing:
         return []
-    ids = [f"{ref}:{rel}/{n}\n" for n in names.split() if n.endswith(".md") and n[:-3].isdigit()]
-    r = subprocess.run(["git", "cat-file", "--batch"], cwd=root, input="".join(ids).encode(), capture_output=True,
-                       env=dyadlib.git_env(), timeout=120)
-    data, rows, i = r.stdout, [], 0
-    while i < len(data):
-        nl = data.index(b"\n", i)
-        head = data[i:nl].split()
-        i = nl + 1
-        if len(head) < 3 or head[1] != b"blob":
-            continue
-        size = int(head[2]); text = data[i:i + size].decode(errors="replace"); i += size + 1
-        try:
-            rows.append(dyadlib.parse_row_file(text))
-        except (KeyError, ValueError):
-            continue
-    return rows
+    blobs = []
+    for line in listing.splitlines():
+        meta, _, name = line.partition("\t")
+        parts = meta.split()
+        if len(parts) == 3 and parts[1] == "blob" and name.endswith(".md") and name[:-3].isdigit():
+            blobs.append(parts[2])
+    want = [b for b in dict.fromkeys(blobs) if b not in cache]
+    if want:
+        r = subprocess.run(["git", "cat-file", "--batch"], cwd=root, input="".join(f"{b}\n" for b in want).encode(),
+                           capture_output=True, env=dyadlib.git_env(), timeout=120)
+        data, i = r.stdout, 0
+        while i < len(data):
+            nl = data.index(b"\n", i)
+            head = data[i:nl].split()
+            i = nl + 1
+            if len(head) < 3 or head[1] != b"blob":
+                continue
+            size = int(head[2]); text = data[i:i + size].decode(errors="replace"); i += size + 1
+            try:
+                cache[head[0].decode()] = dyadlib.parse_row_file(text)
+            except (KeyError, ValueError):
+                cache[head[0].decode()] = None
+    return [cache[b] for b in blobs if cache.get(b) is not None]
 
 
 def judge(root: Path, merges: list[str], base: str | None = None) -> list[str]:
     """Each merge against its parents (a), and against the operative `Y done`s of the ledger at its first parent (b)."""
     rg = dyadlib.load_guard("agent", "rows")
-    msgs = []
+    msgs, cache = [], {}                                 # parsed rows by blob id, shared across the merges (#563 C4)
     for sha in merges:
         parents = (out(root, "rev-list", "--parents", "-n", "1", sha) or "").split()[1:]
         if len(parents) != 2:
             msgs.append(f"warning: merge {sha[:12]} has {len(parents)} parents; only two-parent merges are judged")
             continue
         p1, p2 = parents
-        heads = rg.named_heads(rows_at(root, p1), terminal=True)
+        heads = rg.named_heads(rows_at(root, p1, cache), terminal=True)
         msgs += [m for m in (tree_problem(root, sha, p1, p2), authority_problem(root, sha, p1, p2, heads, base)) if m]
     return msgs
 
