@@ -221,3 +221,20 @@ request (`check --evidence --show <sha256>`); the Operator may re-run the eviden
 **Pairwise (Rule-5).** **14–2**: Binding cites the block by its sha256 and its brief form; property 3 owns how it is printed, stored and shown. **14–12**: unchanged — `check --evidence` never reads the suite memo, so the evidence still observes. **14–6**: the vocabulary row `evidence block` is amended (owner 14, used by 2 and 14); both Rules read it correctly. **14–11**: unchanged — the store is under the git common dir, never tracked, never a generated file in the tree. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #476.
+
+## Amendment — d-work #562 (2026-11-03, property 3: the evidence block's code digest and the hook's skip)
+Claim (plan #562): the evidence block prints the head's code digest, the identity of its tree with `<instance>/d-work/`
+and `<runbooks>/events/` pruned, and the pre-push hook skips the suite on a pushed tree whose code equals that of a head an
+operative `Y done` names, as Rule-12 property 2 states; `check --evidence` itself never skips.
+
+| # | attack | result |
+|---|---|---|
+| 1 | A new `code=` line changes every evidence sha256, so blocks before and after cannot be compared. | Survives, accepted: a block is compared only with a re-run on the same head under the same code, which prints the same line. |
+| 2 | The hook now trusts a run it did not make. | Survives, scoped: only the run the operator ratified the merge on, for identical code; the operator decided it on plan #562; the guards still run on every pushed tree, and hosted CI corroborates on `main`. |
+| 3 | "One push per cut" (plan #562 (a)) belongs in this Rule. | Refuted: how the merge verb and the automaton push is execution (Rule-2, Enforcement), not the kernel-only path; this Rule says only what the hook judges. |
+
+**Pairwise (Rule-5).** **14–12**: Rule-12 property 2 owns the skip; property 3 names it and owns the block. **14–2**:
+Binding's evidence still observes every root. **14–6**: the vocabulary rows `evidence block` and `suite memo` are
+amended (owners 14 and 12); Rules 2, 12 and 14 read them correctly. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #562.

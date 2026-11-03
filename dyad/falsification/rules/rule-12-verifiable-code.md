@@ -240,3 +240,25 @@ every root. 12–1 one zone per commit, unchanged. 12–8 the read-only class, u
 unchanged. Others untouched. Coherent, orthogonal.
 
 Disposition: see ledger #438.
+
+## Amendment — d-work #562 (2026-11-03, property 2: the memo keyed on code; the skip on a head a `Y done` names)
+Claim (plan #562, from #561's replay of the #558 cut): a cut lands in about the time its merges and guards take when
+the pre-push path recognises code it has already judged — in this checkout's memo, or in the evidence the operator's
+Done-`Y` was given on — while no code the suite has not judged lands and the merge evidence stays a full run. The
+plan's eleven attacks are its record; the ones bearing on this Rule's text follow.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | "Only one suite run per cut is required." | **Refuted as too strong** | #558 needed none: its final tree differed from the evidenced head only in 13 ledger files. At most one run, when the cut lands as one push; none when its code equals code the Done-`Y`'s evidence passed. |
+| 2 | A code-digest hit lets code `main` gained during the drift go unjudged. | **Refuted by construction** | The digest prunes only `<instance>/d-work/` and `<runbooks>/events/`; any other path changes it, the hit fails and the suite runs. |
+| 3 | The suite's outcome can depend on the ledger. | **Survives, scoped** | Some tests read live rows tolerantly. The gate already assumes this twice, skipping a ledger-only push (#155) and a ledger-only range (#162); this widens the route to that assumption, never the assumption, and the guards still judge every pushed tree. |
+| 4 | Skipping on another unit's evidence trusts an environment the pushing checkout did not check. | **Confirmed as a limit; the operator's decision** | The plan put it as its own decision; the plan-`Y` of 2026-11-03 binds the path that includes it. Hosted CI still corroborates on `main` after the merge (Rule-14 property 3). |
+| 5 | The code identity needs a new field in the Done entry. | **Refuted** | The operative `Y done` already names every head, and Rule-2's Binding already says its evidence passed on exactly those heads; the runner computes a head's code digest from git. |
+| 6 | `check --evidence` could reuse the same skip. | **Refuted** | It never reads a memo and never skips (Rule-2, Binding); the skip is the pre-push path's alone. |
+
+Pairwise (Rule-5): 12–14 Rule-14 property 3 owns the evidence block and its `code=` line and names the hook's skip;
+Rule-12 property 2 owns when the suite runs. 12–2 Binding's evidence is unchanged and still a full run. 12–3 the
+operative `Y done` and the ledger-only class are Rule-3's, read, not restated. 12–16 the store paths are unchanged.
+Others untouched. Coherent, orthogonal.
+
+Disposition: see ledger #562.
