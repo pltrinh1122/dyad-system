@@ -4,7 +4,7 @@ seat cloned from that origin whose pre-push hook only logs (and, when asked, lan
 row's operative `Y done` is written onto `origin/main` per case. The cases: a recorded Done-Y merges the PR (`--no-ff`,
 the message citing the PR, the row and the entry) and one hook run carries it; no entry, a void entry (a later `Y done`
 on another head), a revoked entry (a later `N`, #541), a short head, a moved live head, an already-landed head and a conflicting PR each refuse with nothing
-pushed; a push race is re-read and re-checked once, then lands; misuse is exit 2; and the rows fence's main path admits
+pushed; a cut of two PRs is one push and one hook run, and a refusal inside a cut pushes nothing (#562); a push race is re-read and re-checked once, then lands; misuse is exit 2; and the rows fence's main path admits
 the merge commit the verb makes."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -160,6 +160,28 @@ class MergeTests(unittest.TestCase):
         head = self.main_at_origin()
         self.assertEqual(git(self.origin, "rev-list", "--parents", "-n", "1", head).split()[1:], [raced, self.sha])
         self.assertEqual(len(self.hook_runs()), 2)
+
+    def test_a_cut_is_one_push_and_one_gate_run(self):
+        """#562 (a): every PR one entry names, merged in its order, one `--no-ff` commit each, pushed once."""
+        eight = self.pr_commit("dyad/c.txt", "c\n", base=self.sha, pr=8)            # stacked on #7
+        self.record(f"2026-10-30 Y plan; 2026-10-31 Y done (merges PR #7 at {self.sha}, PR #8 at {eight})")
+        before = self.main_at_origin()
+        out = self.mod.merge_all(self.seat, [(7, self.sha), (8, eight)])
+        head = self.main_at_origin()
+        first = git(self.origin, "rev-parse", f"{head}^1")
+        self.assertEqual(git(self.origin, "rev-list", "--parents", "-n", "1", head).split()[1:], [first, eight])
+        self.assertEqual(git(self.origin, "rev-list", "--parents", "-n", "1", first).split()[1:], [before, self.sha])
+        self.assertEqual([l.split(" onto ")[0] for l in out], [f"merged PR #7 at {self.sha}", f"merged PR #8 at {eight}"])
+        self.assertEqual(len(self.hook_runs()), 1)                                    # one push, one gate run
+
+    def test_a_refusal_inside_a_cut_pushes_nothing(self):
+        eight = self.pr_commit("dyad/b.txt", "eight's b\n", pr=8)                    # off main: conflicts with #7's b
+        self.record(f"2026-10-30 Y plan; 2026-10-31 Y done (merges PR #7 at {self.sha}, PR #8 at {eight})")
+        before = self.main_at_origin()
+        with self.assertRaises(self.mod.Refused) as e:
+            self.mod.merge_all(self.seat, [(7, self.sha), (8, eight)])
+        self.assertIn("PR #8", str(e.exception)); self.assertIn("nothing pushed", str(e.exception))
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])   # #7 did not land alone
 
     def test_misuse_is_exit_2(self):
         for argv in ([], ["7"], ["7", "--head", self.sha[:12]], ["x", "--head", self.sha], ["7", "--sha", self.sha]):

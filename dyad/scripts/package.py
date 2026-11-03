@@ -33,7 +33,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                           Rule-12's suites the way the runner runs them (d-work #155): every test root,
                                 or one root by path, or one dotted module/class/method — always with
                                 DYAD_NO_NESTED_TESTS set, which is what makes it ~39 s and not ~120 s
-  dyad check --evidence   the evidence block (Rule-14 property 3): head=, tree=, dirty=,
+  dyad check --evidence   the evidence block (Rule-14 property 3): head=, tree=, dirty=, code=,
                                 every line `check` and `check --guards` print, then
                                 evidence-sha256= of those lines; non-zero if any check fails
   dyad check --evidence --at <rev>
@@ -43,7 +43,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 HEAD and index are never touched, and no suite memo is read (#448, #443 C2).
                                 A <rev> that names no commit is refused with one line (exit 2)
   dyad check --evidence --brief [--at <rev>]
-                                the same run, read short (d-work #476, #473 C3): head=, tree=, dirty=, one
+                                the same run, read short (d-work #476, #473 C3): head=, tree=, dirty=, code=, one
                                 `counts: ok= warn= skip= fail=` line, every line that is not ok verbatim and in
                                 order (an indented continuation line follows its parent), `stored: <path>` and
                                 the same evidence-sha256= the full form prints, computed over the full block; the
@@ -467,6 +467,23 @@ def _git(*a):
 def utc_date() -> str:
     return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
+def code_digest(rev="HEAD"):
+    """The sha256 of `rev`'s tree listing (`git ls-tree -r`) with the ledger (`<instance>/d-work/`) and the run-book
+    events store pruned: one value per state of the code, whatever ledger it sits beside (d-work #562 (b)). Those two
+    prefixes are exactly the ones Rule-12 property 2 says cannot change a suite's outcome; any other path changes the
+    digest. None when git cannot say."""
+    listing = _git("ls-tree", "-r", "--full-tree", rev)
+    if listing is None:
+        return None
+    rel, events = dyadlib.instance_rel(REPO), dyadlib.events_rel(REPO)
+    skip = tuple(p for p in (f"{rel}/d-work/" if rel else None, f"{events}/" if events else None) if p)
+    h = hashlib.sha256()
+    for line in listing.splitlines():
+        path = line.split("\t", 1)[-1]
+        if not path.startswith(skip):
+            h.update(line.encode() + b"\n")
+    return h.hexdigest()
+
 def suite_memo_parts(rev="HEAD"):
     """Every input of a Rule-12 pass the memo keys on: `rev`'s tree, the interpreter (`sys.executable`,
     `sys.version`), git's version, the roots `test_suites()` runs, the env knobs (`SUITE_MEMO_ENV`), a digest
@@ -482,7 +499,10 @@ def suite_memo_parts(rev="HEAD"):
     local = hashlib.sha256()
     for f in sorted(dyadlib.instance(REPO).glob("*.local.txt")):   # instance data git ignores, read by guards (#191, #192)
         local.update(f.name.encode() + b"\0" + f.read_bytes() + b"\0")
-    return {"tree": tree, "executable": sys.executable, "python": sys.version, "git": gitv,
+    code = code_digest(rev)
+    if not code:
+        return None
+    return {"tree": tree, "code": code, "executable": sys.executable, "python": sys.version, "git": gitv,
             "roots": sorted(Path(os.path.relpath(p, REPO)).as_posix() for p in test_suites()),
             "env": {k: os.environ.get(k) for k in SUITE_MEMO_ENV},
             "tags": hashlib.sha256(tags.encode()).hexdigest(), "local": local.hexdigest(), "date": utc_date()}
@@ -558,6 +578,46 @@ def suite_memo_miss(parts):
         return "     [Rule-12] suite memo miss: no pass recorded on this checkout"
     return f"     [Rule-12] suite memo miss: {', '.join(best)} differ{'s' if len(best) == 1 else ''} from the nearest pass on this checkout"
 
+def suite_memo_code_hit(parts):
+    """The tree of a recorded pass on this checkout whose every key part equals `parts` but the tree, its `code`
+    included, or None (d-work #562 (b1)): the same code, beside another ledger. Read from the memo files' own JSON."""
+    d = suite_memo_dir() if parts else None
+    if d is None or not d.is_dir():
+        return None
+    try:
+        files = [f for f in d.iterdir() if SUITE_MEMO_NAME.fullmatch(f.name)]
+    except OSError:
+        return None
+    for f in files:
+        try:
+            memo = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(memo, dict) and memo.get("code") and suite_memo_diff(parts, memo) in ([], ["tree"]):
+            return memo.get("tree") or ""
+    return None
+
+def done_code_clause(base, head):
+    """`suite_gate`'s Done-`Y` clause (pre-push only, d-work #562 (b2)): the skip line when `head`'s code digest equals
+    the code digest of a head that an operative `Y done` on `base` names, else None. Rule-2 Binding makes the Operator's
+    Done-`Y` rest on the evidence block's observed pass, a full run of every root on exactly that head, so pushing the
+    same code beside another ledger has nothing left for the suite to judge. The Operator decided that this evidence,
+    run in a unit's own environment, may stand for the pushing machine's own run (plan #562). `check --evidence` never
+    reaches here: it never passes `pre_push`."""
+    code = code_digest(head)
+    if not code:
+        return None
+    try:
+        rows = dyadlib.read_rows(REPO, at=base)
+        named = dyadlib.load_guard("agent", "rows").named_heads(rows)
+    except Exception:                                    # an unreadable ledger proves nothing: the suite runs
+        return None
+    for rid, pr, sha, _ in named:
+        if _git("cat-file", "-e", f"{sha}^{{commit}}") is not None and code_digest(sha) == code:
+            return (f"skip [guards] Rule-12 suite: the pushed code equals PR #{pr}'s head {sha[:12]}, named by row "
+                    f"#{rid}'s operative Y done, whose evidence passed every root (Rule-2 Binding; d-work #562)")
+    return None
+
 def suite_memo_clause(base, head):
     """`suite_gate`'s memo clauses (pre-push only): the skip line, or None. First, `head`'s own tree already
     passed. Second, the range's own non-merge commits all touch only `<instance>/d-work/` (the three-dot walk
@@ -565,7 +625,9 @@ def suite_memo_clause(base, head):
     `<instance>/d-work/` too (so a merge commit's own changes count), and that merge-base's tree already
     passed: a ledger branch behind `origin/main`, whose two-dot range carries `main`'s own advances. The
     same two steps hold for an events-only range, `<host>/runbooks/events/` (`dyadlib.events_only`, d-work
-    #438), each class read whole: a range mixing the two is neither."""
+    #438), each class read whole: a range mixing the two is neither. Third (d-work #562 (b1)), a recorded pass whose
+    every key part but the tree equals `head`'s, its `code` digest (`code_digest`) included: the same code beside
+    another ledger or events, which a re-merge after a ledger-only drift of `main` is."""
     parts = suite_memo_parts(head)
     if suite_memo_hit(parts):
         return f"skip [guards] Rule-12 suite: tree {parts['tree'][:9]} already passed on this checkout (d-work #162)"
@@ -577,6 +639,10 @@ def suite_memo_clause(base, head):
                 if suite_memo_hit(mparts):
                     return (f"skip [guards] Rule-12 suite: {base}...HEAD is {kind} and its merge-base tree "
                             f"{mparts['tree'][:9]} already passed on this checkout (d-work #162)")
+    passed = suite_memo_code_hit(parts)                  # third: the same code passed beside another ledger (#562 (b1))
+    if passed is not None:
+        return (f"skip [guards] Rule-12 suite: tree {parts['tree'][:9]}'s code equals tree {passed[:9]}'s, which already "
+                f"passed on this checkout; they differ only under the ledger or the events (d-work #562)")
     return None
 
 def suite_gate(base, head, pre_push=False, base_ok=True):
@@ -611,7 +677,7 @@ def suite_gate(base, head, pre_push=False, base_ok=True):
     if events and all(p.startswith(f"{events}/") for p in paths):
         return False, f"skip [guards] Rule-12 suite: {base}..HEAD is events-only (d-work #438)"
     if pre_push:
-        line = suite_memo_clause(base, head)
+        line = suite_memo_clause(base, head) or done_code_clause(base, head)
         if line:
             return False, line
         return True, suite_memo_miss(suite_memo_parts(head))   # which key part missed, one line (d-work #474)
@@ -1182,7 +1248,7 @@ def cmd_evidence(brief=False):
         print(f"warn [evidence] {w}", file=sys.stderr)
     git = lambda *a: subprocess.check_output(["git", *a], cwd=REPO, text=True).strip()
     lines = [f"head={git('rev-parse', 'HEAD')}", f"tree={git('rev-parse', 'HEAD^{tree}')}",
-             f"dirty={'yes' if git('status', '--porcelain') else 'no'}"]
+             f"dirty={'yes' if git('status', '--porcelain') else 'no'}", f"code={code_digest('HEAD') or 'unknown'}"]
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         rc = cmd_check() | cmd_guards()
@@ -1197,7 +1263,7 @@ EVIDENCE_STORE = "dyad-evidence"   # `<git common dir>/dyad-evidence/<sha256>.tx
                                    # read short, never tracked; `--show` reads it back (d-work #476, #473 C3)
 EVIDENCE_PREFIX_MIN = 12           # the shortest prefix `--show` accepts: 48 bits, as `--at`'s worktree names use
 EVIDENCE_TOKENS = {"ok": "ok", "warn": "warn", "skip": "skip", "FAIL": "fail"}   # leading token -> counts key
-EVIDENCE_HEADER = ("head=", "tree=", "dirty=")
+EVIDENCE_HEADER = ("head=", "tree=", "dirty=", "code=")
 EVIDENCE_SHA = "evidence-sha256="
 
 def evidence_counts(lines):

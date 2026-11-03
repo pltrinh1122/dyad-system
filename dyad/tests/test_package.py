@@ -1834,7 +1834,8 @@ class EvidenceAtTests(unittest.TestCase):
         full, brief = self.at(d, "HEAD~1"), self.at(d, "HEAD~1", "--brief")
         self.assertEqual(brief.returncode, full.returncode, brief.stdout + brief.stderr)
         b = brief.stdout.splitlines()
-        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
+        self.assertEqual(b[0], f"head={target}"); self.assertRegex(b[3], r"^code=[0-9a-f]{64}$")
+        self.assertRegex(b[4], r"^counts: ok=\d+ warn=\d+ skip=\d+ fail=\d+")
         self.assertEqual(b[-1], full.stdout.splitlines()[-1])        # the same evidence-sha256 as the full form
         self.assertTrue(b[-2].startswith("stored: ") and b[-2].endswith(b[-1].split("=")[1] + ".txt"), b[-2])
         show = subprocess.run([sys.executable, str(d / "dyad" / "scripts" / "package.py"), "check", "--evidence", "--show",
@@ -1915,11 +1916,12 @@ class EvidenceBriefTests(unittest.TestCase):
             rc_brief, brief, _ = self.run_out(self.pkg.cmd_evidence, True)
         full, brief = full.splitlines(), brief.splitlines()
         self.assertEqual((rc_full, rc_brief), (1, 1))
-        self.assertEqual(full[3:-1], lines); self.assertEqual(brief[-1], full[-1])
-        self.assertEqual(brief[3], "counts: ok=4 warn=1 skip=1 fail=1")
+        self.assertEqual(full[4:-1], lines); self.assertEqual(brief[-1], full[-1])
+        self.assertTrue(full[3].startswith("code=")); self.assertEqual(brief[3], full[3])   # #562: the code digest
+        self.assertEqual(brief[4], "counts: ok=4 warn=1 skip=1 fail=1")
         stored = self.dir / (full[-1].split("=")[1] + ".txt")
         self.assertEqual(stored.read_text().splitlines(), full); self.assertEqual(brief[-2], f"stored: {stored}")
-        self.assertEqual(brief[4], "baseline: origin/main x (test)")
+        self.assertEqual(brief[5], "baseline: origin/main x (test)")
         self.assertIn("warn [agent/provenance] row 12 unrecorded", brief)    # a kind main lacks: verbatim
 
     # ---- folding against origin/main's warn kinds (#476, the extension the Operator approved)
@@ -2026,7 +2028,7 @@ class SuiteMemoTests(unittest.TestCase):
     git common dir; read by `suite_gate` only under `pre_push`; never by `check --evidence` nor by
     `check --guards` without `--pre-push`. Every case runs over a scratch repo with `pkg.REPO` pointed at it
     and `test_suites` pinned to one root inside it, so the key's `roots` part is the scratch repo's."""
-    PARTS = {"tree", "executable", "python", "git", "roots", "env", "tags", "local", "date"}
+    PARTS = {"tree", "code", "executable", "python", "git", "roots", "env", "tags", "local", "date"}
 
     def setUp(self):
         self.pkg = load_package()
@@ -2147,7 +2149,7 @@ class SuiteMemoTests(unittest.TestCase):
         self.assertEqual(gate(), (True, miss("local")))                             # instance-local data git ignores
         write(); self.assertFalse(gate()[0])
         (d / "code.txt").write_text("changed\n"); git("commit", "-qam", "tree")
-        self.assertEqual(gate(), (True, miss("tree")))                                      # the tree
+        self.assertEqual(gate(), (True, miss("tree", "code")))                              # the tree and its code (#562)
 
     def test_dirty_tree_partial_run_or_failure_never_writes(self):
         d, seed, git = self.repo()
@@ -2231,7 +2233,7 @@ class SuiteMemoTests(unittest.TestCase):
                                          f"{tree[:9]} already passed on this checkout (d-work #162)"))
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
         (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "not ledger")
-        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree differs from the nearest pass on this checkout"))                          # one non-ledger commit: the clause is off
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree, code differ from the nearest pass on this checkout"))                          # one non-ledger commit: the clause is off
 
     def test_events_branch_behind_main_skips_only_on_a_memoized_merge_base(self):
         """#438: the memo's second clause holds for an events-only branch as for a ledger-only one, each class
@@ -2255,7 +2257,86 @@ class SuiteMemoTests(unittest.TestCase):
         self.assertEqual(self.pkg.suite_gate("main", "HEAD", pre_push=False), (True, None))   # never without --pre-push
         inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
         (d / inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "a ledger commit")
-        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree differs from the nearest pass on this checkout"))                          # events then ledger: neither class, the clause is off
+        tree = git("rev-parse", "HEAD^{tree}")                  # events then ledger: neither class, so the range clause is
+        self.assertEqual(gate(), (False, f"skip [guards] Rule-12 suite: tree {tree[:9]}'s code equals tree "   # off; the
+                                         f"{git('rev-parse', f'{fork}^{{tree}}')[:9]}'s, which already passed on this "   # code
+                                         "checkout; they differ only under the ledger or the events (d-work #562)"))   # clause (#562)
+        (d / "code.txt").write_text("branch code\n"); git("commit", "-qam", "code")
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree, code differ from the nearest pass on this checkout"))
+
+class CodeKeyedSkipTests(unittest.TestCase):
+    """d-work #562 (b): the pre-push gate skips the suite when the pushed code was already judged — (b1) a recorded pass
+    on this checkout with the same code digest beside another ledger, (b2) the code of a head an operative `Y done` on
+    the base names, whose evidence passed (Rule-2 Binding). Code that differs runs, and `check --evidence` and
+    `check --guards` without `--pre-push` never skip."""
+    def setUp(self):
+        SuiteMemoTests.setUp(self)
+
+    def repo(self):
+        d, seed, git = SuiteMemoTests.repo(self)
+        self.inst = os.environ.get("DYAD_INSTANCE", "agent-corpus")
+        return d, seed, git
+
+    def row(self, d, git, disposed):
+        (d / self.inst / "d-work" / "rows" / "1.md").write_text(
+            f"id: 1\ntitle: one\nopened: 2026-11-03\nstate: planned\ndisposed: {disposed}\nrefs: \n")
+        git("add", "-A"); git("commit", "-qm", "ledger: #1")
+
+    def test_code_digest_ignores_the_ledger_and_the_events_only(self):
+        d, seed, git = self.repo()
+        before = self.pkg.code_digest()
+        (d / self.inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "row")
+        self.assertEqual(self.pkg.code_digest(), before)
+        (d / "code.txt").write_text("other\n"); git("commit", "-qam", "code")
+        self.assertNotEqual(self.pkg.code_digest(), before)
+
+    def test_b1_a_ledger_drift_after_a_pass_skips_and_a_code_drift_runs(self):
+        d, seed, git = self.repo()
+        passed = git("rev-parse", "HEAD^{tree}")
+        self.pkg.suite_memo_write(self.pkg.suite_memo_parts())          # this code passed here
+        (d / self.inst / "d-work" / "rows" / "2.md").write_text("id: 2\n"); git("add", "-A"); git("commit", "-qm", "row")
+        gate = lambda: self.pkg.suite_gate(seed, "HEAD", pre_push=True)   # seed..HEAD carries code: no range clause
+        tree = git("rev-parse", "HEAD^{tree}")
+        self.assertEqual(gate(), (False, f"skip [guards] Rule-12 suite: tree {tree[:9]}'s code equals tree {passed[:9]}'s, "
+                                         "which already passed on this checkout; they differ only under the ledger or the "
+                                         "events (d-work #562)"))
+        self.assertEqual(self.pkg.suite_gate(seed, "HEAD", pre_push=False), (True, None))   # never without --pre-push
+        (d / "code.txt").write_text("other\n"); git("commit", "-qam", "code")
+        self.assertEqual(gate(), (True, "     [Rule-12] suite memo miss: tree, code differ from the nearest pass on this checkout"))
+
+    def test_b2_code_named_by_an_operative_done_y_skips(self):
+        d, seed, git = self.repo()
+        git("switch", "-qc", "pr")
+        (d / "code.txt").write_text("the pr\n"); git("commit", "-qam", "pr")
+        pr = git("rev-parse", "HEAD")
+        git("switch", "-q", "main")
+        self.row(d, git, f"2026-11-03 Y plan; 2026-11-03 Y done (merges PR #5 at {pr})")
+        git("merge", "-q", "--no-ff", "-m", "Merge PR #5", pr)            # the cut: the PR's code beside the new ledger
+        line = (f"skip [guards] Rule-12 suite: the pushed code equals PR #5's head {pr[:12]}, named by row #1's operative "
+                "Y done, whose evidence passed every root (Rule-2 Binding; d-work #562)")
+        self.assertEqual(self.pkg.suite_gate("main~1", "HEAD", pre_push=True), (False, line))
+        self.assertEqual(self.pkg.suite_gate("main~1", "HEAD", pre_push=False), (True, None))   # never without --pre-push
+        (d / "code.txt").write_text("changed after the Y\n"); git("commit", "-qam", "more code")
+        self.assertTrue(self.pkg.suite_gate("main~2", "HEAD", pre_push=True)[0])      # other code: the suite runs
+
+    def test_b2_a_void_or_absent_done_y_runs(self):
+        d, seed, git = self.repo()
+        git("switch", "-qc", "pr")
+        (d / "code.txt").write_text("the pr\n"); git("commit", "-qam", "pr")
+        pr = git("rev-parse", "HEAD")
+        git("switch", "-q", "main")
+        self.row(d, git, f"2026-11-03 Y plan; 2026-11-03 Y done (merges PR #5 at {pr}); 2026-11-03 N")   # revoked (#541)
+        git("merge", "-q", "--no-ff", "-m", "Merge PR #5", pr)
+        self.assertTrue(self.pkg.suite_gate("main~1", "HEAD", pre_push=True)[0])
+
+    def test_evidence_never_skips_and_prints_the_code_line(self):
+        d, seed, git = self.repo()
+        self.pkg.suite_memo_write(self.pkg.suite_memo_parts())
+        calls, reads, out = SuiteMemoTests.guards(self, "main", False, evidence=True)
+        self.assertIn(("check",), calls)                                   # the suite ran, memo or not
+        self.assertEqual(reads, [])
+        self.assertIn(f"code={self.pkg.code_digest()}", out.splitlines()[:4])
+
 
 class InstalledRootTests(unittest.TestCase):
     """#176 (d-work #199 N5): `dyad install` records the core's tree in the craft registry, and the pre-push

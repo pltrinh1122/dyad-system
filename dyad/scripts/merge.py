@@ -19,6 +19,9 @@ commits names this verb, so the harness that runs it is pointed at that record b
 says (plan #532, revision 5, R3). The verb therefore reads nothing but `origin/main` and the PR's live head, both
 re-read on every try.
 
+`merge_all` merges a cut — every PR one `Y done` names, in its order — in one worktree and one push, so the gate
+judges the cut's final tree once and a refusal at any PR pushes nothing (d-work #562 (a)); the automaton calls it.
+
 The worktree and its lock are `dyad dwork land`'s (`land.py`: `<git common dir>/dyad-land`, one land or merge at a time
 per clone), so a merge never touches the caller's checkout. A push refused because `main` moved is re-read and
 re-checked from the start once (a race: another seat landed something), never rebased; any other refusal stops with
@@ -80,45 +83,61 @@ def live_head(repo: Path, pr: int) -> str:
     return (r.stdout.split() or [""])[0]
 
 
-def attempt(repo: Path, wt: Path, pr: int, sha: str) -> tuple[str, str, int, str] | None:
-    """One try: read, check, merge, push. (merge sha, base, row, entry) on success; None when the push lost a race
-    to `main` (the caller re-reads); Refused otherwise."""
+def attempt(repo: Path, wt: Path, items: list[tuple[int, str]]):
+    """One try over a cut: read, check every PR, merge each in order, push once (d-work #562 (a)). Returns
+    ([(pr, sha, merge sha, row, entry)], base) on success; None when the push lost a race to `main` (the caller
+    re-reads); Refused otherwise, with nothing pushed: a cut lands whole or not at all."""
     base = land.fetch(repo)
-    rid, entry = authorizing(dyadlib.read_rows(repo, at=base), pr, sha)
-    live = live_head(repo, pr)
-    if live != sha:
-        raise Refused(f"PR #{pr}'s live head is {live or 'absent'}, not {sha}: a moved head voids the Y (Rule-2 Binding)")
-    land.git(repo, "fetch", "-q", "origin", f"refs/pull/{pr}/head", timeout=land.NETWORK_TIMEOUT)
-    if land.git(repo, "merge-base", "--is-ancestor", sha, base, check=False).returncode == 0:
-        raise Refused(f"{sha} is already on origin/main: PR #{pr} has landed")
+    rows = dyadlib.read_rows(repo, at=base)                # read once per try, not once per PR
+    auth = [(pr, sha, *authorizing(rows, pr, sha)) for pr, sha in items]
+    for pr, sha, _, _ in auth:
+        live = live_head(repo, pr)
+        if live != sha:
+            raise Refused(f"PR #{pr}'s live head is {live or 'absent'}, not {sha}: a moved head voids the Y (Rule-2 Binding)")
+        land.git(repo, "fetch", "-q", "origin", f"refs/pull/{pr}/head", timeout=land.NETWORK_TIMEOUT)
+        if land.git(repo, "merge-base", "--is-ancestor", sha, base, check=False).returncode == 0:
+            raise Refused(f"{sha} is already on origin/main: PR #{pr} has landed")
     land.prepare(repo, wt, base)
-    msg = (f"Merge PR #{pr} at {sha}\n\nExecuted by `dyad merge` on the Done-Y recorded on main: row #{rid}, "
-           f"{entry!r} (Rule-2 Binding, clerical execution; Rule-14 property 3; #532)")
-    m = land.git(wt, "merge", "-q", "--no-ff", "-m", msg, sha, check=False)
-    if m.returncode:
-        land.git(wt, "merge", "--abort", check=False)
-        raise Refused(f"PR #{pr} at {sha} does not merge cleanly onto origin/main {base[:12]}: "
-                      f"{(m.stdout + m.stderr).strip().splitlines()[-1:] or ['conflict']}")
-    head = land.out(wt, "rev-parse", "HEAD")
+    done = []
+    for pr, sha, rid, entry in auth:
+        msg = (f"Merge PR #{pr} at {sha}\n\nExecuted by `dyad merge` on the Done-Y recorded on main: row #{rid}, "
+               f"{entry!r} (Rule-2 Binding, clerical execution; Rule-14 property 3; #532)")
+        m = land.git(wt, "merge", "-q", "--no-ff", "-m", msg, sha, check=False)
+        if m.returncode:
+            land.git(wt, "merge", "--abort", check=False)
+            onto = f"PR #{done[-1][0]}'s merge" if done else f"origin/main {base[:12]}"
+            raise Refused(f"PR #{pr} at {sha} does not merge cleanly onto {onto}: "
+                          f"{(m.stdout + m.stderr).strip().splitlines()[-1:] or ['conflict']}; nothing pushed")
+        done.append((pr, sha, land.out(wt, "rev-parse", "HEAD"), rid, entry))
     p = land.git(wt, "push", "--porcelain", "origin", "HEAD:refs/heads/main", check=False, timeout=land.NETWORK_TIMEOUT)
     if p.returncode == 0:
-        return head, base, rid, entry
+        return done, base
     if land.fetch(repo) != base:          # main moved under the push: a race, re-read and re-checked by the caller
         return None
     raise Refused(f"the push failed with main unmoved; nothing landed:\n{(p.stdout + p.stderr).strip()}")
 
 
-def merge(repo: Path, pr: int, sha: str) -> str:
+def merge_all(repo: Path, items: list[tuple[int, str]]) -> list[str]:
+    """Merge a cut — the PRs one operative `Y done` names, in its order — as one push through the gate, so the gate
+    judges the cut's final tree once (d-work #562 (a)). One line per PR merged."""
     common = Path(land.out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
     wt = common / land.WORKTREE
     with land.locked(common):
         for n in range(TRIES):
-            got = attempt(repo, wt, pr, sha)
+            got = attempt(repo, wt, items)
             if got:
-                head, base, rid, entry = got
-                return (f"merged PR #{pr} at {sha} onto main {base[:12]} as {head}: authorized by row #{rid} "
-                        f"{entry!r}")
+                done, base = got
+                prev, out = base, []
+                for pr, sha, head, rid, entry in done:
+                    out.append(f"merged PR #{pr} at {sha} onto main {prev[:12]} as {head}: authorized by row #{rid} "
+                               f"{entry!r}")
+                    prev = head
+                return out
         raise Refused(f"main moved under the push {TRIES} times: nothing landed; run it again")
+
+
+def merge(repo: Path, pr: int, sha: str) -> str:
+    return merge_all(repo, [(pr, sha)])[0]
 
 
 def main(argv, repo: Path) -> int:
