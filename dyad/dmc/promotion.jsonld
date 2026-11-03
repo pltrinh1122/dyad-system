@@ -23,7 +23,9 @@
     "the scheduled sweep's hygiene notice, for a backlog row a commit already claims",
     "the charters of the instance's mandates table, for the unit that owns a candidate's files",
     "the failure-mode derivation of the incident log, for a candidate's incident mode",
-    "adjacency, of a candidate to an anchor: S1 (the anchor's plan or completion evidence deferred it or named it as not built or a follow-up) or S2 (it was promised while working the anchor) alone, or a score of at least 3 from S3 shared files 2 (only files under a fifth of the stored plans touch), S4 shared mechanism (a verb, a guard or a store) 2, S5 refs edge 1, S6 same owning unit 1, S7 same incident mode 1; S1 and S5 are read from records, S2, S3, S4, S6 and S7 are inferred and carry their reason"
+    "a candidate need not be a row: a promise or a finding, named by its source (promise on #N, I12 on #N, finding) and a one-line title",
+    "absorbed: another row's plan names the candidate as carried by it; dependency: the candidate's fix is assumed by another's, or another's refs or plan name it as a prerequisite; impact, within P1: blocks or corrupts work, then misleads a reading, then cosmetic; dependency and impact are inferred and carry their reason",
+    "adjacency, of a candidate to an anchor: S1 (the anchor's plan or completion evidence deferred it or named it as not built or a follow-up) or S2 (it was promised while working the anchor) alone, or a score of at least 3 from S3 shared files 2 (only files under a fifth of the stored plans touch), S4 shared mechanism (a verb, a guard or a store) 2, S5 refs edge 1, S6 same owning unit 1 (counted only when the anchor's board owner names exactly one unit), S7 same incident mode 1; S1 and S5 are read from records, S2, S3, S4, S6 and S7 are inferred and carry their reason"
   ],
   "hasDefinedTerm": [
     {
@@ -58,22 +60,22 @@
       "@type": "DefinedTerm",
       "termCode": "P5",
       "name": "worked under backlog",
-      "dyad:when": "the scheduled sweep reports a commit claiming the row while it is still backlog; the sweep's other hygiene findings argue for retirement and never rank here",
+      "dyad:when": "the scheduled sweep reports a commit claiming the row while it is still backlog; the sweep's other hygiene findings (orphaned, untouched, malformed) are reasons to read a row, never grounds to retire it or to promote it",
       "dyad:then": "proposed after P4"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P6",
       "name": "the oldest valid row",
-      "dyad:when": "the row is the oldest backlog row whose reason still holds",
+      "dyad:when": "the row is the oldest backlog row whose reason still holds and that no other row's plan absorbs",
       "dyad:then": "proposed after P5"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "none",
       "name": "not a candidate",
-      "dyad:when": "the row is in no class above, or it duplicates another row",
-      "dyad:then": "not proposed; a duplicate is replaced by the row it duplicates, with the reason stated"
+      "dyad:when": "the row is in no class above, duplicates another row, or is absorbed by another row's plan",
+      "dyad:then": "not proposed; a duplicate is replaced by the row it duplicates, and an absorbed row is proposed only through the row that absorbed it, with the reason stated"
     },
     {
       "@type": "DefinedTerm",
@@ -83,7 +85,7 @@
       "dyad:then": "nothing is proposed and nothing reaches the operator (the message-overhead criterion)"
     }
   ],
-  "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry); under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",
+  "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; within a class a candidate another depends on comes first, and within P1 the higher impact; then ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry) and one new row, born open, for each named promise or finding; under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",
   "dyad:default": "no proposal",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
