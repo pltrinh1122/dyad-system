@@ -178,7 +178,9 @@ its revision 5.
   `server-instances.md` property 7): it records an observation, never a decision (Rule-2). One
   commit stays one zone (Rule-1), so a commit touching both the ledger and the events is neither
   class. Monitoring is therefore no d-work: a standing read-only check has nothing for a plan-`Y`
-  to authorize and never completes, so it opens no row, and its only write is its events (#438).
+  to authorize and never completes, so it opens no row, and its only write is its events (#438). The scheduled sweep
+  (Rule-14 property 3) is such a check: read-only, it decides nothing, and it writes one event per run and, only for
+  what is new or failing, one notice to the home's inbox (#564).
 - The `disposed` column records every disposition the row receives, in order, as
   `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`. The agent writes each entry
   clerically when the disposition is given, so the chain of authorization is reconstructible
@@ -510,6 +512,7 @@ operator's case and spelling reach no machine directly; history keeps the old wo
 verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
 `../falsification/rules/rule-3-d-work.md`, amendment #556. Ledger's session-start bullet cites the organization craft's roles
 2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
-organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560.
+organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring 2026-11-03 (d-work #564); see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
 
 Set: System Requirements.

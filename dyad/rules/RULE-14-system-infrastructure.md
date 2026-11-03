@@ -54,10 +54,16 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    re-run the evidence on the same head and compare the sha256 (Rule-2, Binding; #476). The block also prints the head's
    code digest (`code=`), the identity of the tree with `<instance>/d-work/` and `<runbooks>/events/` pruned; under
    `--pre-push` the hook skips the suite on a pushed tree whose code equals that of a head an operative `Y done` names
-   (Rule-12 property 2; #562), and `check --evidence` itself never skips. Hosted CI corroborates and never replaces the block, and
-   it is never a gate: it runs on `main` after a merge and on manual dispatch, never on a branch
-   push or a PR event, and never on a ledger-only commit; the pre-push hook is the only check
-   run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
+   (Rule-12 property 2; #562), and `check --evidence` itself never skips. **Corroboration** (`dyad check --corroborate`) never replaces the
+   block and is never a gate: it runs on `main` after a merge, where the merge ran — in the automaton's own job after
+   its push, since a push made with the workflow's token starts no other workflow, or in hosted CI for any other push
+   to `main` — once per landed tree (a newer push to `main` cancels the run on the older one), never on a branch push,
+   a PR event, or a ledger-only or events-only commit. It runs the guards, the containment range, the fence, the
+   build and a scratch install every time, and the suite only when the landed code differs from code an operative
+   `Y done`'s evidence passed; the **scheduled sweep** (`dyad automaton sweep`, twice a day) runs the suite on `main`
+   in the hosting's environment and every whole-store guard, read-only, and posts one notice to the home's inbox
+   only for what is new or failing (#564). The pre-push hook is the only check run before a merge (local CI first,
+   ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
    --no-ff` of the branch into `main`, commit message citing the PR and the done-Y — and is
    pushed when the hosting returns; the plan gate and the fence read the local `main`, and
    the completion reply states "evidence at <sha>, hosting unreachable" (#138).
@@ -88,6 +94,8 @@ the evidence block by its sha256 and its brief form, the full block stored per c
 2026-10-26 (d-work #476, child C3 of #473); see the same record, amendment #476. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 3's
 evidence block gains the code digest and the hook's skip on a head a `Y done` names 2026-11-03 (d-work #562); see
-`../falsification/rules/rule-14-system-infrastructure.md`, amendment #562.
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #562. Property 3 names corroboration, run where the
+merge ran, and the scheduled sweep 2026-11-03 (d-work #564): the automaton's merges had had no corroboration at all, and
+every merge of a stack started its own full run on a tree nobody lands on; see the same record, amendment #564.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
