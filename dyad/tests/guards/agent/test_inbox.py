@@ -212,6 +212,32 @@ class WriteAheadTests(World):
     def relay(self, to="engineer-1537d8fb", harness="h2"):
         return self.as_seat("program-59cec502", "post", to, "--row", "5", "--kind", "relay", "do task-5", harness=harness)
 
+    def test_reading_a_relay_claims_its_row_in_the_same_land(self):
+        """#567 F2: the executor's own inbox read of the relay lands its presence touch with the markers, claiming the
+        row the board names it owner of, with the files the row's plan names; a later read of a notice that hands it
+        nothing claims nothing more, and only refreshes `seen`."""
+        d = self.clones["program-59cec502"]
+        plans = d / INST / "d-work" / "plans"; plans.mkdir(parents=True)
+        (plans / "5.md").write_text("# Plan #5\n\nFiles touched: dyad/scripts/x.py, dyad/tests/test_x.py\n")
+        git(d, "add", "-A"); git(d, *livetest.IDENTITY, "commit", "-qm", "ledger: plan 5"); git(d, "push", "-q", "origin", "HEAD:main")
+        self.board_set("owner=engineer-1537d8fb session_x", "waiting-on=unit engineer-1537d8fb", "next=send task-5")
+        self.assertEqual(self.relay()[0], 0)
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.as_seat("engineer-1537d8fb", "read")
+        self.assertEqual(rc, 0, err)
+        head = git(self.origin, "rev-parse", "main")
+        changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        presence = f"{INST}/d-work/sessions/engineer-1537d8fb.md"
+        self.assertIn(presence, changed); self.assertEqual(len(changed), 2, changed)   # the marker and the presence, one commit
+        f = dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"main:{presence}"))
+        self.assertEqual((f["rows"], f["files"]), ("5", "dyad/scripts/x.py dyad/tests/test_x.py"))
+        self.assertEqual(f["root"], str(self.clones["engineer-1537d8fb"].resolve()))   # the reader's checkout, not land's worktree
+        self.assertEqual(self.as_seat("program-59cec502", "post", "engineer-1537d8fb", "--row", "5", "--kind", "notice", "fyi")[0], 0)
+        rc, _, err = self.as_seat("engineer-1537d8fb", "read")
+        self.assertEqual(rc, 0, err)
+        f2 = dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"main:{presence}"))
+        self.assertEqual(f2["rows"], "5"); self.assertGreaterEqual(f2["seen"], f["seen"])
+
     def test_a_relay_without_its_board_entry_is_refused(self):
         before = git(self.origin, "rev-parse", "main")
         rc, _, err = self.relay()

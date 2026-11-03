@@ -303,7 +303,21 @@ class Nothing(Exception):
     pass
 
 
-def read_builder(seat: str, show_all: bool, inst: str, got: list):
+PLANNED_NOTICE = re.compile(r"^row #(\d+) planned\b")   # the automaton's notice (automaton.PLANNED)
+
+
+def handed_rows(new: list) -> list[str]:
+    """#567: the rows the messages being marked read hand this seat — each `relay`'s row, and each `notice` that
+    announces a row planned — for `sessions.claim` to gate against the board."""
+    out = []
+    for _, f in new:
+        if f.get("kind") == "relay" or (f.get("kind") == "notice" and PLANNED_NOTICE.match(f.get("body") or "")):
+            if (f.get("row") or "").isdigit() and f["row"] not in out:
+                out.append(f["row"])
+    return out
+
+
+def read_builder(seat: str, show_all: bool, inst: str, got: list, repo: Path | None = None):
     me = sessions().writer()
     def build(wt: Path):
         got.clear()
@@ -316,7 +330,8 @@ def read_builder(seat: str, show_all: bool, inst: str, got: list):
         for p, _ in new:
             p.with_suffix(".read").write_text(board().render({"read": t, "reader": seat, "writer": me}, MARK_FIELDS))
         out = [l for p, f, r in ms if show_all or not r for l in render_message(p, f, r)]
-        return ([p.with_suffix(".read").relative_to(wt).as_posix() for p, _ in new],
+        presence = land().refresh_presence(wt, inst, handed_rows(new), repo, always=True)   # #567: the read lands the touch with it
+        return ([p.with_suffix(".read").relative_to(wt).as_posix() for p, _ in new] + presence,
                 f"ledger: inbox {seat} read ({len(new)})", "\n".join(out + [f"inbox {seat}: {len(new)} marked read"]))
     return build
 
@@ -328,7 +343,7 @@ def read(repo: Path, show_all: bool = False) -> list[dict[str, str]]:
         raise Refused("the instance (DYAD_INSTANCE) lies outside this work tree")
     got: list = []
     try:
-        land().land(repo, inst, None, read_builder(seat, show_all, inst, got), "inbox read")
+        land().land(repo, inst, None, read_builder(seat, show_all, inst, got, repo), "inbox read")
     except Nothing:
         for name, f, r in got:
             print("\n".join(render_message(Path(name), f, r)))

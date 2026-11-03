@@ -368,7 +368,20 @@ def resume_view(root: Path) -> dict:
     return {"cos": dict(got).get(COS, {}), "live": live, "stale": stale, "states": states,
             "owed": [(n, f) for n, f in live if f.get("waiting-on") == "operator"],
             "gates": [(n, f["waiting-on"]) for n, f in live if f.get("waiting-on", "").startswith("external ")],
-            "seats": seats, "unread": dyadlib.load_guard("agent", "inbox").unread(root, seat) if seat else 0}
+            "seats": seats, "unread": dyadlib.load_guard("agent", "inbox").unread(root, seat) if seat else 0,
+            "last_act": last_acts(root, seats)}
+
+
+def last_acts(root: Path, seats: list[str]) -> dict[str, str]:
+    """#567 F8: {seat: its presence file's `seen`, "" when it has none} — the time of its last ledger act (a plan-`Y`
+    it recorded, an inbox read, a session start). Information only: a unit deep in a branch writes none for hours, so
+    the board's own `waiting-on` and `since` stay the idle reading."""
+    d = sessions().sessions_dir(root)
+    out = {}
+    for seat in seats:
+        p = d / f"{seat}.md"
+        out[seat] = sessions().parse(p.read_text(errors="ignore")).get("seen", "") if p.exists() else ""
+    return out
 
 
 def resume_lines(root: Path) -> list[str]:
@@ -397,6 +410,10 @@ def resume_lines(root: Path) -> list[str]:
         out += [f"    {line}" for line in (f.get("question") or "(no question recorded)").split("\n")]
     out.append(f"external gates ({len(v['gates'])}): " + ("; ".join(f"#{n} {w}" for n, w in v["gates"]) or "none"))
     out.append(f"announce to ({len(v['seats'])}): {', '.join(v['seats']) or 'none'}" + (f"; seat table: {' / '.join(cos['seats'].splitlines())}" if cos.get("seats") else ""))
+    if v["seats"]:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        out.append("last ledger act (presence `seen`, information only, #567): " + ", ".join(
+            f"{s} {age(v['last_act'][s], now) if v['last_act'].get(s) else 'none'}" for s in v["seats"]))
     out.append("then: `dyad board set _cos holder=<this seat>` before any other act (write-ahead)")
     return out
 

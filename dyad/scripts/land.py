@@ -382,7 +382,30 @@ def run_verb(wt: Path, inst: str, argv: list[str]) -> subprocess.CompletedProces
                           env={**env(), "DYAD_INSTANCE": inst})
 
 
-def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: str, words):
+def handed_row(wt: Path, inst: str, verb: str, pos: list[str], vals: dict, stdout: str) -> str | None:
+    """#567: the row a verb that has just written in the worktree hands its actor — a `new` row born open, or a row a
+    `state <id> planned` records a `Y plan` on — or None for every other verb (Rule-16: presence is touched at a
+    plan-`Y`, never at a Done or a prompt)."""
+    if verb == "new":
+        rid = (stdout.strip().splitlines() or [""])[-1].strip()
+        r = row_at(wt, inst, int(rid)) if rid.isdigit() else None
+        return rid if r is not None and r.state in ("open", "planned") else None
+    if verb == "state" and len(pos) >= 3 and pos[2] == "planned" and (vals.get("-d") or "").startswith("Y plan"):
+        return pos[1]
+    return None
+
+
+def refresh_presence(wt: Path, inst: str, rows: list[str], here: Path | None, always: bool = False) -> list[str]:
+    """#567: the actor's own presence file refreshed in the worktree, claiming `rows` only where the board names it
+    (`sessions.claim`); the path to add to the commit, [] when nothing was handed (unless `always`, an inbox read) or
+    `DYAD_SESSION` is unset."""
+    if (not rows and not always) or here is None:
+        return []
+    p = dyadlib.load_guard("agent", "sessions").refresh_in(wt, inst, rows, Path(here))
+    return [p] if p else []
+
+
+def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: str, words, repo: Path | None = None):
     today = datetime.date.today().isoformat()
     def build(wt: Path):
         why = already_landed(wt, inst, pos, vals, bare, words, today)
@@ -392,6 +415,8 @@ def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: s
         if r.returncode:
             sys.stderr.write(r.stderr); sys.stdout.write(r.stdout)
             raise Refused(f"dwork {pos[0]} refused it in the worktree; nothing landed")
+        rid = handed_row(wt, inst, pos[0], pos, vals, r.stdout)
+        refresh_presence(wt, inst, [rid] if rid else [], repo)
         return written(wt), subject(pos[0], pos, vals, bare, r.stdout), r.stdout
     return build
 
@@ -580,7 +605,7 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words):
                 run.append(ln)
         if not run:
             raise Refused("already landed: every line of the batch is on origin/main; nothing pushed")
-        parts, outs = [], []
+        parts, outs, handed = [], [], []
         for ln in run:
             if ln.verb == "land":
                 copy_paths(repo, wt, ln.rels)
@@ -592,6 +617,9 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words):
                 raise Refused(f"{ln.where()}: dwork {ln.verb} refused it in the worktree; the batch stops and nothing landed")
             outs.append(r.stdout.strip())
             parts.append(subject(ln.verb, ln.pos, ln.vals, ln.bare, r.stdout).removeprefix("ledger: "))
+            if rid := handed_row(wt, inst, ln.verb, ln.pos, ln.vals, r.stdout):
+                handed.append(rid)
+        refresh_presence(wt, inst, handed, repo)
         return written(wt), batch_subject(parts), "\n".join(o for o in outs if o)
     return build
 
@@ -641,7 +669,7 @@ def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
             raise Refused(f"dwork {verb} --land generates its own subject; -m is `dwork land`'s")
         if "--check" in bare:
             return check_only(repo, inst, argv, pos, vals, bare, words)
-        return land(repo, inst, mirror, verb_builder(argv, pos, vals, bare, inst, words), f"dwork {verb}")
+        return land(repo, inst, mirror, verb_builder(argv, pos, vals, bare, inst, words, repo), f"dwork {verb}")
     except Refused as e:
         print(f"refused: {e}", file=sys.stderr)
         return 1
