@@ -947,8 +947,23 @@ def guard_check(entry):
         return lambda: [f"{rel}: {problem}"]
     return lambda: mod.check_package(REPO)
 
-CHECKS = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
-CHECKS.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
+def checks():
+    """The check table `check` runs: Rule-11, Rule-12, then one entry per registry guard. Built on first use and kept
+    as the module's `CHECKS` (a caller that sets `CHECKS` itself — a test's patch — is read as set), never at import:
+    building it loads and compiles every guard from source (#185), about 0.2 s, which a CLI call that runs no check
+    (`dwork`, `session`, `inbox`, …) has no use for (d-work #563 C2)."""
+    table = globals().get("CHECKS")
+    if table is None:
+        table = {"Rule-11": check_rule_11, "Rule-12": check_rule_12}
+        table.update({f"{c}/{e}": guard_check(entry) for entry in registry() for c, e in [entry[:2]]})
+        globals()["CHECKS"] = table
+    return table
+
+def __getattr__(name):
+    """`package.CHECKS` read from outside (a projector, a test) builds the table on first read (`checks`)."""
+    if name == "CHECKS":
+        return checks()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # ---- the invariant pass (crafts/syseng/rules/invariants.md p1, p4): before any check, over every model module
 def invariant_modules(failures: list | None = None):
@@ -1587,7 +1602,7 @@ def cmd_evidence_at(rev, brief=False):
 
 def cmd_check():
     rc = cmd_invariants()
-    for name, fn in CHECKS.items():
+    for name, fn in checks().items():
         msgs = fn()
         msgs = [m.removeprefix("FAIL ") for m in msgs]
         hard = [m for m in msgs if not m.startswith("warning:")]

@@ -73,6 +73,14 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(expected, CORE + CRAFT)
         for g in expected:   # every registered guard reports a line, whichever crafts this install carries (#171)
             self.assertIn(f"[{g}]", r.stdout, g)
+    def test_the_check_table_is_built_on_first_use_not_at_import(self):
+        """#563 C2: importing the runner loads no guard; the table is built when a check needs it, then kept."""
+        pkg = load_package()
+        self.assertNotIn("CHECKS", vars(pkg))
+        table = pkg.CHECKS
+        self.assertIs(pkg.checks(), table); self.assertEqual(list(table)[:2], ["Rule-11", "Rule-12"])
+        with unittest.mock.patch.object(pkg, "CHECKS", {"Rule-11": lambda: []}):
+            self.assertEqual(list(pkg.checks()), ["Rule-11"])               # a patched table is read as set
     def test_registry_contract(self):
         pkg = load_package()
         reg = pkg.registry()
