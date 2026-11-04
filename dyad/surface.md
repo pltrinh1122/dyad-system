@@ -161,6 +161,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | name | status |
 |---|---|
 | agent-vs-tended-rule | frozen |
+| altitude | frozen |
 | amend-scope | frozen |
 | answer-grammar | frozen |
 | attack-result | frozen |
