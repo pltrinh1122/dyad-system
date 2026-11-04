@@ -794,6 +794,10 @@ Disposition: see ledger #564.
 
 
 ## Amendment — d-work #574 (2026-11-04: the definition of done; the row a play-book the plan runs prescribes)
+**Where the sentences land.** Rule-3's own sentences for both claims are not written by this amendment: #585 refactors
+Rule-3 and absorbs them (plan #585, R7). This amendment changes Rule-15, Rule-2, Rule-7, the vocabulary and the
+play-books, and records the attacks the Rule-3 rewrite carries.
+
 **Claims.** (1) A row is partitioned by the operator's definition of done (DoD): the plan opens with it (Rule-15 phase
 1) and the completion evidence opens with it, quoted, and the report that answers it (this Rule, Completion
 counter-prompt). (2) A plan that runs a play-book carries the rows that play-book's own steps prescribe (Scope, Plan,
@@ -822,7 +826,7 @@ accreted row's; this Rule owns the `disposed` form. **3–15**: Rule-15 owns the
 list. **3–16**: no new state or transition; a carried row is born `backlog`, already in `dyadlib.NEW_STATES`.
 **3–1, 4, 5, 6, 8–14, 18–20**: untouched. Coherent, orthogonal.
 
-**Terms (Rule-6).** New: `definition of done` (owner 15, used by 3 15); both read correctly. Changed: `backlog` (used
+**Terms (Rule-6).** New: `definition of done` (owner 15, used by 15; Rule-3 joins its `used by` with #585); Rule-15 reads correctly. Changed: `backlog` (used
 by 3), `mandate scope` (used by 2 3), `accreted row` (used by 2 3 7 15 16); each Rule in their `used by` still reads
 correctly, the carried case being an addition to each definition.
 
