@@ -30,6 +30,14 @@ worded from fixed record times, never a computed age, so a finding told once is 
   W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
                           INFLIGHT_W9_HOURS (A9)
   W10' report after board an owner's report on a row, to home, newer than the row's board `since` (A10)
+  W11 phase age           a phased board entry (#587) whose `since` is older than its phase's threshold in
+                          INFLIGHT_W11_HOURS (an asked phase 24 h, every other 3 days): plan #587 F5's one rule,
+                          "phase older than N", worded from the entry's `since` alone
+
+A ring owed (#587 X8: a relay posted by home to a unit, unread) is W1: every unread `relay` is one, whoever sent it,
+and a `report` or `notice` home posts never rings (`land.ring_list` rings every kind but `notice`, and the machine's
+relays to a unit are all of kind `relay`). W1's threshold is 4 h, not X8's hour: the sweep runs twice a day, so a
+lower threshold would tell nothing sooner.
 
 The hosting's open PRs (W4–W6) are read by the caller with `GITHUB_TOKEN`; without them those kinds print one skip line.
 Clustering waits for typed refs (plan #569 decision 3).
@@ -62,12 +70,18 @@ INFLIGHT_W3_HOURS = 24         # W3: an open row with no plan this long
 INFLIGHT_W6_DAYS = 3           # W6: an open PR's head unchanged this long
 INFLIGHT_W8_DAYS = 3           # W8: a promise listed this long
 INFLIGHT_W9_HOURS = 24         # W9: a recorded question to the operator this old
-INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'")
+INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
+    "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
+    "done-ready": 72, "done-asked": 24, "landing": 72, "held": 72}
+INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'", "W11")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("thresholds-in-range", lambda: HYGIENE_STALE_DAYS > 0 and 0 < HYGIENE_SIMILAR < 1 and 0 < HYGIENE_MAX_DF < 1 and HYGIENE_TOP > 0),
     ("inflight-thresholds-positive", lambda: min(INFLIGHT_W1_HOURS, INFLIGHT_W2_DAYS, INFLIGHT_W3_HOURS, INFLIGHT_W6_DAYS,
-                                                 INFLIGHT_W8_DAYS, INFLIGHT_W9_HOURS) > 0 and len(set(INFLIGHT_KINDS)) == 11),
+                                                 INFLIGHT_W8_DAYS, INFLIGHT_W9_HOURS) > 0 and len(set(INFLIGHT_KINDS)) == 12),
+    ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) == set(dyadlib.ORCH_PHASES)
+                                       and all(h > 0 for h in INFLIGHT_W11_HOURS.values())
+                                       and all(INFLIGHT_W11_HOURS[p] == 24 for p in dyadlib.ORCH_ASKED)),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import
     ("lines-are-information", lambda: not any(dyadlib.load_guard("agent", "inbox").DISPOSITION.search(l) for l in (
@@ -76,7 +90,8 @@ TREE_INVARIANTS = [   # loads a guard, so never at import
         "hygiene I12 worked: backlog row #3 is cited by abc on origin/x",
         "candidate: #4 and #5 similar (0.40): a / b",
         "inflight W1 relay unread: row #6's relay to engineer-1 sent 2026-11-03T10:00:00Z has no read marker",
-        "inflight W9 operator wait: row #7 waits on the operator with no question recorded"))),
+        "inflight W9 operator wait: row #7 waits on the operator with no question recorded",
+        "inflight W11 phase age: row #8 in done-asked since 2026-11-03T10:00Z"))),
 ]
 
 
@@ -365,6 +380,22 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             m = max(late, key=lambda m: m.get("sent", ""))
             out.append(f"inflight W10' report after board: row #{i}'s board since {f.get('since')}, but {m['from']} "
                        f"reported on it at {m.get('sent')}")
+    out += phase_age(entries, nowdt)
+    return out
+
+
+def phase_age(entries: dict[int, dict[str, str]], nowdt) -> list[str]:
+    """W11 (#587 F5): `inflight W11 phase age: row #N in <phase> since <since>` for each phased entry whose `since` is
+    older than its phase's INFLIGHT_W11_HOURS; worded from the record alone, never a computed age, so the line is new
+    again only when the entry moves. An unphased entry, an unknown phase or an unreadable `since` says nothing (the
+    board guard names a malformed one)."""
+    bd = dyadlib.load_guard("agent", "board")
+    out = []
+    for i, f in sorted(entries.items()):
+        p = bd.phase_name(f)
+        t = _when(f.get("since", ""))
+        if p in INFLIGHT_W11_HOURS and t and (nowdt - t).total_seconds() > INFLIGHT_W11_HOURS[p] * 3600:
+            out.append(f"inflight W11 phase age: row #{i} in {p} since {f['since']}")
     return out
 
 

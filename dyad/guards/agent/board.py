@@ -757,6 +757,8 @@ RELAYS: dict[tuple[str, str], tuple[str, str, str | None]] = {   # (event, targe
     ("pr-up", "verifying"):            ("holder", "report", "row #{id} verifying: PR #{pr} at {head} is up from {sender}; verify {prs}"),
     ("evidence-verified", "done-ready"): ("holder", "report", "row #{id} done-ready: evidence {ev12} on {prs}; the Done question is owed"),
     ("evidence-failed", "building"):   ("unit", "relay", "row #{id} building: the evidence failed; the failing line is the board's note"),
+    ("head-moved", "verifying"):       ("holder", "report", "row #{id} verifying: PR #{pr} moved to {head}; the evidence and any question on the earlier head are withdrawn (X6)"),
+    ("withdrawn", "done-ready"):       ("holder", "report", "row #{id} done-ready: the batch Done question naming it was withdrawn, a head it named moved (see board/{id}.md note); re-ask (X6)"),
     ("answered-Y", "landing"):         ("owners", "notice", "row #{id} landing: the Done answer is recorded on main; the automaton merges {prs}"),
     ("answered-Y", dyadlib.ORCH_DROP): ("owners", "notice", "row #{id} closed: the Done answer is recorded and the row is done"),
     ("answered-N", "building"):        ("unit", "relay", "row #{id} building: the Done was refused; read provenance/{id}.md"),
@@ -815,7 +817,7 @@ def relay_lines(rid: int, event: str, target: str, entry: dict[str, str], sender
     if to == "unit":
         recips = [first(sub, "unit")]
     elif to == "holder":
-        recips = [holder] + ([o for o in owners(entry) if o not in (sender, holder)] if event == "pr-up" else [])
+        recips = [holder] + ([o for o in owners(entry) if o not in (sender, holder)] if event in ("pr-up", "head-moved") else [])
     else:
         recips = owners(entry)
     seen = []
@@ -843,30 +845,40 @@ def land_mod():
 
 
 # ---- a transition, pure (X1, X9)
-def actor_ok(actor: str, entry: dict[str, str], sender: str) -> str | None:
-    """Why `sender` may not fire an event of `actor` on `entry`, or None."""
-    holder = entry.get("holder") or sender
-    if actor == "home" and sender != holder:
-        return f"a home event is the holder's ({holder}), not {sender}'s"
-    if actor == "unit" and sender not in set(owners(entry)) | {entry.get("holder", "")}:
-        return f"a unit event is an owner's or the holder's ({', '.join(owners(entry) + [entry.get('holder', '?')])}), not {sender}'s"
-    if actor == "automaton":
-        return "an automaton event never comes from the CLI"
-    return None
+def actor_ok(actor: str, entry: dict[str, str], sender: str, automaton: bool = False) -> str | None:
+    """Why `sender` may not fire an event of `actor` (one actor, or several joined by `dyadlib.ORCH_OR`) on `entry`, or
+    None. `automaton` is the automaton's own call (scripts/automaton.py, never the CLI): it may fire exactly the events
+    whose cell names the automaton (#587 X5, X6)."""
+    actors = dyadlib.orch_actors(actor)
+    if automaton:
+        return None if "automaton" in actors else f"a {actor} event is never the automaton's"
+    why = []
+    for a in sorted(actors):
+        holder = entry.get("holder") or sender
+        if a == "home" and sender != holder:
+            why.append(f"a home event is the holder's ({holder}), not {sender}'s")
+        elif a == "unit" and sender not in set(owners(entry)) | {entry.get("holder", "")}:
+            why.append(f"a unit event is an owner's or the holder's ({', '.join(owners(entry) + [entry.get('holder', '?')])}), not {sender}'s")
+        elif a == "automaton":
+            why.append("an automaton event never comes from the CLI")
+        else:
+            return None
+    return "; ".join(why) or None
 
 
 def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str, str], sender: str, now: str,
-               recorded: bool = False, question_text: str | None = None) -> tuple[str, dict[str, str] | None]:
+               recorded: bool = False, question_text: str | None = None,
+               automaton: bool = False) -> tuple[str, dict[str, str] | None]:
     """(target, the new entry or None when it is dropped) of one event on one entry; Refused when the table does not
     allow it. `entry` is {} when absent; `pairs` the event's own fields; the new entry's `writer` is left to the
     caller. Pure: no file, no git."""
     cur = phase_name(entry)
     key = (cur, event)
     if key not in dyadlib.ORCH_EVENTS:
-        legal = sorted(e for f, e in dyadlib.ORCH_EVENTS if f == cur and e != "closed")
+        legal = sorted(e for f, e in dyadlib.ORCH_EVENTS if f == cur and (automaton or e in dyadlib.ORCH_CLI_EVENTS))
         raise Refused(f"#{rid} is at {cur or 'no phase'}: {event} is not an event from there (legal: {', '.join(legal) or 'none'})")
     targets, actor, required = dyadlib.ORCH_EVENTS[key]
-    if not recorded and (why := actor_ok(actor, entry, sender)):
+    if not recorded and (why := actor_ok(actor, entry, sender, automaton)):
         raise Refused(f"#{rid} {event}: {why} (#587)")
     missing = [r for r in required if r != "said-file" and not pairs.get(r)]
     if missing:
@@ -893,6 +905,9 @@ def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str
             new["owner"] = "; ".join(x for x in (new.get("owner", "").strip(), pairs["unit"]) if x)
     elif event == "pr-up":
         sub = pr_add(sub, int(pairs["pr"]), pairs["head"])
+    elif event == "head-moved":                           # X6: the new head recorded, the evidence on the old one void;
+        sub = pr_add(sub, int(pairs["pr"]), pairs["head"])   # the question is a DERIVED field, so it is dropped below
+        sub.pop("evidence", None)
     elif event == "evidence-verified":
         sub["evidence"] = [pairs["evidence"]]
     elif event == "evidence-failed" or (event == "answered-N" and cur == "done-asked"):
@@ -1007,7 +1022,7 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
         raise Refused(f"--expect is a phase ({', '.join(dyadlib.ORCH_PHASES)}) or none, not {expect!r}")
     key = (None if expect == "none" else expect, event)
     if key not in dyadlib.ORCH_EVENTS:
-        legal = sorted(e for f, e in dyadlib.ORCH_EVENTS if f == key[0] and e != "closed")
+        legal = sorted(e for f, e in dyadlib.ORCH_EVENTS if f == key[0] and e in dyadlib.ORCH_CLI_EVENTS)
         raise Refused(f"{event} is not an event from {expect} (legal: {', '.join(legal) or 'none'})")
     _, _, required = dyadlib.ORCH_EVENTS[key]
     allowed_keys = (set(required) - {"said-file"}) | {"note"} | ({"unit"} if key[0] is None else set())   # adoption
@@ -1122,13 +1137,15 @@ def batch_union(ids, entries: dict) -> dict:
 
 
 def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, said_abs: str | None, inst: str,
-                    repo: Path, value_flags, parse, words, sender: str, recorded: bool = False, landed=None, ran=None):
+                    repo: Path, value_flags, parse, words, sender: str, recorded: bool = False, landed=None, ran=None,
+                    automaton: bool = False):
     """land's builder for one `board advance` (section 7 of plan #587 PR2). On every try, in land's worktree on a freshly
     fetched origin/main: read and refuse (`--expect`, the table, the actor, the fields, the binding set); compose the
     ledger lines, write the board, compose the relays; then run the composed text through `dwork batch`'s own parser
     and builder, so every refusal of `dwork state` and `inbox post` holds. A refusal raises before `git commit`; the
     next `land.prepare` discards what was written. `recorded` (the automaton's catch-up only, never the CLI) writes no
-    ledger line, checks no trace and waives the actor."""
+    ledger line, checks no trace and waives the actor. `automaton` (the automaton's X5 and X6 only, never the CLI) fires
+    an event whose actor cell names the automaton, and only such an event."""
     L = land_mod()
     me = sessions().writer()
     landed = [] if landed is None else landed
@@ -1164,7 +1181,7 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 entries[rid] = {**entries[rid], "phase": phase_render(aexp, sub)}
                 continue
             _, actor, _ = dyadlib.ORCH_EVENTS[(cur, event)]
-            if not recorded and (why := actor_ok(actor, entries[rid], sender)):
+            if not recorded and (why := actor_ok(actor, entries[rid], sender, automaton)):
                 raise Refused(f"#{rid} {event}: {why} (#587)")
         # event preconditions
         if event == "plan-landed":
@@ -1198,7 +1215,8 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
         if event == "answered-Y" and aexp == "done-asked" and not recorded and len(ids) > 1:
             entries.update(batch_union(ids, entries))     # a Done batch with PRs: every row waits on the whole union
         now = now_iso()
-        results = {rid: transition(rid, entries[rid], rows[rid], event, pairs, sender, now, recorded, qtext) for rid in ids}
+        results = {rid: transition(rid, entries[rid], rows[rid], event, pairs, sender, now, recorded, qtext, automaton)
+                   for rid in ids}
         lines = []
         if not recorded:
             if event == "answered-Y" and aexp == "done-asked":

@@ -17,6 +17,12 @@ The cases:
   (#564).
 - The sweep (#564) prints every finding, tells the home only what no automaton notice has told yet, and exits 1
   when a finding fails.
+- #587 X6: a PR head that moved off the head a phased entry records (verifying, done-ready, done-asked) fires
+  `head-moved`: back to verifying, the new head recorded, the evidence and the question withdrawn, the holder told and
+  the owners cc'd; the new heads are then verified in the same run.
+- #587 X5: a verifying entry whose every PR is up at its recorded head gets the combined merge onto main and its
+  evidence: `evidence-verified` with the sha256, or `evidence-failed` with the conflict or the first FAIL line as the
+  note; an evidence run that says nothing about the PRs is told to home and fires nothing.
 - Misuse is exit 2."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -35,10 +41,16 @@ CORROBORATED = []
 def passing(repo, before, after):
     CORROBORATED.append((before, after)); return True, ["ok   [corroborate] check"]
 
-def run(argv, repo, corroborate=passing, **envs):
+EVIDENCED = []
+EV = "0123456789abcdef" * 4
+def evidence_ok(repo, sha):
+    EVIDENCED.append(sha); return 0, [f"head={sha}", "ok   [rule-12] suite", f"evidence-sha256={EV}"]
+
+def run(argv, repo, corroborate=passing, evidence=evidence_ok, **envs):
     out, err = io.StringIO(), io.StringIO()
-    with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, **envs}), \
+    with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "GITHUB_ACTIONS": "", **envs}), \
          unittest.mock.patch.object(am, "corroborate", corroborate), \
+         unittest.mock.patch.object(am, "evidence_at", evidence), \
          contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         rc = am.main(argv, repo)
     return rc, out.getvalue(), err.getvalue()
@@ -256,7 +268,239 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(rc, 0, out + err)
         self.assertIn("board #9 phase verifying: Y done recorded by hand, merge PR #7 pending; board not flipped", out)
         self.assertNotIn("catch up #9", out)
-        self.assertEqual(self.on_main(f"{INST}/d-work/board/9.md"), before)
+        # #587 X6: the move itself is the machine's to record — the new head on the entry, still verifying, never landing
+        f = am.board().parse(self.on_main(f"{INST}/d-work/board/9.md"))[0]
+        self.assertEqual(am.board().phase_name(f), "verifying")
+        self.assertNotEqual(self.on_main(f"{INST}/d-work/board/9.md"), before)
+
+    # ---- d-work #587 X5, X6: the automaton's own events
+    ENG = "engineer-1537d8fb"
+
+    def verifying_row(self, rid, phase, prs, question=None, evidence=None):
+        sub = {"unit": [self.ENG], "pr": [f"{n} at {h}" for n, h in prs]} | ({"evidence": [evidence]} if evidence else {})
+        return {f"{INST}/d-work/rows/{rid}.md": ROW.format(id=rid, state="planned", disposed="2026-11-02 Y plan"),
+                f"{INST}/d-work/provenance/{rid}.md": f"# Provenance #{rid}\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                f"{INST}/d-work/board/{rid}.md": self.phased(rid, phase, sub, question),
+                f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"}
+
+    def entry(self, rid):
+        text = self.on_main(f"{INST}/d-work/board/{rid}.md")
+        return am.board().parse(text)[0] if text else None
+
+    def test_verifying_with_every_pr_up_is_verified_once(self):
+        """X5: the combined merge of the recorded heads onto main, its evidence, then `evidence-verified` through the
+        machine: done-ready, the sha256 recorded, the holder told; a second run has nothing to do."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), f"evidence #14: combined merge of PR #7 at {self.sha} onto main")
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        (head,) = EVIDENCED
+        self.assertEqual(git(self.w.seat, "rev-list", "--parents", "-n", "1", head).split()[2], self.sha)   # base, then PR #7
+        f = self.entry(14)
+        b = am.board()
+        self.assertEqual((b.phase_name(f), b.first(b.phase_of(f["phase"])[1], "evidence"), f["waiting-on"]),
+                         ("done-ready", EV, f"unit {HOME}"))
+        self.assertEqual(b.check_phased("14", f, None), [])
+        (msg,) = self.inbox(HOME)
+        self.assertIn("kind: report", msg); self.assertIn("from: automaton", msg); self.assertIn("row #14 done-ready", msg)
+        self.assertIn("ring owed: " + HOME, out)
+        self.assertIn("verifying -> done-ready", git(self.w.origin, "log", "-1", "--format=%s", "main"))
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+
+    def test_the_combined_merge_is_the_same_commit_for_the_same_heads(self):
+        base = git(self.w.seat, "rev-parse", "origin/main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}):
+            a, _ = am.combined_head(self.w.seat, base, [(7, self.sha)])
+            b, _ = am.combined_head(self.w.seat, base, [(7, self.sha)])
+        self.assertEqual(a, b)
+
+    def test_a_failing_evidence_returns_the_row_to_its_unit(self):
+        """X5: the first FAIL line is the note, the unit gets the relay and owes a ring; the row is building."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        failing = lambda repo, sha: (1, [f"head={sha}", "ok   [a] fine", "FAIL [agent/rows] 2026-11-02 Y done broke",
+                                          "FAIL [b] second", f"evidence-sha256={EV}"])
+        rc, out, err = run(["run"], self.w.seat, evidence=failing)
+        self.assertEqual(rc, 0, out + err)
+        f = self.entry(14)
+        self.assertEqual(am.board().phase_name(f), "building")
+        self.assertTrue(f["note"].startswith("combined evidence at "), f["note"])
+        self.assertIn("FAIL [agent/rows] [an entry, read in the ledger] broke", f["note"])   # masked as post masks
+        (msg,) = self.inbox(self.ENG)
+        self.assertIn("kind: relay", msg); self.assertIn("row #14 building: the evidence failed", msg)
+        self.assertIn(f"ring owed: {self.ENG}", out)
+
+    def test_a_combined_conflict_fails_without_running_the_evidence(self):
+        eight = self.w.pr(8, "dyad/zz-pr.txt", "eight's version\n")                   # the same file as PR #7
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha), (8, eight)]))
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(EVIDENCED, [])
+        f = self.entry(14)
+        self.assertEqual(am.board().phase_name(f), "building")
+        self.assertEqual(f["note"], f"combined merge: PR #8 at {eight[:12]} does not merge cleanly onto the merges before it: "
+                                    "dyad/zz-pr.txt")                       # the paths only, never git's messages
+        self.assertNotIn("Auto-merging", f["note"])
+
+    def test_an_unknown_head_is_refused_not_a_conflict(self):
+        """A head the fetch did not bring (the PR moved between ls-remote and fetch) is no verdict on the PRs: Refused,
+        so `do_evidence` tells home and fires nothing; the next run's watch sees the move."""
+        base = git(self.w.seat, "rev-parse", "origin/main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}):
+            with self.assertRaises(am.Refused) as c:
+                am.combined_head(self.w.seat, base, [(7, "ab" * 20)])
+        self.assertIn("not in the object store", str(c.exception))
+
+    def test_an_evidence_that_cannot_be_taken_is_told_to_home_and_fires_nothing(self):
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        unfit = lambda repo, sha: (2, ["FAIL [evidence] a shallow clone"])
+        before = self.on_main(f"{INST}/d-work/board/14.md")
+        rc, out, err = run(["run"], self.w.seat, evidence=unfit)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/14.md"), before)
+        (msg,) = self.inbox(HOME)
+        self.assertIn(f"the combined evidence of PR #7 at {self.sha[:12]} refused for row #14: FAIL [evidence] a shallow clone (exit 2)", msg)
+
+    def test_a_told_evidence_refusal_is_neither_re_run_nor_re_told_when_main_moves(self):
+        """The escalation is keyed on the row and the cut's heads, never on main's sha: after main moves, the next run
+        finds it told, posts nothing and does not pay for the evidence again."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        calls = []
+        unfit = lambda repo, sha: calls.append(sha) or (2, ["FAIL [evidence] a shallow clone"])
+        run(["run"], self.w.seat, evidence=unfit)
+        self.assertEqual((len(calls), len(self.inbox(HOME))), (1, 1))
+        self.w.write_main({f"{INST}/d-work/zz-unrelated.md": "main moves\n"})
+        rc, out, err = run(["run"], self.w.seat, evidence=unfit)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual((len(calls), len(self.inbox(HOME))), (1, 1))
+        self.assertIn("refused, already told", out)
+
+    def test_no_evidence_is_taken_in_a_job_holding_a_write_token(self):
+        """In GitHub Actions without `AUTOMATON_EVIDENCE_SANDBOX=on` the PR heads' code is never run: home is told once."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        before = self.on_main(f"{INST}/d-work/board/14.md")
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(EVIDENCED, [])
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/14.md"), before)
+        (msg,) = self.inbox(HOME)
+        self.assertIn("not taken in a job holding a write token", msg)
+        run(["run"], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(len(self.inbox(HOME)), 1)                                     # told once
+        rc, out, err = run(["run"], self.w.seat, GITHUB_ACTIONS="true", AUTOMATON_EVIDENCE_SANDBOX="on")
+        self.assertEqual(len(EVIDENCED), 1, out + err)
+        self.assertEqual(am.board().phase_name(self.entry(14)), "done-ready")
+
+    def test_a_hanging_ls_remote_costs_the_run_nothing_else(self):
+        """A timeout reading a live head proposes nothing for that row; the merge and close acts stand."""
+        files = dict(self.files)
+        files.update({k: v for k, v in self.verifying_row(14, "verifying", [(7, self.sha)]).items() if "_cos" not in k})
+        self.w.write_main(files)
+        def hang(repo, n):
+            raise subprocess.TimeoutExpired(["git", "ls-remote"], 1)
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}), \
+             unittest.mock.patch.object(am.steps, "live_head", hang):
+            _, acts = am.plan(self.w.seat)
+        self.assertEqual([a[:2] for a in acts], [("merge", 9)])
+
+    def test_a_moved_head_withdraws_the_question_and_is_reverified(self):
+        """X6 (the #572 #650 replay): a done-asked entry whose PR moved after the question goes back to verifying, the
+        new head recorded, the question and evidence withdrawn, the holder told; then X5 verifies the new head in the
+        same run."""
+        self.w.write_main(self.verifying_row(14, "done-asked", [(7, self.sha)], "Y/N: Done with #14 row 14 (merges PR #7)?", EV))
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), f"head-moved #14 from done-asked: PR #7 now at {moved}")
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        log = git(self.w.origin, "log", "-2", "--format=%s", "main").splitlines()
+        self.assertIn("head-moved (done-asked -> verifying)", log[1]); self.assertIn("verifying -> done-ready", log[0])
+        reports = [m for m in self.inbox(HOME) if "kind: report" in m]
+        self.assertTrue(any(f"row #14 verifying: PR #7 moved to {moved}" in m for m in reports), reports)
+        self.assertEqual(len(EVIDENCED), 1)
+        f = self.entry(14)
+        b = am.board()
+        self.assertEqual(b.pr_list(b.phase_of(f["phase"])[1]), [(7, moved)])
+        self.assertEqual(b.phase_name(f), "done-ready"); self.assertNotIn("question", f)   # asked again by home, on the new head
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+
+    def test_two_moved_prs_are_both_recorded_then_verified(self):
+        """X6: one head-moved per moved PR, the first from the recorded phase, the second through verifying's own
+        self-loop; both new heads recorded, then X5 verifies the pair in the same run."""
+        eight = self.w.pr(8, "dyad/zz-eight.txt", "eight\n")
+        self.w.write_main(self.verifying_row(14, "done-asked", [(7, self.sha), (8, eight)],
+                                             "Y/N: Done with #14 row 14 (merges PR #7, #8)?", EV))
+        seven2 = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        eight2 = self.w.pr(8, "dyad/zz-eight.txt", "eight moved\n")
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        log = git(self.w.origin, "log", "-3", "--format=%s", "main").splitlines()
+        self.assertIn("head-moved (done-asked -> verifying)", log[2])
+        self.assertIn("head-moved (verifying -> verifying)", log[1])
+        self.assertIn("verifying -> done-ready", log[0])
+        f = self.entry(14)
+        b = am.board()
+        self.assertEqual(b.pr_list(b.phase_of(f["phase"])[1]), [(7, seven2), (8, eight2)])
+        self.assertEqual((b.phase_name(f), len(EVIDENCED)), ("done-ready", 1))
+        self.assertNotIn("question", f)
+
+    def test_a_moved_head_after_a_recorded_y_done_is_withdrawn_not_caught_up(self):
+        """The #572 replay: the Y done recorded at done-asked on the old head, then the head moves. The Y is void
+        (Rule-2), so no catch-up: head-moved takes the entry back to verifying with the new head and no question, the
+        merge is refused and home told once, and X5 leaves the row to home."""
+        files = dict(self.files)
+        files[f"{INST}/d-work/board/9.md"] = self.phased(9, "done-asked", {"unit": [self.ENG], "pr": [f"7 at {self.sha}"],
+                                                                         "evidence": [EV]},
+                                                       "Y/N: Done with #9 row 9 (accreted #10, merges PR #7)?")
+        self.w.write_main(files)
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        EVIDENCED.clear()
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertNotIn("caught up", out)
+        f = self.entry(9)
+        b = am.board()
+        self.assertEqual((b.phase_name(f), b.pr_list(b.phase_of(f["phase"])[1])), ("verifying", [(7, moved)]))
+        self.assertNotIn("question", f)
+        self.assertEqual(EVIDENCED, [])
+        refusals = [m for m in self.inbox(HOME) if "refused for row #9" in m]
+        self.assertEqual(len(refusals), 1, self.inbox(HOME))
+        self.assertIn("board #9 phase verifying: Y done recorded by hand", out)
+
+    def test_a_moved_head_withdraws_the_batch_question_from_its_other_rows(self):
+        """X6 for a batch: rows #14 and #15 share one Done question; PR #7 of #14 moves. #14 goes back to verifying
+        (then X5 re-verifies it); #15, whose own head did not move, steps back to done-ready with no question."""
+        eight = self.w.pr(8, "dyad/zz-eight.txt", "eight\n")
+        q = "Y/N: Done with #14 row 14, #15 row 15 (merges PR #7, #8)?"
+        files = self.verifying_row(14, "done-asked", [(7, self.sha)], q, EV)
+        files.update(self.verifying_row(15, "done-asked", [(8, eight)], q, EV))
+        self.w.write_main(files)
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertIn(f"withdrawn #15 from done-asked: the batch Done question it shares is void (PR #7 of #14 moved to {moved[:12]})", out)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        b = am.board()
+        f14, f15 = self.entry(14), self.entry(15)
+        self.assertEqual(b.pr_list(b.phase_of(f14["phase"])[1]), [(7, moved)])
+        self.assertNotIn("question", f14)
+        self.assertEqual((b.phase_name(f15), b.pr_list(b.phase_of(f15["phase"])[1])), ("done-ready", [(8, eight)]))
+        self.assertNotIn("question", f15)
+        self.assertEqual(b.first(b.phase_of(f15["phase"])[1], "evidence"), EV)           # its own heads' evidence kept
+        self.assertIn("PR #7 of #14 moved to", f15["note"])
+        self.assertTrue(any("row #15 done-ready: the batch Done question naming it was withdrawn" in m for m in self.inbox(HOME)))
+
+    def test_an_abbreviated_recorded_head_is_not_a_move(self):
+        self.w.write_main(self.verifying_row(14, "done-ready", [(7, self.sha[:8])], evidence=EV))
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
 
     def test_plan_parts_and_part_for(self):
         parts = am.plan_parts("# Plan\nParts: engineer: a; counsel-0032b4c0: b; bad\n")

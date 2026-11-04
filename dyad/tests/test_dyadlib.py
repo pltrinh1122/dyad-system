@@ -39,7 +39,13 @@ class OrchestrationMachineTests(unittest.TestCase):
         names = [n for n, _ in dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)]
         self.assertEqual(dyadlib.false_invariants(dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)), [])
         self.assertTrue(set(names) <= {n for n, _ in dyadlib.INVARIANTS})       # enforced at import
-        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed"})
+        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed", "head-moved", "withdrawn"})   # the automaton's own
+        self.assertEqual(dyadlib.orch_actors("home or automaton"), {"home", "automaton"})
+        for e in ("evidence-verified", "evidence-failed"):                                   # #587 X5: either may fire it
+            self.assertEqual(dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]), {"home", "automaton"})
+        self.assertEqual({f for f, e in dyadlib.ORCH_EVENTS if e == "head-moved"}, set(dyadlib.ORCH_WATCHED))   # X6
+        self.assertEqual({k: v for k, v in dyadlib.ORCH_EVENTS.items() if k[1] == "withdrawn"},          # X6, a batch
+                         {("done-asked", "withdrawn"): (("done-ready",), "automaton", ("note",))})
         self.assertEqual((dyadlib.orch_release_to("plan-asked"), dyadlib.orch_release_to("done-asked"),
                           dyadlib.orch_release_to("building")), ("plan-ready", "done-ready", "building"))
 
@@ -55,10 +61,18 @@ class OrchestrationMachineTests(unittest.TestCase):
             "orch-hold-closure": without(("verifying", "hold")),
             "orch-drop-reachable": {**E, ("landing", "closed"): (("landing",), "automaton", ())},   # a trap phase
             "orch-keys-known": {**E, ("planning", "release"): ((dyadlib.ORCH_FROM,), "home", ())},
+            "orch-keys-known ": {**E, ("verifying", "evidence-failed"): (("building",), "home or robot", ("note",))},
             "orch-asked-exits-on-answer": {**E, ("plan-asked", "pr-up"): (("verifying",), "unit", ("pr", "head"))},
+            "orch-head-moved-returns-to-verifying": {**E, ("done-asked", "head-moved"): (("done-ready",), "automaton", ("pr", "head"))},
+            "orch-automaton-evidence-from-verifying-only": {**E, ("building", "evidence-verified"): (("done-ready",), "home or automaton", ("evidence",))},
+            "orch-withdrawn-is-the-automatons-from-done-asked": {**E, ("done-asked", "withdrawn"): (("done-ready",), "home", ("note",))},
+            "orch-withdrawn-is-the-automatons-from-done-asked ": {**E, ("plan-asked", "withdrawn"): (("plan-ready",), "automaton", ("note",))},
         }
         for name, table in cases.items():
-            self.assertIn(name, dyadlib.false_invariants(dyadlib.orch_invariants(table)), name)
+            self.assertIn(name.strip(), dyadlib.false_invariants(dyadlib.orch_invariants(table)), name)
+        # an asked phase may exit by head-moved or withdrawn (Rule-2 voids a Y on a moved head, and a batch Y when any
+        # head it names moves), and by nothing else unanswered
+        self.assertNotIn("orch-asked-exits-on-answer", dyadlib.false_invariants(dyadlib.orch_invariants(E)))
 
 
 class SemverTests(unittest.TestCase):

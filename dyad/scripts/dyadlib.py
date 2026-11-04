@@ -549,6 +549,9 @@ ORCH_DROP = "(closed)"     # target sentinel: the entry file is deleted (never s
 ORCH_FROM = "@from"        # target sentinel: release returns to phase.from (an asked phase steps back to its *-ready)
 ORCH_ACTORS = frozenset({"home", "unit", "automaton"})
 ORCH_HOLDABLE = ("planning", "plan-ready", "plan-asked", "building", "verifying", "done-ready", "done-asked")
+ORCH_WATCHED = ("verifying", "done-ready", "done-asked")   # #587 X6: the phases whose recorded PR heads the automaton
+                                                           # compares with the live heads; a move fires `head-moved`
+ORCH_OR = " or "           # an actor cell naming several actors: `home or automaton` (#587 X5), any one may fire it
 # (from-phase | None, event) -> (targets, actor, required fields)
 ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str, ...]]] = {
     (None, "opened"):                   (("planning",), "home", ("unit",)),
@@ -561,17 +564,31 @@ ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str,
     ("building", "pr-up"):              (("verifying",), "unit", ("pr", "head")),
     ("verifying", "pr-up"):             (("verifying",), "unit", ("pr", "head")),  # self-loop
     ("building", "evidence-verified"):  (("done-ready",), "home", ("evidence",)),  # no-PR d-work, or heads already listed
-    ("verifying", "evidence-verified"): (("done-ready",), "home", ("evidence",)),
-    ("verifying", "evidence-failed"):   (("building",), "home", ("note",)),
+    ("verifying", "evidence-verified"): (("done-ready",), "home or automaton", ("evidence",)),   # X5: the automaton's
+    ("verifying", "evidence-failed"):   (("building",), "home or automaton", ("note",)),         # combined evidence
     ("done-ready", "asked"):            (("done-asked",), "home", ()),
     ("done-asked", "answered-Y"):       (("landing", ORCH_DROP), "home", ("said-file",)),   # ORCH_DROP when no PR
     ("done-asked", "answered-N"):       (("building",), "home", ("said-file",)),
     ("landing", "closed"):              ((ORCH_DROP,), "automaton", ()),           # steps.close_landed drops the entry
     ("held", "release"):                ((ORCH_FROM,), "home", ()),
     **{(p, "hold"): (("held",), "home", ("note", "on")) for p in ORCH_HOLDABLE},
+    # X6: a live PR head that differs from the one the phase records voids the evidence and any question asked on it
+    # (Rule-2, Binding: a Y binds only while the heads are unchanged), so the entry goes back to verifying
+    **{(p, "head-moved"): (("verifying",), "automaton", ("pr", "head")) for p in ORCH_WATCHED},
+    # X6 for a batch: a Done question naming several rows is void once any head it names moves (Rule-2, Binding), so
+    # every other row it names steps back to done-ready, its own heads and evidence unchanged, its question withdrawn
+    ("done-asked", "withdrawn"):        (("done-ready",), "automaton", ("note",)),
 }
+
+def orch_actors(cell: str) -> frozenset[str]:
+    """The actors an `ORCH_EVENTS` actor cell names: one, or several joined by `ORCH_OR`."""
+    return frozenset(a.strip() for a in cell.split(ORCH_OR))
+
 ORCH_EVENT_NAMES = frozenset(e for _, e in ORCH_EVENTS)
-ORCH_CLI_EVENTS = ORCH_EVENT_NAMES - {"closed"}   # `closed` is the automaton's own (steps.close_landed)
+# the events some non-automaton actor may fire, so `board advance` takes them; `closed` (steps.close_landed) and
+# `head-moved` (automaton.py) are the automaton's own
+ORCH_CLI_EVENTS = frozenset(e for _, e in ORCH_EVENTS
+                            if any(orch_actors(a) - {"automaton"} for (_, ee), (_, a, _) in ORCH_EVENTS.items() if ee == e))
 
 def orch_release_to(frm: str) -> str:
     """Where `release` returns an entry held at `frm`: an asked phase steps back to its `*-ready`, since `hold` took its
@@ -607,7 +624,7 @@ def orch_invariants(events, phases=ORCH_PHASES) -> list:
     froms = {f for f, _ in events}
     answers = {k: v for k, v in events.items() if k[1] in ("answered-Y", "answered-N")}
     return [
-        ("orch-keys-known", lambda: all((f is None or f in phases) and a in ORCH_ACTORS
+        ("orch-keys-known", lambda: all((f is None or f in phases) and orch_actors(a) <= ORCH_ACTORS
                                         and all(t in phases or t in (ORCH_DROP, ORCH_FROM) for t in ts)
                                         and (ORCH_FROM not in ts or (f, e) == ("held", "release"))
                                         for (f, e), (ts, a, _) in events.items())),
@@ -616,8 +633,22 @@ def orch_invariants(events, phases=ORCH_PHASES) -> list:
         ("orch-drop-reachable", lambda: all(ORCH_DROP in orch_reach(events, p) for p in phases)),
         ("orch-answers-from-asked-by-home", lambda: all(f in ORCH_ASKED and a == "home" for (f, _), (_, a, _) in answers.items())
                                                     and all(("said-file" in r) == (k in answers) for k, (_, _, r) in events.items())),
-        ("orch-automaton-takes-no-words", lambda: all("said-file" not in r for _, (_, a, r) in events.items() if a == "automaton")),
-        ("orch-asked-exits-on-answer", lambda: all(e in ("answered-Y", "answered-N", "hold") for f, e in events if f in ORCH_ASKED)),
+        ("orch-automaton-takes-no-words", lambda: all("said-file" not in r for _, (_, a, r) in events.items() if "automaton" in orch_actors(a))),
+        # an asked phase is left by the answer, by `hold`, by `head-moved` or by `withdrawn` — the non-answer exits
+        # besides hold, because Rule-2's Binding voids a Y given on a moved head (`head-moved`, the row whose PR moved),
+        # and a batch Y when any head it names moves (`withdrawn`, every other row the batch question names), so the
+        # question must come down before it is answered
+        ("orch-asked-exits-on-answer", lambda: all(e in ("answered-Y", "answered-N", "hold", "head-moved", "withdrawn")
+                                                   for f, e in events if f in ORCH_ASKED)),
+        ("orch-head-moved-returns-to-verifying", lambda: all(ts == ("verifying",) and orch_actors(a) == {"automaton"}
+                                                             and {"pr", "head"} <= set(r) and f in ORCH_WATCHED
+                                                             for (f, e), (ts, a, r) in events.items() if e == "head-moved")
+                                                         and all((p, "head-moved") in events for p in ORCH_WATCHED)),
+        ("orch-withdrawn-is-the-automatons-from-done-asked", lambda: all(f == "done-asked" and ts == ("done-ready",)
+                                                                          and orch_actors(a) == {"automaton"}
+                                                                          for (f, e), (ts, a, _) in events.items() if e == "withdrawn")),
+        ("orch-automaton-evidence-from-verifying-only", lambda: all(f == "verifying" for (f, e), (_, a, _) in events.items()
+                                                                    if e.startswith("evidence-") and "automaton" in orch_actors(a))),
         ("orch-hold-closure", lambda: all((p, "hold") in events for p in phases if p not in ("held", "landing"))
                                       and ("held", "release") in events),
     ]

@@ -6,7 +6,8 @@
 - the ranking lists similar rows as candidates, skips siblings under one parent and drops boilerplate tokens;
 - placement: no runner path (`check`, `--evidence`, `--corroborate`, the gate) and no guard reaches it;
 - every line is information, never a disposition shape (the module's TREE_INVARIANTS);
-- work in flight (d-work #569): one fixture per kind W1-W10', and the exemptions (A3, A4, A6, A9)."""
+- work in flight (d-work #569): one fixture per kind W1-W10', and the exemptions (A3, A4, A6, A9);
+- W11 phase age (d-work #587 F5): a phased entry past its phase's threshold, worded from its `since` alone."""
 import os, shutil, subprocess, sys, tempfile, time, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -223,6 +224,32 @@ class InflightTests(unittest.TestCase):
         self.commit()
         got = [l for l in self.run_it() if " W10' " in l]
         self.assertEqual(got, ["inflight W10' report after board: row #1's board since 2025-11-04T10:00Z, but eng-1 reported on it at 2025-11-04T12:00:00Z"])
+
+    def test_w11_phase_age(self):
+        """#587 F5: a phased entry older than its phase's threshold (asked phases 24 h, others 3 days); an unphased one
+        is W11-silent; the line holds the record's `since`, never a computed age."""
+        bd = dyadlib.load_guard("agent", "board")
+        def phased(rid, phase, since, **sub):
+            f = {"holder": "home-1", "owner": "eng-1", "since": since,
+                 "phase": bd.phase_render(phase, {"unit": ["eng-1"], **{k: [v] for k, v in sub.items()}})}
+            f.update(bd.derive(rid, f))
+            if phase in dyadlib.ORCH_ASKED:
+                f["question"] = f"Y/N: proceed with #{rid} as planned?"
+            return bd.render(f, bd.FIELDS)
+        for i in (1, 2, 3, 4):
+            self.row(i)
+        self.put("board/1.md", phased(1, "plan-asked", "2025-11-03T20:00Z"))          # 28 h asked: a finding
+        self.put("board/2.md", phased(2, "building", "2025-11-03T20:00Z"))            # 28 h building: none
+        self.put("board/3.md", phased(3, "building", "2025-11-01T00:00Z"))            # 4 days building: a finding
+        self.put("board/4.md", "holder: h\nwaiting-on: unit eng-1\nsince: 2025-10-01T00:00Z\n")   # unphased: none
+        self.commit()
+        got = [l for l in self.run_it() if " W11 " in l]
+        self.assertEqual(got, ["inflight W11 phase age: row #1 in plan-asked since 2025-11-03T20:00Z",
+                               "inflight W11 phase age: row #3 in building since 2025-11-01T00:00Z"])
+        self.assertEqual(set(hy.INFLIGHT_W11_HOURS), set(dyadlib.ORCH_PHASES))
+        am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
+        groups = am.notice_groups([f"finding: {l}" for l in got] + ["finding: inflight W1 relay unread: x"])
+        self.assertEqual([k for k, _ in groups], ["work in flight W1", "work in flight W11"])   # its own notice
 
     def test_every_line_is_information_and_a_notice_kind(self):
         inbox = dyadlib.load_guard("agent", "inbox")

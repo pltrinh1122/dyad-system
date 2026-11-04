@@ -131,7 +131,10 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
     base = land.fetch(repo)
     rows = dyadlib.read_rows(repo, at=base)
     rg, acts = rows_guard(), []
-    acts += catch_ups(repo, base, rows)                                # #587: the board follows a Y recorded by hand
+    w = watch(repo, base, rows)                                        # #587 X6 moved heads, then X5 combined evidence
+    void = {a[1] for a in w if a[0] in ("head-moved", "withdrawn")}
+    acts += [a for a in catch_ups(repo, base, rows) if a[1] not in void]   # #587: the board follows a Y recorded by
+    acts += w                                                          # hand — never a Y on a moved head (Rule-2: void)
     for r in rows:
         if r.state in dyadlib.TERMINAL_STATES or not rg.operative_done(r.disposed):
             continue
@@ -217,6 +220,201 @@ def catch_up(repo: Path, rid: int, phase: str) -> str:
                 os.environ[k] = v
 
 
+# ---- #587 X5, X6: the automaton's own events, fired through `board advance`'s builder
+def live(repo: Path, pr: int) -> str | None:
+    """A PR's live head, or None when the hosting does not answer in time: The World unreadable proposes nothing, and
+    one hanging `ls-remote` never costs the run its merges and closes."""
+    try:
+        return steps.live_head(repo, pr)
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def watch(repo: Path, base: str, rows) -> list[tuple]:
+    """#587 X6 and X5, from the phased board entries on `base`: ("head-moved", rid, phase, [(pr, live head), …]) for an
+    entry in `dyadlib.ORCH_WATCHED` whose recorded PR heads are not the live ones (`git ls-remote refs/pull/<n>/head`;
+    a recorded head may be abbreviated); for a moved entry in done-asked, ("withdrawn", sib, note) for every other row
+    its stored question names that sits in done-asked under the identical question and did not move itself (Rule-2: a
+    batch Y is void once any head it names moves); else ("evidence", rid, [(pr, live head), …]) for an entry in
+    `verifying` whose every listed PR is up at its recorded head and whose row carries no operative `Y done` (one
+    recorded by hand outside done-asked is reported by `run` and left to home). A PR with no live head, or whose head
+    the hosting does not give in time, proposes nothing for its row (the hosting is The World). Read-only."""
+    b, out, seen = board(), [], {}
+    by_id = {r.id: r for r in rows}
+    d = f"{inst(repo)}/d-work/board"
+    for name in ls(repo, base, d):
+        if not name.endswith(".md") or not name[:-3].isdigit():
+            continue
+        rid = int(name[:-3])
+        r = by_id.get(rid)
+        f = b.parse(show(repo, base, f"{d}/{name}") or "")[0]
+        if r is None or r.state in dyadlib.TERMINAL_STATES or not f.get("phase"):
+            continue
+        try:
+            phase, sub = b.phase_of(f["phase"])
+        except ValueError:
+            continue
+        seen[rid] = (f, phase)
+        prs = b.pr_list(sub)
+        if phase not in dyadlib.ORCH_WATCHED or not prs:
+            continue
+        heads = [(n, h, live(repo, n)) for n, h in prs]
+        if any(l is None for _, _, l in heads):
+            continue
+        moved = [(n, l) for n, h, l in heads if not l.startswith(h)]
+        if moved:
+            out.append(("head-moved", rid, phase, moved))
+        elif phase == "verifying" and not rows_guard().operative_done(r.disposed):   # a Y done recorded by hand
+            out.append(("evidence", rid, [(n, l) for n, _, l in heads]))            # binds its own heads: home's
+    moved_ids = {a[1] for a in out if a[0] == "head-moved"}
+    told = set()
+    for a in [a for a in out if a[0] == "head-moved" and a[2] == "done-asked"]:
+        q = seen[a[1]][0].get("question", "")
+        pr, head = a[3][0]
+        for sib in b.ids_of(q):
+            if sib == a[1] or sib in moved_ids or sib in told or sib not in seen:
+                continue
+            f, phase = seen[sib]
+            if phase == "done-asked" and f.get("question", "") == q:
+                told.add(sib)
+                out.append(("withdrawn", sib, f"PR #{pr} of #{a[1]} moved to {head[:12]}"))
+    return out
+
+
+OID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+COMBINED_IDENT = {"GIT_AUTHOR_NAME": "dyad automaton", "GIT_AUTHOR_EMAIL": "automaton@dyad.invalid",
+                  "GIT_COMMITTER_NAME": "dyad automaton", "GIT_COMMITTER_EMAIL": "automaton@dyad.invalid"}
+
+def combined_head(repo: Path, base: str, cut: list[tuple[int, str]]) -> tuple[str | None, str]:
+    """(the combined merge commit, "") of `cut` onto `base`, in the cut's order, as `merge_all` would merge it but
+    with `git merge-tree` and `commit-tree` only: no worktree, no push, nothing on any ref. The commit is the same for
+    the same base and heads (identity and dates fixed to `base`'s), so its evidence can be re-run and compared. (None,
+    the conflict) when a PR does not merge cleanly onto the merges before it."""
+    when = land.out(repo, "log", "-1", "--format=%cI", base)
+    env = {**land.env(), **COMBINED_IDENT, "GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when}
+    cur = base
+    for pr, head in cut:
+        steps.fetch_head(repo, pr)
+        if land.git(repo, "cat-file", "-e", f"{head}^{{commit}}", check=False).returncode:
+            raise Refused(f"PR #{pr} head {head[:12]} is not in the object store after the fetch (moved since it was read?)")
+        if steps.ancestor(repo, head, cur):
+            continue
+        r = land.git(repo, "merge-tree", "--write-tree", "--name-only", cur, head, check=False)
+        first = (r.stdout.split() or [""])[0]
+        if r.returncode and not (r.returncode == 1 and OID.fullmatch(first)):   # exit 1 with a tree is a conflict;
+            raise Refused(f"git merge-tree {cur[:12]} {head[:12]} exited {r.returncode}: "   # anything else is no verdict
+                          f"{(r.stderr or r.stdout).strip() or 'no output'}")
+        if r.returncode:
+            onto = "the merges before it" if cur != base else f"origin/main {base[:12]}"
+            paths = r.stdout.split("\n\n")[0].split()[1:6]           # the conflicted paths, before git's messages
+            return None, (f"PR #{pr} at {head[:12]} does not merge cleanly onto {onto}: "
+                          f"{', '.join(paths) or 'conflict'}")
+        tree = r.stdout.split()[0]
+        c = subprocess.run(["git", "commit-tree", tree, "-p", cur, "-p", head, "-m",
+                            f"automaton: combined merge of PR #{pr} at {head} (#587 X5)"],
+                           cwd=repo, capture_output=True, text=True, env=env)
+        if c.returncode:
+            raise Refused(f"git commit-tree: {c.stderr.strip()}")
+        cur = c.stdout.strip()
+    return cur, ""
+
+
+def evidence_at(repo: Path, sha: str) -> tuple[int, list[str]]:
+    """(exit code, lines) of `check --evidence --at <sha>`: the merged tree's own runner, in a detached worktree the
+    runner removes afterwards (Rule-14 property 3's block; never the caller's checkout)."""
+    r = subprocess.run([sys.executable, str(HERE / "package.py"), "check", "--evidence", "--at", sha], cwd=repo,
+                       capture_output=True, text=True, env={**dyadlib.git_env(), **EVIDENCE_ENV})
+    return r.returncode, (r.stdout + r.stderr).splitlines()
+
+
+# The evidence child runs code no one has reviewed yet (the PR heads' own runner and tests). An empty value resets the
+# credential header a CI checkout persists; hooks are left alone, since the suite's own scratch repos rely on theirs.
+# Not a fence against malice — the child can read the config itself — which is why `evidence_allowed` keeps it out of
+# a job holding a write token.
+EVIDENCE_ENV = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "http.https://github.com/.extraheader", "GIT_CONFIG_VALUE_0": ""}
+
+def evidence_allowed() -> bool:
+    """Whether X5 may run the PR heads' code here: never inside GitHub Actions (whose automaton job holds a write
+    token) unless the job says it is a sandbox without one (`AUTOMATON_EVIDENCE_SANDBOX=on`)."""
+    return os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("AUTOMATON_EVIDENCE_SANDBOX") == "on"
+
+
+def evidence_event(repo: Path, base: str, cut: list[tuple[int, str]]) -> tuple[str | None, dict[str, str], str]:
+    """#587 X5: (event, its fields, a line for the run's output) of the combined evidence of `cut` onto `base`:
+    `evidence-verified` with evidence=<sha256> when the merge is clean and `check --evidence` passes;
+    `evidence-failed` with note=<the conflict, or the first FAIL line> when it is not. (None, {}, why) when the run
+    says nothing about the PRs — the evidence could not be taken here (a `[evidence]` line: a shallow clone, a missing
+    tag), or no evidence-sha256= line was printed — which is escalated to home, never fired."""
+    sha, conflict = combined_head(repo, base, cut)
+    if sha is None:
+        return "evidence-failed", {"note": note_of(f"combined merge: {conflict}")}, conflict
+    rc, lines = evidence_at(repo, sha)
+    fails = [l for l in lines if l.startswith("FAIL")]
+    ev = [l.removeprefix("evidence-sha256=") for l in lines if l.startswith("evidence-sha256=")]
+    if any(l.startswith("FAIL [evidence]") for l in fails) or not ev:
+        return None, {}, ((fails or lines or ["no output"])[0] + f" (exit {rc})")   # no base-dependent sha: told once
+    if rc == 0 and not fails:
+        return "evidence-verified", {"evidence": ev[-1]}, f"combined head {sha[:12]}, evidence {ev[-1][:12]}"
+    first_fail = (fails or [f"check --evidence exited {rc}"])[0]
+    return "evidence-failed", {"note": note_of(f"combined evidence at {sha[:12]}: {first_fail}")}, first_fail
+
+
+def note_of(text: str) -> str:
+    """A board `note` the automaton writes: one line, at most 300 characters, an entry-shaped fragment masked as `post`
+    masks it (the board carries information, never authority, #587 X2)."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", " ".join(text.split()))[:300]
+
+
+def fire(repo: Path, rid: int, event: str, expect: str, pairs: dict[str, str]) -> str:
+    """One automaton event (#587 X5, X6) through `board advance`'s own builder from the automaton's seat: the table,
+    `--expect`, the board, the relays, one ledger-only commit. A refusal is the run's line, never an escalation (the
+    next run re-reads main and re-decides)."""
+    with_env = {"DYAD_SESSION": SEAT}
+    old = {k: os.environ.get(k) for k in with_env}
+    os.environ.update(with_env)
+    try:
+        i, run_ = inst(repo), dyadlib.runner_module()
+        ran: list = []
+        build = board().advance_builder([rid], event, pairs, expect, None, i, repo, run_.DWORK_VALUE_FLAGS,
+                                        run_.dwork_args, run_.words, SEAT, ran=ran, automaton=True)
+        land.land(repo, i, None, build, "board advance")
+        ring = land.ring_list(ran)
+        return (f"board #{rid}: {event} from {expect}" + (f" ({', '.join(f'{k}={v}' for k, v in sorted(pairs.items()))})" if pairs else "")
+                + (f"; ring owed: {', '.join(ring)} (home rings, #587 X8)" if ring else ""))
+    except (Refused, board().Refused) as e:
+        return f"board #{rid} {event} not fired: {e}"
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def do_evidence(repo: Path, rid: int, cut: list[tuple[int, str]]) -> str:
+    """#587 X5: the combined merge and its evidence, fired as `evidence-verified` or `evidence-failed`; whatever says
+    nothing about the PRs is told to home once (`escalate`), keyed on the row and the cut's heads — never on main's
+    sha, which every run moves — and checked before the evidence is paid for, so a told refusal is neither re-run nor
+    re-told until a head moves. The verdict is advisory: a Done-Y's evidence stays the main Agent's own
+    `check --evidence` (Rule-2, Binding)."""
+    what = "the combined evidence of " + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in cut)
+    if not evidence_allowed():
+        return escalate(repo, rid, f"{what} in this job", "not taken in a job holding a write token (unreviewed PR "
+                        "code); home runs check --evidence --at the combined head")
+    base = land.fetch(repo)
+    to, prefix = home(repo, base), f"automaton: {what} refused for row #{rid}:"
+    if to and any(m.get("from") == SEAT and m.get("row") == str(rid) and m.get("body", "").startswith(prefix)
+                  for m in box_messages(repo, base, to)):
+        return f"refused, already told {to}: {prefix} (not re-run)"
+    try:
+        event, pairs, line = evidence_event(repo, base, cut)
+    except (Refused, subprocess.TimeoutExpired) as e:
+        return escalate(repo, rid, what, str(e))
+    if event is None:
+        return escalate(repo, rid, what, line)
+    return fire(repo, rid, event, "verifying", pairs) + f" [{line}]"
+
+
 # ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
 PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
 
@@ -286,6 +484,12 @@ def describe(act: tuple) -> str:
         return f"close row #{act[1]} (every named head is on main)"
     if kind == "advance":
         return f"catch up #{act[1]} {act[2]} (recorded on the ledger)"
+    if kind == "head-moved":
+        return f"head-moved #{act[1]} from {act[2]}: " + ", ".join(f"PR #{pr} now at {h}" for pr, h in act[3])
+    if kind == "withdrawn":
+        return f"withdrawn #{act[1]} from done-asked: the batch Done question it shares is void ({act[2]})"
+    if kind == "evidence":
+        return f"evidence #{act[1]}: combined merge of {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} onto main"
     if kind == "board":
         return f"board #{act[1]}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(act[2].items()) if k != "holder")
     return f"notice {act[2]}: {act[3]}"
@@ -558,6 +762,7 @@ CORROBORATION_FAILED: set[int] = set()   # rows whose landed cut failed corrobor
 def run(repo: Path) -> list[str]:
     out, stopped = [], set()
     _, acts = plan(repo)
+    moved = {a[1] for a in acts if a[0] == "head-moved"}
     for act in acts:
         if act[0] == "merge":
             ok, line = do_merge(repo, act[1], act[2])
@@ -570,6 +775,13 @@ def run(repo: Path) -> list[str]:
             out.append(board_set(repo, act[1], act[2]))
         elif act[0] == "advance":
             out.append(catch_up(repo, act[1], act[3]))
+        elif act[0] == "head-moved":                                  # #587 X6: one event per moved PR, the first
+            for k, (pr, head) in enumerate(act[3]):                    # from the recorded phase, the rest from verifying
+                out.append(fire(repo, act[1], "head-moved", act[2] if k == 0 else "verifying", {"pr": str(pr), "head": head}))
+        elif act[0] == "withdrawn":                                   # #587 X6, a batch's other rows
+            out.append(fire(repo, act[1], "withdrawn", "done-asked", {"note": note_of(act[2])}))
+        elif act[0] == "evidence":
+            out.append(do_evidence(repo, act[1], act[2]))             # #587 X5
         else:
             try:
                 out.append(post(repo, act[2], act[1], act[3]))
@@ -578,6 +790,9 @@ def run(repo: Path) -> list[str]:
     # merges just landed may make a row due: one more pass closes it in the same run
     base, again = plan(repo)
     out += [do_close(repo, a[1]) for a in again if a[0] == "close" and a[1] not in stopped]
+    # #587 X5 after X6: a row whose head moved in this run is back in verifying; its new heads are verified now, since
+    # the automaton's own push starts no workflow run of its own
+    out += [do_evidence(repo, a[1], a[2]) for a in again if a[0] == "evidence" and a[1] in moved]
     # #572 K3: a cut still owed after this run's merges waits on its merge, not on the operator
     for a in again:
         if a[0] == "merge":
