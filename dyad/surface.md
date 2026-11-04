@@ -30,7 +30,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 |---|---|---|
 | `dyad check` | — | frozen |
 | `dyad check --list` | — | frozen |
-| `dyad check --guards` | `--pre-push [<remote> <url>]` | frozen |
+| `dyad check --guards` | `--pre-push [<remote> <url>]` (empty stdin fails with its line on a hand run, passes when git sends `<remote> <url>`; a tty is refused; a missing core tag fails) | moving (#592) |
 | `dyad check --corroborate [<before> [<after>]]` | — | frozen |
 | `dyad check --pr <base> [<head>]` | — | frozen |
 | `dyad check --tests [<target>]` | — | frozen |
@@ -48,7 +48,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |
 | `dyad dwork trace <id>` | `--transcript <path>`, `--out` | frozen |
 | `dyad session name` | `--function`, `--topic`, `--hp`, `--system`, `--on` | frozen |
-| `dyad session touch` | `-r <row>`, `-f <file>` | frozen |
+| `dyad session touch` | `-r <row>`, `-f <file>` (`-r` splits on whitespace; fetches origin first) | moving (#592) |
 | `dyad session list` | — | frozen |
 | `dyad session reconcile` | — | frozen |
 | `dyad project <surface>` / `--list` | — | frozen |
@@ -214,7 +214,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | port-diff | frozen |
 | port-direction | frozen |
 | preference-kind | frozen |
-| prepush-judgeable | frozen |
+| prepush-judgeable | moving (#592) |
 | promotion | frozen |
 | provenance-entry | frozen |
 | provenance-legacy | frozen |

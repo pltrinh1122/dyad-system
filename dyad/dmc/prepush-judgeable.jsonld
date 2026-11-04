@@ -23,6 +23,27 @@
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
+      "termCode": "empty-stdin",
+      "name": "read from its stdin",
+      "dyad:when": "the hook's stdin carries no ref line and no `<remote> <url>` argv was given (a hand run)",
+      "dyad:then": "nothing was judged: it prints that line and fails, never the deletion line (d-work #592, mode 28)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "git-sent-nothing",
+      "name": "passes",
+      "dyad:when": "the hook's stdin carries no ref line and git passed `<remote> <url>`: every ref is up to date or rejected by git itself",
+      "dyad:then": "there is nothing to judge: it prints that line and passes, so git reports its own outcome (d-work #592)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tty-stdin",
+      "name": "refuses a push it cannot judge",
+      "dyad:when": "stdin is a terminal, not git's ref lines",
+      "dyad:then": "it is refused before reading: run it from the hook (d-work #592)"
+    },
+    {
+      "@type": "DefinedTerm",
       "termCode": "no-new-commit",
       "name": "passes",
       "dyad:when": "the ref is a deletion, or its commit is already on origin/main",

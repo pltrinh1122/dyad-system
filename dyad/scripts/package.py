@@ -1148,6 +1148,18 @@ def swept(mod, clerical) -> bool:
     wanted = tuple(f"{rel}/{r}" for r in reads)
     return not any(p.startswith(wanted) for p in clerical) if wanted else True
 
+PRE_PUSH_EMPTY = "warn [pre-push] no ref line on stdin: nothing judged"
+PRE_PUSH_NOTHING = "ok   [pre-push] git sent no ref line: every ref is up to date or rejected by git; nothing to judge"
+PRE_PUSH_TTY = "refused: --pre-push reads git's ref lines on stdin; run it from the hook"
+SHALLOW_PREFIX = "shallow clone:"
+
+def clone_lines(repo):
+    """#592 (F13, Rule-14 p3): `bootstrap.clone_problems` as the pre-push gate reads it — a missing core tag is a
+    `FAIL [pre-push]` line, as at `check --evidence`; a shallow clone only a `warn` line, since a cloud session clones
+    50 deep and pushes ledger commits (it still refuses at evidence)."""
+    bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+    return [f"{'warn' if m.startswith(SHALLOW_PREFIX) else 'FAIL'} [pre-push] {m}" for m in bs.clone_problems(repo)]
+
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -1158,7 +1170,13 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     not only those beyond `base`: `remote` and `url` are git's hook argv, and a push to a declared
     public remote carrying a private citation beside a quoted body is refused, with no override."""
     if pre_push:
+        if sys.stdin is None or sys.stdin.isatty():   # #592 (mode 28): `read()` would block on a terminal, and judge nothing
+            print(PRE_PUSH_TTY); return 1
         lines = sys.stdin.read().splitlines()
+        if not any(len(l.split()) == 4 for l in lines):   # #592 (mode 28): no ref line is not a deletion; nothing was judged
+            if remote is not None:   # git's own call (argv `<remote> <url>`): an up-to-date or locally rejected push
+                print(PRE_PUSH_NOTHING); return 0
+            print(PRE_PUSH_EMPTY); return 1   # a hand run (`</dev/null`, no argv)
         import privatecite                               # #518: a public remote never receives a private citation's body
         cite_refusals, cite_info = privatecite.check_push(REPO, remote, url, lines)
         for m in cite_info:
@@ -1179,6 +1197,11 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         if pushed is None:
             print(f"ok   [pre-push] nothing new to judge: every ref is a deletion or already on {base}")
             return 0
+        unfit = clone_lines(REPO)   # #592 (F13): a clone missing the core tag yields false FAILs; a shallow one only warns here
+        for m in unfit:
+            print(m)
+        if any(m.startswith("FAIL") for m in unfit):
+            return 1
     else:
         pushed = None
     rc = cmd_invariants()
