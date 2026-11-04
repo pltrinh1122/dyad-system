@@ -156,6 +156,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | attendance | frozen |
 | audit-fences | frozen |
 | audit-watermark | frozen |
+| backlog-hygiene | frozen |
 | batch-engagement | frozen |
 | board-lines | frozen |
 | bundle-row | frozen |
@@ -236,6 +237,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | session-overlap | frozen |
 | session-reconcile | frozen |
 | suite-or-guards | frozen |
+| sweep-findings | frozen |
 | tag-drift | frozen |
 | tended-conflict | frozen |
 | term-home | frozen |
@@ -247,6 +249,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | trace-in-evidence | frozen |
 | trace-window | frozen |
 | transaction-containment | frozen |
+| work-in-flight | frozen |
 | y-binding | frozen |
 | zone-classification | frozen |
 | zone-set | frozen |

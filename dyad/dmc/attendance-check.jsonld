@@ -44,6 +44,14 @@
     }
   ],
   "dyad:precedence": "A disposition counts as the seat's own only when its note holds neither mandate nor relayed via, anywhere.",
+  "dyad:tunables": [
+    {
+      "dyad:preference": "attendance-window",
+      "dyad:defaultValue": "7",
+      "dyad:allowed": "a positive integer (days)",
+      "dyad:readBy": "guards/agent/sessions.py"
+    }
+  ],
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
     "dyad:implementation": "guards/agent/sessions.py"
