@@ -1707,7 +1707,7 @@ def cmd_corroborate(before=None, after="HEAD"):
     pkg_py, guards = REPO / "dyad" / "scripts" / "package.py", REPO / "dyad" / "guards"
     step("check", lambda: corroborate_py(pkg_py, "check"))
     if before:
-        step("rule-1 containment (push range)", lambda: corroborate_py(guards / "infra" / "containment.py", "range", before, after))
+        step("rule-1 containment (push range)", lambda: corroborate_py(guards / "infra" / "containment.py", "landed", before, after))   # #589: each PR it lands
         step("rule-3 fence (push range)", lambda: corroborate_py(guards / "agent" / "rows.py", before, after))
     step("rule-1 containment (tree)", lambda: corroborate_py(guards / "infra" / "containment.py", "tree"))
     with tempfile.TemporaryDirectory(prefix="dyad-corroborate-") as tmp:

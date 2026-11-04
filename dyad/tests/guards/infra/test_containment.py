@@ -174,6 +174,55 @@ class TransactionTests(unittest.TestCase):
         self.assertTrue(any("multiple zones" in f for f in c.check_staged(cwd=self.r.d)))
 
 
+class LandedTests(unittest.TestCase):
+    """#589: a push to main lands a cut of PRs (#562); each PR is judged as the transaction it is, never the range."""
+    def setUp(self):
+        self.r = Repo()
+        self.base = self.r.commit({"README.md": "r"})
+        sh("git", "branch", "-M", "main", cwd=self.r.d)
+
+    def pr(self, name, files, merged=True):
+        sh("git", "switch", "-qc", name, "main", cwd=self.r.d)
+        head = self.r.commit(files, msg=f"{name} work")
+        sh("git", "switch", "-q", "main", cwd=self.r.d)
+        if merged:
+            sh("git", "merge", "-q", "--no-ff", "-m", f"Merge PR #{name[2:]} at {head}", name, cwd=self.r.d)
+        return head
+
+    def landed(self):
+        report = []
+        return c.check_landed(self.base, "HEAD", cwd=self.r.d, report=report), report
+
+    def test_a_two_zone_cut_of_one_zone_prs_passes_one_line_each(self):
+        self.pr("pr1", {"dyad/a.md": "a"}); self.pr("pr2", {"preferences-corpus/P.md": "p"})
+        fails, report = self.landed()
+        self.assertEqual(fails, [])
+        self.assertEqual([l.split(": ", 1)[1] for l in report], ["agent", "preferences"])
+        self.assertTrue(report[0].startswith("ok   [landed] PR #1 ("), report)
+        self.assertTrue(c.check_range(self.base, "HEAD", cwd=self.r.d))          # the whole range still mixes zones
+
+    def test_a_cross_zone_pr_in_a_cut_still_fails(self):
+        self.pr("pr1", {"dyad/a.md": "a"}); self.pr("pr2", {"dyad/b.md": "b", "CLAUDE.md": "c"})
+        fails, report = self.landed()
+        self.assertTrue(any("touches multiple zones" in f for f in fails), fails)
+        self.assertEqual(len(report), 1)                                        # PR #1 alone reported ok
+
+    def test_a_direct_cross_zone_commit_fails_and_a_direct_one_zone_commit_passes(self):
+        self.r.commit({"agent-corpus/d-work/rows/1.md": "x"})
+        self.assertEqual(self.landed()[0], [])
+        self.r.commit({"dyad/x.md": "x", "CLAUDE.md": "y"})
+        self.assertTrue(any("touches multiple zones" in f for f in self.landed()[0]))
+
+    def test_the_cli_verb_prints_the_lines(self):
+        self.pr("pr1", {"dyad/a.md": "a"})
+        r = subprocess.run([sys.executable, str(Path(c.__file__)), "landed", self.base, "HEAD"], cwd=self.r.d, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [landed] PR #1 (", r.stdout); self.assertIn("): agent", r.stdout)
+
+    def test_corroboration_judges_the_push_with_landed(self):
+        """`check --corroborate`'s push-range step (Rule-1 names it `rule-1 containment (push range)`) runs `landed`."""
+        src = (Path(c.__file__).resolve().parents[2] / "scripts" / "package.py").read_text()
+        self.assertIn('step("rule-1 containment (push range)", lambda: corroborate_py(guards / "infra" / "containment.py", "landed", before, after))', src)
+
 class VerbTableTests(unittest.TestCase):
     """#25: the CLI verb table is a declared constant, and the lift out of `main` is behaviour-preserving."""
     def setUp(self): self.r = Repo()
