@@ -8,6 +8,79 @@ mode records stay where they are, never moved or renumbered.*
 
 **Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 252 rows, latest 2026-11-03
 
+## Resolved incidents (definition of done)
+
+The operator's definition of done for #571 (plan #570 revision 4): "a report showing the number of resolved INCIDENTS"
+(by mode, with the fence, row or impossibility per mode).
+
+**Every one of the 252 incidents is in exactly one mode, and every mode is closed one of three ways:**
+
+| closed by | modes | incidents |
+|---|---|---|
+| a fence shipped on this kernel | 20 | 84 |
+| an impossibility on this kernel, its Rule named | 11 | 40 |
+| **resolved now** | **31** | **124** |
+| a fence row proposed (R-a…R-h), not yet built | 20 | 128 |
+| total | 51 | 252 |
+
+124 of 252 are resolved today. The other 128 resolve as R-a…R-h are opened and built. Until then each is named, by
+mode, to the row that would fence it. Modes 21 and 33 are mixed (one face fenced, a residue impossible) and are counted
+as fenced.
+
+| mode | incidents | closed by | fence, row or impossibility |
+|---|---|---|---|
+| 01 | 7 | row (proposed) | R-g |
+| 02 | 9 | row (proposed) | R-h |
+| 03 | 4 | row (proposed) | R-c |
+| 04 | 6 | fenced | `dwork new --land` at the call; `rows.check_id_collisions`, `contiguity_problems` at push |
+| 05 | 11 | impossible | Rule-9/Rule-10 Enforcement "inference only"; Rule-7 keeps the transcript out of the corpus |
+| 06 | 20 | row (proposed) | R-g |
+| 07 | 7 | row (proposed) | R-e |
+| 08 | 5 | impossible | Rule-14 p3 (kernel-only path); a harness hook is Operator-side (Rule-1 Boundaries) |
+| 09 | 12 | row (proposed) | R-a |
+| 10 | 4 | fenced | `rows.check_commit` (`disposed_problems`) at push; `--land`, `--check` at the call |
+| 11 | 4 | fenced | `dwork new|state --said` refusals at the call; `provenance.check_transaction` at push |
+| 12 | 8 | row (proposed) | R-d |
+| 13 | 5 | fenced | `dyad merge` refuses at merge (#532); `merges.py` warns at push (#541) |
+| 14 | 2 | fenced | `rows.done_head_refusals` at push |
+| 15 | 6 | fenced | `rows.done_order_problems`, `landing_problems` at push; `dwork state` refusals at the call |
+| 16 | 7 | row (proposed) | R-f |
+| 17 | 6 | row (proposed) | R-c |
+| 18 | 8 | row (proposed) | R-c |
+| 19 | 6 | row (proposed) | R-g |
+| 20 | 5 | fenced | `prs.CITE` and `agent/references` at push |
+| 21 | 7 | fenced | rows 7, 98, 197, 232: the verbs read the remote and their own exit; rows 8, 124, 187 (filtering own tool output) impossible, Rule-14 p2 |
+| 22 | 3 | impossible | Rule-14 p3; harness hook Operator-side |
+| 23 | 2 | impossible | Rule-14 p3; harness hook Operator-side |
+| 24 | 2 | fenced | the hooks exec `dyad-python <guard>` (no exec bit needed); call sites pinned by the suite at push |
+| 25 | 2 | impossible | Rule-14 p3; harness hook Operator-side; Rule-1 Enforcement already says never bypass |
+| 26 | 6 | fenced | `suite_env` at spawn; `checkout_snapshot` at suite end |
+| 27 | 5 | row (proposed) | R-d |
+| 28 | 3 | row (proposed) | R-a |
+| 29 | 12 | fenced | `sessions.touch` keys claims from the holder at the call (#350, #567) |
+| 30 | 6 | impossible | Rule-10 Enforcement "inference only"; Rule-14 p3 |
+| 31 | 2 | row (proposed) | R-c |
+| 32 | 4 | impossible | Rule-14 p3; harness hook Operator-side |
+| 33 | 8 | fenced | fenced per property met (interpreter, clone depth/tags, CI git, hosting account/draft); the next unknown property impossible, Rule-14 p4 |
+| 34 | 2 | impossible | Rule-14 p4 (The World); damage bounded by Rule-2 Binding local merge (#138) |
+| 35 | 3 | row (proposed) | R-f |
+| 36 | 2 | fenced | `run_suite` temp-root sweep at every suite run |
+| 37 | 3 | row (proposed) | R-c |
+| 38 | 2 | fenced | pre-push gate runs the full guard set at push |
+| 39 | 2 | fenced | `dyadlib.split_cells` at parse |
+| 40 | 7 | row (proposed) | R-h |
+| 41 | 6 | row (proposed) | R-b |
+| 42 | 4 | fenced | `rows.refs_shape_problems` at push |
+| 43 | 2 | fenced | `dwork state --check` at the call |
+| 44 | 2 | fenced | `release.py` publishes from the rows push; sweep `released` health detects |
+| 45 | 3 | impossible | Rule-3 Completion: the reply is chat; the evidence sha256 fences only what it cites (Rule-2 Binding) |
+| 46 | 3 | row (proposed) | R-e |
+| 47 | 2 | fenced | `automaton.sweep_ci` twice daily; `automaton.corroborate` at each landed cut |
+| 48 | 1 | impossible | Rule-18 (ops script form) covers delivery; the chat print itself is read by no mechanism |
+| 49 | 2 | row (proposed) | R-b |
+| 50 | 1 | fenced | `privatecite.check_push` at push, fail-closed |
+| 51 | 1 | impossible | Rule-14 p4: the 403 lies in the hosting; mechanism not established by the cells |
+
 ## Phase 0 — survey
 `LEDGER=agent-corpus/audits/INCIDENTS.md dyad runbook run incident-hardening survey`, event
 `incident-hardening-20261104T020220Z-survey` (landed on `main`, events-only). Live count 252 against the watermark 233:
