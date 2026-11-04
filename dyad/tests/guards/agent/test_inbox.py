@@ -92,7 +92,15 @@ class FormTests(unittest.TestCase):
             with self.assertRaises(ib.Refused, msg=argv) as e:
                 ib.parse_post(argv)
             self.assertIn(says, str(e.exception))
-        self.assertEqual(ib.parse_post(["program-x", "--row", "5", "--kind", "ack", "seen\n"]), ("program-x", 5, "ack", "seen"))
+        self.assertEqual(ib.parse_post(["program-x", "--row", "5", "--kind", "ack", "seen\n"]), ("program-x", 5, "ack", "seen", ()))
+        self.assertEqual(ib.parse_post(["program-x", "--cc", "orch-y", "--row", "5", "--kind", "report", "b"]),
+                         ("program-x", 5, "report", "b", ("orch-y",)))
+        for argv, says in ((["program-x", "--cc", "program-x", "--row", "5", "--kind", "report", "b"], "another seat"),
+                           (["program-x", "--cc", "o", "--cc", "o", "--row", "5", "--kind", "report", "b"], "once each"),
+                           (["program-x", "--cc", "o", "--row", "5", "--kind", "relay", "b"], "--cc is for a report")):
+            with self.assertRaises(ib.Refused, msg=argv) as e:
+                ib.parse_post(argv)
+            self.assertIn(says, str(e.exception))
 
     def test_contract(self):
         self.assertEqual((ib.ENTITY, ib.CORPUS, ib.TRANSACTION), ("message", "agent", True))
@@ -143,6 +151,24 @@ class CliTests(World):
         git(self.clones["engineer-1537d8fb"], "fetch", "-q", "origin")
         self.assertTrue(dyadlib.ledger_only(self.clones["engineer-1537d8fb"], before, head))
         self.assertEqual(ib.check_transaction(self.clones["engineer-1537d8fb"], before, head), [])
+
+    def test_cc_lands_one_commit_in_every_box(self):
+        """#572 K6: a report to home copied to orchestrate is one land, one message per box, each `to` its own box."""
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--cc", "orchestrate-d688fecf",
+                                    "--row", "5", "--kind", "report", "PR up")
+        self.assertEqual(rc, 0, err)
+        head = git(self.origin, "rev-parse", "main")
+        self.assertEqual(git(self.origin, "rev-list", "--count", f"{before}..{head}"), "1")
+        paths = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertEqual(sorted(p.split("/")[3] for p in paths), ["orchestrate-d688fecf", "program-59cec502"])
+        for p in paths:
+            f = dyadlib.load_guard("agent", "board").parse(git(self.origin, "show", f"main:{p}"))[0]
+            self.assertEqual((f["to"], f["body"]), (p.split("/")[3], "PR up"))
+        self.assertIn("(cc orchestrate-d688fecf)", git(self.origin, "log", "-1", "--format=%s", head))
+        git(self.clones["program-59cec502"], "pull", "-q", "--ff-only", "origin", "main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}):
+            self.assertEqual(ib.check_package(self.clones["program-59cec502"]), [])
 
     def test_post_refuses_before_anything_lands(self):
         before = git(self.origin, "rev-parse", "main")
