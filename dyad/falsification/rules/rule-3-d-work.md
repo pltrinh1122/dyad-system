@@ -865,6 +865,238 @@ M1–M5 (`agent-corpus/d-work/plans/574.md`, `584.md`, `585.md`). Their survivor
 - Changed: `definition of done` (now used by 3 15), `done-Y` (used by 2 3), `archived` (used by 3 16).
 - Each Rule in their `used by` reads correctly.
 
+### Revision 2 (2026-11-04): the operator's definition of done
+The operator's words (provenance #585, entry 3): "claims must passes falsification" / "claim should be re-scoped to avoid
+exceptions". Every claim of the Rule below carries at least one attack with its result and survivor, and only survivors
+stay in the Rule. Every exception clause is removed by narrowing a claim, splitting the excepted case into its own claim,
+or moving it to the Rule that owns it. An independent attack pass by audit (audit-e73be78c, B1–B10 and A1–A11) is
+answered row by row.
+### Rule-3 claim table — d-work #585, plan revision 2
+
+Draft: `RULE-3-d-work.md` in this directory (built on PR #670 head 9bd2481a). The operator's definition of done:
+"claims must passes falsification" / "claim should be re-scoped to avoid exceptions".
+
+A claim is a sentence of the revised Rule that asserts what the Rule requires, permits or forbids. Results:
+**confirmed** — the attack found the draft sentence false or carrying an exception, and the survivor replaces it;
+**refuted** — the attack failed, the sentence stands; **survives, scoped** — it stands within the scope stated.
+"Draft" below means PR #670 at 9bd2481a unless it says "v2 draft" (this revision's own earlier text). Audit items
+(A1–A11, B1–B10) are from `audit-585.txt`, answered in the last section.
+
+| id | section | claim | attack | result | survivor |
+|----|---------|-------|--------|--------|----------|
+| C1 | Scope | "Three things open a row: an operator prompt, an operator disposition, and a plan-`Y` whose plan names the row's class" | B1: incident-hardening opens `backlog` fence rows from the agent's own finding (#571's 8 rows), against the draft's "never the agent's own finding" | confirmed (draft) | Third source restated as a plan-`Y` naming the class; the finding reaches a row through it (C10) |
+| C2 | Scope | "A prompt: operator text sent alone, text sent with a `Y`, and an amend's text that asks for something else" | B2: amend text asking for the same proposal revised "opens no second row" (Answer grammar), against the draft's "Every operator prompt opens a d-work" | confirmed (draft) | Prompt defined by a partition of operator text (alone / with `Y` / with `N`); the same-proposal amend is received on its row (C17), so no carve-out |
+| C3 | Scope | "It opens its d-work when the reply writes, proposes or carries a `Y/N` line, … before that question" | #491: a read's own proposal got a `Y` with no row to land on | refuted (holds) | kept (#492's survivor) |
+| C4 | Scope | "The test is the reply's form, never the agent's inference" | does "proposes" need inference? A proposal carries its one `Y/N` (Rule-10), so the form shows it | survives, scoped | kept |
+| C5 | Scope | "A new prompt while a d-work is open suspends it and opens another: d-works stack" | under `batch-disposition-mode: on-ignore` a new prompt in place of an answer is the engagement signal; does it still open? Yes: both hold (Conditions bullet 7) | refuted | kept |
+| C6 | Scope | "A bare answer … is not a prompt; the rows it opens are the ones its question names" | the draft said a bare answer "opens nothing" beside "the `Y` that admits an intake" opens a row: a bare `Y` to the intake question | confirmed (draft) | survivor as quoted; message-kind DMC's `bare` outcome still names the no-prompt case |
+| C7 | Scope | "an accreted row is one the agent opens while executing another, under that row's plan-`Y`; under `accretion: implicit` a plan-`Y` carries the rows its plan names a class for; no disposition of its own; nothing suspended" | #290: 117 of 280 rows accreted, each costing more dispositions than prompt-born rows | refuted | kept, "names a class for" pointing to Plan C37 |
+| C8 | Scope | "Under `accretion: explicit` it is asked for like any other row" | preference partition complete? `accretion` has two values | refuted | kept |
+| C9 | Scope | "A read-only answer … opens no row and records nothing" | A1: draft's "One exemption: a prompt whose answer only reads …" is an exception to "every prompt opens"; #490 cost a row for a pure read | confirmed (draft form) | split into its own claim, scoped by the reply's form, the complement of C3 |
+| C10 | Scope | "A finding of the agent's reaches a row through one of the three above" | B1 (fence rows from findings) | survives, scoped | stated as routing through C1's three sources |
+| C11 | Scope | "A d-work a prompt opened terminates on the operator's `Y` to its Done question … A `backlog` row, never started, ends when a `Y` archives it" | v2 draft "A d-work terminates on one event": a `backlog` row retired by the retirement form (`backlog → archived`, Rule-16) ends with no Done | confirmed (v2 draft) | split by scope: prompt-opened d-work vs never-started `backlog` row |
+| C12 | Scope | subagents read, search, draft; a delegated subagent reports the sentinel first | this report, drafted by a delegated subagent, opens with the sentinel; Rule-8 Conduct agrees | refuted | kept |
+| C13 | Scope | writing a row, counter-prompts, commit, push, PR, merge, reversible/destructive host action "are the main agent's alone"; it reports delegated state each turn | brief of this d-work forbids those acts to the subagent; PREFERENCES `delegation-posture` floor states the same | refuted | kept ("alone" restores the old "Subagents never …") |
+| C14 | Answer grammar | `Y` — the disposition is given, binding the acts the question names | Rule-2 Binding "binds only to the PR(s) or action(s) named" | refuted | kept |
+| C15 | Answer grammar | "`N`, bare — nothing is authorized; the agent revises" | answer-grammar DMC `bare` | refuted | kept |
+| C16 | Answer grammar | amend: entered as a `prompt` entry of the refused d-work's record | Rule-7 trigger "opens or is received on a d-work" | refuted | kept |
+| C17 | Answer grammar | same proposal revised → no second row, plan revised in place; something else → own d-work; the `N` authorizes nothing | #290 plan refused 2026-10-14 in the words that became revision 5; amend-scope DMC | refuted | kept ("until" clause restated positively: the revision takes its own `Y`) |
+| C18 | Answer grammar | "A `Y` with text is a `Y` plus a prompt" | a `Y` whose text asks to change the plan just approved: the `Y` binds the plan as asked, the text opens a d-work that re-plans | survives, scoped | kept |
+| C19 | Answer grammar | "Silence is not consent" | `on-ignore` reads an unanswered question as an engagement signal — a signal for the form, never a `Y` | refuted | kept |
+| C20 | Answer grammar | an answer is read by its meaning; row records the token, provenance the words | label-case DMC, #553 | refuted | kept |
+| C21 | Answer grammar | "Where two readings lead to different acts the agent asks …; a difference of case or spelling alone leads to one act" | draft "never about spelling alone" was a carve-out on asking | survives, re-scoped | split: ask when readings differ in act; spelling never differs in act |
+| C22 | What a `Y` binds | "A `Y` binds exactly the acts its question names …: what the question states and what it cites directly" | B4: binding transitive through citations (plan → play-book → rows) with no depth limit | confirmed (draft) | "directly"; the plan file names each carried class, a play-book step by id |
+| C23 | What a `Y` binds | the plan question's plan-`Y` binds the mutation, every PR, every carried row | Rule-2 Binding mandate clause (#290, #574) | refuted | kept |
+| C24 | What a `Y` binds | the Done question's done-`Y` verifies, closes accreted, archives retired, ratifies merges exactly | Rule-2 Binding first bullet gains `retires` (#585) | refuted | kept |
+| C25 | What a `Y` binds | a batch counter-prompt binds each d-work as its single question would | Rule-2 Binding batch bullet | refuted | kept |
+| C26 | What a `Y` binds | "A row or act is carried when another's question names it … so that `Y` binds it with no question of its own" | v2 draft "carried when a question the operator answered names it" made every named act carried; vocabulary `carried` says "without a question of its own" | confirmed (v2 draft) | survivor as quoted, matching the vocabulary |
+| C27 | What a `Y` binds | work the plan does not describe, and a row its scope or step does not cover, is a new plan | plan-departure DMC `new plan` | refuted | kept |
+| C28 | What a `Y` binds | a plan-`Y` carries no act of these kinds: destructive host action, release, intake, preference value, undescribed mutation | Rule-2's list reads "a release — except under the release gate" | survives, scoped | stated as a scope ("carries no act of these kinds"); the gate case split to C29 |
+| C29 | What a `Y` binds | "A release under the release gate is named in its own d-work's Done question, so that done-`Y` binds it as a named act" | Rule-11 gate form `Y/N: Done with #<id> <title> (merges PR #a, releases <tag-a>)?` | refuted | kept: a named act is never carried, so C28 needs no carve-out |
+| C30 | Plan | "The agent's first substantive reply to a prompt that opens a d-work is a plan …" | v2 draft "to a prompt": a read-only answer (C9) is a reply to a prompt with no plan | confirmed (v2 draft) | scoped to prompts that open a d-work |
+| C31 | Plan | the definition of done is the operator's words or one marked proposed; one row per definition of done | #574 X4: 49 backlog rows; where a bare-`Y` row keeps the operator's words | survives, scoped | kept; the lookup order is the play-book's |
+| C32 | Plan | the plan-`Y` authorizes the mutation and binds every PR to the plan | prs.py plan gate requires `Y plan` | refuted | kept |
+| C33 | Plan | departing work is a new plan; until a `Y` nothing is authorized | draft "any other answer leaves …" was a complement clause | survives, re-scoped | "until a `Y`" |
+| C34 | Plan | "Every plan is asked, a one-line plan included; a row the plan-`Y` carries was named in that question and is asked no second time" | A2: "No exemptions … and a row … is never asked a second time" states one | confirmed (draft form) | every question is asked once; the carried row was asked in the plan question |
+| C35 | Plan | an execution detail (order, split, unit, tooling) with content and end state unchanged, none stated as requirement, no irreversible or world-reaching intermediate state, is covered and reported | #555; #553 rev 3 and #532 rev 6 cost a question for an order change | refuted | kept |
+| C36 | Plan | a change meeting fewer than all of these conditions is a new plan | draft "if any condition fails" | refuted | kept, restated |
+| C37 | Plan | a plan carries rows from two sources, each stated in the plan file: (a) mandate scope, (b) a play-book step cited by id | A3: "accretes nothing beyond the rows a play-book … prescribes" | confirmed (draft form) | split into two sources, no "beyond" |
+| C38 | Plan | rule and ceiling are the operator's to read before the plan-`Y`; the play-book count stated in the plan as a number; rows countable only in execution are born `backlog`, each listed in the completion evidence | B3: #571's 8 fence rows were unknown at plan-`Y` time, so "the play-book's own count" was not readable | confirmed (draft) | survivor as quoted (a strengthening: no row is carried open past what the operator read) |
+| C39 | Plan | a play-book that wants a question for a row says so in its step | incident-hardening step for fence rows | refuted | kept |
+| C40 | Plan | a plan stating neither source carries no row; a row outside the rule or past the ceiling is a new plan | escalate edge (countersign model Part II §4) | refuted | kept |
+| C41 | Plan | a carried row is born `open` (done riding this done-`Y`) or `backlog` (explicit once prompted) | #574 carried `backlog` rows, Rule-7 property 4 | refuted | kept |
+| C42 | Plan | craft play-book: no criterion fires → new craft instance; one fires → advise a new dyad system | A4: "unless one of its criteria fires" | survives, re-scoped | partition by the criteria; test string `craft-instantiation-criteria` kept |
+| C43 | Completion | done-`Y` asked on the output in the PR(s), before merge, "so `main` never carries a PR's output before its done-`Y`" | B5: plan files, inbox reports and events land on `main` by ledger-only and events-only commits before any done-`Y` (#571, #591 plan files) | confirmed (draft) | scoped to a PR's output |
+| C44 | Completion | the Done question is the last line of the reply that believes the d-work is done | Rule-10 one `Y/N` last | refuted | kept |
+| C45 | Completion | the form's one parenthetical, in order; the `Y` binds the sets exactly as listed; leaving a row out is a breach | #290: the delivered set, never the promised one | refuted | kept ("present only when" → "present when") |
+| C46 | Completion | a row named under `retires` is `backlog` or `done`; an `open`/`planned` superseded row closes by its own Done first | Rule-16 table: archived only from `done` or `backlog` | refuted | kept |
+| C47 | Completion | the E8 evidence list, in order; an omission is a breach | #465 six Done records lacked traces unseen | refuted | kept |
+| C48 | Completion | under `dwork-trace` `always` the evidence cites the trace; under `on-demand` when prompted; preview printed, file written by the commit that records the `Y` | trace-in-evidence DMC; #213, #215 | refuted | kept |
+| C49 | Completion | "A mandate close rides the mandate's own trace" | an accreted row has no Done question of its own, so no trace of its own exists to cite | refuted | kept |
+| C50 | Completion | "The reply that asks does not merge" | #47, #58, #67: merges before the `Y` | refuted | kept |
+| C51 | Completion | "A done-`Y` that names no merge has nothing in flight: one ledger commit holds its entries and the trace, and sets `done` at once" | by meaning (audit): "recorded done at once" was an exception to Record/Merge/Close | confirmed (draft form) | split: Record/Merge/Close is scoped to a done-`Y` that names a merge (C52) |
+| C52 | Completion | Record, merge, Close, in order, for a done-`Y` naming a merge; Close once every head the operative entry names is on `main` | #202: twelve INCIDENTS.md rows, eleven instances, of `done` set before the merge | refuted | kept |
+| C53 | Completion | a merge before the `Y` is self-ratification, an incident; `done` before the heads land is the converse breach, refused by the fence | `rows.done_order_problems`, `rows.landing_problems` | refuted | kept |
+| C54 | Completion | while a merge owes a push the row stays `open` or `planned` — the states the plan gate admits that have an edge to `done` — its plan-`Y` carrying the push | by meaning (audit): "never `blocked`" | survives, re-scoped | stated by the property that selects the two states |
+| C55 | Completion | a resolution that changes a head voids the `Y`; asked again, a further entry | Rule-2 Binding "only if their heads are unchanged"; merge verb refuses a moved head (#532) | refuted | kept |
+| C56 | Completion | while `DYAD_AUTOMATON` is `on` the automaton executes merge and Close from the recorded entry; refusals go to the home's inbox; it decides nothing | #556; Rule-2 Enforcement automaton bullet | refuted | kept; refusal list names `archived` explicitly (was "neither `backlog` nor `done`") |
+| C57 | Completion | while it is `off` the agent executes both by hand | partition of the variable | refuted | kept |
+| C58 | Completion | a relayed Done presents evidence per `relay-form`, the unit's question last, the `Y` binding what the unit asked | #423, #424 | refuted | kept |
+| C59 | Batch | the three modes; the pending queue; both counts every reply while non-empty; `on-ignore` lapses when empty | PREFERENCES `batch-disposition-mode` | refuted | kept |
+| C60 | Batch | batch forms replace single forms, one kind per question; a `Y` binds the named set; every answer short of `Y` binds none | Rule-2 batch bullet; draft "anything else, none of it" | survives, re-scoped | "short of `Y`" |
+| C61 | Batch | each row's entry names the whole set; one provenance entry in every named record | Rule-7 property 5 count | refuted | kept |
+| C62 | Batch | mandate form: two questions whatever the set's size; a carried row, a release question and the retirement form never enter the queue | Rule-11 release batch is its own form | refuted | kept, restated without "nor" |
+| C63 | Batch | the queue's counts and last question live in the board store; a hop loses none | #535 | refuted | kept |
+| C64 | Batch | the board is written write-ahead; its guard checks shape | board.py | refuted | kept ("shape only" → "shape") |
+| C65 | Batch | the inbox carries information, never authority; relays travel verbatim, citing their provenance entry | inbox.py refuses a disposition-shaped body (Rule-16) | refuted | kept |
+| C66 | Batch | a message to a session is at most a doorbell; the five routes | B10: no live session → no doorbell target | survives, scoped | actionable post rings when a direct message reaches the unit's session; a unit with no live session polls |
+| C67 | Ledger | states move along Rule-16's table | `dyadlib.TRANSITIONS`, fence | refuted | kept |
+| C68 | Ledger | `blocked` → `open` "when that one is terminal (`done` or `archived`)" | B7: an archived blocker never becomes `done` | confirmed (draft) | survivor as quoted |
+| C69 | Ledger | `backlog`: opened by disposition or carried; `open` when prompted, `archived` when retired | Rule-16 `backlog → open, archived` | refuted | kept |
+| C70 | Ledger | `done` = Done `Y` and every named merge landed; interval warned once per row | `rows.done_recorded_not_closed` | refuted | kept |
+| C71 | Ledger | `archived` from `done` or `backlog`; terminal; the two question forms; a `Y` archives exactly the named rows; the agent archives on an operator `Y` alone | #290: 0 archives in 280 rows; draft "anything else none" and "never archives on its own judgment" | survives, re-scoped | "every answer short of `Y` archives none"; "on an operator `Y` alone" |
+| C72 | Ledger | the parent's question is asked only when every child is terminal, `blocked`, `backlog` or holding its recorded done-`Y` | B6: an `archived` child blocked the parent by the draft's list | confirmed (draft) | `archived` added as terminal |
+| C73 | Ledger | the parent completes on its own done-`Y`, evidence naming each child's state | #290: 23 `backlog` children | refuted | kept |
+| C74 | Ledger | "For every row opened from 2026-09-12 #46 on, `disposed` records every disposition …" | A5: "rows before … are not backfilled" | survives, re-scoped | scope stated first |
+| C75 | Ledger | carried rows' entry forms and the copied words with their notes | Rule-7 property 4 (#290, #574, #585) | refuted | kept |
+| C76 | Ledger | `mode` names a row's Done route: `implicit` for a row whose done rides another's done-`Y`; `explicit` or absent for a row its own Done closes | A6: "a carried `backlog` row carries none" | confirmed (draft form) | survivor as quoted; the carried `backlog` row falls in the second class |
+| C77 | Ledger | ledger-only and events-only commits are clerical and go direct to `main` | Rule-2 Not ratification; `rows.py` | refuted | kept |
+| C78 | Ledger | a commit touching both is **neither** and goes by PR, as a commit that **touches anything else** does | Rule-1 one zone per commit | survives, scoped | kept: two named classes, each a claim; "touches anything else" is the direct-commit-class DMC outcome name, the complement class, not a carve-out |
+| C79 | Ledger | monitoring is no d-work, opens no row; its writes are its events and, for the sweep, one inbox notice | B8: the draft said "writes only its events" beside an inbox notice | confirmed (draft) | survivor as quoted |
+| C80 | Ledger | session start: report rows not `done`, `merge-disposition`, sentinel; frame absent → say so and stop | E1 | refuted | kept |
+| C81 | Ledger | under `flat` a session reads the whole ledger; under `m4` its unit's board | A7: "instead of the whole ledger" | survives, re-scoped | partition by `organization` |
+| C82 | Ledger | it touches its presence file, reads every other session's, reports a bearing overlap | #185 near-miss | refuted | kept |
+| C83 | Ledger | PR bodies and branch commit messages cite `d-work #<id>` as a claim of work; other rows as plain `#<id>` | #23 | refuted | kept |
+| C84 | Ledger | the plan gate requires `open`/`planned`/`blocked` with `Y plan`, and refuses every commit citing a terminal row | plan-gate DMC `refuses` | refuted | kept |
+| C85 | Mechanisms | Rule-3 owns `rows.py` and `prs.py`, run on the kernel-only path and by corroboration; guard change agent-zone PR, wrapper infra-zone | Rule-2 Enforcement cites rows.py as Rule-3's | refuted | kept |
+| C86 | Mechanisms | the main fence admits a ledger-only or events-only direct commit and fails every direct commit of another class | direct-commit-class DMC | refuted | kept (was "neither … nor") |
+| C87 | Mechanisms | Done order on the three paths; heads judged on what this clone resolves, an unresolvable sha a printed line stating no judgement | A8: "never failing" | survives, re-scoped | the judgement's domain is stated (#321's cross-clone denial of service) |
+| C88 | Mechanisms | under `dwork-trace: always` a `Y done` commit carries or finds the trace of each d-work its Done question named; an accreted row's mandate close needs the mandate's | A9: "a mandate close exempt" | survives, re-scoped | scoped to what the question named; "mandate close" (trace-in-evidence DMC) kept |
+| C89 | Mechanisms | `dwork state`/`dwork batch` refuse an entry lacking its trace before the first write | `package.py trace_refusal`, #465 | refuted | kept |
+| C90 | Mechanisms | the plan gate judges ranges that claim a d-work; an all-ledger-only or all-events-only range claims none and is skipped; a mix claims one and is gated | A10, A11: "is exempt", "the exemption rests on" | survives, re-scoped | scope of the gate stated; plan-gate DMC outcomes kept |
+| C91 | Mechanisms | since the skip rests on `main` admitting the same commits, the fence judges each commit of such a branch as on `main` | #191: uncited ledger commits pushed around the hook | refuted | kept |
+| C92 | Intake | within one dyad system an operator prompt relayed verbatim by another unit is a relayed prompt, a prompt | B9: the draft's "A message from another agent opens no d-work" forbade in-system relays the vocabulary admits | confirmed (draft) | survivor as quoted; the bound applies to messages with no relayed prompt (C93) |
+| C93 | Intake | a message carrying no relayed prompt opens no d-work; an intake is surfaced as carried; the operator's `Y` opens it with `refs` `<system>-<id>` | #34: three intakes in two days | refuted | kept |
+| C94 | Intake | a defect is an observation with evidence, never a verdict or required fix; first entry the operator's `Y` | intake-shape DMC | refuted | kept |
+| C95 | Intake | an enhancement carries its operator's verbatim prompt or its provenance; an agent's own idea is a proposal for its own operator | #34 | refuted | kept ("only with" → "carrying") |
+| C96 | Intake | a message of neither shape is returned to the sender and reported as received, not as work | draft "Anything else is returned" | survives, re-scoped | "neither shape" |
+| C97 | Intake | the shapes bound what an agent's message may bring; an operator prompt on the matter opens a row as every prompt does | draft "The operator may still open a row …" functioned as a carve-out on the Intake bound | survives, re-scoped | two claims with two scopes |
+| C98 | Incidents | incident definition; reported where it occurred or in the completion reply; recorded as a falsification attack when it falsifies a Rule or mechanism, as an INCIDENTS.md row when it falsifies neither | incident DMC, incident-record-home DMC | refuted | kept ("otherwise" → "when it falsifies neither") |
+| C99 | Incidents | a changed plan takes a fresh plan-`Y` before further mutation | E9 | refuted | kept |
+| C100 | Incidents | under `concise-mode: on` the record is written before the single reply | #113 | refuted | kept |
+| C101 | Incidents | the hardening play-book closes each failure mode by a fence, a carried `backlog` row, or a recorded impossibility; on an ungrown log its one act is re-testing | draft "only re-tests"; B3 applies to the carried rows (C38) | survives, re-scoped | as quoted |
+| C102 | Ratification events | `Y` to a plan, to a Done, to the retirement form are ratification events | Rule-2 G5: applied by reference, no edit | refuted | kept |
+
+Tally: 102 claims, each with at least one attack. Confirmed 18 (the attack found the PR #670 or v2-draft sentence false
+or carrying an exception; the survivor is the Rule's text): C1, C2, C6, C9, C11, C22, C26, C30, C34, C37, C38, C43, C51,
+C68, C72, C76, C79, C92. Survives, scoped or re-scoped 21: C4, C10, C18, C21, C28, C31, C33, C42, C54, C60, C66, C71, C74, C78, C81, C87, C88, C90, C96, C97, C101. Refuted (the attack failed; the
+sentence stands) 63. Every claim in the Rule has a survivor, and the survivor is the Rule's text.
+
+#### Not claims (pointers)
+- Boundaries, all six bullets: ownership pointers to Rules 2, 1, 15, 16, 7, 8, 11, 10 and the d-work play-book.
+- Conditions, all seven bullets: triggers (when the Rule applies), checked for count by Rule-4.
+- Scope's terms paragraph: definitions adopted from the countersign model and the vocabulary (Rule-6).
+- "the countersign model's answer grammar" (Answer grammar opening), `dyad/dmc/label-case.jsonld`, the plan-departure
+  and message-route DMC paths: citations.
+- What a `Y` binds: "(Rule-2, Binding of approval)" and the pointer to Rule-2's list.
+- Ledger: "Its states are defined in the vocabulary (Rule-6)"; the Operating Guide path; Rule-16 Presence pointers.
+- Mechanisms: "Rule-2 cites `rows.py` by name and does not own it"; the events guard is the sysadmin craft's; the
+  incident log's check stays a script until #170; `traces.py` checks the trace store.
+- Provenance and `Set:`.
+
+#### Exception count
+Command (run from the scratchpad; `check.py` in this directory does the same and more):
+
+```
+P='\b(except|excepted|unless|exemption|exempt|but not|other than|save)\b'
+grep -oiE "$P" main-rule3.md | wc -l                # main (git show origin/main:dyad/rules/RULE-3-d-work.md)
+grep -oiE "$P" r585v2/RULE-3-d-work.md | wc -l      # this draft
+python3 r585v2/check.py r585v2/RULE-3-d-work.md --main main-rule3.md
+```
+
+| text | brief regex, whole file | brief regex, above Provenance | audit regex, above Provenance | inflected forms (audit regex plus plurals and verb forms), whole file |
+|------|----|----|----|----|
+| main's Rule-3 (`origin/main` a1de842f) | 7 | 5 | 7 | 11 |
+| PR #670 head 9bd2481a | 5 | 5 | 10 | 11 |
+| this draft | **0** | **0** | **0** | **0** |
+
+The audit reported 11 on both main and #670; the inflected column reproduces that 11 (its "No exemptions" matches only
+with the plural). Manual scan for "only … not": no line of this draft holds the construction; `check.py` lists every
+`only` line (none above Provenance asserts an exclusion: "asked only when" is the parent-askable DMC outcome, a
+condition, not a carve-out). Manual scan for exception-like phrases (`anything else`, `every other`, `beyond`,
+`otherwise`): two hits, both kept and judged in C78 and C82 ("reads every other session's" is a scope, all sessions
+but its own, that names no carve-out of a rule).
+
+#### Exceptions removed
+| old phrase (PR #670 head) | move | new text |
+|---|---|---|
+| "One exemption: a prompt whose answer only reads the corpus … opens none" | split | C9, its own claim scoped by the reply's form |
+| "Every operator prompt opens a d-work" (carved by amend and read-only) | narrow | C2/C3: partition of operator text, opening scoped by the reply's form |
+| "and never the agent's own finding" | narrow | C1, C10 |
+| "never about spelling alone" | split | C21 |
+| "binds every act its question names and nothing else" / "nothing it does not" (Intent) | narrow | "binds exactly the acts its question names", "directly" (C22) |
+| "A carried act was named …, or it is not carried: anything the plan does not describe …" | split | C26, C27 |
+| "Never carried … a release outside the release gate" | split + scope | C28 (positive list), C29 (the gate's release is a named act); Rule-2's own "except" noted for Rule-2 |
+| "any other answer leaves the d-work open" | narrow | "until a `Y`" (C33) |
+| "No exemptions: a plan may be one line … never asked a second time" | narrow | C34 |
+| "if any condition fails it is a new plan" | narrow | C36 |
+| "accretes nothing beyond the rows a play-book it runs prescribes" | split | C37 (two sources) |
+| "a new craft instance unless one of its criteria fires" | narrow (partition) | C42 |
+| "each clause present only when it names something" | narrow | "present when" (C45) |
+| "under `on-demand` only when the operator prompted" | narrow | "cites one when the operator prompted for one" (C48) |
+| "A done-`Y` that names no merge is recorded `done` at once" (by meaning) | split | C51; Record/Merge/Close scoped to a named merge (C52) |
+| "(never `blocked`, which has no edge to `done`)" (by meaning) | narrow | C54 |
+| "a retired row that is neither `backlog` nor `done`" | narrow | listed states (C56) |
+| "With it off" | kept as a partition | C57 |
+| "anything else, none of it" (batch) | narrow | "every answer short of `Y` binds none" (C60) |
+| "Beside them, never one of them … nor do a release question or the retirement form" | narrow | C62 |
+| "The queue is recorded, not conversational"; "checks shape only" | narrow | C63, C64 |
+| "a self-addressed post needs none" / polling as the only fallback | narrow | C66 |
+| "from `done` or `backlog` only"; "anything else none"; "never archives on its own judgment" | narrow | C71 |
+| "rows before 2026-09-12 #46 are not backfilled" | narrow | C74 |
+| "a carried `backlog` row carries none" | narrow | C76 |
+| "writes only its events" | narrow | C79 |
+| "reads its unit's board instead of the whole ledger" | split by `organization` | C81 |
+| "fails a direct commit … that is neither ledger-only nor events-only" | narrow | C86 |
+| "an unresolvable sha printing one line, never failing" | narrow | C87 |
+| "a mandate close exempt" | narrow | C88 |
+| "claims no d-work and is exempt"; "Since the exemption rests on …" | narrow | C90, C91 |
+| "A message from another agent opens no d-work" | split | C92 (relayed prompt), C93 |
+| "an enhancement, only with its operator behind it" | narrow | C95 |
+| "Anything else is returned to the sender" | narrow | C96 |
+| "The operator may still open a row by prompting" | split | C97 |
+| "otherwise as a row of INCIDENTS.md" | narrow | C98 |
+| "it only re-tests the fences already closed" | narrow | C101 |
+| "never one of Rule-2's never-accretable acts" in vocabulary `carried`; Rule-2 "except under the release gate" | move to Rule-2 / vocabulary | pointer only here (C28); the wording change is listed in notes.md |
+
+#### Audit pass answered
+| item | fix, or the reason it stands | claim |
+|------|------------------------------|-------|
+| A1 One exemption (read-only) | split: read-only answer is its own claim; opening scoped by the reply's form | C3, C9 |
+| A2 No exemptions … never asked a second time | every plan asked once; the carried row was asked in the plan question | C34 |
+| A3 nothing beyond the play-book rows | two carrying sources, each its own claim | C37 |
+| A4 unless a criterion fires | partition by the criteria | C42 |
+| A5 not backfilled | scope stated first: rows opened from #46 on | C74 |
+| A6 carried backlog row carries none | `mode` is the row's Done route; the `backlog` row is in the own-Done class | C76 |
+| A7 instead of the whole ledger | partition by `organization` (`flat` ledger, `m4` board) | C81 |
+| A8 never failing | the fence's judgement is scoped to resolvable heads; an unresolvable one is a stated non-judgement | C87 |
+| A9 mandate close exempt | the trace needed is that of each d-work the Done question named; the mandate close needs the mandate's | C88 |
+| A10 range is exempt | the gate judges ranges that claim a d-work; a clerical range claims none | C90 |
+| A11 exemption rests on main | gone with A10 ("the skip rests on") | C91 |
+| by meaning: no-merge `done` at once | split; Record/Merge/Close scoped to a done-`Y` naming a merge | C51, C52 |
+| by meaning: never `blocked` | stated by the property: the gate-admitted states with an edge to `done` | C54 |
+| B1 never the agent's own finding | third source is a plan-`Y` naming the class; findings route through the three | C1, C10 |
+| B2 every prompt opens a d-work | partition of operator text; the same-proposal amend is received on its row | C2, C17 |
+| B3 play-book ceiling unreadable | the count is stated in the plan as a number; rows countable only in execution are born `backlog` and listed in the evidence (open question 1 in notes.md) | C38 |
+| B4 transitive citation | "cites directly"; a play-book step cited by id | C22, C37 |
+| B5 main never carries unverified output | scoped to a PR's output | C43 |
+| B6 archived child missing | terminal (`done` or `archived`) added | C72 |
+| B7 blocked on an archived row | `open` again when the blocker is terminal | C68 |
+| B8 writes only its events | its writes are its events and the sweep's one inbox notice | C79 |
+| B9 in-system relays | a relayed prompt within one system is a prompt; the intake bound is scoped to messages with none | C92, C93 |
+| B10 doorbell with no live session | the doorbell is scoped to a unit whose session a direct message reaches; one with no live session polls | C66 |
+
+
 ### Rule-3's Provenance section before #585 (history, moved here verbatim)
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged

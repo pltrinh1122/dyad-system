@@ -66,8 +66,8 @@ not edited when they are added (G5).
   question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked
   against its own evidence and its own heads-unchanged condition.
 - A plan counter-prompt whose plan states a **mandate scope** (Rule-3, Plan), or runs a play-book
-  whose step prescribes a class of row — that step's class its rule and the play-book's own count its
-  ceiling (#574) — binds wider than one
+  whose step prescribes a class of row — that step's class its rule and the play-book's own count, stated in the plan as
+  a number, its ceiling (#574, #585) — binds wider than one
   action and no wider than that scope: the plan-`Y` authorizes the mutation *and* the class of row
   the scope names, so an **accreted row** inside it carries that `Y` as its own authorization and
   is never asked for separately, while the done-`Y` ratifies the accreted set exactly as the
