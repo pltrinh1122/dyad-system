@@ -53,8 +53,10 @@ class FormTests(unittest.TestCase):
         as `unit <name>` by `board set`."""
         self.assertEqual(bd.parse_set(["5", "waiting-on=seat engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
         self.assertEqual(bd.parse_set(["5", "waiting-on=unit engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
-        for v in ("unit engineer-1537d8fb", "seat engineer-1537d8fb"):
-            self.assertEqual(bd.check_entry("5", ENTRY.replace("waiting-on: operator", f"waiting-on: {v}"), {5: "planned"}), [])
+        self.assertEqual(bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: unit engineer-1537d8fb"), {5: "planned"}), [])
+        (w,) = bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: seat engineer-1537d8fb"), {5: "planned"})
+        self.assertTrue(w.startswith("warning: board/5.md: `waiting-on: seat engineer-1537d8fb` uses the alias"), w)   # #573 step 5
+        self.assertIn("write `unit engineer-1537d8fb`", w)
 
     def test_parse_set_refuses_misuse(self):
         for argv, says in ((["x", "next=a"], "not a row id"), (["5"], "usage"), (["5", "writer=me"], "never typed"),

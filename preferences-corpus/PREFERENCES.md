@@ -23,7 +23,7 @@ defines what each value means.
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attended-seats | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
+| paired-units | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
@@ -50,7 +50,7 @@ defines what each value means.
   main Agent stays free for the next prompt; the main Agent alone writes rows, asks the plan-Y,
   pushes, opens PRs and asks Done. `none`: subagents read, search and draft text only.
 - `delegation-posture` — how much of an **attended** seat's own work — the cos always, and any seat
-  `attended-seats` names (Rule-16 Presence) — runs in its main chat and how much in the subagents it spawns (forks,
+  `paired-units` names (Rule-16 Presence) — runs in its main chat and how much in the subagents it spawns (forks,
   worktrees) (d-work #436, #441). It never routes an act between seats: which seat
   owns an act is the charter's (`MANDATES.md`), unchanged by any value. The floor is Rule-3's subagent clause: a
   seat's main chat alone writes rows, asks and answers counter-prompts, pushes, opens PRs, merges and runs host
@@ -69,7 +69,7 @@ defines what each value means.
   "clarification: tuning criteria is not for outside of seat delegation but within seat:  `main-chat`  vs. `sub-agent`."
   — followed, after two blank lines, by a lone "not", kept verbatim in the provenance record and read as a truncated line.
 - `delegation-posture-unattended` — the same three values, for every seat that is not attended: under
-  `attended-seats: none`, every secretary and desk (d-work #441). No Operator waits on such a seat's chat. What
+  `paired-units: none`, every secretary and desk (d-work #441). No Operator waits on such a seat's chat. What
   reaches it comes through the cos, which relays and moves on, so the cos stays free whatever this value is,
   and a matter routed to the seat waits at most for the act the seat is in. Inert under `organization: flat`
   (its one seat is the leader). Where neither posture row exists, a seat runs `responsive` attended and
@@ -155,7 +155,7 @@ defines what each value means.
   Presence; the cabinet craft's `rules/naming.md`), read advisorily by the cabinet craft's `seat` guard and printed
   by `dyad session name`. `flat`: one pair, one board, desks by row; no seat form is read. dyad-system:
   `m4`, the Operator's default since 2026-10-21 ("codify M4 as the default organizational preference").
-- `attended-seats` — the seats the Operator attends beside the program seat, which is always attended (d-work
+- `paired-units` (named `attended-seats` until d-work #573, its alias read until 1.0) — the seats the Operator attends beside the program seat, which is always attended (d-work
   #412): seat names, or seat names without their `-<hp>` (`counsel` names every holder of the counsel seat), or
   `none`. The constraint it states is the Operator's span — how many seats the Operator sits at, a limit of the
   interface the Operator reads through — never how many seats run: in the Operator's words, "we can have one
@@ -166,10 +166,10 @@ defines what each value means.
   Operator's prompt of 2026-10-27 ("I need to have this conversation in the `communicate` session.  Mark that session as 'attended' because i'll need to hard-context switch whenever i'm working on the story.  the story is also asynchronous and has no dependency on other matters, persistent for the duration of the dyad-system at a minimimum - so it's an exemplar for when operator attendance should happen.") — the instance's reading: a seat is attended when its work is a
   hard context switch for the Operator, asynchronous, independent of other matters and long-lived; the leader is
   always attended.
-- `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388, #412): a
+- `attendance-window` — how many days the records are read back to check `paired-units` (d-work #388, #412): a
   seat holds an own disposition when a provenance record whose `session:` line names it holds a disposition
   whose note holds neither `mandate #<id>` nor `relayed via`, anywhere (#422), within the window. A live seat holding one that
-  `attended-seats` does not declare prints `undeclared` (the leader reports it); a declared seat holding none prints `warn`.
+  `paired-units` does not declare prints `undeclared` (the leader reports it); a declared seat holding none prints `warn`.
   dyad-system: `7`, plan #388's default.
 - `relay-form` — how the leader, the cos, presents to the Operator a question a seat that is not attended owes
   (d-work #424): the Operator-bound direction of a relay. The seat-bound direction never varies — the Operator's
