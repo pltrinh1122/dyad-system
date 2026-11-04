@@ -125,7 +125,10 @@ A mode closes by exactly one of three exits, and by no other means:
 1. **Fenced at a named moment** — a mechanical check that would catch a fault of the mode, named
    together with the moment it runs.
 2. **A `backlog` row that names the fence to build** — the fence does not exist, but the row does, and
-   the row names what would be built and which incidents it would have caught.
+   the row names what would be built and which incidents it would have caught. The row is **carried**: it is
+   born `backlog` under the plan-`Y` that runs this exercise, its entry `Y backlog (mandate #<id>)`, and is never
+   asked for again (Rule-3 Ledger and Plan, #574); its own work waits for the operator's prompt like any `backlog`
+   row's, and the exercise's completion evidence lists it.
 3. **Recorded unfenceable on this kernel**, naming the Rule that makes it so — Rule-14 property 2 for
    a fault that lives in a hosted service the kernel never contains (a hosted git service is never
    kernel), Rule-5's Enforcement for a judgment no script can decide (it says so of coherence and

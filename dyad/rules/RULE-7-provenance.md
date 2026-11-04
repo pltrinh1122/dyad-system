@@ -61,7 +61,8 @@ built on.
    and the date because the writer stamps the day it writes, so without it the record misdates the
    operator. The note is what discloses that the words predate the row they open; the agent's own
    account of why the row exists stays in the mandate's plan file (#290). The same holds of the
-   entry that closes it, the mandate's done-`Y` words under the same note (#422). A disposition the operator gives
+   entry that closes it, the mandate's done-`Y` words under the same note (#422), and of a carried
+   `backlog` row's entry 1 (Rule-3, Ledger), the words of the plan-`Y` whose play-book prescribed it (#574). A disposition the operator gives
    on the hosting rather than in words — the approval of a publishing run under Rule-11's release gate — has no
    words to copy, so its entry holds the reference instead, noted `by reference`, its fenced body
    `run <run id> approved by <login> at <ISO-8601 UTC time>` as the hosting reports them. The reference is verifiable on the hosting,
@@ -79,8 +80,8 @@ per Rule-11 property 1; tests in `dyad/tests/guards/agent/test_provenance.py`, R
 Rule-11's runner as `agent/provenance`). Its two checks are split by what a failure costs (#191):
 - **Transaction**, each non-merge commit being pushed (the range's own history, merge base to head)
   against its parent, as property 3 binds a commit: a row the commit adds brings at least one new
-  entry in its record — a `disposition` when it is born `backlog`, which only a disposition opens
-  (Rule-3); a row going `backlog` → `open` brings a `prompt` (Rule-3: the operator prompts for it); a
+  entry in its record — a `disposition` when it is born `backlog`, which only a disposition opens,
+  or a plan-`Y` it carries (Rule-3); a row going `backlog` → `open` brings a `prompt` (Rule-3: the operator prompts for it); a
   row whose `disposed` gains k entries gains k `disposition` entries; and a record only grows — its
   earlier entries stay word for word and the file is never deleted, a merge commit's records judged
   against each of its parents. This check blocks only the push
@@ -133,6 +134,8 @@ added the Anthropic key in #558, and the Rule named neither; see the same record
 disposition recorded by reference 2026-11-01 (d-work #545): under the release gate the operator's approval of a
 publishing run is a tap with no words; see the same record, amendment #545. Property 4
 says unit for seat and lowercases operator and agent 2026-11-02 (d-work #553); see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Enforcement's alarm moves to the evidence run
-and the scheduled sweep 2026-11-03 (d-work #564); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
+and the scheduled sweep 2026-11-03 (d-work #564); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Property 4 and Enforcement gain the carried `backlog` row 2026-11-04 (d-work #574): a
+row a play-book the plan runs prescribes is born under that plan-`Y`, its words copied as an accreted row's are; see the
+same record, amendment #574.
 
 Set: System Requirements.
