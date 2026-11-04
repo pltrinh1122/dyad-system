@@ -194,3 +194,30 @@ replaced; the claim, its attacks (attack 9) and the pairwise statements are reco
 `rule-14-system-infrastructure.md`, amendment #564.
 
 Disposition: see ledger #564.
+
+
+## Amendment — d-work #589 (2026-11-04: the detector judges each PR a push lands)
+**Claim.** After the merge, Rule-1's detector judges each PR a push to `main` lands in *range* mode: the merge's first
+parent to each further parent, its commits and its whole diff. It judges each direct, non-merge first-parent commit in
+*commits* mode. It no longer judges the push range as one transaction.
+
+**Attacks.** Plan #589's L1–L7 (`agent-corpus/d-work/plans/589.md`):
+- A cross-zone PR inside a cut still fails, because its own range is judged (L1).
+- The first parent is the pre-merge `main` (L2).
+- A direct commit is judged alone (L3).
+- A criss-cross merge reuses `range_diff` (L4).
+- An octopus merge is judged against each non-first parent (L5).
+- There is no infra-zone change (L6).
+
+Beyond them:
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| M1 | Rule-1 binds "a commit and a PR"; a cut is neither, so judging per PR is the Rule, not a loosening | **survives.** #166 already held that a push range is not a transaction. #573's cut, `ba004ff..145206c`, landed #642 (agent) and #651/#652 (preferences), each single-zone, and the range check failed it as if it were one PR. | Each landed PR is judged as `dyad check --pr` judges it; the step keeps its name `rule-1 containment (push range)`, its object now each PR the push lands. |
+| M2 | The step's name now misleads | **survives, stated.** The name stays because the evidence-block and corroboration readers fold warnings by step name. Renaming it is a surface change (#573), left to the surface inventory. | — |
+
+**Pairwise (Rule-5).** **1–14**: Rule-14 property 3 owns corroboration; this Rule names what its containment step
+judges. **1–3**: the fence (Rule-3) still judges direct commits to `main`, and this Rule judges their zone. Others are
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #589.
