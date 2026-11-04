@@ -60,6 +60,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad inbox post <unit>` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
 | `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |
+| `dyad automaton run --evidence-from <file>` / `evidence --out <file>` | — | moving (#587) |
 | `dyad automaton sweep` | — | moving (#572) |
 | `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | moving (#572) |
 | `dyad bootstrap` | `--check` | frozen |

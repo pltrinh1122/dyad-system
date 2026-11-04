@@ -23,6 +23,9 @@ The cases:
 - #587 X5: a verifying entry whose every PR is up at its recorded head gets the combined merge onto main and its
   evidence: `evidence-verified` with the sha256, or `evidence-failed` with the conflict or the first FAIL line as the
   note; an evidence run that says nothing about the PRs is told to home and fires nothing.
+- #587 X10: `evidence --out` writes those verdicts as JSON lines and fires, posts and lands nothing, refused in a job
+  holding a write token; `run --evidence-from` fires each line only once it passes every check (its shape, a verdict
+  of the machine's table, the row in verifying, its heads the board's recorded and the live ones), never computing.
 - Misuse is exit 2."""
 import contextlib, io, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
@@ -502,6 +505,183 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = run(["scan"], self.w.seat)
         self.assertEqual(out.strip(), "nothing to do")
 
+    # ---- #587 X10: evidence computed in a sandbox job, fired by the write job from its artifact
+    def evidence_file(self, *lines):
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        f.write_text("".join(l + "\n" for l in lines))
+        return f
+
+    def test_evidence_out_writes_the_verdict_and_fires_nothing(self):
+        """`evidence --out`: one JSON line per evidence act, and main, the board and every inbox untouched; `run
+        --evidence-from` in a write-token job then fires it without running any evidence itself."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        before = git(self.w.origin, "rev-parse", "main")
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        EVIDENCED.clear()
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(len(EVIDENCED), 1)
+        self.assertEqual(am.json.loads(f.read_text()), {"rid": 14, "event": "evidence-verified", "evidence": EV,
+                                                         "heads": [[7, self.sha]]})
+        self.assertEqual(len(f.read_text().splitlines()), 1)
+        self.assertEqual(git(self.w.origin, "rev-parse", "main"), before)                  # nothing landed, nothing posted
+        self.assertEqual(self.inbox(HOME), [])
+        EVIDENCED.clear()
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(EVIDENCED, [])                                                   # served, never computed
+        g = self.entry(14)
+        b = am.board()
+        self.assertEqual((b.phase_name(g), b.first(b.phase_of(g["phase"])[1], "evidence")), ("done-ready", EV))
+        self.assertIn("[evidence file, line 1]", out)
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(out.strip(), "evidence line 1 dropped: row #14 has no evidence act at those heads now")
+
+    def test_evidence_out_is_refused_in_a_job_holding_a_write_token(self):
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        EVIDENCED.clear()
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 1)
+        self.assertIn("never in a job holding a write token", err)
+        self.assertFalse(f.exists()); self.assertEqual(EVIDENCED, [])
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat, GITHUB_ACTIONS="true", AUTOMATON_EVIDENCE_SANDBOX="on")
+        self.assertEqual(rc, 0, out + err)
+        self.assertTrue(f.exists())
+
+    def test_a_row_with_no_line_is_left_not_computed_nor_told(self):
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        before = self.on_main(f"{INST}/d-work/board/14.md")
+        EVIDENCED.clear()
+        rc, out, err = run(["run", "--evidence-from", str(self.evidence_file())], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn(f"evidence #14: no line for the combined evidence of PR #7 at {self.sha[:12]} in the evidence file", out)
+        self.assertEqual((EVIDENCED, self.on_main(f"{INST}/d-work/board/14.md"), self.inbox(HOME)), ([], before, []))
+        rc, out, err = run(["run", "--evidence-from", str(SCRATCH.mkdtemp() / "absent.jsonl")], self.w.seat,
+                           GITHUB_ACTIONS="true")                                     # a missing artifact costs the run nothing
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("unreadable (FileNotFoundError); nothing fired from it", out)
+
+    def test_a_moved_head_drops_the_line(self):
+        """The line's heads are re-checked: a PR that moved after the evidence job is `head-moved`, and the stale line is
+        dropped rather than fired onto the new head."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        f = self.evidence_file(am.json.dumps({"rid": 14, "event": "evidence-verified", "evidence": EV, "heads": [[7, self.sha]]}))
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("evidence line 1 dropped: row #14's heads are not the board's recorded and live heads", out)
+        g = self.entry(14)
+        b = am.board()
+        self.assertEqual((b.phase_name(g), b.pr_list(b.phase_of(g["phase"])[1])), ("verifying", [(7, moved)]))
+        base = git(self.w.seat, "rev-parse", "origin/main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}):
+            self.assertIsNone(am.heads_problem(self.w.seat, base, 14, [(7, moved)]))
+            self.assertIn("records other heads", am.heads_problem(self.w.seat, base, 14, [(7, self.sha)]))
+            self.assertIn("lists other PRs", am.heads_problem(self.w.seat, base, 14, [(8, moved)]))
+            self.assertIn("has no board entry", am.heads_problem(self.w.seat, base, 99, [(7, moved)]))
+            later = self.w.pr(7, "dyad/zz-pr.txt", "later\n")                         # live moved, board not yet
+            self.assertIn(f"PR #7 is no longer at {moved[:12]}", am.heads_problem(self.w.seat, base, 14, [(7, moved)]))
+        self.assertNotEqual(later, moved)
+
+    def test_evidence_out_takes_a_moved_rows_live_heads_and_run_fires_them_after_head_moved(self):
+        self.w.write_main(self.verifying_row(14, "done-asked", [(7, self.sha)], "Y/N: Done with #14 row 14 (merges PR #7)?", EV))
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(am.json.loads(f.read_text())["heads"], [[7, moved]])
+        EVIDENCED.clear()
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(EVIDENCED, [])
+        log = git(self.w.origin, "log", "-2", "--format=%s", "main").splitlines()
+        self.assertIn("head-moved (done-asked -> verifying)", log[1]); self.assertIn("verifying -> done-ready", log[0])
+
+    def test_a_null_verdict_is_told_to_home_once_never_fired(self):
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        unfit = lambda repo, sha: (2, ["FAIL [evidence] a shallow clone"])
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat, evidence=unfit)
+        self.assertEqual(rc, 0, out + err)
+        self.assertIsNone(am.json.loads(f.read_text())["event"])
+        before = self.on_main(f"{INST}/d-work/board/14.md")
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/14.md"), before)
+        (msg,) = self.inbox(HOME)
+        self.assertIn("refused for row #14: FAIL [evidence] a shallow clone (exit 2)", msg)
+        run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(len(self.inbox(HOME)), 1)
+
+    def test_evidence_lines_are_checked_strictly(self):
+        """The file is another job's artifact, written after the PR heads' code ran: every line is checked, a bad one
+        dropped with a reason that echoes nothing it holds."""
+        sha, d = "a" * 40, am.json.dumps
+        good = {"rid": 14, "event": "evidence-failed", "note": "x", "heads": [[7, sha]]}
+        bad = ["{not json", d([1]), d(good | {"event": "answered-Y"}), d(good | {"EVIL": 1}), d(good | {"rid": True}),
+               d(good | {"rid": "14"}), d(good | {"heads": [[7, "abc123"]]}), d(good | {"heads": [[7, sha], [7, sha]]}),
+               d(good | {"heads": []}), d({"rid": 14, "event": "evidence-verified", "evidence": "f" * 63, "heads": [[7, sha]]}),
+               d(good | {"note": " "}), d(good | {"event": ["evidence-failed"]}), d({"rid": 14, "heads": [[7, sha]], "note": "x"})]
+        pending, dropped = am.read_evidence(self.evidence_file(*bad, "", d(good | {"rid": 15}), d(good | {"rid": 16}), d(good | {"rid": 16})))
+        self.assertEqual(list(pending), [15])
+        self.assertEqual(len(dropped), len(bad) + 2, dropped)
+        self.assertTrue(all("EVIL" not in l and "answered" not in l for l in dropped), dropped)
+        self.assertIn("evidence line 3 dropped: not an evidence event of the machine's table", dropped)
+        self.assertEqual(dropped[-1], f"evidence line {len(bad) + 4} dropped: row #16 is named by 2 lines")
+        big = SCRATCH.mkdtemp() / "big.jsonl"; big.write_text("x" * (am.EVIDENCE_FILE_BYTES + 1))
+        self.assertEqual(am.read_evidence(big)[0], {})
+        deep = self.evidence_file("[" * 100000, d(good | {"rid": 15}))                # recurses past the stack in json
+        self.assertEqual((list(am.read_evidence(deep)[0]), am.read_evidence(deep)[1]),
+                         ([15], ["evidence line 1 dropped: not JSON"]))
+        pending, dropped = am.read_evidence(SCRATCH.mkdtemp())                       # a directory, a FIFO: never read
+        self.assertEqual(pending, {}); self.assertIn("not a regular file; nothing fired from it", dropped[0])
+        # a well-formed line for a row that is not in verifying is dropped by the run, never fired
+        self.w.write_main(self.verifying_row(14, "done-ready", [(7, self.sha)], evidence=EV))
+        before = git(self.w.origin, "rev-parse", "main")
+        f = self.evidence_file(d({"rid": 14, "event": "evidence-failed", "note": "forged", "heads": [[7, self.sha]]}))
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(out.strip(), "evidence line 1 dropped: row #14 has no evidence act at those heads now")
+        self.assertEqual(git(self.w.origin, "rev-parse", "main"), before)
+
+    def test_a_deeply_nested_evidence_line_costs_the_run_none_of_its_merges(self):
+        self.w.write_main(self.files)
+        f = self.evidence_file("[" * 100000)
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("evidence line 1 dropped: not JSON", out)
+        self.assertIn(f"merged PR #7 at {self.sha}", out)
+        self.assertIn("state: done", self.on_main(f"{INST}/d-work/rows/9.md"))
+
+    def test_evidence_out_reads_an_unmoved_prs_full_live_head_beside_a_moved_one(self):
+        """A moved two-PR row whose unmoved PR the board records abbreviated: the line carries both full live heads, so
+        `run --evidence-from` fires it after head-moved rather than dropping it."""
+        eight = self.w.pr(8, "dyad/zz-eight.txt", "eight\n")
+        self.w.write_main(self.verifying_row(14, "done-ready", [(7, self.sha), (8, eight[:8])], evidence=EV))
+        moved = self.w.pr(7, "dyad/zz-pr.txt", "moved\n")
+        f = SCRATCH.mkdtemp() / "evidence.jsonl"
+        rc, out, err = run(["evidence", "--out", str(f)], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(am.json.loads(f.read_text())["heads"], [[7, moved], [8, eight]])
+        rc, out, err = run(["run", "--evidence-from", str(f)], self.w.seat, GITHUB_ACTIONS="true")
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("[evidence file, line 1]", out)
+        self.assertEqual(am.board().phase_name(self.entry(14)), "done-ready")
+
+    def test_a_long_refusal_still_writes_an_admissible_note(self):
+        """A no-verdict note is what `escalate` keeps (first line, 300 characters), so a long `git merge-tree` refusal
+        passes `evidence_line_problem` and reaches home."""
+        self.w.write_main(self.verifying_row(14, "verifying", [(7, self.sha)]))
+        base = git(self.w.seat, "rev-parse", "origin/main")
+        long = am.Refused("git merge-tree exited 128: " + "x" * 5000 + "\nsecond line")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}), \
+             unittest.mock.patch.object(am, "evidence_event", side_effect=long):
+            rec, _ = am.evidence_verdict(self.w.seat, base, 14, [(7, self.sha)])
+        self.assertIsNone(am.evidence_line_problem(rec))
+        self.assertEqual(rec["note"], ("git merge-tree exited 128: " + "x" * 5000)[:300])
+        self.assertEqual((am.home_note("\n  \n"), am.home_note("\n a \nb")), ("no reason given", "a"))
+
     def test_plan_parts_and_part_for(self):
         parts = am.plan_parts("# Plan\nParts: engineer: a; counsel-0032b4c0: b; bad\n")
         self.assertEqual(parts, {"engineer": "a", "counsel-0032b4c0": "b"})
@@ -629,6 +809,9 @@ class AutomatonTests(unittest.TestCase):
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
         self.assertEqual(run(["go"], self.w.seat)[0], 2)
+        self.assertEqual(run(["evidence"], self.w.seat)[0], 2)
+        self.assertEqual(run(["evidence", "--to", "f"], self.w.seat)[0], 2)
+        self.assertEqual(run(["run", "--evidence-from"], self.w.seat)[0], 2)
         self.assertEqual(run(["--help"], self.w.seat)[0], 0)
         self.assertEqual(dyadlib.check_invariants(am), len(am.INVARIANTS) + len(am.TREE_INVARIANTS))
 

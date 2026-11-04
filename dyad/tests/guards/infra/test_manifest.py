@@ -41,6 +41,20 @@ class InfrastructureTests(unittest.TestCase):
         py = 'subprocess.run([sys.executable, "-m"])\nsubprocess.check_output(["git", *a])\nsubprocess.Popen([cmd])\n'
         self.assertEqual(inf.python_calls(py), ["python3", "git", "<cmd>"])
         self.assertEqual(inf.shebang("#!/usr/bin/env bash\n"), "bash"); self.assertEqual(inf.shebang("#!/bin/sh\n"), "sh")
+    def test_the_artifact_actions_map_to_their_rows(self):
+        """#587 X10: a dyad-* workflow's `uses: actions/upload-artifact@v4` and `download-artifact@v4` lines map, through
+        the real rules file, to the core manifest's declared rows (no undeclared-token failure)."""
+        pkg, wf = Path(tempfile.mkdtemp(prefix="dyad-art-")), Path(tempfile.mkdtemp(prefix="dyad-wf-"))
+        self.addCleanup(shutil.rmtree, pkg); self.addCleanup(shutil.rmtree, wf)
+        (wf / "dyad-x.yml").write_text("jobs:\n  a:\n    steps:\n      - uses: actions/upload-artifact@v4\n"
+                                       "      - uses: actions/download-artifact@v4\n")
+        tokens = inf.scan(pkg, wf)
+        self.assertEqual(set(tokens), {"actions/upload-artifact@v4", "actions/download-artifact@v4"})
+        rows = inf.parse_manifest((dyadlib.PKG / "infrastructure" / "INFRASTRUCTURE.md").read_text())
+        msgs = inf.check(rows, inf.load_rules(inf.RULES_FILE), tokens)
+        self.assertEqual([m for m in msgs if not m.startswith("warning:")], [])
+        self.assertIn("'actions/upload-artifact@v4' invoked by dyad-x.yml maps to no declared component",
+                      inf.check(rows, {}, tokens))
     def test_contract(self):
         self.assertEqual((inf.ENTITY, inf.CORPUS, inf.TRANSACTION), ("component", "infra", False)); self.assertEqual(len(inf.FIELDS), 7); self.assertEqual(inf.FIELDS[-1], "profile")
         self.assertTrue(inf.RULES_FILE.exists()); self.assertEqual(inf.RULES_FILE.parent, Path(inf.__file__).parent)

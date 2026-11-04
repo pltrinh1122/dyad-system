@@ -15,6 +15,8 @@ bash + GNU coreutils, grep, awk, sed: bash sh grep awk sed tr cut sort uniq mkte
 GitHub (hosting): -
 GitHub Actions + actions/checkout@v4: actions/checkout@v4
 actions/setup-python@v5: actions/setup-python@v5
+actions/upload-artifact@v4: actions/upload-artifact@v4
+actions/download-artifact@v4: actions/download-artifact@v4
 gh: gh
 jq: jq
 Linux (OS): -
