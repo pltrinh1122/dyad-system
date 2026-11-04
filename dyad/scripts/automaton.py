@@ -11,9 +11,11 @@ ledger lines only and never from a conversation:
       skips the suite, so the retry costs the guards only (#562 (c));
   (b) **close** — a row whose every named head is on `main` goes `done`, its accreted rows close under its mandate and
       its board entry is dropped (`dyad steps close-landed --land`, scripts/steps.py);
-  (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: each owner's inbox
-      gets one `notice`, "row #N planned; read plans/N.md". The seat still infers from the plan; this replaces only the
-      message saying "go".
+  (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: the entry is set
+      waiting on its first owner, the plan its next act, its question removed (#572 K1), and each owner's inbox gets
+      one `notice`, "row #N planned; read plans/N.md", with "; yours: <part>" when the plan's `parts:` line names the
+      owner's part (K2, the relay that restated the plan). A `Y done` whose cut does not land in the run sets the
+      entry waiting on that merge (K3). The seat still infers from the plan.
   (d) **corroborate** — after a cut lands, `check --corroborate <before> <after>` runs on the landed tree in the same
       job: what hosted CI on `main` checks, which a push made with the workflow's token never starts (d-work #564 E1).
       The suite runs only when the landed code differs from an evidenced PR head. A failure is posted to home and the
@@ -121,7 +123,7 @@ def posted(repo: Path, base: str, seat: str, row: int, body: str) -> bool:
 # ---- the acts a run would take
 def plan(repo: Path) -> tuple[str, list[tuple]]:
     """(base, acts) on a freshly fetched origin/main: ("merge", rid, [(pr, sha), …]) — one cut per row, in the row's
-    own order — then ("close", rid), then ("notice", rid, owner). Pure reading."""
+    own order — then ("close", rid), then ("board", rid, pairs) and ("notice", rid, owner, body). Pure reading."""
     base = land.fetch(repo)
     rows = dyadlib.read_rows(repo, at=base)
     rg, acts = rows_guard(), []
@@ -144,10 +146,77 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         text = show(repo, base, f"{inst(repo)}/d-work/board/{r.id}.md")
         if not text:
             continue
-        for owner in board().owners(board().parse(text)[0]):
-            if not posted(repo, base, owner, r.id, PLANNED.format(rid=r.id)):
-                acts.append(("notice", r.id, owner))
+        entry = board().parse(text)[0]
+        owners = board().owners(entry)
+        if owners and (pairs := planned_flip(r.id, entry, owners)):
+            acts.append(("board", r.id, pairs))                       # #572 K1: before the notices it announces
+        parts = plan_parts(show(repo, base, f"{inst(repo)}/d-work/plans/{r.id}.md") or "")
+        for owner in owners:
+            body = notice_body(r.id, part_for(parts, owner))
+            if not posted(repo, base, owner, r.id, body):
+                acts.append(("notice", r.id, owner, body))
     return base, acts
+
+
+# ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
+PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
+
+def plan_parts(text: str) -> dict[str, str]:
+    """{unit: part} from a plan's optional `parts:` line, `<unit>: <part>; <unit>: <part>` (#572 K2); {} without one."""
+    m = PARTS.search(text)
+    out = {}
+    for item in (m.group(1).split(";") if m else []):
+        unit, sep, part = item.partition(":")
+        if sep and unit.strip() and part.strip():
+            out[unit.strip()] = part.strip()
+    return out
+
+def part_for(parts: dict[str, str], seat: str) -> str | None:
+    """The part a plan's `parts:` line names for `seat`: by its full seat name, or by its function (the name before
+    its `-<hp>`)."""
+    return parts.get(seat) or parts.get(re.sub(r"-[0-9a-f]{8}$", "", seat))
+
+def notice_body(rid: int, part: str | None) -> str:
+    """The plan notice, quoting the unit's own part when the plan names one (#572 K2: the relay that restated the
+    plan); masked as `post` masks it, so the told text and the compared text are the same."""
+    body = PLANNED.format(rid=rid) + (f"; yours: {part}" if part else "")
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
+
+def planned_flip(rid: int, entry: dict[str, str], owners: list[str]) -> dict[str, str] | None:
+    """#572 K1: the board pairs a recorded `Y plan` decides — waiting on the first owner, the plan as the next act, no
+    question — or None when the entry already waits on a unit (the flip is done, or home has moved it on)."""
+    if entry.get("waiting-on", "").startswith(("unit ", board().UNIT_ALIAS)):
+        return None
+    return {"waiting-on": f"unit {owners[0]}", "next": f"execute plans/{rid}.md", "question": "",
+            "holder": entry.get("holder", "")}
+
+def pending_flip(entry: dict[str, str], cut: list[tuple[int, str]]) -> dict[str, str] | None:
+    """#572 K3: the board pairs a recorded `Y done` whose cut did not land in this run decides — waiting on the merge,
+    no question — or None when the entry already waits on it."""
+    want = "external merge " + ", ".join(f"PR #{pr}" for pr, _ in cut)
+    if entry.get("waiting-on") == want:
+        return None
+    return {"waiting-on": want, "question": "", "holder": entry.get("holder", "")}
+
+def board_set(repo: Path, rid: int, pairs: dict[str, str]) -> str:
+    """One board write from the automaton's seat, landed ledger-only through `board set`'s own builder; `holder` is
+    passed as it stands, so the write never takes the holder."""
+    with_env = {"DYAD_SESSION": SEAT}
+    old = {k: os.environ.get(k) for k in with_env}
+    os.environ.update(with_env)
+    try:
+        i = inst(repo)
+        pairs = {k: v for k, v in pairs.items() if k != "holder" or v}
+        land.land(repo, i, None, board().set_builder(str(rid), pairs, False, i), "board set")
+        return f"board #{rid}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(pairs.items()) if k != "holder")
+    except (Refused, board().Refused) as e:
+        return f"board #{rid} not written: {e}"
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
 
 def describe(act: tuple) -> str:
@@ -156,7 +225,9 @@ def describe(act: tuple) -> str:
         return f"merge {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} (row #{act[1]})"
     if kind == "close":
         return f"close row #{act[1]} (every named head is on main)"
-    return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
+    if kind == "board":
+        return f"board #{act[1]}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(act[2].items()) if k != "holder")
+    return f"notice {act[2]}: {act[3]}"
 
 
 # ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
@@ -434,14 +505,22 @@ def run(repo: Path) -> list[str]:
                 stopped.add(act[1])
         elif act[0] == "close":
             out.append(do_close(repo, act[1]))
+        elif act[0] == "board":
+            out.append(board_set(repo, act[1], act[2]))
         else:
             try:
-                out.append(post(repo, act[2], act[1], PLANNED.format(rid=act[1])))
+                out.append(post(repo, act[2], act[1], act[3]))
             except (Refused, inbox().Refused) as e:
                 out.append(f"notice to {act[2]} refused: {e}")
     # merges just landed may make a row due: one more pass closes it in the same run
-    _, again = plan(repo)
+    base, again = plan(repo)
     out += [do_close(repo, a[1]) for a in again if a[0] == "close" and a[1] not in stopped]
+    # #572 K3: a cut still owed after this run's merges waits on its merge, not on the operator
+    for a in again:
+        if a[0] == "merge":
+            text = show(repo, base, f"{inst(repo)}/d-work/board/{a[1]}.md")
+            if text and (pairs := pending_flip(board().parse(text)[0], a[2])):
+                out.append(board_set(repo, a[1], pairs))
     return out or ["nothing to do"]
 
 
