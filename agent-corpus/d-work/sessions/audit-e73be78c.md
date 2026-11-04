@@ -1,5 +1,5 @@
 session: audit-e73be78c
-seen: 2026-11-04T19:06:51+00:00
+seen: 2026-11-04T19:18:00+00:00
 root: /home/user/dyad-system
 rows: 570 591
 files: agent-corpus/audits/2026-11-04-home-replies-per-disposition.md agent-corpus/d-work/plans/591.md
