@@ -221,7 +221,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
-  dyad board [set <id>|_cos key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none …]
+  dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none …]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
                                 fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs;

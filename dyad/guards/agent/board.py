@@ -9,6 +9,21 @@ table. The board store puts it on `main`:
   <instance>/d-work/board/<id>.md   one per row not terminal with orchestration in flight
   <instance>/d-work/board/_cos.md   the cross-row items: the seat table, the last question asked, the promises (the
                                     pending queue is derived at read since #572 K4; a stored `queue` is still read)
+  <instance>/d-work/board/_cos-<operator>.md
+                                    the same, for the cabinet `program-<operator>` (#594): one `_cos` file per cabinet
+
+**Cabinets (#594).** A cabinet is one operator's leader and the board it keeps: `program` (the solo leader, and every
+seat under `organization: flat`) or `program-<operator>` (a member pair's leader, `program-<operator>-<hp>`), the
+leader's seat name without its `-<hp>` (`cabinet_of`). A row's entry carries an optional `cabinet`, absent meaning
+`program`, written by `board set` alone when it creates the entry and never typed or changed; `_cos.md` is `program`'s
+cross-row file, `_cos-<operator>.md` another cabinet's (`is_cos`). A leader writes only its own cabinet's entries and
+`_cos` file (`board set _cos` resolves to it); another seat may write an existing entry, its cabinet kept, and only
+`queue`/`seats` of a `_cos` file whose `seats` names it; a non-leader's first write on a new entry files it under the
+cabinet whose `seats` names it (refused when two cabinets exist and not exactly one does). `--drop` of a row's entry
+stays cabinet-agnostic, and `board advance` keeps the same fence and files a birth the same way. A seat is matched to
+a `_cos` file's `seats` by full name, its seat key only as the fallback (two cabinets' `engineer-<hp>` units share
+one key). The writer is `DYAD_SESSION`, or with none set the `holder=<seat>` the pairs name. `resume` and `dyad board`
+read the resumer's cabinet only.
 
 Each file is `key: value` lines; a value continues on the lines after it that start with two spaces (so a question
 is kept verbatim, newlines and all); blank and `#` lines are skipped. Keys of a row's file: `holder` (the cos session
@@ -19,7 +34,7 @@ that wrote the file last (`sessions.writer`, Rule-16's writer pattern, #350). `_
 place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely; its history is git's.
 
   dyad board                         render the board from the working tree: one line per entry, oldest wait first
-  dyad board set <id>|_cos key=value… [--drop]
+  dyad board set <id>|_cos[-<operator>] key=value… [--drop]
                                      merge the pairs into the file as it stands on a freshly fetched origin/main, in
                                      land's worktree, and land it as a ledger-only commit (`dwork land`'s loop, so a
                                      moved `main` re-merges from the inputs). `holder` defaults to this seat
@@ -47,8 +62,8 @@ phase. An entry without `phase` behaves exactly as before. `owner` accumulates (
 (plan #535 attack 6; the lease, #537, arbitrates later). A warning, never a refusal. The cos writes the board before
 it sends the message or asks the question it records (write-ahead, plan #535 attack 3).
 
-The check (`check_package`): every file is `<id>.md` or `_cos.md`, well-formed, keys known and not repeated, `holder`
-present, `waiting-on` and `since` in their forms, and each id a row (fails otherwise, Rule-20); a row that is
+The check (`check_package`): every file is `<id>.md` or `_cos[-<operator>].md`, well-formed, keys known and not repeated, `holder`
+present, `waiting-on`, `since` and `cabinet` in their forms, and each id a row (fails otherwise, Rule-20); a row that is
 terminal is a stale entry, a warning. Not checked: staleness by age, and append-only (the store is overwritten).
   board.py [repo-root]
 """
@@ -64,14 +79,18 @@ ENTITY, CORPUS, TRANSACTION = "board", "agent", False
 NAME, OWNER = "board entry", "Rule-3"
 BOARD_REL = "d-work/board"
 COS = "_cos"
-FIELDS = ("holder", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
+FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "writer")
 REQUIRED = ("holder",)
+CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
+                                                     # so an operator segment of eight hex is no cabinet (sessions.name_problems)
+SOLO = "program"                                     # the cabinet an entry without `cabinet` is filed under
+HP_TAIL = re.compile(r"-[0-9a-f]{8}$")               # a seat name's `-<hp>`, which `sessions._seat_key` strips
 CONT = "  "                                          # a continuation line's prefix
 WAITING = re.compile(r"operator|(?:unit|seat) \S+|external \S.*")   # `seat <name>` is `unit <name>`'s alias (#553)
 UNIT_ALIAS = "seat "                                # read until the release after next; `board set` writes `unit `
 KEY = re.compile(r"[a-z][a-z-]*")
-USAGE = ("usage: dyad board | dyad board set <id>|_cos key=value… [--drop] | dyad board resume | dyad board phases | "
+USAGE = ("usage: dyad board | dyad board set <id>|_cos[-<operator>] key=value… [--drop] | dyad board resume | dyad board phases | "
          "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>]")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
@@ -80,6 +99,12 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("waiting-on-forms", lambda: all(WAITING.fullmatch(v) for v in ("operator", "unit counsel-015qiPLU", "seat counsel-015qiPLU", "external run 1"))
                                  and not WAITING.fullmatch("someone")),
     ("store-under-d-work", lambda: BOARD_REL.startswith("d-work/")),
+    ("cabinet-form", lambda: all(CABINET.fullmatch(v) for v in (SOLO, "program-bob"))
+                             and not any(CABINET.fullmatch(v) for v in ("someone", "program-", "Program"))),
+    ("cabinet-is-a-field-of-entries-only", lambda: "cabinet" in FIELDS and "cabinet" not in COS_FIELDS),
+    ("cos-names-its-cabinet", lambda: [cos_cabinet(n) for n in (COS, COS + "-bob", COS + "-bob-cccccccc", "_cosx", "5")]
+                                      == [SOLO, "program-bob", None, None, None]
+                              and cos_name(cos_cabinet(COS + "-bob")) == COS + "-bob" and cos_name(SOLO) == COS),
 ]
 
 
@@ -126,7 +151,95 @@ def render(fields: dict[str, str], keys) -> str:
 
 
 def keys_for(name: str):
-    return COS_FIELDS if name == COS else FIELDS
+    return COS_FIELDS if is_cos(name) else FIELDS
+
+
+# ---- cabinets (#594)
+def cos_cabinet(name: str) -> str | None:
+    """The cabinet a cross-row file's stem names — `_cos` -> `program`, `_cos-<operator>` -> `program-<operator>` — or
+    None when the stem is no `_cos` file."""
+    if name == COS:
+        return SOLO
+    if name.startswith(COS + "-") and valid_cabinet(SOLO + name[len(COS):]):
+        return SOLO + name[len(COS):]
+    return None
+
+
+def is_cos(name: str) -> bool:
+    """True when `name` is a cabinet's cross-row file: `_cos` or `_cos-<operator>` (K8: the one predicate every reader
+    that skips the cross-row file uses before `int(name)`)."""
+    return cos_cabinet(name) is not None
+
+
+def cos_name(cabinet: str) -> str:
+    """The cross-row file's stem of `cabinet`: `_cos` for `program`, `_cos-<operator>` for `program-<operator>`."""
+    return COS + cabinet[len(SOLO):]
+
+
+def valid_cabinet(v: str) -> bool:
+    """A cabinet value in its form and with no `-<hp>` tail: a seat key (`sessions._seat_key(v) == v`, the tree
+    invariant `hp-tail-is-the-seat-keys`), never a seat name."""
+    return bool(CABINET.fullmatch(v or "")) and not HP_TAIL.search(v)
+
+
+def entry_cabinet(f: dict[str, str]) -> str:
+    """The cabinet an entry is filed under: its `cabinet`, absent meaning `program` (zero migration)."""
+    return f.get("cabinet") or SOLO
+
+
+def cabinet_of(seat: str | None, root: Path | None = None) -> str | None:
+    """The cabinet `seat` leads, or None: under `organization: flat` every seat (and none) is `program`'s; under `m4` a seat whose
+    function is the leader function leads its seat key (`program-<hp>` -> `program`, `program-<operator>-<hp>` ->
+    `program-<operator>`), any other seat none (K4)."""
+    s = sessions()
+    if s.organization(root) != "m4":
+        return SOLO
+    if not seat:
+        return None
+    parsed = s.parse_seat(seat)
+    if parsed is None or parsed["function"] != s.LEADER_FUNCTION:
+        return None
+    key = s._seat_key(seat)
+    return key if valid_cabinet(key) else None
+
+
+def names_seat(cos: dict[str, str], seat: str | None, exact: bool = False) -> bool:
+    """True when a `_cos` file's `seats` names `seat`: by its full name, or — unless `exact` — by its seat key (the key
+    outlives a hop)."""
+    if not seat:
+        return False
+    key = sessions()._seat_key
+    return any(o == seat or (not exact and key(o) == key(seat))
+               for o in owners({"owner": cos.get("seats", "").replace("\n", ";")}))
+
+
+def naming_cabinets(seat: str | None, coses: dict[str, dict[str, str]]) -> tuple[list[str], bool]:
+    """(the cabinets whose `seats` name `seat`, whether by full name): the full-name matches when any `_cos` file holds
+    one, else the seat-key matches. Two cabinets' units of one function share a seat key (`engineer-aaaaaaaa`,
+    `engineer-bbbbbbbb`), so the key is only the fallback for a seat no file names in full (#594)."""
+    exact = sorted(c for c, f in coses.items() if names_seat(f, seat, exact=True))
+    if exact or not seat:
+        return exact, True
+    return sorted(c for c, f in coses.items() if names_seat(f, seat)), False
+
+
+def filing_cabinet(seat: str | None, coses: dict[str, dict[str, str]]) -> str:
+    """K7: the cabinet a non-leader's first write on a new entry is filed under, from `coses` ({cabinet: its `_cos`
+    fields}): with no `_cos` file `program`, with one its cabinet (a departure from plan #594's K7, which said
+    `program`: a board holding only `_cos-<operator>.md` is that cabinet's); with two or more the one whose `seats`
+    names the seat in full, else the one whose `seats` hold its seat key when that key carries a topic
+    (`function-topic`; a bare function's key is shared across cabinets) — Refused when none or several do."""
+    if len(coses) <= 1:
+        return next(iter(coses), SOLO)
+    naming, exact = naming_cabinets(seat, coses)
+    parsed = sessions().parse_seat(seat) if seat else None
+    if not exact and not (parsed and parsed["topic"]):
+        naming = []
+    if len(naming) != 1:
+        raise Refused(f"{seat or 'this seat'} is named by the seats of {', '.join(naming) if naming else 'no cabinet'} "
+                      f"among {', '.join(sorted(coses))}: a new entry is filed under exactly one cabinet; ask its "
+                      f"leader to write it, or to list this seat in its `_cos` seats (#594 K7)")
+    return naming[0]
 
 
 parse_entry = parse   # the board's own reader, by a name no builder parameter shadows (#587: `parse` is the runner's there)
@@ -151,8 +264,8 @@ def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None 
     """One file's problems; `name` its stem, `states` row id -> state, `rows` row id -> Row (the phased entry's row
     checks; skipped without it). An entry with no `phase` is judged exactly as before #587."""
     where = f"board/{name}.md"
-    if name != COS and not name.isdigit():
-        return [f"{where}: not `<id>.md` or `{COS}.md`"]
+    if not is_cos(name) and not name.isdigit():
+        return [f"{where}: not `<id>.md` or `{COS}[-<operator>].md`"]
     fields, problems = parse(text)
     msgs = [f"{where}: {p}" for p in problems]
     allowed = keys_for(name)
@@ -165,13 +278,15 @@ def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None 
                     f"`unit {fields['waiting-on'][len(UNIT_ALIAS):]}` — the alias is removed in dyad-operator 1.0 (#573)")
     if "since" in fields and parse_since(fields["since"]) is None:
         msgs.append(f"{where}: 'since' is not an ISO-8601 date or time ({fields['since']!r})")
+    if "cabinet" in fields and not valid_cabinet(fields["cabinet"]):
+        msgs.append(f"{where}: 'cabinet' is not `program` or `program-<operator>` with no `-<hp>` ({fields['cabinet']!r}, #594)")
     if name.isdigit():
         state = states.get(int(name))
         if state is None:
             msgs.append(f"{where}: no row #{name} (Rule-20: an unresolved reference)")
         elif state in dyadlib.TERMINAL_STATES:
             msgs.append(f"warning: {where}: row #{name} is {state}; a stale entry — `dyad board set {name} --drop`")
-    if "phase" in fields and name != COS:
+    if "phase" in fields and not is_cos(name):
         msgs += check_phased(name, fields, rows)
     return msgs
 
@@ -272,7 +387,7 @@ def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     d = store(root); rel = d.relative_to(root) if d.is_relative_to(root) else d
-    return {"store": f"{rel}/<id>.md and {rel}/{COS}.md",
+    return {"store": f"{rel}/<id>.md and {rel}/{COS}[-<operator>].md",
             "parser": "`board.parse` (key: value lines, two-space continuations)",
             "observed": len(entries(root)),
             "note": "the cos's orchestration in flight, one file per row not terminal; overwritten, history is git's",
@@ -315,12 +430,12 @@ class Refused(Exception):
 
 
 def parse_set(a: list[str]) -> tuple[str, dict[str, str], bool]:
-    """(name, pairs, drop) from `<id>|_cos key=value… [--drop]`."""
+    """(name, pairs, drop) from `<id>|_cos[-<operator>] key=value… [--drop]`."""
     if not a:
         raise Refused(USAGE)
     name, rest = a[0], a[1:]
-    if name != COS and not name.isdigit():
-        raise Refused(f"{name!r} is not a row id or {COS}")
+    if not is_cos(name) and not name.isdigit():
+        raise Refused(f"{name!r} is not a row id or {COS}[-<operator>]")
     drop = "--drop" in rest
     rest = [x for x in rest if x != "--drop"]
     if drop and rest:
@@ -332,10 +447,11 @@ def parse_set(a: list[str]) -> tuple[str, dict[str, str], bool]:
         k, sep, v = x.partition("=")
         if not sep or not KEY.fullmatch(k):
             raise Refused(f"{x!r} is not key=value")
-        if k == "writer":
-            raise Refused("`writer` is written by `board set` itself, never typed")
+        if k in ("writer", "cabinet"):
+            raise Refused(f"`{k}` is written by `board set` itself, never typed"
+                          + (" (#594: filed once, when the entry is created)" if k == "cabinet" else ""))
         if k not in keys_for(name):
-            raise Refused(f"unknown key {k!r} for {name} (keys: {', '.join(k for k in keys_for(name) if k != 'writer')})")
+            raise Refused(f"unknown key {k!r} for {name} (keys: {', '.join(k for k in keys_for(name) if k not in ('writer', 'cabinet'))})")
         if k in REQUIRED and v == "":
             raise Refused(f"{k!r} cannot be removed")
         if k == "waiting-on" and v and not WAITING.fullmatch(v):
@@ -355,21 +471,25 @@ def set_builder(name: str, pairs: dict[str, str], drop: bool, inst: str):
     s = sessions()
     me = s.writer()
     seat = os.environ.get("DYAD_SESSION") or None
+    actor = seat or pairs.get("holder") or None           # no DYAD_SESSION: the `holder=<seat>` path names the writer
     def build(wt: Path):
-        path = wt / inst / BOARD_REL / f"{name}.md"
+        mine = cabinet_of(actor, wt)
+        target = cos_name(mine) if name == COS and mine else name   # `board set _cos` is the writer's own cabinet's
+        path = wt / inst / BOARD_REL / f"{target}.md"
         rel = path.relative_to(wt).as_posix()
+        old = parse(path.read_text())[0] if path.exists() else {}
+        cabinet_fence(target, old, pairs, drop, actor, mine, cos_files(wt / inst / BOARD_REL))
         if drop:
             if not path.exists():
                 raise Refused(f"already landed: {rel} is not on origin/main; nothing pushed")
             path.unlink()
-            return [rel], f"ledger: board {name} dropped", ""
-        if name.isdigit():
-            row = next((r for r in dyadlib.read_rows(wt) if r.id == int(name)), None)
+            return [rel], f"ledger: board {target} dropped", ""
+        if target.isdigit():
+            row = next((r for r in dyadlib.read_rows(wt) if r.id == int(target)), None)
             if row is None:
-                raise Refused(f"no row #{name} on origin/main")
+                raise Refused(f"no row #{target} on origin/main")
             if row.state in dyadlib.TERMINAL_STATES:
-                raise Refused(f"row #{name} is {row.state} on origin/main: a terminal row has no board entry")
-        old = parse(path.read_text())[0] if path.exists() else {}
+                raise Refused(f"row #{target} is {row.state} on origin/main: a terminal row has no board entry")
         if "phase" in pairs and not old.get("phase"):
             raise Refused(f"{rel} carries no phase: a phase is born only by `dyad board advance` (#587 X1)")
         if old.get("phase"):
@@ -381,6 +501,10 @@ def set_builder(name: str, pairs: dict[str, str], drop: bool, inst: str):
         if w:
             print(w, file=sys.stderr)
         new = merged(old, pairs, seat, me, now_iso())
+        if target.isdigit() and not old:                 # #594 K7: filed once, by code, when the entry is created
+            cab = mine or filing_cabinet(actor, cos_files(wt / inst / BOARD_REL))
+            if cab != SOLO:
+                new["cabinet"] = cab
         if old.get("phase") and name.isdigit():          # #587 X1: a holder change re-derives; the phase's `since` stays
             unit = first(phase_of(old["phase"])[1], "unit")
             if unit and unit not in owners(new):
@@ -390,13 +514,46 @@ def set_builder(name: str, pairs: dict[str, str], drop: bool, inst: str):
                 new["since"] = old["since"]
         if not new.get("holder"):
             raise Refused("no holder: set DYAD_SESSION or pass holder=<seat>")
-        text = render(new, keys_for(name))
+        text = render(new, keys_for(target))
         if path.exists() and path.read_text() == text:
             raise Refused(f"already landed: {rel} on origin/main is identical; nothing pushed")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
-        return [rel], f"ledger: board {name} ({', '.join(sorted(pairs))})", ""
+        return [rel], f"ledger: board {target} ({', '.join(sorted(pairs))})", ""
     return build
+
+
+def cos_files(d: Path) -> dict[str, dict[str, str]]:
+    """{cabinet: its `_cos` file's fields} for every cross-row file in the board directory `d`."""
+    return {cos_cabinet(p.stem): parse(p.read_text(errors="replace"))[0]
+            for p in (sorted(d.glob("*.md")) if d.is_dir() else []) if is_cos(p.stem)}
+
+
+def cabinet_fence(name: str, old: dict[str, str], pairs: dict[str, str], drop: bool, seat: str | None,
+                  mine: str | None, coses: dict[str, dict[str, str]] | None = None) -> None:
+    """K6: Refused when the writer may not write `name`. A leader (`mine`) writes only its own cabinet's `_cos` file
+    and entries; another seat may write an existing entry (its cabinet kept) and only `queue`/`seats` of a `_cos` file
+    whose `seats` names it in full, or by its seat key when no other cabinet's `seats` (`coses`, every `_cos` file;
+    `{name's cabinet: old}` without it) hold that key. `--drop` of a row's entry is cabinet-agnostic: a terminal row
+    owes nothing."""
+    cc = cos_cabinet(name)
+    if cc is None:
+        if drop or not old or mine is None or entry_cabinet(old) == mine:
+            return
+        raise Refused(f"board/{name}.md is filed under cabinet {entry_cabinet(old)}, and {seat} leads {mine}: a leader "
+                      f"writes only its own cabinet's entries (#594 K6)")
+    if mine is not None:
+        if mine != cc:
+            raise Refused(f"board/{name}.md is cabinet {cc}'s, and {seat} leads {mine}: a leader writes only its own "
+                          f"cabinet's `_cos` file ({cos_name(mine)}, #594 K6)")
+        return
+    extra = sorted(set(pairs) - {"queue", "seats"})
+    naming, exact = naming_cabinets(seat, {**(coses or {}), cc: old})
+    if drop or extra or cc not in naming or not (exact or naming == [cc]):
+        raise Refused(f"board/{name}.md is cabinet {cc}'s and {seat or 'this seat'} leads none: another seat writes only "
+                      f"`queue` or `seats` of a `_cos` file whose `seats` names it"
+                      + (f" (not {', '.join(extra)})" if extra else "") + " (#594 K6; set DYAD_SESSION to the leader's "
+                      "seat, or with none pass holder=<the leader's seat>)")
 
 
 def cmd_set(a: list[str], repo: Path) -> int:
@@ -424,13 +581,25 @@ def load(root: Path) -> list[tuple[str, dict[str, str]]]:
     return [(p.stem, parse(p.read_text(errors="replace"))[0]) for p in entries(root)]
 
 
+def viewer_cabinet(root: Path) -> str:
+    """The cabinet `dyad board` and `resume` read: the one `DYAD_SESSION` leads, `program` for any other seat."""
+    return cabinet_of(os.environ.get("DYAD_SESSION") or None, root) or SOLO
+
+
+def split_cabinets(got: list[tuple[str, dict[str, str]]], cab: str):
+    """(this cabinet's `_cos` fields, its row entries, the other cabinets' row entries) of a loaded board."""
+    cos = dict(got).get(cos_name(cab), {})
+    rows = [(n, f) for n, f in got if not is_cos(n)]
+    return cos, [(n, f) for n, f in rows if entry_cabinet(f) == cab], [(n, f) for n, f in rows if entry_cabinet(f) != cab]
+
+
 def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
     now = now or datetime.datetime.now(datetime.timezone.utc)
     me = sessions().writer()
     rows = {r.id: r for r in dyadlib.read_rows(root)}
     got = load(root)
-    cos = dict(got).get(COS, {})
-    items = [(n, f) for n, f in got if n != COS]
+    cab = viewer_cabinet(root)
+    cos, items, others = split_cabinets(got, cab)
     items.sort(key=lambda nf: parse_since(nf[1].get("since", "")) or now)
     out = [f"board: {len(items)} entr{'y' if len(items) == 1 else 'ies'}, holder {cos.get('holder') or '?'} "
            f"(read from the working tree; `git pull` first for main's)"]
@@ -442,23 +611,36 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
                    f"owner {f.get('owner', '-')} | next: {(f.get('next') or '-').splitlines()[0]} | {title[:60]}")
         if f.get("question"):
             out.append(f"    question: {f['question'].splitlines()[-1]}")
-    out.append(queue_line(derived_queue(root, got)))
+    if others:                                            # #594: one count line, only when another cabinet holds any
+        by = {}
+        for n, f in others:
+            by.setdefault(entry_cabinet(f), []).append(n)
+        out.append(f"{len(others)} entr{'y' if len(others) == 1 else 'ies'} on other cabinets' boards ("
+                   + "; ".join(f"{c}: {' '.join(f'#{n}' for n in sorted(ns, key=int))}" for c, ns in sorted(by.items())) + ")")
+    out.append(queue_line(derived_queue(root, got, cab)))
     if cos:
         for k in ("queue", "seats", "question"):
             if cos.get(k):
-                out.append(f"_cos {k}: {cos[k].splitlines()[-1] if k == 'question' else ' / '.join(cos[k].splitlines())}")
+                out.append(f"{cos_name(cab)} {k}: {cos[k].splitlines()[-1] if k == 'question' else ' / '.join(cos[k].splitlines())}")
     live = [i for i, r in rows.items() if r.state in ("open", "planned", "blocked")]
-    missing = sorted(set(live) - {int(n) for n, _ in items})
+    missing = sorted(set(live) - {int(n) for n, _ in items + others})
     out.append(f"{len(missing)} open, planned or blocked row(s) carry no board entry")
-    out += [w for n, f in got if not f.get("phase") and (w := writer_warning(n, f, me))]   # #587: units write a phased one
+    mine = {n for n, _ in items} | {cos_name(cab)}
+    out += [w for n, f in got if n in mine and not f.get("phase") and (w := writer_warning(n, f, me))]   # #587: units write a phased one
     return out
 
 
-def derived_queue(root: Path, got: list[tuple[str, dict[str, str]]] | None = None) -> dict[str, list[int]]:
+def derived_queue(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
+                  cabinet: str | None = None) -> dict[str, list[int]]:
     """#572 K4: the pending queue read from records instead of written to `_cos`: `plan-ready`, the open rows with a
     stored plan and no `Y plan` entry, not accreted under a mandate; `done-ready`, the live entries whose question is a
-    Done question (`Done with`). Rule-3's counts, so no write keeps them."""
+    Done question (`Done with`). Rule-3's counts, so no write keeps them. With `cabinet` (#594 K10), that cabinet's
+    share: a row with an entry counts to its entry's cabinet, a row with none to `program`."""
     got = load(root) if got is None else got
+    if cabinet is not None:
+        filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
+        q = derived_queue(root, got)
+        return {k: [i for i in v if filed.get(i, SOLO) == cabinet] for k, v in q.items()}
     plans = dyadlib.instance(root) / "d-work" / "plans"
     rows = dyadlib.read_rows(root)
     live = {r.id for r in rows if r.state not in dyadlib.TERMINAL_STATES}
@@ -484,19 +666,20 @@ def owners(f: dict[str, str]) -> list[str]:
 
 def resume_view(root: Path) -> dict:
     """What a new holder resumes from, as data (`resume_lines` prints it; a caller acts on it):
-    - `cos` (the `_cos` entry), `live` and `stale` entries (`stale`: the row is terminal or gone, #547);
+    - `cabinet` (the resumer's, #594), `cos` (its `_cos` file), `live` and `stale` entries of that cabinet (`stale`: the row is terminal or gone, #547);
     - `owed` (the live entries waiting on the Operator), `gates` (on an external ref) and `seats` (every seat a live
       entry waits on or names as an owner, co-owners included, #551);
     - `unread`: this seat's unread inbox messages (#536)."""
     got = load(root)
     states = row_states(root)
-    items = [(n, f) for n, f in got if n != COS]
+    cab = viewer_cabinet(root)
+    cos, items, _ = split_cabinets(got, cab)               # #594: the resumer's cabinet only (S13)
     stale = [(n, f) for n, f in items if states.get(int(n)) in dyadlib.TERMINAL_STATES or int(n) not in states]
     live = [(n, f) for n, f in items if (n, f) not in stale]
     seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith(("unit ", UNIT_ALIAS))}
                    | {o for _, f in live for o in owners(f)})
     seat = os.environ.get("DYAD_SESSION") or None
-    return {"cos": dict(got).get(COS, {}), "live": live, "stale": stale, "states": states,
+    return {"cabinet": cab, "cos": cos, "live": live, "stale": stale, "states": states,
             "owed": [(n, f) for n, f in live if f.get("waiting-on") == "operator"],
             "gates": [(n, f["waiting-on"]) for n, f in live if f.get("waiting-on", "").startswith("external ")],
             "seats": seats, "unread": dyadlib.load_guard("agent", "inbox").unread(root, seat) if seat else 0,
@@ -528,9 +711,9 @@ def resume_lines(root: Path) -> list[str]:
             if f.get(k):
                 first, *rest = f[k].split("\n")
                 out.append(f"  {k}: {first}"); out.extend(f"    {r}" for r in rest)
-    out.append(queue_line(derived_queue(root)))
+    out.append(queue_line(derived_queue(root, None, v["cabinet"])))
     if cos:
-        block(f"{COS}:", cos, COS_FIELDS)
+        block(f"{cos_name(v['cabinet'])}:", cos, COS_FIELDS)
     for n, f in v["live"]:
         block(f"#{n}:" + (f" phase {phase_name(f)}" if f.get("phase") else ""), f, FIELDS)
     for n, f in v["stale"]:
@@ -1140,7 +1323,9 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                     repo: Path, value_flags, parse, words, sender: str, recorded: bool = False, landed=None, ran=None,
                     automaton: bool = False):
     """land's builder for one `board advance` (section 7 of plan #587 PR2). On every try, in land's worktree on a freshly
-    fetched origin/main: read and refuse (`--expect`, the table, the actor, the fields, the binding set); compose the
+    fetched origin/main: read and refuse (`--expect`, the cabinet fence of `board set` on an existing entry (#594 K6),
+    the table, the actor, the fields, the binding set), and file a birth under the sender's cabinet as `board set`
+    files a new entry (#594 K7); compose the
     ledger lines, write the board, compose the relays; then run the composed text through `dwork batch`'s own parser
     and builder, so every refusal of `dwork state` and `inbox post` holds. A refusal raises before `git commit`; the
     next `land.prepare` discards what was written. `recorded` (the automaton's catch-up only, never the CLI) writes no
@@ -1180,6 +1365,8 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 nm, sub = phase_of(entries[rid]["phase"])
                 entries[rid] = {**entries[rid], "phase": phase_render(aexp, sub)}
                 continue
+            if entries[rid] and not (recorded or automaton):   # #594 K6 on the phased path; the automaton leads none
+                cabinet_fence(str(rid), entries[rid], pairs, False, sender, cabinet_of(sender, wt))
             _, actor, _ = dyadlib.ORCH_EVENTS[(cur, event)]
             if not recorded and (why := actor_ok(actor, entries[rid], sender, automaton)):
                 raise Refused(f"#{rid} {event}: {why} (#587)")
@@ -1232,6 +1419,10 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 if p.exists():
                     p.unlink(); changed.append(rid)
             else:
+                if old_text[rid] is None and "cabinet" not in new:   # #594 K7: a birth is filed once, as `board set` files one
+                    cab = cabinet_of(sender, wt) or filing_cabinet(sender, cos_files(bdir))
+                    if cab != SOLO:
+                        new["cabinet"] = cab
                 new["writer"] = me
                 text = render(new, FIELDS)
                 if text != old_text[rid]:
@@ -1347,6 +1538,8 @@ INVARIANTS += [   # #587: the machine's derived fields (crafts/syseng/rules/inva
     ("relays-name-known-events", lambda: all(e in dyadlib.ORCH_EVENT_NAMES and (t in dyadlib.ORCH_PHASES or t in (dyadlib.ORCH_DROP, dyadlib.ORCH_FROM)) for e, t in RELAYS)),
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)
+    ("hp-tail-is-the-seat-keys", lambda: all((sessions()._seat_key(v) == v) == (not HP_TAIL.search(v))
+                                             for v in (SOLO, "program-bob", "program-aaaaaaaa", "program-bob-cccccccc", "program-1234567"))),
     ("relays-are-information", lambda: not any(inbox().DISPOSITION.search(relay_body(587, e, t if t != dyadlib.ORCH_FROM else "plan-ready",
         {"holder": "home-1", "owner": "unit-1; unit-2", "phase": "verifying\nunit: unit-1\npr: 650 at 9bbb5cc8\nevidence: " + "0" * 64},
         "unit-2", "parts: unit-1: " + RELAY_SAMPLE["part"], {"pr": RELAY_SAMPLE["pr"], "head": RELAY_SAMPLE["head"]})[2]) for e, t in RELAYS)),

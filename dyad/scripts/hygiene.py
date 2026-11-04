@@ -23,7 +23,7 @@ worded from fixed record times, never a computed age, so a finding told once is 
   W4  orphan PR           an open PR citing no `d-work #N` of a live row (prs.py's parse, A5)
   W5  orphan branch       an origin branch whose tip is not on main, with no open PR and no commit citing a live row (A6)
   W6  stale PR head       an open PR on a live row whose head commit is over INFLIGHT_W6_DAYS old
-  W7a unit not in table   a unit a live board entry names that `_cos`'s `seats` does not
+  W7a unit not in table   a unit a live board entry names that its cabinet's `_cos` `seats` does not
   W7b unit stale          a live entry waiting on a unit whose presence file is stale; skipped with one line until the
                           presence store holds a fresh file (gated on #567, A7)
   W8  promise kept listed a `promised` entry of a board file listed over INFLIGHT_W8_DAYS (its age: git history, A8)
@@ -38,6 +38,11 @@ A ring owed (#587 X8: a relay posted by home to a unit, unread) is W1: every unr
 and a `report` or `notice` home posts never rings (`land.ring_list` rings every kind but `notice`, and the machine's
 relays to a unit are all of kind `relay`). W1's threshold is 4 h, not X8's hour: the sweep runs twice a day, so a
 lower threshold would tell nothing sooner.
+
+Per cabinet (#594): each entry is read with its own cabinet's `_cos[-<operator>]` file — W7a against that file's
+`seats`, W8 over every `_cos` file, W10' in that cabinet's holder's box — and `inflight_cabinets` returns each line
+with the cabinet it concerns (a row's entry's, `program` for a row with none and for a line about no row), so the
+sweep tells each cabinet's home its own lines.
 
 The hosting's open PRs (W4–W6) are read by the caller with `GITHUB_TOKEN`; without them those kinds print one skip line.
 Clustering waits for typed refs (plan #569 decision 3).
@@ -63,6 +68,7 @@ HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of row
 HYGIENE_TOP = 10               # ranking: at most this many pairs
 PARENT = re.compile(r"\bparent #(\d+)")
 CITE = re.compile(r"\bd-work #(\d+)\b")
+ROW_REF = re.compile(r"\brow #(\d+)")          # the row an `inflight` line is about (#594: its cabinet's home is told)
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 INFLIGHT_W1_HOURS = 4          # W1: a relay unread this long (minimum ages: the sweep runs every 12 hours, A11)
 INFLIGHT_W2_DAYS = 3           # W2: a planned row quiet this long
@@ -248,17 +254,28 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
     """`inflight W…` lines for the work in flight on `base` (module docstring). `pulls` is the hosting's open PRs as
     [{number, body, title, head_ref, head_sha}], or None when it was not read (W4–W6 then skip with one line).
     `presence_fresh(seat, now)` says whether a seat's presence is fresh; None reads the presence store on `base`."""
+    return [line for _, line in inflight_cabinets(repo, base, now, pulls, presence_fresh)]
+
+
+def inflight_cabinets(repo: Path, base: str, now: float, pulls: list[dict] | None,
+                      presence_fresh=None) -> list[tuple[str, str]]:
+    """`inflight`'s lines, each as (cabinet, line) (#594): the cabinet of the row the line is about — its board entry's,
+    `program` when it has none — and `program` for a line about no row."""
     import datetime
     nowdt = datetime.datetime.fromtimestamp(now, datetime.timezone.utc)
     inst = dyadlib.instance_rel(repo) or "agent-corpus"
     rows = {r.id: r for r in dyadlib.read_rows(repo, at=base)}
     live = {i for i, r in rows.items() if r.state not in dyadlib.TERMINAL_STATES and r.state != "backlog"}
-    boards = _board_files(repo, base, inst)
-    cos = boards.pop("_cos", {})
-    entries = {int(n): f for n, f in boards.items() if n.isdigit() and int(n) in live}
     bd = dyadlib.load_guard("agent", "board")
-    home = cos.get("holder")
+    boards = _board_files(repo, base, inst)
+    coses = {bd.cos_cabinet(n): boards.pop(n) for n in sorted(boards) if bd.is_cos(n)}
+    filed = {int(n): bd.entry_cabinet(f) for n, f in boards.items() if n.isdigit()}
+    entries = {int(n): f for n, f in boards.items() if n.isdigit() and int(n) in live}
+    homes = {c: f.get("holder") for c, f in coses.items()}
     msgs = _messages(repo, base, inst)
+    special: dict[str, str] = {}                         # a line tagged from its file, not its text: W7a, every W8
+    def cab(row) -> str:
+        return filed.get(int(row), bd.SOLO) if str(row).isdigit() else bd.SOLO
     out = []
     # W1: a relay no one has read
     for m in msgs:
@@ -331,12 +348,15 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             tip = git(repo, "log", "-1", "--format=%h %cs", ref).split()
             out.append(f"inflight W5 orphan branch: {name} (tip {tip[0] if tip else '?'} of {tip[1] if len(tip) > 1 else '?'}) "
                        f"is not on main, has no open PR and no commit citing a live row")
-    # W7a: a unit the board names that the unit table does not
-    table = set(bd.owners({"owner": cos.get("seats", "").replace("\n", ";")}))
-    if table:
-        named = {u for f in entries.values() for u in bd.owners(f) + _units(f.get("waiting-on", ""))}
-        for u in sorted(named - table):
-            out.append(f"inflight W7a unit not in table: {u} is named on the board but not in _cos's seats")
+    # W7a: a unit the board names that its cabinet's unit table does not
+    for c in sorted(set(coses) | {bd.SOLO}):
+        table = set(bd.owners({"owner": coses.get(c, {}).get("seats", "").replace("\n", ";")}))
+        if table:
+            named = {u for i, f in entries.items() if filed.get(i, bd.SOLO) == c
+                     for u in bd.owners(f) + _units(f.get("waiting-on", ""))}
+            for u in sorted(named - table):
+                line = f"inflight W7a unit not in table: {u} is named on the board but not in {bd.cos_name(c)}'s seats"
+                out.append(line); special[line] = c
     # W7b: waiting on a unit whose presence is stale, gated on a presence store that holds a fresh file (#567)
     sv = dyadlib.load_guard("agent", "sessions")
     if presence_fresh is None:
@@ -355,13 +375,15 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
                 if not presence_fresh(u, nowdt):
                     out.append(f"inflight W7b unit stale: row #{i} waits on {u}, whose presence file is stale")
     # W8: a promise still listed
-    for name, f in [("_cos", cos)] + [(str(i), f) for i, f in sorted(entries.items())]:
+    for name, f in [(bd.cos_name(c), f) for c, f in coses.items()] + [(str(i), f) for i, f in sorted(entries.items())]:
         for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:
             t = _promise_since(repo, base, f"{inst}/d-work/board/{name}.md", promise)
             if t and now - t > INFLIGHT_W8_DAYS * 86400:
                 stamp = datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%d")
-                out.append(f"inflight W8 promise still listed: board {name} has promised {promise[:80]!r} since {stamp} "
-                           f"(over {INFLIGHT_W8_DAYS} days)")
+                line = (f"inflight W8 promise still listed: board {name} has promised {promise[:80]!r} since {stamp} "
+                        f"(over {INFLIGHT_W8_DAYS} days)")
+                out.append(line)                         # tagged from its file, never by a `row #` in the promise's text
+                special[line] = bd.cos_cabinet(name) if bd.is_cos(name) else filed.get(int(name), bd.SOLO)
     # W9: waiting on the operator
     for i, f in sorted(entries.items()):
         if f.get("waiting-on") != "operator":
@@ -374,14 +396,15 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
     # W10': an owner's report newer than the board
     for i, f in sorted(entries.items()):
         since, owners = _when(f.get("since", "")), set(bd.owners(f))
-        late = [m for m in msgs if m["_box"] == home and m.get("kind") == "report" and m.get("row") == str(i)
+        late = [m for m in msgs if m["_box"] == homes.get(filed.get(i, bd.SOLO)) and m.get("kind") == "report" and m.get("row") == str(i)
                 and m.get("from") in owners and since and (t := _when(m.get("sent", ""))) and t > since]
         if late:
             m = max(late, key=lambda m: m.get("sent", ""))
             out.append(f"inflight W10' report after board: row #{i}'s board since {f.get('since')}, but {m['from']} "
                        f"reported on it at {m.get('sent')}")
     out += phase_age(entries, nowdt)
-    return out
+    return [(special[line] if line in special else cab(m[1]) if (m := ROW_REF.search(line)) else bd.SOLO, line)
+            for line in out]
 
 
 def phase_age(entries: dict[int, dict[str, str]], nowdt) -> list[str]:
