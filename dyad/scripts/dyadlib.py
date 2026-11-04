@@ -539,7 +539,8 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
 
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
-PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification")
+PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification", "definition of done")
+DOD_SINCE = "2026-11-05"   # #574: `definition of done` is asked only of plans whose row opened on or after this date
 
 _CELL_SEP = re.compile(r"(?<!\\)\|")   # a `|` not preceded by `\`: an escaped `\|` is cell content (#171)
 
@@ -732,7 +733,9 @@ INVARIANTS: list[Invariant] = [
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),
-    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS) == 5 and "base commit" in PLAN_PARTS),   # Rule-15 phase 1's five parts (#203)
+    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS) == 6 and "base commit" in PLAN_PARTS
+                                    and PLAN_PARTS[-1] == "definition of done"),   # Rule-15 phase 1's six parts (#203, #574)
+    ("dod-since-is-a-date", lambda: bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", DOD_SINCE))),
     ("semver-accepts-build-metadata", lambda: bool(SEMVER.fullmatch("1.2.3")) and bool(SEMVER.fullmatch("1.2.3+local.1")) and not SEMVER.fullmatch("1.2")),
     ("semver-tuple-strips-build", lambda: semver_tuple("1.2.3+local.1") == (1, 2, 3)),
     ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),

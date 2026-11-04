@@ -96,9 +96,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 `<date> Y plan (mandate #<id>)`, and entry 1 of its record the
                                 mandate's own authorizing words copied verbatim, noted
                                 `mandate #<id>, <the mandate's own date>` (Rule-7 property 4). It takes
-                                no disposition of its own, so --mandate refuses -d, --said, --prompt
-                                and --backlog, and refuses a target that is no row or carries no
-                                `Y plan`. refs defaults to `parent #<id>`
+                                no disposition of its own, so --mandate refuses -d, --said and
+                                --prompt, and refuses a target that is no row or carries no `Y plan`.
+                                refs defaults to `parent #<id>`. With --backlog (#574): a row a
+                                play-book the mandate's plan runs prescribes, carried under that
+                                plan-`Y` — born backlog, no `mode` line, entry `<date> Y backlog
+                                (mandate #<id>)`, entry 1 noted as above
   dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
@@ -117,6 +120,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 exits 0, or the real call's own refusal and exits non-zero (#464). With
                                 --land it checks in the land worktree against a freshly fetched
                                 origin/main and lands nothing
+  dyad dwork state <id> archived --retired-by <done-row>
+                                archive a backlog or done row the named row's operative Done-`Y`
+                                retires (`Y done (retires #<id>, …)`, #574 revision 3): the entry `<date>
+                                Y archive (done #<done-row>)`, its record's entry the done words noted
+                                `done #<done-row>, <date>`; the automaton's close runs it
   dyad dwork state <id> done --mandate <parent>
                                 close an accreted row on its mandate's Done-`Y` (implicit mode, d-work
                                 #422): the row's entry `<date> Y done (mandate #<parent>, <its date>)` and
@@ -1852,10 +1860,10 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--state", "--craft", "--mandate", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
+DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
     "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--mandate"}, {"--check"}, 3),   # #464; --said-ref #545
+    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--mandate", "--retired-by"}, {"--check"}, 3),   # #464; --said-ref #545
     "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
     "list": ({"--state", "--craft"}, set(), 1)}
 
@@ -1925,6 +1933,13 @@ def append_provenance(rid, entries, today, fresh=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
     return path
+
+RETIRES = re.compile(r"\bretires (#\d+(?:, #\d+)*)")   # #574 revision 3: `Y done (accreted #c, retires #r, #s, merges …)`
+
+def retired_rows(entry: str) -> list[int]:
+    """The rows a Done entry's `retires` clause names, in order; [] without one."""
+    m = RETIRES.search(entry or "")
+    return [int(x) for x in re.findall(r"#(\d+)", m.group(1))] if m else []
 
 def mandate_words(rows, raw, kind="Y plan"):
     """The mandate's own words and the date they were given: the *last* `disposition` entry of
@@ -2076,14 +2091,15 @@ def cmd_dwork(a):
             # #290: implicit mode. The row takes no disposition of its own — its one entry is the mandate's,
             # and its record's entry 1 is the mandate's own words, copied with a note that discloses that they
             # predate the row (Rule-7 property 4, parallel to the relayed prompt already there).
-            if backlog or d is not None or prompt is not None or said is not None:
-                sys.exit("refused: --mandate carries the mandate's own disposition (implicit mode, Rule-3); "
-                         "it takes no -d, --said, --prompt or --backlog — a row born backlog carries no PR "
-                         "and moves only on the Operator's prompt")
+            if d is not None or prompt is not None or said is not None:
+                sys.exit("refused: --mandate carries the mandate's own disposition (Rule-3); "
+                         "it takes no -d, --said or --prompt")
             mid, mwords, mdate = mandate_words(rows, mandate)
             fence_for("disposition", mwords)
-            entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], "implicit"
-        if backlog and d is None:
+            # #574 revision 2: with --backlog, a row the plan's play-book prescribes is carried under the plan-`Y`
+            # that runs it — born backlog, explicit (its Done never rides the parent's), entry 1 the mandate's words
+            entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], (dyadlib.DEFAULT_MODE if backlog else "implicit")
+        if backlog and d is None and mandate is None:
             sys.exit("refused: --backlog opens a row by disposition (Rule-3); give -d and --said")
         if not entries:
             sys.exit("refused: a row is opened by the Operator's words; give --prompt[-file] or -d with --said[-file] (Rule-7, #191)")
@@ -2101,7 +2117,7 @@ def cmd_dwork(a):
             sys.exit("refused: refs given twice, as an argument and with -r")
         refs = vals.get("-r", pos[2] if len(pos) > 2 else "")
         if mandate is not None:
-            disposed = f"{today} Y plan (mandate #{mid})"
+            disposed = f"{today} Y {'backlog' if backlog else 'plan'} (mandate #{mid})"
             refs = refs or f"parent #{mid}"   # the mandate is the row's parent; `row.refs->row` resolves it (Rule-20)
         refusal = trace_refusal(dyadlib.load_guard("agent", "rows"), rid, d) if mandate is None else None
         if refusal:   # #465: a row born with a `Y done` carries its trace as any other record does
@@ -2140,11 +2156,40 @@ def cmd_dwork(a):
             fence_for("disposition", mwords)
             d = f"Y done (mandate #{mid}, {mdate})"
             entries = [("disposition", mwords, f"mandate #{mid}, {mdate}")]
+        if "--retired-by" in vals:
+            # #574 revision 3 (G5, G6): a row a delivered row's Done-`Y` retires, archived on that Done's words — the
+            # entry `<date> Y archive (done #<id>)`, the record's entry the done words noted `done #<id>, <date>`, as
+            # a mandate's words are copied (Rule-7 property 4). Only from `backlog` or `done` (Rule-16, G2).
+            if state != "archived" or "--mandate" in vals:
+                sys.exit("refused: --retired-by archives a row a Done-`Y` retires; the state is `archived`, without --mandate")
+            if d is not None or said is not None or prompt is not None or "--relayed-via" in vals:
+                sys.exit("refused: --retired-by carries the retiring row's own Done-`Y`; it takes no -d, --said, --prompt or --relayed-via")
+            if r.state not in ("backlog", "done"):
+                sys.exit(f"refused: #{rid} is {r.state}; a Done-`Y` retires only a backlog or done row (#574 G2)")
+            did, dwords, ddate = mandate_words(rows, vals["--retired-by"], "Y done")
+            if did == rid:
+                sys.exit(f"refused: #{rid} cannot retire itself")
+            if rows[did].state != "done":   # the state follows the merge: a Done's retires are executed at its close (G5)
+                sys.exit(f"refused: #{did} is {rows[did].state}; the rows its Done retires are archived once #{did} is "
+                         f"done, every head it names on main (#574 G5, Rule-3 Completion)")
+            op = dyadlib.load_guard("agent", "rows").operative_done(rows[did].disposed) or ""   # a release-ready line is passed over (#545)
+            if rid not in retired_rows(op):
+                sys.exit(f"refused: #{did}'s operative Done-`Y` names no `retires #{rid}`")
+            fence_for("disposition", dwords)
+            d = f"Y archive (done #{did})"
+            entries = [("disposition", dwords, f"done #{did}, {ddate}")]
         if r.state == "backlog" and state == "open" and prompt is None:
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
         # #202: the Done state follows the merge. Every refusal here precedes the first write (Rule-7 p3),
         # and each is the fence's own clause said earlier, where it costs a line instead of a push.
         rg = dyadlib.load_guard("agent", "rows")
+        if d is not None and rg.DONE_Y.search(f"{today} {d}") and (named := retired_rows(d)):
+            # #574 G1, G2: the Done question names the rows its report retires; each must be backlog or done now, so
+            # the close can archive it (Rule-16 gives `archived` no other source), and never the row itself
+            bad = [f"#{x} ({rows[x].state if x in rows else 'no row'})" for x in named
+                   if x == rid or x not in rows or rows[x].state not in ("backlog", "done")]
+            if bad:
+                sys.exit(f"refused: a Done's `retires` names only backlog or done rows other than itself (#574 G2): {', '.join(bad)}")
         if d is not None and rg.DONE_MERGES.search(f"{today} {d}"):
             heads, prs = rg.HEAD_AT.findall(d), re.findall(r"#(\d+)", d.split("merge", 1)[1] if "merge" in d else "")
             if len(heads) < max(1, len(prs)):

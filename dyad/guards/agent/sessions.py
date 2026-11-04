@@ -76,6 +76,7 @@ ATTENDANCE_MODES = ("M3", "M4", "hybrid")       # only the leader attended | eve
 ROUTES = ("chat", "relayed")                    # where a seat's counter-prompt is asked: its own chat, or through the leader (R29)
 _RECORD_SESSION = re.compile(r"^session:\s*(\S+)\s*$", re.M)
 _MANDATE_NOTE, _RELAYED_NOTE = "mandate #", "relayed via"
+_DONE_NOTE = "done #"   # #574 G6: a Done's words copied onto a row it retires, given on that row, never in this seat
 _BY_REFERENCE_NOTE = "by reference"   # #545: a hosting approval (provenance.BY_REFERENCE), given in no seat
 # Reconcile (d-work #434, child C1 of #431): the live presence files against the harness's own session list
 # (`hostadapter.harness_sessions`), one line per mismatch — the operate seat's run-book health command, advisory, never
@@ -343,7 +344,7 @@ def own_disposition(note: str) -> bool:
     (Rule-7 property 4: a record only grows). Nor `by reference` (#545): a hosting approval recorded by reference was
     given on the hosting, in no seat."""
     n = note.strip()
-    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n and _BY_REFERENCE_NOTE not in n
+    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n and _BY_REFERENCE_NOTE not in n and _DONE_NOTE not in n
 
 def attendance_index(root: Path | None = None, now: datetime.date | None = None) -> dict[str, str]:
     """{seat: latest date} over every provenance record whose `session:` line names a seat: the latest own disposition
