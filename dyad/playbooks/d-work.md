@@ -225,6 +225,19 @@ own steps prescribe — the incident-hardening play-book's `backlog` row naming 
 asked again (Rule-3 Plan, the mandate scope; Ledger, the carried `backlog` row); each is listed in the completion
 evidence like any accreted row.
 
+What the home writes, and what it leaves to the records (#572). An act whose content a recorded line already decides
+is the automaton's or the code's, never an inferring unit's (the inventory: `agent-corpus/audits/2026-11-04-inference-map.md`).
+A plan that splits its work among units names each unit's part on one line, `parts: <unit>: <part>; <unit>: <part>`,
+by unit name or by its function alone (the name before its `-<hp>`); on the plan-`Y` the automaton's plan notice then
+quotes each owner's own part and flips that row's board to wait on its owner, so the home sends no relay that
+restates the plan, and relays only what the plan does not say — a sequencing, a review asked, the operator's further
+words. A report is its own record: the home writes the board only when a row's next act or owner changes, never to
+re-word a report the inbox already holds (the work-in-flight sweep, above, reads a report newer than the board), and
+a unit posts one report to every box that needs it at once (`inbox post --cc`). Three acts stay the home's, because
+no record decides them: the doorbell that wakes a unit, since only a session can ring one; recording a disposition,
+since only the party that received the operator's words can enter them (Rule-7 property 4) — the reply that receives
+a `Y` records it, and that is the reply the release counts; and drafting the questions the operator answers.
+
 Promotion when the board is empty (#566; `dyad/dmc/promotion.jsonld`). When a unit is **idle** — no row that is not
 terminal waits on it — or **about to be** — its one waiting row's `next` is a Done draft or a review — and nothing is
 **owed** — no counter-prompt the home asked is unanswered (a row routed home with a board `question`, or a pending queue
