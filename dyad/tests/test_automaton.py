@@ -122,6 +122,17 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(am.dyadlib.parse_row_file(self.on_main(f"{rows}/11.md")).state, "archived")
         self.assertEqual(run(["run"], self.w.seat)[1].strip(), "nothing to do")
 
+    def test_a_no_merge_done_tells_home_once_of_a_retired_row_gone_open(self):
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        self.w.write_main({f"{rows}/9.md": ROW.format(id=9, state="done", disposed="2026-11-02 Y plan; 2026-11-02 Y done (retires #11)"),
+                           f"{prov}/9.md": REC.format(id=9), f"{rows}/11.md": ROW.format(id=11, state="open", disposed=""),
+                           f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"})
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        (msg,) = self.inbox(HOME); self.assertIn("row #11 is open", msg)
+        self.assertEqual(am.dyadlib.parse_row_file(self.on_main(f"{rows}/11.md")).state, "open")
+        self.assertEqual(run(["run"], self.w.seat)[1].strip(), "nothing to do")
+
     def test_a_done_archives_exactly_the_rows_it_retires(self):
         """#574 G5: the close archives each named row that is backlog or done, on the Done's words; a named row that
         is open is told to home and left as it is."""
@@ -142,6 +153,10 @@ class AutomatonTests(unittest.TestCase):
         self.assertTrue(any("archive on close refused for row #9: row #13 is open" in m for m in self.inbox(HOME)), self.inbox(HOME))
         rc, out, _ = run(["run"], self.w.seat)
         self.assertEqual(out.strip(), "nothing to do")
+        files = {f"{rows}/13.md": ROW.format(id=13, state="done", disposed="2026-11-03 Y done")}   # #13 done later, on its own
+        self.w.write_main(files)
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do"); self.assertEqual(st(13).state, "done")   # refused once, never resolved
 
     def test_a_push_race_is_retried(self):
         self.w.write_main(self.files)

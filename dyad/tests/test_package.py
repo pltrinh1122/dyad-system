@@ -1056,6 +1056,24 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(pv.check_record(rec / "3.md", row=dyadlib.parse_row_file(rows.joinpath("3.md").read_text())), [])
         r = self.dwork_state(d, "1", "archived", "--retired-by", "1")
         self.assertNotEqual(r.returncode, 0)
+    def test_retired_by_waits_for_the_done_and_reads_past_a_release_ready_line(self):
+        """Review of #574 r3: the archive needs the retiring row `done` (the state follows the merge), and its
+        operative Done is read past a `release-ready` line written after it (#545)."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        r = self.dwork_state(d, "1", "planned", "-d", "Y done (retires #3, merges PR #5 at abc1234)", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("#1 is planned", r.stderr)
+        one = rows.joinpath("1.md").read_text()
+        rows.joinpath("1.md").write_text(one.replace("state: planned", "state: done").replace(
+            "abc1234)\n", "abc1234); 2026-11-05 release-ready v0.9.0 at " + "b" * 40 + " (archive " + "a" * 64 + ")\n"))
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).state, "archived")
     def test_dwork_new_mandate_refuses_before_it_writes(self):
         d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
         rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")

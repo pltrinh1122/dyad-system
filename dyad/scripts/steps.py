@@ -227,7 +227,7 @@ def close_landed(repo: Path, rid: int, landing: bool) -> list[str]:
     # #574 G5: the rows the Done retires, archived on its words; any other is refused, never resolved here
     for r in retired_rows(entry):
         st = rows[r].state if r in rows else None
-        if st in ("backlog", "done"):
+        if st in ("backlog", "done") or r in children:   # an accreted row this batch closes is done when its line runs
             cmds.append(["state", str(r), "archived", "--retired-by", str(rid)])
         elif st != "archived":
             out.append(f"{NOT_ARCHIVED}row #{r} is {st or 'no row'}; row #{rid}'s Done retires only a backlog or done row (#574 G2)")

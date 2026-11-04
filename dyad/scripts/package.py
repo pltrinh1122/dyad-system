@@ -2169,8 +2169,11 @@ def cmd_dwork(a):
             did, dwords, ddate = mandate_words(rows, vals["--retired-by"], "Y done")
             if did == rid:
                 sys.exit(f"refused: #{rid} cannot retire itself")
-            last = [e for e in dyadlib.load_guard("agent", "rows").entries(rows[did].disposed)][-1:] or [""]
-            if rid not in retired_rows(last[0]):
+            if rows[did].state != "done":   # the state follows the merge: a Done's retires are executed at its close (G5)
+                sys.exit(f"refused: #{did} is {rows[did].state}; the rows its Done retires are archived once #{did} is "
+                         f"done, every head it names on main (#574 G5, Rule-3 Completion)")
+            op = dyadlib.load_guard("agent", "rows").operative_done(rows[did].disposed) or ""   # a release-ready line is passed over (#545)
+            if rid not in retired_rows(op):
                 sys.exit(f"refused: #{did}'s operative Done-`Y` names no `retires #{rid}`")
             fence_for("disposition", dwords)
             d = f"Y archive (done #{did})"

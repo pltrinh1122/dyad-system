@@ -138,12 +138,20 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if not owed:
             acts.append(("close", r.id))
     byid = {r.id: r for r in rows}
-    for r in rows:   # #574 G5: a done row whose Done retires rows still to archive (a Done naming no merge closes at once)
-        last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
-        if r.state == "done" and rg.DONE_Y.search(last[0]):
-            due = [x for x in steps.retired_rows(last[0]) if x in byid and byid[x].state in ("backlog", "done")]
-            if due:
-                acts.append(("archive", r.id, due))
+    to = home(repo, base)
+    for r in rows:   # #574 G5: a Done naming no merge is `done` at once and no close runs; its retires are archived here
+        op = (rg.operative_done(r.disposed) or "") if r.state == "done" else ""
+        if not op or rg.DONE_MERGES.search(f"2000-01-01 {op}"):
+            continue                                   # a merge-naming Done's retires are its close's, once (close_landed)
+        named = steps.retired_rows(op)
+        due = [x for x in named if x in byid and byid[x].state in ("backlog", "done")]
+        if due:
+            acts.append(("archive", r.id, due))
+        for x in named:                                # told once, never resolved (G5): a row no longer backlog or done
+            if x not in byid or byid[x].state not in ("backlog", "done", "archived"):
+                why = stray_body(r.id, x, byid[x].state if x in byid else "no row")
+                if to and not posted(repo, base, to, r.id, why):
+                    acts.append(("tell", r.id, why))
     for r in rows:
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
         if r.state != "planned" or not rg.PLAN_Y.match(last[0]):
@@ -157,6 +165,12 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
     return base, acts
 
 
+def stray_body(rid: int, x: int, state: str) -> str:
+    """The notice for a row a Done retires that is no longer backlog or done (#574 G5), as `escalate` words it."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", f"automaton: archive of the rows its Done retires refused for "
+                                   f"row #{rid}: row #{x} is {state}; a Done retires only a backlog or done row (#574 G2)")
+
+
 def describe(act: tuple) -> str:
     kind = act[0]
     if kind == "merge":
@@ -165,6 +179,8 @@ def describe(act: tuple) -> str:
         return f"close row #{act[1]} (every named head is on main)"
     if kind == "archive":
         return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
+    if kind == "tell":
+        return f"tell home: {act[2]}"
     return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
 
 
@@ -451,7 +467,16 @@ def run(repo: Path) -> list[str]:
             try:
                 out.append(steps.batch(repo, [f"state {x} archived --retired-by {act[1]}" for x in act[2]]))
             except Refused as e:
-                out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
+                if "already landed: every line of the batch is on origin/main" in str(e):
+                    out.append(f"row #{act[1]}: the rows its Done retires are already archived")
+                else:
+                    out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
+        elif act[0] == "tell":
+            to = home(repo, land.fetch(repo))
+            try:
+                out.append(f"refused, {post(repo, to, act[1], act[2])}: {act[2]}")
+            except (Refused, inbox().Refused) as e:
+                out.append(f"the notice to {to} was refused ({e}): {act[2]}")
         else:
             try:
                 out.append(post(repo, act[2], act[1], PLANNED.format(rid=act[1])))
