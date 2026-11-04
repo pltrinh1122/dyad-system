@@ -62,3 +62,10 @@ otherwise both are execution detail (Rule-3 Plan).
 written. **15–16**: plan files unchanged in store and presence. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #555.
+
+
+## Amendment — d-work #574 (2026-11-04: phase 1 gains the definition of done)
+This Rule's sentence changes with Rule-3's; the claims, their attacks and the pairwise statements for every Rule this
+d-work touches are recorded once, in `rule-3-d-work.md`, amendment #574.
+
+Disposition: see ledger #574.

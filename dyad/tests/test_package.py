@@ -1010,6 +1010,70 @@ class PackageTests(livetest.LiveCase):
         r = self.dwork_state(d, "3", "done", "-d", "Y done, with #1", "--said", "Y")           # its Done rides the mandate's
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).mode, "implicit")   # carried, never rewritten
+    def test_dwork_new_backlog_mandate_carries_a_prescribed_row(self):
+        """#574 revision 2: a row a play-book the mandate's plan runs prescribes is carried under that plan-`Y`: born
+        backlog, explicit (no `mode` line, its Done never rides the parent's), its entry `Y backlog (mandate #<id>)`,
+        its record's entry 1 the mandate's words noted `mandate #<id>, <date>`."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, run the exercise")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_new(d, "fence: the mode found", "--backlog", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "3")
+        born = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual((born.state, born.mode, born.refs), ("backlog", dyadlib.DEFAULT_MODE, "parent #1"))
+        self.assertRegex(born.disposed, r"^\d{4}-\d{2}-\d{2} Y backlog \(mandate #1\)$")
+        self.assertNotIn("mode:", rows.joinpath("3.md").read_text())
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, run the exercise")])
+        self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")
+        self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5
+    def test_a_done_retires_only_backlog_or_done_rows_and_archives_them_on_its_words(self):
+        """#574 revision 3: G2, the record refuses a `retires` naming an open row or itself; G6, `state <r> archived
+        --retired-by <id>` writes `Y archive (done #<id>)` and copies the done words noted `done #<id>, <date>`."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv, sv = dyadlib.load_guard("agent", "provenance"), dyadlib.load_guard("agent", "sessions")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        for bad, says in (("Y done (retires #3, #1)", "#1 (planned)"), ("Y done (retires #9)", "#9 (no row)")):
+            r = self.dwork_state(d, "1", "done", "-d", bad, "--said", "Y")
+            self.assertNotEqual(r.returncode, 0); self.assertIn("retires", r.stderr); self.assertIn(says, r.stderr)
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")                     # no Done retires it yet
+        self.assertNotEqual(r.returncode, 0); self.assertIn("carries no 'Y done'", r.stderr)
+        r = self.dwork_state(d, "1", "done", "-d", "Y done (retires #3, #2)", "--said", "Y, delivered")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for rid in (3, 2):
+            r = self.dwork_state(d, str(rid), "archived", "--retired-by", "1")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            row = dyadlib.parse_row_file(rows.joinpath(f"{rid}.md").read_text())
+            self.assertEqual(row.state, "archived"); self.assertRegex(row.disposed, r"\d{4}-\d{2}-\d{2} Y archive \(done #1\)$")
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, delivered")])
+        self.assertRegex(e[0]["note"], r"^done #1, \d{4}-\d{2}-\d{2}$"); self.assertFalse(sv.own_disposition(e[0]["note"]))
+        self.assertEqual(pv.check_record(rec / "3.md", row=dyadlib.parse_row_file(rows.joinpath("3.md").read_text())), [])
+        r = self.dwork_state(d, "1", "archived", "--retired-by", "1")
+        self.assertNotEqual(r.returncode, 0)
+    def test_retired_by_waits_for_the_done_and_reads_past_a_release_ready_line(self):
+        """Review of #574 r3: the archive needs the retiring row `done` (the state follows the merge), and its
+        operative Done is read past a `release-ready` line written after it (#545)."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        r = self.dwork_state(d, "1", "planned", "-d", "Y done (retires #3, merges PR #5 at abc1234)", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("#1 is planned", r.stderr)
+        one = rows.joinpath("1.md").read_text()
+        rows.joinpath("1.md").write_text(one.replace("state: planned", "state: done").replace(
+            "abc1234)\n", "abc1234); 2026-11-05 release-ready v0.9.0 at " + "b" * 40 + " (archive " + "a" * 64 + ")\n"))
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).state, "archived")
     def test_dwork_new_mandate_refuses_before_it_writes(self):
         d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
         rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")

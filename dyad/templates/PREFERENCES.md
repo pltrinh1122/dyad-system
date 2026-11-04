@@ -11,6 +11,8 @@ defines what each value means.
 | import-licenses | MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC, PSF-2.0 | SPDX identifiers | Rule-13 (import criteria) |
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | none | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
+| delegation-posture | responsive | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
+| delegation-posture-unattended | efficient | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | off | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | ask | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case) |
@@ -23,6 +25,20 @@ defines what each value means.
 | paired-units | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
+| hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| inflight-unread-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-planned-quiet-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-unplanned-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| promotion-ceiling | 2 | a positive integer (rows proposed at once, never more than the idle units) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
+| promotion-adjacency-min | 3 | a positive integer (the adjacency score that alone makes a candidate adjacent) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -49,6 +65,14 @@ defines what each value means.
   pushes, opens PRs and asks Done. `none`: subagents read, search and draft text only. Seeded
   `none`: the more contained behavior, until the Operator has reviewed the workflow and chosen
   `plan-and-execute`.
+- `delegation-posture` — how much of an attended seat's own work runs in its main chat and how much in the
+  sub-agents it spawns: `responsive` (the main chat does only what Rule-3's subagent clause keeps for it),
+  `balanced` (work it can finish within a budget) or `efficient` (it drafts and verifies itself). A form
+  preference: it authorizes nothing, and it is inert under `delegation: none`. Seeded `responsive`, the cabinet
+  Operating Guide's fallback for an attended seat.
+- `delegation-posture-unattended` — the same three values, for every seat that is not attended. Seeded
+  `efficient`, the Guide's fallback for an unattended seat (#603: every key `dyad/surface.md` S3 freezes is
+  seeded here, so a fresh install passes its own suite).
 - `cli-pattern` — `industry-standard`: a run-book command is the tool's own CLI shown verbatim
   (`docker compose … stop`); a runner may wrap it for telemetry but prints and runs the identical
   line; the dyad's own commands go through one entrypoint, `dyad/bin/dyad`, as `<noun> <verb>`
@@ -152,3 +176,11 @@ defines what each value means.
   (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
   binds to. Seeded `verbatim`: the conservative default for a fresh install — the seat's own words pass through
   until the Operator has chosen the cos's brief.
+- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the six `inflight-*` keys,
+  the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
+  reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that
+  claims the key under `dyad:tunables` (`dyad/dmc/schema.md`; the record named in the row's `read by`), and the rows
+  are seeded at those defaults. The code reads each through `dyadlib.tunable` when it runs: a value that is absent, or
+  that does not parse or is outside the `allowed` cell, reads as the default. The `promotion-*` keys are read by the
+  play-book (`dyad/playbooks/d-work.md`, Promotion), by the home's judgment, not by code. `attendance-window`, above,
+  is the same kind (its record `dyad/dmc/attendance-check.jsonld`).

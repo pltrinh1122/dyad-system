@@ -11,9 +11,11 @@ ledger lines only and never from a conversation:
       skips the suite, so the retry costs the guards only (#562 (c));
   (b) **close** — a row whose every named head is on `main` goes `done`, its accreted rows close under its mandate and
       its board entry is dropped (`dyad steps close-landed --land`, scripts/steps.py);
-  (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: each owner's inbox
-      gets one `notice`, "row #N planned; read plans/N.md". The seat still infers from the plan; this replaces only the
-      message saying "go".
+  (c) **notice** — a row whose last disposition is a `Y plan` and whose board entry names owners: the entry is set
+      waiting on its first owner, the plan its next act, its question removed (#572 K1), and each owner's inbox gets
+      one `notice`, "row #N planned; read plans/N.md", with "; yours: <part>" when the plan's `parts:` line names the
+      owner's part (K2, the relay that restated the plan). A `Y done` whose cut does not land in the run sets the
+      entry waiting on that merge (K3). The seat still infers from the plan.
   (d) **corroborate** — after a cut lands, `check --corroborate <before> <after>` runs on the landed tree in the same
       job: what hosted CI on `main` checks, which a push made with the workflow's token never starts (d-work #564 E1).
       The suite runs only when the landed code differs from an evidenced PR head. A failure is posted to home and the
@@ -125,7 +127,7 @@ def posted(repo: Path, base: str, seat: str, row: int, body: str) -> bool:
 # ---- the acts a run would take
 def plan(repo: Path) -> tuple[str, list[tuple]]:
     """(base, acts) on a freshly fetched origin/main: ("merge", rid, [(pr, sha), …]) — one cut per row, in the row's
-    own order — then ("close", rid), then ("notice", rid, owner). Pure reading."""
+    own order — then ("close", rid), then ("board", rid, pairs) and ("notice", rid, owner, body). Pure reading."""
     base = land.fetch(repo)
     rows = dyadlib.read_rows(repo, at=base)
     rg, acts = rows_guard(), []
@@ -141,6 +143,21 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
             acts.append(("merge", r.id, cut))
         if not owed:
             acts.append(("close", r.id))
+    byid = {r.id: r for r in rows}
+    to = home(repo, base)
+    for r in rows:   # #574 G5: a Done naming no merge is `done` at once and no close runs; its retires are archived here
+        op = (rg.operative_done(r.disposed) or "") if r.state == "done" else ""
+        if not op or rg.DONE_MERGES.search(f"2000-01-01 {op}"):
+            continue                                   # a merge-naming Done's retires are its close's, once (close_landed)
+        named = steps.retired_rows(op)
+        due = [x for x in named if x in byid and byid[x].state in ("backlog", "done")]
+        if due:
+            acts.append(("archive", r.id, due))
+        for x in named:                                # told once, never resolved (G5): a row no longer backlog or done
+            if x not in byid or byid[x].state not in ("backlog", "done", "archived"):
+                why = stray_body(r.id, x, byid[x].state if x in byid else "no row")
+                if to and not posted(repo, base, to, r.id, why):
+                    acts.append(("tell", r.id, why))
     for r in rows:
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
         if r.state != "planned" or not rg.PLAN_Y.match(last[0]):
@@ -148,10 +165,82 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         text = show(repo, base, f"{inst(repo)}/d-work/board/{r.id}.md")
         if not text:
             continue
-        for owner in board().owners(board().parse(text)[0]):
-            if not posted(repo, base, owner, r.id, PLANNED.format(rid=r.id)):
-                acts.append(("notice", r.id, owner))
+        entry = board().parse(text)[0]
+        owners = board().owners(entry)
+        if owners and (pairs := planned_flip(r.id, entry, owners)):
+            acts.append(("board", r.id, pairs))                       # #572 K1: before the notices it announces
+        parts = plan_parts(show(repo, base, f"{inst(repo)}/d-work/plans/{r.id}.md") or "")
+        for owner in owners:
+            body = notice_body(r.id, part_for(parts, owner))
+            if not posted(repo, base, owner, r.id, body):
+                acts.append(("notice", r.id, owner, body))
     return base, acts
+
+
+def stray_body(rid: int, x: int, state: str) -> str:
+    """The notice for a row a Done retires that is no longer backlog or done (#574 G5), as `escalate` words it."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", f"automaton: archive of the rows its Done retires refused for "
+                                   f"row #{rid}: row #{x} is {state}; a Done retires only a backlog or done row (#574 G2)")
+
+# ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
+PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
+
+def plan_parts(text: str) -> dict[str, str]:
+    """{unit: part} from a plan's optional `parts:` line, `<unit>: <part>; <unit>: <part>` (#572 K2); {} without one."""
+    m = PARTS.search(text)
+    out = {}
+    for item in (m.group(1).split(";") if m else []):
+        unit, sep, part = item.partition(":")
+        if sep and unit.strip() and part.strip():
+            out[unit.strip()] = part.strip()
+    return out
+
+def part_for(parts: dict[str, str], seat: str) -> str | None:
+    """The part a plan's `parts:` line names for `seat`: by its full seat name, or by its function (the name before
+    its `-<hp>`)."""
+    return parts.get(seat) or parts.get(re.sub(r"-[0-9a-f]{8}$", "", seat))
+
+def notice_body(rid: int, part: str | None) -> str:
+    """The plan notice, quoting the unit's own part when the plan names one (#572 K2: the relay that restated the
+    plan); masked as `post` masks it, so the told text and the compared text are the same."""
+    body = PLANNED.format(rid=rid) + (f"; yours: {part}" if part else "")
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
+
+def planned_flip(rid: int, entry: dict[str, str], owners: list[str]) -> dict[str, str] | None:
+    """#572 K1: the board pairs a recorded `Y plan` decides — waiting on the first owner, the plan as the next act, no
+    question — or None when the entry already waits on a unit (the flip is done, or home has moved it on)."""
+    if entry.get("waiting-on", "").startswith(("unit ", board().UNIT_ALIAS)):
+        return None
+    return {"waiting-on": f"unit {owners[0]}", "next": f"execute plans/{rid}.md", "question": "",
+            "holder": entry.get("holder", "")}
+
+def pending_flip(entry: dict[str, str], cut: list[tuple[int, str]]) -> dict[str, str] | None:
+    """#572 K3: the board pairs a recorded `Y done` whose cut did not land in this run decides — waiting on the merge,
+    no question — or None when the entry already waits on it."""
+    want = "external merge " + ", ".join(f"PR #{pr}" for pr, _ in cut)
+    if entry.get("waiting-on") == want:
+        return None
+    return {"waiting-on": want, "question": "", "holder": entry.get("holder", "")}
+
+def board_set(repo: Path, rid: int, pairs: dict[str, str]) -> str:
+    """One board write from the automaton's seat, landed ledger-only through `board set`'s own builder; `holder` is
+    passed as it stands, so the write never takes the holder."""
+    with_env = {"DYAD_SESSION": SEAT}
+    old = {k: os.environ.get(k) for k in with_env}
+    os.environ.update(with_env)
+    try:
+        i = inst(repo)
+        pairs = {k: v for k, v in pairs.items() if k != "holder" or v}
+        land.land(repo, i, None, board().set_builder(str(rid), pairs, False, i), "board set")
+        return f"board #{rid}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(pairs.items()) if k != "holder")
+    except (Refused, board().Refused) as e:
+        return f"board #{rid} not written: {e}"
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
 
 def describe(act: tuple) -> str:
@@ -160,13 +249,19 @@ def describe(act: tuple) -> str:
         return f"merge {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} (row #{act[1]})"
     if kind == "close":
         return f"close row #{act[1]} (every named head is on main)"
-    return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
+    if kind == "archive":
+        return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
+    if kind == "tell":
+        return f"tell home: {act[2]}"
+    if kind == "board":
+        return f"board #{act[1]}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(act[2].items()) if k != "holder")
+    return f"notice {act[2]}: {act[3]}"
 
 
 # ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
-SWEEP_LANDING_HOURS = 24       # a Y done whose named heads are not on main after this long is a finding
-SWEEP_STALE_DAYS = 3           # a board entry whose `since` is older than this is a finding
-SWEEP_CI_HOURS = 24            # code pushes to main in this window are checked for a completed corroboration
+SWEEP_LANDING_HOURS = "sweep-landing-hours"   # tunable (#590): a Y done whose named heads are not on main after this long is a finding
+SWEEP_STALE_DAYS = "sweep-board-stale-days"   # tunable (#590): a board entry whose `since` is older than this is a finding
+SWEEP_CI_HOURS = "sweep-ci-hours"             # tunable (#590): code pushes to main in this window are checked for a completed corroboration
 CI_WORKFLOWS = ("rule-11 package", "d-work automaton")   # the runs that corroborate a code push (#564 E1, E4)
 HEXWORD = re.compile(r"\b[0-9a-f]{7,64}\b")
 
@@ -184,8 +279,9 @@ def sweep_check(wt: Path) -> list[tuple[bool, str]]:
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
     return out
 
-def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Y dones whose heads never landed, and stale board entries, read from `base`."""
+def sweep_ledger(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Y dones whose heads never landed, and stale board entries, read from `base`; the tunables from `prefs` (the
+    worktree at `base`), else `repo`."""
     import datetime
     out, rg = [], rows_guard()
     for r in dyadlib.read_rows(repo, at=base):
@@ -195,7 +291,7 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", e)
         when = datetime.datetime.fromisoformat(m.group(1)).replace(tzinfo=datetime.timezone.utc) if m else None
         owed = [(pr, h) for _, pr, h, _ in rg.named_heads([r]) if not steps.ancestor(repo, h, base)]
-        if owed and when and (now - when).total_seconds() > SWEEP_LANDING_HOURS * 3600:
+        if owed and when and (now - when).total_seconds() > dyadlib.tunable(SWEEP_LANDING_HOURS, prefs or repo) * 3600:
             out.append((False, f"finding: row #{r.id}'s done answer of {m.group(1)} names heads not on main: "
                                + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in owed)))
     d = f"{inst(repo)}/d-work/board"
@@ -204,8 +300,8 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
             continue
         fields = board().parse(show(repo, base, f"{d}/{name}") or "")[0]
         since = board().parse_since(fields.get("since", "")) if fields.get("since") else None
-        if since and (now - since).days > SWEEP_STALE_DAYS:
-            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {SWEEP_STALE_DAYS} days)"))
+        if since and (now - since).days > (days := dyadlib.tunable(SWEEP_STALE_DAYS, prefs or repo)):
+            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {days} days)"))
     return out
 
 def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
@@ -303,12 +399,16 @@ def land_events(repo: Path, rel: str | None, fresh: dict[str, str], row: int | N
     m = re.search(r"landed ([0-9a-f]{40}) on main", buf.getvalue())
     return f"events: {names} landed on main{f' as {m.group(1)[:12]}' if m else ''} (events-only)"
 
-def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
+def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
     import datetime, json, urllib.request
     token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
-    since = (now - datetime.timedelta(hours=SWEEP_CI_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
+    except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
+        since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
+    since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
     code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
     if not code:
@@ -386,7 +486,8 @@ def notice_parts(group: list[str]) -> list[list[str]]:
     return parts + ([cur] if cur else [])
 
 def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
-    """Read-only: (lines, rc). Every finding prints; findings no automaton notice in the home's inbox has told yet are
+    """(lines, rc). Read-only but for one write: the event its own health run recorded, landed events-only on `row`
+    (#593, `land_events`). Every finding prints; findings no automaton notice in the home's inbox has told yet are
     posted in one notice on `row`; rc 1 when any finding fails."""
     import datetime
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -396,14 +497,14 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
+        found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
+        found += [(False, f"finding: {h}") for h in hyg]
+        found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)]   # #569
         try:                                                 # read before the lock goes: the next land resets wt
             events_at, fresh, event_notes = new_events(wt)
         except Exception as e:                               # the event step never fails the sweep's findings
             events_at, fresh, event_notes = None, {}, [f"events: not read ({type(e).__name__}); not landed"]
-    found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
-    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
-    found += [(False, f"finding: {h}") for h in hyg]
-    found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls())]   # #569
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
@@ -501,7 +602,11 @@ def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, st
 
 def do_close(repo: Path, rid: int) -> str:
     try:
-        return "\n".join(l for l in steps.close_landed(repo, rid, True) if l)
+        lines = [l for l in steps.close_landed(repo, rid, True) if l]
+        # #574 G5: a row the Done retires that is neither backlog nor done is told to home, never resolved
+        lines += [escalate(repo, rid, "archive on close", l.removeprefix(steps.NOT_ARCHIVED))
+                  for l in lines if l.startswith(steps.NOT_ARCHIVED)]
+        return "\n".join(lines)
     except Refused as e:
         if str(e).startswith("already closed"):
             return str(e)
@@ -521,14 +626,37 @@ def run(repo: Path) -> list[str]:
                 stopped.add(act[1])
         elif act[0] == "close":
             out.append(do_close(repo, act[1]))
+        elif act[0] == "archive":
+            try:
+                out.append(steps.batch(repo, [f"state {x} archived --retired-by {act[1]}" for x in act[2]]))
+            except Refused as e:
+                if "already landed: every line of the batch is on origin/main" in str(e):
+                    out.append(f"row #{act[1]}: the rows its Done retires are already archived")
+                else:
+                    out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
+        elif act[0] == "tell":
+            to = home(repo, land.fetch(repo))
+            try:
+                out.append(f"refused, {post(repo, to, act[1], act[2])}: {act[2]}")
+            except (Refused, inbox().Refused) as e:
+                out.append(f"the notice to {to} was refused ({e}): {act[2]}")
+
+        elif act[0] == "board":
+            out.append(board_set(repo, act[1], act[2]))
         else:
             try:
-                out.append(post(repo, act[2], act[1], PLANNED.format(rid=act[1])))
+                out.append(post(repo, act[2], act[1], act[3]))
             except (Refused, inbox().Refused) as e:
                 out.append(f"notice to {act[2]} refused: {e}")
     # merges just landed may make a row due: one more pass closes it in the same run
-    _, again = plan(repo)
+    base, again = plan(repo)
     out += [do_close(repo, a[1]) for a in again if a[0] == "close" and a[1] not in stopped]
+    # #572 K3: a cut still owed after this run's merges waits on its merge, not on the operator
+    for a in again:
+        if a[0] == "merge":
+            text = show(repo, base, f"{inst(repo)}/d-work/board/{a[1]}.md")
+            if text and (pairs := pending_flip(board().parse(text)[0], a[2])):
+                out.append(board_set(repo, a[1], pairs))
     return out or ["nothing to do"]
 
 

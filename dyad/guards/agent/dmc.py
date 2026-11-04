@@ -34,15 +34,19 @@ CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative)
                           # the DMC stores of the core, the crafts and the instance (`<instance>/dmc/`), none under the ledger or the events; on a clerical push touching none, the gate leaves it to the sweep
 NAME, OWNER = "decision-making criterion", "Rule-12"
 FIELDS = ("@context", "@id", "@type", "identifier", "name", "description", "dyad:decides", "dyad:inputs",
-          "hasDefinedTerm", "dyad:precedence", "dyad:default", "dyad:judgedBy", "isPartOf", "dyad:home",
+          "hasDefinedTerm", "dyad:precedence", "dyad:default", "dyad:tunables", "dyad:judgedBy", "isPartOf", "dyad:home",
           "dyad:alsoIn", "dyad:owner")                                   # every key of a record, schema.md order
-OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:alsoIn")
+OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:tunables", "dyad:alsoIn")
 REQUIRED = tuple(f for f in FIELDS if f not in OPTIONAL)
 TYPES = ("DefinedTermSet", "dyad:DecisionCriterion")
 OUTCOME_KEYS = ("termCode", "name", "dyad:when", "dyad:then")
 KINDS = ("mechanical", "inference", "declared")
 PATH_KEYS = ("dyad:home", "dyad:alsoIn", "dyad:implementation")   # path-valued: exempt from the forbidden scan
-FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner",)
+TUNABLE_KEYS = ("dyad:preference", "dyad:defaultValue", "dyad:allowed", "dyad:readBy")   # one tunable (#590)
+TUNABLE_PATH = "dyad:readBy"                                       # path-valued, inside a tunable
+PREF_KEY = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")            # a preference key's shape
+TEMPLATE = ("templates", "PREFERENCES.md")                         # the core's preference template, under the package
+FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH)
 CONTEXT = ["https://schema.org", {"dyad": "urn:dyad:term:"}]   # what dyad/dmc/context.jsonld holds
 CONTEXT_FILE, STORE, CORE_CONTAINER, INSTANCE_CONTAINER = "context.jsonld", "dmc", "dyad-operator", "instance"
 FORBIDDEN = (("date", re.compile(r"\d{4}-\d{2}-\d{2}")),
@@ -54,6 +58,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md: pure, enforced at import
     ("optional-are-fields", lambda: set(OPTIONAL) <= set(FIELDS) and len(REQUIRED) == len(FIELDS) - len(OPTIONAL) == 13),
     ("path-keys-are-record-keys", lambda: set(PATH_KEYS) - {"dyad:implementation"} <= set(FIELDS)),
     ("owner-required", lambda: "dyad:owner" in REQUIRED and "dyad:owner" in FORBIDDEN_EXEMPT),
+    ("tunables-optional", lambda: "dyad:tunables" in OPTIONAL and TUNABLE_PATH in TUNABLE_KEYS and TUNABLE_PATH in FORBIDDEN_EXEMPT),
+    ("pref-key-shape", lambda: bool(PREF_KEY.fullmatch("hygiene-stale-days")) and not PREF_KEY.fullmatch("Hygiene_days")),
     ("kinds-are-three", lambda: KINDS == ("mechanical", "inference", "declared")),
     ("context-is-schema-org-plus-dyad", lambda: CONTEXT[0] == "https://schema.org" and CONTEXT[1] == {"dyad": "urn:dyad:term:"}),
     ("forbidden-patterns-catch-their-kind", lambda: [bool(r.search(s)) for (_, r), s in zip(FORBIDDEN, (
@@ -107,6 +113,45 @@ def resolve(rel: str, base: Path, root: Path, pkg: Path) -> tuple[str, Path | No
 
 def _collapse(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
+
+def tunable_keys(d) -> list[str]:
+    """The preference keys a record's `dyad:tunables` names, malformed entries skipped."""
+    t = d.get("dyad:tunables") if isinstance(d, dict) else None
+    return [x["dyad:preference"] for x in t if isinstance(x, dict) and isinstance(x.get("dyad:preference"), str)] \
+        if isinstance(t, list) else []
+
+def tunable_problems(t, base: Path, root: Path, pkg: Path, bad, warn) -> list[str]:
+    """`dyad:tunables` (#590): a non-empty list of objects, each holding TUNABLE_KEYS as non-empty strings, its
+    preference a key-shaped name used once in the record, its `dyad:readBy` a path resolved as `dyad:home` is."""
+    if not (isinstance(t, list) and t):
+        bad("dyad:tunables is not a non-empty list"); return []
+    keys = []
+    for i, x in enumerate(t):
+        if not isinstance(x, dict):
+            bad(f"dyad:tunables[{i}] is not an object"); continue
+        for k in TUNABLE_KEYS:
+            if not (isinstance(x.get(k), str) and x[k].strip()):
+                bad(f"dyad:tunables[{i}] {k} is not a non-empty string")
+        pk = x.get("dyad:preference")
+        if isinstance(pk, str) and pk.strip():
+            if not PREF_KEY.fullmatch(pk):
+                bad(f"dyad:tunables[{i}] dyad:preference {pk!r} is not a preference key (lowercase, hyphenated)")
+            keys.append(pk)
+        rb = x.get(TUNABLE_PATH)
+        if isinstance(rb, str) and rb.strip():
+            st, _, why = resolve(rb, base, root, pkg)
+            if st != "ok":
+                (warn if st == "warn" else bad)(f"dyad:tunables[{i}] dyad:readBy {rb!r} {why}")
+    for k in sorted({k for k in keys if keys.count(k) > 1}):
+        bad(f"dyad:tunables names preference {k!r} twice")
+    return keys
+
+def template_keys(pkg: Path) -> set[str] | None:
+    """The keys of the core's preference template, or None when it is absent."""
+    p = pkg.joinpath(*TEMPLATE)
+    if not p.is_file():
+        return None
+    return {dyadlib.plain(r[0]).strip() for r in dyadlib.table_rows(p.read_text()) if r}
 
 def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, context) -> tuple[list[str], str | None]:
     """(messages, @id or None) for one record; bare messages fail, `warning:` ones warn."""
@@ -174,6 +219,11 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 st, _, why = resolve(jb["dyad:implementation"], base, root, pkg)
                 if st != "ok":
                     (warn if st == "warn" else bad)(f"dyad:implementation {jb['dyad:implementation']!r} {why}")
+    if "dyad:tunables" in d:
+        if container != CORE_CONTAINER:   # one home for a default, the core's: dyadlib.tunable reads no other record (#590)
+            bad("dyad:tunables is the core's only (dyad/dmc/): dyadlib.tunable reads no craft or instance record (#590)")
+        else:
+            tunable_problems(d["dyad:tunables"], base, root, pkg, bad, warn)
     home = None
     if "dyad:home" in d:
         st, home, why = resolve(d["dyad:home"], base, root, pkg)
@@ -212,12 +262,25 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
         context = json.loads(ctx_path.read_text()).get("@context")
     except (OSError, json.JSONDecodeError, AttributeError):
         return [f"{STORE}/{CONTEXT_FILE}: the core context is absent or not JSON; {len(recs)} records cannot be judged"]
-    msgs, seen = [], {}
+    msgs, seen, claims = [], {}, {}
     for container, p, base in recs:
         m, rid = check_record(container, p, base, root, pkg, context)
         msgs += m
         if rid is not None:
             seen.setdefault(rid, []).append(p)
+        try:
+            for k in dict.fromkeys(tunable_keys(json.loads(p.read_text()))):
+                claims.setdefault(k, []).append(p)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+    tkeys, unseeded = template_keys(pkg), {}
+    for k, ps in sorted(claims.items()):
+        if len(ps) > 1:
+            msgs.append(f"preference {k!r} claimed as a tunable by {len(ps)} records: " + ", ".join(x.name for x in ps))
+        elif tkeys is not None and k not in tkeys:
+            unseeded.setdefault(ps[0].name, []).append(k)
+    for name, ks in sorted(unseeded.items()):   # one line per record: the gap until the keys are seeded (#590)
+        msgs.append(f"warning: {name}: {len(ks)} tunable(s) with no row in {'/'.join(TEMPLATE)} yet: {', '.join(ks)}")
     for rid, ps in seen.items():
         if len(ps) > 1:
             msgs.append(f"@id {rid} declared by {len(ps)} records: " + ", ".join(

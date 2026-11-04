@@ -70,6 +70,7 @@ integration dyad/tests/test_project_countersign.py         # scratch repos, git 
 integration dyad/tests/test_release.py                     # scratch repos, a bare origin, a gh shim, an install (#470)
 integration dyad/tests/test_runbook.py                     # scratch repos, the run-book runner, bash
 integration dyad/tests/test_trace.py                       # scratch repos
+integration dyad/tests/test_tunables.py                   # git init in a scratch dir; the live repo's DMC store (#590)
 
 integration crafts/sysadmin/tests/guards/test_changelog.py     # git: locates the live repo (the live change log)
 integration crafts/sysadmin/tests/guards/test_events.py        # scratch repos
