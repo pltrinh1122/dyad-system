@@ -270,3 +270,21 @@ sounds is named. **14–5**: `sweep` and `scheduled sweep` are distinct terms. *
 guard and names the corroboration step that runs it; property 3 owns corroboration. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #564.
+
+## Amendment — d-work #593 (2026-11-04, property 2: a host that runs only the automaton; backlog row #55)
+Accreted under mandate #570; plan `agent-corpus/d-work/plans/593.md`.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| P5 | Property 2 must drop the CLI agent from the kernel (#55, workstation#224 gap e). | Survives, narrowed | The agent is the proposer; without it there is no dyad, so the kernel keeps it and stays one (a kernel row is `both`, `crafts/sysarch/rules/manifest.md`). What changes is the reading: the kernel-only path (property 3) and every automaton run need only Python, Git and pydantic, so a host running only those has no agent session, while its system keeps its agent party elsewhere. |
+| A1 | Then the `operating` profile should mark Claude Code `authoring`. | Refuted | The profile says which activity of a *system* needs a row, not which host; an operating system still has an agent party. The manifest is unchanged. |
+| A2 | "Needs only Python, Git and pydantic" is false: the automaton runs in a hosted job. | Survives, scoped | The hosting is a library adapter (property 3); what the automaton's code imports and invokes is the kernel's, which the manifest guard checks as it checks every invocation. |
+
+**Rule-4.** Block holds. **Rule-6.** `automaton` is now used by Rule-14; its `used by` cell gains 14 in #585's window
+(reported to counsel).
+**Pairwise (Rule-5).** **14–2**: Rule-2 owns the automaton as execution; property 2 states only what it runs on. **14–8**:
+Rule-8 classes what an automaton does on a host; property 2 says what that host needs. **14–11**: the profile cell's
+meaning is unchanged (A1). **14–19**: Rule-19's automaton runs its read-only commands through the core runner, kernel
+code. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #593.

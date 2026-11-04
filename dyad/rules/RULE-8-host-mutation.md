@@ -1,6 +1,6 @@
 # Rule-8: host mutation
 
-**Intent:** Classify, authorize and record every host action the agent takes.
+**Intent:** Classify, authorize and record every host action the agent or an automaton takes.
 **Target:** a host action
 
 ## Boundaries (out of scope)
@@ -20,8 +20,8 @@
   change-log row of every command that starts, stops or alters it.
 
 ## Conditions (triggers)
-- The agent is about to run anything on the machine that is neither a repo transaction nor
-  read-only.
+- The agent, or an automaton, is about to run anything on the machine that is neither a repo
+  transaction nor read-only (an automaton: only what Classes, below, leaves it).
 - A plan names a host action (the class is stated there for the operator's review).
 - A host action has completed (change log row, same d-work).
 - Before any reversible or destructive host action the agent reads every rule of the active
@@ -34,10 +34,12 @@
 ## Classes
 Three classes, named here; which actions fall in which class, with examples, is the active
 craft's host-mutation rule (`crafts/sysadmin/rules/host-mutation.md`):
-- **read-only** — free.
-- **reversible** — authorized by the plan-`Y` of the plan that names it, with its undo.
+- **read-only** — free, for the agent and for an automaton alike.
+- **reversible** — authorized by the plan-`Y` of the plan that names it, with its undo. An
+  automaton executes one only from the ledger line that records that plan-`Y`, and decides
+  nothing (Rule-2 Enforcement).
 - **destructive** — needs its own counter-prompt naming the action, even inside a planned
-  d-work.
+  d-work; never an automaton's, since a counter-prompt is asked and answered live.
 
 ## Conduct
 - Detect, don't dispose: what the agent finds on the host is reported; fixing it unplanned is
@@ -63,5 +65,9 @@ Operator gap E5 (audit 2026-09-12, completeness). Falsified; see
 `../falsification/rules/rule-8-host-mutation.md`. Kernel since #155: the class table, the
 read-before-act procedure and the change-log columns moved to the sysadmin craft. Operator and agent are lowercase in prose, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+Intent, Conditions and Classes name a host action an automaton takes 2026-11-04 (d-work #593): #556 made the automaton
+a party, while this Rule's target was the agent's actions alone, so a daemon on the host had no reading; read-only is
+free, reversible is executed only from a recorded plan-`Y`, destructive is never its own; see the same record,
+amendment #593.
 
 Set: System Requirements.

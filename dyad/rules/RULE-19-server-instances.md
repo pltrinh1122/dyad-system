@@ -33,7 +33,8 @@ health command whose observed pass is the deploying d-work's completion evidence
   if it does not work, corrected in a PR.
 - The completion counter-prompt of a deploying d-work: the run-book exists and its health
   command passes as observed.
-- Either party runs a run-book command: it runs through the runner (`dyad runbook run`,
+- Any party — the operator, the agent or an automaton — runs a run-book command, an automaton only a
+  `read-only` one (property 1): it runs through the runner (`dyad runbook run`,
   `dyad/scripts/runbook.py`, core), which records its event; a run-book is added or edited: the
   active craft's guards `sysadmin/runbooks` and `sysadmin/events` (`crafts/sysadmin/guards/`)
   check it on every push and PR, in Rule-11's runner and on the kernel-only path.
@@ -43,7 +44,10 @@ health command whose observed pass is the deploying d-work's completion evidence
    (instance, workstation zone; `DYAD_RUNBOOKS`, default `workstation-corpus/runbooks`, in the
    manner of Rule-11 property 3) in the active craft's run-book form
    (`crafts/sysadmin/rules/server-instances.md`), with a health command whose pass criterion is
-   stated. `dyad runbook new <instance>` seeds it from the craft's template.
+   stated. `dyad runbook new <instance>` seeds it from the craft's template. Its commands are run
+   by the operator or the agent and, when `read-only`, by an automaton too — the scheduled sweep's
+   health commands — whose event names `role: automaton`; a reversible or destructive command is
+   never an automaton's (Rule-8, Classes) (#593).
 2. **Deployed means run-book and health.** A server's deploying d-work is not Done until the
    run-book exists and the health command passes; the completion reply cites the run-book path
    and the health command's observed output (Rule-3 completion evidence). The run-book and its
@@ -62,6 +66,9 @@ the events.
 ## Provenance
 Operator rule, 2026-09-14 (ledger #134). Falsified; see
 `../falsification/rules/rule-19-server-instances.md`. Kernel since #155: properties 1–4 and 6–9
-moved to the sysadmin craft; its `Set:` line names that (#160 finding, fixed by #162).
+moved to the sysadmin craft; its `Set:` line names that (#160 finding, fixed by #162). The run-book condition and
+property 1 name the automaton as a third runner of `read-only` commands 2026-11-04 (d-work #593, backlog row #54): the
+event's `role` knew only the operator and the agent, while the scheduled sweep runs health commands; see the same
+record, amendment #593.
 
 Set: System Requirements (kernel; content: crafts/sysadmin/rules/server-instances.md).
