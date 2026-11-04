@@ -225,3 +225,10 @@ This Rule's sentence changes with property 3 of Rule-14; the claim, its attacks 
 Rule this d-work touches are recorded once, in `rule-14-system-infrastructure.md`, amendment #564.
 
 Disposition: see ledger #564.
+
+
+## Amendment — d-work #574 (2026-11-04: the carried `backlog` row's entry 1)
+This Rule's sentence changes with Rule-3's; the claims, their attacks and the pairwise statements for every Rule this
+d-work touches are recorded once, in `rule-3-d-work.md`, amendment #574.
+
+Disposition: see ledger #574.
