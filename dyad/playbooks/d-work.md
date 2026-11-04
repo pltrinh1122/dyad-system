@@ -105,15 +105,16 @@ report + proposal (done) → countersignature — realized as, in order:
    intake (Rule-3) is a signal admitted by the operator's `Y`; a relayed prompt is still the operator's words,
    noted `relayed via <session>`.
 2. **Proposal.** The plan file (Rule-15 phase 1; Rule-10's path, counter and reconciliation; the disposition
-   budget and the mandate scope of `disposition-digest.md`), then the plan counter-prompt as the reply's last
-   line. The Rule-16 presence read precedes the file.
+   budget and the mandate scope of `disposition-digest.md`), opening with its definition of done (below), then the
+   plan counter-prompt as the reply's last line. The Rule-16 presence read precedes the file.
 3. **Countersignature.** `Y`: `open → planned`, the presence touched. A bare `N`: nothing moves, the agent
    revises. `N` with text: amend — the plan revised in place and asked again.
 4. **Execution.** Rule-15 phase 2, in any session: branches and PRs citing `d-work #<id>` through the plan
    gate, `dyad check --pr` before each PR; rows accreted inside the mandate scope (implicit mode) and
    escalated back to explicit where the scope does not cover them (`disposition-digest.md`, the escalate-edge
    test); every departure an incident, a changed plan a fresh plan-`Y`.
-5. **Report + proposal.** The completion evidence (Rule-3 Completion counter-prompt: PRs by number and zone,
+5. **Report + proposal.** The completion evidence, opening with the plan's definition of done, quoted, and the
+   report that answers it (Rule-3 Completion counter-prompt; then PRs by number and zone,
    checks as observed, the evidence block, host actions, accreted rows, departures, the trace preview) — a
    countersign report, which asks nothing — then the Done question as the last line, naming the accreted rows
    and, under `merge-disposition: with-done`, the held PRs.
@@ -206,6 +207,36 @@ twice a day. On that notice the home acts per kind, and decides nothing an owner
   board may be stale; the home reads the report and fixes the board.
 What cannot be read from records — a unit's chat state, a hold said only in conversation — stays the home's
 inference. Clustering the backlog by `refs` waits for typed refs (#569 A12).
+
+Definition of done (#574). A row is partitioned by what the operator will judge it by, never by the shape of the work:
+one **definition of done** (DoD) the operator can evaluate is one row, its plan-`Y` and done-`Y` covering the largest
+scope that DoD lets the operator judge (#570 revision 4). Before the plan, the agent takes the operator's DoD, when the
+prompt gives one, from the provenance record and quotes it with its entry; otherwise it proposes one, marked
+*proposed*, drawn from the prompt, the row's refs and what the operator has judged before. The plan opens with it
+(Rule-15 phase 1); the plan-`Y` accepts it and `N` with text amends it (Rule-3 Answer grammar), so a DoD costs no
+question of its own. Work one DoD covers is one row, its parts carried as accreted children verified through that
+DoD's report; work whose parts the operator would judge separately is split into rows, one per DoD; an unfamiliar
+domain draws finer DoDs and so smaller rows, and nothing else models the operator's familiarity. For many rows at
+once — a backlog being re-partitioned — the home proposes every DoD in one document, the operator amends only those
+it would define differently, and the counts are kept: rows in, DoDs out, absorbed, split, and DoDs amended, the
+measure of how well the proposals fit. The completion evidence opens with the DoD, quoted, and the report that answers
+it (Rule-3 Completion counter-prompt); the rest of the evidence follows. A play-book the plan runs carries the rows its
+own steps prescribe — the incident-hardening play-book's `backlog` row naming a fence — under that plan-`Y`, never
+asked again (Rule-3 Plan, the mandate scope; Ledger, the carried `backlog` row); each is listed in the completion
+evidence like any accreted row.
+
+What the home writes, and what it leaves to the records (#572). An act whose content a recorded line already decides
+is the automaton's or the code's, never an inferring unit's (the inventory: `agent-corpus/audits/2026-11-04-inference-map.md`).
+A plan that splits its work among units names each unit's part on one line, `parts: <unit>: <part>; <unit>: <part>`,
+by unit name or by its function alone (the name before its `-<hp>`); on the plan-`Y` the automaton's plan notice then
+quotes each owner's own part and flips that row's board to wait on its owner, so the home sends no relay that
+restates the plan, and relays only what the plan does not say — a sequencing, a review asked, the operator's further
+words. A report is its own record: the home writes the board only when a row's next act or owner changes, never to
+re-word a report the inbox already holds (the work-in-flight sweep, above, reads a report newer than the board), and
+a unit posts one report to every box that needs it at once (`inbox post --cc`). Three acts stay the home's, because
+no record decides them: the doorbell that wakes a unit, since only a session can ring one; recording a disposition,
+since only the party that received the operator's words can enter them (Rule-7 property 4) — the reply that receives
+a `Y` records it, and that is the reply the release counts; and drafting the questions the operator answers.
 
 Promotion when the board is empty (#566; `dyad/dmc/promotion.jsonld`). When a unit is **idle** — no row that is not
 terminal waits on it — or **about to be** — its one waiting row's `next` is a Done draft or a review — and nothing is

@@ -111,6 +111,16 @@ class SurfaceTests(unittest.TestCase):
         code_keys = {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}   # the alias is read (and warns) until step 4
         self.assertEqual(stale_keys(listed, known, code_keys), set(), "an S3 key that is no preference")
 
+    def test_s3_a_fresh_install_seeds_every_frozen_key(self):
+        """A fresh install has the core's template and no instance table (#603: the 0.18.0 cut failed its own suite
+        because S3 froze two keys only this instance seeded): every S3 key that is no `moving` mark is a key of the
+        template alone, or one the code still reads."""
+        sessions = dyadlib.load_guard("agent", "sessions")
+        tmpl = {c[0] for c in (dyadlib.split_cells(l) for l in (PKG / "templates" / "PREFERENCES.md").read_text().splitlines()
+                               if l.startswith("| ")) if c and c[0] != "key" and re.fullmatch(r"[a-z][a-z-]*", c[0])}
+        listed = {r[0]: r[-1] for r in self.s["S3"]}
+        self.assertEqual(stale_keys(listed, tmpl, {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}), set(),
+                         "an S3 key a fresh install's template does not seed")
     def test_s3_an_alias_the_code_reads_is_not_stale_once_no_table_holds_it(self):
         """The operator's rename (step 3) leaves no table with `attended-seats` while the code still reads it: the
         alias row stays listed and is not stale; once step 4 stops reading it, it is (orchestrate's combined run)."""

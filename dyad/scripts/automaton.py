@@ -33,8 +33,17 @@ head, a closed row and a notice already posted are skipped. Any run may be retri
 nothing. Memory across runs (a retry) lives in the run itself or in the store, never here.
 
   dyad automaton scan      read-only: the acts a run would take now, one line each
-  dyad automaton run       take them; one line per act and per refusal; exit 1 when a landed cut failed
-                           corroboration, else 0 unless the automaton itself failed
+  dyad automaton run [--evidence-from <file>]
+                           take them; one line per act and per refusal; exit 1 when a landed cut failed
+                           corroboration, else 0 unless the automaton itself failed. With --evidence-from (#587 X10)
+                           the evidence acts fire the file's verdicts instead of computing them: each line is
+                           untrusted, checked strictly (shape, a verdict of the machine's table, the row in
+                           verifying, its heads the board's recorded and the live ones) and dropped with a reason
+                           when any check fails
+  dyad automaton evidence --out <file>
+                           read-only, sandbox-only (never in a job holding a write token): the combined evidence of
+                           every evidence act, one JSON line each, {rid, event, evidence or note, heads}, to <file>;
+                           fires, posts and commits nothing
   dyad automaton sweep [--row <id>]
                            read-only, twice a day (d-work #564): every guard over every store and the full suite on
                            origin/main, Y dones whose heads never landed, stale board entries, released tags
@@ -51,7 +60,7 @@ commits carry the identity of whoever runs it; its inbox messages come from the 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("automaton.py: Python 3.12+ required")
-import os, re, subprocess
+import json, os, re, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -66,11 +75,14 @@ Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
 PLANNED = "row #{rid} planned; read plans/{rid}.md"
-USAGE = "usage: dyad automaton scan|run|sweep [--row <id>]"
+USAGE = "usage: dyad automaton scan | run [--evidence-from <file>] | evidence --out <file> | sweep [--row <id>]"
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seat-is-path-shaped", lambda: bool(re.fullmatch(r"[A-Za-z0-9._-]+", SEAT))),
     ("retries-bounded", lambda: 1 < RACE_TRIES <= 10),
+    ("evidence-events-are-the-automatons-from-verifying",          # #587 X10: an evidence line fires only these
+     lambda: all("automaton" in dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]) for e in EVIDENCE_EVENTS)),
+    ("evidence-file-bounded", lambda: 0 < EVIDENCE_FILE_LINES and 0 < EVIDENCE_HEADS <= 100 and EVIDENCE_FILE_BYTES <= 1 << 24),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import (crafts/syseng/rules/invariants.md)
     ("notice-is-information", lambda: not dyadlib.load_guard("agent", "inbox").DISPOSITION.search(PLANNED.format(rid=1))),
@@ -158,6 +170,21 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
             acts.append(("merge", r.id, cut))
         if not owed:
             acts.append(("close", r.id))
+    byid = {r.id: r for r in rows}
+    for r in rows:   # #574 G5: a Done naming no merge is `done` at once and no close runs; its retires are archived here
+        op = (rg.operative_done(r.disposed) or "") if r.state == "done" else ""
+        if not op or rg.DONE_MERGES.search(f"2000-01-01 {op}"):
+            continue                                   # a merge-naming Done's retires are its close's, once (close_landed)
+        named = steps.retired_rows(op)
+        due = [x for x in named if x in byid and byid[x].state in ("backlog", "done")]
+        if due:
+            acts.append(("archive", r.id, due))
+        for x in named:                                # told once, never resolved (G5): a row no longer backlog or done
+            if x not in byid or byid[x].state not in ("backlog", "done", "archived"):
+                why = stray_body(r.id, x, byid[x].state if x in byid else "no row")
+                to = home(repo, base, row_cabinet(repo, base, r.id))   # the row's cabinet's home (#594)
+                if to and not posted(repo, base, to, r.id, why):
+                    acts.append(("tell", r.id, why))
     for r in rows:
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
         if r.state != "planned" or not rg.PLAN_Y.match(last[0]):
@@ -402,29 +429,224 @@ def fire(repo: Path, rid: int, event: str, expect: str, pairs: dict[str, str]) -
                 os.environ[k] = v
 
 
+def evidence_what(cut: list[tuple[int, str]]) -> str:
+    return "the combined evidence of " + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in cut)
+
+
+def evidence_verdict(repo: Path, base: str, rid: int, cut: list[tuple[int, str]]) -> tuple[dict | None, str]:
+    """#587 X5, the read half of `do_evidence`: (record, a line for the output) of the combined evidence of `cut` onto
+    `base`, firing and posting nothing. The record is `{rid, event, evidence | note, heads}`: event `evidence-verified`
+    or `evidence-failed`, or None when the evidence says nothing about the PRs (note: why, for home). (None, line) when
+    that refusal is already told to home for these heads: it is neither re-run nor re-told until a head moves."""
+    what = evidence_what(cut)
+    to, prefix = home(repo, base, row_cabinet(repo, base, rid)), f"automaton: {what} refused for row #{rid}:"
+    if to and any(m.get("from") == SEAT and m.get("row") == str(rid) and m.get("body", "").startswith(prefix)
+                  for m in box_messages(repo, base, to)):
+        return None, f"refused, already told {to}: {prefix} (not re-run)"
+    heads = [[pr, h] for pr, h in cut]
+    try:
+        event, pairs, line = evidence_event(repo, base, cut)
+    except (Refused, subprocess.TimeoutExpired) as e:
+        return {"rid": rid, "event": None, "note": home_note(str(e)), "heads": heads}, str(e)
+    if event is None:
+        return {"rid": rid, "event": None, "note": home_note(line), "heads": heads}, line
+    return {"rid": rid, "event": event, **pairs, "heads": heads}, line
+
+
+def home_note(text: str) -> str:
+    """A no-verdict line's `note`: what `escalate` keeps of it (its first non-blank line, at most 300 characters), so a
+    long refusal — `git merge-tree`'s stderr — stays within `EVIDENCE_NOTE_CHARS` and still reaches home."""
+    return (text.strip().splitlines() or ["no reason given"])[0].strip()[:300] or "no reason given"
+
+
+def evidence_act(repo: Path, rec: dict | None, line: str, what: str) -> str:
+    """The write half: a verdict fired from `verifying`, a no-verdict told to home once, a told one only reported."""
+    if rec is None:
+        return line
+    if rec["event"] is None:
+        return escalate(repo, rec["rid"], what, rec["note"])
+    pairs = {k: rec[k] for k in ("evidence", "note") if k in rec}
+    return fire(repo, rec["rid"], rec["event"], "verifying", pairs) + f" [{line}]"
+
+
 def do_evidence(repo: Path, rid: int, cut: list[tuple[int, str]]) -> str:
     """#587 X5: the combined merge and its evidence, fired as `evidence-verified` or `evidence-failed`; whatever says
     nothing about the PRs is told to home once (`escalate`), keyed on the row and the cut's heads — never on main's
     sha, which every run moves — and checked before the evidence is paid for, so a told refusal is neither re-run nor
     re-told until a head moves. The verdict is advisory: a Done-Y's evidence stays the main Agent's own
     `check --evidence` (Rule-2, Binding)."""
-    what = "the combined evidence of " + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in cut)
+    what = evidence_what(cut)
     if not evidence_allowed():
         return escalate(repo, rid, f"{what} in this job", "not taken in a job holding a write token (unreviewed PR "
                         "code); home runs check --evidence --at the combined head")
-    base = land.fetch(repo)
-    to, prefix = home(repo, base, row_cabinet(repo, base, rid)), f"automaton: {what} refused for row #{rid}:"
-    if to and any(m.get("from") == SEAT and m.get("row") == str(rid) and m.get("body", "").startswith(prefix)
-                  for m in box_messages(repo, base, to)):
-        return f"refused, already told {to}: {prefix} (not re-run)"
-    try:
-        event, pairs, line = evidence_event(repo, base, cut)
-    except (Refused, subprocess.TimeoutExpired) as e:
-        return escalate(repo, rid, what, str(e))
-    if event is None:
-        return escalate(repo, rid, what, line)
-    return fire(repo, rid, event, "verifying", pairs) + f" [{line}]"
+    rec, line = evidence_verdict(repo, land.fetch(repo), rid, cut)
+    return evidence_act(repo, rec, line, what)
 
+
+# ---- #587 X10: the evidence split across two jobs — a sandbox that computes, a write job that fires
+EVIDENCE_EVENTS = ("evidence-verified", "evidence-failed")   # the verdicts an evidence line may carry, or null
+EVIDENCE_SHA = re.compile(r"[0-9a-f]{64}")
+EVIDENCE_FILE_BYTES = 1 << 20      # an evidence file is another job's artifact: bounded before it is parsed
+EVIDENCE_FILE_LINES = 500
+EVIDENCE_HEADS = 20                # PRs one line may name
+EVIDENCE_NOTE_CHARS = 2000         # a note's raw length; what is written is `note_of`'s, at most 300
+
+
+def evidence_out(repo: Path, out: Path) -> list[str]:
+    """`automaton evidence --out <file>` (#587 X10): one JSON line per evidence act the run would take — every
+    `verifying` entry whose PRs are up at their recorded heads, and every entry whose head moved (its cut the live
+    heads, which `run` re-verifies once `head-moved` has fired) — computed as `do_evidence` computes it, then written
+    to `out`. Fires nothing, posts nothing, commits nothing; refused where `evidence_allowed` refuses (a job holding a
+    write token), since it runs the PR heads' own code. Its lines are the output."""
+    if not evidence_allowed():
+        raise Refused("evidence --out runs the PR heads' code: never in a job holding a write token "
+                      "(set AUTOMATON_EVIDENCE_SANDBOX=on in a sandbox without one)")
+    base = land.fetch(repo)
+    rows = dyadlib.read_rows(repo, at=base)
+    by_id, rg, b = {r.id: r for r in rows}, rows_guard(), board()
+    cuts: list[tuple[int, list[tuple[int, str]]]] = []
+    for a in watch(repo, base, rows):
+        if a[0] == "evidence":
+            cuts.append((a[1], a[2]))
+        elif a[0] == "head-moved" and not rg.operative_done(by_id[a[1]].disposed):
+            text = show(repo, base, f"{inst(repo)}/d-work/board/{a[1]}.md") or ""
+            now = dict(a[3])        # only the moved PRs: every other one's live head is read, never its recorded
+            cut = [(n, now.get(n) or live(repo, n))       # one, which may be abbreviated (`run` compares full heads)
+                   for n, _ in b.pr_list(b.phase_of(b.parse(text)[0]["phase"])[1])]
+            if all(h for _, h in cut):
+                cuts.append((a[1], cut))
+    records, lines = [], []
+    for rid, cut in cuts:
+        rec, line = evidence_verdict(repo, base, rid, cut)
+        lines.append(f"evidence #{rid}: " + (f"{rec['event'] or 'no verdict, for home'} [{line}]" if rec else line))
+        if rec:
+            records.append(rec)
+    try:
+        out.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in records))
+    except OSError as e:
+        raise Refused(f"evidence --out {out}: {e}")
+    return lines + [f"wrote {len(records)} evidence line(s) to {out}"]
+
+
+def evidence_line_problem(obj) -> str | None:
+    """Why a parsed evidence line is not admissible, or None. Strict: the file is untrusted (another job's artifact,
+    written after the PR heads' code ran), so every key, type and shape is checked and nothing it holds is echoed."""
+    if not isinstance(obj, dict):
+        return "not a JSON object"
+    event = obj.get("event")
+    if event is not None and (event not in EVIDENCE_EVENTS or ("verifying", event) not in dyadlib.ORCH_EVENTS):
+        return "not an evidence event of the machine's table"
+    want = {"rid", "event", "heads", "evidence" if event == "evidence-verified" else "note"}
+    if set(obj) != want:
+        return "its keys are not exactly " + ", ".join(sorted(want))
+    if type(obj["rid"]) is not int or obj["rid"] <= 0:
+        return "rid is not a positive integer"
+    heads = obj["heads"]
+    if not isinstance(heads, list) or not 0 < len(heads) <= EVIDENCE_HEADS:
+        return f"heads is not a list of 1 to {EVIDENCE_HEADS} [pr, head] pairs"
+    for h in heads:
+        if not (isinstance(h, list) and len(h) == 2 and type(h[0]) is int and h[0] > 0 and isinstance(h[1], str)
+                and OID.fullmatch(h[1])):
+            return "a head is not [<pr>, <full sha>]"
+    if len({h[0] for h in heads}) != len(heads):
+        return "a PR is named twice"
+    if "evidence" in want and not (isinstance(obj["evidence"], str) and EVIDENCE_SHA.fullmatch(obj["evidence"])):
+        return "evidence is not a sha256"
+    if "note" in want and not (isinstance(obj["note"], str) and obj["note"].strip()
+                               and len(obj["note"]) <= EVIDENCE_NOTE_CHARS):
+        return f"note is not a non-empty string of at most {EVIDENCE_NOTE_CHARS} characters"
+    return None
+
+
+def read_evidence(path: Path) -> tuple[dict[int, tuple[int, dict]], list[str]]:
+    """({rid: (line number, record)}, the lines dropped) of an evidence file. An unreadable, oversized or overlong
+    file yields nothing; a line that is not JSON or fails `evidence_line_problem` is dropped; a row named by more
+    than one line has every one of them dropped (which one is meant is not the run's to guess)."""
+    try:
+        if path.exists() and not path.is_file():      # a FIFO, a device, a directory: never opened
+            return {}, [f"evidence file {path}: not a regular file; nothing fired from it"]
+        with path.open("rb") as fh:
+            data = fh.read(EVIDENCE_FILE_BYTES + 1)     # never more than the bound is read
+        if len(data) > EVIDENCE_FILE_BYTES:
+            return {}, [f"evidence file {path}: larger than {EVIDENCE_FILE_BYTES} bytes; nothing fired from it"]
+        text = data.decode("utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        return {}, [f"evidence file {path}: unreadable ({type(e).__name__}); nothing fired from it"]
+    lines = text.splitlines()
+    if len(lines) > EVIDENCE_FILE_LINES:
+        return {}, [f"evidence file {path}: more than {EVIDENCE_FILE_LINES} lines; nothing fired from it"]
+    got: dict[int, list[tuple[int, dict]]] = {}
+    dropped = []
+    for n, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except (ValueError, RecursionError):         # a deeply nested line recurses past the stack: not JSON here
+            dropped.append(f"evidence line {n} dropped: not JSON"); continue
+        if why := evidence_line_problem(obj):
+            dropped.append(f"evidence line {n} dropped: {why}"); continue
+        got.setdefault(obj["rid"], []).append((n, obj))
+    out = {}
+    for rid, items in got.items():
+        if len(items) > 1:
+            dropped += [f"evidence line {n} dropped: row #{rid} is named by {len(items)} lines" for n, _ in items]
+        else:
+            out[rid] = items[0]
+    return out, dropped
+
+
+def heads_problem(repo: Path, base: str, rid: int, heads: list[tuple[int, str]]) -> str | None:
+    """Why an evidence line for row `rid` at `heads` may not fire on `base` now, or None: the entry is in `verifying`,
+    its row neither terminal nor carrying an operative `Y done`, its recorded PRs the line's in order, each recorded head
+    a prefix of the line's (a recorded head may be abbreviated), and each PR's live head the line's exactly."""
+    b = board()
+    text = show(repo, base, f"{inst(repo)}/d-work/board/{rid}.md")
+    if not text:
+        return f"row #{rid} has no board entry"
+    try:
+        phase, sub = b.phase_of(b.parse(text)[0].get("phase", ""))
+    except ValueError:
+        return f"row #{rid}'s board entry has no phase"
+    if phase != "verifying":
+        return f"row #{rid} is in {phase}, not verifying"
+    r = next((r for r in dyadlib.read_rows(repo, at=base) if r.id == rid), None)
+    if r is None or r.state in dyadlib.TERMINAL_STATES or rows_guard().operative_done(r.disposed):
+        return f"row #{rid} is not open to evidence (no row, terminal, or a Y done recorded)"
+    recorded = b.pr_list(sub)
+    if [n for n, _ in recorded] != [n for n, _ in heads]:
+        return f"row #{rid}'s board lists other PRs"
+    if any(not h.startswith(rh) for (_, rh), (_, h) in zip(recorded, heads)):
+        return f"row #{rid}'s board records other heads"
+    for n, h in heads:
+        if live(repo, n) != h:
+            return f"PR #{n} is no longer at {h[:12]} (moved, or its head unreadable)"
+    return None
+
+
+def serve_evidence(repo: Path, rid: int, cut: list[tuple[int, str]], pending: dict[int, tuple[int, dict]]) -> str:
+    """`run --evidence-from`'s evidence act: the file's line for this row, fired through `fire` once its heads are
+    this act's and still hold on a fresh main (`heads_problem`); a null verdict told to home once. A row the file
+    has no line for is reported and left (the evidence job takes it); nothing is ever computed here."""
+    what = evidence_what(cut)
+    item = pending.pop(rid, None)
+    if item is None:
+        return f"evidence #{rid}: no line for {what} in the evidence file (not fired)"
+    n, rec = item
+    heads = [(p, h) for p, h in rec["heads"]]
+    if heads != list(cut):
+        return f"evidence line {n} dropped: row #{rid}'s heads are not the board's recorded and live heads"
+    if why := heads_problem(repo, land.fetch(repo), rid, heads):
+        return f"evidence line {n} dropped: {why}"
+    if rec["event"] is None:
+        return escalate(repo, rid, what, rec["note"])
+    pairs = {"evidence": rec["evidence"]} if rec["event"] == "evidence-verified" else {"note": note_of(rec["note"])}
+    return fire(repo, rid, rec["event"], "verifying", pairs) + f" [evidence file, line {n}]"
+
+def stray_body(rid: int, x: int, state: str) -> str:
+    """The notice for a row a Done retires that is no longer backlog or done (#574 G5), as `escalate` words it."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", f"automaton: archive of the rows its Done retires refused for "
+                                   f"row #{rid}: row #{x} is {state}; a Done retires only a backlog or done row (#574 G2)")
 
 # ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
 PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
@@ -501,15 +723,19 @@ def describe(act: tuple) -> str:
         return f"withdrawn #{act[1]} from done-asked: the batch Done question it shares is void ({act[2]})"
     if kind == "evidence":
         return f"evidence #{act[1]}: combined merge of {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} onto main"
+    if kind == "archive":
+        return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
+    if kind == "tell":
+        return f"tell home: {act[2]}"
     if kind == "board":
         return f"board #{act[1]}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(act[2].items()) if k != "holder")
     return f"notice {act[2]}: {act[3]}"
 
 
 # ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
-SWEEP_LANDING_HOURS = 24       # a Y done whose named heads are not on main after this long is a finding
-SWEEP_STALE_DAYS = 3           # a board entry whose `since` is older than this is a finding
-SWEEP_CI_HOURS = 24            # code pushes to main in this window are checked for a completed corroboration
+SWEEP_LANDING_HOURS = "sweep-landing-hours"   # tunable (#590): a Y done whose named heads are not on main after this long is a finding
+SWEEP_STALE_DAYS = "sweep-board-stale-days"   # tunable (#590): a board entry whose `since` is older than this is a finding
+SWEEP_CI_HOURS = "sweep-ci-hours"             # tunable (#590): code pushes to main in this window are checked for a completed corroboration
 CI_WORKFLOWS = ("rule-11 package", "d-work automaton")   # the runs that corroborate a code push (#564 E1, E4)
 HEXWORD = re.compile(r"\b[0-9a-f]{7,64}\b")
 
@@ -527,8 +753,9 @@ def sweep_check(wt: Path) -> list[tuple[bool, str]]:
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
     return out
 
-def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Y dones whose heads never landed, and stale board entries, read from `base`."""
+def sweep_ledger(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Y dones whose heads never landed, and stale board entries, read from `base`; the tunables from `prefs` (the
+    worktree at `base`), else `repo`."""
     import datetime
     out, rg = [], rows_guard()
     for r in dyadlib.read_rows(repo, at=base):
@@ -538,7 +765,7 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", e)
         when = datetime.datetime.fromisoformat(m.group(1)).replace(tzinfo=datetime.timezone.utc) if m else None
         owed = [(pr, h) for _, pr, h, _ in rg.named_heads([r]) if not steps.ancestor(repo, h, base)]
-        if owed and when and (now - when).total_seconds() > SWEEP_LANDING_HOURS * 3600:
+        if owed and when and (now - when).total_seconds() > dyadlib.tunable(SWEEP_LANDING_HOURS, prefs or repo) * 3600:
             out.append((False, f"finding: row #{r.id}'s done answer of {m.group(1)} names heads not on main: "
                                + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in owed)))
     d = f"{inst(repo)}/d-work/board"
@@ -547,8 +774,8 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
             continue
         fields = board().parse(show(repo, base, f"{d}/{name}") or "")[0]
         since = board().parse_since(fields.get("since", "")) if fields.get("since") else None
-        if since and (now - since).days > SWEEP_STALE_DAYS:
-            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {SWEEP_STALE_DAYS} days)"))
+        if since and (now - since).days > (days := dyadlib.tunable(SWEEP_STALE_DAYS, prefs or repo)):
+            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {days} days)"))
     return out
 
 def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
@@ -568,12 +795,16 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
             out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
     return out
 
-def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
+def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
     import datetime, json, urllib.request
     token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
-    since = (now - datetime.timedelta(hours=SWEEP_CI_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
+    except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
+        since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
+    since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
     code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
     if not code:
@@ -662,11 +893,11 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
-    found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
-    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
-    found += [(False, f"finding: {h}") for h in hyg]
-    flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), sweep_pulls())   # #569, per cabinet #594
-    found += [(False, f"finding: {h}") for _, h in flight]
+        found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
+        found += [(False, f"finding: {h}") for h in hyg]
+        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)   # #569, per cabinet #594
+        found += [(False, f"finding: {h}") for _, h in flight]
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     cabinet = {f"finding: {h}": c for c, h in flight}
     rc = 1 if any(f for f, _ in found) else 0
@@ -773,7 +1004,11 @@ def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, st
 
 def do_close(repo: Path, rid: int) -> str:
     try:
-        return "\n".join(l for l in steps.close_landed(repo, rid, True) if l)
+        lines = [l for l in steps.close_landed(repo, rid, True) if l]
+        # #574 G5: a row the Done retires that is neither backlog nor done is told to home, never resolved
+        lines += [escalate(repo, rid, "archive on close", l.removeprefix(steps.NOT_ARCHIVED))
+                  for l in lines if l.startswith(steps.NOT_ARCHIVED)]
+        return "\n".join(lines)
     except Refused as e:
         if str(e).startswith("already closed"):
             return str(e)
@@ -782,8 +1017,16 @@ def do_close(repo: Path, rid: int) -> str:
 
 CORROBORATION_FAILED: set[int] = set()   # rows whose landed cut failed corroboration in this run: the run exits 1
 
-def run(repo: Path) -> list[str]:
+def run(repo: Path, evidence_from: Path | None = None) -> list[str]:
+    """Take the acts. With `evidence_from` (#587 X10) the evidence acts are served from that file, which an
+    `evidence --out` job wrote, and never computed here (`serve_evidence`)."""
     out, stopped = [], set()
+    pending: dict[int, tuple[int, dict]] = {}
+    if evidence_from is not None:
+        pending, dropped = read_evidence(evidence_from)
+        out += dropped
+    evidence = (lambda rid, cut: serve_evidence(repo, rid, cut, pending)) if evidence_from is not None else \
+        (lambda rid, cut: do_evidence(repo, rid, cut))
     _, acts = plan(repo)
     moved = {a[1] for a in acts if a[0] == "head-moved"}
     for act in acts:
@@ -794,6 +1037,22 @@ def run(repo: Path) -> list[str]:
                 stopped.add(act[1])
         elif act[0] == "close":
             out.append(do_close(repo, act[1]))
+        elif act[0] == "archive":
+            try:
+                out.append(steps.batch(repo, [f"state {x} archived --retired-by {act[1]}" for x in act[2]]))
+            except Refused as e:
+                if "already landed: every line of the batch is on origin/main" in str(e):
+                    out.append(f"row #{act[1]}: the rows its Done retires are already archived")
+                else:
+                    out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
+        elif act[0] == "tell":
+            fresh = land.fetch(repo)
+            to = home(repo, fresh, row_cabinet(repo, fresh, act[1]))   # the row's cabinet's home (#594)
+            try:
+                out.append(f"refused, {post(repo, to, act[1], act[2])}: {act[2]}")
+            except (Refused, inbox().Refused) as e:
+                out.append(f"the notice to {to} was refused ({e}): {act[2]}")
+
         elif act[0] == "board":
             out.append(board_set(repo, act[1], act[2]))
         elif act[0] == "advance":
@@ -804,7 +1063,7 @@ def run(repo: Path) -> list[str]:
         elif act[0] == "withdrawn":                                   # #587 X6, a batch's other rows
             out.append(fire(repo, act[1], "withdrawn", "done-asked", {"note": note_of(act[2])}))
         elif act[0] == "evidence":
-            out.append(do_evidence(repo, act[1], act[2]))             # #587 X5
+            out.append(evidence(act[1], act[2]))                      # #587 X5
         else:
             try:
                 out.append(post(repo, act[2], act[1], act[3]))
@@ -815,7 +1074,8 @@ def run(repo: Path) -> list[str]:
     out += [do_close(repo, a[1]) for a in again if a[0] == "close" and a[1] not in stopped]
     # #587 X5 after X6: a row whose head moved in this run is back in verifying; its new heads are verified now, since
     # the automaton's own push starts no workflow run of its own
-    out += [do_evidence(repo, a[1], a[2]) for a in again if a[0] == "evidence" and a[1] in moved]
+    out += [evidence(a[1], a[2]) for a in again if a[0] == "evidence" and a[1] in moved]
+    out += [f"evidence line {n} dropped: row #{rid} has no evidence act at those heads now" for rid, (n, _) in pending.items()]
     # #572 K3: a cut still owed after this run's merges waits on its merge, not on the operator
     for a in again:
         if a[0] == "merge":
@@ -844,9 +1104,14 @@ def main(argv: list[str], repo: Path) -> int:
                 print(USAGE, file=sys.stderr); return 2
             lines, rc = sweep(Path(repo), int(rest[1]) if rest else None)
             print("\n".join(lines)); return rc
-        if a == ["run"]:
+        if a[:1] == ["evidence"]:
+            if len(a) != 3 or a[1] != "--out":
+                print(USAGE, file=sys.stderr); return 2
+            print("\n".join(evidence_out(Path(repo), Path(a[2]))))
+            return 0
+        if a == ["run"] or (len(a) == 3 and a[:2] == ["run", "--evidence-from"]):
             CORROBORATION_FAILED.clear()
-            print("\n".join(run(Path(repo))))
+            print("\n".join(run(Path(repo), Path(a[2]) if len(a) == 3 else None)))
             return 1 if CORROBORATION_FAILED else 0
         print(USAGE, file=sys.stderr)
         return 2

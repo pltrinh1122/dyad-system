@@ -402,6 +402,74 @@ def preference(key: str, root: Path | None = None) -> str | None:
             return canonical_value(plain(r[1]).strip(), r[2] if len(r) >= 3 else "")
     return None
 
+# ---- tunables (d-work #590): an operator-tunable number is a preference whose default has one home, the
+# `dyad:defaultValue` of the DMC record that claims its key under `dyad:tunables` (`dyad/dmc/schema.md`). Every reader
+# the record's `dyad:readBy` names calls `tunable` at use time, so a preference written after import is read.
+DMC_STORE = "dmc"                                                  # the core's DMC store, under the package
+_TUNABLE_BETWEEN = re.compile(r"between\s+(-?\d+(?:\.\d+)?)\s+and\s+(-?\d+(?:\.\d+)?)")
+
+def _tunable_entries(pkg: Path = PKG):
+    """(record name, entry) for every `dyad:tunables` entry of the core's DMC records, in file order."""
+    import json
+    for p in sorted((pkg / DMC_STORE).glob("*.jsonld")):
+        text = p.read_text()
+        if '"dyad:tunables"' in text:   # a cheap filter: most records carry none
+            for t in json.loads(text).get("dyad:tunables") or ():
+                if isinstance(t, dict):
+                    yield p.name, t
+
+def tunable_entry(key: str, pkg: Path = PKG) -> dict[str, str]:
+    """The `dyad:tunables` entry of the core DMC record that claims `key` (`dyad/dmc/*.jsonld`), with `_record` its
+    file name. KeyError when no record claims it: an unknown tunable is a programming error, never a silent default."""
+    for name, t in _tunable_entries(pkg):
+        if t.get("dyad:preference") == key:
+            return {**t, "_record": name}
+    raise KeyError(f"tunable {key!r}: no record in {pkg.name}/{DMC_STORE}/ claims it under dyad:tunables")
+
+def tunables_read_by(rel: str, pkg: Path = PKG) -> set[str]:
+    """The tunable keys whose `dyad:readBy` is `rel` (package-relative, as the records write it): a reader's
+    TREE_INVARIANTS pins its own key list against this, so the code and the records cannot drift apart."""
+    return {t["dyad:preference"] for _, t in _tunable_entries(pkg)
+            if t.get("dyad:readBy") == rel and t.get("dyad:preference")}
+
+def tunable_value(text: str | None, default: int | float, allowed: str) -> int | float | None:
+    """`text` parsed to `default`'s type (its first word: `7 days` reads 7), or None when it does not parse or falls
+    outside what `allowed` states: `between A and B` needs A < value < B; `positive` needs value > 0."""
+    try:
+        v = type(default)((text or "").split()[0])
+    except (ValueError, IndexError):
+        return None
+    m = _TUNABLE_BETWEEN.search(allowed)
+    if m and not float(m.group(1)) < v < float(m.group(2)):
+        return None
+    if "positive" in allowed and not v > 0:
+        return None
+    return v
+
+def tunable_default(key: str, pkg: Path = PKG) -> int | float:
+    """The record's `dyad:defaultValue` for `key`, an int when it reads as one, else a float. KeyError on an unknown
+    key; ValueError when the default does not parse or is not valid by its own `dyad:allowed` (fail-loud: the one
+    home of the default is wrong)."""
+    t = tunable_entry(key, pkg)
+    raw, allowed = t.get("dyad:defaultValue", ""), t.get("dyad:allowed", "")
+    try:
+        typed: int | float = int(raw)
+    except ValueError:
+        typed = float(raw)
+    default = tunable_value(raw, typed, allowed)
+    if default is None:
+        raise ValueError(f"tunable {key!r}: the default {raw!r} of {t['_record']} is not {allowed!r}")
+    return default
+
+def tunable(key: str, root: Path | None = None, pkg: Path = PKG) -> int | float:
+    """The tunable `key`, read at use time: the instance's preference value (`preference`) parsed to the type of the
+    DMC default when it is valid by the record's `dyad:allowed`, else the record's `dyad:defaultValue` — absent and
+    malformed both fall back, as `attendance-window` always did. KeyError on an unknown key (fail-loud)."""
+    default = tunable_default(key, pkg)
+    v = preference(key, root)
+    got = tunable_value(v, default, tunable_entry(key, pkg).get("dyad:allowed", "")) if v is not None else None
+    return default if got is None else got
+
 _PREF_ALT = re.compile(r"`([^`]+)`")
 
 def canonical_value(value: str, allowed: str) -> str:
@@ -655,7 +723,8 @@ def orch_invariants(events, phases=ORCH_PHASES) -> list:
 
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
-PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification")
+PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification", "definition of done")
+DOD_SINCE = "2026-11-05"   # #574: `definition of done` is asked only of plans whose row opened on or after this date
 
 _CELL_SEP = re.compile(r"(?<!\\)\|")   # a `|` not preceded by `\`: an escaped `\|` is cell content (#171)
 
@@ -848,14 +917,23 @@ INVARIANTS: list[Invariant] = [
     ("host-classes-distinct", lambda: len(set(HOST_CLASSES)) == 3),
     ("git-vars-distinct", lambda: len(set(GIT_VARS)) == len(GIT_VARS) and all(v.startswith("GIT_") for v in GIT_VARS)),
     ("index-modes-differ", lambda: MODE_EXEC != MODE_FILE and MODE_EXEC.endswith("755")),
-    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS) == 5 and "base commit" in PLAN_PARTS),   # Rule-15 phase 1's five parts (#203)
+    ("plan-parts-distinct", lambda: len(set(PLAN_PARTS)) == len(PLAN_PARTS) == 6 and "base commit" in PLAN_PARTS
+                                    and PLAN_PARTS[-1] == "definition of done"),   # Rule-15 phase 1's six parts (#203, #574)
+    ("dod-since-is-a-date", lambda: bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", DOD_SINCE))),
     ("semver-accepts-build-metadata", lambda: bool(SEMVER.fullmatch("1.2.3")) and bool(SEMVER.fullmatch("1.2.3+local.1")) and not SEMVER.fullmatch("1.2")),
     ("semver-tuple-strips-build", lambda: semver_tuple("1.2.3+local.1") == (1, 2, 3)),
     ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),
     ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
     ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
+    ("tunable-value-reads-allowed", lambda: tunable_value("7 days", 1, "a positive integer (days)") == 7
+        and tunable_value("-2", 1, "a positive integer") is None and tunable_value("none", 1, "a positive integer") is None
+        and tunable_value("0.5", 0.35, "a number between 0 and 1") == 0.5 and tunable_value("1", 0.35, "a number between 0 and 1") is None),   # #590
     ("events-store-relative", lambda: bool(EVENTS_REL) and not EVENTS_REL.startswith("/") and not EVENTS_REL.endswith("/") and "d-work" not in EVENTS_REL),   # #438: the event store never overlaps the ledger
     *orch_invariants(ORCH_EVENTS),   # #587: the board entry's orchestration machine (X1-X4, X9)
+]
+TREE_INVARIANTS: list[Invariant] = [   # reads the DMC store, so the runner's pass only, never at import
+    ("tunable-defaults-valid", lambda: all(isinstance(tunable_default(t["dyad:preference"]), (int, float))
+                                           for _, t in _tunable_entries())),   # #590: every default parses and is allowed
 ]
 
 enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding
