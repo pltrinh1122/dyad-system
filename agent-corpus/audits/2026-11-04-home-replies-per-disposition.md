@@ -82,8 +82,8 @@ Background-task completions add more; the transcript holds those, and git does n
 | relays to units | 37 | 21% |
 | inbox read markers | 13 | 7% |
 
-Every board write and every relay is a ledger-only push, and a moved `main` makes it retry. Two board pushes in this
-unit's own session today retried twice.
+Every board write and every relay is a ledger-only push, and a moved `main` makes it retry. This unit's own inbox read
+at 19:06Z rebuilt twice on a moved `main` before it landed.
 
 ## Cuts, each with its owner
 | # | cut | driver | expected effect | owning row |
