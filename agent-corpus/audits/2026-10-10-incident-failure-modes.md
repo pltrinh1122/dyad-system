@@ -6,6 +6,8 @@ don't dispose; play-book `dyad/playbooks/incident-hardening.md`, Conduct).*
 
 **Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 233 rows, latest 2026-10-26 (the 2026-10-10 derivation covered 144; rows 145–213 were grouped by the delta derivation of 2026-10-24, d-work #259 revision 5; rows 214–233 by the delta of 2026-10-26, d-work #472, both below)
 
+**Superseded as the current index** by the full re-derivation of 2026-11-04 (d-work #571, all 252 rows, 51 modes): `2026-11-04-incident-failure-modes.md`. This file and its mode records stay as they are.
+
 ## Phase 0 — the survey that made this a full derivation
 
 Run through the core runner, `LEDGER=agent-corpus/audits/INCIDENTS.md dyad runbook run
