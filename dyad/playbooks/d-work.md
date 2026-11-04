@@ -6,7 +6,7 @@ transition is legal now, what input it takes and from whom, and which record the
 decision Rule-3, Rule-7, Rule-15 and Rule-16 each own one part of, and that the agent made by inference
 against the CLI help at every row write (Rule-13 property 1: the recurrence proposes code — the machine's
 input alphabet is `dyadlib.INPUTS`, and this play-book's two tables are pinned to it and to the guards by
-`dyad/tests/test_playbooks.py`). Read by Rule-3's Ledger clause. Steps: `dyad/runbooks/d-work.md` —
+`dyad/tests/test_playbooks.py`). Read by Rule-3's Boundaries. Steps: `dyad/runbooks/d-work.md` —
 `open`, `plan`, `authorize`, `execute`, `verify-prs`, `evidence`, `record`, `done-record`, `complete`,
 `close-landed`, `defer`, `resume`, `sync-mirror` (the four harvested from recurring hand-written scripts, #556,
 implemented by `dyad steps`) — run through

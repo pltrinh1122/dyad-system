@@ -831,3 +831,127 @@ by 3), `mandate scope` (used by 2 3), `accreted row` (used by 2 3 7 15 16); each
 correctly, the carried case being an addition to each definition.
 
 Disposition: see ledger #574.
+
+
+## Amendment — d-work #585 (2026-11-04: the refactor; absorbs #574 revisions 1–3 and #584)
+**Claim.** Rule-3 is rewritten, not amended. It is organised around what opens a row, what a `Y` binds (every act its
+question names: merges, accreted and carried rows, play-book-prescribed rows, retirements), the two questions, what is
+never carried (Rule-2's list, by pointer), the record of each `Y` and the automaton's execution. The new text
+supersedes every earlier version and amendment of Rule-3. Other Rules keep their own concerns and point to Rule-3 where
+they restated its machinery. The sentence-by-sentence fate of the old text is the clause map,
+`agent-corpus/audits/2026-11-04-rule-3-clause-map.md`.
+
+The attacks are plan #585's R1–R7, #574's E1–E8 and F1–F6 (amendment #574 above), #574 revision 3's G1–G6, and #584's
+M1–M5 (`agent-corpus/d-work/plans/574.md`, `584.md`, `585.md`). Their survivors are the text. Beyond them:
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| X1 | A shorter Rule drops an obligation a guard or test relies on | **refuted by check.** Every string `dyad/tests/test_playbooks.py` asserts of Rule-3 is kept. Every outcome name of the 14 DMCs homed in Rule-3 appears in it. Every vocabulary term used by 3 appears. Every path it cites resolves. Every heading another file cites by name is kept: `Scope` becomes `Scope (what opens a row)`, its prefix unchanged. | — |
+| X2 | The retirement form becomes a new ratification event | **survives.** Rule-3 already made the operator's `Y` to it the act that archives. Ratification events now lists it, which states what was true. Rule-2 applies it by reference (G5) with no edit. | — |
+| X3 | Code lags the text | **confirmed.** Three statements are true only once engineer's code lands: `dwork new --backlog --mandate` (#574 PR 2), a `Y done (retires …)` entry, and the automaton archiving on close (#574 revision 3). | Until they land, a carried row and a retirement are written by hand in the stated forms. The completion evidence of #585 states which have landed. |
+
+**Pairwise (Rule-5).**
+- **3–2:** Rule-2 owns what a `Y` binds and the never-accretable list. Rule-3's "What a `Y` binds" points to it and
+  states the two questions. Rule-2's first Binding bullet gains `retires`.
+- **3–7:** Rule-7 stores the copied entries (carried, accreted, retired). Rule-3 states when they are written.
+- **3–15:** Rule-15 owns the phases and the plan's parts. Its accreted-row bullet points here.
+- **3–16:** Rule-16 owns the stores and the transition table. No state or transition changes; `archived` gains the
+  Done route.
+- **3–1, 4, 5, 6, 8–14, 18–20:** their references to Rule-3's sections still resolve. Coherent and orthogonal.
+
+**Terms (Rule-6).**
+- New: `carried` (owner 3, used by 3 7), `doorbell` (owner 3, used by 3).
+- Changed: `definition of done` (now used by 3 15), `done-Y` (used by 2 3), `archived` (used by 3 16).
+- Each Rule in their `used by` reads correctly.
+
+### Rule-3's Provenance section before #585 (history, moved here verbatim)
+Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
+disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
+by an ignored counter-prompt or the `always` preference; see
+`../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
+three intakes from peer sessions in two days — one carrying its operator's plan-`Y`, one a defect
+with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
+an operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106. Incidents gains the
+`concise-mode` bullet 2026-09-22 (d-work #113): under one reply per prompt the record precedes the
+reply; see the same record, amendment #113. Incidents gains the periodic-exercise bullet
+2026-09-23 (d-work #137): the grouping-and-mitigation exercise run by hand in #116, #128 and #135
+becomes a play-book Rule-3 reads, parameterized by the ledger it hardens and idempotent on one
+that has not grown; see the same record, amendment #137. Ledger and Mechanisms gain the plan
+gate's ledger-only exemption 2026-09-29 (d-work #191): the gate refused a clerical range, which
+pushed ledger commits around the hook and past every other guard; see the same record, amendment
+#191. Completion counter-prompt gains the d-work trace bullet 2026-10-05 (d-work #213): the
+per-d-work performance measurement done by hand three times (#204, #212) becomes a play-book whose
+trace the completion evidence cites, previewed in the completion reply and stored by the Done ledger
+commit (plan revision 2), as the preference `dwork-trace` reads (revision 3, #215); see the same
+record, amendment #213. Mechanisms gains the trace guard 2026-10-06 (d-work #227): the store's check
+ran only inside Rule-12's suite, which a guard-only push skips (#217); see the same record, amendment #227.
+Scope, Plan, Ledger, Completion counter-prompt and Batch disposition gain accretion under a mandate,
+and Answer grammar is added, 2026-10-14 (d-work #290): 117 of this instance's 280 rows had been
+accreted, and the ones actually worked cost the operator *more* than prompt-born rows — mean 2.65
+disposed entries against 2.15, with not one closing on a single disposition except #162–#165, the
+four handled as a mandate under #199; meanwhile `archived` had been used 0 times in 280 rows, 75
+rows sat in `backlog` at a median age of 21 days, and the transition table gave `backlog` one
+successor, so the one parent ever gated on `backlog` children could not be asked its Done question
+at all. The vocabulary is the countersign model's (then the Tended craft countersign, since #381
+`dyad/playbooks/countersign-model.md`) — mandate, implicit mode, escalate edge, amend — adopted rather
+than coined (Rule-13 property 1), and `amend` is the first of the four refactors that model's Part II
+§7 lists as owed by this system. See the same record, amendment #290. Completion counter-prompt, Ledger and Mechanisms gain the three-act Done order 2026-10-15 (d-work
+#202): recording the done-`Y` set the row `done`, `done` is terminal, and the plan gate refuses every
+commit citing a terminal row, so a ratified merge that still needed one push — a rebase onto a moved
+`main`, a conflict resolved, the second PR of a sequenced set — had no admissible sequence at all.
+Twelve rows of `agent-corpus/audits/INCIDENTS.md` between 2026-09-30 and 2026-10-15 are that one
+mechanism — eleven distinct instances, two of them recorded as one event's two rows, four recovery rows were paid for it, and 164 rows' `disposed` claims a merge that nothing
+reads — five of those claims are known false. The record of the `Y` is now the `disposed` entry and
+its provenance entry, which still precede the merge; the state follows it. See the same record,
+amendment #202. Ledger gains the d-work play-book 2026-10-15 (d-work #309): the lifecycle was spread over
+five Rules, two play-books and the CLI help, and the transition table named no inputs — a successor relation,
+not a machine; the input alphabet is now `dyadlib.INPUTS` with its invariants, and the play-book's tables are
+pinned to it and to the guards; see the same record, amendment #309. Scope and Answer grammar cite the countersign
+model by its core path, and Scope names the delegate edge and the mode lifecycle beside the escalate edge it already
+named, 2026-10-22 (d-work #381, child C3 of #369): the countersign craft is retired and its model carried by the core
+as a play-book; see the same record, amendment #381. Ledger's session-start bullet gains
+the organization sentence 2026-10-22 (d-work #379, #369 C7): under `m4` a session reads a board, not the
+whole ledger, and the Guide that says how is the organization craft's; see the same record, amendment #379. Ledger's
+session-start bullet names the cos and a secretary, and the Guide's path the cabinet craft, 2026-10-25 (d-work #419,
+child C2 of #417): the organization craft is renamed `cabinet` and its role terms cos and secretary; see the same
+record, amendment #419. Completion counter-prompt gains the relayed-Done sentence 2026-10-25
+(d-work #424): a seat's Done question reached the operator in the seat's own shape (#423), while what the operator
+reads from the cos is the matter at the operator's altitude; the form is the preference `relay-form`, the
+evidence block and the question stay the seat's; see the same record, amendment #424. Ledger
+and Mechanisms gain the events-only commit 2026-10-25 (d-work #438): a standing health check's
+events needed an `open` row with a `Y plan`, a PR and the full suite, the row behind them (#431) was
+`done` and refused by the plan gate, and the events held uncommitted blocked the seat's own ledger
+pushes; a standing row would be a d-work that never completes and authorizes no mutation, so
+monitoring is stated to be no d-work and its events clerical, as the ledger's are; see the same
+record, amendment #438. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-d-work.yml` 2026-10-26 (d-work #477, C4
+of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
+record, amendment #477. Mechanisms gains the fence's trace clause 2026-10-26 (d-work
+#465): the completion clause said the Done record commit carries the trace, and nothing checked it; six Done records
+(#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465. Completion's relayed-Done bullet cites the seat's evidence as
+Rule-2's Binding does, by its sha256 and its brief form, 2026-10-26 (d-work #476, child C3 of #473); see the same
+record, amendment #476. Scope gains the read-only answer
+2026-10-27 (d-work #492): a board shown on request had cost a row, a provenance record, a trace, two ledger pushes
+and a Done question for a pure read (#490), while a read's own proposal had been given a `Y` with no row to land on
+(#491); see the same record, amendment #492. Batch disposition records
+the pending queue in the board store, written ahead, 2026-11-02 (d-work #535): the orchestration in flight — the
+queue, every question owed, every dispatched act and its wait — lived only in the cos's chat, and a hop of the cos
+from one session to another would have lost it; see the same record, amendment #535. Batch disposition gains the
+inbox 2026-11-02 (d-work #536): reports and relays travelled as messages to session ids, lost on a hop and
+unreceivable by a terminal holder; see the same record, amendment #536. Plan gains the execution detail
+2026-11-02 (d-work #555): a change of order with the content unchanged had been read as a departure and cost the
+operator a question (#553 revision 3, #532 revision 6), while the operator holds that execution order not stated as a
+requirement is covered by the original mandate; see the same record, amendment #555. Intent, Ledger, Answer grammar,
+Completion counter-prompt and Batch disposition move to the dyad-native terms 2026-11-02 (d-work #553): a d-work is
+a body of work, `unit` now naming a position; a seat is a unit, the leader the home and an unattended seat a solo;
+done-`Y`, operator and agent are lowercase in prose; and Answer grammar reads an answer by meaning, because the
+operator's case and spelling reach no machine directly; history keeps the old words and
+`dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Completion counter-prompt lets the automaton execute the merge and the close
+2026-11-02 (d-work #556): after each done-`Y` the home spent six to ten turns dispatching merges, reading reports,
+verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
+`../falsification/rules/rule-3-d-work.md`, amendment #556. Ledger's session-start bullet cites the organization craft's roles
+2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
+organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring, and Mechanisms the fence's corroboration step in place of the CI job's,
+2026-11-03 (d-work #564); see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
+
+Disposition: see ledger #585.

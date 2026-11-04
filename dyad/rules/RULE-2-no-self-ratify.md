@@ -47,6 +47,7 @@ not edited when they are added (G5).
 
 ## Binding of approval
 - A "Y" binds only to the PR(s) or action(s) named in the question it answers. A done-`Y`
+  archives only the rows the counter-prompt named under `retires` (Rule-3, What a `Y` binds; #574), and
   merges only the PRs the counter-prompt named, only on the guards' observed passes — the
   kernel-only path (`package.py check --evidence`, Rule-14 property 3) run by the main agent
   on the exact head being merged, its evidence block cited in the completion reply (Rule-3) by
@@ -134,6 +135,8 @@ after-merge check is corroboration where the merge ran 2026-11-03 (d-work #564):
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Binding's mandate clause gains the play-book that prescribes a class of row
 2026-11-04 (d-work #574): the plan-`Y` that ran the incident-hardening play-book had already answered for the fence rows
 that play-book prescribes, and they were asked again; the never-accretable list is unchanged; see the same record,
-amendment #574.
+amendment #574. Binding's first bullet names the rows a done-`Y` retires 2026-11-04 (d-work #585, absorbing #574
+revision 3): a delivered row's report retires rows the operator had been asked about again in the retirement form; see
+`../falsification/rules/rule-3-d-work.md`, amendment #585.
 
 Set: System Requirements.
