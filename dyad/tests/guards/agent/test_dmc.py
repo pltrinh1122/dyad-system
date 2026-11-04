@@ -214,6 +214,11 @@ class DmcGuardTests(unittest.TestCase):
         (self.t.pkg / "audits" / "2026-09-24-x.md").write_text("")
         self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun(**{"dyad:readBy": "audits/2026-09-24-x.md"})]}))
         self.assertEqual(self.t.check(), [])
+    def test_tunables_in_a_craft_or_instance_record_fail(self):
+        self.template("hygiene-stale-days")
+        c = self.t.craft("cabinet")
+        self.t.put(c, record("cabinet", **{"dyad:tunables": [self.tun()]}))
+        self.fails("dyad:tunables is the core's only")
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ The file is `<identifier>.jsonld`. `dyad/dmc/context.jsonld` is the one context 
 | `hasDefinedTerm` | yes | a list of ≥ 2 outcomes, each `{"@type": "DefinedTerm", "termCode", "name", "dyad:when", "dyad:then"}`, every value a non-empty string, `termCode` unique in the record |
 | `dyad:precedence` | no | the order or tie-break among outcomes |
 | `dyad:default` | no | the outcome when the inputs cannot decide |
-| `dyad:tunables` | no | a non-empty list of the numbers this criterion lets the operator tune, each `{"dyad:preference": <key>, "dyad:defaultValue", "dyad:allowed", "dyad:readBy": <path>}`, every value a non-empty string: the preference key (lowercase, hyphenated), the value used when the preference is absent, what the `allowed` cell says, and the file that reads it; a key is claimed by one record only (#590) |
+| `dyad:tunables` | no | a non-empty list of the numbers this criterion lets the operator tune, each `{"dyad:preference": <key>, "dyad:defaultValue", "dyad:allowed", "dyad:readBy": <path>}`, every value a non-empty string: the preference key (lowercase, hyphenated), the value used when the preference is absent, what the `allowed` cell says, and the file that reads it; a key is claimed by one record only; core records only (`dyad/dmc/`), since `dyadlib.tunable` reads no craft or instance record (#590) |
 | `dyad:judgedBy` | yes | `{"dyad:kind": "mechanical" \| "inference" \| "declared", "dyad:implementation": <path> \| null}` |
 | `isPartOf` | yes | the container's urn (table above) |
 | `dyad:home` | yes | a path: the file that defines the criterion |

@@ -255,9 +255,9 @@ def describe(act: tuple) -> str:
 
 
 # ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
-SWEEP_LANDING_HOURS = 24       # a Y done whose named heads are not on main after this long is a finding
-SWEEP_STALE_DAYS = 3           # a board entry whose `since` is older than this is a finding
-SWEEP_CI_HOURS = 24            # code pushes to main in this window are checked for a completed corroboration
+SWEEP_LANDING_HOURS = "sweep-landing-hours"   # tunable (#590): a Y done whose named heads are not on main after this long is a finding
+SWEEP_STALE_DAYS = "sweep-board-stale-days"   # tunable (#590): a board entry whose `since` is older than this is a finding
+SWEEP_CI_HOURS = "sweep-ci-hours"             # tunable (#590): code pushes to main in this window are checked for a completed corroboration
 CI_WORKFLOWS = ("rule-11 package", "d-work automaton")   # the runs that corroborate a code push (#564 E1, E4)
 HEXWORD = re.compile(r"\b[0-9a-f]{7,64}\b")
 
@@ -275,8 +275,9 @@ def sweep_check(wt: Path) -> list[tuple[bool, str]]:
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
     return out
 
-def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Y dones whose heads never landed, and stale board entries, read from `base`."""
+def sweep_ledger(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Y dones whose heads never landed, and stale board entries, read from `base`; the tunables from `prefs` (the
+    worktree at `base`), else `repo`."""
     import datetime
     out, rg = [], rows_guard()
     for r in dyadlib.read_rows(repo, at=base):
@@ -286,7 +287,7 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", e)
         when = datetime.datetime.fromisoformat(m.group(1)).replace(tzinfo=datetime.timezone.utc) if m else None
         owed = [(pr, h) for _, pr, h, _ in rg.named_heads([r]) if not steps.ancestor(repo, h, base)]
-        if owed and when and (now - when).total_seconds() > SWEEP_LANDING_HOURS * 3600:
+        if owed and when and (now - when).total_seconds() > dyadlib.tunable(SWEEP_LANDING_HOURS, prefs or repo) * 3600:
             out.append((False, f"finding: row #{r.id}'s done answer of {m.group(1)} names heads not on main: "
                                + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in owed)))
     d = f"{inst(repo)}/d-work/board"
@@ -295,8 +296,8 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
             continue
         fields = board().parse(show(repo, base, f"{d}/{name}") or "")[0]
         since = board().parse_since(fields.get("since", "")) if fields.get("since") else None
-        if since and (now - since).days > SWEEP_STALE_DAYS:
-            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {SWEEP_STALE_DAYS} days)"))
+        if since and (now - since).days > (days := dyadlib.tunable(SWEEP_STALE_DAYS, prefs or repo)):
+            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {days} days)"))
     return out
 
 def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
@@ -316,12 +317,16 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
             out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
     return out
 
-def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
+def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
     import datetime, json, urllib.request
     token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
-    since = (now - datetime.timedelta(hours=SWEEP_CI_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
+    except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
+        since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
+    since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
     code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
     if not code:
@@ -409,10 +414,10 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
-    found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
-    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
-    found += [(False, f"finding: {h}") for h in hyg]
-    found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls())]   # #569
+        found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
+        found += [(False, f"finding: {h}") for h in hyg]
+        found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)]   # #569
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
