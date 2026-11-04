@@ -305,7 +305,7 @@ class WriteAheadTests(World):
         self.assertEqual(rc, 0, err)                                         # a report needs no board entry
 
     def test_the_entry_must_name_the_seat_and_be_this_sessions(self):
-        self.board_set("owner=engineer-1537d8fb session_x; counsel-0032b4c0 session_y", "waiting-on=seat engineer-1537d8fb", "next=send task-5")
+        self.board_set("owner=engineer-1537d8fb session_x; counsel-0032b4c0 session_y", "waiting-on=unit engineer-1537d8fb", "next=send task-5")
         rc, _, err = self.relay(to="distribute-a603e150", harness="h3")    # not the entry's last writer: no owner added
         self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, counsel-0032b4c0, not distribute-a603e150", err)
         rc, _, err = self.relay(harness="h3")                                # the same seat, another holder

@@ -62,12 +62,12 @@ SEAT_FORM = re.compile(r"^(?P<function>[a-z]+)(?:-(?P<topic>[a-z0-9]+(?:-[a-z0-9
 HP_LEN = 8                                      # `<hp>`: the first eight hex of the holder's harness session id
 LEADER_FUNCTION = "program"                     # the function whose bare seat is the leader (revision 10)
 # Attendance (Rule-16 Presence; d-work #388 children 1–3 as #393, declared by #412 C2 as #414): which seats an Operator
-# sits at is declared by the `attended-seats` preference — the leader always, the listed seats beside it, `none` the
+# sits at is declared by the `paired-units` preference — the leader always, the listed seats beside it, `none` the
 # default — and checked against the provenance records: a seat holds an own disposition when a record whose `session:`
 # line names it holds a disposition given there (a note holding neither `mandate #` nor `relayed via`, #422) within the
 # `attendance-window` preference. A live undeclared seat holding one prints `undeclared`; a declared seat holding none, `warn`.
-ATTENDED_SEATS = "attended-seats"               # the preference key: seat names beside the leader, or `none` (the template seeds `none`)
-PAIRED_UNITS = "paired-units"                   # its new name (#553): read first; `attended-seats` is its alias until the release after next
+PAIRED_UNITS = "paired-units"                   # the preference key (#553): unit names beside the leader, or `none` (the template seeds `none`)
+RETIRED_KEYS = {"attended-seats": PAIRED_UNITS}  # #604: a retired key -> its name; no longer read, and a table holding it fails
 UNIT_KINDS = ("dyad", "solo", "auto")           # #553: a paired (attended) unit, an unpaired one, an automaton's (none keeps a presence file yet)
 NO_SEATS = "none"
 ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days, a tunable whose default is dmc/attendance-check.jsonld's (#590)
@@ -89,8 +89,8 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("seat-form-names-its-three-groups", lambda: set(SEAT_FORM.groupindex) == {"function", "topic", "hp"} and bool(SEAT_FORM.match("engineer-ledgerd-1537d8fb")) and not SEAT_FORM.match("cos-1")),
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
               ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed")),
-              ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
-              ("paired-units-aliases-attended-seats", lambda: PAIRED_UNITS == "paired-units" and UNIT_KINDS[:2] == ("dyad", "solo")),
+              ("declared-default-is-none", lambda: NO_SEATS == "none" and PAIRED_UNITS == "paired-units" and UNIT_KINDS[:2] == ("dyad", "solo")),
+              ("retired-keys-name-their-key", lambda: RETIRED_KEYS == {"attended-seats": PAIRED_UNITS} and PAIRED_UNITS not in RETIRED_KEYS),
               ("reconcile-readings-are-four", lambda: len(set(READINGS)) == 4 and bool(TITLE_FORM.match("engineer-1537d8fb: cloud (ds) - ledger")) and not TITLE_FORM.match("dyad-system-ea")),
               ("process-id-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _PROCESS)))]   # crafts/syseng/rules/invariants.md
 TREE_INVARIANTS = [   # reads the DMC store, so the runner's pass only, never at import
@@ -376,13 +376,12 @@ def attendance_index(root: Path | None = None, now: datetime.date | None = None)
     return out
 
 def declared_preference(root: Path | None = None) -> tuple[str, str | None]:
-    """(key, value) of the pairing preference: `paired-units` when the table holds it, else its alias `attended-seats`
-    (#553; both are read until the release after next)."""
-    v = dyadlib.preference(PAIRED_UNITS, root)
-    return (PAIRED_UNITS, v) if v is not None else (ATTENDED_SEATS, dyadlib.preference(ATTENDED_SEATS, root))
+    """(key, value) of the pairing preference `paired-units` (#553). Its old name `attended-seats` is no longer read
+    (#604); a table still holding it fails the guard (`retired_key_problems`) rather than reading as unpaired."""
+    return PAIRED_UNITS, dyadlib.preference(PAIRED_UNITS, root)
 
 def declared_seats(root: Path | None = None) -> list[str]:
-    """The `paired-units` preference (alias `attended-seats`, #553) as a sorted list of entries: [] when the key is
+    """The `paired-units` preference (#553) as a sorted list of entries: [] when the key is
     absent or holds `none` (the default, #412: only the leader paired). Words are split on spaces and commas; `none`
     beside a name is dropped."""
     words = str(declared_preference(root)[1] or "").replace(",", " ").split()
@@ -394,7 +393,7 @@ def _seat_key(name: str) -> str:
     return m.group(1) if m else name
 
 def declares(entries: list[str], seat: str) -> bool:
-    """True when an `attended-seats` entry names `seat`: its full seat name, or the name without `-<hp>`
+    """True when a `paired-units` entry names `seat`: its full seat name, or the name without `-<hp>`
     (`engineer` declares `engineer-1537d8fb` and every later holder of that seat)."""
     return seat in entries or _seat_key(seat) in entries
 
@@ -414,7 +413,7 @@ def is_leader(seat: str, form: re.Pattern | None = None, functions: list[str] | 
 def attendance(root: Path | None = None, now: datetime.date | None = None) -> dict:
     """The mode read over the live seats (plan #388 child 2, declared by #412): {mode, attended: {seat: date or ""},
     relayed: [seat], leaders: [seat], declared: [entry], undeclared: [(seat, date)], warnings: [entry], window_days}.
-    Attended = the live leaders ∪ the live seats `attended-seats` declares; the value is the seat's latest own
+    Attended = the live leaders ∪ the live seats `paired-units` declares; the value is the seat's latest own
     disposition within the window, "" when it holds none. Only leaders attended → M3 (the default, and the reading
     with no live seat); every live seat attended → M4; otherwise hybrid. The record-derived reading is the fence: a
     relayed live seat holding an own disposition within the window is `undeclared` (read over the live seats, as the
@@ -431,7 +430,8 @@ def attendance(root: Path | None = None, now: datetime.date | None = None) -> di
     warnings = [e for e in declared if not any(e == s or e == _seat_key(s) for s in index)]
     mode = "M3" if set(att) <= set(leaders) else ("M4" if not relayed else "hybrid")
     return {"mode": mode, "attended": att, "relayed": relayed, "leaders": leaders, "declared": declared,
-            "undeclared": undeclared, "warnings": warnings, "window_days": attendance_window(root).days}
+            "undeclared": undeclared, "warnings": warnings, "window_days": attendance_window(root).days,
+            "retired": retired_key_problems(root)}   # #604: the reading that drops a retired key says so
 
 def route(seat: str, root: Path | None = None, now: datetime.date | None = None) -> str:
     """Plan #388 child 3: where a counter-prompt this seat owes the Operator is asked — `chat` (its own) when the seat is
@@ -441,17 +441,19 @@ def route(seat: str, root: Path | None = None, now: datetime.date | None = None)
 def attendance_line(a: dict) -> str:
     n_live = len(a["attended"]) + len(a["relayed"])
     return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live unit(s) dyad, the rest solo; paired: "
-            f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{PAIRED_UNITS}`, alias `{ATTENDED_SEATS}`, Rule-16 "
+            f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{PAIRED_UNITS}`, Rule-16 "
             f"Presence; a solo unit's questions are relayed through the leader)")
 
 def fence_lines(a: dict) -> list[str]:
     """The record-derived check against the declared set, one line each (#412): `undeclared` for a disposition given in
     an undeclared seat, `warn` for a declared entry with none within the window. A board reading, not a Rule-3
-    incident: the act it shows is the Operator's, and the leader, which tracks attendance, is its one reporter."""
+    incident: the act it shows is the Operator's, and the leader, which tracks attendance, is its one reporter. A retired
+    key the table still holds (#604) prints one `refused:` line, so the reading that does not read it says so."""
     return ([f"undeclared: {s} holds an own disposition of {d} but `{PAIRED_UNITS}` does not pair it (Rule-16 Presence)"
              for s, d in a["undeclared"]]
             + [f"warn: {e} is paired but holds no own disposition within {a['window_days']} day(s)"
-               for e in a["warnings"]])
+               for e in a["warnings"]]
+            + [f"refused: {m}; until then this reading pairs none of its units" for m in a.get("retired", [])])
 
 def system_handle(root: Path) -> str:
     """The system's short handle in a session title, `(ds)` for dyad-system: the initials of the repository
@@ -676,21 +678,19 @@ def check_record(p: Path, text: str | None = None) -> list[str]:
         msgs.append(f"{p.name}: 'holder' is not a path-segment token ({fields['holder']!r})")
     return msgs
 
-def alias_warnings(root: Path | None = None) -> list[str]:
-    """#573 step 5: one warning while the preference table pairs units under the alias `attended-seats` and not under
-    `paired-units`, naming the new key; the alias is removed in dyad-operator 1.0."""
-    key, value = declared_preference(root)
-    if key == ATTENDED_SEATS and value is not None:
-        return [f"warning: preference `{ATTENDED_SEATS}` is the alias of `{PAIRED_UNITS}`; rename the key (value "
-                f"unchanged) by a preferences PR — the alias is removed in dyad-operator 1.0 (#573)"]
-    return []
+def retired_key_problems(root: Path | None = None) -> list[str]:
+    """#604 (#573 step 4, plan B4): one failure per retired key the preference table still holds, naming its new key.
+    The old key is no longer read, so ignoring it silently would unpair every unit it names."""
+    return [f"preference `{old}` was removed in dyad-operator 1.0 and is no longer read; rename the key to `{new}` "
+            f"(value unchanged) by a preferences PR (#604)"
+            for old, new in RETIRED_KEYS.items() if dyadlib.preference(old, root) is not None]
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
     msgs = []
     for p in sorted(sessions_dir(root).glob("*.md")):
         msgs += check_record(p)
-    return msgs + alias_warnings(root)
+    return msgs + retired_key_problems(root)
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     root = root or dyadlib.repo_root()

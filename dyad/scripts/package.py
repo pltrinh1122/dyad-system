@@ -189,7 +189,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 session's file (DYAD_SESSION env; unset, it refuses); no args, the
                                 files from this session's own open/planned rows' stored plans;
                                 list prints every session's file, flagging one past the stale window, with the
-                                attendance mode over the live seats (M3 | M4 | hybrid), the `attended-seats`
+                                attendance mode over the live seats (M3 | M4 | hybrid), the `paired-units`
                                 declared beside the leader, each seat `attended` or `relayed`, and the records'
                                 check of the declaration: `undeclared` for an own disposition in an undeclared
                                 live seat, `warn` for a declared seat with none within `attendance-window`
