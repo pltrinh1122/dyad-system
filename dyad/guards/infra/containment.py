@@ -16,6 +16,7 @@ line names the mode that ran.
   containment.py commit <sha>         one commit
   containment.py commits <base> <head> each non-merge commit of a push range
   containment.py range <base> <head>  a PR: each non-merge commit + the whole diff
+  containment.py landed <before> <after> a push to main: each PR it merges in range mode, each direct commit alone (#589)
   containment.py tree                 every tracked file must be classified
   containment.py zones                print the zone table
 """
@@ -91,7 +92,8 @@ def corpus_zone(corpus: str, root: Path | str | None = None) -> str:
 # The two checks over a pair of commits (#166). A push range is not a transaction: the runner's
 # transaction hook runs `commits`, its PR hook `range`; both print the name they ran under.
 MODES = {"commits": "each non-merge commit of base..head (a push range; Rule-1 binds a commit, not the range)",
-         "range": "each non-merge commit and the whole base...head diff (a PR)"}
+         "range": "each non-merge commit and the whole base...head diff (a PR)",
+         "landed": "each PR a push to main merges, in range mode, and each direct commit on it alone (#589)"}
 TRANSACTION_MODE, PR_MODE = "commits", "range"
 
 # The verb the shipped `dyad/hooks/pre-commit` passes: this module's whole contract with the hook,
@@ -195,6 +197,35 @@ def check_range(base, head, cwd=None):
     how, entries = range_diff(base, head, cwd=cwd)
     label = f"range {base[:7]}..{head[:7]}" + (f" ({how})" if how else "")
     return check_commits(base, head, cwd=cwd) + check_paths(label, entries, cwd)
+def check_landed(before, after, cwd=None, report: list | None = None):
+    """Mode `landed` (#589): what a push to `main` landed, judged as the transactions it holds. Since #562 one push can
+    land a cut of several PRs, and a push range is no transaction (#166), so the range is never judged whole: each
+    first-parent commit of `before..after`, oldest first, is either a merge, whose PR (first parent to each other
+    parent) is judged in `range` mode, or a direct commit, judged alone. `report` gains one line per merged PR naming
+    its zone."""
+    fails = []
+    for line in git("rev-list", "--first-parent", "--reverse", "--parents", f"{before}..{after}", cwd=cwd).splitlines():
+        sha, first, *others = line.split()
+        if not others:
+            fails += check_commit(sha, cwd=cwd)
+            continue
+        subject = git("log", "-1", "--format=%s", sha, cwd=cwd).strip()
+        name = (subject.split(" at ")[0].removeprefix("Merge ") if subject.startswith("Merge PR #") else f"merge {sha[:7]}")
+        for other in others:
+            got = check_range(first, other, cwd=cwd)
+            fails += got
+            if report is not None and not got:
+                zones = {classify(p, zones=table(cwd)) for st, p in range_diff(first, other, cwd=cwd)[1] if p}
+                report.append(f"ok   [landed] {name} ({other[:12]}): {' '.join(sorted(zones - {'unclassified'})) or 'no paths'}")
+    return fails
+
+def landed_verb(args: list[str]) -> list[str]:
+    report: list[str] = []
+    fails = check_landed(args[0], args[1], report=report)
+    for line in report:
+        print(line)
+    return fails
+
 def check_tree(cwd=None):
     t = table(cwd)
     return [f"FAIL [tree]: unclassified path: {p}" for p in git("ls-files", cwd=cwd).split() if classify(p, zones=t) == "unclassified"]
@@ -213,6 +244,7 @@ VERBS: dict[str, Callable[[list[str]], list[str] | None]] = {
     "commit":  lambda args: check_commit(args[0]),
     "commits": lambda args: check_commits(args[0], args[1]),
     "range":   lambda args: check_range(args[0], args[1]),
+    "landed":  landed_verb,
     "tree":    lambda args: check_tree(),
     "zones":   print_zones,
 }
