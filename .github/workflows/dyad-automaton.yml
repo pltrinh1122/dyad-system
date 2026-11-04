@@ -14,22 +14,50 @@ name: d-work automaton
 on:
   push:
     branches: [main]
-    paths: ["agent-corpus/d-work/rows/**", "agent-corpus/d-work/board/**"]
+    paths: ["agent-corpus/d-work/rows/**", "agent-corpus/d-work/board/**", "agent-corpus/d-work/inbox/**"]   # inbox: typed events (#587 X10)
   workflow_dispatch: {}
-permissions:
-  contents: write
-  pull-requests: write
+# Two jobs (#587 X10). `evidence` runs the PR heads' own code to take combined evidence, so it holds no write token:
+# `contents: read`, no persisted credentials, and AUTOMATON_EVIDENCE_SANDBOX=on, the only place `automaton evidence`
+# runs. It fires nothing and hands its verdicts, one JSON line each, to `run` as an artifact. `run` holds the write
+# token and never runs PR code: `run --evidence-from` checks each line strictly (shape, verdict, row in verifying,
+# heads recorded and live) and drops a bad line with a reason. With no artifact, `run` takes every other act and
+# tells home of each evidence act it could not take.
+permissions: {}
 concurrency: { group: dyad-automaton, cancel-in-progress: false }
 jobs:
-  run:
+  evidence:
     if: vars.DYAD_AUTOMATON == 'on'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0, fetch-tags: true, persist-credentials: false }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: combined evidence of every verifying row (read-only, sandbox)
+        env:
+          AUTOMATON_EVIDENCE_SANDBOX: "on"
+        run: python3 dyad/scripts/package.py automaton evidence --out "$RUNNER_TEMP/evidence.jsonl"
+      - uses: actions/upload-artifact@v4
+        with: { name: automaton-evidence, path: "${{ runner.temp }}/evidence.jsonl", retention-days: 1, if-no-files-found: ignore }
+  run:
+    needs: evidence
+    if: always() && vars.DYAD_AUTOMATON == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0, fetch-tags: true }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - uses: actions/download-artifact@v4
+        continue-on-error: true   # no artifact (the evidence job failed or wrote none): run without it
+        with: { name: automaton-evidence, path: "${{ runner.temp }}/evidence" }
       - name: run the d-work automaton
         env:
           DYAD_SESSION: automaton   # the inbox sender's seat
@@ -38,4 +66,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
           python3 dyad/scripts/package.py automaton scan
-          python3 dyad/scripts/package.py automaton run
+          ev="$RUNNER_TEMP/evidence/evidence.jsonl"
+          if [ -f "$ev" ]; then
+            python3 dyad/scripts/package.py automaton run --evidence-from "$ev"
+          else
+            python3 dyad/scripts/package.py automaton run
+          fi

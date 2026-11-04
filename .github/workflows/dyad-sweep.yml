@@ -31,7 +31,7 @@ jobs:
         with: { ref: main, fetch-depth: 0, fetch-tags: true }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: sweep, through the automaton run-book
+      - name: sweep, through the automaton run-book, as the automaton's own read-only party (#593)
         env:
           DYAD_SESSION: automaton   # the inbox sender's seat
           GITHUB_TOKEN: "${{ github.token }}"
@@ -42,7 +42,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
           rc=0
-          python3 dyad/scripts/package.py runbook run automaton sweep || rc=$?
+          python3 dyad/scripts/package.py runbook run automaton sweep --as automaton || rc=$?
           ev=workstation-corpus/runbooks/events/automaton.jsonl
           if [ -n "$(git status --porcelain -- "$ev")" ]; then
             git add -- "$ev"
