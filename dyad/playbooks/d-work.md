@@ -159,12 +159,18 @@ every other message — a hold, an acknowledgement, a still-running note — **s
 to the inbox, the automaton or the orchestrating solo. A mechanism that sends the operator messages is kept only if it
 passes the same test.
 
+Tunables (#590). Every threshold this play-book names is an operator preference whose default its decision criterion
+holds (`dyad/dmc/schema.md`, `dyad:tunables`; the table, `agent-corpus/audits/2026-11-04-tunables.md`): the operator
+tunes it by a preferences-zone PR, never by a code change, and the code reads it through `dyadlib.tunable`. The
+families are hygiene (`hygiene-stale-days`, `hygiene-similar`, `hygiene-top`), work in flight (`inflight-*`), the
+sweep's findings over time (`sweep-*`) and promotion (`promotion-ceiling`, `promotion-adjacency-min`).
+
 Backlog hygiene (#565). The scheduled sweep (Rule-14 property 3; #564) reads the `backlog` rows on `main` after its `check`, whatever `check`
 returned, and finds only what is structural: a row untouched — no commit to its row, plan or provenance record —
-for `HYGIENE_STALE_DAYS`; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
+for `hygiene-stale-days` days; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
 terminal row; a row a commit on any `origin` branch claims as `d-work #N` while it is still `backlog`. Beside those
 it ranks pairs by similarity — TF-IDF cosine over the rows, siblings of one parent skipped, tokens common to more
-than a fifth of the rows dropped — at or above `HYGIENE_SIMILAR`. A ranked pair is a candidate for the review, never
+than a fifth of the rows dropped — at or above `hygiene-similar`, the top `hygiene-top` pairs. A ranked pair is a candidate for the review, never
 a finding. Hygiene is no guard: the runner never discovers it, and neither CI, the pre-push gate, `check --evidence`
 nor `check --corroborate` runs it. The sweep posts what is new since its last run, and nothing else, in its one
 `notice` to the home's inbox.
@@ -189,7 +195,7 @@ a question reaches the operator):
 Work in flight (#569). The same sweep reads the work in flight from records alone — inbox files and their `.read`
 markers, commits and branch tips, PR bodies and heads, the board, presence and the stored plans — and posts what is
 new since its last run, one notice per kind, to the home's inbox. Each threshold is a minimum age, the sweep running
-twice a day. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
+twice a day; the ages below are the defaults of the `inflight-*` preference keys. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
 - **A relay or notice left unread** (4 h): the home rings the unit's doorbell, the one act that wakes a session; a
   reminder in the same unread inbox would go unread too, so the sweep notifies the home alone.
 - **A planned row gone quiet** (3 days, only while its board entry waits on a unit), **an open row with no plan file**
@@ -276,7 +282,7 @@ Within a class, a candidate another depends on — whose fix the other's assumes
 name as a prerequisite — comes first; within P1, impact comes next: a defect that blocks or corrupts work, before one
 that misleads a reading, before a cosmetic one; dependency and impact are inferred and carry their reason (#568).
 Ties then go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
-smaller of 2 and the number of idle units, each candidate with a different owner: a promoted row costs the operator
+smaller of `promotion-ceiling` (default 2) and the number of idle units, each candidate with a different owner: a promoted row costs the operator
 three answers. The home judges every class; the sweep supplies only P5. The question is one line naming each candidate,
 its class, its reason and its owner — `Y/N: open #a (P1, <reason>, <owner>), #b (P4, <reason>, <owner>)?` — and a `Y`
 opens each named row (`backlog → open`, the operator's words its `prompt` entry, Rule-7) and, for each named promise
