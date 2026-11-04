@@ -26,6 +26,20 @@ defines what each value means.
 | paired-units | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
+| hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| inflight-unread-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-planned-quiet-days | 3 | a positive integer (days) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-unplanned-hours | 24 | a positive integer (hours) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep; default `dyad/dmc/sweep-findings.jsonld`) |
+| promotion-ceiling | 2 | a positive integer (rows proposed at once, never more than the idle units) | Rule-3 (backlog promotion, judged by the home; default `dyad/dmc/promotion.jsonld`) |
+| promotion-adjacency-min | 3 | a positive integer (the adjacency score that alone makes a candidate adjacent) | Rule-3 (backlog promotion, judged by the home; default `dyad/dmc/promotion.jsonld`) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -183,3 +197,10 @@ defines what each value means.
   binds to.
   dyad-system: `brief`, the Operator's prompt of 2026-10-25 ("I need dispositions to be presented by you by
   explaining WHAT is the matter, WHY is the matter important and HOW is the matter being addressed").
+- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the six `inflight-*` keys,
+  the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
+  reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
+  (`dyad/dmc/schema.md`, `dyad:tunables`), and the code reads each through `dyadlib.tunable`, so a missing or
+  out-of-range value reads as that default. dyad-system: every one at its default, the values the code used as
+  constants before #590, so nothing changes in behaviour; altitude has no key, its knob being the definition of done
+  (plan #570 revision 4).

@@ -144,6 +144,21 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
             acts.append(("merge", r.id, cut))
         if not owed:
             acts.append(("close", r.id))
+    byid = {r.id: r for r in rows}
+    to = home(repo, base)
+    for r in rows:   # #574 G5: a Done naming no merge is `done` at once and no close runs; its retires are archived here
+        op = (rg.operative_done(r.disposed) or "") if r.state == "done" else ""
+        if not op or rg.DONE_MERGES.search(f"2000-01-01 {op}"):
+            continue                                   # a merge-naming Done's retires are its close's, once (close_landed)
+        named = steps.retired_rows(op)
+        due = [x for x in named if x in byid and byid[x].state in ("backlog", "done")]
+        if due:
+            acts.append(("archive", r.id, due))
+        for x in named:                                # told once, never resolved (G5): a row no longer backlog or done
+            if x not in byid or byid[x].state not in ("backlog", "done", "archived"):
+                why = stray_body(r.id, x, byid[x].state if x in byid else "no row")
+                if to and not posted(repo, base, to, r.id, why):
+                    acts.append(("tell", r.id, why))
     for r in rows:
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
         if r.state != "planned" or not rg.PLAN_Y.match(last[0]):
@@ -217,6 +232,11 @@ def catch_up(repo: Path, rid: int, phase: str) -> str:
                 os.environ[k] = v
 
 
+def stray_body(rid: int, x: int, state: str) -> str:
+    """The notice for a row a Done retires that is no longer backlog or done (#574 G5), as `escalate` words it."""
+    return inbox().DISPOSITION.sub("[an entry, read in the ledger]", f"automaton: archive of the rows its Done retires refused for "
+                                   f"row #{rid}: row #{x} is {state}; a Done retires only a backlog or done row (#574 G2)")
+
 # ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
 PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
 
@@ -286,15 +306,19 @@ def describe(act: tuple) -> str:
         return f"close row #{act[1]} (every named head is on main)"
     if kind == "advance":
         return f"catch up #{act[1]} {act[2]} (recorded on the ledger)"
+    if kind == "archive":
+        return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
+    if kind == "tell":
+        return f"tell home: {act[2]}"
     if kind == "board":
         return f"board #{act[1]}: " + ", ".join(f"{k}={v}" if v else f"{k} removed" for k, v in sorted(act[2].items()) if k != "holder")
     return f"notice {act[2]}: {act[3]}"
 
 
 # ---- the sweep (d-work #564): read-only; what the pre-push gate leaves, plus checks the gate never had
-SWEEP_LANDING_HOURS = 24       # a Y done whose named heads are not on main after this long is a finding
-SWEEP_STALE_DAYS = 3           # a board entry whose `since` is older than this is a finding
-SWEEP_CI_HOURS = 24            # code pushes to main in this window are checked for a completed corroboration
+SWEEP_LANDING_HOURS = "sweep-landing-hours"   # tunable (#590): a Y done whose named heads are not on main after this long is a finding
+SWEEP_STALE_DAYS = "sweep-board-stale-days"   # tunable (#590): a board entry whose `since` is older than this is a finding
+SWEEP_CI_HOURS = "sweep-ci-hours"             # tunable (#590): code pushes to main in this window are checked for a completed corroboration
 CI_WORKFLOWS = ("rule-11 package", "d-work automaton")   # the runs that corroborate a code push (#564 E1, E4)
 HEXWORD = re.compile(r"\b[0-9a-f]{7,64}\b")
 
@@ -312,8 +336,9 @@ def sweep_check(wt: Path) -> list[tuple[bool, str]]:
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
     return out
 
-def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Y dones whose heads never landed, and stale board entries, read from `base`."""
+def sweep_ledger(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Y dones whose heads never landed, and stale board entries, read from `base`; the tunables from `prefs` (the
+    worktree at `base`), else `repo`."""
     import datetime
     out, rg = [], rows_guard()
     for r in dyadlib.read_rows(repo, at=base):
@@ -323,7 +348,7 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
         m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", e)
         when = datetime.datetime.fromisoformat(m.group(1)).replace(tzinfo=datetime.timezone.utc) if m else None
         owed = [(pr, h) for _, pr, h, _ in rg.named_heads([r]) if not steps.ancestor(repo, h, base)]
-        if owed and when and (now - when).total_seconds() > SWEEP_LANDING_HOURS * 3600:
+        if owed and when and (now - when).total_seconds() > dyadlib.tunable(SWEEP_LANDING_HOURS, prefs or repo) * 3600:
             out.append((False, f"finding: row #{r.id}'s done answer of {m.group(1)} names heads not on main: "
                                + ", ".join(f"PR #{pr} at {h[:12]}" for pr, h in owed)))
     d = f"{inst(repo)}/d-work/board"
@@ -332,8 +357,8 @@ def sweep_ledger(repo: Path, base: str, now) -> list[tuple[bool, str]]:
             continue
         fields = board().parse(show(repo, base, f"{d}/{name}") or "")[0]
         since = board().parse_since(fields.get("since", "")) if fields.get("since") else None
-        if since and (now - since).days > SWEEP_STALE_DAYS:
-            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {SWEEP_STALE_DAYS} days)"))
+        if since and (now - since).days > (days := dyadlib.tunable(SWEEP_STALE_DAYS, prefs or repo)):
+            out.append((False, f"finding: board {name[:-3]} unchanged since {fields['since']} (over {days} days)"))
     return out
 
 def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
@@ -353,12 +378,16 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
             out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
     return out
 
-def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
-    """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
+def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
+    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
     import datetime, json, urllib.request
     token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
-    since = (now - datetime.timedelta(hours=SWEEP_CI_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
+    except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
+        since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
+    since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
     code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
     if not code:
@@ -446,10 +475,10 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
-    found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
-    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
-    found += [(False, f"finding: {h}") for h in hyg]
-    found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls())]   # #569
+        found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
+        found += [(False, f"finding: {h}") for h in hyg]
+        found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)]   # #569
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
     rc = 1 if any(f for f, _ in found) else 0
     to = home(repo, base)
@@ -546,7 +575,11 @@ def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, st
 
 def do_close(repo: Path, rid: int) -> str:
     try:
-        return "\n".join(l for l in steps.close_landed(repo, rid, True) if l)
+        lines = [l for l in steps.close_landed(repo, rid, True) if l]
+        # #574 G5: a row the Done retires that is neither backlog nor done is told to home, never resolved
+        lines += [escalate(repo, rid, "archive on close", l.removeprefix(steps.NOT_ARCHIVED))
+                  for l in lines if l.startswith(steps.NOT_ARCHIVED)]
+        return "\n".join(lines)
     except Refused as e:
         if str(e).startswith("already closed"):
             return str(e)
@@ -566,6 +599,21 @@ def run(repo: Path) -> list[str]:
                 stopped.add(act[1])
         elif act[0] == "close":
             out.append(do_close(repo, act[1]))
+        elif act[0] == "archive":
+            try:
+                out.append(steps.batch(repo, [f"state {x} archived --retired-by {act[1]}" for x in act[2]]))
+            except Refused as e:
+                if "already landed: every line of the batch is on origin/main" in str(e):
+                    out.append(f"row #{act[1]}: the rows its Done retires are already archived")
+                else:
+                    out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
+        elif act[0] == "tell":
+            to = home(repo, land.fetch(repo))
+            try:
+                out.append(f"refused, {post(repo, to, act[1], act[2])}: {act[2]}")
+            except (Refused, inbox().Refused) as e:
+                out.append(f"the notice to {to} was refused ({e}): {act[2]}")
+
         elif act[0] == "board":
             out.append(board_set(repo, act[1], act[2]))
         elif act[0] == "advance":

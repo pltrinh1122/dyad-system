@@ -70,12 +70,12 @@ ATTENDED_SEATS = "attended-seats"               # the preference key: seat names
 PAIRED_UNITS = "paired-units"                   # its new name (#553): read first; `attended-seats` is its alias until the release after next
 UNIT_KINDS = ("dyad", "solo", "auto")           # #553: a paired (attended) unit, an unpaired one, an automaton's (none keeps a presence file yet)
 NO_SEATS = "none"
-ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days (the template seeds 7)
-DEFAULT_ATTENDANCE_DAYS = 7
+ATTENDANCE_WINDOW = "attendance-window"         # the preference key: days, a tunable whose default is dmc/attendance-check.jsonld's (#590)
 ATTENDANCE_MODES = ("M3", "M4", "hybrid")       # only the leader attended | every live seat | some (#366, #388)
 ROUTES = ("chat", "relayed")                    # where a seat's counter-prompt is asked: its own chat, or through the leader (R29)
 _RECORD_SESSION = re.compile(r"^session:\s*(\S+)\s*$", re.M)
 _MANDATE_NOTE, _RELAYED_NOTE = "mandate #", "relayed via"
+_DONE_NOTE = "done #"   # #574 G6: a Done's words copied onto a row it retires, given on that row, never in this seat
 _BY_REFERENCE_NOTE = "by reference"   # #545: a hosting approval (provenance.BY_REFERENCE), given in no seat
 # Reconcile (d-work #434, child C1 of #431): the live presence files against the harness's own session list
 # (`hostadapter.harness_sessions`), one line per mismatch — the operate seat's run-book health command, advisory, never
@@ -88,11 +88,14 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("organizations-hold-the-default", lambda: DEFAULT_ORGANIZATION in ORGANIZATIONS and len(set(ORGANIZATIONS)) == 2),
               ("seat-form-names-its-three-groups", lambda: set(SEAT_FORM.groupindex) == {"function", "topic", "hp"} and bool(SEAT_FORM.match("engineer-ledgerd-1537d8fb")) and not SEAT_FORM.match("cos-1")),
               ("hp-is-eight-hex", lambda: HP_LEN == 8 and bool(SEAT_FORM.match(f"{LEADER_FUNCTION}-{'a' * HP_LEN}"))),
-              ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed") and DEFAULT_ATTENDANCE_DAYS > 0),
+              ("attendance-modes-and-routes", lambda: len(set(ATTENDANCE_MODES)) == 3 and ROUTES == ("chat", "relayed")),
               ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
               ("paired-units-aliases-attended-seats", lambda: PAIRED_UNITS == "paired-units" and UNIT_KINDS[:2] == ("dyad", "solo")),
               ("reconcile-readings-are-four", lambda: len(set(READINGS)) == 4 and bool(TITLE_FORM.match("engineer-1537d8fb: cloud (ds) - ledger")) and not TITLE_FORM.match("dyad-system-ea")),
               ("process-id-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _PROCESS)))]   # crafts/syseng/rules/invariants.md
+TREE_INVARIANTS = [   # reads the DMC store, so the runner's pass only, never at import
+    ("attendance-window-is-the-record", lambda: dyadlib.tunables_read_by("guards/agent/sessions.py") == {ATTENDANCE_WINDOW}),   # #590: one home
+]
 
 def sessions_dir(root: Path | None = None) -> Path:
     return dyadlib.instance(root) / "d-work" / "sessions"
@@ -327,13 +330,12 @@ def touch(root: Path, rows: list[str], files: list[str], here: Path | None = Non
     return p
 
 def attendance_window(root: Path | None = None) -> datetime.timedelta:
-    """The `attendance-window` preference as days (a positive integer), DEFAULT_ATTENDANCE_DAYS when absent or malformed."""
-    v = dyadlib.preference(ATTENDANCE_WINDOW, root)
+    """The `attendance-window` preference as days (a positive integer), read through `dyadlib.tunable`: the DMC default
+    (dmc/attendance-check.jsonld) when absent or malformed (#590)."""
     try:
-        days = int(str(v).split()[0]) if v else DEFAULT_ATTENDANCE_DAYS
-    except ValueError:
-        days = DEFAULT_ATTENDANCE_DAYS
-    return datetime.timedelta(days=days if days > 0 else DEFAULT_ATTENDANCE_DAYS)
+        return datetime.timedelta(days=dyadlib.tunable(ATTENDANCE_WINDOW, root))
+    except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
+        return datetime.timedelta(days=dyadlib.tunable_default(ATTENDANCE_WINDOW))
 
 def own_disposition(note: str) -> bool:
     """A disposition the Operator gave in the seat whose record holds it: its note holds, anywhere, neither a mandate's
@@ -343,7 +345,7 @@ def own_disposition(note: str) -> bool:
     (Rule-7 property 4: a record only grows). Nor `by reference` (#545): a hosting approval recorded by reference was
     given on the hosting, in no seat."""
     n = note.strip()
-    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n and _BY_REFERENCE_NOTE not in n
+    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n and _BY_REFERENCE_NOTE not in n and _DONE_NOTE not in n
 
 def attendance_index(root: Path | None = None, now: datetime.date | None = None) -> dict[str, str]:
     """{seat: latest date} over every provenance record whose `session:` line names a seat: the latest own disposition

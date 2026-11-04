@@ -90,6 +90,15 @@ class PreferenceTests(unittest.TestCase):
     def test_describe(self):
         root, pkg = fixture(HEAD + ROWS); d = pf.describe(root, pkg)
         self.assertEqual([f[0] for f in d["fields"]], list(pf.FIELDS)); self.assertEqual(d["fields"][0][4], "merge-disposition"); self.assertEqual(d["observed"], 2)
+    def test_a_tunable_value_its_record_does_not_allow_warns(self):   # #590: tunable() would read the default silently
+        rules = {3: Path("RULE-3.md")}
+        for bad in ("1.5", "0,4", "lots"):
+            msgs = pf.check_text(HEAD + f"| hygiene-similar | {bad} | a number | Rule-3 |\n", "p", rules)
+            self.assertEqual(len(msgs), 1, (bad, msgs))
+            self.assertTrue(msgs[0].startswith("warning:") and "hygiene-similar" in msgs[0] and "0.35" in msgs[0], msgs)
+        self.assertEqual(pf.check_text(HEAD + "| hygiene-similar | 0.4 | a number | Rule-3 |\n", "p", rules), [])
+        self.assertEqual(pf.check_text(HEAD + "| sweep-ci-hours | 0 | a number | Rule-3 |\n", "p", rules)[0][:8], "warning:")
+        self.assertEqual(pf.check_text(HEAD + ROWS, "p", {2: Path(), 3: Path(), 13: Path()}), [])   # not tunables: nothing
 
 if __name__ == "__main__":
     unittest.main()

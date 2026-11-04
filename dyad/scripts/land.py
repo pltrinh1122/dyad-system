@@ -211,7 +211,7 @@ def already_landed(wt: Path, inst: str, pos: list[str], vals: dict, bare: set, w
                 continue
             first = (record_at(wt, inst, r.id) or [{}])[0]
             if mandate is not None and f"(mandate #{mandate})" in r.disposed:
-                return f"#{r.id} {title!r} is already accreted under mandate #{mandate}"
+                return f"#{r.id} {title!r} is already carried under mandate #{mandate}"
             if first.get("text") in {t for t in (prompt, said) if t is not None}:
                 return f"#{r.id} {title!r} already holds these words as its entry 1"
         return None
@@ -243,7 +243,8 @@ def subject(verb: str, pos: list[str], vals: dict, bare: set, stdout: str) -> st
     d, line = vals.get("-d"), (stdout.strip().splitlines() or [""])[-1]
     if verb == "new":
         rid = line.strip()
-        what = f"accreted under mandate #{vals['--mandate']}" if "--mandate" in vals else ("backlog" if "--backlog" in bare else "open")
+        what = ((f"backlog, carried under mandate #{vals['--mandate']}" if "--backlog" in bare else f"accreted under mandate #{vals['--mandate']}")
+                if "--mandate" in vals else ("backlog" if "--backlog" in bare else "open"))
         s = f"ledger: #{rid} {what}{f' ({d})' if d else ''}: {pos[1]}"
     elif "--mandate" in vals:
         s = f"ledger: #{pos[1]} {pos[2]} (mandate #{vals['--mandate']})"

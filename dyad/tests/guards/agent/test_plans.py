@@ -34,7 +34,16 @@ class PlanTests(unittest.TestCase):
         msgs = pl.check_package(fixture({"7.md": "# Plan #7\nbase commit: abc\n"}))
         self.assertTrue(all(m.startswith("warning: ") for m in msgs), msgs)
         self.assertTrue(any("names no intent" in m for m in msgs)); self.assertTrue(any("never mentions `mutation`" in m for m in msgs))
-        self.assertEqual(len(msgs), 1 + len([p for p in dyadlib.PLAN_PARTS if p != "base commit"]))
+        self.assertEqual(len(msgs), 1 + len([p for p in dyadlib.PLAN_PARTS[:-1] if p != "base commit"]))   # no row: five parts
+    def test_definition_of_done_is_asked_only_from_DOD_SINCE(self):
+        """#574: a plan whose row opened on or after DOD_SINCE is asked for its definition of done; an older one is not."""
+        root = fixture({"7.md": GOOD, "8.md": GOOD.replace("#7", "#8"), "9.md": GOOD.replace("#7", "#9") + "## Definition of done\nz\n"})
+        rows = root / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True)
+        for rid, opened in ((7, "2026-11-04"), (8, dyadlib.DOD_SINCE), (9, "2026-12-01")):
+            (rows / f"{rid}.md").write_text(f"id: {rid}\ntitle: t\nopened: {opened}\nstate: open\ndisposed: \nrefs: \n")
+        self.assertEqual(pl.check_package(root), ["warning: 8.md: never mentions `definition of done` (dyadlib.PLAN_PARTS)"])
+        self.assertEqual(pl.parts_for(None), dyadlib.PLAN_PARTS[:5])
+
     def test_non_numeric_files_ignored(self):
         self.assertEqual(pl.check_package(fixture({"README.md": "# no plan\n"})), [])
     def test_describe_fields_start_with_FIELDS_and_add_parts(self):
