@@ -23,7 +23,8 @@ is read in the ledger (rows, provenance) and nowhere else. A report names the ro
                           from this seat (`DYAD_SESSION`): one message, landed ledger-only through land's loop, and
                           the same message in each `--cc` seat's box in the same land (#572 K6; never a relay); a
                           `relay` lands only when `board/<id>.md` on origin/main names <seat> among its owners and
-                          this session wrote it last (write-ahead, #552)
+                          this session wrote it last (write-ahead, #552) — or, from the entry's holder, adds <seat>
+                          to its owners in the same commit (#586 E1)
   dyad inbox read [--all]  this seat's unread messages on a freshly fetched origin/main, printed in order and marked
                           read in one ledger-only land; `--all` prints the read ones too
   dyad inbox list [<seat>] read-only, from the working tree: every message of the box, unread first marked `*`
@@ -241,15 +242,36 @@ def write_ahead_problem(wt: Path, inst: str, row: int, to: str, me: str) -> str 
     return None
 
 
+def holder_adds_owner(wt: Path, inst: str, row: int, to: str, me: str, sender: str) -> str | None:
+    """#586 E1: a relay from the board's holder to a unit its entry does not yet name as an owner adds that unit to
+    `owner`, writing the entry in the worktree so it lands in the relay's own commit, board first (write-ahead kept by
+    construction, #552). Only the holder, and only when this session wrote the entry last; anything else is refused
+    as before. Returns the entry's repo-relative path, or None when it does not apply."""
+    path = wt / inst / board().BOARD_REL / f"{row}.md"
+    if not path.is_file():
+        return None
+    f = board().parse(path.read_text(errors="replace"))[0]
+    if f.get("holder") != sender or f.get("writer") != me or to in board().owners(f):
+        return None
+    f["owner"] = "; ".join(x for x in (f.get("owner", "").strip(), to) if x)
+    path.write_text(board().render(f, board().keys_for(str(row))))
+    return path.relative_to(wt).as_posix()
+
+
 def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str, cc=()):
     """One message to `to` and, for each `--cc` seat, the same message in that seat's box (its `to` its own box), all in
     one land (#572 K6: a report sent to home and copied to orchestrate was two posts, two lands)."""
     me = sessions().writer()
     def build(wt: Path):
-        if row not in {r.id for r in dyadlib.read_rows(wt)}:
+        r = next((x for x in dyadlib.read_rows(wt) if x.id == row), None)
+        if r is None:
             raise Refused(f"no row #{row} on origin/main")
+        extra = []
         if kind == "relay":
             why = write_ahead_problem(wt, inst, row, to, me)
+            if why and r.state not in dyadlib.TERMINAL_STATES and (added := holder_adds_owner(wt, inst, row, to, me, sender)):
+                extra.append(added)                       # #586 E1: the board entry first, in the same commit
+                why = write_ahead_problem(wt, inst, row, to, me)
             if why:
                 raise Refused(why)
         t = now()
@@ -265,8 +287,8 @@ def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str
             path.write_text(board().render(fields, FIELDS))
             paths.append(path)
         copies = f" (cc {', '.join(cc)})" if cc else ""
-        return ([p.relative_to(wt).as_posix() for p in paths], f"ledger: inbox {to}{copies} ({kind}, row {row})",
-                f"posted {paths[0].name} to {to}{copies}")
+        return (extra + [p.relative_to(wt).as_posix() for p in paths], f"ledger: inbox {to}{copies} ({kind}, row {row})",
+                (f"added {to} to board/{row}.md's owners (#586)\n" if extra else "") + f"posted {paths[0].name} to {to}{copies}")
     return build
 
 
@@ -288,7 +310,10 @@ def parse_post(a: list[str]) -> tuple[str, int, str, str, tuple[str, ...]]:
         raise Refused(USAGE)
     if ("--body-file" in vals) == bool(words) or len(words) > 1:
         raise Refused("give the body as one argument or as --body-file, not both and not neither")
-    body = Path(vals["--body-file"]).read_text() if "--body-file" in vals else words[0]
+    try:
+        body = Path(vals["--body-file"]).read_text(encoding="utf-8") if "--body-file" in vals else words[0]
+    except (OSError, UnicodeDecodeError) as e:
+        raise Refused(f"--body-file {vals['--body-file']}: {e}") from None
     body = body.rstrip("\n")
     if not body.strip():
         raise Refused("an empty body")
