@@ -113,7 +113,6 @@ the operator's. The key names and allowed values are the surface.
 | attended-seats | alias → `paired-units` (#573) |
 | attendance-window | frozen |
 | relay-form | frozen |
-| altitude | moving (#570 A1t; not yet a key) |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
@@ -161,6 +160,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | name | status |
 |---|---|
 | agent-vs-tended-rule | frozen |
+| altitude | frozen |
 | amend-scope | frozen |
 | answer-grammar | frozen |
 | attack-result | frozen |
