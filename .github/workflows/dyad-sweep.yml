@@ -10,6 +10,7 @@ name: d-work sweep
 # sweep's event, which this job commits events-only (clerical, Rule-3; no row, no PR) through the pre-push gate.
 # That commit is the heartbeat the run-book's health reads (last sweep under 13 h), and it is the repository activity
 # that keeps GitHub from disabling the schedule. A red sweep notifies; it holds nothing (plan #564, decision 2).
+# d-work #575: this line exists to re-register the schedule by a user's push (it first landed in a github-actions[bot] merge).
 on:
   schedule:
     - cron: '0 6,18 * * *'
