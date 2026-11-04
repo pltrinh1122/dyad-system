@@ -1,5 +1,5 @@
 session: orchestrate-d688fecf
-seen: 2026-11-04T17:56:36+00:00
+seen: 2026-11-04T18:18:08+00:00
 root: /home/user/dyad-system
 rows: 498 503 570 573 575 584 585 586 587
 files: .github/workflows/dyad-pages.yml BUNDLE.md crafts/cabinet/VERSION crafts/cabinet/guards/seats_rules.txt crafts/chronicle/** dyad/guards/infra/containment.py dyad/tests/guards/infra/test_containment.py preferences-corpus/MANDATES.md site/** workstation-corpus/INFRASTRUCTURE.md
