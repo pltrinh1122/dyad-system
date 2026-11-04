@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-04T18:15:26+00:00
+seen: 2026-11-04T18:23:46+00:00
 root: /home/user/dyad-system
 rows: 570 572 573 574 575 584 585 586 587
 files: dyad/guards/agent/board.py dyad/guards/agent/inbox.py dyad/playbooks/d-work.md dyad/scripts/automaton.py dyad/tests/guards/agent/test_board.py dyad/tests/guards/agent/test_inbox.py dyad/tests/test_automaton.py
