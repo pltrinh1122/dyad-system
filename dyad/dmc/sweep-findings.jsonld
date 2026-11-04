@@ -1,0 +1,73 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/sweep-findings",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "sweep-findings",
+  "name": "Sweep findings over time",
+  "description": "How long the scheduled sweep lets a landing, a board entry or a code push wait before it is a finding.",
+  "dyad:decides": "Has a recorded done answer, a board entry or a code push to main waited long enough to be a sweep finding?",
+  "dyad:inputs": [
+    "each operative Y done and whether its named heads are on main",
+    "each board entry's since",
+    "code pushes to main and their corroboration runs",
+    "the preferences sweep-landing-hours, sweep-board-stale-days and sweep-ci-hours"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "landing",
+      "name": "Y dones whose heads never landed",
+      "dyad:when": "a Y done's named heads are not on main after sweep-landing-hours",
+      "dyad:then": "a finding, told once to the home"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "board",
+      "name": "stale board entries",
+      "dyad:when": "a board entry's since is older than sweep-board-stale-days",
+      "dyad:then": "a finding, told once to the home"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ci",
+      "name": "code pushes to main with no completed corroboration",
+      "dyad:when": "a code push to main within the last sweep-ci-hours has no completed corroboration",
+      "dyad:then": "a finding, told once to the home"
+    }
+  ],
+  "dyad:tunables": [
+    {
+      "dyad:preference": "sweep-landing-hours",
+      "dyad:defaultValue": "24",
+      "dyad:allowed": "a positive integer (hours)",
+      "dyad:readBy": "scripts/automaton.py"
+    },
+    {
+      "dyad:preference": "sweep-board-stale-days",
+      "dyad:defaultValue": "3",
+      "dyad:allowed": "a positive integer (days)",
+      "dyad:readBy": "scripts/automaton.py"
+    },
+    {
+      "dyad:preference": "sweep-ci-hours",
+      "dyad:defaultValue": "24",
+      "dyad:allowed": "a positive integer (hours)",
+      "dyad:readBy": "scripts/automaton.py"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/automaton.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "scripts/automaton.py",
+  "dyad:owner": "Rule-14"
+}

@@ -87,6 +87,20 @@
   ],
   "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; within a class a candidate another depends on comes first, and within P1 the higher impact; then ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry) and one new row, born open, for each named promise or finding; under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",
   "dyad:default": "no proposal",
+  "dyad:tunables": [
+    {
+      "dyad:preference": "promotion-ceiling",
+      "dyad:defaultValue": "2",
+      "dyad:allowed": "a positive integer (rows proposed at once, never more than the idle units)",
+      "dyad:readBy": "playbooks/d-work.md"
+    },
+    {
+      "dyad:preference": "promotion-adjacency-min",
+      "dyad:defaultValue": "3",
+      "dyad:allowed": "a positive integer (the adjacency score that alone makes a candidate adjacent)",
+      "dyad:readBy": "playbooks/d-work.md"
+    }
+  ],
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null

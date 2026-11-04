@@ -175,6 +175,46 @@ class DmcGuardTests(unittest.TestCase):
         (self.t.pkg / "dmc" / "context.jsonld").unlink()
         self.t.put(self.t.pkg, record("dyad-operator")); self.fails("the core context is absent")
 
+    # dyad:tunables (#590)
+    def tun(self, **over) -> dict:
+        t = {"dyad:preference": "hygiene-stale-days", "dyad:defaultValue": "30", "dyad:allowed": "a positive integer",
+             "dyad:readBy": "rules/home.md"}
+        t.update(over); return t
+    def template(self, *keys):
+        (self.t.pkg / "templates").mkdir(exist_ok=True)
+        rows = "".join(f"| {k} | x | y | Rule-3 |\n" for k in keys)
+        (self.t.pkg / "templates" / "PREFERENCES.md").write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + rows)
+    def test_tunables_valid_with_template_row(self):
+        self.template("hygiene-stale-days")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun()]}))
+        self.assertEqual(self.t.check(), [])
+    def test_tunables_without_template_row_warns_only(self):
+        self.template("other")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun()]}))
+        msgs = self.t.check()
+        self.assertTrue(msgs and all(m.startswith("warning:") for m in msgs), msgs)
+        self.assertIn("1 tunable(s) with no row in templates/PREFERENCES.md yet: hygiene-stale-days", msgs[0])
+    def test_tunables_shape(self):
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": []}))
+        self.fails("dyad:tunables is not a non-empty list")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": ["x", self.tun(**{"dyad:defaultValue": ""}),
+            self.tun(**{"dyad:preference": "Bad_Key", "dyad:readBy": "rules/gone.md"})]}))
+        self.fails("dyad:tunables[0] is not an object", "dyad:tunables[1] dyad:defaultValue is not a non-empty string",
+                   "dyad:preference 'Bad_Key' is not a preference key", "dyad:tunables[2] dyad:readBy 'rules/gone.md' does not exist")
+    def test_tunable_named_twice_in_a_record_or_across_records(self):
+        self.template("hygiene-stale-days")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun(), self.tun()]}))
+        self.fails("names preference 'hygiene-stale-days' twice")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun()]}))
+        self.t.put(self.t.pkg, record("dyad-operator", identifier="other", **{"@id": "urn:dyad:dmc:dyad-operator/other",
+            "dyad:tunables": [self.tun()]}), ident="other")
+        self.fails("preference 'hygiene-stale-days' claimed as a tunable by 2 records")
+    def test_tunable_read_by_exempt_from_forbidden_scan(self):
+        self.template("hygiene-stale-days"); (self.t.pkg / "audits").mkdir()
+        (self.t.pkg / "audits" / "2026-09-24-x.md").write_text("")
+        self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:tunables": [self.tun(**{"dyad:readBy": "audits/2026-09-24-x.md"})]}))
+        self.assertEqual(self.t.check(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
