@@ -1010,6 +1010,25 @@ class PackageTests(livetest.LiveCase):
         r = self.dwork_state(d, "3", "done", "-d", "Y done, with #1", "--said", "Y")           # its Done rides the mandate's
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).mode, "implicit")   # carried, never rewritten
+    def test_dwork_new_backlog_mandate_carries_a_prescribed_row(self):
+        """#574 revision 2: a row a play-book the mandate's plan runs prescribes is carried under that plan-`Y`: born
+        backlog, explicit (no `mode` line, its Done never rides the parent's), its entry `Y backlog (mandate #<id>)`,
+        its record's entry 1 the mandate's words noted `mandate #<id>, <date>`."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, run the exercise")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_new(d, "fence: the mode found", "--backlog", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "3")
+        born = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
+        self.assertEqual((born.state, born.mode, born.refs), ("backlog", dyadlib.DEFAULT_MODE, "parent #1"))
+        self.assertRegex(born.disposed, r"^\d{4}-\d{2}-\d{2} Y backlog \(mandate #1\)$")
+        self.assertNotIn("mode:", rows.joinpath("3.md").read_text())
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, run the exercise")])
+        self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")
+        self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5
     def test_dwork_new_mandate_refuses_before_it_writes(self):
         d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
         rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")

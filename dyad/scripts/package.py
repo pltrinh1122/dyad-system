@@ -96,9 +96,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 `<date> Y plan (mandate #<id>)`, and entry 1 of its record the
                                 mandate's own authorizing words copied verbatim, noted
                                 `mandate #<id>, <the mandate's own date>` (Rule-7 property 4). It takes
-                                no disposition of its own, so --mandate refuses -d, --said, --prompt
-                                and --backlog, and refuses a target that is no row or carries no
-                                `Y plan`. refs defaults to `parent #<id>`
+                                no disposition of its own, so --mandate refuses -d, --said and
+                                --prompt, and refuses a target that is no row or carries no `Y plan`.
+                                refs defaults to `parent #<id>`. With --backlog (#574): a row a
+                                play-book the mandate's plan runs prescribes, carried under that
+                                plan-`Y` — born backlog, no `mode` line, entry `<date> Y backlog
+                                (mandate #<id>)`, entry 1 noted as above
   dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
@@ -2076,14 +2079,15 @@ def cmd_dwork(a):
             # #290: implicit mode. The row takes no disposition of its own — its one entry is the mandate's,
             # and its record's entry 1 is the mandate's own words, copied with a note that discloses that they
             # predate the row (Rule-7 property 4, parallel to the relayed prompt already there).
-            if backlog or d is not None or prompt is not None or said is not None:
-                sys.exit("refused: --mandate carries the mandate's own disposition (implicit mode, Rule-3); "
-                         "it takes no -d, --said, --prompt or --backlog — a row born backlog carries no PR "
-                         "and moves only on the Operator's prompt")
+            if d is not None or prompt is not None or said is not None:
+                sys.exit("refused: --mandate carries the mandate's own disposition (Rule-3); "
+                         "it takes no -d, --said or --prompt")
             mid, mwords, mdate = mandate_words(rows, mandate)
             fence_for("disposition", mwords)
-            entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], "implicit"
-        if backlog and d is None:
+            # #574 revision 2: with --backlog, a row the plan's play-book prescribes is carried under the plan-`Y`
+            # that runs it — born backlog, explicit (its Done never rides the parent's), entry 1 the mandate's words
+            entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], (dyadlib.DEFAULT_MODE if backlog else "implicit")
+        if backlog and d is None and mandate is None:
             sys.exit("refused: --backlog opens a row by disposition (Rule-3); give -d and --said")
         if not entries:
             sys.exit("refused: a row is opened by the Operator's words; give --prompt[-file] or -d with --said[-file] (Rule-7, #191)")
@@ -2101,7 +2105,7 @@ def cmd_dwork(a):
             sys.exit("refused: refs given twice, as an argument and with -r")
         refs = vals.get("-r", pos[2] if len(pos) > 2 else "")
         if mandate is not None:
-            disposed = f"{today} Y plan (mandate #{mid})"
+            disposed = f"{today} Y {'backlog' if backlog else 'plan'} (mandate #{mid})"
             refs = refs or f"parent #{mid}"   # the mandate is the row's parent; `row.refs->row` resolves it (Rule-20)
         refusal = trace_refusal(dyadlib.load_guard("agent", "rows"), rid, d) if mandate is None else None
         if refusal:   # #465: a row born with a `Y done` carries its trace as any other record does
