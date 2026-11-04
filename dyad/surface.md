@@ -7,7 +7,8 @@ craft keeps its own number and its own surface, so crafts are out of scope here 
 Each item has a status:
 - `frozen`: changing it after 1.0.0 needs 2.0.0.
 - `moving (#<row>)`: a 1.0 child row is still changing it.
-- `alias → <new> (#573)`: an old spelling still accepted beside the new one, removed before the cut (#554).
+- `alias → <new> (#573)`: an old spelling still accepted beside the new one. It warns in the deprecation release
+  `dyad-operator-v0.18.0` and is removed in 1.0.0 (the operator's decision on B3, provenance #573; #554).
 
 `dyad/tests/test_surface.py` pins this file (`dyad/surface.md`) against the code in both directions. A surface change without an edit
 here fails the suite, and so does an entry here that the code no longer has. With `DYAD_SURFACE_RELEASE=1`, any
@@ -57,6 +58,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad merge <pr>` | `--head <sha>` | frozen |
 | `dyad board` / `board set <id>\|_cos key=value...` / `board resume` | `--drop` | frozen |
 | `dyad inbox post <unit>` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
+| `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |
 | `dyad automaton sweep` | — | moving (#572) |
 | `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | moving (#572) |
@@ -73,7 +75,8 @@ are each guard's own constant, the source the test reads.
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
 | board entry | `d-work/board/<id>.md` | `holder`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `writer` | `board.FIELDS` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>`; `seat <name>` | `board.UNIT_ALIAS` | alias → `unit <name>` (#573) |
-| board cross-row | `d-work/board/_cos.md` | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `writer` | `board.COS_FIELDS` | moving (#573) |
+| board cross-row | `d-work/board/_cos.md` | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `writer`; `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | moving (#572, #573) |
+| plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | moving (#572, K2) |
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
 | presence | `d-work/sessions/<id>.md` | `session`, `seen`, `root`, `rows`, `files`; optional `writer`, `host`, `holder` | `sessions.FIELDS` | frozen |
