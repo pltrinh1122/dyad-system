@@ -544,6 +544,12 @@ def read_batch(src: str, repo: Path, inst: str, value_flags, parse) -> list[Line
         text = sys.stdin.read() if src == "-" else Path(src).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as e:
         raise Refused(f"dwork batch {src}: {e}") from None
+    return read_batch_text(text, repo, inst, value_flags, parse)
+
+
+def read_batch_text(text: str, repo: Path, inst: str, value_flags, parse) -> list[Line]:
+    """`read_batch`'s loop over text already in hand: what `board advance` composes (#587) is parsed by the same
+    readers as a batch file, so a composed line is refused exactly as a typed one would be."""
     lines = []
     for n, raw in enumerate(text.splitlines(), 1):
         t = raw.strip()

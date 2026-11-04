@@ -537,6 +537,91 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
     ("done", "archived"):    ("the retirement Y over the named set", frozenset({"disposition"})),
 }
 
+# d-work #587 (X1-X4, X9): the orchestration machine of a board entry, beside the row's own machine above and never
+# touching it. A board entry that carries a `phase` is in this machine; one that carries none behaves as before #587.
+# An event moves an entry from a phase (None: the entry is absent or unphased, an adoption) to its target, fired by
+# one actor, with the fields the event must carry. `said-file` is the Operator's words (Rule-7), carried only by an
+# answer. Data, read by `board advance` (guards/agent/board.py), which is the derived fields' only writer.
+ORCH_PHASES = ("planning", "plan-ready", "plan-asked", "building", "verifying",
+               "done-ready", "done-asked", "landing", "held")      # stored phases, in lifecycle order
+ORCH_ASKED = frozenset({"plan-asked", "done-asked"})
+ORCH_DROP = "(closed)"     # target sentinel: the entry file is deleted (never stored)
+ORCH_FROM = "@from"        # target sentinel: release returns to phase.from (an asked phase steps back to its *-ready)
+ORCH_ACTORS = frozenset({"home", "unit", "automaton"})
+ORCH_HOLDABLE = ("planning", "plan-ready", "plan-asked", "building", "verifying", "done-ready", "done-asked")
+# (from-phase | None, event) -> (targets, actor, required fields)
+ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str, ...]]] = {
+    (None, "opened"):                   (("planning",), "home", ("unit",)),
+    (None, "plan-landed"):              (("plan-ready",), "unit", ()),             # adoption of an unphased entry
+    (None, "pr-up"):                    (("verifying",), "unit", ("pr", "head")),  # adoption
+    ("planning", "plan-landed"):        (("plan-ready",), "unit", ()),
+    ("plan-ready", "asked"):            (("plan-asked",), "home", ()),
+    ("plan-asked", "answered-Y"):       (("building",), "home", ("said-file",)),
+    ("plan-asked", "answered-N"):       (("planning",), "home", ("said-file",)),
+    ("building", "pr-up"):              (("verifying",), "unit", ("pr", "head")),
+    ("verifying", "pr-up"):             (("verifying",), "unit", ("pr", "head")),  # self-loop
+    ("building", "evidence-verified"):  (("done-ready",), "home", ("evidence",)),  # no-PR d-work, or heads already listed
+    ("verifying", "evidence-verified"): (("done-ready",), "home", ("evidence",)),
+    ("verifying", "evidence-failed"):   (("building",), "home", ("note",)),
+    ("done-ready", "asked"):            (("done-asked",), "home", ()),
+    ("done-asked", "answered-Y"):       (("landing", ORCH_DROP), "home", ("said-file",)),   # ORCH_DROP when no PR
+    ("done-asked", "answered-N"):       (("building",), "home", ("said-file",)),
+    ("landing", "closed"):              ((ORCH_DROP,), "automaton", ()),           # steps.close_landed drops the entry
+    ("held", "release"):                ((ORCH_FROM,), "home", ()),
+    **{(p, "hold"): (("held",), "home", ("note", "on")) for p in ORCH_HOLDABLE},
+}
+ORCH_EVENT_NAMES = frozenset(e for _, e in ORCH_EVENTS)
+ORCH_CLI_EVENTS = ORCH_EVENT_NAMES - {"closed"}   # `closed` is the automaton's own (steps.close_landed)
+
+def orch_release_to(frm: str) -> str:
+    """Where `release` returns an entry held at `frm`: an asked phase steps back to its `*-ready`, since `hold` took its
+    question down; any other phase is restored as it was."""
+    return {"plan-asked": "plan-ready", "done-asked": "done-ready"}.get(frm, frm)
+
+def orch_successors(events, phase) -> set[str]:
+    """Every target an event from `phase` may reach, `ORCH_FROM` expanded to the phases `release` may restore."""
+    out = set()
+    for (f, _), (targets, _, _) in events.items():
+        if f != phase:
+            continue
+        for t in targets:
+            if t == ORCH_FROM:
+                out |= {orch_release_to(q) for (q, e) in events if e == "hold" and q is not None}
+            else:
+                out.add(t)
+    return out
+
+def orch_reach(events, start) -> set[str]:
+    """Every phase (and ORCH_DROP) reachable from `start` (a phase, or None for the births and adoptions)."""
+    seen, todo = set(), [start]
+    while todo:
+        for t in orch_successors(events, todo.pop()):
+            if t not in seen:
+                seen.add(t)
+                if t != ORCH_DROP:
+                    todo.append(t)
+    return seen
+
+def orch_invariants(events, phases=ORCH_PHASES) -> list:
+    """The machine's invariants over a table: the module's own (in INVARIANTS), or a patched copy a test passes."""
+    froms = {f for f, _ in events}
+    answers = {k: v for k, v in events.items() if k[1] in ("answered-Y", "answered-N")}
+    return [
+        ("orch-keys-known", lambda: all((f is None or f in phases) and a in ORCH_ACTORS
+                                        and all(t in phases or t in (ORCH_DROP, ORCH_FROM) for t in ts)
+                                        and (ORCH_FROM not in ts or (f, e) == ("held", "release"))
+                                        for (f, e), (ts, a, _) in events.items())),
+        ("orch-every-phase-reachable", lambda: set(phases) <= orch_reach(events, None)),
+        ("orch-every-phase-exits", lambda: set(phases) <= froms),
+        ("orch-drop-reachable", lambda: all(ORCH_DROP in orch_reach(events, p) for p in phases)),
+        ("orch-answers-from-asked-by-home", lambda: all(f in ORCH_ASKED and a == "home" for (f, _), (_, a, _) in answers.items())
+                                                    and all(("said-file" in r) == (k in answers) for k, (_, _, r) in events.items())),
+        ("orch-automaton-takes-no-words", lambda: all("said-file" not in r for _, (_, a, r) in events.items() if a == "automaton")),
+        ("orch-asked-exits-on-answer", lambda: all(e in ("answered-Y", "answered-N", "hold") for f, e in events if f in ORCH_ASKED)),
+        ("orch-hold-closure", lambda: all((p, "hold") in events for p in phases if p not in ("held", "landing"))
+                                      and ("held", "release") in events),
+    ]
+
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
 PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification")
@@ -739,6 +824,7 @@ INVARIANTS: list[Invariant] = [
     ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
     ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
     ("events-store-relative", lambda: bool(EVENTS_REL) and not EVENTS_REL.startswith("/") and not EVENTS_REL.endswith("/") and "d-work" not in EVENTS_REL),   # #438: the event store never overlaps the ledger
+    *orch_invariants(ORCH_EVENTS),   # #587: the board entry's orchestration machine (X1-X4, X9)
 ]
 
 enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding

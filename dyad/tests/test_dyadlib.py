@@ -32,6 +32,35 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dyadlib.ledger_rows("| 5 | too | short |\n")
 
+class OrchestrationMachineTests(unittest.TestCase):
+    """d-work #587: the board entry's machine (`ORCH_EVENTS`) holds its invariants, and each one flips on a patched
+    copy of the table that breaks exactly what it names."""
+    def test_the_table_holds(self):
+        names = [n for n, _ in dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)]
+        self.assertEqual(dyadlib.false_invariants(dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)), [])
+        self.assertTrue(set(names) <= {n for n, _ in dyadlib.INVARIANTS})       # enforced at import
+        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed"})
+        self.assertEqual((dyadlib.orch_release_to("plan-asked"), dyadlib.orch_release_to("done-asked"),
+                          dyadlib.orch_release_to("building")), ("plan-ready", "done-ready", "building"))
+
+    def test_each_invariant_flips_on_a_patched_copy(self):
+        E = dyadlib.ORCH_EVENTS
+        def without(*keys):
+            return {k: v for k, v in E.items() if k not in keys}
+        cases = {
+            "orch-every-phase-reachable": without(("plan-ready", "asked")),                       # plan-asked unreachable
+            "orch-every-phase-exits": without(("building", "pr-up"), ("building", "evidence-verified"), ("building", "hold")),
+            "orch-answers-from-asked-by-home": {**E, ("building", "answered-Y"): (("done-ready",), "home", ("said-file",))},
+            "orch-automaton-takes-no-words": {**E, ("landing", "closed"): ((dyadlib.ORCH_DROP,), "automaton", ("said-file",))},
+            "orch-hold-closure": without(("verifying", "hold")),
+            "orch-drop-reachable": {**E, ("landing", "closed"): (("landing",), "automaton", ())},   # a trap phase
+            "orch-keys-known": {**E, ("planning", "release"): ((dyadlib.ORCH_FROM,), "home", ())},
+            "orch-asked-exits-on-answer": {**E, ("plan-asked", "pr-up"): (("verifying",), "unit", ("pr", "head"))},
+        }
+        for name, table in cases.items():
+            self.assertIn(name, dyadlib.false_invariants(dyadlib.orch_invariants(table)), name)
+
+
 class SemverTests(unittest.TestCase):
     """D2 (#100): one grammar, shared by the core and every Tended craft's VERSION check — strict
     MAJOR.MINOR.PATCH, with an optional `+build` suffix a diverged, unreleased tree may carry."""

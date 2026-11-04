@@ -147,6 +147,117 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = run(["run"], self.w.seat)
         self.assertNotIn("board #9", out)
 
+    # ---- d-work #587: a phased entry is in the machine, so K1-K3 leave it alone and a Y recorded by hand is caught up
+    def phased(self, rid, phase, sub, question=None, owner="engineer-1537d8fb"):
+        b = am.board()
+        f = {"holder": HOME, "phase": b.phase_render(phase, sub), "owner": owner, "since": "2026-11-04T10:00Z", "writer": "h1"}
+        f.update(b.derive(rid, f))
+        if question:
+            f["question"] = question
+        return b.render(f, b.FIELDS)
+
+    def test_a_phased_planned_entry_gets_no_k1_flip_and_no_k2_notice(self):
+        self.w.write_main({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                           f"{INST}/d-work/board/12.md": self.phased(12, "building", {"unit": ["engineer-1537d8fb"]})})
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual((rc, out.strip()), (0, "nothing to do"))
+
+    def test_a_phased_landing_entry_gets_no_k3_flip(self):
+        files = dict(self.files)
+        files[f"{INST}/d-work/board/9.md"] = self.phased(9, "landing", {"unit": ["engineer-1537d8fb"], "pr": [f"7 at {self.sha}"],
+                                                                         "evidence": ["0" * 64]})
+        self.w.write_main(files)
+        self.w.pr(7, "dyad/zz-pr.txt", "moved\n")                                       # the merge is refused
+        before = self.on_main(f"{INST}/d-work/board/9.md")
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertNotIn("board #9", out)
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/9.md"), before)
+
+    def test_a_plan_y_recorded_by_hand_is_caught_up_with_no_ledger_line(self):
+        rows = f"{INST}/d-work/rows/12.md"
+        self.w.write_main({rows: ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                           f"{INST}/d-work/board/12.md": self.phased(12, "plan-asked", {"unit": ["engineer-1537d8fb"]},
+                                                                      "Y/N: proceed with #12 as planned?")})
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), "catch up #12 answered-Y (recorded on the ledger)")
+        row_before = self.on_main(rows)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        f = am.board().parse(self.on_main(f"{INST}/d-work/board/12.md"))[0]
+        self.assertEqual((am.board().phase_name(f), f["waiting-on"]), ("building", "unit engineer-1537d8fb"))
+        self.assertNotIn("question", f)
+        (msg,) = self.inbox("engineer-1537d8fb")
+        self.assertIn("body: row #12 planned; read plans/12.md", msg); self.assertIn("from: automaton", msg)
+        self.assertEqual(self.on_main(rows), row_before)                                  # the ledger already held it
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+
+    def test_a_done_naming_another_pr_set_is_not_caught_up(self):
+        files = dict(self.files)
+        files[f"{INST}/d-work/board/9.md"] = self.phased(9, "done-asked", {"unit": ["engineer-1537d8fb"], "pr": [f"8 at {self.sha}"],
+                                                                            "evidence": ["0" * 64]}, "Y/N: Done with #9 nine (merges PR #8)?")
+        self.w.write_main(files)
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertNotIn("catch up", out)
+        self.assertIn(f"merge PR #7 at {self.sha} (row #9)", out)
+
+    def test_a_plan_y_recorded_by_hand_at_plan_ready_is_caught_up(self):
+        """The question was asked in chat without `asked`: the entry is still at plan-ready, and the catch-up still moves
+        it to building and posts the plan notice (#587, a K1/K2 parity the skip of phased entries would otherwise lose)."""
+        self.w.write_main({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                           f"{INST}/d-work/board/12.md": self.phased(12, "plan-ready", {"unit": ["engineer-1537d8fb"]})})
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), "catch up #12 answered-Y (recorded on the ledger)")
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        f = am.board().parse(self.on_main(f"{INST}/d-work/board/12.md"))[0]
+        self.assertEqual((am.board().phase_name(f), f["waiting-on"]), ("building", "unit engineer-1537d8fb"))
+        (msg,) = self.inbox("engineer-1537d8fb")
+        self.assertIn("body: row #12 planned; read plans/12.md", msg)
+        self.assertIn("plan-ready -> building", git(self.w.origin, "log", "-2", "--format=%s", "main"))
+
+    def test_a_batch_y_done_recorded_by_hand_at_done_ready_is_caught_up_per_row(self):
+        """A batch `Y done` names the union; each row's entry lists only its own PR. Each is caught up to landing,
+        waiting on the union with the heads the entry names, as `board advance` writes a batch."""
+        sha8 = self.w.pr(8, "dyad/zz-pr8.txt", "pr8\n")
+        d = f"2026-11-02 Y plan; 2026-11-02 Y done (batch #11,#13, merges PR #7 at {self.sha}, PR #8 at {sha8})"
+        files = {}
+        for rid, pr in ((11, f"7 at {self.sha}"), (13, f"8 at {sha8}")):
+            files[f"{INST}/d-work/rows/{rid}.md"] = ROW.format(id=rid, state="planned", disposed=d)
+            files[f"{INST}/d-work/provenance/{rid}.md"] = REC.format(id=rid)
+            files[f"{INST}/d-work/board/{rid}.md"] = self.phased(rid, "done-ready", {"unit": ["engineer-1537d8fb"], "pr": [pr],
+                                                                                    "evidence": ["0" * 64]})
+        self.w.write_main(files)
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertIn("catch up #11 answered-Y (recorded on the ledger)", out)
+        self.assertIn("catch up #13 answered-Y (recorded on the ledger)", out)
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}):
+            for rid in (11, 13):
+                self.assertIn("caught up", am.catch_up(self.w.seat, rid, "done-ready"))
+        for rid in (11, 13):
+            f = am.board().parse(self.on_main(f"{INST}/d-work/board/{rid}.md"))[0]
+            b = am.board()
+            self.assertEqual((b.phase_name(f), f["waiting-on"]), ("landing", "external merge PR #7, PR #8") if rid == 11
+                             else ("landing", "external merge PR #8, PR #7"), rid)
+            self.assertEqual(dict(b.pr_list(b.phase_of(f["phase"])[1])), {7: self.sha, 8: sha8})
+            self.assertEqual(self.on_main(f"{INST}/d-work/rows/{rid}.md"), files[f"{INST}/d-work/rows/{rid}.md"])   # no ledger line
+
+    def test_a_y_done_recorded_at_verifying_is_reported_and_the_board_is_left(self):
+        files = dict(self.files)
+        files[f"{INST}/d-work/board/9.md"] = self.phased(9, "verifying", {"unit": ["engineer-1537d8fb"], "pr": [f"7 at {self.sha}"]})
+        self.w.write_main(files)
+        self.w.pr(7, "dyad/zz-pr.txt", "moved\n")                                       # the merge is refused
+        before = self.on_main(f"{INST}/d-work/board/9.md")
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("board #9 phase verifying: Y done recorded by hand, merge PR #7 pending; board not flipped", out)
+        self.assertNotIn("catch up #9", out)
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/9.md"), before)
+
     def test_plan_parts_and_part_for(self):
         parts = am.plan_parts("# Plan\nParts: engineer: a; counsel-0032b4c0: b; bad\n")
         self.assertEqual(parts, {"engineer": "a", "counsel-0032b4c0": "b"})
