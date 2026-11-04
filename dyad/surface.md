@@ -114,7 +114,20 @@ the operator's. The key names and allowed values are the surface.
 | attendance-window | frozen |
 | relay-form | frozen |
 | altitude | moving (#570 A1t; not yet a key) |
-| sweep and hygiene thresholds | moving (#570 C1; not yet keys) |
+| hygiene-stale-days | frozen |
+| hygiene-similar | frozen |
+| hygiene-top | frozen |
+| inflight-unread-hours | frozen |
+| inflight-planned-quiet-days | frozen |
+| inflight-unplanned-hours | frozen |
+| inflight-pr-still-days | frozen |
+| inflight-promise-days | frozen |
+| inflight-question-hours | frozen |
+| sweep-landing-hours | frozen |
+| sweep-board-stale-days | frozen |
+| sweep-ci-hours | frozen |
+| promotion-ceiling | frozen |
+| promotion-adjacency-min | frozen |
 
 ## S4 Rules
 

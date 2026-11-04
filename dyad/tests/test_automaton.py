@@ -162,11 +162,11 @@ class AutomatonTests(unittest.TestCase):
 
     def sweep(self, check=(), hygiene=((), ()), inflight=(), **kw):
         with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
-             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now: (list(hygiene[0]), list(hygiene[1]))), \
-             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls: list(inflight)), \
+             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: list(inflight)), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
-             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now: []):
+             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
             return run(["sweep", "--row", "9"], self.w.seat, **kw)
 
     def test_the_sweep_tells_only_what_is_new(self):

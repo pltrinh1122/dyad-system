@@ -220,7 +220,10 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 if st != "ok":
                     (warn if st == "warn" else bad)(f"dyad:implementation {jb['dyad:implementation']!r} {why}")
     if "dyad:tunables" in d:
-        tunable_problems(d["dyad:tunables"], base, root, pkg, bad, warn)
+        if container != CORE_CONTAINER:   # one home for a default, the core's: dyadlib.tunable reads no other record (#590)
+            bad("dyad:tunables is the core's only (dyad/dmc/): dyadlib.tunable reads no craft or instance record (#590)")
+        else:
+            tunable_problems(d["dyad:tunables"], base, root, pkg, bad, warn)
     home = None
     if "dyad:home" in d:
         st, home, why = resolve(d["dyad:home"], base, root, pkg)

@@ -10,7 +10,9 @@ and the value is inference (d-work #512: #510's mixed cell refused a seat name).
 (an install seeds it). The template is
 the preference schema (`dyad/vocabulary/VOCABULARY.md`'s `package` row: package-level, not
 per-instance); a key it carries but the live corpus does not warns (`missing_keys`, #180) — an
-instance never re-seeded after the template gained a key a Rule now reads.
+instance never re-seeded after the template gained a key a Rule now reads. A tunable's value (a key a core DMC
+record claims under `dyad:tunables`) that its record's `dyad:allowed` does not admit warns (`tunable_warnings`, #590):
+`dyadlib.tunable` reads the default instead, and nothing else would say so.
   preferences.py [repo-root]
 """
 import sys
@@ -59,7 +61,7 @@ def missing_keys(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]
         return []
     return sorted(keys(tmpl.read_text()) - keys(p.read_text()))
 
-def check_text(text: str, where: str, rules: dict[int, Path]) -> list[str]:
+def check_text(text: str, where: str, rules: dict[int, Path], pkg: Path = dyadlib.PKG) -> list[str]:
     header, rows = parse(text); msgs, seen = [], set()
     if tuple(header) != FIELDS:
         msgs.append(f"{where}: header {header or 'missing'} is not {list(FIELDS)}")
@@ -84,6 +86,7 @@ def check_text(text: str, where: str, rules: dict[int, Path]) -> list[str]:
                 msgs.append(f"warning: {where}: `{d['key']}` value `{value}` is read as `{canon}`; write it `{canon}` (L6, #553)")
             else:
                 msgs.append(f"{where}: `{d['key']}` value `{d['value']}` is not one of {' | '.join(alts)}")
+        msgs += tunable_warnings(d["key"], value, where, pkg)
         ns = _RULE.findall(d["read by"])
         if d["read by"] and not ns:
             msgs.append(f"{where}: `{d['key']}` read by names no Rule")
@@ -92,16 +95,30 @@ def check_text(text: str, where: str, rules: dict[int, Path]) -> list[str]:
                 msgs.append(f"{where}: `{d['key']}` read by Rule-{n}, which does not exist")
     return msgs
 
+def tunable_warnings(key: str, value: str, where: str, pkg: Path = dyadlib.PKG) -> list[str]:
+    """One warning when `key` is a tunable (a core DMC record claims it under `dyad:tunables`, #590) and `value` is not
+    what the record's `dyad:allowed` says: `dyadlib.tunable` then reads the default, so the value does no harm, and
+    this line is what tells the Operator the setting is ignored. A warning, never a failure."""
+    try:
+        e = dyadlib.tunable_entry(key, pkg)
+        default = dyadlib.tunable_default(key, pkg)
+    except (KeyError, ValueError):   # not a tunable; a bad record default is the dmc guard's and the runner's to report
+        return []
+    if dyadlib.tunable_value(value, default, e.get("dyad:allowed", "")) is not None:
+        return []
+    return [f"warning: {where}: `{key}` value `{value}` is not {e.get('dyad:allowed', '')}; dyadlib.tunable reads the "
+            f"default {default} ({e['_record']}, #590)"]
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
     rules = dyadlib.rule_files(pkg); msgs = []
     tmpl = pkg / "templates" / "PREFERENCES.md"
     if tmpl.exists():
-        msgs += check_text(tmpl.read_text(), "templates/PREFERENCES.md", rules)
+        msgs += check_text(tmpl.read_text(), "templates/PREFERENCES.md", rules, pkg)
     p = preferences_path(root)
     if p.exists():
         rel = p.relative_to(root) if p.is_relative_to(root) else p
-        msgs += check_text(p.read_text(), str(rel), rules)
+        msgs += check_text(p.read_text(), str(rel), rules, pkg)
     for k in missing_keys(root, pkg):
         msgs.append(f"warning: {p.relative_to(root) if p.is_relative_to(root) else p}: key `{k}` is in templates/PREFERENCES.md but has no row here — seed it (a fresh install would have)")
     return msgs
