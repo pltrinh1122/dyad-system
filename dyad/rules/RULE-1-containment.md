@@ -21,7 +21,8 @@
   push range is not a transaction, #166).
 - A PR is about to be opened or updated (`dyad check --pr <base> <head>`, run by the Agent), and
   `main` is pushed (corroboration, `dyad check --corroborate`, Rule-14 property 3 — run by `.github/workflows/dyad-package.yml`
-  or by the automaton's job — its step `rule-1 containment (push range)`, detecting, after the merge).
+  or by the automaton's job — its step `rule-1 containment (push range)`, detecting, after the merge, over each PR the push lands and each
+  direct commit, #589).
 - A path is added that no zone claims (forbidden).
 
 The repo has five zones — `agent`, `workstation`, `preferences`, `infra`, `craft` (`crafts/*`: every
@@ -41,14 +42,16 @@ The guard runs in two modes, because the Rule binds a commit and a PR and nothin
 — each non-merge commit of a range, what `dyad check --guards` runs before every push, so a push of
 several single-zone commits that together span zones is correct; and *range* — those commits **and**
 the whole `base...head` diff, which is the PR, run by `dyad check --pr <base> <head>` before a PR is
-opened and by the detector over what lands on `main` (#166). Since the PR trigger was removed (#168)
+opened and by the detector over each PR that lands on `main` — the merge's own range, so a push landing a cut of
+several single-zone PRs is correct — with a direct, non-merge commit on `main` judged alone in *commits* mode (#166,
+#589; containment's `landed` mode). Since the PR trigger was removed (#168)
 no runner judges a PR's whole diff *before* it merges: one zone per PR is the Agent's conduct plus
 that command, reported in the completion evidence, not a gate.
 
 Enforcement: `dyad/hooks/pre-commit` (local, blocking; `git config core.hooksPath dyad/hooks`),
 `dyad/hooks/pre-push` (local, blocking, commits mode) and corroboration (`dyad check --corroborate`, Rule-14 property 3:
 its steps `rule-1 containment (push range)` and `rule-1 containment (tree)`)
-(after the merge, detecting, range mode). All call `dyad/guards/infra/containment.py`. Before any commit in this repo,
+(after the merge, detecting: each PR the push lands in range mode, each direct commit in commits mode, #589). All call `dyad/guards/infra/containment.py`. Before any commit in this repo,
 run `git config core.hooksPath dyad/hooks` if not already set. Until d-work #24 (internal
 LAN git server with required status checks) lands, these hooks are the only *blocking*
 enforcement of Rule-1; CI only detects. A hook that cannot execute at all — an exec bit lost from
@@ -67,6 +70,8 @@ record, amendment #194. Conditions and Enforcement names `.github/workflows/dyad
 of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
 record, amendment #477. Conditions and Enforcement name corroboration's steps in place of the CI job's 2026-11-03 (d-work #564): the
 job's steps became one command, `dyad check --corroborate`, run in hosted CI and in the automaton's job; same guards, still
-detecting; see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
+detecting; see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Conditions, the modes paragraph and Enforcement say the detector judges each PR a push lands and each
+direct commit alone 2026-11-04 (d-work #589): since #562 one push to `main` lands a cut of several PRs, and judging the
+push range as one PR failed #573's three-PR cut (agent plus preferences); see the same record, amendment #589.
 
 Set: System Requirements.
