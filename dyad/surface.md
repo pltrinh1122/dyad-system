@@ -134,7 +134,7 @@ the operator's. The key names and allowed values are the surface.
 |---|---|---|---|
 | 1 | `RULE-1-containment.md` | Boundaries; Conditions; Provenance | frozen |
 | 2 | `RULE-2-no-self-ratify.md` | Boundaries; Conditions; Ratification events; Not ratification; Binding of approval; Enforcement; Provenance | frozen |
-| 3 | `RULE-3-d-work.md` | Boundaries; Conditions; Scope; Answer grammar; Plan; Ledger; Mechanisms; Completion counter-prompt; Batch disposition; Intake; Incidents; Ratification events; Provenance | frozen |
+| 3 | `RULE-3-d-work.md` | Boundaries; Conditions; Scope; Answer grammar; What a `Y` binds; Plan; Completion counter-prompt; Batch disposition; Ledger; Mechanisms; Intake; Incidents; Ratification events; Provenance | frozen |
 | 4 | `RULE-4-integrity.md` | Boundaries; Conditions; Criteria; Mechanisms; Provenance | frozen |
 | 5 | `RULE-5-coherence.md` | Boundaries; Conditions; Definitions; Sets; Enforcement; Provenance | frozen |
 | 6 | `RULE-6-vocabulary.md` | Boundaries; Conditions; Master record; Mechanisms; Provenance | frozen |
@@ -215,6 +215,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | manifest-token | frozen |
 | merge-question | frozen |
 | message-kind | frozen |
+| message-route | frozen |
 | message-overhead | frozen |
 | mitigation-status | frozen |
 | mode-edge | frozen |
