@@ -45,9 +45,12 @@ Any other response leaves it incomplete, to be resumed later.
 - A third thing opens a row, beside a prompt and a disposition: **accretion**, the agent's own act
   under an authorized plan. An **accreted row** is one the agent opens while executing another
   row. Under the preference `accretion: implicit` (`preferences-corpus/PREFERENCES.md`) a row the
-  authorized plan already describes, inside the mandate scope that plan states (Plan, below), is
+  authorized plan already describes, inside the mandate scope that plan states (Plan, below), or one
+  a play-book that plan runs prescribes by a step of its own (Plan, below), is
   born `open` carrying that plan-`Y` and takes no disposition of its own (Ledger, below); its Done
-  rides the mandate's done-`Y`, which names it (Completion counter-prompt, below). It opens no
+  rides the mandate's done-`Y`, which names it (Completion counter-prompt, below). A step that
+  prescribes a `backlog` row carries it born `backlog` instead, its own work still waiting for the
+  operator's prompt (Ledger, the carried `backlog` row). It opens no
   d-work in the sense of this section's first bullet: no operator prompt was sent, so nothing is
   suspended and nothing stacks. Under `accretion: explicit` it is asked for like any other row.
   The terms are the countersign model's (`dyad/playbooks/countersign-model.md`), adopted rather
@@ -112,7 +115,11 @@ its revision 5.
 - **Mandate scope.** A plan that intends to accrete states it: a *rule* for the class of row it
   will open ("one child per failure mode", "a row per surviving fence") and a *ceiling* — at most
   how many such rows. Both are the operator's to read before the plan-`Y` and to refuse. A plan
-  that states no mandate scope accretes nothing, however much it describes; a row the stated rule
+  that states no mandate scope accretes nothing, however much it describes, beyond the rows a
+  play-book it runs prescribes by a step of its own — whose rule is that step's class of row and
+  whose ceiling is the play-book's own count (the incident-hardening play-book's `backlog` row
+  naming a fence, one per failure mode it does not otherwise close), legible in the corpus before
+  the plan-`Y` as a stated scope is in the plan (#574); a row the stated rule
   does not cover, or the row after the stated ceiling, is work departing from the plan and so a
   new plan needing a new `Y`. How large a ceiling may be is the operator's number, never this
   Rule's.
@@ -133,8 +140,11 @@ its revision 5.
   - `planned` — the plan file is authorized (plan-`Y`); execution may start in any session (Rule-15).
   - `blocked` — the operator disposed a deferral naming another d-work; `refs` names it.
     Returns to `open` when the blocking d-work is `done`.
-  - `backlog` — opened by an operator disposition rather than worked immediately; not
-    started. Becomes `open` when the operator prompts for it, or `archived` when an operator
+  - `backlog` — opened by an operator disposition rather than worked immediately, or **carried**:
+    born under the plan-`Y` whose play-book prescribes it (Plan, the mandate scope), its `disposed`
+    entry `<date> Y backlog (mandate #<id>)` and its record's entry 1 that plan-`Y`'s words, noted as
+    an accreted row's are (Rule-7 property 4), with no `mode` line, since its Done never rides the
+    parent's (#574); not started. Becomes `open` when the operator prompts for it, or `archived` when an operator
     disposition retires it (the retirement form, below).
   - `done` — the operator answered `Y` to the completion counter-prompt *and* every merge that `Y`
     named has landed. Between the two the row keeps the state it had, and its `disposed` carries the
@@ -286,7 +296,8 @@ that the event store only grows is, on `main`, the sysadmin craft's events guard
   execute). What
   the interval does not do is re-bind the `Y`: a resolution that changes a head voids it (Rule-2,
   Binding), the question is asked again, and its answer is a further entry on the same live row.
-- The completion reply carries the evidence the verification needs (E8): every PR of the
+- The completion reply carries the evidence the verification needs (E8), opening with the plan's
+  definition of done (Rule-15 phase 1), quoted, and the report that answers it; then every PR of the
   d-work by number and zone; each check's result as observed, never assumed, or "CI absent"
   with the local guard results (Rule-2, Binding); every host
   action taken, with its class and its change-log row (a missing row is stated as a Rule-8
@@ -415,7 +426,8 @@ what an agent may bring, never what the operator may ask for.
   before that single reply reports it, so an interrupted turn loses narration, never the record.
 - Periodically the incident log is worked whole rather than row by row: an exercise groups an
   incident ledger into failure modes and closes each one by a fence at a named moment, by a
-  `backlog` row naming the fence still to build, or by a recorded impossibility on this kernel
+  `backlog` row naming the fence still to build (carried under the plan-`Y` that runs the
+  exercise, never asked again; Ledger, #574), or by a recorded impossibility on this kernel
   naming the Rule that makes it so — that exercise is the incident-hardening play-book
   (`dyad/playbooks/incident-hardening.md`), which takes the incident ledger it hardens as its
   parameter and, on one that has not grown since the last exercise, does nothing beyond
@@ -514,6 +526,10 @@ verifying ancestry and closing, every one of them clerical execution of a record
 2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
 organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring, and Mechanisms the fence's corroboration step in place of the CI job's,
 2026-11-03 (d-work #564); see
-`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Completion counter-prompt's evidence opens with
+the plan's definition of done, and Scope, Plan, Ledger and Incidents carry the row a play-book the plan runs prescribes,
+2026-11-04 (d-work #574): rows were partitioned by the shape of the work rather than by what the operator can evaluate,
+and audit's eight fence rows under #571 cost a second question the plan-`Y` that ran the incident-hardening play-book
+had already answered; see the same record, amendment #574.
 
 Set: System Requirements.

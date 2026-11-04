@@ -791,3 +791,39 @@ This Rule's sentence changes with property 3 of Rule-14; the claim, its attacks 
 Rule this d-work touches are recorded once, in `rule-14-system-infrastructure.md`, amendment #564.
 
 Disposition: see ledger #564.
+
+
+## Amendment — d-work #574 (2026-11-04: the definition of done; the row a play-book the plan runs prescribes)
+**Claims.** (1) A row is partitioned by the operator's definition of done (DoD): the plan opens with it (Rule-15 phase
+1) and the completion evidence opens with it, quoted, and the report that answers it (this Rule, Completion
+counter-prompt). (2) A plan that runs a play-book carries the rows that play-book's own steps prescribe (Scope, Plan,
+Ledger, Incidents; Rule-2 Binding; Rule-7 property 4 and Enforcement): the incident-hardening play-book's `backlog`
+row naming a fence is born `backlog` under that plan-`Y`, entry `Y backlog (mandate #<id>)`, never asked again.
+
+| # | attack | result | survivor |
+|---|--------|--------|----------|
+| E1 | The play-book alone can make the evidence open with the DoD. | **confirmed: not enough.** A play-book is read by a Rule, never a Rule; the completion evidence is this Rule's list, whose omissions are breaches. | The evidence bullet gains the opening clause; Rule-15 phase 1 gains the plan part; the play-book holds the procedure. |
+| E2 | Adding a plan part is free. | **confirmed.** `dyadlib.PLAN_PARTS` drives `agent/plans` warnings over about 570 stored plans and an invariant pins five parts. | The guard part is engineer's PR, after this text, asked only of plans from this landing on. |
+| E3 | A DoD costs a question per row. | **survives.** It rides the plan question: the operator's words, or one marked proposed; `Y` accepts, `N` with text amends. | — |
+| E4 | A proposed DoD is the agent's text dressed as the operator's. | **survives.** Marked proposed until a plan-`Y`; the operator's own words are quoted only from a `prompt` entry (Rule-7). | — |
+| E5 | Accreted rows break one DoD per row. | **survives, scoped.** A child is work inside its parent's DoD, verified through the parent's report; a child the operator would judge on its own terms takes its own DoD and an explicit row (the escalate edge). | — |
+| E6 | The agent can decide what the operator can evaluate. | **survives.** It proposes; the operator's amendments correct it, and the amendment count measures the fit. | — |
+| E8 | A guard can check the evidence opens with the DoD. | **survives, stated.** The completion reply is chat; inference, as the rest of the evidence list is. | — |
+| F1 | A play-book-prescribed row needs no disposition of its own. | **confirmed against the old text** ("a plan that states no mandate scope accretes nothing"), which is what changes. | The play-book's step is the rule, its own count the ceiling; a row the step does not prescribe returns to explicit mode. |
+| F2 | This widens a `Y` past what the operator read. | **survives.** The question named the play-book, ratified corpus as legible before the `Y` as a stated scope; Rule-2's never-accretable list is unchanged, so a step that would open one of those still asks. | — |
+| F3 | A carried `backlog` row could be worked without the operator. | **survives, unchanged.** Carrying changes only its birth: `backlog → open` still needs the operator's prompt, after which it is explicit with its own pair of `Y`; it carries no `mode: implicit`, and a parent's Done stays askable over `backlog` children. | — |
+| F4 | Provenance breaks. | **survives.** Entry 1 is the carrying plan-`Y`'s words noted `mandate #<id>, <date>`; Rule-7's transaction clause names the carried case; property 5's count holds one for one. | — |
+| F5 | The verb already does it. | **confirmed: a verb change.** `dwork new --mandate` refuses `--backlog` today. | Engineer's PR admits `--backlog --mandate <id>`; until it lands, a carried row is written by hand to the same form. |
+| F6 | Every play-book that opens rows gains the power unseen. | **survives, stated.** Intended; the step's own text decides, and a play-book that wants a question says so (promotion's promise row opens only on a `Y` by its text). | — |
+
+**Pairwise (Rule-5).** **3–2**: Rule-2 owns what a `Y` binds; its mandate clause names the play-book case, the
+never-accretable list unchanged; this Rule owns when a row is born. **3–7**: Rule-7 stores the carried row's entry 1 as an
+accreted row's; this Rule owns the `disposed` form. **3–15**: Rule-15 owns the plan's parts; this Rule owns the evidence
+list. **3–16**: no new state or transition; a carried row is born `backlog`, already in `dyadlib.NEW_STATES`.
+**3–1, 4, 5, 6, 8–14, 18–20**: untouched. Coherent, orthogonal.
+
+**Terms (Rule-6).** New: `definition of done` (owner 15, used by 3 15); both read correctly. Changed: `backlog` (used
+by 3), `mandate scope` (used by 2 3), `accreted row` (used by 2 3 7 15 16); each Rule in their `used by` still reads
+correctly, the carried case being an addition to each definition.
+
+Disposition: see ledger #574.
