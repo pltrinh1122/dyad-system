@@ -160,9 +160,11 @@ class AutomatonTests(unittest.TestCase):
         (msg,) = self.inbox(HOME)
         self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
 
-    def sweep(self, check=(), hygiene=((), ()), **kw):
+    def sweep(self, check=(), hygiene=((), ()), inflight=(), **kw):
         with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now: (list(hygiene[0]), list(hygiene[1]))), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls: list(inflight)), \
+             unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
              unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now: []):
             return run(["sweep", "--row", "9"], self.w.seat, **kw)
@@ -199,6 +201,21 @@ class AutomatonTests(unittest.TestCase):
         self.assertTrue(any(", backlog hygiene: hygiene I1 untouched: backlog row #10" in m for m in msgs), msgs)
         self.assertTrue(any(", similarity candidates: candidate: #9 and #10" in m for m in msgs), msgs)
         rc, out, _ = self.sweep(hygiene=hyg)
+        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
+
+    def test_work_in_flight_is_told_one_notice_per_kind(self):
+        """#569: each W kind its own notice to home, new-only like every finding; never failing the sweep."""
+        self.w.write_main(self.files)
+        flight = ["inflight W1 relay unread: row #9's relay to eng-1 sent 2026-11-01T00:00:00Z has no read marker (over 4h)",
+                  "inflight W9 operator wait: row #9 waits on the operator with no question recorded",
+                  "inflight W9 operator wait: row #10 waits on the operator with no question recorded"]
+        rc, out, err = self.sweep(inflight=flight)
+        self.assertEqual(rc, 0, out + err)
+        msgs = self.inbox(HOME)
+        self.assertEqual(sorted(m.split(", ")[1].split(":")[0] for m in msgs if "work in flight" in m),
+                         ["work in flight W1", "work in flight W9"])
+        self.assertTrue(any("work in flight W9: inflight W9 operator wait: row #9" in m and "row #10" in m for m in msgs), msgs)
+        rc, out, _ = self.sweep(inflight=flight)
         self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
 
     def test_a_long_group_is_split_never_cut(self):

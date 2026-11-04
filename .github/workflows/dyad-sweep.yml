@@ -1,6 +1,6 @@
 name: d-work sweep
 # The automaton's scheduled sweep (d-work #564; run-book `workstation-corpus/runbooks/automaton.md`, operate's,
-# Rule-19). Twice a day, at 6:00 and 18:00 America/Los_Angeles, it runs the run-book's `sweep`
+# Rule-19). Twice a day, at 14:17 and 02:17 UTC (schedule below), it runs the run-book's `sweep`
 # (`dyad automaton sweep --row 564`, read-only):
 #   - every guard over every store and the full suite;
 #   - the outside-repo drift checks: archives against BUNDLE.sha256 and their tags, moved tags, the mirror against main;
@@ -10,10 +10,13 @@ name: d-work sweep
 # sweep's event, which this job commits events-only (clerical, Rule-3; no row, no PR) through the pre-push gate.
 # That commit is the heartbeat the run-book's health reads (last sweep under 13 h), and it is the repository activity
 # that keeps GitHub from disabling the schedule. A red sweep notifies; it holds nothing (plan #564, decision 2).
+# Schedule (d-work #575): the cron is UTC. GitHub ignored the `timezone` key: schedule run 41802948988 started at 08:53
+# UTC, the 06:00 UTC slot plus GitHub's delay, and no run came at 06:00 Pacific. 14:17 and 02:17 UTC are 06:17 and
+# 18:17 Pacific under standard time, and an hour later under daylight time, inside health's 13 h window either way.
+# Minute 17, off the hour, because top-of-the-hour schedule runs are the ones GitHub delays most.
 on:
   schedule:
-    - cron: '0 6,18 * * *'
-      timezone: 'America/Los_Angeles'
+    - cron: '17 14,2 * * *'
   workflow_dispatch: {}
 permissions:
   contents: write   # the events-only commit and the inbox notice
@@ -34,7 +37,7 @@ jobs:
           GITHUB_TOKEN: "${{ github.token }}"
           GITHUB_REPOSITORY: "${{ github.repository }}"
         run: |
-          TZ=America/Los_Angeles printf 'sweep at %(%Y-%m-%d %H:%M %Z)T (scheduled for 06 and 18 Pacific)\n' -1
+          TZ=America/Los_Angeles printf 'sweep at %(%Y-%m-%d %H:%M %Z)T (scheduled 14:17 and 02:17 UTC)\n' -1
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
