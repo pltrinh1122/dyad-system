@@ -92,7 +92,15 @@ class FormTests(unittest.TestCase):
             with self.assertRaises(ib.Refused, msg=argv) as e:
                 ib.parse_post(argv)
             self.assertIn(says, str(e.exception))
-        self.assertEqual(ib.parse_post(["program-x", "--row", "5", "--kind", "ack", "seen\n"]), ("program-x", 5, "ack", "seen"))
+        self.assertEqual(ib.parse_post(["program-x", "--row", "5", "--kind", "ack", "seen\n"]), ("program-x", 5, "ack", "seen", ()))
+        self.assertEqual(ib.parse_post(["program-x", "--cc", "orch-y", "--row", "5", "--kind", "report", "b"]),
+                         ("program-x", 5, "report", "b", ("orch-y",)))
+        for argv, says in ((["program-x", "--cc", "program-x", "--row", "5", "--kind", "report", "b"], "another seat"),
+                           (["program-x", "--cc", "o", "--cc", "o", "--row", "5", "--kind", "report", "b"], "once each"),
+                           (["program-x", "--cc", "o", "--row", "5", "--kind", "relay", "b"], "--cc is for a report")):
+            with self.assertRaises(ib.Refused, msg=argv) as e:
+                ib.parse_post(argv)
+            self.assertIn(says, str(e.exception))
 
     def test_contract(self):
         self.assertEqual((ib.ENTITY, ib.CORPUS, ib.TRANSACTION), ("message", "agent", True))
@@ -143,6 +151,24 @@ class CliTests(World):
         git(self.clones["engineer-1537d8fb"], "fetch", "-q", "origin")
         self.assertTrue(dyadlib.ledger_only(self.clones["engineer-1537d8fb"], before, head))
         self.assertEqual(ib.check_transaction(self.clones["engineer-1537d8fb"], before, head), [])
+
+    def test_cc_lands_one_commit_in_every_box(self):
+        """#572 K6: a report to home copied to orchestrate is one land, one message per box, each `to` its own box."""
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--cc", "orchestrate-d688fecf",
+                                    "--row", "5", "--kind", "report", "PR up")
+        self.assertEqual(rc, 0, err)
+        head = git(self.origin, "rev-parse", "main")
+        self.assertEqual(git(self.origin, "rev-list", "--count", f"{before}..{head}"), "1")
+        paths = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertEqual(sorted(p.split("/")[3] for p in paths), ["orchestrate-d688fecf", "program-59cec502"])
+        for p in paths:
+            f = dyadlib.load_guard("agent", "board").parse(git(self.origin, "show", f"main:{p}"))[0]
+            self.assertEqual((f["to"], f["body"]), (p.split("/")[3], "PR up"))
+        self.assertIn("(cc orchestrate-d688fecf)", git(self.origin, "log", "-1", "--format=%s", head))
+        git(self.clones["program-59cec502"], "pull", "-q", "--ff-only", "origin", "main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}):
+            self.assertEqual(ib.check_package(self.clones["program-59cec502"]), [])
 
     def test_post_refuses_before_anything_lands(self):
         before = git(self.origin, "rev-parse", "main")
@@ -238,6 +264,38 @@ class WriteAheadTests(World):
         f2 = dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"main:{presence}"))
         self.assertEqual(f2["rows"], "5"); self.assertGreaterEqual(f2["seen"], f["seen"])
 
+    def test_the_holders_relay_adds_its_receiver_as_owner_in_one_commit(self):
+        """#586 E1: today's #573 relay to orchestrate, refused twice because orchestrate was no owner, lands with
+        orchestrate added to the entry's owners in the same commit; a post from a unit that is not the holder is still
+        refused."""
+        self.board_set("owner=engineer-1537d8fb session_x", "waiting-on=unit engineer-1537d8fb", "next=send task-5")
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.relay(to="orchestrate-d688fecf")
+        self.assertEqual(rc, 0, err); self.assertIn("added orchestrate-d688fecf to board/5.md's owners", out)
+        head = git(self.origin, "rev-parse", "main")
+        self.assertEqual(git(self.origin, "rev-list", "--count", f"{before}..{head}"), "1")
+        changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertIn(f"{INST}/d-work/board/5.md", changed)
+        f = dyadlib.load_guard("agent", "board").parse(git(self.origin, "show", f"main:{INST}/d-work/board/5.md"))[0]
+        self.assertEqual(dyadlib.load_guard("agent", "board").owners(f), ["engineer-1537d8fb", "orchestrate-d688fecf"])
+        rc, _, err = self.as_seat("engineer-1537d8fb", "post", "counsel-0032b4c0", "--row", "5", "--kind", "relay", "x")
+        self.assertEqual(rc, 1); self.assertIn("names owner(s)", err)                  # not the holder: refused
+        self.assertEqual(git(self.origin, "rev-parse", "main"), head)
+
+    def test_only_the_holder_adds_an_owner_and_never_on_a_terminal_row(self):
+        """The holder condition alone (the entry's last writer, but another seat holds it), and a terminal row."""
+        self.board_set("holder=engineer-1537d8fb", "owner=engineer-1537d8fb session_x", "waiting-on=unit engineer-1537d8fb")
+        rc, _, err = self.relay(to="orchestrate-d688fecf")                    # program wrote it last, engineer holds it
+        self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, not orchestrate-d688fecf", err)
+        self.board_set("holder=program-59cec502")
+        d = self.clones["program-59cec502"]
+        git(d, "pull", "-q", "--ff-only", "origin", "main")
+        rows = d / INST / "d-work" / "rows" / "5.md"
+        rows.write_text(rows.read_text().replace("state: planned", "state: done"))
+        git(d, "commit", "-qam", "ledger: #5 done"); git(d, "push", "-q", "origin", "HEAD:main")
+        rc, _, err = self.relay(to="orchestrate-d688fecf")
+        self.assertEqual(rc, 1); self.assertIn("names owner(s)", err)
+
     def test_a_relay_without_its_board_entry_is_refused(self):
         before = git(self.origin, "rev-parse", "main")
         rc, _, err = self.relay()
@@ -248,7 +306,7 @@ class WriteAheadTests(World):
 
     def test_the_entry_must_name_the_seat_and_be_this_sessions(self):
         self.board_set("owner=engineer-1537d8fb session_x; counsel-0032b4c0 session_y", "waiting-on=seat engineer-1537d8fb", "next=send task-5")
-        rc, _, err = self.relay(to="distribute-a603e150")
+        rc, _, err = self.relay(to="distribute-a603e150", harness="h3")    # not the entry's last writer: no owner added
         self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, counsel-0032b4c0, not distribute-a603e150", err)
         rc, _, err = self.relay(harness="h3")                                # the same seat, another holder
         self.assertEqual(rc, 1); self.assertIn("was last written by h2, not this session (h3)", err)

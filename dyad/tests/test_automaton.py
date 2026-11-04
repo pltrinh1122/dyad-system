@@ -8,7 +8,9 @@ The cases:
   run; a second run has nothing to do.
 - A `Y done` naming a head the PR has moved off is refused. The refusal is posted once to the home's inbox (the board
   `_cos` holder), naming the row and quoting no entry; a second run does not post it again.
-- A planned row with a board entry notifies each owner once.
+- A planned row with a board entry notifies each owner once; the board is set waiting on its first owner and each
+  notice quotes the owner's part from the plan's `parts:` line (#572 K1, K2); a Done whose cut does not land waits on
+  its merge (K3).
 - A push race is re-merged at once, without backoff.
 - A row naming two PRs lands them as one cut: one push (#562).
 - A landed cut is corroborated once, before..after; a failed corroboration is posted to home and the run exits 1
@@ -109,6 +111,99 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = run(["run"], self.w.seat)
         self.assertEqual(out.strip(), "nothing to do")
 
+    def test_a_done_naming_no_merge_archives_its_retired_rows_next_run(self):
+        """#574 G5: a Done that names no merge is recorded `done` at once, so no close runs; the automaton archives."""
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        self.w.write_main({f"{rows}/9.md": ROW.format(id=9, state="done", disposed="2026-11-02 Y plan; 2026-11-02 Y done (retires #11)"),
+                           f"{prov}/9.md": REC.format(id=9), f"{rows}/11.md": ROW.format(id=11, state="backlog", disposed=""),
+                           f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"})
+        rc, out, err = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), "archive #11 (retired by row #9's Done)")
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(am.dyadlib.parse_row_file(self.on_main(f"{rows}/11.md")).state, "archived")
+        self.assertEqual(run(["run"], self.w.seat)[1].strip(), "nothing to do")
+
+    def test_a_no_merge_done_tells_home_once_of_a_retired_row_gone_open(self):
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        self.w.write_main({f"{rows}/9.md": ROW.format(id=9, state="done", disposed="2026-11-02 Y plan; 2026-11-02 Y done (retires #11)"),
+                           f"{prov}/9.md": REC.format(id=9), f"{rows}/11.md": ROW.format(id=11, state="open", disposed=""),
+                           f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"})
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        (msg,) = self.inbox(HOME); self.assertIn("row #11 is open", msg)
+        self.assertEqual(am.dyadlib.parse_row_file(self.on_main(f"{rows}/11.md")).state, "open")
+        self.assertEqual(run(["run"], self.w.seat)[1].strip(), "nothing to do")
+
+    def test_a_done_archives_exactly_the_rows_it_retires(self):
+        """#574 G5: the close archives each named row that is backlog or done, on the Done's words; a named row that
+        is open is told to home and left as it is."""
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        files = dict(self.files)
+        files[f"{rows}/9.md"] = ROW.format(id=9, state="planned",
+            disposed=f"2026-11-02 Y plan; 2026-11-02 Y done (accreted #10, retires #11, #12, #13, merges PR #7 at {self.sha})")
+        files[f"{prov}/9.md"] = REC.format(id=9)
+        for rid, st in ((11, "backlog"), (12, "done"), (13, "open"), (14, "backlog")):
+            files[f"{rows}/{rid}.md"] = ROW.format(id=rid, state=st, disposed="")
+        self.w.write_main(files)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        st = lambda rid: am.dyadlib.parse_row_file(self.on_main(f"{rows}/{rid}.md"))
+        self.assertEqual([st(r).state for r in (9, 11, 12, 13, 14)], ["done", "archived", "archived", "open", "backlog"])
+        self.assertRegex(st(11).disposed, r"Y archive \(done #9\)$")
+        self.assertRegex(self.on_main(f"{prov}/11.md"), r"## 1 disposition \d{4}-\d{2}-\d{2} done #9, 2026-11-02\n")
+        self.assertTrue(any("archive on close refused for row #9: row #13 is open" in m for m in self.inbox(HOME)), self.inbox(HOME))
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+        files = {f"{rows}/13.md": ROW.format(id=13, state="done", disposed="2026-11-03 Y done")}   # #13 done later, on its own
+        self.w.write_main(files)
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do"); self.assertEqual(st(13).state, "done")   # refused once, never resolved
+
+    def test_a_plan_y_flips_the_board_and_the_notice_quotes_each_part(self):
+        """#572 K1/K2: the board waits on the first owner with the plan as its next act and no question; each owner's
+        notice quotes its own part from the plan's `parts:` line, matched by seat or by function; one write, once."""
+        b = f"{INST}/d-work/board/12.md"
+        self.w.write_main({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                           f"{INST}/d-work/plans/12.md": "# Plan #12\n\nparts: engineer: PR 2, the verb; counsel-0032b4c0: PR 1, the Rule\n",
+                           b: f"holder: {HOME}\nowner: engineer-1537d8fb s1; counsel-0032b4c0 s2\nwaiting-on: operator\n"
+                              f"question: Y/N: proceed with #12 as planned?\nwriter: h1\n"})
+        rc, out, err = run(["scan"], self.w.seat)
+        self.assertIn("board #12: next=execute plans/12.md, question removed, waiting-on=unit engineer-1537d8fb", out)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        f = am.board().parse(self.on_main(b))[0]
+        self.assertEqual((f["waiting-on"], f["next"], f["holder"]), ("unit engineer-1537d8fb", "execute plans/12.md", HOME))
+        self.assertNotIn("question", f)
+        (eng,), (cou,) = self.inbox("engineer-1537d8fb"), self.inbox("counsel-0032b4c0")
+        self.assertIn("body: row #12 planned; read plans/12.md; yours: PR 2, the verb", eng)
+        self.assertIn("body: row #12 planned; read plans/12.md; yours: PR 1, the Rule", cou)
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+
+    def test_a_done_whose_cut_does_not_land_waits_on_its_merge(self):
+        """#572 K3: the merge is refused this run, so the board waits on the merge, its question removed; once."""
+        files = dict(self.files)
+        files[f"{INST}/d-work/board/9.md"] = f"holder: {HOME}\nwaiting-on: operator\nquestion: Y/N: Done with #9?\nwriter: h1\n"
+        self.w.write_main(files)
+        self.w.pr(7, "dyad/zz-pr.txt", "moved\n")                                       # the merge is refused
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        f = am.board().parse(self.on_main(f"{INST}/d-work/board/9.md"))[0]
+        self.assertEqual((f["waiting-on"], f["holder"]), ("external merge PR #7", HOME)); self.assertNotIn("question", f)
+        self.assertIn("board #9: question removed, waiting-on=external merge PR #7", out)
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertNotIn("board #9", out)
+
+    def test_plan_parts_and_part_for(self):
+        parts = am.plan_parts("# Plan\nParts: engineer: a; counsel-0032b4c0: b; bad\n")
+        self.assertEqual(parts, {"engineer": "a", "counsel-0032b4c0": "b"})
+        self.assertEqual((am.part_for(parts, "engineer-1537d8fb"), am.part_for(parts, "counsel-0032b4c0"),
+                          am.part_for(parts, "audit-e73be78c")), ("a", "b", None))
+        self.assertEqual(am.plan_parts("# Plan\n"), {})
+        self.assertNotRegex(am.notice_body(1, "after 2026-11-02 Y plan (x)"), r"\d{4}-\d{2}-\d{2} Y plan")   # masked as post masks
+
     def test_a_push_race_is_retried(self):
         self.w.write_main(self.files)
         calls = []
@@ -162,11 +257,11 @@ class AutomatonTests(unittest.TestCase):
 
     def sweep(self, check=(), hygiene=((), ()), inflight=(), **kw):
         with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
-             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now: (list(hygiene[0]), list(hygiene[1]))), \
-             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls: list(inflight)), \
+             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: list(inflight)), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
-             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now: []):
+             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
             return run(["sweep", "--row", "9"], self.w.seat, **kw)
 
     def test_the_sweep_tells_only_what_is_new(self):

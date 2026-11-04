@@ -1,0 +1,75 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/backlog-hygiene",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "backlog-hygiene",
+  "name": "Backlog hygiene",
+  "description": "Which backlog rows and row pairs the scheduled sweep's hygiene reports to the home.",
+  "dyad:decides": "Which backlog rows, and which pairs of rows, does the sweep's hygiene report?",
+  "dyad:inputs": [
+    "each backlog row's last commit to its row, plan or provenance record",
+    "the TF-IDF cosine of each pair of backlog rows, siblings of one parent skipped",
+    "the preferences hygiene-stale-days, hygiene-similar and hygiene-top"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "untouched",
+      "name": "a row untouched",
+      "dyad:when": "no commit has touched the row, its plan or its provenance record for hygiene-stale-days",
+      "dyad:then": "a structural finding, posted once in the sweep's notice: a reason to read the row, never a verdict on it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "similar",
+      "name": "a candidate for the review",
+      "dyad:when": "a pair's cosine is at or above hygiene-similar, and it is among the hygiene-top highest",
+      "dyad:then": "listed as a candidate line for the home's review, never a finding"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "none",
+      "name": "nothing else",
+      "dyad:when": "neither holds",
+      "dyad:then": "nothing is reported"
+    }
+  ],
+  "dyad:tunables": [
+    {
+      "dyad:preference": "hygiene-stale-days",
+      "dyad:defaultValue": "30",
+      "dyad:allowed": "a positive integer (days)",
+      "dyad:readBy": "scripts/hygiene.py"
+    },
+    {
+      "dyad:preference": "hygiene-similar",
+      "dyad:defaultValue": "0.35",
+      "dyad:allowed": "a number between 0 and 1",
+      "dyad:readBy": "scripts/hygiene.py"
+    },
+    {
+      "dyad:preference": "hygiene-top",
+      "dyad:defaultValue": "10",
+      "dyad:allowed": "a positive integer (pairs)",
+      "dyad:readBy": "scripts/hygiene.py"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/hygiene.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "scripts/automaton.py"
+  ],
+  "dyad:owner": "Rule-3"
+}

@@ -5,7 +5,8 @@ file name (a title after ` — ` is free text), carries a base-commit line (`bas
 case, Rule-15 phase 1). Existence of these parts, nothing more: what a plan says stays inference
 (plan #151, mutation 6). A plan naming no intent (no line mentioning `intent`), or never mentioning
 a part of dyadlib.PLAN_PARTS, is reported as a warning: plans ratified before Rule-15 keep their
-form (plan #138 states a claim instead of an intent). The id → row and base commit → commit references are resolved by
+form (plan #138 states a claim instead of an intent). `definition of done` (#574) is asked only of a plan whose row
+opened on or after dyadlib.DOD_SINCE, so the plans written before it keep their five parts. The id → row and base commit → commit references are resolved by
 `references.py` (Rule-20).
   plans.py [repo-root]
 """
@@ -42,7 +43,12 @@ def parse(text: str) -> dict[str, str]:
     intent = next((l.strip() for l in text.splitlines() if _INTENT.search(l)), "")
     return {"id": m.group(1) if m else "", "title": (m.group(2) or "").strip() if m else "", "base commit": b.group(1) if b else "", "intent": intent}
 
-def check_plan(path: Path, text: str | None = None) -> list[str]:
+def parts_for(opened: str | None) -> tuple[str, ...]:
+    """The PLAN_PARTS a plan is asked for: all six when its row opened on or after DOD_SINCE, else the first five
+    (#574: the part is new, and a stored plan is never asked to grow one)."""
+    return dyadlib.PLAN_PARTS if opened and opened >= dyadlib.DOD_SINCE else dyadlib.PLAN_PARTS[:-1]
+
+def check_plan(path: Path, text: str | None = None, opened: str | None = None) -> list[str]:
     text = path.read_text() if text is None else text
     d = parse(text); msgs = []
     if not d["id"]:
@@ -54,16 +60,20 @@ def check_plan(path: Path, text: str | None = None) -> list[str]:
     if not d["intent"]:
         msgs.append(f"warning: {path.name}: names no intent (Rule-15 phase 1)")
     low = text.lower()
-    for part in dyadlib.PLAN_PARTS:
+    for part in parts_for(opened):
         if part not in low:
             msgs.append(f"warning: {path.name}: never mentions `{part}` (dyadlib.PLAN_PARTS)")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
-    msgs = []
-    for p in plans(root):
-        msgs += check_plan(p)
+    msgs, ps = [], plans(root)
+    try:
+        opened = {str(r.id): r.opened for r in dyadlib.read_rows(root)} if ps else {}
+    except (OSError, ValueError, KeyError):
+        opened = {}
+    for p in ps:
+        msgs += check_plan(p, opened=opened.get(p.stem))
     return msgs
 
 def summary(root: Path | None = None) -> str:

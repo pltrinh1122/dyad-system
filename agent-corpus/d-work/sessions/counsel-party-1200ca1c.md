@@ -1,5 +1,5 @@
 session: counsel-party-1200ca1c
-seen: 2026-11-04T20:35:00+00:00
+seen: 2026-11-04T22:15:56+00:00
 root: /home/user/wt-593
 rows: 593
 files: 

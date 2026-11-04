@@ -7,7 +7,8 @@ What the cos holds in flight lived only in its chat, so a hop of the mode from o
 table. The board store puts it on `main`:
 
   <instance>/d-work/board/<id>.md   one per row not terminal with orchestration in flight
-  <instance>/d-work/board/_cos.md   the cross-row items: the pending queue, the seat table, the last question asked
+  <instance>/d-work/board/_cos.md   the cross-row items: the seat table, the last question asked, the promises (the
+                                    pending queue is derived at read since #572 K4; a stored `queue` is still read)
 
 Each file is `key: value` lines; a value continues on the lines after it that start with two spaces (so a question
 is kept verbatim, newlines and all); blank and `#` lines are skipped. Keys of a row's file: `holder` (the cos session
@@ -207,15 +208,16 @@ def writer_warning(name: str, fields: dict[str, str], me: str) -> str | None:
 
 
 def merged(old: dict[str, str], pairs: dict[str, str], seat: str | None, me: str, now: str) -> dict[str, str]:
-    """`old` with `pairs` applied (`key=` removes), `holder` defaulted to `seat`, `since` to `now` when `waiting-on`
-    changes or the entry is new, and `writer` set to `me`."""
+    """`old` with `pairs` applied (`key=` removes), `holder` defaulted to `seat` only when the entry holds none (#572 K7:
+    a default that re-took the holder on every write flipped it in 44 of 130 writes), `since` to `now` when
+    `waiting-on` changes or the entry is new, and `writer` set to `me`."""
     new = dict(old)
     for k, v in pairs.items():
         if v == "":
             new.pop(k, None)
         else:
             new[k] = v
-    if "holder" not in pairs and seat:
+    if "holder" not in pairs and seat and not new.get("holder"):
         new["holder"] = seat
     if "since" not in pairs and (not old or new.get("waiting-on") != old.get("waiting-on")):
         new["since"] = now
@@ -338,6 +340,7 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
                    f"owner {f.get('owner', '-')} | next: {(f.get('next') or '-').splitlines()[0]} | {title[:60]}")
         if f.get("question"):
             out.append(f"    question: {f['question'].splitlines()[-1]}")
+    out.append(queue_line(derived_queue(root, got)))
     if cos:
         for k in ("queue", "seats", "question"):
             if cos.get(k):
@@ -347,6 +350,25 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
     out.append(f"{len(missing)} open, planned or blocked row(s) carry no board entry")
     out += [w for n, f in got if (w := writer_warning(n, f, me))]
     return out
+
+
+def derived_queue(root: Path, got: list[tuple[str, dict[str, str]]] | None = None) -> dict[str, list[int]]:
+    """#572 K4: the pending queue read from records instead of written to `_cos`: `plan-ready`, the open rows with a
+    stored plan and no `Y plan` entry, not accreted under a mandate; `done-ready`, the live entries whose question is a
+    Done question (`Done with`). Rule-3's counts, so no write keeps them."""
+    got = load(root) if got is None else got
+    plans = dyadlib.instance(root) / "d-work" / "plans"
+    rows = dyadlib.read_rows(root)
+    plan_ready = [r.id for r in rows if r.state == "open" and (plans / f"{r.id}.md").exists()
+                  and " Y plan" not in f" {r.disposed}" and "mandate #" not in r.disposed]
+    live = {r.id for r in rows if r.state not in dyadlib.TERMINAL_STATES}
+    done_ready = sorted(int(n) for n, f in got if n.isdigit() and int(n) in live and "Done with" in (f.get("question") or ""))
+    return {"plan-ready": plan_ready, "done-ready": done_ready}
+
+
+def queue_line(q: dict[str, list[int]]) -> str:
+    return ("queue (derived, #572): " + ", ".join(f"{k} {len(v)}" + (f" ({' '.join(f'#{i}' for i in v)})" if v else "")
+                                                 for k, v in q.items()))
 
 
 def owners(f: dict[str, str]) -> list[str]:
@@ -400,6 +422,7 @@ def resume_lines(root: Path) -> list[str]:
             if f.get(k):
                 first, *rest = f[k].split("\n")
                 out.append(f"  {k}: {first}"); out.extend(f"    {r}" for r in rest)
+    out.append(queue_line(derived_queue(root)))
     if cos:
         block(f"{COS}:", cos, COS_FIELDS)
     for n, f in v["live"]:

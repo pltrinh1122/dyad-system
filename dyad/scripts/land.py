@@ -211,7 +211,7 @@ def already_landed(wt: Path, inst: str, pos: list[str], vals: dict, bare: set, w
                 continue
             first = (record_at(wt, inst, r.id) or [{}])[0]
             if mandate is not None and f"(mandate #{mandate})" in r.disposed:
-                return f"#{r.id} {title!r} is already accreted under mandate #{mandate}"
+                return f"#{r.id} {title!r} is already carried under mandate #{mandate}"
             if first.get("text") in {t for t in (prompt, said) if t is not None}:
                 return f"#{r.id} {title!r} already holds these words as its entry 1"
         return None
@@ -243,7 +243,8 @@ def subject(verb: str, pos: list[str], vals: dict, bare: set, stdout: str) -> st
     d, line = vals.get("-d"), (stdout.strip().splitlines() or [""])[-1]
     if verb == "new":
         rid = line.strip()
-        what = f"accreted under mandate #{vals['--mandate']}" if "--mandate" in vals else ("backlog" if "--backlog" in bare else "open")
+        what = ((f"backlog, carried under mandate #{vals['--mandate']}" if "--backlog" in bare else f"accreted under mandate #{vals['--mandate']}")
+                if "--mandate" in vals else ("backlog" if "--backlog" in bare else "open"))
         s = f"ledger: #{rid} {what}{f' ({d})' if d else ''}: {pos[1]}"
     elif "--mandate" in vals:
         s = f"ledger: #{pos[1]} {pos[2]} (mandate #{vals['--mandate']})"
@@ -480,7 +481,9 @@ def land_rels(repo: Path, inst: str, names: list[str], label: str = "dwork land"
 
 # ---- the batch (#459)
 BATCH_USAGE = ("usage: dwork batch <file>|- --land [--mirror <branch>] — one `dwork` argv per line, shell-quoted: "
-               "`new …`, `state …` or `land <path>…`; blank and `#` lines are skipped; -m, --land and --mirror are the "
+               "`new …`, `state …`, `land <path>…`, `board <id>|_cos key=value…` or `post <unit> --row N --kind K …` "
+               "(#586: one commit for the record, the board and the relays; it prints the units to ring); blank and "
+               "`#` lines are skipped; -m, --land and --mirror are the "
                "batch's, never a line's. A later line cannot name an id a `new` line of the same batch creates: that id "
                "is allocated in the worktree and re-allocated on a rebuild. Under `dwork-trace: always` a `Y done` line's "
                "trace rides the batch: a `land <instance>/d-work/traces/<id>.md` line before it (#465)")
@@ -496,6 +499,35 @@ class Line:
 
     def where(self) -> str:
         return f"line {self.n} ({self.text})"
+
+
+def board_guard():
+    return dyadlib.load_guard("agent", "board")
+
+
+def inbox_guard():
+    return dyadlib.load_guard("agent", "inbox")
+
+
+def other_line(n: int, t: str, toks: list[str]) -> "Line":
+    """#586 E2: a `board <id>|_cos key=value… [--drop]` or `post <unit> --row N --kind K (<body>|--body-file p)
+    [--cc <unit>]…` line, parsed and refused here by the same parsers `dyad board set` and `dyad inbox post` use, so a
+    batch that holds one refuses before its first write; `--body-file` is read now, relative to the caller."""
+    verb, rest = toks[0], toks[1:]
+    try:
+        if verb == "board":
+            parsed = board_guard().parse_set(rest)
+        else:
+            if "--body-file" in rest:
+                i = rest.index("--body-file")
+                if i + 1 < len(rest):
+                    rest = rest[:i + 1] + [str(Path(rest[i + 1]).resolve())] + rest[i + 2:]
+            parsed = inbox_guard().parse_post(rest)
+    except (board_guard().Refused, inbox_guard().Refused, OSError, UnicodeDecodeError) as e:
+        raise Refused(f"line {n}: {verb}: {e}") from None
+    ln = Line(n, t, [verb, *rest[:1]], {}, set(), [], [])
+    ln.parsed = parsed
+    return ln
 
 
 def as_refused(n: int, f, *a):
@@ -522,14 +554,17 @@ def read_batch(src: str, repo: Path, inst: str, value_flags, parse) -> list[Line
             toks = shlex.split(t)
         except ValueError as e:
             raise Refused(f"line {n}: {e}") from None
+        if toks and toks[0] in ("board", "post"):   # #586 E2: parsed by their own CLIs' parsers, before anything runs
+            lines.append(other_line(n, t, toks))
+            continue
         pos, vals, bare = as_refused(n, parse, toks)
         for flag, given in (("-m", "-m" in vals), ("--mirror", "--mirror" in vals), ("--land", "--land" in bare)):
             if given:
                 raise Refused(f"line {n}: {flag} is the batch's, never a line's: the batch generates one subject, "
                               f"takes one --mirror and lands every line ({BATCH_USAGE})")
         verb = pos[0] if pos else None
-        if verb not in ("new", "state", "land"):   # the verbs --land lands, and land
-            raise Refused(f"line {n}: a batch line is `new`, `state` or `land <path>…`, not {verb!r}")
+        if verb not in ("new", "state", "land", "board", "post"):   # the verbs --land lands, land, and #586's two
+            raise Refused(f"line {n}: a batch line is `new`, `state`, `land <path>…`, `board …` or `post …`, not {verb!r}")
         if "--check" in bare:   # #464: a line that writes nothing has nothing to land; check it alone
             raise Refused(f"line {n}: --check writes nothing, so a batch cannot land it; run `dwork state … --check` alone")
         if verb == "land":
@@ -569,7 +604,22 @@ def done_order(lines: list[Line], today: str) -> None:
                       f"merge, then the close batch; nothing landed")
 
 
+def posted_already(wt: Path, inst: str, to: str, row: int, kind: str, body: str, sender: str) -> bool:
+    """An identical message from `sender` already in `to`'s box on the tree at `wt`: a re-run batch never posts twice."""
+    ib = inbox_guard()
+    d = wt / inst / ib.INBOX_REL / to
+    return d.is_dir() and any(
+        (f := board_guard().parse(p.read_text(errors="replace"))[0]).get("from") == sender and f.get("row") == str(row)
+        and f.get("kind") == kind and f.get("body") == body for p in d.glob("*.md"))
+
+
 def line_landed(repo: Path, wt: Path, inst: str, ln: Line, words, today: str) -> str | None:
+    if ln.verb == "post":
+        to, row, kind, body, _ = ln.parsed
+        sender = os.environ.get("DYAD_SESSION", "")
+        return f"the same {kind} to {to} on row #{row} is on origin/main" if posted_already(wt, inst, to, row, kind, body, sender) else None
+    if ln.verb == "board":
+        return None                                      # `board set` itself refuses an identical entry: run, and skip it then
     if ln.verb == "land":
         return f"{', '.join(ln.rels)} identical on origin/main" if identical(repo, wt, ln.rels) else None
     return as_refused(ln.n, already_landed, wt, inst, ln.pos, ln.vals, ln.bare, words, today)
@@ -593,8 +643,22 @@ def batch_subject(parts: list[str]) -> str:
     return dyadlib.load_guard("agent", "prs").CITE.sub(r"#\1", s)
 
 
-def batch_builder(repo: Path, lines: list[Line], inst: str, words):
+def keep_relay_owners(name: str, pairs: dict[str, str], lines: list[Line]) -> dict[str, str]:
+    """A board line that sets `owner` on a row keeps every unit a relay line of the same batch sends that row to, so a
+    relay's added owner (#586 E1) survives the board line whatever their order, and a re-run of the batch writes the
+    same entry and is skipped as landed (review of #586)."""
+    if "owner" not in pairs or not name.isdigit():
+        return pairs
+    own = [o for o in (x.strip() for x in pairs["owner"].split(";")) if o]
+    for ln in lines:
+        if ln.verb == "post" and ln.parsed[2] == "relay" and ln.parsed[1] == int(name) and ln.parsed[0] not in board_guard().owners({"owner": "; ".join(own)}):
+            own.append(ln.parsed[0])
+    return {**pairs, "owner": "; ".join(own)}
+
+
+def batch_builder(repo: Path, lines: list[Line], inst: str, words, ran: list | None = None):
     today = datetime.date.today().isoformat()
+    ran = [] if ran is None else ran
     def build(wt: Path):
         run = []
         for ln in lines:      # judged against origin/main before any line runs, on every try
@@ -605,11 +669,29 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words):
                 run.append(ln)
         if not run:
             raise Refused("already landed: every line of the batch is on origin/main; nothing pushed")
+        ran[:] = [ln for ln in run if ln.verb == "post"]   # the ring is the posts this try runs, never a skipped one
         parts, outs, handed = [], [], []
         for ln in run:
             if ln.verb == "land":
                 copy_paths(repo, wt, ln.rels)
                 parts += [land_part(inst, rel) for rel in ln.rels]
+                continue
+            if ln.verb in ("board", "post"):              # #586 E2: the CLIs' own builders, in this worktree, in order
+                try:
+                    if ln.verb == "board":
+                        name, pairs, drop = ln.parsed
+                        pairs = keep_relay_owners(name, pairs, lines)
+                        _, msg, out = board_guard().set_builder(name, pairs, drop, inst)(wt)
+                    else:
+                        to, row, kind, body, cc = ln.parsed
+                        _, msg, out = inbox_guard().post_builder(to, row, kind, body, inbox_guard().this_seat(), inst, cc)(wt)
+                except (board_guard().Refused, inbox_guard().Refused) as e:
+                    if ln.verb == "board" and str(e).startswith("already landed"):
+                        print(f"skipped (already landed): {ln.where()}: {e}")
+                        continue
+                    raise Refused(f"{ln.where()}: {ln.verb} refused it in the worktree ({e}); the batch stops and nothing landed") from None
+                outs.append(out.strip())
+                parts.append(msg.removeprefix("ledger: "))
                 continue
             r = run_verb(wt, inst, ln.argv)
             if r.returncode:
@@ -632,7 +714,22 @@ def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror
     lines = read_batch(a_pos[1], repo, inst, value_flags, parse)
     done_order(lines, datetime.date.today().isoformat())
     landed = sorted({rel for ln in lines for rel in ln.rels})
-    return land(repo, inst, mirror, batch_builder(repo, lines, inst, words), "dwork batch", landed)
+    ran: list = []
+    rc = land(repo, inst, mirror, batch_builder(repo, lines, inst, words, ran), "dwork batch", landed)
+    ring = ring_list(ran)
+    if rc == 0 and ring:
+        print(f"ring: {', '.join(ring)} (a doorbell is the session's act, #586 X4)")
+    return rc
+
+
+def ring_list(lines: list[Line]) -> list[str]:
+    """#586 X4: the units the batch's actionable posts reach (every `post` line not of kind `notice`, its `--cc`
+    seats too), in order and once each; the session rings them, since no command can (#584 M4)."""
+    out = []
+    for ln in lines:
+        if ln.verb == "post" and ln.parsed[2] != "notice":
+            out += [u for u in (ln.parsed[0], *ln.parsed[4]) if u not in out]
+    return out
 
 
 def main(a: list[str], repo: Path, value_flags, parse, words) -> int:

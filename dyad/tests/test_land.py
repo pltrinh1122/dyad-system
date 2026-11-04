@@ -119,6 +119,18 @@ class LandTests(unittest.TestCase):
         self.assertEqual(out.splitlines()[0], "3")
         self.assertTrue(git(self.origin, "log", "-1", "--format=%s", "main").startswith("ledger: #3 open: mine"))
 
+    def test_a_carried_backlog_row_lands_with_its_subject_and_once(self):
+        """#574: `new --backlog --mandate` lands as `#N backlog, carried under mandate #M`, and a re-run is refused."""
+        rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(git(self.origin, "log", "-1", "--format=%s", "main").startswith("ledger: #2 backlog, carried under mandate #1: a fence"))
+        head = self.main_at_origin()
+        rc, _, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        self.assertEqual(rc, 1); self.assertIn("already carried under mandate #1", err)
+        self.assertEqual(self.main_at_origin(), head)
+
     def test_an_already_landed_entry_is_refused(self):
         rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
         self.assertEqual(rc, 0, err)
@@ -301,6 +313,82 @@ class LandTests(unittest.TestCase):
         self.assertEqual(self.files_of(head), [s + "provenance/1.md", s + "rows/1.md", s + "traces/1.md"])
         self.assertEqual(git(self.origin, "log", "-1", "--format=%s", "main"), "ledger: batch trace #1, #1 done (Y done)")
         self.assertEqual(len(self.hook_runs()), 1)
+
+    # ---- #586 E2: board and post lines ride the batch; any refusal lands none of them
+    def holder_env(self):
+        return unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-aaaaaaaa", "CLAUDE_CODE_SESSION_ID": "h-home"})
+
+    def test_a_record_board_and_relay_are_one_commit_and_print_the_ring(self):
+        s = f"{INST}/d-work/"
+        with self.holder_env():
+            rc, out, err = self.batch("state 1 planned -d 'Y plan' --said Y\n"
+                                      "board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb' next='build it'\n"
+                                      "post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n"
+                                      "post orchestrate-cccccccc --row 1 --kind notice 'fyi'\n")
+        self.assertEqual(rc, 0, err)
+        head = self.main_at_origin()
+        self.assertEqual(git(self.origin, "rev-list", "--count", "main~1..main"), "1"); self.assertEqual(len(self.hook_runs()), 1)
+        files = self.files_of(head)
+        self.assertIn(s + "board/1.md", files); self.assertIn(s + "rows/1.md", files)
+        self.assertEqual(sum(f.startswith(s + "inbox/engineer-bbbbbbbb/") for f in files), 1)
+        self.assertEqual(sum(f.startswith(s + "inbox/orchestrate-cccccccc/") for f in files), 1)
+        self.assertIn("ring: engineer-bbbbbbbb (a doorbell", out)                     # a notice is not rung
+        with self.holder_env():                                                        # a re-run posts nothing twice
+            rc, out, err = self.batch("post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n")
+        self.assertEqual(rc, 1); self.assertIn("already landed", err)
+
+    def test_a_batch_relay_to_a_non_owner_keeps_its_owner_on_a_re_run(self):
+        """#586 E1 inside a batch, and the review's blocking case: the relay adds its receiver as owner; a re-run of
+        the whole batch, its board line included, lands nothing and keeps that owner; --cc rings, --drop lands."""
+        s, text = f"{INST}/d-work/", ("board 1 owner=program-aaaaaaaa waiting-on='unit program-aaaaaaaa'\n"
+                                     "post engineer-bbbbbbbb --row 1 --kind relay 'go' \n"
+                                     "post program-aaaaaaaa --cc orchestrate-cccccccc --row 1 --kind report 'up'\n")
+        bd = dyadlib.load_guard("agent", "board")
+        with self.holder_env():
+            rc, out, err = self.batch(text)
+        self.assertEqual(rc, 0, err); self.assertEqual(len(self.hook_runs()), 1)
+        owners = lambda: bd.owners(bd.parse(git(self.origin, "show", f"main:{s}board/1.md"))[0])
+        self.assertEqual(owners(), ["program-aaaaaaaa", "engineer-bbbbbbbb"])
+        self.assertIn("ring: engineer-bbbbbbbb, program-aaaaaaaa, orchestrate-cccccccc", out)
+        head = self.main_at_origin()
+        with self.holder_env():
+            rc, out, err = self.batch(text + "state 1 planned -d 'Y plan' --said Y\n")   # the old lines and one new
+        self.assertEqual(rc, 0, err)
+        self.assertIn("skipped (already landed): line 1 (board 1", out); self.assertNotIn("ring:", out)   # nothing rung twice
+        self.assertEqual(owners(), ["program-aaaaaaaa", "engineer-bbbbbbbb"])
+        self.assertEqual(self.files_of(self.main_at_origin()),                        # the new line and its presence (#567)
+                         [s + "provenance/1.md", s + "rows/1.md", s + "sessions/program-aaaaaaaa.md"])
+        with self.holder_env():
+            rc, out, err = self.batch("board 1 --drop\n")
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn(f"{s}board/1.md", git(self.origin, "ls-tree", "-r", "--name-only", "main", f"{s}board"))
+
+    def test_a_body_file_that_is_no_utf8_is_a_line_refusal(self):
+        bad = self.top / "bad.bin"; bad.write_bytes(b"\xff\xfe\x80")
+        with self.holder_env():
+            rc, _, err = self.batch(f"post engineer-bbbbbbbb --row 1 --kind report --body-file {bad}\n")
+        self.assertEqual(rc, 1); self.assertIn("line 1: post:", err); self.assertNotIn("Traceback", err)
+
+    def test_a_refused_disposition_drops_its_board_and_relays(self):
+        """Today's #573 slip: a `;` in `-d` refused the record while its relays had already gone out."""
+        before = self.main_at_origin()
+        with self.holder_env():
+            rc, out, err = self.batch("board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb'\n"
+                                      "post engineer-bbbbbbbb --row 1 --kind relay 'go'\n"
+                                      "state 1 planned -d 'Y B3 (a; b)' --said Y\n")
+        self.assertEqual(rc, 1); self.assertIn("line 3", err); self.assertIn("nothing landed", err)
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])
+        self.assertNotIn("ring:", out)
+
+    def test_a_bad_board_or_post_line_is_refused_before_anything_runs(self):
+        before = self.main_at_origin()
+        with self.holder_env():
+            for text, says in (("board 1 colour=red\n", "unknown key 'colour'"),
+                               ("post engineer-bbbbbbbb --row 1 --kind report '2026-11-04 Y plan'\n", "disposition-shaped"),
+                               ("post engineer-bbbbbbbb --row 1 --kind order 'x'\n", "usage")):
+                rc, _, err = self.batch("state 1 planned -d 'Y plan' --said Y\n" + text)
+                self.assertEqual(rc, 1, text); self.assertIn("line 2: ", err); self.assertIn(says, err)
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])
 
     def test_a_refused_line_lands_nothing(self):
         before = self.main_at_origin()
