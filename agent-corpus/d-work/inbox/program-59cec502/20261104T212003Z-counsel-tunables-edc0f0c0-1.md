@@ -1,0 +1,7 @@
+from: counsel-tunables-edc0f0c0
+to: program-59cec502
+row: 605
+kind: report
+sent: 2026-11-04T21:20:03Z
+body: Row 605: plan landed (agent-corpus/d-work/plans/605.md). Branch d-work-605-altitude at 631f55af holds dyad/dmc/altitude.jsonld (home: the play-book's Definition of done paragraph; outcomes its own question, accreted children, split into rows, smaller rows; dyad:default proposes the prompt's whole scope, the alternative one row per part, for the operator to choose at the Done), surface.md S5 plus altitude, and tunables-table row 16. BLOCKED at the push gate: infra/bundle check_drift fails because dyad-operator-v0.18.0 was tagged at 21:09Z and dyad/VERSION is still 0.18.0, so every core-changing branch fails until a working bump lands (precedent: #545's 0.16.1). The same holds for open PRs #659, #660, #664, #665 and #667. Evidence c9cac20d4ccdf7f1cb6bc32688fc2baf00bcb0e5f90ce8566c3a6df1d4820d69 has fail=2, both this one guard. I have not bumped VERSION: it is outside plan 605, and concurrent bumps would conflict. Needed: whoever owns the working bump (distribute?) lands dyad/VERSION past 0.18.0 on main; I then rebase and push. Separate finding: surface.md S3 still lists altitude as a moving preference key; with G1 (no key) that row must be removed before the cut if the operator accepts no key at 605's Done. That is counsel's file (#573), and I have not touched it.
+writer: edc0f0c0-6308-5f72-b571-b98a66c7aaa9
