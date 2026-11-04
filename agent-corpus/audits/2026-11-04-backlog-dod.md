@@ -8,6 +8,11 @@ the proposal. Nothing is opened, retired or merged by this document. Its tracked
 `agent-corpus/audits/2026-11-04-backlog-dod.md` (plan #570 named `2026-11-backlog-dod.md`; the audit naming guard
 requires the day).*
 
+**Revision 2 (2026-11-04), after your `Y` on #570 revision 6** (v1.0.0's scope in or out). Group 1 splits: its four
+fences in v1.0 (R-a, R-b, R-c, R-e) are absorbed into #592, the other four form group 1b, out of 1.0. Group 3 is
+absorbed into #593, and #548 leaves group 5 for #594. #592–#594 were opened under #570's mandate by that `Y`.
+The counts and section 6 follow.
+
 **How to read it.** Section 3 holds the groups, section 4 every row. Amend only the DoDs you would define differently,
 by group or row id. The number you amend is the measure of the proposals (plan #570, revision 4).
 
@@ -48,19 +53,19 @@ which was archived before), and the eight fence rows #576–#583 were opened. 62
 | measure | count | rows |
 |---|---:|---|
 | rows in (`backlog` at 9a3de41) | 49 | |
-| merged into a new row (one DoD over several rows) | 28 | groups 1–6 |
-| absorbed into an open row (rides its Done as `retires`) | 1 | #554 into #573's step 4 |
+| merged into a new row (one DoD over several rows) | 21 | groups 1b, 2, 4, 5, 6 |
+| absorbed into an open row (retired by #574's Done, or by step 4's for #554) | 8 | #554 into #573's step 4; #577, #579, #581, #583 into #592; #54, #55 into #593; #548 into #594 |
 | split | 2 | #317 (one sentence to #585, one to #303); #319 (two new rows) |
 | work already delivered (retire; ground: carried by #567, `done`) | 2 | #130, #311 |
 | unchanged (own DoD, stays `backlog`) | 16 | |
-| **DoDs out, on backlog work** | **24** | 6 groups + 2 from #319 + 16 unchanged |
-| open rows whose DoD takes backlog work | 2 | #573's step 4 (#554), #585 (#317's sentence b) |
-| rows that would leave the backlog | 33 | the 28 merged, #554, #317, #319, #130, #311 |
-| new rows to open | 8 | groups 1–6, 319a, 319b |
-| backlog afterwards, if all is accepted | 24 | 49 − 33 + 8 |
+| **DoDs out, on backlog work** | **23** | 5 groups + 2 from #319 + 16 unchanged |
+| open rows whose DoD takes backlog work | 5 | #573's step 4 (#554), #585 (#317's sentence b), #592, #593, #594 |
+| rows #574's Done retires | 32 | the 21 merged, the 7 absorbed into #592–#594, #317, #319, #130, #311 (#554 waits for step 4) |
+| new rows #574's Done opens as `backlog` | 7 | groups 1b, 2, 4, 5, 6, 319a, 319b |
+| backlog afterwards, if all is accepted | 24 | 49 − 32 + 7 (#554 stays until step 4) |
 | DoDs you amended | — | after your reply |
 
-Sum check: 28 merged + 1 absorbed + 2 split + 2 delivered + 16 unchanged = 49.
+Sum check: 21 merged + 8 absorbed + 2 split + 2 delivered + 16 unchanged = 49.
 
 ## 3. Proposed DoD groups
 
@@ -70,8 +75,12 @@ Sum check: 28 merged + 1 absorbed + 2 split + 2 delivered + 16 unchanged = 49.
 |---|---|---|---|
 | #573 public surface | *proposed* (plan #570 revision 4): "a report listing the surface 1.0 freezes and every alias removed, plus the one test that pins it." | #554, whole | plan #573, step 4: "#554 is carried by this step and closes with #573's done-`Y` (it is cited in this row's refs)." Your B3 answer moved step 4 after the 0.18.0 cut, and your done-`Y` on #573's 0.18.0 part (2026-11-04) did not name #554. So #554 rides step 4's own Done, the row that continues #573 under #570's mandate after the cut. |
 | #585 Rule-3 refactor | *proposed* (plan #585): "A **clause map** you can read in one pass: every sentence of today's Rule-3 with its fate (kept, merged, moved to the Rule that owns its concern, or dropped), the reason, and the row or incident it came from. Beside it, the new Rule-3, with its length against today's." | #317, sentence (b) only | the new Rule-3 is organised around "what opens a row" (plan #585, Mutation). Sentence (b) says that a unit carrying your own prompt opens its row as a prompt does, noted `relayed via <unit>`. The new Rule-3 would hold it, and #585's completion evidence would name #317 as retired, with this ground. |
+| #592 v1.0 fences | *proposed* (#570 revision 6): #571's count of resolved incidents rises by the modes of R-a, R-b, R-c and R-e | #577, #579, #581, #583 | revision 6: each changes how a verb or a record behaves, so it lands before 1.0 freezes the surface |
+| #593 the automaton as a party | group 3's DoD below | #54, #55 | revision 6: the event `role` and change-log `actor` values are store formats |
+| #594 the board keyed by cabinet | *proposed*: a second cabinet's rows never appear in a home's resume (simulator S13) | #548 | revision 6: the board store's layout |
 
-#571 is `done`, so it can absorb nothing. The eight fence rows its report proposed make up group 1.
+#571 is `done`, so it can absorb nothing. Of the eight fence rows its report proposed, four are #592's (revision 6)
+and four make up group 1b.
 
 Checked and not absorbed, because the open row's DoD as it stands does not cover the row:
 - #54 and #572: #572's report says where inference is required, not which party a record names.
@@ -84,15 +93,16 @@ Checked and not absorbed, because the open row's DoD as it stands does not cover
 
 ### 3.2 New rows: one DoD over several backlog rows
 
-**Group 1. Hardening: the incidents still open.** #576, #577, #578, #579, #580, #581, #582, #583 (R-a…R-h). Tag
-`v1.0.0`.
+**Group 1b. Hardening after 1.0: the fences that only add.** #576, #578, #580, #582 (R-g, R-h, R-d, R-f), out of
+v1.0.0 by revision 6 (warnings, a new verb and guard internals, so nothing 1.0 freezes changes). Their partners
+R-a, R-b, R-c and R-e are #592's.
 - Your DoD for hardening (provenance #570, entry 5): "i expect a report showing the number of resolved INCIDENTS"
 - Applied here, *proposed*: #571's table of resolved incidents, read again on this row's PR heads. The 20 modes that
   R-a…R-h name move from "row (proposed)" to "fenced", each with its fence and the moment it fires. The count rises
   from 124 of 252. Any mode still open is named with its reason.
-- Why one row: you judge the eight fences by one number. #571's index: "124 of 252 are resolved today. The other 128
+- Why one row: you judge the four fences by one number. #571's index: "124 of 252 are resolved today. The other 128
   resolve as R-a…R-h are opened and built." #571 is `done`, so a new row carries the same DoD.
-- Its Done would retire #576–#583.
+- Its Done would retire #576, #578, #580 and #582.
 
 **Group 2. Open audit findings on craft and play-book text.** #84, #85, #86, #87, #88, #89, #257, #318, #320.
 - *Proposed*, in the shape of your hardening DoD: a report showing each of 12 open findings resolved. They are the
@@ -102,7 +112,7 @@ Checked and not absorbed, because the open row's DoD as it stands does not cover
 - Your words for the sweep (provenance #83, entry 1): "perform an audit sweep for completeness and coherence of the `sysadmin` craft and create a plan with corresponding backlog items for remediation - don't remediate."
 - Why one row: every finding is judged the same way, by reading the before and the after.
 
-**Group 3. The automaton as a party.** #54, #55.
+**Group 3. The automaton as a party.** #54, #55. Absorbed into #593 by revision 6; this DoD is #593's proposal.
 - *Proposed*: a report of every Rule sentence and record field that names only the operator and the agent as parties,
   or presumes a CLI agent on every host: Rules 3, 8, 14 and 19, the run-book event's `role` and the change log's
   `actor`. Each gets its new text, naming the automaton where it acts. The tests on the PR head show an automaton run
@@ -119,7 +129,7 @@ Checked and not absorbed, because the open row's DoD as it stands does not cover
   mode by itself; a paired secretary never does.
 - Order: the MacBook leg needs 319a first.
 
-**Group 5. Seat hops, every pair.** #313, #548, #549, #550.
+**Group 5. Seat hops, every pair.** #313, #549, #550 (#548 is #594's, revision 6).
 - Your words (provenance #546, entry 1): "stress test the seat-hops through simulation - cover all scenarios across cabinets and hosts"
 - *Proposed*: the seat-hop simulator's report on the row's PR head, filled pairwise over all six axes (#550). Every
   scenario passes except S8, which group 4 carries. In particular: a second cabinet's rows never appear in a home's
@@ -162,8 +172,8 @@ ground for retirement is *carried* (`dyad/dmc/retirement-candidate.jsonld`). No 
 |---|---|---|---|---|
 | 4 | DYAD_CANONICAL: remote-agnostic base for cmd_guards, dwork new and the PR guard | *Proposed:* in a scratch clone whose main remote is not named `origin`, the push gate, `dwork new` and the PR guard read that remote's `main`, shown by their output. | unchanged | an intake from a peer system (2026-09-14); plan #301: "kept, LAN-git-era rows the Operator opens or retires" |
 | 5 | package.py check refuses a sensitive registry row whose repo has a non-LAN remote | *Proposed:* a push is refused when the craft registry lists a craft marked sensitive and the remote is not one the instance lists as on its LAN, shown in a scratch repo; with no list, one skip line. | unchanged | as #4 |
-| 54 | gap (d): no scheduled/daemon actor model across Rules 3/8/19 | → group 3 | merged into group 3 | provenance #553, entry 1: "fills the #54 daemon gap"; the sweep's events still record `role: agent` |
-| 55 | gap (e): Rule-14 property 2 kernel wording presumes a CLI inferencing agent | → group 3 | merged into group 3 | plan #55: the kernel as worded has no member for a host with no CLI agent; the automaton's host is one |
+| 54 | gap (d): no scheduled/daemon actor model across Rules 3/8/19 | → #593 | absorbed into #593 | provenance #553, entry 1: "fills the #54 daemon gap"; the sweep's events still record `role: agent` |
+| 55 | gap (e): Rule-14 property 2 kernel wording presumes a CLI inferencing agent | → #593 | absorbed into #593 | plan #55: the kernel as worded has no member for a host with no CLI agent; the automaton's host is one |
 | 60 | Rule-8 presumes every system has a host | *Proposed:* Rule-8 names where a system records the host actions it takes on a host it does not tend, with this instance's change log as the worked example. | unchanged | audit 2026-09-17-sysadmin-minimum.md, attack 3, elevated by #57 |
 | 84 | sysadmin craft rules cite a foreign instance's d-work ids bare | → group 2 | merged into group 2 | the sweep of provenance #83, entry 1 ("for remediation") |
 | 85 | craft rules cite agent-corpus/d-work/plans/{155,162,216}.md, instance paths absent here | → group 2 | merged into group 2 | same sweep; two of the three paths now resolve to unrelated plans here (155, 216) |
@@ -197,20 +207,22 @@ ground for retirement is *carried* (`dyad/dmc/retirement-candidate.jsonld`). No 
 | 537 | cos mode P3: the lease | → group 4 | merged into group 4 | provenance #531, entry 3 |
 | 538 | cos mode P4: the mode as one loadable unit | → group 4 | merged into group 4 | same |
 | 539 | cos mode P5: follow into an unseated session | → group 4 | merged into group 4 | same; plan #531 marks P5 optional |
-| 548 | board store and _cos.md keyed by cabinet | → group 5 | merged into group 5 | provenance #546, entry 1; simulator scenario S13 |
+| 548 | board store and _cos.md keyed by cabinet | → #594 | absorbed into #594 | provenance #546, entry 1; simulator scenario S13 |
 | 549 | board renders a since in the future of the reading host as skew, never a negative age | → group 5 | merged into group 5 | same; scenario S15 |
 | 550 | seat-hop simulator: pairwise coverage over all six axes | → group 5 | merged into group 5 | same; audit 2026-11-02, finding F4 |
 | 554 | remove the vocabulary aliases at the release after next | → #573's step 4 | absorbed into #573's step 4 | plan #573, step 4: "#554 is carried by this step"; step 4 follows the 0.18.0 cut (your B3), so it closes with step 4's Done, not with #573's 0.18.0 part |
-| 576 | R-g fence (33 incidents) | → group 1 | merged into group 1 | provenance #570, entry 5 (hardening); #571's index, modes 01, 06, 19 |
-| 577 | R-c fence (23 incidents) | → group 1 | merged into group 1 | same; modes 03, 17, 18, 31, 37 |
-| 578 | R-h fence (16 incidents) | → group 1 | merged into group 1 | same; modes 02, 40 |
-| 579 | R-a fence (15 incidents) | → group 1 | merged into group 1 | same; modes 09, 28 |
-| 580 | R-d fence (13 incidents) | → group 1 | merged into group 1 | same; modes 12, 27 |
-| 581 | R-e fence (10 incidents) | → group 1 | merged into group 1 | same; modes 07, 46 |
-| 582 | R-f fence (10 incidents) | → group 1 | merged into group 1 | same; modes 16, 35 |
-| 583 | R-b fence (8 incidents) | → group 1 | merged into group 1 | same; modes 41, 49 |
+| 576 | R-g fence (33 incidents) | → group 1b | merged into group 1b | provenance #570, entry 5 (hardening); #571's index, modes 01, 06, 19 |
+| 577 | R-c fence (23 incidents) | → #592 | absorbed into #592 | same; modes 03, 17, 18, 31, 37 |
+| 578 | R-h fence (16 incidents) | → group 1b | merged into group 1b | same; modes 02, 40 |
+| 579 | R-a fence (15 incidents) | → #592 | absorbed into #592 | same; modes 09, 28 |
+| 580 | R-d fence (13 incidents) | → group 1b | merged into group 1b | same; modes 12, 27 |
+| 581 | R-e fence (10 incidents) | → #592 | absorbed into #592 | same; modes 07, 46 |
+| 582 | R-f fence (10 incidents) | → group 1b | merged into group 1b | same; modes 16, 35 |
+| 583 | R-b fence (8 incidents) | → #592 | absorbed into #592 | same; modes 41, 49 |
 
 ## 5. The step's test
+
+*As first drafted, before revision 6 split group 1 and moved group 3 and #548 into open rows; the findings stand.*
 
 The step is the paragraph "Definition of done (#574)" of `dyad/playbooks/d-work.md` at f35eb112 (lines 211–226).
 
@@ -268,13 +280,15 @@ The step is the paragraph "Definition of done (#574)" of `dyad/playbooks/d-work.
 
 Each open point the draft found, with the path the home takes unless you amend it.
 
-1. **How rows leave and open.** #574's Done question names every row this report retires (`retires #r, …`) and every
-   new row it opens (groups 1–6, 319a, 319b). Your one done-`Y` opens the new rows as `backlog` first, then archives
-   the rows they replace, in one record, so no row retires before its successor exists. Ground: "i shouldn’t be disposing “archive” - i’m expecting ‘done-Y’" (provenance #574, entry 4). The archiving is engineer's code from #574
-   revision 3 (G5, G6), which rides the same Done. Amend "open later" to keep every row as it is today.
-2. **Group 1 is one row.** You judge the eight fences by one number. The cost: each fence's PR waits for that one
-   done-`Y`. The `v1.0.0` cut does not wait for group 1: #570's H1 counts a mode with a row as closed. Amend "keep
-   eight" to keep R-a…R-h as eight rows.
+1. **How rows leave and open.** #574's Done question names every row this report retires (`retires #r, …`: the 21
+   merged, the 7 absorbed into #592–#594, #317, #319, #130 and #311) and the new rows it opens as `backlog` (groups 1b,
+   2, 4, 5, 6, 319a, 319b). Your one done-`Y` opens the new rows first, then archives the rows they replace, in one
+   record, so no row retires before its successor exists. #592–#594 already exist, opened under #570's mandate by your
+   `Y` on revision 6. Ground: "i shouldn’t be disposing “archive” - i’m expecting ‘done-Y’" (provenance #574, entry 4).
+   The archiving is engineer's code from #574 revision 3 (G5, G6), which rides the same Done. Amend "open later" to
+   keep every row as it is today.
+2. **Group 1 is split by revision 6.** R-a, R-b, R-c and R-e are #592 (in v1.0). R-g, R-h, R-d and R-f are group 1b,
+   one row after 1.0, judged by the same count of resolved incidents.
 3. **Group 2 is one report.** Every finding is judged the same way, by its before and after. Amend "per audit" for
    three rows.
 4. **Groups 4 and 5 stay apart.** Group 4 is something you try: the cos follows you. Group 5 is a report you read: the
@@ -288,5 +302,5 @@ Each open point the draft found, with the path the home takes unless you amend i
 7. **Names.** The peer system, the client and the company stay unnamed. Their rows are cited by id: the titles of
    #54 and #55 are shortened, #177 is shown by id only, and the entries of #166 and #174 are quoted only in part.
 8. **319b stays owed.** Your prompt on #81 names Windows portability.
-9. **Order.** Group 4's MacBook leg needs 319a first. Group 1's R-c and group 3 each need a Rule-3 sentence, so they
-   follow #585 (Rule-3 has one writer).
+9. **Order.** Group 4's MacBook leg needs 319a first. #592's R-c and #593 each need a Rule-3 sentence, so those
+   sentences ride #585 (Rule-3 has one writer).
