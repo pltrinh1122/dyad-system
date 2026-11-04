@@ -42,10 +42,11 @@ class FormTests(unittest.TestCase):
         new = bd.merged({}, {"waiting-on": "seat counsel"}, "program-a", "h2", "2026-11-02T12:00Z")
         self.assertEqual(new, {"waiting-on": "seat counsel", "holder": "program-a", "since": "2026-11-02T12:00Z", "writer": "h2"})
         again = bd.merged(new, {"next": "wait"}, "program-b", "h3", "2026-11-02T13:00Z")
-        self.assertEqual((again["since"], again["holder"], again["writer"]), ("2026-11-02T12:00Z", "program-b", "h3"))
+        self.assertEqual((again["since"], again["holder"], again["writer"]), ("2026-11-02T12:00Z", "program-a", "h3"))   # #572 K7: kept
         moved = bd.merged(again, {"waiting-on": "operator", "next": ""}, None, "h3", "2026-11-02T14:00Z")
         self.assertEqual(moved["since"], "2026-11-02T14:00Z"); self.assertNotIn("next", moved)
-        self.assertEqual(moved["holder"], "program-b")                     # no seat named: the holder stays
+        self.assertEqual(moved["holder"], "program-a")                     # no seat named: the holder stays
+        self.assertEqual(bd.merged(moved, {"holder": "program-b"}, "program-c", "h4", "x")["holder"], "program-b")   # given: taken
 
     def test_unit_is_the_form_and_seat_its_alias(self):
         """#553: `waiting-on unit <name>` is the form; `seat <name>` is read until the release after next and written
@@ -125,6 +126,7 @@ class GuardTests(unittest.TestCase):
         self.assertTrue(lines[3].startswith("#5 planned  waiting-on external run 41331223332 for 2h"), lines)
         self.assertIn("    question: Y/N: approve the release run?", lines)
         self.assertIn("_cos queue: plan 0, done 1", lines)
+        self.assertIn("queue (derived, #572): plan-ready 0, done-ready 0", lines)
         self.assertIn("0 open, planned or blocked row(s) carry no board entry", lines)
         self.assertTrue(any(l.startswith("warn: board/5.md was last written by h1, not this session (h2)") for l in lines), lines)
         text = "\n".join(res)
@@ -163,6 +165,20 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(v["last_act"], {"counsel-0032b4c0": "", "engineer-1537d8fb": seen})
         self.assertIn("last ledger act (presence `seen`, information only, #567): counsel-0032b4c0 none, engineer-1537d8fb 2h", text)
         self.assertEqual([n for n, _ in v["live"]], ["5"])                    # the board, not presence, says what is live
+
+    def test_the_queue_is_derived_from_records(self):
+        """#572 K4: plan-ready is an open row with a stored plan and no plan disposition (not accreted); done-ready an
+        entry whose question is a Done question."""
+        rows, plans = self.root / INST / "d-work" / "rows", self.root / INST / "d-work" / "plans"
+        plans.mkdir(parents=True)
+        (rows / "7.md").write_text(ROW.format(id=7, state="open").replace("2026-11-01 Y plan", "2026-11-01 Y open"))
+        (rows / "8.md").write_text(ROW.format(id=8, state="open").replace("2026-11-01 Y plan", "2026-11-01 Y plan (mandate #5)"))
+        for i in (5, 7, 8):
+            (plans / f"{i}.md").write_text("# Plan\n")
+        self.put("5", ENTRY.replace("Y/N: approve the release run?", "Y/N: Done with #5 five (merges PR #1)?"))
+        q = bd.derived_queue(self.root)
+        self.assertEqual(q, {"plan-ready": [7], "done-ready": [5]})
+        self.assertEqual(bd.queue_line(q), "queue (derived, #572): plan-ready 1 (#7), done-ready 1 (#5)")
 
     def test_contract(self):
         self.assertEqual((bd.ENTITY, bd.CORPUS, bd.TRANSACTION), ("board", "agent", False))
@@ -222,13 +238,13 @@ class SetTests(unittest.TestCase):
 
     def test_set_merges_removes_warns_and_refuses(self):
         self.assertEqual(self.run_cli("set", "5", "waiting-on=operator", "next=ask")[0], 0)
-        since = self.on_main()["since"]
+        since, holder = self.on_main()["since"], self.on_main()["holder"]
         with unittest.mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "h2", "DYAD_SESSION": "program-bbbbbbbb"}):
             rc, _, err = self.run_cli("set", "5", "next=", "promised=a follow-up")
         self.assertEqual(rc, 0, err)
         self.assertIn("warn: board/5.md was last written by h1, not this session (h2)", err)
         f = self.on_main()
-        self.assertEqual((f["holder"], f["writer"], f["since"], f["promised"]), ("program-bbbbbbbb", "h2", since, "a follow-up"))
+        self.assertEqual((f["holder"], f["writer"], f["since"], f["promised"]), (holder, "h2", since, "a follow-up"))   # #572 K7
         self.assertNotIn("next", f)
         with unittest.mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "h2", "DYAD_SESSION": "program-bbbbbbbb"}):
             rc, _, err = self.run_cli("set", "5", "promised=a follow-up")

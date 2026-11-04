@@ -19,8 +19,9 @@ is lost.
 guard after: a `Y/N:` counter-prompt line, or a ledger entry such as `2026-11-02 Y done (…)` or `Y plan (…)`. Authority
 is read in the ledger (rows, provenance) and nowhere else. A report names the row; it does not quote the entry.
 
-  dyad inbox post <seat> --row <id> --kind <kind> (<body> | --body-file <path>)
-                          from this seat (`DYAD_SESSION`): one message, landed ledger-only through land's loop; a
+  dyad inbox post <seat> --row <id> --kind <kind> [--cc <seat>]... (<body> | --body-file <path>)
+                          from this seat (`DYAD_SESSION`): one message, landed ledger-only through land's loop, and
+                          the same message in each `--cc` seat's box in the same land (#572 K6; never a relay); a
                           `relay` lands only when `board/<id>.md` on origin/main names <seat> among its owners and
                           this session wrote it last (write-ahead, #552)
   dyad inbox read [--all]  this seat's unread messages on a freshly fetched origin/main, printed in order and marked
@@ -58,7 +59,7 @@ SEAT = re.compile(r"[A-Za-z0-9._-]{1,80}")
 NAME_RE = re.compile(r"(?P<stamp>\d{8}T\d{6}Z)-(?P<sender>[A-Za-z0-9._-]+)-(?P<n>\d+)\.(?P<ext>md|read)")
 STAMP = "%Y%m%dT%H%M%SZ"
 DISPOSITION = re.compile(r"(?m)^\s*Y/N:|\b\d{4}-\d{2}-\d{2} [YN] (?:plan|done|release|backlog)\b|\bY (?:plan|done|release) \(")
-USAGE = ("usage: dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | "
+USAGE = ("usage: dyad inbox post <seat> --row <id> --kind report|relay|ack|notice [--cc <seat>]... (<body> | --body-file <path>) | "
          "dyad inbox read [--all] | dyad inbox list [<seat>]")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
@@ -240,7 +241,9 @@ def write_ahead_problem(wt: Path, inst: str, row: int, to: str, me: str) -> str 
     return None
 
 
-def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str):
+def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str, cc=()):
+    """One message to `to` and, for each `--cc` seat, the same message in that seat's box (its `to` its own box), all in
+    one land (#572 K6: a report sent to home and copied to orchestrate was two posts, two lands)."""
     me = sessions().writer()
     def build(wt: Path):
         if row not in {r.id for r in dyadlib.read_rows(wt)}:
@@ -251,24 +254,33 @@ def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str
                 raise Refused(why)
         t = now()
         stamp = t.strftime(STAMP)
-        d = wt / inst / INBOX_REL / to
-        n = 1 + len(list(d.glob(f"{stamp}-{sender}-*.md"))) if d.is_dir() else 1
-        path = d / f"{stamp}-{sender}-{n}.md"
-        fields = {"from": sender, "to": to, "row": str(row), "kind": kind,
-                  "sent": t.strftime("%Y-%m-%dT%H:%M:%SZ"), "body": body, "writer": me}
-        d.mkdir(parents=True, exist_ok=True)
-        path.write_text(board().render(fields, FIELDS))
-        return [path.relative_to(wt).as_posix()], f"ledger: inbox {to} ({kind}, row {row})", f"posted {path.name} to {to}"
+        paths = []
+        for box in (to, *cc):
+            d = wt / inst / INBOX_REL / box
+            n = 1 + len(list(d.glob(f"{stamp}-{sender}-*.md"))) if d.is_dir() else 1
+            path = d / f"{stamp}-{sender}-{n}.md"
+            fields = {"from": sender, "to": box, "row": str(row), "kind": kind,
+                      "sent": t.strftime("%Y-%m-%dT%H:%M:%SZ"), "body": body, "writer": me}
+            d.mkdir(parents=True, exist_ok=True)
+            path.write_text(board().render(fields, FIELDS))
+            paths.append(path)
+        copies = f" (cc {', '.join(cc)})" if cc else ""
+        return ([p.relative_to(wt).as_posix() for p in paths], f"ledger: inbox {to}{copies} ({kind}, row {row})",
+                f"posted {paths[0].name} to {to}{copies}")
     return build
 
 
-def parse_post(a: list[str]) -> tuple[str, int, str, str]:
+def parse_post(a: list[str]) -> tuple[str, int, str, str, tuple[str, ...]]:
     if not a or not SEAT.fullmatch(a[0]):
         raise Refused(USAGE)
-    to, rest, vals, words = a[0], a[1:], {}, []
+    to, rest, vals, words, cc = a[0], a[1:], {}, [], []
     i = 0
     while i < len(rest):
-        if rest[i] in ("--row", "--kind", "--body-file") and i + 1 < len(rest):
+        if rest[i] == "--cc" and i + 1 < len(rest):
+            if not SEAT.fullmatch(rest[i + 1]) or rest[i + 1] == to or rest[i + 1] in cc:
+                raise Refused(f"--cc takes another seat, once each, not {rest[i + 1]!r}")
+            cc.append(rest[i + 1]); i += 2
+        elif rest[i] in ("--row", "--kind", "--body-file") and i + 1 < len(rest):
             vals[rest[i]] = rest[i + 1]; i += 2
         else:
             words.append(rest[i]); i += 1
@@ -283,14 +295,17 @@ def parse_post(a: list[str]) -> tuple[str, int, str, str]:
     if disposition_shaped(body):
         raise Refused("the body is disposition-shaped (a `Y/N:` line or a ledger entry): a message carries information, "
                       "never authority — name the row instead (#536)")
-    return to, int(vals["--row"]), vals["--kind"], body
+    if cc and vals["--kind"] == "relay":
+        raise Refused("a relay goes to the one seat its board entry names (write-ahead, #552); --cc is for a report, "
+                      "notice or ack")
+    return to, int(vals["--row"]), vals["--kind"], body, tuple(cc)
 
 
-def post(repo: Path, to: str, row: int, kind: str, body: str) -> int:
+def post(repo: Path, to: str, row: int, kind: str, body: str, cc=()) -> int:
     inst = dyadlib.instance_rel(repo)
     if inst is None:
         raise Refused("the instance (DYAD_INSTANCE) lies outside this work tree")
-    return land().land(repo, inst, None, post_builder(to, row, kind, body, this_seat(), inst), "inbox post")
+    return land().land(repo, inst, None, post_builder(to, row, kind, body, this_seat(), inst, tuple(cc)), "inbox post")
 
 
 def render_message(p: Path, f: dict[str, str], read: bool) -> list[str]:
