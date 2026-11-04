@@ -1029,6 +1029,33 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, run the exercise")])
         self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")
         self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5
+    def test_a_done_retires_only_backlog_or_done_rows_and_archives_them_on_its_words(self):
+        """#574 revision 3: G2, the record refuses a `retires` naming an open row or itself; G6, `state <r> archived
+        --retired-by <id>` writes `Y archive (done #<id>)` and copies the done words noted `done #<id>, <date>`."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv, sv = dyadlib.load_guard("agent", "provenance"), dyadlib.load_guard("agent", "sessions")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        for bad, says in (("Y done (retires #3, #1)", "#1 (planned)"), ("Y done (retires #9)", "#9 (no row)")):
+            r = self.dwork_state(d, "1", "done", "-d", bad, "--said", "Y")
+            self.assertNotEqual(r.returncode, 0); self.assertIn("retires", r.stderr); self.assertIn(says, r.stderr)
+        r = self.dwork_state(d, "3", "archived", "--retired-by", "1")                     # no Done retires it yet
+        self.assertNotEqual(r.returncode, 0); self.assertIn("carries no 'Y done'", r.stderr)
+        r = self.dwork_state(d, "1", "done", "-d", "Y done (retires #3, #2)", "--said", "Y, delivered")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for rid in (3, 2):
+            r = self.dwork_state(d, str(rid), "archived", "--retired-by", "1")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            row = dyadlib.parse_row_file(rows.joinpath(f"{rid}.md").read_text())
+            self.assertEqual(row.state, "archived"); self.assertRegex(row.disposed, r"\d{4}-\d{2}-\d{2} Y archive \(done #1\)$")
+        e = pv.parse(rec.joinpath("3.md").read_text())
+        self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, delivered")])
+        self.assertRegex(e[0]["note"], r"^done #1, \d{4}-\d{2}-\d{2}$"); self.assertFalse(sv.own_disposition(e[0]["note"]))
+        self.assertEqual(pv.check_record(rec / "3.md", row=dyadlib.parse_row_file(rows.joinpath("3.md").read_text())), [])
+        r = self.dwork_state(d, "1", "archived", "--retired-by", "1")
+        self.assertNotEqual(r.returncode, 0)
     def test_dwork_new_mandate_refuses_before_it_writes(self):
         d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
         rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: 2026-10-01 Y plan\nrefs: \n")

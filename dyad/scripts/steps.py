@@ -20,7 +20,9 @@ calls the same functions.
   dyad steps close-landed     DWORK [--land]: when every head the row's operative Y done names is on origin/main, the
                               row is set `done`, every row the entry names as accreted (`accreted #c` or
                               `mandate rows #c`) is closed under it (`--mandate`), and — under --land — its board entry
-                              is dropped. Refuses while a named head is not yet on main.
+                              is dropped; every row it names under `retires #r` that is backlog or done is archived
+                              on its words (`dwork state <r> archived --retired-by <id>`, #574), any other named row
+                              printed `not archived: …`. Refuses while a named head is not yet on main.
   dyad steps sync-mirror      MIRROR=<branch>: fast-forward the branch to origin/main; never a force push.
 
 Every step fetches `origin/main` first and reads the ledger there (`dyadlib.read_rows(at=…)`), never the checkout's,
@@ -44,6 +46,8 @@ USAGE = "usage: dyad steps verify-prs|done-record|close-landed|sync-mirror [--la
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("four-steps", lambda: STEPS == ("verify-prs", "done-record", "close-landed", "sync-mirror")),
+    ("retires-clause-parses", lambda: retired_rows("Y done (accreted #9, retires #262, #263, merges PR #1 at a)") == [262, 263]
+                                    and retired_rows("Y done (merges PR #1 at a)") == []),
     ("accreted-clause-parses", lambda: ACCRETED.search("Y done (accreted #547, #551, merges PR #1 at a)").group(1) == "#547, #551"
                                      and ACCRETED.search("Y done (mandate rows #304, #314, merges PR #2 at b)").group(1) == "#304, #314"),
 ]
@@ -189,6 +193,14 @@ def done_record(repo: Path, rid: int, prs: list[int], said: Path, accreted: list
     return [f"row #{rid}: {entry}", out]
 
 
+RETIRES = re.compile(r"\bretires (#\d+(?:, #\d+)*)")   # #574 revision 3, as package.RETIRES
+NOT_ARCHIVED = "not archived: "
+
+def retired_rows(entry: str) -> list[int]:
+    m = RETIRES.search(entry or "")
+    return [int(x) for x in re.findall(r"#(\d+)", m.group(1))] if m else []
+
+
 def mandate_rows(entry: str) -> list[int]:
     m = ACCRETED.search(entry)
     return [int(x) for x in re.findall(r"#(\d+)", m.group(1))] if m else []
@@ -212,6 +224,13 @@ def close_landed(repo: Path, rid: int, landing: bool) -> list[str]:
     children = [c for c in mandate_rows(entry) if c in rows and rows[c].state not in dyadlib.TERMINAL_STATES]
     cmds = [["state", str(rid), "done"]] + [["state", str(c), "done", "--mandate", str(rid)] for c in children]
     out = [f"row #{rid}: every named head is on origin/main {base[:12]} ({len(heads)})"]
+    # #574 G5: the rows the Done retires, archived on its words; any other is refused, never resolved here
+    for r in retired_rows(entry):
+        st = rows[r].state if r in rows else None
+        if st in ("backlog", "done"):
+            cmds.append(["state", str(r), "archived", "--retired-by", str(rid)])
+        elif st != "archived":
+            out.append(f"{NOT_ARCHIVED}row #{r} is {st or 'no row'}; row #{rid}'s Done retires only a backlog or done row (#574 G2)")
     if landing:
         out.append(batch(repo, [" ".join(shlex.quote(a) for a in c) for c in cmds]))
         board = dyadlib.instance(repo) / "d-work" / "board" / f"{rid}.md"

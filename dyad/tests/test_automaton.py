@@ -109,6 +109,40 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = run(["run"], self.w.seat)
         self.assertEqual(out.strip(), "nothing to do")
 
+    def test_a_done_naming_no_merge_archives_its_retired_rows_next_run(self):
+        """#574 G5: a Done that names no merge is recorded `done` at once, so no close runs; the automaton archives."""
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        self.w.write_main({f"{rows}/9.md": ROW.format(id=9, state="done", disposed="2026-11-02 Y plan; 2026-11-02 Y done (retires #11)"),
+                           f"{prov}/9.md": REC.format(id=9), f"{rows}/11.md": ROW.format(id=11, state="backlog", disposed=""),
+                           f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"})
+        rc, out, err = run(["scan"], self.w.seat)
+        self.assertEqual(out.strip(), "archive #11 (retired by row #9's Done)")
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(am.dyadlib.parse_row_file(self.on_main(f"{rows}/11.md")).state, "archived")
+        self.assertEqual(run(["run"], self.w.seat)[1].strip(), "nothing to do")
+
+    def test_a_done_archives_exactly_the_rows_it_retires(self):
+        """#574 G5: the close archives each named row that is backlog or done, on the Done's words; a named row that
+        is open is told to home and left as it is."""
+        rows, prov = f"{INST}/d-work/rows", f"{INST}/d-work/provenance"
+        files = dict(self.files)
+        files[f"{rows}/9.md"] = ROW.format(id=9, state="planned",
+            disposed=f"2026-11-02 Y plan; 2026-11-02 Y done (accreted #10, retires #11, #12, #13, merges PR #7 at {self.sha})")
+        files[f"{prov}/9.md"] = REC.format(id=9)
+        for rid, st in ((11, "backlog"), (12, "done"), (13, "open"), (14, "backlog")):
+            files[f"{rows}/{rid}.md"] = ROW.format(id=rid, state=st, disposed="")
+        self.w.write_main(files)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        st = lambda rid: am.dyadlib.parse_row_file(self.on_main(f"{rows}/{rid}.md"))
+        self.assertEqual([st(r).state for r in (9, 11, 12, 13, 14)], ["done", "archived", "archived", "open", "backlog"])
+        self.assertRegex(st(11).disposed, r"Y archive \(done #9\)$")
+        self.assertRegex(self.on_main(f"{prov}/11.md"), r"## 1 disposition \d{4}-\d{2}-\d{2} done #9, 2026-11-02\n")
+        self.assertTrue(any("archive on close refused for row #9: row #13 is open" in m for m in self.inbox(HOME)), self.inbox(HOME))
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertEqual(out.strip(), "nothing to do")
+
     def test_a_push_race_is_retried(self):
         self.w.write_main(self.files)
         calls = []

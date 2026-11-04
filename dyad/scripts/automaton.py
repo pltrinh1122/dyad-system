@@ -137,6 +137,13 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
             acts.append(("merge", r.id, cut))
         if not owed:
             acts.append(("close", r.id))
+    byid = {r.id: r for r in rows}
+    for r in rows:   # #574 G5: a done row whose Done retires rows still to archive (a Done naming no merge closes at once)
+        last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
+        if r.state == "done" and rg.DONE_Y.search(last[0]):
+            due = [x for x in steps.retired_rows(last[0]) if x in byid and byid[x].state in ("backlog", "done")]
+            if due:
+                acts.append(("archive", r.id, due))
     for r in rows:
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
         if r.state != "planned" or not rg.PLAN_Y.match(last[0]):
@@ -156,6 +163,8 @@ def describe(act: tuple) -> str:
         return f"merge {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} (row #{act[1]})"
     if kind == "close":
         return f"close row #{act[1]} (every named head is on main)"
+    if kind == "archive":
+        return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
     return f"notice {act[2]}: {PLANNED.format(rid=act[1])}"
 
 
@@ -414,7 +423,11 @@ def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, st
 
 def do_close(repo: Path, rid: int) -> str:
     try:
-        return "\n".join(l for l in steps.close_landed(repo, rid, True) if l)
+        lines = [l for l in steps.close_landed(repo, rid, True) if l]
+        # #574 G5: a row the Done retires that is neither backlog nor done is told to home, never resolved
+        lines += [escalate(repo, rid, "archive on close", l.removeprefix(steps.NOT_ARCHIVED))
+                  for l in lines if l.startswith(steps.NOT_ARCHIVED)]
+        return "\n".join(lines)
     except Refused as e:
         if str(e).startswith("already closed"):
             return str(e)
@@ -434,6 +447,11 @@ def run(repo: Path) -> list[str]:
                 stopped.add(act[1])
         elif act[0] == "close":
             out.append(do_close(repo, act[1]))
+        elif act[0] == "archive":
+            try:
+                out.append(steps.batch(repo, [f"state {x} archived --retired-by {act[1]}" for x in act[2]]))
+            except Refused as e:
+                out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
         else:
             try:
                 out.append(post(repo, act[2], act[1], PLANNED.format(rid=act[1])))
