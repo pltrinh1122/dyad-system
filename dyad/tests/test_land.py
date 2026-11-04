@@ -302,6 +302,50 @@ class LandTests(unittest.TestCase):
         self.assertEqual(git(self.origin, "log", "-1", "--format=%s", "main"), "ledger: batch trace #1, #1 done (Y done)")
         self.assertEqual(len(self.hook_runs()), 1)
 
+    # ---- #586 E2: board and post lines ride the batch; any refusal lands none of them
+    def holder_env(self):
+        return unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-aaaaaaaa", "CLAUDE_CODE_SESSION_ID": "h-home"})
+
+    def test_a_record_board_and_relay_are_one_commit_and_print_the_ring(self):
+        s = f"{INST}/d-work/"
+        with self.holder_env():
+            rc, out, err = self.batch("state 1 planned -d 'Y plan' --said Y\n"
+                                      "board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb' next='build it'\n"
+                                      "post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n"
+                                      "post orchestrate-cccccccc --row 1 --kind notice 'fyi'\n")
+        self.assertEqual(rc, 0, err)
+        head = self.main_at_origin()
+        self.assertEqual(git(self.origin, "rev-list", "--count", "main~1..main"), "1"); self.assertEqual(len(self.hook_runs()), 1)
+        files = self.files_of(head)
+        self.assertIn(s + "board/1.md", files); self.assertIn(s + "rows/1.md", files)
+        self.assertEqual(sum(f.startswith(s + "inbox/engineer-bbbbbbbb/") for f in files), 1)
+        self.assertEqual(sum(f.startswith(s + "inbox/orchestrate-cccccccc/") for f in files), 1)
+        self.assertIn("ring: engineer-bbbbbbbb (a doorbell", out)                     # a notice is not rung
+        with self.holder_env():                                                        # a re-run posts nothing twice
+            rc, out, err = self.batch("post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n")
+        self.assertEqual(rc, 1); self.assertIn("already landed", err)
+
+    def test_a_refused_disposition_drops_its_board_and_relays(self):
+        """Today's #573 slip: a `;` in `-d` refused the record while its relays had already gone out."""
+        before = self.main_at_origin()
+        with self.holder_env():
+            rc, out, err = self.batch("board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb'\n"
+                                      "post engineer-bbbbbbbb --row 1 --kind relay 'go'\n"
+                                      "state 1 planned -d 'Y B3 (a; b)' --said Y\n")
+        self.assertEqual(rc, 1); self.assertIn("line 3", err); self.assertIn("nothing landed", err)
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])
+        self.assertNotIn("ring:", out)
+
+    def test_a_bad_board_or_post_line_is_refused_before_anything_runs(self):
+        before = self.main_at_origin()
+        with self.holder_env():
+            for text, says in (("board 1 colour=red\n", "unknown key 'colour'"),
+                               ("post engineer-bbbbbbbb --row 1 --kind report '2026-11-04 Y plan'\n", "disposition-shaped"),
+                               ("post engineer-bbbbbbbb --row 1 --kind order 'x'\n", "usage")):
+                rc, _, err = self.batch("state 1 planned -d 'Y plan' --said Y\n" + text)
+                self.assertEqual(rc, 1, text); self.assertIn("line 2: ", err); self.assertIn(says, err)
+        self.assertEqual(self.main_at_origin(), before); self.assertEqual(self.hook_runs(), [])
+
     def test_a_refused_line_lands_nothing(self):
         before = self.main_at_origin()
         rc, out, err = self.batch("state 1 planned -d 'Y plan' --said Y\nstate 99 open --prompt 'no such row'\n")

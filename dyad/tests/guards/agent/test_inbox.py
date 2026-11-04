@@ -264,6 +264,24 @@ class WriteAheadTests(World):
         f2 = dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"main:{presence}"))
         self.assertEqual(f2["rows"], "5"); self.assertGreaterEqual(f2["seen"], f["seen"])
 
+    def test_the_holders_relay_adds_its_receiver_as_owner_in_one_commit(self):
+        """#586 E1: today's #573 relay to orchestrate, refused twice because orchestrate was no owner, lands with
+        orchestrate added to the entry's owners in the same commit; a post from a unit that is not the holder is still
+        refused."""
+        self.board_set("owner=engineer-1537d8fb session_x", "waiting-on=unit engineer-1537d8fb", "next=send task-5")
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.relay(to="orchestrate-d688fecf")
+        self.assertEqual(rc, 0, err); self.assertIn("added orchestrate-d688fecf to board/5.md's owners", out)
+        head = git(self.origin, "rev-parse", "main")
+        self.assertEqual(git(self.origin, "rev-list", "--count", f"{before}..{head}"), "1")
+        changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertIn(f"{INST}/d-work/board/5.md", changed)
+        f = dyadlib.load_guard("agent", "board").parse(git(self.origin, "show", f"main:{INST}/d-work/board/5.md"))[0]
+        self.assertEqual(dyadlib.load_guard("agent", "board").owners(f), ["engineer-1537d8fb", "orchestrate-d688fecf"])
+        rc, _, err = self.as_seat("engineer-1537d8fb", "post", "counsel-0032b4c0", "--row", "5", "--kind", "relay", "x")
+        self.assertEqual(rc, 1); self.assertIn("names owner(s)", err)                  # not the holder: refused
+        self.assertEqual(git(self.origin, "rev-parse", "main"), head)
+
     def test_a_relay_without_its_board_entry_is_refused(self):
         before = git(self.origin, "rev-parse", "main")
         rc, _, err = self.relay()
@@ -274,7 +292,7 @@ class WriteAheadTests(World):
 
     def test_the_entry_must_name_the_seat_and_be_this_sessions(self):
         self.board_set("owner=engineer-1537d8fb session_x; counsel-0032b4c0 session_y", "waiting-on=seat engineer-1537d8fb", "next=send task-5")
-        rc, _, err = self.relay(to="distribute-a603e150")
+        rc, _, err = self.relay(to="distribute-a603e150", harness="h3")    # not the entry's last writer: no owner added
         self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, counsel-0032b4c0, not distribute-a603e150", err)
         rc, _, err = self.relay(harness="h3")                                # the same seat, another holder
         self.assertEqual(rc, 1); self.assertIn("was last written by h2, not this session (h3)", err)
