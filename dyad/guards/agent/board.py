@@ -141,6 +141,9 @@ def check_entry(name: str, text: str, states: dict[int, str]) -> list[str]:
     msgs += [f"{where}: '{k}' missing" for k in REQUIRED if not fields.get(k)]
     if "waiting-on" in fields and not WAITING.fullmatch(fields["waiting-on"]):
         msgs.append(f"{where}: 'waiting-on' is not `operator`, `unit <name>` (alias `seat <name>`) or `external <ref>` ({fields['waiting-on']!r})")
+    if fields.get("waiting-on", "").startswith(UNIT_ALIAS):   # #573 step 5: the deprecation warning before 1.0 removes it
+        msgs.append(f"warning: {where}: `waiting-on: {fields['waiting-on']}` uses the alias `seat <name>`; write "
+                    f"`unit {fields['waiting-on'][len(UNIT_ALIAS):]}` — the alias is removed in dyad-operator 1.0 (#573)")
     if "since" in fields and parse_since(fields["since"]) is None:
         msgs.append(f"{where}: 'since' is not an ISO-8601 date or time ({fields['since']!r})")
     if name.isdigit():

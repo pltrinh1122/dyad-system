@@ -20,7 +20,7 @@ defines what each value means.
 | host-zone | workstation | `workstation` \| `infra` | Rule-1 (host row of the zone table) |
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| attended-seats | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
+| paired-units | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 
@@ -124,15 +124,16 @@ defines what each value means.
   read. Seeded `m4`, the Operator's default: it authorizes nothing by itself — a charter is a
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cabinet/docs/operating-guide.md` §6).
-- `attended-seats` — the seats the Operator attends beside the leader, which is always attended (d-work
-  #412): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
+- `paired-units` — the seats the Operator attends beside the leader, which is always attended (d-work
+  #412; named `attended-seats` until #553, still read as its alias and warned on until dyad-operator 1.0,
+  #573): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
   of the counsel seat), or `none`. The constraint it states is the Operator's span — how many seats the
   Operator sits at — never how many seats run: a hundred seats are one span while only the leader is
   attended and orchestrates the rest. Over the live seats the reading is a mode — every seat attended
   (M4), only the leader (M3), some (hybrid) — and a seat's counter-prompt is asked in its own chat when
   attended and relayed through the leader otherwise; `dyad session list` prints the set, the mode and
   each seat's route (Rule-16 Presence). Seeded `none`: by default only the leader is attended.
-- `attendance-window` — how many days the records are read back to check `attended-seats` (d-work #388,
+- `attendance-window` — how many days the records are read back to check `paired-units` (d-work #388,
   #412): a seat holds an own disposition when a provenance record whose `session:` line names it holds a
   disposition whose note holds neither `mandate #<id>` nor `relayed via`, anywhere, within the window. A
   live seat holding one that the preference does not declare prints `undeclared`; a declared seat holding

@@ -717,6 +717,14 @@ class AttendanceTests(unittest.TestCase):
             self._presence(root, seat)
         a = self._read(root)
         self.assertEqual((sorted(a["attended"]), a["relayed"]), (["engineer-1537d8fb", "program-59cec502"], ["counsel-0032b4c0"]))
+    def test_the_alias_key_warns_until_it_is_renamed(self):
+        """#573 step 5: the deprecation warning, one line naming `paired-units`; none once the new key is there."""
+        root = self._repo(declared="counsel")
+        (w,) = [m for m in sv.check_package(root) if m.startswith("warning:")]
+        self.assertIn("`attended-seats` is the alias of `paired-units`", w); self.assertIn("removed in dyad-operator 1.0", w)
+        p = root / "preferences-corpus" / "PREFERENCES.md"
+        p.write_text(p.read_text().replace("| attended-seats |", "| paired-units |"))
+        self.assertEqual(sv.check_package(root), [])
     def test_no_live_seat_reads_m3(self):
         root = self._repo()
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
