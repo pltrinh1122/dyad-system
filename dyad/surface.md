@@ -52,7 +52,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad session list` | — | frozen |
 | `dyad session reconcile` | — | frozen |
 | `dyad project <surface>` / `--list` | — | frozen |
-| `dyad runbook check` / `list <instance>` / `run <instance> <name>` / `new <instance>` | `--as operator\|agent` | frozen |
+| `dyad runbook check` / `list <instance>` / `run <instance> <name>` / `new <instance>` | `--as operator\|agent\|automaton` (automaton: a read-only command only, #593) | frozen |
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |

@@ -225,6 +225,14 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(sum(len(p) for p in parts), 40)                          # every line in exactly one part
         self.assertTrue(all(len(" | ".join(p)) < am.NOTICE_CHARS for p in parts))
 
+    def test_the_sweeps_health_run_is_the_automatons_own(self):
+        """The sweep reads `released` health as the automaton, a read-only run under its own party (#593)."""
+        seen = []
+        def fake(argv, **kw):
+            seen.append(argv); return subprocess.CompletedProcess(argv, 0, "", "")
+        with unittest.mock.patch.object(am.subprocess, "run", fake), unittest.mock.patch.dict(os.environ, {"MIRROR": ""}):
+            am.sweep_drift(PKG.parent, PKG.parent, "HEAD")
+        self.assertEqual(seen[0][-4:], ["released", "health", "--as", "automaton"])
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
         self.assertEqual(run(["go"], self.w.seat)[0], 2)

@@ -208,7 +208,8 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
     """The world against the record: released tags against their entries (the `released` run-book's health), and
     the mirror branch (`MIRROR`) against main."""
     out = []
-    r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "runbook", "run", "released", "health"],
+    r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "runbook", "run", "released", "health",
+                        "--as", "automaton"],   # the automaton's own party, a read-only run (#593)
                        cwd=wt, capture_output=True, text=True, env=dyadlib.git_env(), timeout=600)
     gaps = [l for l in r.stdout.splitlines() if l.startswith(("no tag:", "tag not at cut:", "no Release:"))]
     out += [(True, f"finding: released: {g}") for g in gaps]
