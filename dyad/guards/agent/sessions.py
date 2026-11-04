@@ -675,12 +675,21 @@ def check_record(p: Path, text: str | None = None) -> list[str]:
         msgs.append(f"{p.name}: 'holder' is not a path-segment token ({fields['holder']!r})")
     return msgs
 
+def alias_warnings(root: Path | None = None) -> list[str]:
+    """#573 step 5: one warning while the preference table pairs units under the alias `attended-seats` and not under
+    `paired-units`, naming the new key; the alias is removed in dyad-operator 1.0."""
+    key, value = declared_preference(root)
+    if key == ATTENDED_SEATS and value is not None:
+        return [f"warning: preference `{ATTENDED_SEATS}` is the alias of `{PAIRED_UNITS}`; rename the key (value "
+                f"unchanged) by a preferences PR — the alias is removed in dyad-operator 1.0 (#573)"]
+    return []
+
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     root = root or dyadlib.repo_root()
     msgs = []
     for p in sorted(sessions_dir(root).glob("*.md")):
         msgs += check_record(p)
-    return msgs
+    return msgs + alias_warnings(root)
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     root = root or dyadlib.repo_root()
@@ -766,10 +775,11 @@ def main(a: list[str]) -> int:
             print(f"{s.get('session', s['_path']):24} {flag:6} seen={s.get('seen',''):20} rows={s.get('rows',''):16} files={len(s.get('files','').split())}{where}{att}{same_flag}")
         return 0
     msgs = check_package(Path(a[0]) if a else None)
+    fails = [m for m in msgs if not m.startswith("warning:")]
     for m in msgs:
-        print(f"FAIL [sessions] {m}")
-    print(f"ok   [sessions] {summary(Path(a[0]) if a else None)}" if not msgs else f"FAIL [sessions] {len(msgs)} problem(s)")
-    return 1 if msgs else 0
+        print(f"warn [sessions] {m.removeprefix('warning:').strip()}" if m.startswith("warning:") else f"FAIL [sessions] {m}")
+    print(f"ok   [sessions] {summary(Path(a[0]) if a else None)}" if not fails else f"FAIL [sessions] {len(fails)} problem(s)")
+    return 1 if fails else 0
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1, #203)
 
