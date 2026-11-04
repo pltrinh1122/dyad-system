@@ -36,7 +36,10 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
                            completed corroboration, the backlog's hygiene (scripts/hygiene.py, #565: findings
                            and `candidate:` similarity lines) and the work in flight (W1-W10', #569, one notice
                            per kind). One `finding:` line each; a finding not yet told is posted, in
-                           one notice, to the home's inbox on `--row`. Exit 1 when a finding fails
+                           one notice, to the home's inbox on `--row`. Exit 1 when a finding fails. A health
+                           run that appended an event (a changed reading, #438) has it landed on main as an
+                           events-only commit citing no d-work, on `--row` only (#593); one `events:` line says
+                           what happened, and a landing that fails never changes a finding or the exit
 
 It runs from `main`'s own code: server-side in `.github/workflows/dyad-automaton.yml` on every push to `main`, gated by
 the repository variable `DYAD_AUTOMATON` (`on`, the operator's switch), and by hand by any unit for recovery. Its
@@ -45,7 +48,7 @@ commits carry the identity of whoever runs it; its inbox messages come from the 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("automaton.py: Python 3.12+ required")
-import os, re, subprocess
+import contextlib, io, json, os, re, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -56,6 +59,7 @@ land = dyadlib.load_module(HERE / "land.py", "land")
 merge_mod = dyadlib.load_module(HERE / "merge.py", "merge")
 steps = dyadlib.load_module(HERE / "steps.py", "steps")
 hygiene_mod = dyadlib.load_module(HERE / "hygiene.py", "hygiene")   # the sweep's backlog hygiene (d-work #565)
+runbook_mod = dyadlib.load_module(HERE / "runbook.py", "runbook")   # the event store's primitives (Rule-19)
 Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
@@ -222,6 +226,83 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
             out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
     return out
 
+def new_events(wt: Path) -> tuple[str | None, dict[str, str], list[str]]:
+    """(store, {path: appended text}, notes) for the run-book event files the sweep's runs appended to in the swept
+    worktree `wt`: `store` the event store's repo-relative path (`dyadlib.events_rel`), each path under it, its text
+    the lines after its content at `wt`'s HEAD. The runner appends only a changed reading (`runbook.unchanged`,
+    #438), so this is often empty. A file changed other than by appending, removed, or unreadable is never landed: one
+    note says so, and nothing here raises into the sweep."""
+    rel = dyadlib.events_rel(wt)
+    if not rel:
+        return None, {}, []
+    fresh, notes = {}, []
+    for p in land.written(wt):
+        if not (p.startswith(f"{rel}/") and p.endswith(".jsonl")):
+            continue
+        if not (wt / p).is_file():
+            notes.append(f"events: {p} removed or not a file; not landed")
+            continue
+        try:
+            r = land.git(wt, "show", f"HEAD:{p}", check=False)
+            before = r.stdout if r.returncode == 0 else ""
+            now = (wt / p).read_text(encoding="utf-8")
+        except (OSError, UnicodeError, Refused) as e:
+            notes.append(f"events: {p} not read ({type(e).__name__}); not landed")
+            continue
+        if not now.startswith(before):
+            notes.append(f"events: {p} changed other than by an append; not landed")
+        elif now[len(before):].strip():
+            fresh[p] = now[len(before):]
+    return rel, fresh, notes
+
+
+def events_builder(fresh: dict[str, str]):
+    """`land.land`'s builder: append each fresh event line to its file on the freshly fetched main, unless that file's
+    last event of the same command already holds the same reading (output digest and exit, `runbook.unchanged`'s
+    test) — so a rebuild after a moved main, or a reading another run landed meanwhile, never records twice."""
+    def build(w: Path):
+        for rel, text in fresh.items():
+            p = w / rel
+            for line in text.splitlines(keepends=True):
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                last = runbook_mod.last_event(p, ev.get("name", "")) if p.is_file() else None
+                if last and last.get("output_sha256") == ev.get("output_sha256") and last.get("exit") == ev.get("exit"):
+                    continue
+                p.parent.mkdir(parents=True, exist_ok=True)
+                with open(p, "a", encoding="utf-8") as f:
+                    f.write(line if line.endswith("\n") else line + "\n")
+        paths = land.written(w)
+        if not paths:
+            raise Refused("already landed: main holds the same reading; nothing pushed")
+        names = ", ".join(sorted(Path(r).stem for r in fresh))
+        return paths, f"events: {names} (automaton sweep)", ""
+    return build
+
+
+def land_events(repo: Path, rel: str | None, fresh: dict[str, str], row: int | None) -> str:
+    """One `events:` line: the sweep's new event lines landed on main as an events-only commit through the land
+    machinery (its worktree, its lock, its push-race rebuilds), under a subject that cites no d-work (Rule-3 Ledger,
+    #438). Skipped without `--row` — a sweep run without it acts on nothing. Never raises: a refused or failed landing
+    (no push rights, a moved main on every try) is the line, and the sweep's findings and exit are unchanged."""
+    if not fresh:
+        return "events: no new reading to land"
+    names = ", ".join(sorted(Path(r).stem for r in fresh))
+    if not row:
+        return f"events: {names} not landed (no --row: this sweep acts on nothing)"
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            land.land(repo, "", None, events_builder(fresh), "the sweep's events", prefix=f"{rel}/", kind="events-only")
+    except Refused as e:
+        return f"events: {names} not landed ({str(e).splitlines()[0][:300]})"
+    except Exception as e:                       # a landing never fails the sweep
+        return f"events: {names} not landed ({type(e).__name__}: {(str(e).splitlines() or [''])[0][:300]})"
+    m = re.search(r"landed ([0-9a-f]{40}) on main", buf.getvalue())
+    return f"events: {names} landed on main{f' as {m.group(1)[:12]}' if m else ''} (events-only)"
+
 def sweep_ci(repo: Path, base: str, now) -> list[tuple[bool, str]]:
     """Code pushes to main within SWEEP_CI_HOURS with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
@@ -315,6 +396,10 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt) + sweep_drift(repo, wt, base)
+        try:                                                 # read before the lock goes: the next land resets wt
+            events_at, fresh, event_notes = new_events(wt)
+        except Exception as e:                               # the event step never fails the sweep's findings
+            events_at, fresh, event_notes = None, {}, [f"events: not read ({type(e).__name__}); not landed"]
     found += sweep_ledger(repo, base, now) + sweep_ci(repo, base, now)
     hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp())   # after check, whatever check returned (#565 A8)
     found += [(False, f"finding: {h}") for h in hyg]
@@ -337,7 +422,8 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
         summary += "; " + "; ".join(sent)
     elif new:
         summary += "; not told (no --row or no home)"
-    return lines + [summary], rc
+    event_lines = event_notes + [land_events(repo, events_at, fresh, row)]   # after the notices; never changes rc
+    return lines + event_lines + [summary], rc
 
 # ---- taking them
 def post(repo: Path, to: str, row: int, body: str) -> str:
