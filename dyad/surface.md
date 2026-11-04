@@ -41,7 +41,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad craft new <name>` / `list` / `check [<craft>]` / `export <craft> [<out>]` / `install <src>` | `--force`, `--dwork <N>` | frozen |
 | `dyad ledger` | — | frozen |
 | `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate`, `--land`, `--mirror` | frozen |
-| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--check`, `--land`, `--mirror` | frozen |
+| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--check`, `--land`, `--mirror` | frozen |
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
@@ -115,7 +115,20 @@ the operator's. The key names and allowed values are the surface.
 | attendance-window | frozen |
 | relay-form | frozen |
 | altitude | moving (#570 A1t; not yet a key) |
-| sweep and hygiene thresholds | moving (#570 C1; not yet keys) |
+| hygiene-stale-days | frozen |
+| hygiene-similar | frozen |
+| hygiene-top | frozen |
+| inflight-unread-hours | frozen |
+| inflight-planned-quiet-days | frozen |
+| inflight-unplanned-hours | frozen |
+| inflight-pr-still-days | frozen |
+| inflight-promise-days | frozen |
+| inflight-question-hours | frozen |
+| sweep-landing-hours | frozen |
+| sweep-board-stale-days | frozen |
+| sweep-ci-hours | frozen |
+| promotion-ceiling | frozen |
+| promotion-adjacency-min | frozen |
 
 ## S4 Rules
 
@@ -157,6 +170,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | attendance | frozen |
 | audit-fences | frozen |
 | audit-watermark | frozen |
+| backlog-hygiene | frozen |
 | batch-engagement | frozen |
 | board-lines | frozen |
 | bundle-row | frozen |
@@ -237,6 +251,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | session-overlap | frozen |
 | session-reconcile | frozen |
 | suite-or-guards | frozen |
+| sweep-findings | frozen |
 | tag-drift | frozen |
 | tended-conflict | frozen |
 | term-home | frozen |
@@ -248,6 +263,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | trace-in-evidence | frozen |
 | trace-window | frozen |
 | transaction-containment | frozen |
+| work-in-flight | frozen |
 | y-binding | frozen |
 | zone-classification | frozen |
 | zone-set | frozen |

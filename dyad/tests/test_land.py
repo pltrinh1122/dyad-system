@@ -119,6 +119,18 @@ class LandTests(unittest.TestCase):
         self.assertEqual(out.splitlines()[0], "3")
         self.assertTrue(git(self.origin, "log", "-1", "--format=%s", "main").startswith("ledger: #3 open: mine"))
 
+    def test_a_carried_backlog_row_lands_with_its_subject_and_once(self):
+        """#574: `new --backlog --mandate` lands as `#N backlog, carried under mandate #M`, and a re-run is refused."""
+        rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(git(self.origin, "log", "-1", "--format=%s", "main").startswith("ledger: #2 backlog, carried under mandate #1: a fence"))
+        head = self.main_at_origin()
+        rc, _, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        self.assertEqual(rc, 1); self.assertIn("already carried under mandate #1", err)
+        self.assertEqual(self.main_at_origin(), head)
+
     def test_an_already_landed_entry_is_refused(self):
         rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
         self.assertEqual(rc, 0, err)

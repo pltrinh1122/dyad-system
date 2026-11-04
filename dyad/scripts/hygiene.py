@@ -4,31 +4,31 @@
 The structural findings an automaton can make about the backlog, and a similarity ranking for the home's review. It
 finds and ranks; it judges nothing (plan #565: the semantic problems are the home's). Read from one commit of `main`:
 
-  I1 untouched        a backlog row no commit has touched (its row, plan or provenance file) in HYGIENE_STALE_DAYS
+  I1 untouched        a backlog row no commit has touched (its row, plan or provenance file) in `hygiene-stale-days`
   I2 malformed title  an empty title, or one shaped like a flag (it starts with `-`)
   I4 orphaned         a backlog child whose `refs: parent #N` names a terminal row
   I12 worked          a commit on a fetched `origin` branch cites `d-work #N` for a backlog row
   ranking             TF-IDF cosine over each backlog row's title and plan text against every row, siblings under one
                       parent skipped and tokens in more than HYGIENE_MAX_DF of rows dropped; the top pairs at or above
-                      HYGIENE_SIMILAR, listed as candidates and never as findings
+                      `hygiene-similar` (at most `hygiene-top`), listed as candidates and never as findings
 
 Work in flight (d-work #569), `inflight W…` lines, each read from records alone (plan #569's falsification) and
 worded from fixed record times, never a computed age, so a finding told once is not new again until its record moves:
 
-  W1  relay unread        a `relay` with no `.read` marker, sent over INFLIGHT_W1_HOURS ago (told to home only, A2)
+  W1  relay unread        a `relay` with no `.read` marker, sent over `inflight-unread-hours` ago (told to home only, A2)
   W2  planned row quiet   a planned row the board says waits on a unit, with no citing commit, PR update, board write
-                          or plan-`Y` in INFLIGHT_W2_DAYS (A3: rows waiting on the operator are not counted)
-  W3  open, no plan       an open row with no plan file, opened over INFLIGHT_W3_HOURS ago; a child (`refs: parent
+                          or plan-`Y` in `inflight-planned-quiet-days` (A3: rows waiting on the operator are not counted)
+  W3  open, no plan       an open row with no plan file, opened over `inflight-unplanned-hours` ago; a child (`refs: parent
                           #N`) or a row under a mandate is exempt (A4, Rule-15)
   W4  orphan PR           an open PR citing no `d-work #N` of a live row (prs.py's parse, A5)
   W5  orphan branch       an origin branch whose tip is not on main, with no open PR and no commit citing a live row (A6)
-  W6  stale PR head       an open PR on a live row whose head commit is over INFLIGHT_W6_DAYS old
+  W6  stale PR head       an open PR on a live row whose head commit is over `inflight-pr-still-days` old
   W7a unit not in table   a unit a live board entry names that `_cos`'s `seats` does not
   W7b unit stale          a live entry waiting on a unit whose presence file is stale; skipped with one line until the
                           presence store holds a fresh file (gated on #567, A7)
-  W8  promise kept listed a `promised` entry of a board file listed over INFLIGHT_W8_DAYS (its age: git history, A8)
+  W8  promise kept listed a `promised` entry of a board file listed over `inflight-promise-days` (its age: git history, A8)
   W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
-                          INFLIGHT_W9_HOURS (A9)
+                          `inflight-question-hours` (A9)
   W10' report after board an owner's report on a row, to home, newer than the row's board `since` (A10)
   W11 phase age           a phased board entry (#587) whose `since` is older than its phase's threshold in
                           INFLIGHT_W11_HOURS (an asked phase 24 h, every other 3 days): plan #587 F5's one rule,
@@ -57,33 +57,37 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dyadlib
 
-HYGIENE_STALE_DAYS = 30        # I1: untouched this long
-HYGIENE_SIMILAR = 0.35         # ranking: the lowest cosine listed
-HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of rows is boilerplate, dropped
-HYGIENE_TOP = 10               # ranking: at most this many pairs
+# The operator-tunable thresholds (d-work #590): each a preference key, read at use time by `dyadlib.tunable`, whose
+# default has one home, its DMC record's `dyad:defaultValue` (dmc/backlog-hygiene.jsonld, dmc/work-in-flight.jsonld).
+TUNABLES = {
+    "I1": "hygiene-stale-days",            # I1: untouched this long (days)
+    "similar": "hygiene-similar",          # ranking: the lowest cosine listed
+    "top": "hygiene-top",                  # ranking: at most this many pairs
+    "W1": "inflight-unread-hours",         # W1: a relay unread this long (minimum ages: the sweep runs every 12 hours, A11)
+    "W2": "inflight-planned-quiet-days",   # W2: a planned row quiet this long
+    "W3": "inflight-unplanned-hours",      # W3: an open row with no plan this long
+    "W6": "inflight-pr-still-days",        # W6: an open PR's head unchanged this long
+    "W8": "inflight-promise-days",         # W8: a promise listed this long
+    "W9": "inflight-question-hours",       # W9: a recorded question to the operator this old
+}
+HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of rows is boilerplate, dropped (an engineering constant)
 PARENT = re.compile(r"\bparent #(\d+)")
 CITE = re.compile(r"\bd-work #(\d+)\b")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
-INFLIGHT_W1_HOURS = 4          # W1: a relay unread this long (minimum ages: the sweep runs every 12 hours, A11)
-INFLIGHT_W2_DAYS = 3           # W2: a planned row quiet this long
-INFLIGHT_W3_HOURS = 24         # W3: an open row with no plan this long
-INFLIGHT_W6_DAYS = 3           # W6: an open PR's head unchanged this long
-INFLIGHT_W8_DAYS = 3           # W8: a promise listed this long
-INFLIGHT_W9_HOURS = 24         # W9: a recorded question to the operator this old
 INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
     "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
     "done-ready": 72, "done-asked": 24, "landing": 72, "held": 72}
 INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'", "W11")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
-    ("thresholds-in-range", lambda: HYGIENE_STALE_DAYS > 0 and 0 < HYGIENE_SIMILAR < 1 and 0 < HYGIENE_MAX_DF < 1 and HYGIENE_TOP > 0),
-    ("inflight-thresholds-positive", lambda: min(INFLIGHT_W1_HOURS, INFLIGHT_W2_DAYS, INFLIGHT_W3_HOURS, INFLIGHT_W6_DAYS,
-                                                 INFLIGHT_W8_DAYS, INFLIGHT_W9_HOURS) > 0 and len(set(INFLIGHT_KINDS)) == 12),
+    ("max-df-in-range", lambda: 0 < HYGIENE_MAX_DF < 1),
+    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 12),
     ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) == set(dyadlib.ORCH_PHASES)
                                        and all(h > 0 for h in INFLIGHT_W11_HOURS.values())
                                        and all(INFLIGHT_W11_HOURS[p] == 24 for p in dyadlib.ORCH_ASKED)),
 ]
-TREE_INVARIANTS = [   # loads a guard, so never at import
+TREE_INVARIANTS = [   # loads a guard or reads the DMC store, so never at import
+    ("tunables-are-the-records", lambda: set(TUNABLES.values()) == dyadlib.tunables_read_by("scripts/hygiene.py")),   # #590: one home
     ("lines-are-information", lambda: not any(dyadlib.load_guard("agent", "inbox").DISPOSITION.search(l) for l in (
         "hygiene I1 untouched: backlog row #1 (a title), no commit in 31 days",
         "hygiene I4 orphaned: backlog row #2's parent #1 is done",
@@ -130,8 +134,10 @@ def tokens(text: str) -> list[str]:
     return TOKEN.findall(text.lower())
 
 
-def ranking(rows, texts: dict[int, str], backlog: list) -> list[tuple[float, int, int]]:
-    """[(cosine, a, b)], best first: each backlog row against every row, by TF-IDF over `texts`, siblings skipped."""
+def ranking(rows, texts: dict[int, str], backlog: list, root: Path | None = None) -> list[tuple[float, int, int]]:
+    """[(cosine, a, b)], best first: each backlog row against every row, by TF-IDF over `texts`, siblings skipped; at
+    most `hygiene-top` pairs at or above `hygiene-similar`, both read from `root`'s preferences."""
+    similar, top = dyadlib.tunable(TUNABLES["similar"], root), dyadlib.tunable(TUNABLES["top"], root)
     docs = {r.id: Counter(tokens(texts.get(r.id, r.title))) for r in rows}
     n = max(len(docs), 1)
     df = Counter(t for d in docs.values() for t in d)
@@ -148,22 +154,23 @@ def ranking(rows, texts: dict[int, str], backlog: list) -> list[tuple[float, int
                 continue                                    # siblings share their parent's boilerplate (A5)
             seen.add((min(o.id, r.id), max(o.id, r.id)))
             cos = sum(v * vec[o.id].get(t, 0.0) for t, v in vec[r.id].items()) / (norm[r.id] * norm[o.id])
-            if cos >= HYGIENE_SIMILAR:
+            if cos >= similar:
                 out.append((cos, min(o.id, r.id), max(o.id, r.id)))
-    return sorted(out, key=lambda x: (-x[0], x[1], x[2]))[:HYGIENE_TOP]
+    return sorted(out, key=lambda x: (-x[0], x[1], x[2]))[:top]
 
 
-def hygiene(repo: Path, base: str, now: float) -> tuple[list[str], list[str]]:
+def hygiene(repo: Path, base: str, now: float, prefs: Path | None = None) -> tuple[list[str], list[str]]:
     """(findings, candidates) for the backlog on `base`: `hygiene I…` lines, and `candidate:` ranking lines."""
     inst = dyadlib.instance_rel(repo) or "agent-corpus"
     rows = dyadlib.read_rows(repo, at=base)
     byid = {r.id: r for r in rows}
     backlog = [r for r in rows if r.state == "backlog"]
     touched, cited = last_touched(repo, base, inst), cited_on_branches(repo)
+    stale_days = dyadlib.tunable(TUNABLES["I1"], prefs or repo)   # `prefs`: the sweep's worktree at `base` (#590)
     findings = []
     for r in backlog:
         days = (now - touched[r.id]) / 86400 if r.id in touched else None
-        if days is not None and days > HYGIENE_STALE_DAYS:
+        if days is not None and days > stale_days:
             findings.append(f"hygiene I1 untouched: backlog row #{r.id} ({r.title[:60]}), no commit in {int(days)} days")
         if not r.title.strip() or r.title.lstrip().startswith("-"):
             findings.append(f"hygiene I2 malformed title: backlog row #{r.id} has the title {r.title[:40]!r}")
@@ -179,7 +186,7 @@ def hygiene(repo: Path, base: str, now: float) -> tuple[list[str], list[str]]:
     malformed = {r.id for r in backlog if not r.title.strip() or r.title.lstrip().startswith("-")}
     ranked = [r for r in rows if r.id not in malformed]          # an I2 row has no title to compare: a finding already
     candidates = [f"candidate: #{a} and #{b} similar ({c:.2f}): {byid[a].title[:50]} / {byid[b].title[:50]}"
-                  for c, a, b in ranking(ranked, texts, [r for r in backlog if r.id not in malformed])]
+                  for c, a, b in ranking(ranked, texts, [r for r in backlog if r.id not in malformed], prefs or repo)]
     return findings, candidates
 
 
@@ -244,10 +251,11 @@ def _promise_since(repo: Path, base: str, rel: str, text: str) -> int | None:
 
 
 def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
-             presence_fresh=None) -> list[str]:
+             presence_fresh=None, prefs: Path | None = None) -> list[str]:
     """`inflight W…` lines for the work in flight on `base` (module docstring). `pulls` is the hosting's open PRs as
     [{number, body, title, head_ref, head_sha}], or None when it was not read (W4–W6 then skip with one line).
-    `presence_fresh(seat, now)` says whether a seat's presence is fresh; None reads the presence store on `base`."""
+    `presence_fresh(seat, now)` says whether a seat's presence is fresh; None reads the presence store on `base`.
+    The thresholds are read from `prefs`'s preferences (the sweep's worktree at `base`, #590), else `repo`'s."""
     import datetime
     nowdt = datetime.datetime.fromtimestamp(now, datetime.timezone.utc)
     inst = dyadlib.instance_rel(repo) or "agent-corpus"
@@ -259,13 +267,14 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
     bd = dyadlib.load_guard("agent", "board")
     home = cos.get("holder")
     msgs = _messages(repo, base, inst)
+    w = {k: dyadlib.tunable(TUNABLES[k], prefs or repo) for k in ("W1", "W2", "W3", "W6", "W8", "W9")}   # read now, never at import
     out = []
     # W1: a relay no one has read
     for m in msgs:
         sent = _when(m.get("sent", ""))
-        if m.get("kind") == "relay" and not m["_read"] and sent and (nowdt - sent).total_seconds() > INFLIGHT_W1_HOURS * 3600:
+        if m.get("kind") == "relay" and not m["_read"] and sent and (nowdt - sent).total_seconds() > w["W1"] * 3600:
             out.append(f"inflight W1 relay unread: row #{m.get('row')}'s relay to {m['_box']} sent {m.get('sent')} has no "
-                       f"read marker (over {INFLIGHT_W1_HOURS}h)")
+                       f"read marker (over {w['W1']}h)")
     # W2: a planned row waiting on a unit, quiet
     cited = _cited_times(repo)
     pr_rows = {}
@@ -284,10 +293,10 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             if (t := _when(v)):
                 marks.append(int(t.timestamp()))
         last = max(marks)
-        if last and now - last > INFLIGHT_W2_DAYS * 86400:
+        if last and now - last > w["W2"] * 86400:
             stamp = datetime.datetime.fromtimestamp(last, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
             out.append(f"inflight W2 planned row quiet: row #{i} waits on {f['waiting-on']} with nothing since {stamp} "
-                       f"(no citing commit, PR update, board write or plan-Y; over {INFLIGHT_W2_DAYS} days)")
+                       f"(no citing commit, PR update, board write or plan-Y; over {w['W2']} days)")
     # W3: an open row with no plan file
     plans = set(git(repo, "ls-tree", "--name-only", f"{base}:{inst}/d-work/plans").split())
     for i in sorted(live):
@@ -296,9 +305,9 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             continue
         added = git(repo, "log", "--diff-filter=A", "--format=%ct", base, "--", f"{inst}/d-work/rows/{i}.md").split()
         t = int(added[-1]) if added else int(_when(r.opened).timestamp()) if _when(r.opened) else None
-        if t and now - t > INFLIGHT_W3_HOURS * 3600:
+        if t and now - t > w["W3"] * 3600:
             out.append(f"inflight W3 open, no plan: row #{i} ({r.title[:50]}), opened {r.opened}, has no plan file "
-                       f"(over {INFLIGHT_W3_HOURS}h)")
+                       f"(over {w['W3']}h)")
     # W4, W6: open PRs; W5: branches
     if pulls is None:
         out.append("inflight W4-W6 skipped: the hosting's open PRs were not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")
@@ -313,10 +322,10 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
                            + (f" (cites {', '.join(f'#{n}' for n in sorted(ids))})" if ids else " (cites none)"))
                 continue
             ct = git(repo, "log", "-1", "--format=%ct", p.get("head_sha", "")).strip()
-            if ct.isdigit() and now - int(ct) > INFLIGHT_W6_DAYS * 86400:
+            if ct.isdigit() and now - int(ct) > w["W6"] * 86400:
                 stamp = datetime.datetime.fromtimestamp(int(ct), datetime.timezone.utc).strftime("%Y-%m-%d")
                 out.append(f"inflight W6 stale PR head: PR #{p['number']} on row #{on[0]} has head {p['head_sha'][:12]} "
-                           f"of {stamp} (over {INFLIGHT_W6_DAYS} days)")
+                           f"of {stamp} (over {w['W6']} days)")
         open_refs = {p.get("head_ref") for p in pulls}
         for ref in git(repo, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split():
             name = ref.removeprefix("origin/")
@@ -358,19 +367,19 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
     for name, f in [("_cos", cos)] + [(str(i), f) for i, f in sorted(entries.items())]:
         for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:
             t = _promise_since(repo, base, f"{inst}/d-work/board/{name}.md", promise)
-            if t and now - t > INFLIGHT_W8_DAYS * 86400:
+            if t and now - t > w["W8"] * 86400:
                 stamp = datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%d")
                 out.append(f"inflight W8 promise still listed: board {name} has promised {promise[:80]!r} since {stamp} "
-                           f"(over {INFLIGHT_W8_DAYS} days)")
+                           f"(over {w['W8']} days)")
     # W9: waiting on the operator
     for i, f in sorted(entries.items()):
         if f.get("waiting-on") != "operator":
             continue
         if not f.get("question"):
             out.append(f"inflight W9 operator wait: row #{i} waits on the operator with no question recorded")
-        elif (t := _when(f.get("since", ""))) and (nowdt - t).total_seconds() > INFLIGHT_W9_HOURS * 3600:
+        elif (t := _when(f.get("since", ""))) and (nowdt - t).total_seconds() > w["W9"] * 3600:
             out.append(f"inflight W9 operator wait: row #{i}'s question to the operator stands since {f['since']} "
-                       f"(over {INFLIGHT_W9_HOURS}h)")
+                       f"(over {w['W9']}h)")
     # W10': an owner's report newer than the board
     for i, f in sorted(entries.items()):
         since, owners = _when(f.get("since", "")), set(bd.owners(f))

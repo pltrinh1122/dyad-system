@@ -18,8 +18,9 @@ that can start in any later session.
 
 ## Phases
 1. **Planning.** The plan is written to `agent-corpus/d-work/plans/<id>.md` before the
-   counter-prompt: intent as read, mutation, files touched, base commit of `main`,
-   falsification pointer. The reply reproduces it. The plan-`Y` binds to the file. A plan that
+   counter-prompt: its definition of done (the operator's words, quoted from the provenance record,
+   or one marked proposed that the plan-`Y` accepts; the d-work play-book), intent as read, mutation,
+   files touched, base commit of `main`, falsification pointer. The reply reproduces it. The plan-`Y` binds to the file. A plan that
    needs an order of its steps or a split of its PRs says so as a requirement (`order: required`);
    otherwise order and split are execution detail (Rule-3 Plan, #555).
 2. **Execution.** Begins by reading the plan file, in the same or any later session. If
@@ -48,6 +49,8 @@ mandate has no plan file, so phase 1 has nothing to write and phase 2's drift ch
 read, and that gap had been silent rather than stated; see the same record, amendment #290. Phase 1 gains the
 stated requirement of order or split 2026-11-02 (d-work #555): without it an order the plan only narrated could not be
 told from one it needed; see the same record, amendment #555. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
-(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Phase 1 gains the definition
+of done 2026-11-04 (d-work #574): a row's scope follows what the operator can evaluate, and the plan is where that is
+stated and accepted; see the same record, amendment #574.
 
 Set: System Requirements.

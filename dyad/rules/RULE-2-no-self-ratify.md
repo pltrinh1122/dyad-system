@@ -64,7 +64,9 @@ not edited when they are added (G5).
 - A batch counter-prompt (Rule-3, Batch disposition) names several d-works, PRs, or both in one
   question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked
   against its own evidence and its own heads-unchanged condition.
-- A plan counter-prompt whose plan states a **mandate scope** (Rule-3, Plan) binds wider than one
+- A plan counter-prompt whose plan states a **mandate scope** (Rule-3, Plan), or runs a play-book
+  whose step prescribes a class of row — that step's class its rule and the play-book's own count its
+  ceiling (#574) — binds wider than one
   action and no wider than that scope: the plan-`Y` authorizes the mutation *and* the class of row
   the scope names, so an **accreted row** inside it carries that `Y` as its own authorization and
   is never asked for separately, while the done-`Y` ratifies the accreted set exactly as the
@@ -129,6 +131,9 @@ hosting approval, the one input no agent can forge, stays; see the same record, 
 recorded done-`Y` names, through the merge verb, and decides nothing; see the same record, amendment #556. Binding's
 after-merge check is corroboration where the merge ran 2026-11-03 (d-work #564): the automaton's merges started no hosted CI; see
 `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
-(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Binding's mandate clause gains the play-book that prescribes a class of row
+2026-11-04 (d-work #574): the plan-`Y` that ran the incident-hardening play-book had already answered for the fence rows
+that play-book prescribes, and they were asked again; the never-accretable list is unchanged; see the same record,
+amendment #574.
 
 Set: System Requirements.

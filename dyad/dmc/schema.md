@@ -28,6 +28,7 @@ The file is `<identifier>.jsonld`. `dyad/dmc/context.jsonld` is the one context 
 | `hasDefinedTerm` | yes | a list of ≥ 2 outcomes, each `{"@type": "DefinedTerm", "termCode", "name", "dyad:when", "dyad:then"}`, every value a non-empty string, `termCode` unique in the record |
 | `dyad:precedence` | no | the order or tie-break among outcomes |
 | `dyad:default` | no | the outcome when the inputs cannot decide |
+| `dyad:tunables` | no | a non-empty list of the numbers this criterion lets the operator tune, each `{"dyad:preference": <key>, "dyad:defaultValue", "dyad:allowed", "dyad:readBy": <path>}`, every value a non-empty string: the preference key (lowercase, hyphenated), the value used when the preference is absent, what the `allowed` cell says, and the file that reads it; a key is claimed by one record only; core records only (`dyad/dmc/`), since `dyadlib.tunable` reads no craft or instance record (#590) |
 | `dyad:judgedBy` | yes | `{"dyad:kind": "mechanical" \| "inference" \| "declared", "dyad:implementation": <path> \| null}` |
 | `isPartOf` | yes | the container's urn (table above) |
 | `dyad:home` | yes | a path: the file that defines the criterion |
@@ -46,6 +47,11 @@ Defined here and nowhere else; a craft uses them, never defines one.
 | `dyad:then` | an outcome's consequence |
 | `dyad:precedence` | how outcomes are ordered or a tie is broken |
 | `dyad:default` | the outcome taken when the inputs cannot decide |
+| `dyad:tunables` | the operator-tunable numbers of the criterion, each a preference with its default here |
+| `dyad:preference` | a tunable's preference key (`preferences-corpus/PREFERENCES.md`) |
+| `dyad:defaultValue` | a tunable's value when the preference is absent: the one home of that default |
+| `dyad:allowed` | a tunable's allowed values, as the preference row's `allowed` cell states them |
+| `dyad:readBy` | the file that reads a tunable |
 | `dyad:judgedBy` | how the decision is made: its kind and its implementation |
 | `dyad:kind` | `mechanical` (code decides), `inference` (the Agent reads and judges), `declared` (a party states it, e.g. a preference) |
 | `dyad:implementation` | the code that decides, as a path, or null |
@@ -60,7 +66,8 @@ Defined here and nowhere else; a craft uses them, never defines one.
   module, or by a run-book's shell step, names those files in `dyad:alsoIn`. It may be present for any kind.
 - **Outcome names are quoted from the home file**: each `name` appears in `dyad:home`, compared
   case-insensitively with every whitespace run collapsed to one space.
-- **No moving values.** Outside the path fields (`dyad:home`, `dyad:alsoIn`, `dyad:implementation`) and
+- **No moving values.** Outside the path fields (`dyad:home`, `dyad:alsoIn`, `dyad:implementation`, a tunable's
+  `dyad:readBy`) and
   `dyad:owner`, no value holds a date (`YYYY-MM-DD`), a version (`[v]N.N.N`), a 40-hex commit sha or an
   email address: a criterion is stated as it stands, and history is git's.
 
@@ -68,7 +75,9 @@ Defined here and nowhere else; a craft uses them, never defines one.
 Every rule above, mechanically, per record: JSON parses; the required keys; `@context`; `@type`; `@id`,
 `identifier` and `isPartOf` against the container and file; the shapes of `dyad:inputs`,
 `hasDefinedTerm` and `dyad:judgedBy`; that every path exists inside the repo; that every outcome name
-appears in the home file; the forbidden values; and, across all records, that no `@id` is declared twice.
+appears in the home file; the forbidden values; a `dyad:tunables` list's shape and paths; and, across all records, that no `@id` is
+declared twice and no preference is claimed as a tunable twice. A tunable whose key has no row in
+`dyad/templates/PREFERENCES.md` warns.
 A path into a craft this system has not installed warns instead of failing (Rule-20 property 2). No
 record anywhere passes, its summary saying so. Whether the outcomes are right, whether the home file
 states them and whether `dyad:kind` is true is inference.
