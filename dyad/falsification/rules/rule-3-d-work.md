@@ -1097,6 +1097,19 @@ but its own, that names no carve-out of a rule).
 | B10 doorbell with no live session | the doorbell is scoped to a unit whose session a direct message reaches; one with no live session polls | C66 |
 
 
+### Revision 2, audit's re-attack answered (audit-e73be78c on head 01141148)
+Exceptions: 0, confirmed. Remaining refutations, each fixed in the Rule:
+
+| item | refutation | fix |
+|---|---|---|
+| R1 | A play-book step counted only in execution has no ceiling to refuse, so carriage is unbounded. | The plan states a number for every play-book step, an upper bound where the count is known only in execution; a row past it is a new plan. Rows born `backlog` and listed after the fact are dropped. This closes counsel's open point 1. |
+| R2 | Plan question, plan file, play-book step is two hops, not "directly". | The plan file states the step's class in words and its number; the step id is only a pointer, so the question cites what binds directly. |
+| R3 | `ledger-pr-merge: agent` merges a ledger-only PR with no done-`Y`. | Scoped to a PR holding a path outside `agent-corpus/d-work/`. |
+| R4 | A Done with `retires` and no merge had no archive act. | The no-merge commit archives each retired row it names. |
+| R5 | #571 and #591 carry `mode: implicit` and closed on their own done-`Y`. | `mode` names how a row was opened (born under another row's plan-`Y`), not which Done closes it; this matches Rule-16's never-lost field. |
+| R6 | A relay of the home's instruction about an open row is neither shape, so it would be returned. | Intake judges only a message proposing work no row holds; a message about an open row is information. |
+| R7 | "case or spelling alone" is overbroad, since `Y` and `N` differ in spelling. | "The listed variants of one answer lead to one act" (`label-case.jsonld`'s table). |
+
 ### Rule-3's Provenance section before #585 (history, moved here verbatim)
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged

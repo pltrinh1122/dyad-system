@@ -76,14 +76,14 @@ Part II §2):
 A `Y` with text is a `Y` plus a prompt. Silence is not consent: an unanswered counter-prompt authorizes nothing. An
 answer is read by its meaning: `Y`, `y` and `yes` are one `Y`, `N`, `n` and `no` one `N`, the row recording the token
 and the provenance record the words as typed (Rule-7). Where two readings lead to different acts the agent asks, as a
-blocking question (Rule-8's form); a difference of case or spelling alone leads to one act
+blocking question (Rule-8's form); the listed variants of one answer lead to one act
 (`dyad/dmc/label-case.jsonld`, #553).
 
 ## What a `Y` binds
 A `Y` binds exactly the acts its question names (Rule-2, Binding of approval): what the question states and what it
 cites directly. A row of work takes two questions:
-- the **plan question** cites the plan file, which names each carried class — its mandate scope, or a play-book step by
-  its id — so its plan-`Y` binds the mutation the plan describes, every PR of the d-work, and every row the plan carries
+- the **plan question** cites the plan file, which states each carried class in words and with its number — its
+  mandate scope, or a play-book step's class, the step id only a pointer — so its plan-`Y` binds the mutation the plan describes, every PR of the d-work, and every row the plan carries
   (Plan, below);
 - the **Done question** names the d-work, its accreted rows, the rows its report retires and its unmerged PRs, so its
   done-`Y` verifies the output, closes the accreted set, archives exactly the retired rows and ratifies exactly those
@@ -115,10 +115,10 @@ named act.
   plan (`dyad/dmc/plan-departure.jsonld`, #555).
 - **Mandate scope.** A plan carries rows from two sources, each stated in the plan file, so the plan question names it.
   (a) A **mandate scope** the plan states: a *rule* for the class of row it will open ("one child per failure mode") and
-  a *ceiling* on how many. (b) A step of a play-book the plan runs that prescribes a class of row, cited in the plan by
-  its step id: that step's class is the rule, and the play-book's own count, stated in the plan as a number, is the
-  ceiling (#574). Rule and ceiling are the operator's to read before the plan-`Y` and to refuse. A step whose rows can
-  be counted only in execution has them born `backlog`, each listed in the completion evidence. A play-book that wants a
+  a *ceiling* on how many. (b) A step of a play-book the plan runs that prescribes a class of row: the plan states that
+  class in words, which is the rule, and a number, which is the ceiling — the step's count, or an upper bound where the
+  count is known only in execution (#574). Rule and ceiling are the operator's to read before the plan-`Y` and to
+  refuse. A play-book that wants a
   question for a row says so in its step. A plan stating neither source carries no row. A row outside the rule, or past
   the ceiling, is a new plan.
 - A carried row is born as its scope or step says: `open`, worked under this d-work, its done riding this done-`Y`; or
@@ -130,7 +130,7 @@ named act.
 
 ## Completion counter-prompt (intent verification)
 - The done-`Y` is the operator's verification that the d-work's intent was delivered as expected, asked on the output as
-  it stands in the PR(s), before merge, so `main` never carries a PR's output before its done-`Y`. The question is
+  it stands in the PR(s), before merge, so `main` never carries a PR holding a path outside `agent-corpus/d-work/` before its done-`Y`. The question is
   always the last line of the reply that believes the d-work is done.
 - **Form**: `Y/N: Done with #<id> <title>?`, or the batch form. One parenthetical names what else the `Y` binds, in this
   order — accreted rows, retired rows, and under `merge-disposition: with-done` the unmerged PRs:
@@ -151,7 +151,7 @@ named act.
   carried by the Record commit, so it covers the `Y` and stays ledger-only; one with no transcript is still cited, its
   buckets marked absent (#213). A mandate close rides the mandate's own trace.
 - The reply that asks does not merge. A done-`Y` that names no merge has nothing in flight: one ledger commit holds its
-  `disposed` entry, its provenance entry and the trace, and sets `done` at once.
+  `disposed` entry, its provenance entry and the trace, sets `done` at once, and archives each retired row it names.
 - **Record, merge, Close** (#202), for a done-`Y` that names a merge. The reply that receives it takes three acts in
   order, so the ledger's record of the `Y` precedes every merge it ratifies. (1) **Record**: one clerical ledger commit
   holding the `disposed` entry, its provenance entry and the trace, the state left as it is, the entry naming each
@@ -229,9 +229,9 @@ named act.
   authorization is reconstructible from the ledger alone (D4). A carried row's entry names the `Y` it rides — an
   accreted row's first `<date> Y plan (mandate #<id>)`, a carried `backlog` row's `<date> Y backlog (mandate #<id>)`, a
   retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
-  or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names a row's Done route (Rule-16 Store):
-  `implicit` on a row whose done rides another's done-`Y`, an accreted row; `explicit`, or the field absent, on a row
-  its own Done question closes, as a carried `backlog` row is once the operator prompts for it.
+  or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names how a row was opened (Rule-16 Store):
+  `implicit` on a row born under another row's plan-`Y`, an accreted row; `explicit`, or the field absent, on a row its
+  own question opened. It says nothing of which Done closes the row.
 - **Ledger-only commits** (nothing outside `agent-corpus/d-work/`) and **events-only commits** (nothing outside
   `<runbooks>/events/`, `DYAD_RUNBOOKS`, Rule-19 property 1, holding events of read-only run-book commands) are clerical
   and go directly to `main` without a PR. One commit stays one zone (Rule-1), so a commit touching both is **neither**
@@ -276,6 +276,8 @@ named act.
   check stays a script run by the suite until #170.
 
 ## Intake (work proposed by another agent)
+Intake judges a message that proposes work no row holds yet. A message about a row already open — a report, a relay of
+the home's instruction, a notice — is information (Batch disposition, the inbox) and is judged by none of what follows.
 Within one dyad system, an operator prompt relayed verbatim by another unit is a **relayed prompt**: a prompt (Scope),
 entered with the note `relayed via <session>` (Rule-7 property 4). A message from another agent that carries no relayed
 prompt of this system's operator opens no d-work. What it may carry is an intake, a candidate row, which the agent
