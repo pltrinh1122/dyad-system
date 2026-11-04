@@ -11,6 +11,8 @@ defines what each value means.
 | import-licenses | MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC, PSF-2.0 | SPDX identifiers | Rule-13 (import criteria) |
 | import-support | release within 12 months; packaged in the kernel ecosystem (PyPI for Python) | free text | Rule-13 (import criteria) |
 | delegation | none | `none` \| `plan-and-execute` | Rule-3 (subagent clause) |
+| delegation-posture | responsive | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
+| delegation-posture-unattended | efficient | `responsive` \| `balanced` \| `efficient` | the cabinet Operating Guide (Posture), Rule-3 (subagent clause, under `delegation: plan-and-execute`) |
 | cli-pattern | industry-standard | `industry-standard` \| `explicit-python` | Rule-19 (run-book commands), Rule-11 (entrypoint) |
 | batch-disposition-mode | off | `off` \| `on-ignore` \| `always` | Rule-2 (binding), Rule-3 (counter-prompt form) |
 | ledger-pr-merge | ask | `ask` \| `agent` | Rule-2 (not-ratification list), Rule-1 (branch-fence case) |
@@ -63,6 +65,14 @@ defines what each value means.
   pushes, opens PRs and asks Done. `none`: subagents read, search and draft text only. Seeded
   `none`: the more contained behavior, until the Operator has reviewed the workflow and chosen
   `plan-and-execute`.
+- `delegation-posture` — how much of an attended seat's own work runs in its main chat and how much in the
+  sub-agents it spawns: `responsive` (the main chat does only what Rule-3's subagent clause keeps for it),
+  `balanced` (work it can finish within a budget) or `efficient` (it drafts and verifies itself). A form
+  preference: it authorizes nothing, and it is inert under `delegation: none`. Seeded `responsive`, the cabinet
+  Operating Guide's fallback for an attended seat.
+- `delegation-posture-unattended` — the same three values, for every seat that is not attended. Seeded
+  `efficient`, the Guide's fallback for an unattended seat (#603: every key `dyad/surface.md` S3 freezes is
+  seeded here, so a fresh install passes its own suite).
 - `cli-pattern` — `industry-standard`: a run-book command is the tool's own CLI shown verbatim
   (`docker compose … stop`); a runner may wrap it for telemetry but prints and runs the identical
   line; the dyad's own commands go through one entrypoint, `dyad/bin/dyad`, as `<noun> <verb>`
