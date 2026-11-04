@@ -44,6 +44,12 @@ def ticks(cell: str) -> list[str]:
     return TICK.findall(cell)
 
 
+def stale_keys(listed: dict[str, str], known: set[str], code_keys: set[str]) -> set[str]:
+    """S3 keys that are neither `moving` nor a key of the preference tables (`known`) nor one the code still reads
+    (`code_keys`: the new name, and an alias while it is read and warned on, #573 step 5): a listed key nothing has."""
+    return {k for k, st in listed.items() if not st.startswith("moving") and k not in known | code_keys}
+
+
 class SurfaceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -88,8 +94,17 @@ class SurfaceTests(unittest.TestCase):
         known |= keys(inst) if inst.exists() else set()
         listed = {r[0]: r[-1] for r in self.s["S3"]}
         self.assertEqual(known - set(listed), set(), "a preference key S3 does not list")
-        stale = {k for k, st in listed.items() if not st.startswith("moving") and k not in known | {sessions.PAIRED_UNITS}}
-        self.assertEqual(stale, set(), "an S3 key that is no preference")
+        code_keys = {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}   # the alias is read (and warns) until step 4
+        self.assertEqual(stale_keys(listed, known, code_keys), set(), "an S3 key that is no preference")
+
+    def test_s3_an_alias_the_code_reads_is_not_stale_once_no_table_holds_it(self):
+        """The operator's rename (step 3) leaves no table with `attended-seats` while the code still reads it: the
+        alias row stays listed and is not stale; once step 4 stops reading it, it is (orchestrate's combined run)."""
+        sessions = dyadlib.load_guard("agent", "sessions")
+        listed = {"paired-units": "frozen", "attended-seats": "alias → `paired-units` (#573)", "altitude": "moving (#570)"}
+        known = {"paired-units"}
+        self.assertEqual(stale_keys(listed, known, {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}), set())
+        self.assertEqual(stale_keys(listed, known, {sessions.PAIRED_UNITS}), {"attended-seats"})
 
     def test_s4_rules_and_their_headings(self):
         listed = {r[0]: r for r in self.s["S4"]}
