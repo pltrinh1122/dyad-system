@@ -263,12 +263,13 @@ def post_builder(to: str, row: int, kind: str, body: str, sender: str, inst: str
     one land (#572 K6: a report sent to home and copied to orchestrate was two posts, two lands)."""
     me = sessions().writer()
     def build(wt: Path):
-        if row not in {r.id for r in dyadlib.read_rows(wt)}:
+        r = next((x for x in dyadlib.read_rows(wt) if x.id == row), None)
+        if r is None:
             raise Refused(f"no row #{row} on origin/main")
         extra = []
         if kind == "relay":
             why = write_ahead_problem(wt, inst, row, to, me)
-            if why and (added := holder_adds_owner(wt, inst, row, to, me, sender)):
+            if why and r.state not in dyadlib.TERMINAL_STATES and (added := holder_adds_owner(wt, inst, row, to, me, sender)):
                 extra.append(added)                       # #586 E1: the board entry first, in the same commit
                 why = write_ahead_problem(wt, inst, row, to, me)
             if why:
@@ -309,7 +310,10 @@ def parse_post(a: list[str]) -> tuple[str, int, str, str, tuple[str, ...]]:
         raise Refused(USAGE)
     if ("--body-file" in vals) == bool(words) or len(words) > 1:
         raise Refused("give the body as one argument or as --body-file, not both and not neither")
-    body = Path(vals["--body-file"]).read_text() if "--body-file" in vals else words[0]
+    try:
+        body = Path(vals["--body-file"]).read_text(encoding="utf-8") if "--body-file" in vals else words[0]
+    except (OSError, UnicodeDecodeError) as e:
+        raise Refused(f"--body-file {vals['--body-file']}: {e}") from None
     body = body.rstrip("\n")
     if not body.strip():
         raise Refused("an empty body")

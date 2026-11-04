@@ -522,7 +522,7 @@ def other_line(n: int, t: str, toks: list[str]) -> "Line":
                 if i + 1 < len(rest):
                     rest = rest[:i + 1] + [str(Path(rest[i + 1]).resolve())] + rest[i + 2:]
             parsed = inbox_guard().parse_post(rest)
-    except (board_guard().Refused, inbox_guard().Refused, OSError) as e:
+    except (board_guard().Refused, inbox_guard().Refused, OSError, UnicodeDecodeError) as e:
         raise Refused(f"line {n}: {verb}: {e}") from None
     ln = Line(n, t, [verb, *rest[:1]], {}, set(), [], [])
     ln.parsed = parsed
@@ -642,8 +642,22 @@ def batch_subject(parts: list[str]) -> str:
     return dyadlib.load_guard("agent", "prs").CITE.sub(r"#\1", s)
 
 
-def batch_builder(repo: Path, lines: list[Line], inst: str, words):
+def keep_relay_owners(name: str, pairs: dict[str, str], lines: list[Line]) -> dict[str, str]:
+    """A board line that sets `owner` on a row keeps every unit a relay line of the same batch sends that row to, so a
+    relay's added owner (#586 E1) survives the board line whatever their order, and a re-run of the batch writes the
+    same entry and is skipped as landed (review of #586)."""
+    if "owner" not in pairs or not name.isdigit():
+        return pairs
+    own = [o for o in (x.strip() for x in pairs["owner"].split(";")) if o]
+    for ln in lines:
+        if ln.verb == "post" and ln.parsed[2] == "relay" and ln.parsed[1] == int(name) and ln.parsed[0] not in board_guard().owners({"owner": "; ".join(own)}):
+            own.append(ln.parsed[0])
+    return {**pairs, "owner": "; ".join(own)}
+
+
+def batch_builder(repo: Path, lines: list[Line], inst: str, words, ran: list | None = None):
     today = datetime.date.today().isoformat()
+    ran = [] if ran is None else ran
     def build(wt: Path):
         run = []
         for ln in lines:      # judged against origin/main before any line runs, on every try
@@ -654,6 +668,7 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words):
                 run.append(ln)
         if not run:
             raise Refused("already landed: every line of the batch is on origin/main; nothing pushed")
+        ran[:] = [ln for ln in run if ln.verb == "post"]   # the ring is the posts this try runs, never a skipped one
         parts, outs, handed = [], [], []
         for ln in run:
             if ln.verb == "land":
@@ -664,6 +679,7 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words):
                 try:
                     if ln.verb == "board":
                         name, pairs, drop = ln.parsed
+                        pairs = keep_relay_owners(name, pairs, lines)
                         _, msg, out = board_guard().set_builder(name, pairs, drop, inst)(wt)
                     else:
                         to, row, kind, body, cc = ln.parsed
@@ -697,8 +713,9 @@ def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror
     lines = read_batch(a_pos[1], repo, inst, value_flags, parse)
     done_order(lines, datetime.date.today().isoformat())
     landed = sorted({rel for ln in lines for rel in ln.rels})
-    rc = land(repo, inst, mirror, batch_builder(repo, lines, inst, words), "dwork batch", landed)
-    ring = ring_list(lines)
+    ran: list = []
+    rc = land(repo, inst, mirror, batch_builder(repo, lines, inst, words, ran), "dwork batch", landed)
+    ring = ring_list(ran)
     if rc == 0 and ring:
         print(f"ring: {', '.join(ring)} (a doorbell is the session's act, #586 X4)")
     return rc

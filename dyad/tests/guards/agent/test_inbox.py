@@ -282,6 +282,20 @@ class WriteAheadTests(World):
         self.assertEqual(rc, 1); self.assertIn("names owner(s)", err)                  # not the holder: refused
         self.assertEqual(git(self.origin, "rev-parse", "main"), head)
 
+    def test_only_the_holder_adds_an_owner_and_never_on_a_terminal_row(self):
+        """The holder condition alone (the entry's last writer, but another seat holds it), and a terminal row."""
+        self.board_set("holder=engineer-1537d8fb", "owner=engineer-1537d8fb session_x", "waiting-on=unit engineer-1537d8fb")
+        rc, _, err = self.relay(to="orchestrate-d688fecf")                    # program wrote it last, engineer holds it
+        self.assertEqual(rc, 1); self.assertIn("names owner(s) engineer-1537d8fb, not orchestrate-d688fecf", err)
+        self.board_set("holder=program-59cec502")
+        d = self.clones["program-59cec502"]
+        git(d, "pull", "-q", "--ff-only", "origin", "main")
+        rows = d / INST / "d-work" / "rows" / "5.md"
+        rows.write_text(rows.read_text().replace("state: planned", "state: done"))
+        git(d, "commit", "-qam", "ledger: #5 done"); git(d, "push", "-q", "origin", "HEAD:main")
+        rc, _, err = self.relay(to="orchestrate-d688fecf")
+        self.assertEqual(rc, 1); self.assertIn("names owner(s)", err)
+
     def test_a_relay_without_its_board_entry_is_refused(self):
         before = git(self.origin, "rev-parse", "main")
         rc, _, err = self.relay()
