@@ -1,7 +1,7 @@
 session: counsel-0032b4c0
-seen: 2026-11-04T02:53:55+00:00
+seen: 2026-11-04T18:02:11+00:00
 root: /home/user/wt/inbox
-rows: 570 573 574
+rows: 570 573 574 584 585 586 587
 files: 
 writer: 0032b4c0-1c5b-5779-bdb8-e2280d00681c
 host: cloud linux x86_64
