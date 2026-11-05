@@ -34,6 +34,7 @@ defines what each value means.
 | inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-done-ready-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W11` line for a `done-ready` board entry: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
@@ -149,8 +150,8 @@ defines what each value means.
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cabinet/docs/operating-guide.md` §6).
 - `paired-units` — the seats the Operator attends beside the leader, which is always attended (d-work
-  #412; named `attended-seats` until #553, still read as its alias and warned on until dyad-operator 1.0,
-  #573): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
+  #412; named `attended-seats` until #553, that name no longer read since dyad-operator 1.0 and refused by
+  the presence guard, #604): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
   of the counsel seat), or `none`. The constraint it states is the Operator's span — how many seats the
   Operator sits at — never how many seats run: a hundred seats are one span while only the leader is
   attended and orchestrates the rest. Over the live seats the reading is a mode — every seat attended
@@ -176,7 +177,7 @@ defines what each value means.
   (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
   binds to. Seeded `verbatim`: the conservative default for a fresh install — the seat's own words pass through
   until the Operator has chosen the cos's brief.
-- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the six `inflight-*` keys,
+- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that
   claims the key under `dyad:tunables` (`dyad/dmc/schema.md`; the record named in the row's `read by`), and the rows

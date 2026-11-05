@@ -202,7 +202,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 session's file (DYAD_SESSION env; unset, it refuses); no args, the
                                 files from this session's own open/planned rows' stored plans;
                                 list prints every session's file, flagging one past the stale window, with the
-                                attendance mode over the live seats (M3 | M4 | hybrid), the `attended-seats`
+                                attendance mode over the live seats (M3 | M4 | hybrid), the `paired-units`
                                 declared beside the leader, each seat `attended` or `relayed`, and the records'
                                 check of the declaration: `undeclared` for an own disposition in an undeclared
                                 live seat, `warn` for a declared seat with none within `attendance-window`
@@ -214,7 +214,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 advisory, never a guard (Rule-16 Presence); the remedy is the writer's
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
-  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
+  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent|automaton] | new <instance>
                                 Rule-19 run-books (scripts/runbook.py, the core runner; the check is the
                                 sysadmin craft's guard, crafts/sysadmin/guards/runbooks.py): check every
                                 run-book (exit 2 when no craft provides the check), list one's commands,
@@ -242,14 +242,17 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
-  dyad board [set <id>|_cos key=value… [--drop] | resume]
+  dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none …]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
-                                fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs
-  dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [--all] | list [<seat>]
+                                fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs;
+                                `phases` prints the orchestration machine; `advance` fires one of its events and lands
+                                its every effect (board, answer's ledger lines, trace, relays) in one commit (#587)
+  dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [<message>...] | list [<seat>]
                                 messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
                                 lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
-                                unread and marks them read; `list` is read-only
+                                unread and writes nothing; `read <message>...` marks exactly those
+                                read in one land (#587 S10); `list` is read-only
   dyad automaton scan|run      the d-work automaton (scripts/automaton.py, d-work #556): from ledger lines on origin/main
                                 only, merge the PRs a recorded Y done names (pinned, in order, retried with backoff on a
                                 race), close rows whose heads landed, notify board owners of a Y plan; a refusal is one
@@ -1794,7 +1797,7 @@ def cmd_corroborate(before=None, after="HEAD"):
         for run in runs:
             r = run()
             if r.returncode or (expect and expect not in r.stdout):
-                print(f"FAIL [corroborate] {name}: " + " | ".join((r.stdout + r.stderr).strip().splitlines()[-3:])); rc = 1
+                print(f"FAIL [corroborate] {name}: " + " | ".join(failing_lines(r.stdout + r.stderr))); rc = 1
                 return False
         print(f"ok   [corroborate] {name}")
         return True
@@ -1824,6 +1827,19 @@ def cmd_corroborate(before=None, after="HEAD"):
                                                                            craft_arc, cwd=t), expect=" 0 changes")
             step("core reinstall is idempotent", lambda: corroborate_py(pkg_py, "install", t), expect=" 0 changes")
     return rc
+
+FAILING_LINE = re.compile(r"^\s*(FAIL\b|FAIL:|refused\b|error:|fatal:|Traceback)")
+
+
+def failing_lines(output: str, most: int = 5) -> list[str]:
+    """A failed step's lines for its one FAIL line (#607): the child's failing lines first, then its last line, so
+    a suite's FAIL never scrolls out behind its summary (#603's cut-off notice); the last three when none fail."""
+    lines = [l.strip() for l in output.strip().splitlines() if l.strip()]
+    fails = [l for l in lines if FAILING_LINE.match(l)][:most]
+    if not fails:
+        return lines[-3:]
+    return fails + ([lines[-1]] if lines[-1] not in fails else [])
+
 
 def corroborate_env(skip_suite: bool) -> dict:
     """The environment of every corroboration child: GIT_VARS dropped, no bytecode, and DYAD_NO_NESTED_TESTS set only
@@ -2447,6 +2463,8 @@ def cmd_board(a):
     """The board store's CLI lives at guards/agent/board.py (it is also the guard); this is dispatch only (S4, d-work
     #535)."""
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    if a and a[0] == "advance":   # #587: the composed `state` lines are read by this runner's own readers
+        return dyadlib.load_guard("agent", "board").cmd_advance(a[1:], REPO, DWORK_VALUE_FLAGS, dwork_args, words)
     return dyadlib.load_guard("agent", "board").cli(a, REPO)
 
 def cmd_inbox(a):

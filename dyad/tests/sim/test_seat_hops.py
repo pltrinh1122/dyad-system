@@ -17,8 +17,8 @@ A **known gap** is a scenario whose oracle P1 does not meet, by design or by a f
 - `test_Sn_oracle` is an `expectedFailure` asserting none.
 
 So when the gap is fixed, the first fails and the second turns into an unexpected success: both are red until the
-expectation is updated. #536 (the inbox, with #547 and #551) turned S5, S6, S9, S18 and S26 from gaps into passes. S8
-stays #537's (lease) acceptance test, and S13 is finding F2 (#548), both in `KNOWN_GAPS`; S15's skew report is F3.
+expectation is updated. #536 (the inbox, with #547 and #551) turned S5, S6, S9, S18 and S26 from gaps into passes, and
+#594 (the board keyed by cabinet) S13. S8 stays #537's (lease) acceptance test in `KNOWN_GAPS`; S15's skew report is F3.
 
 Not simulated, stated: the real harness's classifier, a real Remote Control attach, and a real `send_message`
 transport.
@@ -67,7 +67,6 @@ GAP_537 = ("#537 (lease): two live holders both act on one written-ahead entry â
            "when the old holder relays and stops before recording it sent, so the new holder relays again")
 KNOWN_GAPS = {
     "S8": GAP_537,
-    "S13": "F2 (finding, #546; row #548): one board store and one `_cos.md` for two cabinets: resume lists the other leader's rows and the new holder re-presents its questions to this Operator",
 }
 
 QUESTION = "Y/N: approve the release of row 5?\n(evidence 3f1câ€¦; the run waits at its gate)"
@@ -95,7 +94,7 @@ class Run:
         crash = b if b in ("before-wa", "after-wa") else None
         self.put(c, crash)
         if b == "merge":
-            self.old.s.set(9, next=f"merge 7 at {self.w.pr_sha}", waiting_on="seat " + SEAT)
+            self.old.s.set(9, next=f"merge 7 at {self.w.pr_sha}", waiting_on="unit " + SEAT)
             self.w.merge(self.old.s, 7, self.w.pr_sha)            # landed; the hop comes before the board says so
         if b == "release":
             self.w.runs["42"] = "pending"
@@ -271,7 +270,7 @@ class SeatHopTests(unittest.TestCase):
         op = Operator()
         old = w.cos(OLD, host("cloud", "old"), "h-old", op)
         w.seat("communicate-22222222", host("cloud", "c"), "h-comm")
-        old.s.set(5, owner="communicate-22222222 h-comm", waiting_on="seat communicate-22222222",
+        old.s.set(5, owner="communicate-22222222 h-comm", waiting_on="unit communicate-22222222",
                   next="attended: asks in its own chat")
         op.show(QUESTION)                                          # asked in the attended seat's own chat
         mark = len(op.lines)
@@ -281,12 +280,15 @@ class SeatHopTests(unittest.TestCase):
         self.assertEqual(oracle(w, [Item("question", QUESTION, 5)], op, mark, new, []), [])
 
     def cabinets(self):
-        """S13: two leaders share the instance; A asks its Operator on row 5, B its own on row 8; A's leader hops."""
-        w = W.World(SCRATCH, rows={5: "planned", 8: "planned"})
+        """S13: two leaders share the instance, two cabinets (`organization: m4`): A (`program-<hp>`, cabinet
+        `program`) asks its Operator on row 5, B (`program-bob-<hp>`, cabinet `program-bob`) its own on row 8; A's
+        leader hops."""
+        w = W.World(SCRATCH, rows={5: "planned", 8: "planned"}, organization="m4")
         op_a, op_b = Operator("A"), Operator("B")
         a = w.cos(OLD, host("cloud", "a"), "h-a", op_a)
-        b = w.cos("program-cccccccc", host("cloud", "b"), "h-b", op_b)
+        b = w.cos("program-bob-cccccccc", host("cloud", "b"), "h-b", op_b)
         q_b = "Y/N: B's release of row 8?"
+        b.s.set(W.bd.COS, holder=b.s.seat)                         # `board set _cos` by B's leader: `_cos-bob.md`
         a.ask(5, QUESTION); b.ask(8, q_b)
         mark = len(op_a.lines)
         a2 = w.cos(NEW, host("cloud", "a2"), "h-a2", op_a)
@@ -294,15 +296,14 @@ class SeatHopTests(unittest.TestCase):
         return w, op_a, op_b, mark, a2, q_b
 
     def test_S13(self):
+        """#594: each cabinet resumes its own board: A's new leader re-presents only A's question, B's is untouched."""
         w, op_a, op_b, mark, a2, q_b = self.cabinets()
         self.assertEqual(op_b.lines, [q_b])                        # B's leader and Operator are unaffected
-        self.gap("S13", oracle(w, [Item("question", QUESTION, 5)], op_a, mark, a2, [QUESTION]),
-                 [f"visible: {q_b!r} (not owed at the hop)"])
-
-    @unittest.expectedFailure
-    def test_S13_oracle(self):
-        w, op_a, op_b, mark, a2, q_b = self.cabinets()
         self.assertEqual(oracle(w, [Item("question", QUESTION, 5)], op_a, mark, a2, [QUESTION]), [])
+        entries = a2.s.entries()
+        self.assertEqual((entries["8"]["cabinet"], "cabinet" in entries["5"]), ("program-bob", False))
+        self.assertEqual(entries["_cos"]["holder"], NEW)           # A's `_cos` resolved to `_cos.md`, B's file apart
+        self.assertEqual(entries["_cos-bob"]["holder"], "program-bob-cccccccc")
 
     def test_S14_hosting_unreachable_resumes_from_the_local_clone(self):
         r = Run("tc", "idle", "question", outage=True)

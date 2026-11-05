@@ -32,6 +32,57 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dyadlib.ledger_rows("| 5 | too | short |\n")
 
+class OrchestrationMachineTests(unittest.TestCase):
+    """d-work #587: the board entry's machine (`ORCH_EVENTS`) holds its invariants, and each one flips on a patched
+    copy of the table that breaks exactly what it names."""
+    def test_the_table_holds(self):
+        names = [n for n, _ in dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)]
+        self.assertEqual(dyadlib.false_invariants(dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)), [])
+        self.assertTrue(set(names) <= {n for n, _ in dyadlib.INVARIANTS})       # enforced at import
+        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed", "head-moved", "withdrawn"}   # the automaton's own
+                         - {"read"})                                                 # S10: inbox read's, never board advance's
+        self.assertEqual(dyadlib.ORCH_NO_EFFECT, {"read"})
+        self.assertEqual({k: v for k, v in dyadlib.ORCH_EVENTS.items() if k[1] == "read"},          # S10: a self-loop everywhere
+                         {(p, "read"): ((p,), "home or unit", ()) for p in dyadlib.ORCH_PHASES})
+        self.assertEqual(dyadlib.orch_actors("home or automaton"), {"home", "automaton"})
+        for e in ("evidence-verified", "evidence-failed"):                                   # #587 X5: either may fire it
+            self.assertEqual(dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]), {"home", "automaton"})
+        self.assertEqual({f for f, e in dyadlib.ORCH_EVENTS if e == "head-moved"}, set(dyadlib.ORCH_WATCHED))   # X6
+        self.assertEqual({k: v for k, v in dyadlib.ORCH_EVENTS.items() if k[1] == "withdrawn"},          # X6, a batch
+                         {("done-asked", "withdrawn"): (("done-ready",), "automaton", ("note",))})
+        self.assertEqual((dyadlib.orch_release_to("plan-asked"), dyadlib.orch_release_to("done-asked"),
+                          dyadlib.orch_release_to("building")), ("plan-ready", "done-ready", "building"))
+
+    def test_each_invariant_flips_on_a_patched_copy(self):
+        E = dyadlib.ORCH_EVENTS
+        def without(*keys):
+            return {k: v for k, v in E.items() if k not in keys}
+        cases = {
+            "orch-every-phase-reachable": without(("plan-ready", "asked")),                       # plan-asked unreachable
+            "orch-every-phase-exits": without(("building", "pr-up"), ("building", "evidence-verified"), ("building", "hold")),
+            "orch-answers-from-asked-by-home": {**E, ("building", "answered-Y"): (("done-ready",), "home", ("said-file",))},
+            "orch-automaton-takes-no-words": {**E, ("landing", "closed"): ((dyadlib.ORCH_DROP,), "automaton", ("said-file",))},
+            "orch-hold-closure": without(("verifying", "hold")),
+            "orch-drop-reachable": {**E, ("landing", "closed"): (("landing",), "automaton", ())},   # a trap phase
+            "orch-keys-known": {**E, ("planning", "release"): ((dyadlib.ORCH_FROM,), "home", ())},
+            "orch-keys-known ": {**E, ("verifying", "evidence-failed"): (("building",), "home or robot", ("note",))},
+            "orch-asked-exits-on-answer": {**E, ("plan-asked", "pr-up"): (("verifying",), "unit", ("pr", "head"))},
+            "orch-head-moved-returns-to-verifying": {**E, ("done-asked", "head-moved"): (("done-ready",), "automaton", ("pr", "head"))},
+            "orch-automaton-evidence-from-verifying-only": {**E, ("building", "evidence-verified"): (("done-ready",), "home or automaton", ("evidence",))},
+            "orch-withdrawn-is-the-automatons-from-done-asked": {**E, ("done-asked", "withdrawn"): (("done-ready",), "home", ("note",))},
+            "orch-withdrawn-is-the-automatons-from-done-asked ": {**E, ("plan-asked", "withdrawn"): (("plan-ready",), "automaton", ("note",))},
+            "orch-no-effect-is-a-self-loop-everywhere": without(("held", "read")),
+            "orch-no-effect-is-a-self-loop-everywhere ": {**E, ("building", "read"): (("verifying",), "home or unit", ())},
+            "orch-no-effect-is-a-self-loop-everywhere  ": {**E, ("building", "read"): (("building",), "automaton", ())},
+            "orch-no-effect-is-a-self-loop-everywhere   ": {**E, (None, "read"): (("planning",), "unit", ())},
+        }
+        for name, table in cases.items():
+            self.assertIn(name.strip(), dyadlib.false_invariants(dyadlib.orch_invariants(table)), name)
+        # an asked phase may exit by head-moved or withdrawn (Rule-2 voids a Y on a moved head, and a batch Y when any
+        # head it names moves), and by nothing else unanswered
+        self.assertNotIn("orch-asked-exits-on-answer", dyadlib.false_invariants(dyadlib.orch_invariants(E)))
+
+
 class SemverTests(unittest.TestCase):
     """D2 (#100): one grammar, shared by the core and every Tended craft's VERSION check — strict
     MAJOR.MINOR.PATCH, with an optional `+build` suffix a diverged, unreleased tree may carry."""

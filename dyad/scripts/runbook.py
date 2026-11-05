@@ -24,7 +24,8 @@ nothing, its exit code still the command's own. Every other class appends on eve
   runbook.py check                       check every run-book (the craft guard's CLI; exit 2 with no craft)
   runbook.py list <instance>             the commands of one run-book with class, role, section
                                          (<runbooks>/<instance>.md, else the core's dyad/runbooks/<instance>.md; #165)
-  runbook.py run <instance> <name> [--as operator|agent]   execute one command (role: DYAD_ROLE, default agent)
+  runbook.py run <instance> <name> [--as operator|agent|automaton]   execute one command (role: DYAD_ROLE, default agent;
+                                         automaton: a read-only command only)
   runbook.py new <instance>              seed <runbooks>/<instance>.md from the first crafts/*/templates/runbook.md
                                          (refuses to overwrite; exit 2 when no craft ships a template)
 """
@@ -57,7 +58,8 @@ EVENT_FIELDS = ("id", "ts", "role", "instance", "name", "cmd", "class", "scope",
                 "postcondition", "output_sha256", "output_tail", "commit", "runbook_sha256")
 CLI_FLAGS = dyadlib.cli_forms("runbook")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 ROLE_FLAG, = CLI_FLAGS["run"].value_flags
-RUN_ROLES = ("operator", "agent")                                        # who ran it (event `role`)
+AUTOMATON = "automaton"                                                  # the third party, an executor: read-only runs only (#593 P2)
+RUN_ROLES = ("operator", "agent", AUTOMATON)                             # who ran it (event `role`)
 POSTCONDITION_RESULTS = ("n/a", "already", "ok", "failed")
 TAIL_LINES, TAIL_CHARS = 5, 400
 
@@ -98,6 +100,7 @@ INVARIANTS = [
     ("event-fields-match-dataclass", lambda: tuple("class" if f.name == "cls" else f.name for f in fields(Event)) == EVENT_FIELDS),
     ("classes-are-host-classes", lambda: CLASSES is dyadlib.HOST_CLASSES),
     ("roles-distinct", lambda: len(set(ROLES)) == len(ROLES) and len(set(RUN_ROLES)) == len(RUN_ROLES)),
+    ("automaton-is-a-run-role", lambda: AUTOMATON in RUN_ROLES and AUTOMATON not in ROLES),
     ("postcondition-results-distinct", lambda: len(set(POSTCONDITION_RESULTS)) == len(POSTCONDITION_RESULTS)),
 ]
 
@@ -310,6 +313,8 @@ def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = Tru
     print(f"commit: {commit}\n{sha}  {path.relative_to(root) if path.is_relative_to(root) else path}", file=out)
     if c.role == "operator" and role != "operator":
         raise Refused(f"{name} is role `operator` (Rule-8, Operator-run); refused for role `{role}`")
+    if role == AUTOMATON and c.cls != "read-only":
+        raise Refused(f"{name} is `{c.cls}`; the automaton runs a read-only command only (Rule-19, #593)")
     print(f"{c.cls} {name} [{c.scope}]\n$ {c.cmd}", file=out)
     started = datetime.datetime.now(datetime.UTC).replace(microsecond=0)
     ts = started.strftime("%Y-%m-%dT%H:%M:%SZ")

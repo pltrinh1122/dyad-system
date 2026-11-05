@@ -6,7 +6,8 @@ What it builds, all in scratch directories:
   cloud, `false` for a terminal) and `DYAD_SIM_OS` (a label: `linux`, `mac`) — and the holder by
   `CLAUDE_CODE_SESSION_ID`, so `board.py` reads them as it reads a real harness's;
 - the inbox (#536): a relay or a report is a real `dyad inbox post`, addressed by seat name and landed on the bare
-  origin, and read by `dyad inbox read`, which a terminal holder runs like any other. `send_message`, which a terminal
+  origin, and read by `dyad inbox read` (printed) and `dyad inbox read <message>...` (marked, #587 S10), which a
+  terminal holder runs like any other. `send_message`, which a terminal
   holder could not receive and which followed a session id rather than a seat, carries nothing here: it would only be
   a doorbell;
 - seats: a seat, cloud or terminal, reads its inbox, runs each relayed act once per message and reports to the seat
@@ -32,6 +33,8 @@ import dyadlib, livetest
 INST = "agent-corpus"
 ROW = "id: {id}\ntitle: row {id}\nopened: 2026-11-02\nstate: {state}\ndisposed: {disposed}\nrefs: \n"
 RESUMED = "cos resumed in {seat}"
+PREFERENCES = ("| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+               "| organization | {org} | `flat` \\| `m4` | Rule-16 |\n")
 bd = dyadlib.load_guard("agent", "board")
 ib = dyadlib.load_guard("agent", "inbox")
 
@@ -115,9 +118,11 @@ class Session:
             raise WriteRefused(err.getvalue().strip())
 
     def read_inbox(self) -> list[dict[str, str]]:
-        """`dyad inbox read`: this seat's unread messages, marked read."""
+        """`dyad inbox read`, then `dyad inbox read <message>...` naming what it printed: this seat's unread messages,
+        marked read (#587 S10: printing marks nothing, so the seat names what it read)."""
         with self.acting(), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            return ib.read(self.dir)
+            got = ib.read(self.dir)
+            return ib.read(self.dir, [m["_name"] for m in got]) if got else got
 
 
 class WriteRefused(Exception):
@@ -264,12 +269,18 @@ class Item:
 
 
 class World:
-    def __init__(self, scratch: livetest.ScratchInstalls, rows: dict[int, str] | None = None, pr: bool = False):
+    def __init__(self, scratch: livetest.ScratchInstalls, rows: dict[int, str] | None = None, pr: bool = False,
+                 organization: str | None = None):
+        """`organization` seeds `preferences-corpus/PREFERENCES.md` holding that `organization` value in the seed
+        commit (#594: two cabinets need `m4`); None seeds no preferences corpus, which reads as `flat`."""
         self.top = scratch.mkdtemp(prefix="dyad-sim-")
         seed, self.origin, self.hooks = self.top / "seed", self.top / "origin.git", self.top / "hooks"
         seed.mkdir(); git(seed, "init", "-q", "-b", "main")
         rows_dir = seed / INST / "d-work" / "rows"; rows_dir.mkdir(parents=True)
         (seed / "dyad").mkdir(); (seed / "dyad" / "a.txt").write_text("a\n")
+        if organization:
+            prefs = seed / dyadlib.PREFERENCES_REL; prefs.parent.mkdir(parents=True)
+            prefs.write_text(PREFERENCES.format(org=organization))
         self.rows = dict(rows or {5: "planned", 6: "done"})
         for rid, state in self.rows.items():
             (rows_dir / f"{rid}.md").write_text(ROW.format(id=rid, state=state, disposed="2026-11-02 Y plan"))

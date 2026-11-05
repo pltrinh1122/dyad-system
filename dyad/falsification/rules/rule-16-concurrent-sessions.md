@@ -426,3 +426,24 @@ heads-unchanged condition before the asking; Rule-2 is unchanged. **16–7**: an
 (Rule-15 phase 1). Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #587.
+## Amendment — d-work #594 (2026-11-05: the board store keyed by cabinet; #548 S13)
+Claim (plan #594, carried under mandate #570, revision 6): before 1.0 freezes the board store, an entry carries an
+optional `cabinet` key and each cabinet keeps its own cross-row file, so two operators' homes on one instance never
+write each other's queue or question. The plan's attacks K1–K7 are its record; the ones bearing on Rule text follow.
+
+| # | attack | result |
+|---|---|---|
+| 1 | (K1) The layout must become `board/<cabinet>/…`. | Refuted: per-row files are disjoint by id; only the cross-row file was shared. Per-row paths stay; one cross-row file per cabinet. |
+| 2 | (K2) The new key needs an alias that warns first (#573 B3). | Refuted: absent means `program`, `_cos.md` stays `program`'s, and a system of one operator holds no other cabinet, as Rule-16's optional `mode` set the precedent. |
+| 3 | (K3) The cabinet can be read from `holder`. | Refuted: a hop changes `holder`. The key is written once at creation and never typed or changed. |
+| 4 | (K6) A home could still write another cabinet's state. | Survives, built: a home writes only its own cabinet's entries and cross-row file; a terminal row's `--drop` stays open to any unit, since it owes nothing. |
+| 5 | (K7, the departure #674 states) A unit's first entry is filed under `program` when one cross-row file exists. | Refuted by the code: it is filed under the cabinet whose cross-row file names the unit, which avoids the S13 leak; the sentence says so. |
+| 7 | (#674 at fad6cb61) A notice about a row, and the sweep's unit-table check, still read `program`'s home and `_cos.md`. | Refuted by the code: the retired-form notice goes to the row's cabinet's home, as every other tell does, and the S3 seat-table warning reads each cabinet's own cross-row file. The Store sentence names both. |
+| 6 | `cabinet` collides with the cabinet craft's name. | Survives, scoped: the craft's vocabulary defines no `cabinet` term (`check_craft` passes), and the row says the craft's name is a different thing. |
+
+**Rule-6.** New row `cabinet` (owner 16, used by 16). `board store` gains the key and the per-cabinet file; `used by`
+unchanged, each Rule still reads correctly.
+**Pairwise (Rule-5).** **16–3**: Rule-3's write-ahead and pending queue read the board; which cabinet's board is Rule-16's
+store. **16–6**: one new term, no redefinition. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #594.

@@ -63,11 +63,15 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("board", None): ["board"],
     ("board", "set"): ["board", "set", "1", "next=a"],
     ("board", "resume"): ["board", "resume"],
+    ("board", "advance"): ["board", "advance", "1", "2", "pr-up", "--expect", "building", "pr=7", "head=abc1234"],
+    ("board", "phases"): ["board", "phases"],
+    ("board", "draft"): ["board", "draft", "587", "--out", "/tmp/x/587-done.md"],
     ("inbox", "post"): ["inbox", "post", "engineer-1", "--row", "1", "--kind", "report", "--cc", "counsel-2", "a body"],
-    ("inbox", "read"): ["inbox", "read", "--all"],
+    ("inbox", "read"): ["inbox", "read", "20261102T174400Z-engineer-1537d8fb-1", "20261102T174400Z-counsel-0032b4c0-1"],
     ("inbox", "list"): ["inbox", "list", "engineer-1"],
     ("automaton", "scan"): ["automaton", "scan"],
-    ("automaton", "run"): ["automaton", "run"],
+    ("automaton", "run"): ["automaton", "run", "--evidence-from", "ev.jsonl"],
+    ("automaton", "evidence"): ["automaton", "evidence", "--out", "ev.jsonl"],
     ("automaton", "sweep"): ["automaton", "sweep", "--row", "564"],
     ("steps", "verify-prs"): ["steps", "verify-prs"],
     ("steps", "done-record"): ["steps", "done-record", "--land"],
@@ -90,7 +94,7 @@ PARSERS = {   # the functions of each noun's module that compare argv words with
     "runbook": ("script", "runbook", ("main",)), "release": ("script", "release", ("main",)),
     "merge": ("script", "merge", ("parse", "main")), "craft": ("script", "craft", ("cmd_install", "cmd_diff", "main")),
     "bootstrap": ("script", "bootstrap", ("main",)), "automaton": ("script", "automaton", ("main",)),
-    "steps": ("script", "steps", ("main",)), "board": ("guard", "board", ("parse_set", "cli", "main")),
+    "steps": ("script", "steps", ("main",)), "board": ("guard", "board", ("parse_set", "cli", "cmd_draft", "main")),
     "inbox": ("guard", "inbox", ("parse_post", "cli", "main")), "session": ("guard", "sessions", ("seat_name_report", "main")),
     "plan": ("guard", "plans", ("cli", "main")), "dwork": ("script", "trace", ("main",)),
 }
@@ -284,8 +288,9 @@ class ModuleFlagTests(unittest.TestCase):
         self.assertEqual(mods["automaton"].ROW_FLAG, "--row")
         self.assertEqual((mods["land"].MESSAGE, mods["land"].MIRROR, mods["land"].LAND), ("-m", "--mirror", "--land"))
         self.assertEqual(mods["board"].DROP, "--drop")
-        self.assertEqual((mods["inbox"].POST_VALUES, mods["inbox"].CC, mods["inbox"].ALL),
-                         (("--row", "--kind", "--body-file"), "--cc", "--all"))
+        self.assertEqual(mods["board"].OUT, "--out")
+        self.assertEqual((mods["inbox"].POST_VALUES, mods["inbox"].CC), (("--row", "--kind", "--body-file"), "--cc"))
+        self.assertEqual(CLI[("inbox", "read")].flags, ())                     # #587 S10: names mark, nothing else; no `--all`
         self.assertEqual(set(mods["inbox"].POST_VALUES) | {mods["inbox"].CC}, set(CLI[("inbox", "post")].value_flags))
 
     def test_every_projector_flag_is_the_project_forms(self):
