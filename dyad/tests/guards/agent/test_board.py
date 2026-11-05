@@ -39,8 +39,8 @@ class FormTests(unittest.TestCase):
         self.assertEqual(bd.render(f, bd.FIELDS), ENTRY)
 
     def test_merged_defaults_holder_since_and_writer(self):
-        new = bd.merged({}, {"waiting-on": "seat counsel"}, "program-a", "h2", "2026-11-02T12:00Z")
-        self.assertEqual(new, {"waiting-on": "seat counsel", "holder": "program-a", "since": "2026-11-02T12:00Z", "writer": "h2"})
+        new = bd.merged({}, {"waiting-on": "unit counsel"}, "program-a", "h2", "2026-11-02T12:00Z")
+        self.assertEqual(new, {"waiting-on": "unit counsel", "holder": "program-a", "since": "2026-11-02T12:00Z", "writer": "h2"})
         again = bd.merged(new, {"next": "wait"}, "program-b", "h3", "2026-11-02T13:00Z")
         self.assertEqual((again["since"], again["holder"], again["writer"]), ("2026-11-02T12:00Z", "program-a", "h3"))   # #572 K7: kept
         moved = bd.merged(again, {"waiting-on": "operator", "next": ""}, None, "h3", "2026-11-02T14:00Z")
@@ -48,15 +48,25 @@ class FormTests(unittest.TestCase):
         self.assertEqual(moved["holder"], "program-a")                     # no seat named: the holder stays
         self.assertEqual(bd.merged(moved, {"holder": "program-b"}, "program-c", "h4", "x")["holder"], "program-b")   # given: taken
 
-    def test_unit_is_the_form_and_seat_its_alias(self):
-        """#553: `waiting-on unit <name>` is the form; `seat <name>` is read until the release after next and written
-        as `unit <name>` by `board set`."""
-        self.assertEqual(bd.parse_set(["5", "waiting-on=seat engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
+    def test_unit_is_the_form_and_seat_is_refused_naming_it(self):
+        """#553: `waiting-on unit <name>` is the form; #604 (#573 step 4): `seat <name>` is removed — a stored entry
+        fails the guard and `board set` refuses it, each naming the `unit <name>` to write, never rewriting it."""
+        self.assertFalse(hasattr(bd, "UNIT_ALIAS"))
         self.assertEqual(bd.parse_set(["5", "waiting-on=unit engineer-1537d8fb"])[1], {"waiting-on": "unit engineer-1537d8fb"})
+        with self.assertRaises(bd.Refused) as r:
+            bd.parse_set(["5", "waiting-on=seat engineer-1537d8fb"])
+        self.assertIn("write `waiting-on: unit engineer-1537d8fb`", str(r.exception))
         self.assertEqual(bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: unit engineer-1537d8fb"), {5: "planned"}), [])
-        (w,) = bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: seat engineer-1537d8fb"), {5: "planned"})
-        self.assertTrue(w.startswith("warning: board/5.md: `waiting-on: seat engineer-1537d8fb` uses the alias"), w)   # #573 step 5
-        self.assertIn("write `unit engineer-1537d8fb`", w)
+        (f,) = bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: seat engineer-1537d8fb"), {5: "planned"})
+        self.assertFalse(f.startswith("warning:"), f)                              # a failure, not a warning
+        self.assertTrue(f.startswith("board/5.md: `waiting-on: seat engineer-1537d8fb` uses `seat <name>`, removed"), f)
+        self.assertIn("write `waiting-on: unit engineer-1537d8fb`", f)
+        with self.assertRaises(bd.Refused) as r:                                    # never suggest a form WAITING refuses
+            bd.parse_set(["5", "waiting-on=seat x y"])
+        self.assertIn("write `waiting-on: unit <name>`", str(r.exception))
+        (f,) = bd.check_entry("5", ENTRY.replace("waiting-on: operator", "waiting-on: seat x y"), {5: "planned"})
+        self.assertIn("write `waiting-on: unit <name>`", f)
+        self.assertIn("write `waiting-on: unit x`", bd.retired_waiting("seat  x"))              # one token: named, valid
 
     def test_parse_set_refuses_misuse(self):
         for argv, says in ((["x", "next=a"], "not a row id"), (["5"], "usage"), (["5", "writer=me"], "never typed"),
@@ -142,7 +152,7 @@ class GuardTests(unittest.TestCase):
         self.put("6", ENTRY)                                                   # row 6 is done: stale
         self.put("5", ENTRY.replace("owner: engineer-1537d8fb session_01x",
                                     "owner: engineer-1537d8fb session_01x; counsel-0032b4c0 session_015q")
-                           .replace("waiting-on: operator", "waiting-on: seat distribute-a603e150").replace("question:", "promised:"))
+                           .replace("waiting-on: operator", "waiting-on: unit distribute-a603e150").replace("question:", "promised:"))
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
             v = bd.resume_view(self.root)
             text = "\n".join(bd.resume_lines(self.root))
@@ -223,7 +233,7 @@ class SetTests(unittest.TestCase):
 
     def test_set_lands_one_ledger_only_commit(self):
         before = git(self.origin, "rev-parse", "main")
-        rc, out, err = self.run_cli("set", "5", "owner=engineer-1537d8fb session_01x", "waiting-on=seat engineer-1537d8fb",
+        rc, out, err = self.run_cli("set", "5", "owner=engineer-1537d8fb session_01x", "waiting-on=unit engineer-1537d8fb",
                                     f"question={QUESTION}")
         self.assertEqual(rc, 0, err)
         f = self.on_main()
@@ -562,8 +572,11 @@ class MachineTests(unittest.TestCase):
     def test_parse_advance_refuses_before_any_fetch(self):
         f = Path(tempfile.mkdtemp()) / "said.txt"; f.write_text("Y\n"); self.addCleanup(shutil.rmtree, f.parent, True)
         self.assertEqual(bd.parse_advance(["5", "6", "asked", "--expect", "plan-ready"])[:4], ([5, 6], "asked", {}, "plan-ready"))
-        self.assertEqual(bd.parse_advance(["5", "hold", "--expect", "building", "note=x", "on=seat eng-1"])[2],
+        self.assertEqual(bd.parse_advance(["5", "hold", "--expect", "building", "note=x", "on=unit eng-1"])[2],
                          {"note": "x", "on": "unit eng-1"})
+        with self.assertRaises(bd.Refused) as c:                       # #604: the removed form is refused, never rewritten
+            bd.parse_advance(["5", "hold", "--expect", "building", "note=x", "on=seat eng-1"])
+        self.assertIn("write `waiting-on: unit eng-1`", str(c.exception))
         for adopt in (["pr-up", "--expect", "none", "pr=5", "head=abc1234"], ["plan-landed", "--expect", "none"]):
             self.assertEqual(bd.parse_advance(["5", *adopt, "unit=engineer-x"])[2]["unit"], "engineer-x", adopt)   # #587
         for argv, says in ((["5"], "usage"), (["5", "asked"], "usage"), (["5", "fly", "--expect", "none"], "not an event"),

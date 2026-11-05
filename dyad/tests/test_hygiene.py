@@ -196,6 +196,16 @@ class InflightTests(unittest.TestCase):
         got = self.run_it(fresh=lambda seat, at: False)
         self.assertIn("inflight W7b unit stale: row #1 waits on eng-1, whose presence file is stale", got)
 
+    def test_w7c_the_retired_seat_form_is_named_not_skipped(self):
+        """#604: W2/W7a/W7b read `unit <name>` only, so an entry still waiting on `seat <name>` gets its own line."""
+        self.row(1); self.row(2)
+        self.put("board/1.md", "holder: home-1\nwaiting-on: seat eng-1\nsince: 2025-10-01T00:00Z\n")
+        self.put("board/2.md", "holder: home-1\nwaiting-on: unit eng-1\nsince: 2025-11-04T00:00Z\n")
+        self.commit()
+        got = [l for l in self.run_it() if " W7c " in l]
+        self.assertEqual(got, ["inflight W7c retired form: row #1's board entry `waiting-on: seat eng-1` uses `seat <name>`, "
+                               "removed in dyad-operator 1.0; write `waiting-on: unit eng-1` (#604)"])
+
     def test_w8_a_promise_listed_too_long(self):
         self.row(1); self.put("board/_cos.md", "holder: home-1\npromised: open a row for X\n"); self.commit(at=NOW - 5 * DAY)
         self.put("board/_cos.md", "holder: home-1\npromised: open a row for X; fix Y\n"); self.commit(at=NOW - DAY)
