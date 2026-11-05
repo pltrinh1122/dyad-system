@@ -36,6 +36,12 @@ place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely;
                                      ledger-only commit: the board (the derived fields), the ledger lines of an answer
                                      (`dwork state`, composed from the stored question and `--said-file`, never typed),
                                      the trace, and the relays; refused when the phase is not `--expect` (#587 X9)
+  dyad board draft <id> [--out <file>]
+                                     read-only: the Done skeleton of a row phased at `done-ready` (#587 X7) — the DoD
+                                     quoted from plans/<id>.md, each PR's zone and head, the evidence sha256 and its
+                                     brief when stored here, the accreted rows, the trace, orchestrate's sections
+                                     marked, and the question `asked` would store; printed, or written to a file outside
+                                     the work tree; never posted (the inbox refuses a disposition-shaped body)
 
 **The machine (#587).** An entry may carry `phase` (one of `dyadlib.ORCH_PHASES`; its continuation lines the sub-keys
 `unit`, `pr` (`<n> at <hex>`, repeating), `evidence`, `from`, `on`) and `note` (free text: the one field no table
@@ -55,7 +61,7 @@ terminal is a stale entry, a warning. Not checked: staleness by age, and append-
 import sys
 if sys.version_info < (3, 12):
     sys.exit("board.py: Python 3.12+ required")
-import datetime, os, re, shlex
+import datetime, os, re, shlex, subprocess, unicodedata
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -73,8 +79,10 @@ RETIRED_WAITING = "seat "                           # #604: `seat <name>`, remov
 KEY = re.compile(r"[a-z][a-z-]*")
 CLI_FLAGS = dyadlib.cli_forms("board")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 DROP, = CLI_FLAGS["set"].bare
+OUT, = CLI_FLAGS["draft"].value_flags   # #587 X7: the skeleton's file, never under the work tree
 USAGE = ("usage: dyad board | dyad board set <id>|_cos key=value… [--drop] | dyad board resume | dyad board phases | "
-         "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>]")
+         "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>] | "
+         "dyad board draft <id> [--out <file>]")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("holder-is-required-everywhere", lambda: all(k in FIELDS and k in COS_FIELDS for k in REQUIRED)),
@@ -274,7 +282,31 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     msgs = []
     for p in files:
         msgs += check_entry(p.stem, p.read_text(errors="replace"), states, rows)
-    return msgs
+    return msgs + seat_table_problems(files)
+
+
+def seat_table_problems(files: list[Path]) -> list[str]:
+    """#587 S3: the `_cos` seat table is hand-written, so a phased entry's owner or unit it omits is a warning — the
+    replayed slip had orchestrate routed by `opened` while the table `resume` announces from still lacked it. Silent
+    when `_cos` holds no `seats` (a fresh install, or a flat organization)."""
+    by = {p.stem: parse(p.read_text(errors="replace"))[0] for p in files}
+    table = by.get(COS, {}).get("seats", "")
+    if not table.strip():
+        return []
+    seated = {item.split()[0] for item in table.replace("\n", ";").split(";") if item.split()}
+    out = []
+    for name, f in sorted(by.items()):
+        if name == COS or "phase" not in f:
+            continue
+        try:
+            unit = first(phase_of(f["phase"])[1], "unit")
+        except ValueError:
+            continue
+        for s in dict.fromkeys(owners(f) + ([unit] if unit else [])):
+            if s not in seated:
+                out.append(f"warning: board/{name}.md: {s} owns this entry and is missing from the `_cos` seat table — "
+                           f"`dyad board set {COS} seats=…` adds it (#587 S3)")
+    return out
 
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
@@ -677,12 +709,17 @@ def phase_name(f: dict[str, str]) -> str | None:
 
 
 # ---- questions (X3): composed only by `asked`, read back by `answered-*` as the binding set (Rule-2, Binding)
-def accreted_of(rid: int, rows: dict) -> list[int]:
-    """The rows accreted under `rid`'s mandate: not terminal, a `disposed` holding `mandate #<rid>` and refs naming it
-    (`parent #<rid>`, `#<rid>` or `<rid>`)."""
+def mandated(rid: int, rows: dict) -> list[int]:
+    """Every row accreted under `rid`'s mandate, terminal ones included: a `disposed` holding `mandate #<rid>` and refs
+    naming it (`parent #<rid>`, `#<rid>` or `<rid>`)."""
     names = {f"#{rid}", str(rid)}
-    return sorted(r.id for r in rows.values() if r.id != rid and r.state not in dyadlib.TERMINAL_STATES
-                  and re.search(rf"\bmandate #{rid}\b", r.disposed) and names & set(r.refs.replace("parent ", "").split()))
+    return sorted(r.id for r in rows.values() if r.id != rid and re.search(rf"\bmandate #{rid}\b", r.disposed)
+                  and names & set(r.refs.replace("parent ", "").split()))
+
+
+def accreted_of(rid: int, rows: dict) -> list[int]:
+    """The rows accreted under `rid`'s mandate that are not terminal (`mandated`): the ones a Done question names."""
+    return [i for i in mandated(rid, rows) if rows[i].state not in dyadlib.TERMINAL_STATES]
 
 
 def union_prs(ids, entries: dict) -> list[int]:
@@ -701,6 +738,11 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str
     the union in id order. PRs without heads (Rule-3 form). Refused with PRs unless `merge-disposition` is
     `with-done`: under `separate` the merge is its own question, asked by hand (#587 risk 6)."""
     ids = list(ids)
+    for i in ids:
+        r = rows.get(i)
+        if r is not None and any(unicodedata.category(c) == "Cc" for c in r.title):
+            raise Refused(f"row #{i}'s title holds a control character: a Y binds the question as asked, and a title is "
+                          f"immutable (Rule-16), so the remedy is a new row (counsel's ruling 3, #587)")
     if kind == "plan":
         return f"Y/N: proceed with {', '.join(f'#{i}' for i in ids)} as planned?"
     prs = union_prs(ids, entries)
@@ -1320,6 +1362,253 @@ def phases_lines() -> list[str]:
     return out
 
 
+# ---- the Done skeleton (X7): the machine's part of a completion reply, read-only; orchestrate writes the rest
+DRAFT_PHASE = "done-ready"
+ORCHESTRATE = "_orchestrate writes this section; the machine does not judge it._"
+ORCHESTRATE_SECTIONS = (   # (heading, what goes there): Rule-3's completion evidence (E8) that is inference, not data
+    ("Host actions", "every host action taken, its class and its change-log row (a missing row is a Rule-8 breach)"),
+    ("Departures", "anything in the plan not delivered, any departure from it, every escalation"),
+    ("Unverified", "anything that could not be verified, stated before the question"),
+    ("DoD judgment", "whether the output meets the definition of done quoted above, part by part"),
+)
+
+
+QUOTE = "  "                                         # the fixed prefix of every quoted line inside a fence (F2)
+CONTROL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f\x85\u2028\u2029]")   # C0 but tab, DEL, and the line breaks splitlines reads (F8)
+FENCE = re.compile(r" {0,3}(`{3,}|~{3,})")
+QUESTION_START = re.compile(r"^Y/N:", re.M)
+
+
+def _git(repo: Path, *a: str, strip: bool = True) -> str | None:
+    """One read-only git call in `repo`: its stdout (stripped unless told not to), None when git fails."""
+    r = subprocess.run(["git", *a], cwd=repo, capture_output=True, text=True, env=dyadlib.git_env())
+    return (r.stdout.strip() if strip else r.stdout) if r.returncode == 0 else None
+
+
+def clean(text: str) -> str:
+    """`text` with every control character but tab written as `\\xNN` (or `\\uNNNN`), so repo data printed by the
+    draft can neither break a line nor drive a terminal (F8)."""
+    return CONTROL.sub(lambda m: f"\\x{ord(m[0]):02x}" if ord(m[0]) < 0x100 else f"\\u{ord(m[0]):04x}", text)
+
+
+def dod_sections(text: str) -> list[str]:
+    """Every `## Definition of done…` section of a plan (dyadlib.PLAN_PARTS' last part), heading included, verbatim,
+    in file order (a revision may add its own); [] when there is none. A `## ` line inside a code fence (a run of three
+    or more backticks or tildes, closed by a run of the same character at least as long) is text, not a heading (F3)."""
+    part, out, cur, fence = dyadlib.PLAN_PARTS[-1], [], None, None
+    for line in text.split("\n"):
+        m = FENCE.match(line)
+        if fence is None and m:
+            fence = m[1]
+        elif fence is not None and m and m[1][0] == fence[0] and len(m[1]) >= len(fence) and not line[m.end():].strip():
+            fence = None
+        elif fence is None and line.startswith("## "):
+            if cur is not None:
+                out.append("\n".join(cur).rstrip("\n"))
+            cur = [line] if line[3:].strip().lower().startswith(part) else None
+            continue
+        if cur is not None:
+            cur.append(line)
+    if cur is not None:
+        out.append("\n".join(cur).rstrip("\n"))
+    return out
+
+
+def fenced(text: str) -> list[str]:
+    """`text` in a code fence longer than any run of backticks it holds, every line behind the fixed prefix QUOTE and
+    cleaned (`clean`), so no quoted line can close the fence or start a line of its own — a `Y/N:` above all (F2)."""
+    f = "`" * max(3, 1 + max((len(m) for m in re.findall(r"`+", text)), default=0))
+    return [f, *(QUOTE + clean(l) for l in text.split("\n")), f]
+
+
+def cell(text: str) -> str:
+    return clean(text).replace("|", "\\|")
+
+
+def pr_draft(repo: Path, base: str | None, n: int, head: str) -> str:
+    """One PR's table row: number, zone(s) of its files (`containment.classify`) from the merge base with `base` to its
+    recorded head, the head, the file count; the zone cell says why when the head is not in this clone, or is already
+    on `base`. Names are read NUL-separated and unquoted, so a space or a non-ASCII byte is one path (F4)."""
+    full = _git(repo, "rev-parse", "--verify", "-q", f"{head}^{{commit}}")
+    if full is None:
+        return f"| #{n} | ? (head not in this clone: fetch refs/pull/{n}/head) | {head} | ? |"
+    mb = _git(repo, "merge-base", base, full) if base else None
+    if mb is None:
+        return f"| #{n} | ? (no merge base with {base or 'origin/main'}) | {head} | ? |"
+    if mb == full:
+        return f"| #{n} | head already on {base} (merged before the Done?) | {head} | - |"
+    raw = _git(repo, "-c", "core.quotePath=false", "diff", "--name-only", "-z", "--no-renames", f"{mb}..{full}", strip=False)
+    files = [f for f in (raw or "").split("\0") if f]
+    cz = dyadlib.load_guard("infra", "containment")
+    t = cz.table(repo)
+    zones = sorted({cz.classify(p, zones=t) for p in files})
+    z = ", ".join(zones) + (f" ({len(zones)} zones: Rule-1)" if len(zones) > 1 else "") if zones else "none (no file)"
+    return f"| #{n} | {z} | {head} | {len(files)} |"
+
+
+def evidence_draft(repo: Path, sha: str) -> list[str]:
+    """The evidence a phase records, as its brief form when the full block is stored in this checkout
+    (`<git common dir>/dyad-evidence/<sha256>.txt`, Rule-14 property 3) and matches its own sha256; the baseline is
+    looked up only where it costs nothing (self, cached, stored), never computed. A stored block that does not match
+    is named and not shown (F7); an absent one is one line saying where to read it. `sha` is 64 hex (`evidence_lines`)."""
+    pk = dyadlib.runner_module()
+    common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    d = Path(common) / pk.EVIDENCE_STORE if common else None
+    path = d / f"{sha}.txt" if d is not None else None
+    if path is None or not path.is_file():
+        return [f"block not stored here; run `dyad check --evidence --show {sha}` in the checkout that ran it"]
+    block = path.read_text(errors="replace").splitlines()
+    if not block or block[-1] != pk.EVIDENCE_SHA + sha or block[-1] != pk.EVIDENCE_SHA + pk.evidence_sha256(block[:-1]):
+        return [f"stored block {clean(str(path))} does not match its sha256 (tampered or truncated); not shown"]
+    main = _git(repo, "rev-parse", "--verify", "-q", "origin/main^{commit}")
+    baseline: tuple = (None, "origin/main does not resolve")
+    if main:
+        name = f"origin/main {main[:12]}"
+        if block[0] == f"head={main}":
+            baseline = (pk.evidence_warn_kinds(block[:-1]), f"{name} (self)")
+        elif (k := pk.evidence_baseline_cache_read(d / pk.BASELINE_CACHE.format(sha=main), main)) is not None:
+            baseline = (k, f"{name} (cached)")
+        elif (k := pk.evidence_baseline_stored(d, main)) is not None:
+            baseline = (k, f"{name} (stored)")
+        else:
+            baseline = (None, "not computed by board draft")
+    return fenced("\n".join(pk.evidence_brief(block, path, baseline)))
+
+
+def evidence_lines(repo: Path, sub: dict[str, list[str]]) -> list[str]:
+    """The Evidence section's body: the recorded sha256 only when it is 64 hex (HEX64, the guard's own pattern), and
+    never echoed or put in a command otherwise (F6)."""
+    ev = first(sub, "evidence")
+    if not ev:
+        return ["none recorded on the phase"]
+    if not HEX64.fullmatch(ev):
+        return ["evidence malformed (not 64 hex)"]
+    return [f"evidence-sha256 `{ev}`, recorded on the phase over {prs_text(sub) or 'no PR'}", ""] + evidence_draft(repo, ev)
+
+
+def draft_lines(rid: int, repo: Path) -> list[str]:
+    """The Done skeleton of row `rid` (X7), Markdown, from the working tree: Refused unless its board entry is phased
+    at `done-ready` and `check_phased` finds nothing in it (F1). The machine's sections — the DoD quoted from
+    plans/<id>.md, the PRs (zone, head), the evidence (sha256 and brief), the accreted rows, the trace — then
+    orchestrate's (ORCHESTRATE_SECTIONS, marked), and last the question `asked` would store (`question`), composed by the
+    same function. Every repo field is `clean`ed, and the one line starting `Y/N:` is the last: a fail-loud check
+    raises before anything is printed if another did (F2). Reads only; writes and posts nothing."""
+    p = store(repo) / f"{rid}.md"
+    entry = parse(p.read_text(errors="replace"))[0] if p.is_file() else {}
+    cur = phase_name(entry)
+    if cur != DRAFT_PHASE:
+        raise Refused(f"#{rid} is at {clean(cur or ('no phase' if entry else 'no board entry'))}: board draft drafts a "
+                      f"{DRAFT_PHASE} row only")
+    rows = {r.id: r for r in dyadlib.read_rows(repo)}
+    row = rows.get(rid)
+    if row is None:
+        raise Refused(f"#{rid}: no such row")
+    problems = check_phased(str(rid), entry, rows)
+    if problems:
+        raise Refused(f"board/{rid}.md is not a clean {DRAFT_PHASE} entry ({len(problems)} problem(s)), first: "
+                      f"{clean(problems[0].removeprefix('warning:').strip())}")
+    sub = phase_of(entry["phase"])[1]
+    prs = pr_list(sub)
+    inst = dyadlib.instance(repo)
+    rel = lambda q: q.relative_to(repo).as_posix() if q.is_relative_to(repo) else str(q)
+    at = (_git(repo, "rev-parse", "--short=12", "HEAD") or "?")
+    out = [f"# Done #{rid} {clean(row.title)}: skeleton", "",
+           f"Drafted by `dyad board draft {rid}` from the working tree at {at} (`git pull` first for main's). The machine's "
+           f"sections are data; the sections marked for orchestrate are not the machine's. Nothing here was posted.", ""]
+    plan = inst / "d-work" / "plans" / f"{rid}.md"
+    out += [f"## Definition of done (quoted from {rel(plan)})", ""]
+    secs = dod_sections(plan.read_text(errors="replace")) if plan.is_file() else []
+    if secs:
+        for s in secs:
+            out += fenced(s) + [""]
+    else:
+        out += [f"{rel(plan)} {'has no `## Definition of done` section' if plan.is_file() else 'does not exist'}: "
+                f"orchestrate quotes the DoD by hand", ""]
+    base = "origin/main" if _git(repo, "rev-parse", "--verify", "-q", "origin/main^{commit}") else None
+    out += [f"## PRs (zones from the merge base with {base or '?'} to the recorded head)", ""]
+    if prs:
+        out += ["| PR | zone | head | files |", "|---|---|---|---|"] + [pr_draft(repo, base, n, h) for n, h in prs] + [""]
+    else:
+        out += ["none recorded on the phase", ""]
+    out += ["## Evidence", ""] + evidence_lines(repo, sub) + [""]
+    acc = mandated(rid, rows)
+    named = set(accreted_of(rid, rows))
+    out += [f"## Accreted rows (`mandate #{rid}` in `disposed`, refs naming #{rid})", ""]
+    if acc:
+        ents = rows_guard().entries
+        out += ["| row | state | mode | dispositions | title |", "|---|---|---|---|---|"]
+        out += [f"| #{i}{'' if i in named else ' (terminal: not in the question)'} | {cell(rows[i].state)} | {cell(rows[i].mode)} | "
+                f"{len(ents(rows[i].disposed))} | {cell(rows[i].title)} |" for i in acc] + [""]
+    else:
+        out += ["none", ""]
+    tr = inst / "d-work" / "traces" / f"{rid}.md"
+    pref = dyadlib.preference(rows_guard().TRACE_KEY, repo)
+    out += ["## Trace", "", f"`{rel(tr)}`: " + ("present" if tr.is_file() else
+            f"absent (dwork-trace: {clean(pref or 'unset')}; write it with `dyad dwork trace {rid} --out`)"), ""]
+    for head, what in ORCHESTRATE_SECTIONS:
+        out += [f"## {head} (orchestrate)", "", ORCHESTRATE, f"<!-- {what} -->", ""]
+    try:
+        q = clean(question("done", [rid], {rid: entry}, rows, dyadlib.preference("merge-disposition", repo)))
+    except Refused as e:
+        q = f"(question not composed: {clean(str(e))})"
+    out += ["## Question (as `asked` would store it)", "", q]
+    text = "\n".join(out)
+    starts = [m.start() for m in QUESTION_START.finditer(text)]
+    if starts[:-1] or (starts and starts[-1] != text.rfind("\n") + 1):   # F2's fail-loud check, before the one print
+        raise Refused(f"#{rid}: the draft holds a line starting `Y/N:` other than its last; not printed (#587 X7)")
+    return out
+
+
+def out_roots(repo: Path) -> list[Path]:
+    """Every place the skeleton may never be written: each worktree of `repo`'s repository (`git worktree list
+    --porcelain`) and its common git dir (F5)."""
+    roots = [Path(repo).resolve()]
+    for line in (_git(repo, "worktree", "list", "--porcelain") or "").splitlines():
+        if line.startswith("worktree "):
+            roots.append(Path(line[len("worktree "):]).resolve())
+    common = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if common:
+        roots.append(Path(common).resolve())
+    return list(dict.fromkeys(roots))
+
+
+def out_refusal(dest: Path, repo: Path) -> None:
+    """Refused when `--out`'s destination is under a worktree or the git dir of this repository, or already exists."""
+    for root in out_roots(repo):
+        if dest.is_relative_to(root):
+            raise Refused(f"{OUT} {clean(str(dest))} is under {clean(str(root))}, a worktree or the git dir of this repository; "
+                          f"the skeleton is never written to the repo (give a scratch path)")
+    if dest.exists() or dest.is_symlink():
+        raise Refused(f"{OUT} {clean(str(dest))} exists; the skeleton never overwrites a file (give a new path)")
+
+
+def cmd_draft(a: list[str], repo: Path) -> int:
+    """`dyad board draft <id> [--out <file>]`: print the Done skeleton, or write it to a file outside the work tree."""
+    got = dyadlib.cli_parse(CLI_FLAGS["draft"], list(a))
+    usage = dyadlib.cli_usage(("board", "draft"))
+    if got.helped:
+        print(usage); return 0
+    if got.unknown or got.extra or len(got.pos) != 1 or not got.pos[0].isdigit() or (OUT in got.values and not got.one(OUT)):
+        print(usage, file=sys.stderr); return 2
+    try:
+        dest = Path(got.one(OUT)).resolve() if got.one(OUT) else None
+        if dest is not None:
+            out_refusal(dest, Path(repo))
+        lines = draft_lines(int(got.pos[0]), Path(repo).resolve())
+    except Refused as e:
+        print(f"refused: {e}", file=sys.stderr); return 1
+    if dest is None:
+        print("\n".join(lines)); return 0
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with dest.open("x") as h:                     # `x`: a file created meanwhile is not overwritten either
+            h.write("\n".join(lines) + "\n")
+    except OSError as e:
+        print(f"refused: {OUT} {clean(str(dest))}: {clean(e.strerror or type(e).__name__)}", file=sys.stderr); return 1
+    print(f"wrote {clean(str(dest))} ({len(lines)} lines)")
+    return 0
+
+
 def cli(a: list[str], repo: Path | None = None) -> int:
     repo = Path(repo or dyadlib.repo_root())
     if a and a[0] in ("-h", "--help"):
@@ -1330,6 +1619,8 @@ def cli(a: list[str], repo: Path | None = None) -> int:
         print("\n".join(resume_lines(repo))); return 0
     if a == ["phases"]:
         print("\n".join(phases_lines())); return 0
+    if a and a[0] == "draft":
+        return cmd_draft(a[1:], repo)
     if a and a[0] == "advance":                       # the runner routes here with its own readers (package.cmd_board)
         run = dyadlib.runner_module()
         return cmd_advance(a[1:], repo, run.DWORK_VALUE_FLAGS, run.dwork_args, run.words)
@@ -1355,6 +1646,9 @@ INVARIANTS += [   # #587: the machine's derived fields (crafts/syseng/rules/inva
     ("derived-waiting-on-forms", lambda: all(WAITING.fullmatch(derive(1, {"holder": "h", "phase": phase_render(p, {"unit": ["u"], "pr": ["1 at abc1234"], "on": ["operator"]})})["waiting-on"]) for p in dyadlib.ORCH_PHASES)),
     ("subkeys-distinct", lambda: len(set(PHASE_SUBKEYS)) == len(PHASE_SUBKEYS)),
     ("phase-and-note-are-fields", lambda: {"phase", "note"} <= set(FIELDS) and not {"phase", "note"} & set(COS_FIELDS)),
+    ("draft-phase-is-a-phase", lambda: DRAFT_PHASE in dyadlib.ORCH_PHASES and ASKED_OF.get(DRAFT_PHASE) == "done-asked"),   # X7
+    ("orchestrate-sections-distinct", lambda: len({h for h, _ in ORCHESTRATE_SECTIONS}) == len(ORCHESTRATE_SECTIONS)
+                                              and all(h and w and "Y/N" not in h + w for h, w in ORCHESTRATE_SECTIONS)),
     ("relays-name-known-events", lambda: all(e in dyadlib.ORCH_EVENT_NAMES and (t in dyadlib.ORCH_PHASES or t in (dyadlib.ORCH_DROP, dyadlib.ORCH_FROM)) for e, t in RELAYS)),
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)
