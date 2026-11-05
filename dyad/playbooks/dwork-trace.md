@@ -101,7 +101,13 @@ counts of each), then five sections in this order:
      table, its run never summed a second time.
 3. **Counts.** Commits (ledger-only among them) and merges, ledger and work (git); PRs created by head
    branch (`ledger-…` is a ledger PR) and merged, full-suite runs and guards-only push gates, tool calls and output tokens
-   (transcript, the window only). Last, the **delegated share** — the `subagent` bucket over the agent
+   (transcript, the window only). Then three reply lines (#602): **replies per disposition** — the replies of
+   the turns naming this d-work, a turn named by its closing `Y/N:` line's ids, else by what opened it (an Operator
+   message or a harness notice; a compaction inherits the one before it), never by the Agent's prose, PR and merge
+   numbers stripped — over the record's dispositions in the window less those noted `mandate #<id>`; **replies by
+   trigger**, the same replies split by what woke their turn (operator, notify, compact, none); and **replies in the
+   window, all rows**, every reply, the distinct answers and the overlap (the per-row counts summed over that total).
+   Last, the **delegated share** — the `subagent` bucket over the agent
    partition, beside the output tokens of the same window: a share at 0% on a d-work that drafted heavily is
    `delegation: plan-and-execute` not firing for work the preference covers (Rule-3 Scope, Rule-10's
    concise-mode clause), which is what leaves a turn open long enough for a lost segment to cost it (#254).
