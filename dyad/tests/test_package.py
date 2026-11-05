@@ -901,13 +901,26 @@ class PackageTests(livetest.LiveCase):
             with self.subTest(args=args):
                 r = self.dwork_state(d, *args)
                 self.assertNotEqual(r.returncode, 0); self.assertIn("refused: a `Y done` entry is recorded with its trace", r.stderr)
-                self.assertIn("write it first: dyad dwork trace 1 --out", r.stderr); self.assertNotIn("Traceback", r.stderr)
+                self.assertIn("write it first: dyad dwork trace 1 --out --said-file", r.stderr); self.assertNotIn("Traceback", r.stderr)
         self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rec.exists())
         r = self.dwork_state(d, "1", "open", "-d", "Y plan", "--said", "Y")               # a disposition other than `Y done`
         self.assertEqual(r.returncode, 0, r.stderr)
         self.trace(rows, 1)
         r = self.dwork_state(d, "1", "done", "-d", "Y done", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("1.md").read_text())
+    def test_dwork_refuses_a_done_record_beside_a_preview_trace(self):
+        """#592 R-b: the fence fails a `Y done` commit whose trace is a preview; `dwork state` says so before any write,
+        naming the rewrite, and records the same entry once the trace runs through the Done."""
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"; before = rows.joinpath("1.md").read_text()
+        t = rows.parent / "traces"; t.mkdir(exist_ok=True)
+        t.joinpath("1.md").write_text("# Trace #1\n\n## Limits\n\n- preview: no Done disposition yet\n")
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("is a preview", r.stderr)
+        self.assertIn("dyad dwork trace 1 --out --said-file", r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rec.exists())
+        self.trace(rows, 1)                                               # rewritten through the Done
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
     def test_dwork_state_mandate_close_needs_no_trace(self):
         """#465: a `--mandate` close writes `Y done (mandate #<id>, …)`; the accreted row's Done rides the mandate's,
         whose own trace covers the set, so no trace of its own is asked for."""
@@ -1323,6 +1336,31 @@ def _split(cls, n, together):
         delattr(cls, k)
     return made
 globals().update(_split(PackageTests, PACKAGE_SPLIT, PACKAGE_TOGETHER))
+
+class UtcDateTests(PackageTests):
+    """#592 R-b: every date `dwork new` and `dwork state` write is UTC's, whatever the host's local day (the row and
+    provenance helpers are PackageTests', whose own tests `_split` has moved to its numbered classes)."""
+    def test_dwork_new_and_state_write_the_utc_date(self):
+        d, rows = self.dwork_repo()
+        with livetest.off_utc() as (utc, local):
+            self.assertNotEqual(utc, local)
+            r = self.dwork_new(d, "three", "#1", "--prompt", "open three")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            s = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")
+            self.assertEqual(s.returncode, 0, s.stderr)
+        self.assertIn(f"opened: {utc}\n", rows.joinpath("3.md").read_text())
+        self.assertIn(f"\n## 1 prompt {utc}\n", (rows.parent / "provenance" / "3.md").read_text())
+        self.assertIn(f"disposed: {utc} Y plan\n", rows.joinpath("1.md").read_text())
+        self.assertIn(f"disposition {utc} Y plan\n", (rows.parent / "provenance" / "1.md").read_text())
+        for f in ("3.md", "1.md"):
+            self.assertNotIn(local, rows.joinpath(f).read_text())
+    def test_no_writer_reads_the_local_date(self):
+        """#592 R-b: `dyadlib.utc_date` is the one date a store is written with; a grep of the core's scripts and guards
+        for the host's local day finds none, so a seventh writer cannot reintroduce it unseen."""
+        hits = [f"{p.relative_to(PKG)}:{n}" for root in ("scripts", "guards") for p in sorted((PKG / root).rglob("*.py"))
+                for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1) if "date.today(" in line]
+        self.assertEqual(hits, [])
+        self.assertIs(load_package().dyadlib.utc_date, dyadlib.utc_date)
 
 class BundledCraftTests(unittest.TestCase):
     """Rule-11 property 2's bundled craft (d-work #114). The core keeps no list: a craft is bundled

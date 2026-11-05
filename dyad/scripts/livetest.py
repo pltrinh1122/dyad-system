@@ -26,6 +26,7 @@ The module also holds the fixture for the other side of the same question: a *fr
 #199 N3a). Rule-13 wants one place for it, so it was lifted from `test_craft.py` rather than copied into
 `test_package.py`:
 
+  - `off_utc` — the host's local day stubbed one day off UTC's, for a test proving a writer dates by UTC (#592).
   - `ScratchInstalls` — one per test module. `copy(with_craft)` returns an independent scratch repo holding
     the core craft, installed by the real install path (`package.py install`) and committed. With
     `with_craft`, every Tended craft of this tree is copied in beside it. The install runs once per variant
@@ -37,7 +38,7 @@ The module also holds the fixture for the other side of the same question: a *fr
 import sys
 if sys.version_info < (3, 12):
     sys.exit(f"livetest.py: Python 3.12+ required (kernel pin), found {sys.version.split()[0]}")
-import atexit, shutil, subprocess, tempfile, unittest
+import atexit, contextlib, datetime, os, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:   # as runbook.py: a caller's path order stands (#378)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -61,6 +62,24 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("variants-are-the-two-booleans", lambda: VARIANTS == (False, True)),
     ("no-auto-maintenance-pairs", lambda: dict(NO_AUTO_MAINTENANCE) == {"gc.auto": "0", "maintenance.auto": "false"}),
 ]
+
+
+@contextlib.contextmanager
+def off_utc():
+    """#592 R-b: the host's local day stubbed one day off UTC's — a zone 14 h ahead once UTC is past 10:00, else 12 h
+    behind (POSIX TZ strings, so no tz database is needed) — yielding (UTC date, local date); TZ restored after.
+    One helper for every test that proves a writer dates by UTC (`dyadlib.utc_date`), never by the host's day."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    old = os.environ.get("TZ")
+    os.environ["TZ"] = "LOC-14" if now.hour >= 10 else "LOC+12"; time.tzset()
+    try:
+        yield now.date().isoformat(), datetime.datetime.now().date().isoformat()   # naive now: the stubbed local day
+    finally:
+        if old is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = old
+        time.tzset()
 
 
 def store_files(*paths, pattern: str = "*") -> list[Path]:

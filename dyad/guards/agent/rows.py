@@ -39,7 +39,8 @@ interval between the two is read by the package check as one warning per row (`d
 Under the preference `dwork-trace: always`, read at the commit's own tree, a commit that adds a `Y done` entry to row
 N — not a mandate close, whose note holds `mandate #` (Rule-7 property 4) — must hold `<instance>/d-work/traces/N.md`
 in that same tree, carried by the commit or already on the base (`trace_problems`, d-work #465): the Done record
-commit carries the trace (Rule-3 Completion); a merge resolution is judged against each parent.
+commit carries the trace (Rule-3 Completion); a merge resolution is judged against each parent. That trace is never a
+preview: one holding the preview line fails the same commit, carried or on the base (#592 R-b).
 Under `merge-disposition: with-done`, read at the commit's own tree the same way, a `Y merge` entry a commit adds
 warns — a `warning:` line, never a failure (`merge_disposition_warnings`, d-work #519): the Done-`Y` ratifies the
 merge, so a separate merge question was asked against the preference (#486); a note naming a preference-zone or
@@ -161,6 +162,7 @@ def done_order_problems(path: str, before, after, label: str) -> list[str]:
 
 # ---- the Done record carries its trace (d-work #465)
 TRACE_KEY, TRACE_ALWAYS = "dwork-trace", "always"
+PREVIEW_MARK = "- preview:"   # trace.PREVIEW_MARK (#592 R-b): the line only a preview carries; test_rows pins the two equal
 
 def preference_at(sha: str, key: str, cwd) -> str | None:
     """The value of one preference row in the commit's own tree — `dyadlib.preference`'s reading of the table,
@@ -193,13 +195,21 @@ def trace_problems(path: str, before, after, label: str, sha: str, cwd) -> list[
         return []
     tp = trace_path(path, after.id)
     try:
-        git("cat-file", "-e", f"{sha}:{tp}", cwd=cwd, stderr=subprocess.DEVNULL)
-        return []
+        text = git("show", f"{sha}:{tp}", cwd=cwd, stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
-        pass
+        text = None
+    if text is not None:
+        if not any(l.startswith(PREVIEW_MARK) for l in text.splitlines()):
+            return []
+        # #592 R-b: the trace the record carries — or finds on its base — must run through the Done-`Y`, never be the
+        # preview written before it; read at this commit's own tree, so carried and already-landed are judged alike
+        return [f"FAIL [main-fence]: {label} records {e!r} on row file {path} beside a trace {tp} that is a preview "
+                f"(`{PREVIEW_MARK}` under Limits): the Done record carries the trace through the Done-`Y` — rewrite it with "
+                f"`dyad dwork trace {after.id} --out --said-file <the Done words>` and carry it in the same commit (#592)"
+                for e in added]
     return [f"FAIL [main-fence]: {label} records {e!r} on row file {path} without its trace {tp} in the same "
             f"tree (Rule-3 Completion, `dwork-trace: always`: the Done record commit carries the trace — write it "
-            f"with `dyad dwork trace {after.id} --out`, then carry it in the same commit: `dyad dwork batch` with a "
+            f"with `dyad dwork trace {after.id} --out --said-file <the Done words>`, then carry it in the same commit: `dyad dwork batch` with a "
             f"`land {tp}` line before the `state` line; #465)" for e in added]
 
 # ---- a merge question asked against `merge-disposition: with-done` (d-work #519, the audit's F2)

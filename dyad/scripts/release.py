@@ -298,7 +298,6 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
     operative Done-`Y` names the tag (`(merges PR #a at <head>, releases <tag-a>, <tag-b>)`, Rule-2 Binding) and the
     heads the Operator verified; every root the tag carries is that tree at the cut; the
     archive the one code path builds at the cut has `sha256`. Refused, with nothing written, on any miss."""
-    import datetime
     rg = dyadlib.load_guard("agent", "rows")
     path = dyadlib.rows_dir(root) / f"{row_id}.md"
     if not row_id.isdigit() or not path.is_file():
@@ -331,7 +330,7 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
         raise Refused("C2's fence: " + "; ".join(miss) + " — the release returns to an explicit question (#545)")
     if observed != sha256:
         raise Refused(f"C2's fence: the archive built at the cut has sha256 {observed}, not {sha256}")
-    entry = f"{datetime.date.today().isoformat()} release-ready {tag} at {full} (archive {sha256})"
+    entry = f"{dyadlib.utc_date()} release-ready {tag} at {full} (archive {sha256})"
     if not rg.is_ready(entry):
         raise Refused(f"internal: {entry!r} is not the release-ready shape")
     if entry.split(" ", 1)[1] in [e.split(" ", 1)[1] for e in rg.entries(row.disposed)]:
