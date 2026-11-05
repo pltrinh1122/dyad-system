@@ -16,7 +16,7 @@
   "dyad:decides": "Where is this unit's question asked?",
   "dyad:inputs": [
     "the unit",
-    "the preference paired-units (alias attended-seats)",
+    "the preference paired-units",
     "whether the unit is the home"
   ],
   "hasDefinedTerm": [

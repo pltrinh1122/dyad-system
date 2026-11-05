@@ -40,7 +40,7 @@ disposer anywhere.
   reads one line per secretary — never a desk. A leader's board longer than seven is the signal to consolidate (a
   secretary's unit retired or re-homed by its own row) or to split a function — proposed to the operator, never
   done by a unit. Desks are unbounded: a secretary opens as many as its concurrent work needs, one session each,
-  bounded only by its own charter's ceiling (#416 prompt 4); a desk is solo unless `paired-units` (its alias `attended-seats`, read until the release after next) names it,
+  bounded only by its own charter's ceiling (#416 prompt 4); a desk is solo unless `paired-units` names it,
   so desks never count against the operator's span (§6).
 - **Workstations: a cos per operator, a desk per workstation** (dyad-system #531). A cos belongs to an operator's
   attention, never to a machine; a workstation is a place where acts run, so it gets a desk. One cos per operator,
