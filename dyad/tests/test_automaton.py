@@ -259,6 +259,19 @@ class AutomatonTests(unittest.TestCase):
         self.assertNotIn("board #9", out)
         self.assertEqual(self.on_main(f"{INST}/d-work/board/9.md"), before)
 
+    def test_s11_phased_a_question_asked_after_the_plan_y_is_not_caught_up(self):
+        """S11 on the phased path (found by #587's replays): the row's `Y plan` lands first, then home asks a revision
+        on the phased board (plan-asked) in a later commit; the catch-up must not read the older `Y` as its answer."""
+        rows = f"{INST}/d-work/rows/12.md"
+        self.w.write_main({rows: ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n"})
+        asked = self.phased(12, "plan-asked", {"unit": ["engineer-1537d8fb"]}, "Y/N: proceed with #12 revision 2 as planned?")
+        self.w.write_main({f"{INST}/d-work/board/12.md": asked})
+        rc, out, _ = run(["scan"], self.w.seat)
+        self.assertEqual((rc, out.strip()), (0, "nothing to do"))
+        run(["run"], self.w.seat)
+        self.assertEqual(self.on_main(f"{INST}/d-work/board/12.md"), asked)
+
     def test_a_plan_y_recorded_by_hand_is_caught_up_with_no_ledger_line(self):
         rows = f"{INST}/d-work/rows/12.md"
         self.w.write_main({rows: ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
