@@ -26,7 +26,11 @@ with the columns (date, d-work, class, action, undo, outcome, actor), in a works
 the same d-work. `actor` is `operator` or `agent` — the party whose hands executed the action (who
 drove it: typed the command or ran the ops script, versus the Agent's own process), matching what
 a server's own audit log and a run-book event's `role` (server-instances rule) already mean; an
-Operator-run ops script (Rule-18) is `operator`, an Agent-run command `agent`. The credential it
+Operator-run ops script (Rule-18) is `operator`, an Agent-run command `agent`. `actor` may also be
+`automaton` (#593): an automaton runs a reversible action only when the ledger line recording a plan-`Y` that names
+it is on `main`, and so writes a row only for such an action; a destructive action is never an automaton's, since
+it keeps its own counter-prompt (Rule-8). Today the automaton takes no host action, so the value is reserved: the
+format is frozen once, for 1.0. The credential it
 ran under can diverge from the hands that drove it (an Agent-run git commit still carries the
 Operator's own git identity, Rule-2 Enforcement) — `actor` names hands only; a divergent credential
 is named in the row's `outcome`. Only an action the Agent takes is *required* by Rule-8's kernel
@@ -38,7 +42,8 @@ change-log evidence: the row's outcome cites `event: <id>` instead of a pasted t
 Rule-20 resolves the id. The guard `crafts/sysadmin/guards/changelog.py` (registry label
 `sysadmin/changelog`) checks the header equals the columns (or the columns without `actor`, for an
 instance mid-migration — `OPTIONAL`, #216), each row's date form, `#<id>` d-work, class, non-empty
-action, an actor in `operator`/`agent` where the column is present, and — for a reversible or
+action, an actor in `operator`/`agent`/`automaton` where the column is present, an `automaton` row never
+`destructive`, and — for a reversible or
 destructive row — a non-empty undo; a missing change log passes (fresh install).
 
 ## Provenance
