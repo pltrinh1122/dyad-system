@@ -1128,6 +1128,16 @@ R1–R4, R6 and R7 were confirmed answered; exceptions 0. One item remained:
 
 Rule-7 property 4's mandate close and Rule-16's never-lost field still hold, since they state what is written when a mandate closes a row, not that one must.
 
+### Revision 2, audit's fourth pass answered (audit-e73be78c on head 374a6360)
+Exceptions 0; R8 confirmed answered. Two vocabulary divergences fixed (the vocabulary alone changes):
+
+| item | refutation | fix |
+|---|---|---|
+| R9 | The vocabulary's `implicit` ("born under another row's plan-`Y`") covered a carried `backlog` row, which the Rule calls explicit. #576–#583 carry no mode line. | `mode`: `implicit` is an accreted row born `open` under another row's plan-`Y`; `explicit` is every other row. `explicit mode` says the same, naming a carried `backlog` row. |
+| R10 | `accreted row` said "carrying no disposition of its own". #571 and #591 each hold their own `Y done`. | It now says "asking no plan question of its own". |
+
+**Terms (Rule-6).** `mode` is used by 3 and 16, `explicit mode` by 2 and 3, and `accreted row` by 2, 3, 7, 15 and 16. Each Rule re-read and found to read correctly. The Rules' wording on the never-accretable list, and Rule-7 property 4's copied mandate entry, are unaffected.
+
 ### Rule-3's Provenance section before #585 (history, moved here verbatim)
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
