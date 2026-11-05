@@ -983,7 +983,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("project", None):          CliForm("[<surface>]", (("--craft", "<name>"),), ("--list",)),   # --craft: the kanban projector's (#22)
     ("runbook", "check"):       CliForm(),
     ("runbook", "list"):        CliForm("<instance>"),
-    ("runbook", "run"):         CliForm("<instance> <name>", (("--as", "operator|agent"),)),
+    ("runbook", "run"):         CliForm("<instance> <name>", (("--as", "operator|agent|automaton"),)),
     ("runbook", "new"):         CliForm("<instance>"),
     ("release", None):          CliForm("", (), ("--scan",)),
     ("release", "ready"):       CliForm("<row> <tag>", (("--at", "<cut>"), ("--archive", "<sha256>"))),
