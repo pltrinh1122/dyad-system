@@ -320,6 +320,21 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(sum(len(p) for p in parts), 40)                          # every line in exactly one part
         self.assertTrue(all(len(" | ".join(p)) < am.NOTICE_CHARS for p in parts))
 
+    def test_a_refusal_reason_carries_the_failing_lines_never_empty(self):
+        """#592: a failed push's refusal ends its first line with a colon and puts the hook's output after it; the
+        notice carried only that first line, so its reason read empty."""
+        why = ("the push failed with main unmoved; nothing landed:\n"
+               "ok   [guards] agent/rules (19 Rules)\n"
+               "FAIL [guards] agent/traces 584.md: a stored preview\n"
+               "FAIL [guards] agent/traces 585.md: a stored preview\n"
+               "error: failed to push some refs to 'origin'")
+        r = am.reason(why)
+        self.assertTrue(r.startswith("the push failed with main unmoved; nothing landed: | FAIL [guards] agent/traces 584.md"))
+        self.assertIn("585.md", r); self.assertIn("error: failed to push", r); self.assertNotIn("ok   [guards]", r)
+        self.assertEqual(am.reason("a one-line refusal"), "a one-line refusal")
+        self.assertEqual(am.reason("introduced:\nsome plain line"), "introduced: | some plain line")
+        self.assertEqual(am.reason(""), "no reason given")
+        self.assertLessEqual(len(am.reason("x:\n" + "\n".join(f"FAIL {'y' * 300}" for _ in range(9)))), am.REASON_CHARS)
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
         self.assertEqual(run(["go"], self.w.seat)[0], 2)
