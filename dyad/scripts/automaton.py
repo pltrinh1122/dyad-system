@@ -187,6 +187,10 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if entry.get("phase"):
             continue                                                   # #587: `answered-Y` wrote the flip and the relay
         owners = board().owners(entry)
+        if (refusal := board().retired_waiting(entry.get("waiting-on", ""))):   # #604: told to home, never rewritten
+            why = retired_body(r.id, refusal)
+            if to and not posted(repo, base, to, r.id, why):
+                acts.append(("tell", r.id, why))
         if owners and not board_after_plan_y(repo, base, r.id) and (pairs := planned_flip(r.id, entry, owners)):
             acts.append(("board", r.id, pairs))                       # #572 K1: before the notices it announces
         parts = plan_parts(show(repo, base, f"{inst(repo)}/d-work/plans/{r.id}.md") or "")
@@ -640,6 +644,11 @@ def stray_body(rid: int, x: int, state: str) -> str:
     return inbox().DISPOSITION.sub("[an entry, read in the ledger]", f"automaton: archive of the rows its Done retires refused for "
                                    f"row #{rid}: row #{x} is {state}; a Done retires only a backlog or done row (#574 G2)")
 
+def retired_body(rid: int, refusal: str) -> str:
+    """The notice for a planned row's board entry still in the removed `seat <name>` form (#604): the board guard's own
+    refusal, which names the form to write; the entry is left as it stands."""
+    return f"automaton: board flip refused for row #{rid}: board/{rid}.md {refusal}; the entry is left as it stands"
+
 # ---- the clerical board writes a recorded line decides (d-work #572 K1-K3)
 PARTS = re.compile(r"(?im)^\s*parts:\s*(.+)$")
 
@@ -679,8 +688,11 @@ def board_after_plan_y(repo: Path, base: str, rid: int) -> bool:
 
 def planned_flip(rid: int, entry: dict[str, str], owners: list[str]) -> dict[str, str] | None:
     """#572 K1: the board pairs a recorded `Y plan` decides — waiting on the first owner, the plan as the next act, no
-    question — or None when the entry already waits on a unit (the flip is done, or home has moved it on)."""
-    if entry.get("waiting-on", "").startswith(("unit ", board().UNIT_ALIAS)):
+    question — or None when the entry already waits on a unit (the flip is done, or home has moved it on), or still
+    holds the removed `seat <name>` form (#604: that entry is told to home by the scan, never rewritten, so the unit it
+    names and its open question are not lost)."""
+    w = entry.get("waiting-on", "")
+    if w.startswith("unit ") or board().retired_waiting(w):
         return None
     return {"waiting-on": f"unit {owners[0]}", "next": f"execute plans/{rid}.md", "question": "",
             "holder": entry.get("holder", "")}

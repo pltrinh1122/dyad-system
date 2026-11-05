@@ -149,8 +149,8 @@ defines what each value means.
   preferences-zone row the Operator writes — and a one-pair system under `m4` is the Operating
   Guide's one-pair case (`crafts/cabinet/docs/operating-guide.md` §6).
 - `paired-units` — the seats the Operator attends beside the leader, which is always attended (d-work
-  #412; named `attended-seats` until #553, still read as its alias and warned on until dyad-operator 1.0,
-  #573): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
+  #412; named `attended-seats` until #553, that name no longer read since dyad-operator 1.0 and refused by
+  the presence guard, #604): a space-list of seat names, or of seat names without their `-<hp>` (`counsel` names every holder
   of the counsel seat), or `none`. The constraint it states is the Operator's span — how many seats the
   Operator sits at — never how many seats run: a hundred seats are one span while only the leader is
   attended and orchestrates the rest. Over the live seats the reading is a mode — every seat attended

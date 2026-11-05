@@ -68,8 +68,8 @@ FIELDS = ("holder", "phase", "owner", "waiting-on", "next", "since", "question",
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "writer")
 REQUIRED = ("holder",)
 CONT = "  "                                          # a continuation line's prefix
-WAITING = re.compile(r"operator|(?:unit|seat) \S+|external \S.*")   # `seat <name>` is `unit <name>`'s alias (#553)
-UNIT_ALIAS = "seat "                                # read until the release after next; `board set` writes `unit `
+WAITING = re.compile(r"operator|unit \S+|external \S.*")
+RETIRED_WAITING = "seat "                           # #604: `seat <name>`, removed in 1.0; refused naming `unit <name>`
 KEY = re.compile(r"[a-z][a-z-]*")
 CLI_FLAGS = dyadlib.cli_forms("board")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 DROP, = CLI_FLAGS["set"].bare
@@ -79,8 +79,8 @@ USAGE = ("usage: dyad board | dyad board set <id>|_cos key=value… [--drop] | d
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("holder-is-required-everywhere", lambda: all(k in FIELDS and k in COS_FIELDS for k in REQUIRED)),
     ("writer-is-a-key-of-both", lambda: "writer" in FIELDS and "writer" in COS_FIELDS),
-    ("waiting-on-forms", lambda: all(WAITING.fullmatch(v) for v in ("operator", "unit counsel-015qiPLU", "seat counsel-015qiPLU", "external run 1"))
-                                 and not WAITING.fullmatch("someone")),
+    ("waiting-on-forms", lambda: all(WAITING.fullmatch(v) for v in ("operator", "unit counsel-015qiPLU", "external run 1"))
+                                 and not WAITING.fullmatch("someone") and not WAITING.fullmatch(RETIRED_WAITING + "counsel-015qiPLU")),
     ("store-under-d-work", lambda: BOARD_REL.startswith("d-work/")),
 ]
 
@@ -149,6 +149,16 @@ def now_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
 
 
+def retired_waiting(value: str) -> str | None:
+    """#604 (#573 step 4): the refusal for a `waiting-on` in the removed `seat <name>` form, naming the form to write,
+    else None. Never rewritten silently: a stored entry fails the guard and `board set` refuses it."""
+    if not value.startswith(RETIRED_WAITING):
+        return None
+    rest = value[len(RETIRED_WAITING):].strip()
+    form = f"unit {rest}" if WAITING.fullmatch(f"unit {rest}") else "unit <name>"   # never suggest a form WAITING refuses
+    return f"`waiting-on: {value}` uses `seat <name>`, removed in dyad-operator 1.0; write `waiting-on: {form}` (#604)"
+
+
 def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None = None) -> list[str]:
     """One file's problems; `name` its stem, `states` row id -> state, `rows` row id -> Row (the phased entry's row
     checks; skipped without it). An entry with no `phase` is judged exactly as before #587."""
@@ -160,11 +170,10 @@ def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None 
     allowed = keys_for(name)
     msgs += [f"{where}: unknown key {k!r} (keys: {', '.join(allowed)})" for k in fields if k not in allowed]
     msgs += [f"{where}: '{k}' missing" for k in REQUIRED if not fields.get(k)]
-    if "waiting-on" in fields and not WAITING.fullmatch(fields["waiting-on"]):
-        msgs.append(f"{where}: 'waiting-on' is not `operator`, `unit <name>` (alias `seat <name>`) or `external <ref>` ({fields['waiting-on']!r})")
-    if fields.get("waiting-on", "").startswith(UNIT_ALIAS):   # #573 step 5: the deprecation warning before 1.0 removes it
-        msgs.append(f"warning: {where}: `waiting-on: {fields['waiting-on']}` uses the alias `seat <name>`; write "
-                    f"`unit {fields['waiting-on'][len(UNIT_ALIAS):]}` — the alias is removed in dyad-operator 1.0 (#573)")
+    if "waiting-on" in fields and (r := retired_waiting(fields["waiting-on"])):
+        msgs.append(f"{where}: {r}")
+    elif "waiting-on" in fields and not WAITING.fullmatch(fields["waiting-on"]):
+        msgs.append(f"{where}: 'waiting-on' is not `operator`, `unit <name>` or `external <ref>` ({fields['waiting-on']!r})")
     if "since" in fields and parse_since(fields["since"]) is None:
         msgs.append(f"{where}: 'since' is not an ISO-8601 date or time ({fields['since']!r})")
     if name.isdigit():
@@ -340,10 +349,10 @@ def parse_set(a: list[str]) -> tuple[str, dict[str, str], bool]:
             raise Refused(f"unknown key {k!r} for {name} (keys: {', '.join(k for k in keys_for(name) if k != 'writer')})")
         if k in REQUIRED and v == "":
             raise Refused(f"{k!r} cannot be removed")
+        if k == "waiting-on" and (r := retired_waiting(v)):
+            raise Refused(r)
         if k == "waiting-on" and v and not WAITING.fullmatch(v):
             raise Refused(f"waiting-on is `operator`, `unit <name>` or `external <ref>`, not {v!r}")
-        if k == "waiting-on" and v.startswith(UNIT_ALIAS):
-            v = "unit " + v[len(UNIT_ALIAS):]           # the canonical form is written; the alias is only read (#553)
         if k == "since" and v and parse_since(v) is None:
             raise Refused(f"since is an ISO-8601 date or time, not {v!r}")
         if k == "note" and v and dyadlib.load_guard("agent", "inbox").DISPOSITION.search(v):
@@ -495,7 +504,7 @@ def resume_view(root: Path) -> dict:
     items = [(n, f) for n, f in got if n != COS]
     stale = [(n, f) for n, f in items if states.get(int(n)) in dyadlib.TERMINAL_STATES or int(n) not in states]
     live = [(n, f) for n, f in items if (n, f) not in stale]
-    seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith(("unit ", UNIT_ALIAS))}
+    seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith("unit ")}
                    | {o for _, f in live for o in owners(f)})
     seat = os.environ.get("DYAD_SESSION") or None
     return {"cos": dict(got).get(COS, {}), "live": live, "stale": stale, "states": states,
@@ -1040,12 +1049,12 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
     if said is not None and not Path(said).is_file():
         raise Refused(f"--said-file {said} is not a file")
     for k, v in pairs.items():
+        if k == "on" and (r := retired_waiting(v)):
+            raise Refused(f"on={v!r}: {r}")
         bad = {"unit": not inbox().SEAT.fullmatch(v), "pr": not v.isdigit(), "head": not HEAD_HEX.fullmatch(v),
                "evidence": not HEX64.fullmatch(v), "on": not WAITING.fullmatch(v), "note": not v.strip()}[k]
         if bad:
             raise Refused(f"{k}={v!r} is not {dict(unit='a seat', pr='a PR number', head='7-40 hex', evidence='64 hex', on='`operator`, `unit <name>` or `external <ref>`', note='text')[k]}")
-    if "on" in pairs and pairs["on"].startswith(UNIT_ALIAS):
-        pairs["on"] = "unit " + pairs["on"][len(UNIT_ALIAS):]
     if "note" in pairs and inbox().DISPOSITION.search(pairs["note"]):
         raise Refused("note= is disposition-shaped (a `Y/N:` line or a ledger entry): the board carries information, "
                       "never authority (#587 X2)")
