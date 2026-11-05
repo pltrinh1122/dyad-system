@@ -337,7 +337,11 @@ another takes over — a **hop** — nothing in flight is lost:
 post program --row <id> --kind report …`, a relay `dyad inbox post <unit> --row <id> --kind relay …`. Every unit reads
 its inbox at the start of every turn; `dyad board resume` and `dyad session touch` print the unread count. A chat
 message to a session becomes a doorbell only, so a terminal desk (§9), which receives no chat message, hears the cos
-by reading its inbox, and a report reaches the cos however many hops it has made. The inbox carries information
+by reading its inbox, and a report reaches the cos however many hops it has made. Which message rings is the core's
+criterion, `dyad/dmc/message-route.jsonld` (Rule-3 Batch disposition, #584): an actionable post to a unit a direct
+message reaches is followed by a doorbell to its session; an automaton notice goes to the cos, which rings the unit it
+concerns; an information-only copy is posted as a notice and rings nobody; a post to oneself rings nobody; and a unit
+no direct message reaches — a terminal desk, a unit with no live session — polls its inbox. The inbox carries information
 only: a body shaped like a disposition is refused — a report names the row whose ledger entry it means and
 never quotes the entry — and your words reach a unit verbatim with the record entry they
 were given in.
