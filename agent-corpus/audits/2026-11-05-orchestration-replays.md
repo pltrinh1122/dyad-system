@@ -19,7 +19,8 @@ head, replayed. Each must be caught by the automaton with no unit's turn." Home 
 |---|---|
 | S1, S4, S7, S8 | **prevented** by a transition |
 | S2 | **refused**: derived, and hand writes are refused |
-| S3, S5 | **prevented, partly** |
+| S3 | **prevented**: routing reads owners, and the guard warns on an owner missing from the `_cos` seat table |
+| S5 | **prevented** by a transition: one seat is named as acting next. A seat leaving its inbox unread is the sweep's W1, not a transition |
 | S6 | **ring list**. The doorbell stays home's act (X8). |
 | S9 | **partly**. The state is visible, but no timer fires at 13 h. |
 | S10 | **not caught** |
@@ -135,9 +136,13 @@ ring: orchestrate-d688fecf (…)
 $ dyad board resume
 announce to (1): orchestrate-d688fecf; seat table: program-59cec502 (home); engineer-1537d8fb; counsel-0032b4c0
 ```
-**Prevented, partly.** `opened` makes the unit an owner. Relays, the ring list and `resume` all read owners, so routing
-no longer depends on the table. The table itself is still hand-written and unchecked, and the stale table above shows
-it.
+```
+$ dyad check (agent/board)
+warning: board/573.md: orchestrate-d688fecf owns this entry and is missing from the `_cos` seat table — `dyad board set _cos seats=…` adds it (#587 S3)
+```
+**Prevented.** `opened` makes the unit an owner. Relays, the ring list and `resume` all read owners, so routing
+no longer depends on the table. The table is still hand-written, but the board guard now warns on every owner or unit
+of a phased entry it omits (#687), so the stale table above is caught on the next push or evidence run.
 
 ### S4. Counsel's #567/#568 PRs were up, but the board still said "waiting on counsel"
 **Mechanism.** The board was not advanced by the report.
@@ -159,12 +164,13 @@ posted …-program-59cec502-1.md to orchestrate-d688fecf        # waiting-on: un
 (the sweep's inflight, 13 h later)
 inflight W1 relay unread: row #573's relay to orchestrate-d688fecf sent 2026-11-05T06:55:25Z has no read marker (over 4h)
 ```
-**Prevented, partly.**
+**Prevented** as plan F7 frames it: the slip's mechanism was that no state named who must act next.
 - One seat is named as acting next.
 - A relay goes to the unit only. A report goes to the holder, with cc's: one message, not one copy per seat.
 - The unread relay is the sweep's W1 after 4 h. W1 predates #587; it came with #569.
 
-What is not prevented: a seat can still leave its inbox unread. W1 tells home, and the ring is home's act.
+What no transition can prevent: a seat can still leave its inbox unread. That is a seat's act, not a phase; W1 tells
+home after 4 h, and the ring is home's act.
 
 ### S6. B3's relays had no doorbell
 **Mechanism.** Ringing was left to memory.
@@ -350,7 +356,7 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
 - **S10 is not built.** There is no `read` event, and a read is still a side effect of printing. Only its consequence
   is removed.
 - **S9 has no timely timer.** At 13 h, `done-ready` and `verifying` are W11-silent; their threshold is 72 h.
-- **S3 is partly covered.** The `_cos` seat table stays hand-written and unchecked.
+- **S3's table stays hand-written.** It is now checked (a warning per omitted owner), not derived.
 - **The ring stays home's act (S6, X8).** The machine lists the ring; it does not ring.
 - **The scope is phased entries only.** An entry without `phase` behaves as before #587. `board set` still writes its
   `waiting-on` and `next` freely, so S2, S4 and S8 recur on any entry home keeps unphased.

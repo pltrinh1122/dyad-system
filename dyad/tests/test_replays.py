@@ -162,7 +162,7 @@ class Replays(unittest.TestCase):
 
     def test_s3_routing_reads_owners_not_the_seat_table(self):
         """S3: orchestrate missing from the hand-written `_cos` seat table. `opened unit=` makes it an owner; the relay
-        goes to it and `resume` announces to it, whatever the table says. The table itself stays hand-written."""
+        goes to it and `resume` announces to it, whatever the table says; the guard warns on the stale table."""
         self.w.write_main({f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nseats: {HOME} (home); {ENG}; {COU}\nwriter: h1\n"}
                           | row(573, "open", ""))
         rc, out, err = self.adv("573", "opened", "--expect", "none", f"unit={ORC}")
@@ -172,6 +172,10 @@ class Replays(unittest.TestCase):
         rc, out, _ = self.board_cli("resume")
         (line,) = [l for l in out.splitlines() if l.startswith("announce to")]
         self.assertIn(ORC, line.split("; seat table:")[0]); self.assertNotIn(ORC, line.split("; seat table:")[1])
+        warns = [m for m in bd.check_package(self.w.seat) if "seat table" in m]    # the stale table itself is caught
+        self.keep("dyad check (agent/board)", 0, "\n".join(warns) + "\n", "")
+        self.assertEqual(warns, [f"warning: board/573.md: {ORC} owns this entry and is missing from the `_cos` seat "
+                                 f"table — `dyad board set _cos seats=…` adds it (#587 S3)"])
 
     def test_s4_a_co_owners_pr_up_moves_the_wait_off_the_reporter(self):
         """S4: counsel's #567/#568 PRs up, the board still waiting on counsel. Counsel's `pr-up` moves each row to
