@@ -85,6 +85,10 @@ ELSEWHERE = re.compile(r"relayed via|\bmandate #\d+")   # a note whose words wer
 CLI_FLAGS = dyadlib.cli_forms("dwork", ("trace",))   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 (TRANSCRIPT, SAID_FILE), (OUT,) = CLI_FLAGS["trace"].value_flags, CLI_FLAGS["trace"].bare
 SAID_NOTE = "Y done (--said-file)"         # the note of the Done entry `--said-file` stands in for (#592 R-b)
+TRIGGERS = ("operator", "notify", "compact")    # what wakes a turn: the record kinds that end the previous one (#602)
+PR_RUN = re.compile(r"\b(?:pull request|PRs?|pulls?|merges?|merged)\s*#\d+(?:\s*(?:,\s*and|,|and|&)\s*#\d+)*", re.I)   # PR/merge numbers, never rows (#602 F2)
+ROW_ID = re.compile(r"#(\d{1,7})(?!\d)")         # bounded: untrusted text never reaches int() unbounded (#602 F3)
+MANDATE = re.compile(r"\bmandate #\d+")          # a disposition entry carried from a mandate: no answer given here (#602 F6)
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("bucket-names-unique", lambda: len(set(BUCKETS)) == len(BUCKETS)),
@@ -97,6 +101,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("header-names-the-d-work", lambda: bool(HEADER.match("# Trace #1 — t")) and not HEADER.match("# Trace 1")),
     ("preview-legacy-is-instance-local", lambda: PREVIEW_LEGACY.endswith(".local.txt") and "/" not in PREVIEW_LEGACY),
     ("said-note-names-the-done", lambda: bool(DONE.search(SAID_NOTE)) and not OPENING.match(SAID_NOTE)),
+    ("none-is-no-trigger", lambda: "none" not in TRIGGERS),
+    ("trigger-names-unique", lambda: len(set(TRIGGERS)) == len(TRIGGERS)),
 ]
 
 # ---- time
@@ -149,12 +155,20 @@ def _text(content) -> str:
         return "\n".join(b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text")
     return ""
 
+def _ids(text: str, rows=None) -> frozenset[int]:
+    """The row ids a text names: every `#<n>` of at most seven digits once the runs of PR and merge numbers
+    (`merges PR #8, #9`, `PRs #8 and #10`, `merged #9`) are removed, intersected with `rows` when given. Integers
+    only, never the text (Rule-7 p2); a longer digit run names nothing and never reaches `int()` (#602 F2, F3)."""
+    got = frozenset(int(i) for i in ROW_ID.findall(PR_RUN.sub(" ", text or "")))
+    return got if rows is None else got & frozenset(rows)
+
 def _yn(text: str) -> set[int] | None:
-    """The ids a reply's last non-blank line names when it is a `Y/N:` counter-prompt, else None."""
+    """The ids a reply's last non-blank line names when it is a `Y/N:` counter-prompt, else None (`_ids`: PR
+    numbers stripped, the token bounded; #602)."""
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     if not lines or not lines[-1].lstrip("*_`> ").startswith("Y/N:"):
         return None
-    return {int(i) for i in re.findall(r"#(\d+)", lines[-1])}
+    return set(_ids(lines[-1]))
 
 def _yn_kind(text: str) -> str | None:
     """`plan` or `done`: which counter-prompt a reply's last `Y/N:` line asks (Rule-3 forms), else None."""
@@ -265,8 +279,8 @@ def _derive(o: dict) -> list[dict]:
             return []
         origin = (a.get("origin") or {}).get("kind")
         if origin == "human" or a.get("commandMode") == "prompt":
-            return [_rec("operator", ms(a.get("timestamp", "")) or t, sess, text=a["prompt"], queued=True)]
-        return [_rec("notify", t, sess)]
+            return [_rec("operator", ms(a.get("timestamp", "")) or t, sess, text=a["prompt"], queued=True, ids=_ids(a["prompt"]))]
+        return [_rec("notify", t, sess, ids=_ids(a["prompt"]))]          # the ids only, never the text (#602)
     if typ == "user":
         content = msg.get("content")
         if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
@@ -279,8 +293,8 @@ def _derive(o: dict) -> list[dict]:
             return []
         text, origin = _text(content), (o.get("origin") or {}).get("kind") if isinstance(o.get("origin"), dict) else None
         if origin not in (None, "human") or (origin is None and text.lstrip().startswith(HARNESS_PREFIXES)):
-            return [_rec("notify", t, sess)]
-        return [_rec("operator", t, sess, text=text, queued=False)]
+            return [_rec("notify", t, sess, ids=_ids(text))]
+        return [_rec("operator", t, sess, text=text, queued=False, ids=_ids(text))]
     if typ == "assistant":
         out, usage = [], msg.get("usage") if isinstance(msg.get("usage"), dict) else {}
         for b in msg.get("content") or []:
@@ -380,8 +394,8 @@ def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = 
     for e in entries:
         res = {"n": e["n"], "kind": e["kind"], "note": e["note"], "date": e["date"], "ts": None, "status": "unmatched",
                "asked_ts": None, "verbatim": None}
-        turns = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos]   # the turns it may be; words not yet read
-        cands = [c for c in turns if _matches(e["text"], c[1]["text"])]
+        open_turns = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos]   # the turns it may be; words not yet read
+        cands = [c for c in open_turns if _matches(e["text"], c[1]["text"])]
         if e["kind"] == "disposition":
             want = _note_kind(e["note"])                 # a plan `Y` answers a plan question, a Done `Y` a Done one
             if want == "open" or (opened and str(e["n"]) == "1" and want is None):   # never a plan or Done question
@@ -392,10 +406,10 @@ def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = 
                          and (want is None or c[2].get("ynk") == want)]
             cands = [c for c in cands if utc(c[1]["ts"])[:10] == e["date"]]   # a wrong date is unmatched, never guessed
             cands = cands[:1]                            # dispositions are taken in sequence (plan #213, attack 4)
-            asked = [c for c in turns if c[2] is not None and rid in c[2]["yn"] and utc(c[1]["ts"])[:10] == e["date"]
+            asked = [c for c in open_turns if c[2] is not None and rid in c[2]["yn"] and utc(c[1]["ts"])[:10] == e["date"]
                      and (want in (None, "open") or c[2].get("ynk") == want)]
         else:
-            asked = [c for c in turns if utc(c[1]["ts"])[:10] == e["date"]]
+            asked = [c for c in open_turns if utc(c[1]["ts"])[:10] == e["date"]]
         if e["kind"] != "disposition":                   # a prompt's turn: an Operator message answering no `Y/N:`
             asked = [c for c in asked if c[2] is None]
         if len(cands) > 1:
@@ -465,16 +479,97 @@ def buckets(ivs: list[tuple[int, int, str]], start: int, end: int) -> tuple[dict
                 segs.append((t, edges[i + 1], lab))
     return out, segs
 
-def replies(recs: list[dict], start: int, end: int) -> int:
-    """Agent replies in [start, end]: text records that end a turn, the next record being an Operator message, a
-    harness notice, a compaction or none. What the Operator was shown, the metric's stand-in for what was read
-    (#560 D5)."""
-    out = 0
-    for i, r in enumerate(recs):
-        if r["kind"] == "text" and start <= r["ts"] <= end:
-            nxt = recs[i + 1] if i + 1 < len(recs) else None
-            out += nxt is None or nxt["kind"] in ("operator", "notify", "compact")
+def _nexts(recs: list[dict]) -> list[dict | None]:
+    """For each record, the next record of the same harness session, or None: several transcripts merge into one
+    time-sorted list (`load`), and a reply ends its own session's turn, never another's (#602)."""
+    out, after = [None] * len(recs), {}
+    for i in range(len(recs) - 1, -1, -1):
+        s = recs[i].get("session")
+        out[i] = after.get(s)
+        after[s] = recs[i]
     return out
+
+def replies(recs: list[dict], start: int, end: int) -> int:
+    """Agent replies in [start, end]: text records that end a turn, the next record of the same session being an
+    Operator message, a harness notice, a compaction or none. What the Operator was shown, the metric's stand-in
+    for what was read (#560 D5; per session, #602)."""
+    out = 0
+    for r, nxt in zip(recs, _nexts(recs)):
+        if r["kind"] == "text" and start <= r["ts"] <= end:
+            out += nxt is None or nxt["kind"] in TRIGGERS
+    return out
+
+def turns(recs: list[dict], rows) -> list[dict]:
+    """The turns of the transcript, each {trigger, ids, replies, ts, by} (#602), read per harness session (records
+    of several transcripts interleave by time; each session keeps its own turn and ids). A turn opens at the first
+    TRIGGERS record after the previous turn's ending reply (a reply as `replies` reads it), and that record's kind
+    is its trigger (F7). An operator or notify record arriving before the turn's first Agent record joins it: the
+    kind stays the first trigger's and the ids are the union. One arriving later — a queued notice mid-turn — opens
+    nothing and relabels nothing; so does a compaction mid-turn (an auto-compaction inside a tool loop). A
+    compaction opens a turn only after an ending reply or in place of a turn not yet started, and that turn
+    inherits the ids of the last operator or notify trigger (F8). A reply before any trigger is a `none` turn. Its
+    ids, intersected with `rows`: the closing `Y/N:` line's when non-empty (`by` = `yn`), else the trigger's
+    (`by` = `trigger`); the Agent's prose never (F1)."""
+    rows, out, state = frozenset(rows), [], {}
+    for r, nxt in zip(recs, _nexts(recs)):
+        k, sess = r["kind"], r.get("session")
+        cur, last_ids = state.get(sess, (None, frozenset()))
+        if k in TRIGGERS:
+            if cur is not None and not cur["ended"] and cur["started"]:
+                continue                                          # mid-turn: opens nothing, relabels nothing
+            if k != "compact" and cur is not None and not cur["ended"]:
+                cur["tids"] = last_ids = cur["tids"] | frozenset(r.get("ids") or ())   # joins the unstarted turn
+            else:
+                if k != "compact":
+                    last_ids = frozenset(r.get("ids") or ())
+                cur = {"trigger": k, "tids": last_ids, "ts": r["ts"], "started": False, "ended": False, "yn": None, "replies": 0}
+                out.append(cur)
+        elif k in ("text", "tool_use", "thinking"):
+            if cur is None or cur["ended"]:
+                cur = {"trigger": "none", "tids": frozenset(), "ts": r["ts"], "started": False, "ended": False, "yn": None, "replies": 0}
+                out.append(cur)
+            cur["started"] = True
+            if k == "text" and (nxt is None or nxt["kind"] in TRIGGERS):
+                cur.update(ended=True, replies=1, ts=r["ts"], yn=r.get("yn"))
+        state[sess] = (cur, last_ids)
+    res = []
+    for t in out:
+        yn = frozenset(t["yn"] or ()) & rows
+        res.append({"trigger": t["trigger"], "ids": yn or (t["tids"] & rows), "replies": t["replies"], "ts": t["ts"],
+                    "by": "yn" if yn else "trigger"})
+    return res
+
+def replies_for(tns: list[dict], rid: int, start: int, end: int) -> tuple[int, dict[str, int], int]:
+    """(replies, by trigger, attributed by trigger): the replies in [start, end] of the turns naming #rid, split by
+    what woke each turn (TRIGGERS, then `none`; the split sums to the replies), and how many of them were named by
+    the turn's trigger rather than its `Y/N:` line (#602)."""
+    split = {k: 0 for k in TRIGGERS + ("none",)}
+    n = by_trigger = 0
+    for t in tns:
+        if t["replies"] and rid in t["ids"] and start <= t["ts"] <= end:
+            n += t["replies"]; split[t["trigger"]] += t["replies"]
+            by_trigger += t["replies"] if t["by"] == "trigger" else 0
+    return n, split, by_trigger
+
+def answers(entries: list[dict], days: tuple[str, str]) -> int:
+    """The row's operator answers in the window: its disposition entries (provenance entries or `anchor`'s results,
+    read by key) dated on the window's days, anchored or not, less those noted `mandate #<id>` — words given to
+    another row (Rule-7 p4). A `relayed via` entry counts: the Operator gave it (#602 F5, F6)."""
+    return sum(e.get("kind") == "disposition" and days[0] <= str(e.get("date", "")) <= days[1]
+               and not MANDATE.search(str(e.get("note") or "")) for e in entries)
+
+def window_answers(recs: list[dict], start: int, end: int) -> int:
+    """Distinct Operator answers in [start, end]: operator messages answering a `Y/N:` reply (the last text since
+    the previous Operator message, as `anchor` pairs them), counted once per timestamp — a batch `Y` once (#602 F5)."""
+    seen, last_text = set(), None
+    for r in recs:
+        if r["kind"] == "operator":
+            if last_text is not None and last_text.get("yn") is not None and start <= r["ts"] <= end:
+                seen.add(r["ts"])
+            last_text = None
+        elif r["kind"] == "text":
+            last_text = r
+    return len(seen)
 
 def turns_naming_others(recs: list[dict], rid: int, start: int, end: int) -> tuple[list[tuple[int, set]], list[int]]:
     """(shared, others): turns in the window ending in a `Y/N:` line that names #rid with other ids (shared, with
@@ -717,14 +812,31 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None, said: str | None
                   f"| guards-only push gates | {len(gates)} | transcript |",
                   f"| tool calls | {len(tools)} | transcript |",
                   f"| output tokens | {sum(tokens.values())} | transcript |"]
-        n_rep = replies(recs, start, end)                # #560 D5: what the Operator reads per decision it makes
+        tns = turns(recs, rows)                          # #602: per row, only the replies of the turns naming it
+        n_rep, split, by_trigger = replies_for(tns, rid, start, end)
         days = (utc(start)[:10], utc(end)[:10])         # the ledger's own count, not the transcript's anchors
-        n_disp = sum(e["kind"] == "disposition" and days[0] <= e["date"] <= days[1] for e in entries)
-        lines.append(f"| replies per disposition | {n_rep / n_disp:.1f} ({n_rep} replies, {n_disp} dispositions) | transcript |"
-                     if n_disp else f"| replies per disposition | no disposition in the window ({n_rep} replies) | transcript |")
-        limits.append("replies per disposition counts the replies the Operator was shown (a turn's last text), never what "
-                      "was read: an inference; its dispositions are the provenance record's, dated on the window's days "
-                      "(a record holds dates, not times), anchored or not (#560 D5)")
+        n_ans = answers(entries, days)                   # #560 D5: what the Operator reads per decision it makes
+        lines.append(f"| replies per disposition | {n_rep / n_ans:.1f} ({n_rep} replies, {n_ans} answers) | transcript |"
+                     if n_ans else f"| replies per disposition | no operator answer in the window ({n_rep} replies) | transcript |")
+        lines.append("| replies by trigger | " + ", ".join(f"{k} {v}" for k, v in split.items() if k != "none" or v)
+                     + " | transcript |")
+        n_all = replies(recs, start, end)
+        named = {i for t in tns if t["replies"] and start <= t["ts"] <= end for i in t["ids"]}
+        summed = sum(replies_for(tns, i, start, end)[0] for i in named)
+        lines.append(f"| replies in the window, all rows | {n_all} replies, {window_answers(recs, start, end)} answers, "
+                     f"overlap {f'{summed / n_all:.1f}' if n_all else 'n/a'} | transcript |")
+        limits.append(f"replies per disposition counts only the replies of the turns naming #{rid} — by the turn's closing "
+                      "`Y/N:` line, else by what opened it (an Operator message or a harness notice; a compaction inherits "
+                      "the trigger before it), never by the Agent's prose; PR and merge numbers are stripped and ids that "
+                      "are no row dropped, but an id a trigger names for another reason still counts. A reply is what the "
+                      "Operator was shown (a turn's last text), never what was read: an inference. Its answers are the "
+                      "provenance record's dispositions dated on the window's days (a record holds dates, not times), "
+                      "anchored or not, less those noted `mandate #<id>`; a turn naming several rows counts whole in each, "
+                      "and the window line's overlap is their sum over the window's replies (#560 D5, #602)")
+        if by_trigger:
+            limits.append(f"{by_trigger} of #{rid}'s {n_rep} replies were attributed by the turn's trigger (no `Y/N:` naming "
+                          f"a row): the shared-turn reading (`turns_naming_others`) reads `Y/N:` lines only, so the two read "
+                          f"those {by_trigger} turn(s) differently")
         ranged = [r for r in tools if r.get("ranged")]   # #216: pushes booked from the pushed range, not the result text
         if ranged:
             limits.append(f"{len(ranged)} push gate(s) booked from the pushed range read from git (no skip line and no `Ran N tests` "
