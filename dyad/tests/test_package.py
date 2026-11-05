@@ -1375,6 +1375,33 @@ def _split(cls, n, together):
     return made
 globals().update(_split(PackageTests, PACKAGE_SPLIT, PACKAGE_TOGETHER))
 
+class FailingLinesTests(unittest.TestCase):
+    def test_a_failed_steps_line_leads_with_its_failing_lines(self):
+        """#607: corroborate's FAIL line printed a child's last three lines, so a suite's FAIL scrolled out behind its
+        summary (#603's cut-off notice); the failing lines come first now, then the last line."""
+        pkg = load_package()
+        out = ("ok   [guards] agent/rules\n" + "\n".join(f"ok   [guards] g{i}" for i in range(20)) +
+               "\nFAIL [guards] agent/traces 584.md: a stored preview\n     [Rule-12] dyad/tests: Ran 9 tests FAILED\n"
+               "FAIL: test_x (t.T.test_x)\nFAILED (failures=1)\npackage: 292 files")
+        got = pkg.failing_lines(out)
+        self.assertEqual(got[:2], ["FAIL [guards] agent/traces 584.md: a stored preview", "FAIL: test_x (t.T.test_x)"])
+        self.assertEqual(got[-1], "package: 292 files")
+        # replays 2 and 3 (#607 DoD): #603's 20:42Z and the 05:19Z corroboration notices ended `warn … | ok … |
+        # package: N files`, the child's last three lines, with its FAIL above them; now the FAIL leads
+        child = ("ok   [guards] agent/rules (19 Rules)\n"
+                 "     [Rule-12] dyad/tests: Ran 1421 tests FAILED (failures=3, skipped=9)\n"
+                 "FAIL [Rule-12] tests failed (dyad/tests):\n"
+                 "FAIL: test_dyad_plan_check_589_exits_0 (test_plans.PlanCheckTests) — FileNotFoundError: plans/589.md\n"
+                 "FAILED (failures=3, skipped=9)\n"
+                 "warn [syseng/naming] dyad/templates/rows-README.md: 'rows-README.md' is not lowercase\n"
+                 "ok   [syseng/tests]\npackage: 295 files")
+        line = " | ".join(pkg.failing_lines(child))
+        self.assertTrue(line.startswith("FAIL [Rule-12] tests failed (dyad/tests): | FAIL: test_dyad_plan_check_589_exits_0"), line)
+        self.assertNotIn("ok   [syseng/tests]", line)
+        self.assertEqual(pkg.failing_lines("a\nb\nc\nd"), ["b", "c", "d"])
+        self.assertEqual(pkg.failing_lines(""), [])
+        self.assertLessEqual(len(pkg.failing_lines("\n".join(f"FAIL {i}" for i in range(20)))), 6)
+
 class UtcDateTests(PackageTests):
     """#592 R-b: every date `dwork new` and `dwork state` write is UTC's, whatever the host's local day (the row and
     provenance helpers are PackageTests', whose own tests `_split` has moved to its numbered classes)."""
