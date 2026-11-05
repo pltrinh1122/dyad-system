@@ -25,8 +25,16 @@ is read in the ledger (rows, provenance) and nowhere else. A report names the ro
                           `relay` lands only when `board/<id>.md` on origin/main names <seat> among its owners and
                           this session wrote it last (write-ahead, #552) — or, from the entry's holder, adds <seat>
                           to its owners in the same commit (#586 E1)
-  dyad inbox read [--all]  this seat's unread messages on a freshly fetched origin/main, printed in order and marked
-                          read in one ledger-only land; `--all` prints the read ones too
+  dyad inbox read          this seat's unread messages on a freshly fetched origin/main, printed in order, each under
+                          its name (the file's stem); prints only and writes nothing (#587 S10: reports were marked read
+                          unseen, #568, #571)
+  dyad inbox read <message>...
+                          marks exactly the named messages of this seat's box read, in one ledger-only land: each one's
+                          `.read` marker and the reader's presence refresh (#567); refused, before any write, for a name
+                          that is no message of this box (another seat's box named), a message already read, or a name
+                          given twice. For a message whose row has a phased board entry the land fires the machine's
+                          `read` event (`dyadlib.ORCH_NO_EFFECT`), which changes nothing on the entry and writes no board
+                          file: reading is an event, never a side effect of printing
   dyad inbox list [<seat>] read-only, from the working tree: every message of the box, unread first marked `*`
 
 `send_message` becomes an optional doorbell ("inbox: 1 new"), never the carrier. `dyad board resume` and
@@ -57,14 +65,14 @@ REQUIRED = ("from", "to", "row", "kind", "sent", "body")
 MARK_FIELDS = ("read", "reader", "writer")
 KINDS = ("report", "relay", "ack", "notice")
 CLI_FLAGS = dyadlib.cli_forms("inbox")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
-(CC,), (ALL,) = CLI_FLAGS["post"].repeat, CLI_FLAGS["read"].bare
+(CC,) = CLI_FLAGS["post"].repeat
 POST_VALUES = tuple(f for f in CLI_FLAGS["post"].value_flags if f != CC)
 SEAT = re.compile(r"[A-Za-z0-9._-]{1,80}")
 NAME_RE = re.compile(r"(?P<stamp>\d{8}T\d{6}Z)-(?P<sender>[A-Za-z0-9._-]+)-(?P<n>\d+)\.(?P<ext>md|read)")
 STAMP = "%Y%m%dT%H%M%SZ"
 DISPOSITION = re.compile(r"(?m)^\s*Y/N:|\b\d{4}-\d{2}-\d{2} [YN] (?:plan|done|release|backlog)\b|\bY (?:plan|done|release) \(")
 USAGE = ("usage: dyad inbox post <seat> --row <id> --kind report|relay|ack|notice [--cc <seat>]... (<body> | --body-file <path>) | "
-         "dyad inbox read [--all] | dyad inbox list [<seat>]")
+         "dyad inbox read [<message>...] | dyad inbox list [<seat>]")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("required-are-fields", lambda: set(REQUIRED) <= set(FIELDS) and "writer" in FIELDS),
@@ -360,38 +368,94 @@ def handed_rows(new: list) -> list[str]:
     return out
 
 
-def read_builder(seat: str, show_all: bool, inst: str, got: list, repo: Path | None = None):
-    me = sessions().writer()
+def show_builder(seat: str, got: list):
+    """The print path of `inbox read` (#587 S10): collects this seat's unread messages in land's worktree on a freshly
+    fetched origin/main and lands nothing (Nothing, always)."""
     def build(wt: Path):
-        got.clear()
-        ms = messages(wt, seat)
-        new = [(p, f) for p, f, r in ms if not r]
-        got.extend((p.name, f, r) for p, f, r in ms if show_all or not r)
-        if not new:
-            raise Nothing()
-        t = now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        for p, _ in new:
-            p.with_suffix(".read").write_text(board().render({"read": t, "reader": seat, "writer": me}, MARK_FIELDS))
-        out = [l for p, f, r in ms if show_all or not r for l in render_message(p, f, r)]
-        presence = land().refresh_presence(wt, inst, handed_rows(new), repo, always=True)   # #567: the read lands the touch with it
-        return ([p.with_suffix(".read").relative_to(wt).as_posix() for p, _ in new] + presence,
-                f"ledger: inbox {seat} read ({len(new)})", "\n".join(out + [f"inbox {seat}: {len(new)} marked read"]))
+        got[:] = [(p.name, f, r) for p, f, r in messages(wt, seat) if not r]
+        raise Nothing()
     return build
 
 
-def read(repo: Path, show_all: bool = False) -> list[dict[str, str]]:
-    """This seat's messages (unread, or all), marked read in one land; the messages as parsed, oldest first."""
+def message_name(name: str, seat: str) -> tuple[str, str]:
+    """(box, stem) of a name as `inbox read` prints it — a stem, `<stem>.md`, or `<box>/<stem>` — the box this seat's
+    when none is named."""
+    box, _, stem = name.rpartition("/")
+    stem = stem.removesuffix(".md")
+    if (box and not SEAT.fullmatch(box)) or not NAME_RE.fullmatch(stem + ".md"):
+        raise Refused(f"{name!r} is not a message name (`<stamp>-<from-seat>-<n>`, as `dyad inbox read` prints it)")
+    return box or seat, stem
+
+
+def mark_builder(seat: str, names: list[str], inst: str, got: list, repo: Path | None = None):
+    """The marking path of `inbox read <message>…` (#587 S10): on every try, in land's worktree on a freshly fetched
+    origin/main, refuse every name that is no unread message of this seat's box before any write; then write each named
+    message's marker, fire the machine's `read` on each named row's phased entry (no board write) and refresh the
+    reader's presence (#567), all in one ledger-only land."""
+    me = sessions().writer()
+    def build(wt: Path):
+        got.clear()
+        mine = {p.stem: (p, f, r) for p, f, r in messages(wt, seat)}
+        picked, seen = [], set()
+        for name in names:
+            box, stem = message_name(name, seat)
+            if stem in seen:
+                raise Refused(f"{name} is named twice")
+            seen.add(stem)
+            if box != seat:
+                raise Refused(f"{name} is a message of {box}'s box, not this seat's ({seat}): a seat marks only what it read "
+                              f"in its own box; nothing marked")
+            if stem not in mine:
+                d = store(wt)
+                other = sorted(b.name for b in d.iterdir() if (b / f"{stem}.md").is_file()) if d.is_dir() else []
+                raise Refused(f"{name} is " + (f"a message of {', '.join(other)}'s box, not this seat's ({seat})" if other
+                                               else f"no message of {seat}'s box on origin/main")
+                              + "; nothing marked")
+            p, f, r = mine[stem]
+            if r:
+                at = board().parse(p.with_suffix(".read").read_text(errors="replace"))[0].get("read", "?")
+                raise Refused(f"{name} is already read (its marker says {at}); nothing marked")
+            picked.append((p, f))
+        rows = {r.id: r for r in dyadlib.read_rows(wt)}
+        events = []
+        for rid in dict.fromkeys(int(f["row"]) for _, f in picked if (f.get("row") or "").isdigit()):
+            try:
+                line = board().read_event(wt, inst, rid, rows.get(rid), seat)
+            except board().Refused as e:
+                raise Refused(str(e)) from None
+            if line:
+                events.append(line)
+        t = now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        for p, _ in picked:
+            p.with_suffix(".read").write_text(board().render({"read": t, "reader": seat, "writer": me}, MARK_FIELDS))
+        got.extend((p.name, f, False) for p, f in picked)
+        presence = land().refresh_presence(wt, inst, handed_rows(picked), repo, always=True)   # #567: the read lands the touch with it
+        return ([p.with_suffix(".read").relative_to(wt).as_posix() for p, _ in picked] + presence,
+                f"ledger: inbox {seat} read ({len(picked)})",
+                "\n".join([f"marked read: {p.stem}" for p, _ in picked] + events + [f"inbox {seat}: {len(picked)} marked read"]))
+    return build
+
+
+def read(repo: Path, names: list[str] | tuple = ()) -> list[dict[str, str]]:
+    """`inbox read`: with no names, this seat's unread messages printed and nothing written; with names, exactly those
+    messages marked read in one land (#587 S10). The messages printed or marked, as parsed, oldest first, each with
+    `_name` its name as printed (the file's stem), the word `read <message>` takes."""
     seat, inst = this_seat(), dyadlib.instance_rel(repo)
     if inst is None:
         raise Refused("the instance (DYAD_INSTANCE) lies outside this work tree")
     got: list = []
+    if names:
+        land().land(repo, inst, None, mark_builder(seat, list(names), inst, got, repo), "inbox read")
+        return [{**f, "_name": Path(n).stem} for n, f, _ in got]
     try:
-        land().land(repo, inst, None, read_builder(seat, show_all, inst, got, repo), "inbox read")
+        land().land(repo, inst, None, show_builder(seat, got), "inbox read")
     except Nothing:
-        for name, f, r in got:
-            print("\n".join(render_message(Path(name), f, r)))
-        print(f"inbox {seat}: 0 unread")
-    return [f for _, f, _ in got]
+        pass
+    for name, f, r in got:
+        print("\n".join(render_message(Path(name), f, r)))
+    print(f"inbox {seat}: {len(got)} unread, none marked" + (" — mark what you have read: `dyad inbox read <message>...`"
+                                                             if got else ""))
+    return [{**f, "_name": Path(n).stem} for n, f, _ in got]
 
 
 def cli(a: list[str], repo: Path | None = None) -> int:
@@ -402,8 +466,10 @@ def cli(a: list[str], repo: Path | None = None) -> int:
             print(__doc__); return 0
         if a and a[0] == "post":
             return post(repo, *parse_post(a[1:]))
-        if a and a[0] == "read" and a[1:] in ([], [ALL]):
-            read(repo, a[1:] == [ALL]); return 0
+        if a and a[0] == "read":
+            if any(x.startswith("-") for x in a[1:]):
+                raise Refused(f"{USAGE} (`--all` is removed: `dyad inbox list` shows the read messages, #587 S10)")
+            read(repo, a[1:]); return 0
         if a and a[0] == "list" and len(a) <= 2:
             seat = a[1] if len(a) == 2 else this_seat()
             ms = messages(repo, seat)

@@ -11,8 +11,11 @@ Over a scratch world (a bare origin, two seat clones whose pre-push hook only lo
 - `post` lands one ledger-only commit holding one file in the addressee's box, addressed by seat and written by this
   session;
 - `post` refuses a disposition-shaped body, an unknown row, a missing seat and a bad kind before anything lands;
-- `read` prints the unread messages verbatim and marks them read in one land; a second read finds none; `--all` shows
-  the read ones again;
+- `read` with no names prints the unread messages verbatim, each under its name, and writes nothing (#587 S10);
+  `read <message>...` marks exactly the named ones read in one land and refuses, before any write, an unknown name, a
+  message of another seat's box, an already-read one and a name given twice; `--all` is refused (removed);
+- on a row with a phased board entry the marking land fires the machine's `read`, which leaves board/<id>.md
+  byte-identical and writes no board file;
 - `list` reads the working tree;
 - `session touch` prints the unread count."""
 import contextlib, io, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
@@ -135,6 +138,13 @@ class World(unittest.TestCase):
             rc = ib.cli(list(argv), self.clones[seat])
         return rc, out.getvalue(), err.getvalue()
 
+    def unread_names(self, seat):
+        d = self.clones[seat]
+        git(d, "fetch", "-q", "origin")
+        names = git(d, "ls-tree", "-r", "--name-only", "origin/main", f"{INST}/d-work/inbox/{seat}").splitlines()
+        reads = {n.removesuffix(".read") for n in names if n.endswith(".read")}
+        return [Path(n).stem for n in names if n.endswith(".md") and n.removesuffix(".md") not in reads]
+
 
 class CliTests(World):
     def test_post_lands_one_message_in_the_addressees_box(self):
@@ -181,24 +191,86 @@ class CliTests(World):
         self.assertEqual(self.as_seat("engineer-1537d8fb", "bogus")[0], 2)
         self.assertEqual(git(self.origin, "rev-parse", "main"), before)
 
-    def test_read_marks_read_once_and_all_shows_again(self):
-        for body in ("first", "second\n  kept"):
+    def test_read_prints_and_marks_nothing_naming_marks_exactly_the_named(self):
+        """#587 S10: printing is no side effect; marking is an event naming what was read."""
+        for body in ("first", "second\n  kept", "third"):
             self.assertEqual(self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", body)[0], 0)
+        before = git(self.origin, "rev-parse", "main")
         rc, out, err = self.as_seat("program-59cec502", "read", harness="h2")
         self.assertEqual(rc, 0, err)
         self.assertIn("    first", out); self.assertIn("    second\n      kept", out)
-        self.assertIn("inbox program-59cec502: 2 marked read", out)
-        reads = git(self.origin, "ls-tree", "-r", "--name-only", "main", f"{INST}/d-work/inbox/program-59cec502").splitlines()
-        self.assertEqual(sum(p.endswith(".read") for p in reads), 2)
+        self.assertIn("inbox program-59cec502: 3 unread, none marked", out)
+        self.assertEqual(git(self.origin, "rev-parse", "main"), before)                  # printing landed nothing
+        a, b, c = self.unread_names("program-59cec502")
+        self.assertIn(f"* {a}  row #5 report from engineer-1537d8fb", out)                   # the printed name is the one to give
+        rc, out, err = self.as_seat("program-59cec502", "read", a, f"{c}.md", harness="h2")
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"marked read: {a}", out); self.assertIn("inbox program-59cec502: 2 marked read", out)
+        head = git(self.origin, "rev-parse", "main")
+        self.assertEqual(git(self.origin, "rev-list", "--count", f"{before}..{head}"), "1")
+        changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertEqual(sorted(Path(x).name for x in changed if x.endswith(".read")), sorted([f"{a}.read", f"{c}.read"]))
+        self.assertEqual(self.unread_names("program-59cec502"), [b])                      # exactly the named
         rc, out, _ = self.as_seat("program-59cec502", "read", harness="h2")
-        self.assertEqual(rc, 0); self.assertIn("inbox program-59cec502: 0 unread", out); self.assertNotIn("first", out)
-        rc, out, _ = self.as_seat("program-59cec502", "read", "--all", harness="h2")
-        self.assertIn("  " + out.splitlines()[0].lstrip(), out); self.assertIn("    first", out)
+        self.assertIn("inbox program-59cec502: 1 unread, none marked", out); self.assertNotIn("    first", out)
         git(self.clones["program-59cec502"], "pull", "-q", "--ff-only", "origin", "main")
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}):
             self.assertEqual(ib.check_package(self.clones["program-59cec502"]), [])
         rc, out, _ = self.as_seat("program-59cec502", "list", harness="h2")
-        self.assertIn("inbox program-59cec502: 2 message(s), 0 unread", out)
+        self.assertIn("inbox program-59cec502: 3 message(s), 1 unread", out)
+
+    def test_naming_refuses_before_any_write(self):
+        self.assertEqual(self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--cc", "orchestrate-d688fecf",
+                                      "--row", "5", "--kind", "report", "PR up")[0], 0)
+        self.assertEqual(self.as_seat("program-59cec502", "post", "engineer-1537d8fb", "--row", "5", "--kind", "ack", "seen")[0], 0)
+        (mine,) = self.unread_names("program-59cec502")
+        (theirs,) = self.unread_names("engineer-1537d8fb")
+        rc, _, err = self.as_seat("program-59cec502", "read", mine, harness="h2")
+        self.assertEqual(rc, 0, err)
+        before = git(self.origin, "rev-parse", "main")
+        for names, says in (([mine], "already read"),
+                            ([theirs], "a message of engineer-1537d8fb's box, not this seat's (program-59cec502)"),
+                            ([f"orchestrate-d688fecf/{mine}"], "a message of orchestrate-d688fecf's box"),
+                            (["20261102T174400Z-nobody-1"], "no message of program-59cec502's box"),
+                            (["not-a-name"], "is not a message name"),
+                            (["--all"], "`--all` is removed")):
+            rc, _, err = self.as_seat("program-59cec502", "read", *names, harness="h2")
+            self.assertEqual(rc, 1, (names, err)); self.assertIn(says, err)
+        self.assertEqual(self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "x")[0], 0)
+        before = git(self.origin, "rev-parse", "main")
+        (new,) = self.unread_names("program-59cec502")
+        for names, says in (([new, new], "named twice"), ([new, mine], "already read")):
+            rc, _, err = self.as_seat("program-59cec502", "read", *names, harness="h2")
+            self.assertEqual(rc, 1, err); self.assertIn(says, err)
+        self.assertEqual(git(self.origin, "rev-parse", "main"), before)                   # nothing landed, not even the good name
+        self.assertEqual(self.unread_names("program-59cec502"), [new])
+
+    def test_naming_a_message_on_a_phased_row_fires_read_and_writes_no_board(self):
+        """#587 S10: the machine's `read` is a self-loop with no effect: board/5.md stays byte-identical."""
+        bd = dyadlib.load_guard("agent", "board")
+        f = {"holder": "program-59cec502", "owner": "engineer-1537d8fb", "since": "2026-11-04T10:00Z", "writer": "h1",
+             "phase": bd.phase_render("verifying", {"unit": ["engineer-1537d8fb"], "pr": ["638 at " + "2" * 40]})}
+        f.update(bd.derive(5, f))
+        d = self.clones["program-59cec502"]
+        git(d, "pull", "-q", "--ff-only", "origin", "main")
+        (d / INST / "d-work" / "board").mkdir(parents=True)
+        (d / INST / "d-work" / "board" / "5.md").write_text(bd.render(f, bd.FIELDS))
+        git(d, "add", "-A"); git(d, *livetest.IDENTITY, "commit", "-qm", "ledger: board 5"); git(d, "push", "-q", "origin", "HEAD:main")
+        entry = git(self.origin, "show", f"main:{INST}/d-work/board/5.md")
+        self.assertEqual(self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "PR #638 up")[0], 0)
+        (name,) = self.unread_names("program-59cec502")
+        before = git(self.origin, "rev-parse", "main")
+        rc, out, err = self.as_seat("program-59cec502", "read", name, harness="h2")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("board #5: read at verifying, nothing changed", out)
+        head = git(self.origin, "rev-parse", "main")
+        changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
+        self.assertNotIn(f"{INST}/d-work/board/5.md", changed)
+        self.assertEqual(git(self.origin, "show", f"main:{INST}/d-work/board/5.md"), entry)   # byte-identical
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}), \
+             contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(bd.cli(["advance", "5", "read", "--expect", "verifying"], d), 1)   # never board advance's
+        self.assertIn("fired by `dyad inbox read <message>…`", err.getvalue())
 
     def test_the_transaction_check_is_append_only(self):
         self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "first")
@@ -250,6 +322,8 @@ class WriteAheadTests(World):
         self.assertEqual(self.relay()[0], 0)
         before = git(self.origin, "rev-parse", "main")
         rc, out, err = self.as_seat("engineer-1537d8fb", "read")
+        self.assertEqual((rc, git(self.origin, "rev-parse", "main")), (0, before), err)   # printing claims nothing (#587 S10)
+        rc, out, err = self.as_seat("engineer-1537d8fb", "read", *self.unread_names("engineer-1537d8fb"))
         self.assertEqual(rc, 0, err)
         head = git(self.origin, "rev-parse", "main")
         changed = git(self.origin, "diff", "--name-only", before, head).splitlines()
@@ -259,7 +333,7 @@ class WriteAheadTests(World):
         self.assertEqual((f["rows"], f["files"]), ("5", "dyad/scripts/x.py dyad/tests/test_x.py"))
         self.assertEqual(f["root"], str(self.clones["engineer-1537d8fb"].resolve()))   # the reader's checkout, not land's worktree
         self.assertEqual(self.as_seat("program-59cec502", "post", "engineer-1537d8fb", "--row", "5", "--kind", "notice", "fyi")[0], 0)
-        rc, _, err = self.as_seat("engineer-1537d8fb", "read")
+        rc, _, err = self.as_seat("engineer-1537d8fb", "read", *self.unread_names("engineer-1537d8fb"))
         self.assertEqual(rc, 0, err)
         f2 = dyadlib.load_guard("agent", "sessions").parse(git(self.origin, "show", f"main:{presence}"))
         self.assertEqual(f2["rows"], "5"); self.assertGreaterEqual(f2["seen"], f["seen"])
