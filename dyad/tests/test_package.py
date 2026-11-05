@@ -1386,6 +1386,18 @@ class FailingLinesTests(unittest.TestCase):
         got = pkg.failing_lines(out)
         self.assertEqual(got[:2], ["FAIL [guards] agent/traces 584.md: a stored preview", "FAIL: test_x (t.T.test_x)"])
         self.assertEqual(got[-1], "package: 292 files")
+        # replays 2 and 3 (#607 DoD): #603's 20:42Z and the 05:19Z corroboration notices ended `warn … | ok … |
+        # package: N files`, the child's last three lines, with its FAIL above them; now the FAIL leads
+        child = ("ok   [guards] agent/rules (19 Rules)\n"
+                 "     [Rule-12] dyad/tests: Ran 1421 tests FAILED (failures=3, skipped=9)\n"
+                 "FAIL [Rule-12] tests failed (dyad/tests):\n"
+                 "FAIL: test_dyad_plan_check_589_exits_0 (test_plans.PlanCheckTests) — FileNotFoundError: plans/589.md\n"
+                 "FAILED (failures=3, skipped=9)\n"
+                 "warn [syseng/naming] dyad/templates/rows-README.md: 'rows-README.md' is not lowercase\n"
+                 "ok   [syseng/tests]\npackage: 295 files")
+        line = " | ".join(pkg.failing_lines(child))
+        self.assertTrue(line.startswith("FAIL [Rule-12] tests failed (dyad/tests): | FAIL: test_dyad_plan_check_589_exits_0"), line)
+        self.assertNotIn("ok   [syseng/tests]", line)
         self.assertEqual(pkg.failing_lines("a\nb\nc\nd"), ["b", "c", "d"])
         self.assertEqual(pkg.failing_lines(""), [])
         self.assertLessEqual(len(pkg.failing_lines("\n".join(f"FAIL {i}" for i in range(20)))), 6)
