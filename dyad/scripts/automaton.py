@@ -220,7 +220,8 @@ def catch_ups(repo: Path, base: str, rows) -> list[tuple]:
         except ValueError:
             continue
         last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
-        if phase in b.CATCH_UP_PLAN and r.state == "planned" and rg.PLAN_Y.match(last[0]):
+        if phase in b.CATCH_UP_PLAN and r.state == "planned" and rg.PLAN_Y.match(last[0]) \
+                and not board_after_plan_y(repo, base, rid):   # S11: a question asked after that Y is not answered by it
             out.append(("advance", rid, "answered-Y", phase))
         elif phase in b.CATCH_UP_DONE and rg.operative_done(r.disposed) and b.recorded_done_heads(rid, r, sub) is not None:
             out.append(("advance", rid, "answered-Y", phase))
