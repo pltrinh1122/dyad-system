@@ -1110,6 +1110,24 @@ Exceptions: 0, confirmed. Remaining refutations, each fixed in the Rule:
 | R6 | A relay of the home's instruction about an open row is neither shape, so it would be returned. | Intake judges only a message proposing work no row holds; a message about an open row is information. |
 | R7 | "case or spelling alone" is overbroad, since `Y` and `N` differ in spelling. | "The listed variants of one answer lead to one act" (`label-case.jsonld`'s table). |
 
+### Revision 2, audit's third pass answered (audit-e73be78c on head d979e5d7)
+R1–R4, R6 and R7 were confirmed answered; exceptions 0. One item remained:
+
+| item | refutation | fix |
+|---|---|---|
+| R8 | The `mode` fix (R5) was half done. Plan's carried-row bullet still said an open carried row's done rides this done-`Y`, and the vocabulary's `accreted row`, `implicit mode` and `mode` still stated a Done route. #571 and #591 refute this: both were born open under #570 and closed on their own done-`Y`. | The carried-row bullet now says its Done is the question its plan names, this d-work's done-`Y` or its own. `mode` names how a row was opened: `implicit` for an accreted row born `open`, `explicit` or absent for every other row. The vocabulary rows `accreted row`, `mode`, `explicit mode` and `implicit mode` now say how a row is born, never which Done closes it. |
+
+**Terms (Rule-6).** These terms changed. For each, the Rules listed in its `used by` column were re-read and still read correctly:
+
+| term | `used by` |
+|---|---|
+| `accreted row` | 2, 3, 7, 15, 16 |
+| `mode` | 3, 16 |
+| `explicit mode` | 2, 3 |
+| `implicit mode` | 3 |
+
+Rule-7 property 4's mandate close and Rule-16's never-lost field still hold, since they state what is written when a mandate closes a row, not that one must.
+
 ### Rule-3's Provenance section before #585 (history, moved here verbatim)
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged

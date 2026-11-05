@@ -121,8 +121,9 @@ named act.
   refuse. A play-book that wants a
   question for a row says so in its step. A plan stating neither source carries no row. A row outside the rule, or past
   the ceiling, is a new plan.
-- A carried row is born as its scope or step says: `open`, worked under this d-work, its done riding this done-`Y`; or
-  `backlog`, filed for later, its own work waiting for an operator prompt, at which it is an explicit row (Ledger).
+- A carried row is born as its scope or step says: `open`, worked under this d-work; or `backlog`, filed for later, its
+  work waiting for an operator prompt. Its Done is the question its plan names: this d-work's done-`Y`, which then names
+  it, or its own (Completion counter-prompt).
 - A prompt that opens a new body of work is planned by the craft play-book (`dyad/playbooks/craft-instantiation.md`):
   when none of its `craft-instantiation-criteria` fires the plan assumes a new craft instance, and when one fires it
   advises a new dyad system naming the criterion; its run-book is `dyad/runbooks/craft.md`, whose events the completion
@@ -230,8 +231,8 @@ named act.
   accreted row's first `<date> Y plan (mandate #<id>)`, a carried `backlog` row's `<date> Y backlog (mandate #<id>)`, a
   retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
   or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names how a row was opened (Rule-16 Store):
-  `implicit` on a row born under another row's plan-`Y`, an accreted row; `explicit`, or the field absent, on a row its
-  own question opened. It says nothing of which Done closes the row.
+  `implicit` on an accreted row, born `open` under another row's plan-`Y`; `explicit`, or the field absent, on every
+  other row, a carried `backlog` row included. It says nothing of which Done closes the row.
 - **Ledger-only commits** (nothing outside `agent-corpus/d-work/`) and **events-only commits** (nothing outside
   `<runbooks>/events/`, `DYAD_RUNBOOKS`, Rule-19 property 1, holding events of read-only run-book commands) are clerical
   and go directly to `main` without a PR. One commit stays one zone (Rule-1), so a commit touching both is **neither**
