@@ -55,6 +55,18 @@ class StoreTests(unittest.TestCase):
         self.assertTrue(livetest.instance_is_empty(full))
 
 
+class OffUtcTests(unittest.TestCase):
+    """#592 R-b: `off_utc` puts the host's local day one day off UTC's for its body, and restores TZ after."""
+    def test_local_day_differs_inside_and_tz_is_restored(self):
+        import datetime
+        before = os.environ.get("TZ")
+        with livetest.off_utc() as (utc, local):
+            self.assertNotEqual(utc, local)
+            self.assertEqual(utc, datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+            self.assertEqual(local, datetime.datetime.now().date().isoformat())
+        self.assertEqual(os.environ.get("TZ"), before)
+
+
 class CraftTests(unittest.TestCase):
     def test_craft_predicates_over_a_fixture_package(self):
         root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, root, ignore_errors=True)

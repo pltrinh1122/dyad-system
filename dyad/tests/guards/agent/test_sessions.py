@@ -247,7 +247,8 @@ class TouchArgsTests(unittest.TestCase):
 
 class BehindOriginTests(unittest.TestCase):
     """#482 P4 (mode T): touch prints `behind origin/main by n` when HEAD lacks n commits of the local
-    `origin/main` ref (no fetch), and nothing when n is 0 or there is no such ref."""
+    `origin/main` ref as last fetched (here no origin remote, so the fetch is skipped, #592), and nothing when n is 0
+    or there is no such ref."""
     def _git(self, root, *a):
         import subprocess
         subprocess.run(["git", *a], cwd=root, check=True, capture_output=True, env=sv.dyadlib.git_env())
@@ -278,6 +279,101 @@ class BehindOriginTests(unittest.TestCase):
         self._git(root, "reset", "-q", "--hard", "HEAD~2")
         self.assertEqual(sv.behind_origin(root), 2)
         self.assertIn("behind origin/main by 2\n", self._touch_out(root))
+
+class TouchFetchTests(unittest.TestCase):
+    """#592 R-e (mode 07): `session touch` fetches origin first (read-only, 10 s), prints `fetched origin` before the
+    `behind origin/main by n` line and leaves HEAD and the working tree as they were; offline it prints
+    `warn [session] fetch skipped: <reason>` and exits 0. `-r "592 594"` claims both rows."""
+    def _git(self, root, *a):
+        import subprocess
+        return subprocess.run(["git", *a], cwd=root, check=True, capture_output=True, text=True, env=sv.dyadlib.git_env()).stdout.strip()
+    def _clone(self):
+        """(upstream, clone): the clone is two commits behind the upstream's `main` once it fetches."""
+        up = repo()
+        self._git(up, "init", "-q", "-b", "main")
+        for k, v in (("user.email", "t@t"), ("user.name", "t"), ("commit.gpgsign", "false")):
+            self._git(up, "config", k, v)
+        self._git(up, "commit", "-q", "--allow-empty", "-m", "c0")
+        dst = Path(tempfile.mkdtemp()) / "clone"
+        self._git(up.parent, "clone", "-q", str(up), str(dst))
+        (dst / "agent-corpus" / "d-work" / "sessions").mkdir(parents=True)
+        for i in (1, 2):
+            self._git(up, "commit", "-q", "--allow-empty", "-m", f"c{i}")
+        return up, dst
+    def _touch(self, root, *args):
+        import io, contextlib
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {"DYAD_SESSION": "fetch-test"}), \
+             mock.patch.object(sv.dyadlib, "repo_root", return_value=root), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = sv.main(["touch", *(args or ("-r", "1"))])
+        return rc, out.getvalue()
+    def test_touch_fetches_then_states_its_base_and_moves_nothing(self):
+        up, root = self._clone()
+        (root / "local.txt").write_text("uncommitted\n")                     # a working tree with a change of its own
+        state = lambda: (self._git(root, "rev-parse", "HEAD"), self._git(root, "status", "--porcelain", "--", ".", ":!agent-corpus"))
+        before = state()
+        self.assertEqual(sv.behind_origin(root), 0)                            # as last fetched: nothing to say
+        rc, out = self._touch(root)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("fetched origin\nbehind origin/main by 2\n", out)       # the fetch line first, then the base
+        self.assertEqual(state(), before)                                      # HEAD and the tree as they were (touch's own presence file aside)
+    def test_offline_warns_and_exits_0(self):
+        root = repo()
+        rc, out = self._touch(root)
+        self.assertEqual(rc, 0, out)
+        self.assertRegex(out, r"(?m)^warn \[session\] fetch skipped: \S")
+        self.assertNotIn("fetched origin", out)
+    def test_a_timeout_is_a_reason_not_a_failure(self):
+        import subprocess
+        with mock.patch.object(sv.subprocess, "run", side_effect=subprocess.TimeoutExpired(["git"], 10)) as run:
+            self.assertEqual(sv.fetch_origin(repo()), "timed out after 10 s")
+        argv, kw = run.call_args
+        self.assertEqual((argv[0], kw["timeout"], kw["env"]["GIT_TERMINAL_PROMPT"]), (["git", "fetch", "--quiet", "origin"], sv.FETCH_TIMEOUT, "0"))
+        self.assertTrue(kw["env"]["GIT_SSH_COMMAND"].endswith(" -o BatchMode=yes"), kw["env"]["GIT_SSH_COMMAND"])   # ssh never prompts on /dev/tty
+        for given, want in ((None, "ssh -o BatchMode=yes"), ("ssh -i k", "ssh -i k -o BatchMode=yes")):
+            with self.subTest(GIT_SSH_COMMAND=given), mock.patch.dict(os.environ), \
+                 mock.patch.object(sv.subprocess, "run", side_effect=subprocess.TimeoutExpired(["git"], 10)) as run:
+                os.environ.pop("GIT_SSH_COMMAND", None)
+                if given: os.environ["GIT_SSH_COMMAND"] = given
+                sv.fetch_origin(repo())
+                self.assertEqual(run.call_args[1]["env"]["GIT_SSH_COMMAND"], want)
+        with mock.patch.object(sv.subprocess, "run", side_effect=OSError("no git")):
+            self.assertEqual(sv.fetch_origin(repo()), "no git")
+    def test_fetch_origin_names_git_s_reason(self):
+        up, root = self._clone()
+        before = (self._git(root, "rev-parse", "HEAD"), self._git(root, "status", "--porcelain"))
+        self.assertIsNone(sv.fetch_origin(root))
+        self.assertEqual((self._git(root, "rev-parse", "HEAD"), self._git(root, "status", "--porcelain")), before)
+        self._git(root, "remote", "set-url", "origin", str(up.parent / "gone"))
+        reason = sv.fetch_origin(root)
+        self.assertTrue(reason, reason); self.assertNotIn("\n", reason)
+    def test_r_splits_on_whitespace(self):
+        presence = lambda root: (root / "agent-corpus" / "d-work" / "sessions" / "fetch-test.md").read_text()
+        with self.subTest("the DoD case: one -r naming two rows"):
+            root = repo()
+            rc, out = self._touch(root, "-r", "592 594")
+            self.assertEqual(rc, 0, out)
+            self.assertIn("\nrows: 592 594\n", presence(root))
+        with self.subTest("a tab inside the value"):
+            root = repo()
+            rc, out = self._touch(root, "-r", "592 594", "-r", "\t7")
+            self.assertEqual(rc, 0, out)
+            f = sv.parse(presence(root))
+            self.assertEqual(set(f["rows"].split()), {"592", "594", "7"})
+            self.assertNotIn("\t", f["rows"])
+    def test_r_without_a_row_refuses_and_writes_nothing(self):
+        for value in ("", " ", "\t"):
+            with self.subTest(value=value):
+                import io, contextlib
+                root = repo(); err = io.StringIO()
+                with mock.patch.dict(os.environ, {"DYAD_SESSION": "fetch-test"}), \
+                     mock.patch.object(sv.dyadlib, "repo_root", return_value=root), \
+                     contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                    rc = sv.main(["touch", "-r", value, "-r", "5"])
+                self.assertEqual(rc, 2)
+                self.assertIn("'-r' without a value", err.getvalue()); self.assertIn("usage: dyad session touch", err.getvalue())
+                self.assertEqual(list((root / "agent-corpus" / "d-work" / "sessions").iterdir()), [])
 
 class StaleTests(unittest.TestCase):
     def test_fresh_is_not_stale(self):
@@ -736,7 +832,28 @@ class AttendanceTests(unittest.TestCase):
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
             a = sv.attendance(root, self.TODAY)
         self.assertEqual((a["mode"], a["attended"], a["relayed"]), ("M3", {}, []))
-        self.assertIn("mode: M3 — 0 of 0 live unit(s) dyad, the rest solo; paired: none beside the leader", sv.attendance_line(a))
+        self.assertEqual(sv.attendance_line(a), "no live seat")   # #592 (mode 28): an empty board reads no mode
+    def test_session_list_with_only_stale_seats_prints_no_live_seat(self):
+        """The DoD through `session list` itself: every presence file stale, so the first line is `no live seat`
+        (an empty store prints `no session presence files` instead), no `mode:` line, and the seat still listed."""
+        import io, contextlib, datetime
+        root = self._repo()
+        seen = (datetime.datetime.now(datetime.timezone.utc) - sv.STALE_AFTER - datetime.timedelta(hours=1)).isoformat(timespec="seconds")
+        (root / "agent-corpus" / "d-work" / "sessions" / "old-seat.md").write_text(
+            f"session: old-seat\nseen: {seen}\nroot: /tmp/x\nrows: 1\nfiles: a.py\n")
+        out = io.StringIO()
+        with mock.patch.object(sv.dyadlib, "repo_root", return_value=root), \
+             mock.patch.object(sv.dyadlib, "find_guard", return_value=None), contextlib.redirect_stdout(out):
+            rc = sv.main(["list"])
+        lines = out.getvalue().splitlines()
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertEqual(lines[0], "no live seat")
+        self.assertFalse([l for l in lines if l.startswith("mode:")], lines)
+        self.assertTrue([l for l in lines if l.startswith("old-seat") and " stale " in l], lines)
+    def test_one_live_seat_still_reads_its_mode_line(self):
+        root = self._repo(); self._presence(root, "program-59cec502")
+        a = self._read(root)
+        self.assertIn("mode: M3 — 1 of 1 live unit(s) dyad, the rest solo; paired: none beside the leader", sv.attendance_line(a))
     def test_absent_store_gives_no_attendance(self):
         self.assertEqual(sv.attendance_index(repo(), self.TODAY), {})
 

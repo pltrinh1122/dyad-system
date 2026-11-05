@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/altitude",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "altitude",
+  "name": "Altitude",
+  "description": "How large a row is: one definition of done the operator can evaluate per row, its parts carried or split by that definition.",
+  "dyad:decides": "For this prompt's work, how many rows, and which parts ride one row's plan-Y and done-Y?",
+  "dyad:inputs": [
+    "the operator's definition of done, from the provenance record, when the prompt gives one",
+    "whether the operator would judge the parts through one report or each on its own",
+    "whether the domain is one the operator has judged before",
+    "whether a part is an act Rule-2 never lets a Y carry (a preference value, a release, a destructive host action, an Intake)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "never",
+      "name": "its own question",
+      "dyad:when": "a part is an act Rule-2 never lets a Y carry",
+      "dyad:then": "it is asked as its own question whatever the row's scope; dyad/dmc/mandate-accretable.jsonld lists the acts"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "carried",
+      "name": "accreted children",
+      "dyad:when": "one definition of done covers every part: the parts must land together, their number is found while working, or the operator judges them through one report",
+      "dyad:then": "one row; its parts are carried as accreted children under its plan-Y and listed in its completion evidence"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "split",
+      "name": "split into rows",
+      "dyad:when": "the operator would judge the parts separately",
+      "dyad:then": "one row per definition of done, related by refs or a tag, each with its own plan-Y and done-Y, batched where they are ready together"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "finer",
+      "name": "smaller rows",
+      "dyad:when": "the domain is one the operator has not judged before",
+      "dyad:then": "finer definitions of done are proposed, and so smaller rows"
+    }
+  ],
+  "dyad:precedence": "its own question first; then the operator's definition of done when given; then smaller rows in an unfamiliar domain; then the default.",
+  "dyad:default": "no definition of done is given and the domain is familiar: the agent proposes one, marked proposed, over the prompt's whole scope, so one row with its parts carried (accreted children); the alternative is one row per part (split into rows). The operator chooses between them at this record's Done, and N with text on any plan amends the proposed definition before any mutation.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md",
+    "rules/RULE-3-d-work.md",
+    "dmc/mandate-accretable.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

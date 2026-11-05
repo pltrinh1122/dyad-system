@@ -83,6 +83,9 @@ _BY_REFERENCE_NOTE = "by reference"   # #545: a hosting approval (provenance.BY_
 # followed by the end or a separator and any text — ` - <on>`, or a suffix the harness appends (observed: ` - operate`).
 TITLE_FORM = re.compile(r"^(?P<seat>\S+): (?P<kernel>\S+) \((?P<system>[^()]*)\)(?:\s*[-–—|:·,]\s*(?P<on>.*))?$")
 READINGS = ("no harness session", "no presence", "title differs", "stale while titled")
+FETCH_TIMEOUT = 10                              # #592 R-e (mode 07): seconds `touch` gives `git fetch` before it reports and goes on
+CLI_FLAGS = dyadlib.cli_forms("session")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+NO_LIVE_SEAT = "no live seat"                   # #592 (mode 28): `session list` with no live seat reads no mode
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
               ("organizations-hold-the-default", lambda: DEFAULT_ORGANIZATION in ORGANIZATIONS and len(set(ORGANIZATIONS)) == 2),
@@ -92,6 +95,7 @@ INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", 
               ("declared-default-is-none", lambda: NO_SEATS == "none" and ATTENDED_SEATS == "attended-seats"),
               ("paired-units-aliases-attended-seats", lambda: PAIRED_UNITS == "paired-units" and UNIT_KINDS[:2] == ("dyad", "solo")),
               ("reconcile-readings-are-four", lambda: len(set(READINGS)) == 4 and bool(TITLE_FORM.match("engineer-1537d8fb: cloud (ds) - ledger")) and not TITLE_FORM.match("dyad-system-ea")),
+              ("fetch-is-bounded", lambda: 0 < FETCH_TIMEOUT <= 10 and NO_LIVE_SEAT == "no live seat"),
               ("process-id-is-well-formed", lambda: bool(re.fullmatch(r"[0-9a-f]{12}", _PROCESS)))]   # crafts/syseng/rules/invariants.md
 TREE_INVARIANTS = [   # reads the DMC store, so the runner's pass only, never at import
     ("attendance-window-is-the-record", lambda: dyadlib.tunables_read_by("guards/agent/sessions.py") == {ATTENDANCE_WINDOW}),   # #590: one home
@@ -443,7 +447,10 @@ def route(seat: str, root: Path | None = None, now: datetime.date | None = None)
     return ROUTES[0] if seat in attendance(root, now)["attended"] else ROUTES[1]
 
 def attendance_line(a: dict) -> str:
+    """The mode line of `session list`; `no live seat` when none is live (#592, mode 28: an empty board is no mode)."""
     n_live = len(a["attended"]) + len(a["relayed"])
+    if n_live == 0:
+        return NO_LIVE_SEAT
     return (f"mode: {a['mode']} — {len(a['attended'])} of {n_live} live unit(s) dyad, the rest solo; paired: "
             f"{' '.join(a['declared']) or NO_SEATS} beside the leader (`{PAIRED_UNITS}`, alias `{ATTENDED_SEATS}`, Rule-16 "
             f"Presence; a solo unit's questions are relayed through the leader)")
@@ -470,7 +477,7 @@ def seat_name_report(root: Path, args: list[str]) -> tuple[int, list[str]]:
     hosting is The World (Rule-14) and nothing here sets a title."""
     opts, i = {}, 0
     while i < len(args):
-        if args[i].startswith("--") and i + 1 < len(args):
+        if args[i] in CLI_FLAGS["name"].value_flags and i + 1 < len(args):
             opts[args[i][2:]] = args[i + 1]; i += 2
         else:
             return 2, [f"usage: dyad session name [--function <f>] [--topic <t>] [--hp <8 hex>] [--system <handle>] [--on <text>] (got {args[i]!r})"]
@@ -714,9 +721,27 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
 TOUCH_USAGE = ("usage: dyad session touch [-r <row>]... [-f <file>]... (no word: the rows already claimed and the "
                "board rows naming this unit as owner; `files` from their plans)")
 
+def fetch_origin(root: Path, timeout: float = FETCH_TIMEOUT) -> str | None:
+    """#592 R-e (mode 07): `git fetch --quiet origin`, read-only — it moves only the remote-tracking refs, never HEAD,
+    the index or the working tree — bounded by `timeout` seconds and never prompting. None when it fetched; otherwise
+    the reason it did not (git's last stderr line, or the timeout), which `touch` prints as a warning and goes on."""
+    env = {**dyadlib.git_env(), "GIT_TERMINAL_PROMPT": "0",   # ssh opens /dev/tty itself: BatchMode fails it at once
+           "GIT_SSH_COMMAND": os.environ.get("GIT_SSH_COMMAND", "ssh") + " -o BatchMode=yes"}
+    try:
+        r = subprocess.run(["git", "fetch", "--quiet", "origin"], cwd=root, capture_output=True, text=True, env=env,
+                           timeout=timeout, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return f"timed out after {timeout:g} s"
+    except OSError as e:
+        return str(e) or type(e).__name__
+    if r.returncode == 0:
+        return None
+    lines = [l.strip() for l in (r.stderr or "").splitlines() if l.strip()]
+    return lines[-1] if lines else f"git fetch exited {r.returncode}"
+
 def behind_origin(root: Path) -> int | None:
     """#482 P4 (mode T): commits on the local `origin/main` ref that HEAD lacks — counted against the ref as last
-    fetched, never fetching (touch makes no network call); None when there is no such ref or git cannot say."""
+    fetched (`touch` fetches first, `fetch_origin`, #592); None when there is no such ref or git cannot say."""
     try:
         r = subprocess.run(["git", "rev-list", "--count", "HEAD..origin/main"], cwd=root, capture_output=True,
                            text=True, env=dyadlib.git_env(), timeout=60)
@@ -731,8 +756,12 @@ def main(a: list[str]) -> int:
             print(TOUCH_USAGE); return 0
         rows, files, i = [], [], 1
         while i < len(a):   # #479 P1 (mode G): every word is -r <id> or -f <path>; anything else refuses, nothing written
-            if a[i] in ("-r", "-f") and i + 1 < len(a):
-                (rows if a[i] == "-r" else files).append(a[i + 1]); i += 2
+            if a[i] in CLI_FLAGS["touch"].value_flags and i + 1 < len(a) and (a[i] == "-f" or a[i + 1].split()):   # `-r ""` claims nothing: refused
+                if a[i] == "-r":
+                    rows.extend(a[i + 1].split())   # #592 R-e: `-r "592 594"` claims both rows
+                else:
+                    files.append(a[i + 1])
+                i += 2
             else:
                 print(f"refused: `session touch` does not take {a[i]!r}{' without a value' if a[i] in ('-r', '-f') else ''} "
                       f"— nothing written; {TOUCH_USAGE}", file=sys.stderr)
@@ -744,6 +773,8 @@ def main(a: list[str]) -> int:
         print(f"touched {p.relative_to(root)}")
         n = dyadlib.load_guard("agent", "inbox").unread(root, p.stem)   # #536: the inbox is read at every turn start
         print(f"inbox {p.stem}: {n} unread" + (" — `dyad inbox read`" if n else ""))
+        reason = fetch_origin(root)   # #592 R-e (mode 07): the base is stated against a fresh origin, or the line says why not
+        print("fetched origin" if reason is None else f"warn [session] fetch skipped: {reason}")
         if n := behind_origin(root):   # #482 P4: the session-start report states its base; nothing when 0
             print(f"behind origin/main by {n}")
         same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call

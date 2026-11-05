@@ -365,3 +365,12 @@ rides a ledger-only commit, not ratification. **16–7**: no provenance change. 
 **16–1**: agent zone. **16–6**: no new term (`presence file`, `unit`, `inbox` unchanged). Others unchanged. Coherent and orthogonal.
 
 Disposition: see ledger #567.
+
+
+## Amendment — d-work #585 (2026-11-04: pointers to the Rule-3 refactor; #572's --cc and #586's owner-adding post)
+This Rule's sentences change with Rule-3's refactor. The claims, attacks and pairwise statements are recorded once, in
+`rule-3-d-work.md`, amendment #585. The two inbox sentences describe code that has already landed (#572 PR B, #586
+PR #653): the same message in each `--cc` box in one commit, and the holder's post adding its receiver to `owner`. They
+are statements of the store, Rule-16's concern, and decide nothing.
+
+Disposition: see ledger #585.

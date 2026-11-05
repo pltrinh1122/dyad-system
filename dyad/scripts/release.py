@@ -55,6 +55,8 @@ ENTRY_RE = re.compile(r"\S+ Y release (?P<tag>\S+) at (?P<sha>[0-9a-f]{7,40}) \(
 DISPOSED_RE = re.compile(r"^disposed:[ \t]*(.*)$", re.M)
 READY_RE = re.compile(r"\S+ release-ready (?P<tag>\S+) at (?P<sha>[0-9a-f]{40}) \(archive (?P<sha256>[0-9a-f]{64})\)")   # #545
 GATES = ("ledger", "tap")
+CLI_FLAGS = dyadlib.cli_forms("release")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+(SCAN,), (AT, ARCHIVE) = CLI_FLAGS[None].bare, CLI_FLAGS["ready"].value_flags
 
 _ENTRY = "2026-10-26 Y release dyad-operator-v0.12.2 at abc1234 (archive " + "0" * 64 + ")"
 INVARIANTS = [   # crafts/syseng/rules/invariants.md: the two shapes the Operator's recorded Y is read through
@@ -298,7 +300,6 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
     operative Done-`Y` names the tag (`(merges PR #a at <head>, releases <tag-a>, <tag-b>)`, Rule-2 Binding) and the
     heads the Operator verified; every root the tag carries is that tree at the cut; the
     archive the one code path builds at the cut has `sha256`. Refused, with nothing written, on any miss."""
-    import datetime
     rg = dyadlib.load_guard("agent", "rows")
     path = dyadlib.rows_dir(root) / f"{row_id}.md"
     if not row_id.isdigit() or not path.is_file():
@@ -331,7 +332,7 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
         raise Refused("C2's fence: " + "; ".join(miss) + " — the release returns to an explicit question (#545)")
     if observed != sha256:
         raise Refused(f"C2's fence: the archive built at the cut has sha256 {observed}, not {sha256}")
-    entry = f"{datetime.date.today().isoformat()} release-ready {tag} at {full} (archive {sha256})"
+    entry = f"{dyadlib.utc_date()} release-ready {tag} at {full} (archive {sha256})"
     if not rg.is_ready(entry):
         raise Refused(f"internal: {entry!r} is not the release-ready shape")
     if entry.split(" ", 1)[1] in [e.split(" ", 1)[1] for e in rg.entries(row.disposed)]:
@@ -359,7 +360,7 @@ def main(a: list[str] | None = None, root: Path | None = None) -> int:
     a = sys.argv[1:] if a is None else list(a)
     if a and a[0] == "ready":   # dyad release ready <row> <tag> --at <cut> --archive <sha256> (#545)
         r = a[1:]
-        if len(r) != 6 or r[2] != "--at" or r[4] != "--archive":
+        if len(r) != 6 or r[2] != AT or r[4] != ARCHIVE:
             print("usage: dyad release ready <row> <tag> --at <full cut sha> --archive <sha256>", file=sys.stderr)
             return 2
         try:
@@ -368,7 +369,7 @@ def main(a: list[str] | None = None, root: Path | None = None) -> int:
         except Refused as e:
             print(f"refused: {e}", file=sys.stderr)
             return 1
-    if [x for x in a if x != "--scan"]:
+    if [x for x in a if x != SCAN]:
         print("usage: dyad release [--scan] | dyad release ready <row> <tag> --at <cut> --archive <sha256>", file=sys.stderr)
         return 2
     ctx = context(Path(root) if root else dyadlib.repo_root())
@@ -378,7 +379,7 @@ def main(a: list[str] | None = None, root: Path | None = None) -> int:
         print("refused: GITHUB_REPOSITORY (owner/name) is unset, so no Release can be looked up; set it to run by hand",
               file=sys.stderr)
         return 2
-    if "--scan" in a:   # read-only: nothing is built, tagged or written but GITHUB_OUTPUT
+    if SCAN in a:   # read-only: nothing is built, tagged or written but GITHUB_OUTPUT
         p = pending(ctx)
         print(f"pending: {' '.join(p) or 'none'}")
         if os.environ.get("GITHUB_OUTPUT"):
