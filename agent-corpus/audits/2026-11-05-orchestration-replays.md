@@ -23,7 +23,7 @@ head, replayed. Each must be caught by the automaton with no unit's turn." Home 
 | S6 | **ring list**. The doorbell stays home's act (X8). |
 | S9 | **partly**. The state is visible, but no timer fires at 13 h. |
 | S10 | **not caught** |
-| S11 | **prevented** on the unphased path; **not caught** on the phased path (a defect, section 4) |
+| S11 | **prevented** on both paths: the unphased flip and, after these replays found it, the phased catch-up (#664) |
 | R2 #573 combined red | **caught by the automaton**, no unit's turn |
 | R2 #572 stale #650 head | **caught by the automaton**, no unit's turn |
 
@@ -268,8 +268,10 @@ catch up #570 answered-Y (recorded on the ledger)
 $ dyad automaton run
 board #570: caught up answered-Y from plan-asked (recorded on the ledger)       # → building, the question gone
 ```
-This is S11's mechanism, moved from `planned_flip` to `catch_ups`, which does not apply `board_after_plan_y`. It is
-pinned as an expected failure, so the test flips when the defect is fixed. Section 4 lists the fix shapes.
+This was S11's mechanism, moved from `planned_flip` to `catch_ups`, which did not apply `board_after_plan_y`. Found by
+these replays and fixed on #664: `catch_ups` now applies `board_after_plan_y`, so the question asked after the row's
+`Y plan` stands (`dyad automaton scan` prints `nothing to do`). Pinned by the replay below and by
+`test_automaton`'s `test_s11_phased_a_question_asked_after_the_plan_y_is_not_caught_up`.
 
 ### R2. #573's combined red
 **Mechanism.** PR #642, PR #651 (stacked on #642) and PR #652 each pass alone. On main they fail together:
@@ -319,7 +321,8 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
   - X5: `test_verifying_with_every_pr_up_is_verified_once` and `test_a_failing_evidence_returns_the_row_to_its_unit`;
   - X6: `test_a_moved_head_withdraws_the_question_and_is_reverified` and
     `test_a_moved_head_withdraws_the_batch_question_from_its_other_rows`;
-  - S11: `test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away`.
+  - S11: `test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away` and
+    `test_s11_phased_a_question_asked_after_the_plan_y_is_not_caught_up`.
 - `test_hygiene.py`: `test_w11_phase_age`.
 
 **The replays (`dyad/tests/test_replays.py`, one test per case).**
@@ -334,20 +337,16 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
 - `test_s9_a_drafted_done_is_a_phase_the_queue_counts`, which also asserts that no W11 line appears at 13 h
 - `test_s10_a_read_moves_no_phase`, which also asserts that there is no `read` event
 - `test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away`
-- `test_s11_phased_a_revision_asked_through_the_machine_is_never_caught_up` (`expectedFailure`, the defect)
+- `test_s11_phased_a_revision_asked_through_the_machine_is_never_caught_up`
 - `test_r2_573_combined_red`
 - `test_r2_572_stale_head`
 
 ## 4. What is not caught
 
-- **S11 on the phased path is a defect.** `automaton.catch_ups` proposes `answered-Y` for any phased `plan-ready` or
-  `plan-asked` entry of a planned row whose last disposition is a `Y plan`. It never asks `board_after_plan_y`. Two
-  more holes let a planned row reach `plan-asked` at all:
+- **S11's phased path is fixed, two holes stay open.** `catch_ups` now applies `board_after_plan_y` (#664), so the
+  revision asked after a `Y plan` is not answered by it. Still open, stated:
   - `(planning, plan-landed)` does not check the row's state; only the adoption does.
-  - The table has no `amend` edge, which plan F5 named.
-
-  Fix shapes, the engineer's to propose: apply `board_after_plan_y`, or the asked question's own commit, in
-  `catch_ups`; refuse `plan-landed` and `asked` on a planned row; add the `amend` escape edge.
+  - The table has no `amend` edge, which plan F5 named. A revision of a planned row is asked by re-entering the entry.
 - **S10 is not built.** There is no `read` event, and a read is still a side effect of printing. Only its consequence
   is removed.
 - **S9 has no timely timer.** At 13 h, `done-ready` and `verifying` are W11-silent; their threshold is 72 h.

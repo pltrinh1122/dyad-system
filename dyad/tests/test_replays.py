@@ -289,13 +289,12 @@ class Replays(unittest.TestCase):
         self.auto("run")
         self.assertEqual(self.show("board/570.md"), asked)
 
-    @unittest.expectedFailure
     def test_s11_phased_a_revision_asked_through_the_machine_is_never_caught_up(self):
         """S11 on the phased path: NOT caught. The machine has no edge from building back to a plan question (F5's
         `amend` was not built), so a revision of a planned row is asked by re-entering the entry (drop, `opened`,
         `plan-landed`, `asked`); the catch-up then reads the row's older `Y plan` as this question's answer and moves the
-        entry to building, the question gone — S11's mechanism on the phased path. Expected to fail until catch_ups
-        applies board_after_plan_y."""
+        entry to building, the question gone — S11's mechanism on the phased path, found by these replays; fixed on
+        #664 (catch_ups applies board_after_plan_y), so the question stands."""
         self.w.write_main(row(570, disposed="2026-11-04 Y plan; 2026-11-05 Y plan (revision 8)"))
         for argv in (("opened", "--expect", "none", f"unit={AUD}"), ("plan-landed", "--expect", "planning"),
                      ("asked", "--expect", "plan-ready")):
