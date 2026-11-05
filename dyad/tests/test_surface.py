@@ -93,7 +93,7 @@ class SurfaceTests(unittest.TestCase):
         cls.s = sections()
 
     def test_every_section_is_present(self):
-        self.assertEqual(sorted(self.s), [f"S{i}" for i in range(1, 9)])
+        self.assertEqual(sorted(self.s), [f"S{i}" for i in range(1, 10)])
 
     def test_s1_cli_nouns_and_dwork_flags(self):
         src = (PKG / "scripts" / "package.py").read_text()
