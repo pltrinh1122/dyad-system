@@ -140,7 +140,9 @@ named act.
   always the last line of the reply that believes the d-work is done.
 - **Form**: `Y/N: Done with #<id> <title>?`, or the batch form. One parenthetical names what else the `Y` binds, in this
   order — accreted rows, retired rows, and under `merge-disposition: with-done` the unmerged PRs:
-  `Y/N: Done with #<id> <title> (accreted #c, retires #r, merges PR #a)?`, each clause present when it names something.
+  `Y/N: Done with #<id> <title> (accreted #c, retires #r, merges PR #a)?`, each clause present when it names something;
+  `accreted` names the accreted rows this `Y` closes, and one already terminal by its own Done is reported in the
+  evidence, not named (#587).
   The `Y` binds those sets exactly as the evidence listed them, so the operator verifies the set it got, not the one the
   plan promised; leaving a row out is a breach of this Rule. A row named under `retires` is `backlog` or `done` when
   named; an `open` or `planned` row a report supersedes closes by its own Done first (#574).
@@ -150,7 +152,9 @@ named act.
   row stated as a Rule-8 breach); every accreted or carried row — id, `mode`, what it holds, what it cost in
   dispositions — and every escalation; every retired row with its state and ground; each child's state; anything not
   delivered; every departure, execution details included; and anything the agent could not verify. An omission is a
-  breach of this Rule, not a style choice.
+  breach of this Rule, not a style choice. For a row phased `done-ready`, `dyad board draft <id>` prints the data half
+  — the definition of done quoted, the PRs with their zones and recorded heads, the evidence by its sha256, the accreted
+  rows, the trace, and the question as `board advance … asked` stores it — and the agent writes the judgment (#587).
 - **Trace.** When the preference `dwork-trace` is `always` the evidence cites the d-work trace (play-book
   `dyad/playbooks/dwork-trace.md`); under `on-demand` it cites one when the operator prompted for one. The completion
   reply prints its preview, and the reply that receives the done-`Y` writes it to `<instance>/d-work/traces/<id>.md`
@@ -201,7 +205,9 @@ named act.
   open row's orchestration in flight — holder, wait, next act, the question owed verbatim, promises — so a **hop** of
   the session holding the board (the home, under `organization: m4`) loses none of it and asks the operator nothing
   about state. The board is written **write-ahead**: the entry before the dispatch, relay or question it records. Its
-  guard checks shape (#535).
+  guard checks shape (#535). An entry with an orchestration phase is moved only by the recorded events of Rule-16's
+  table (`dyad board advance`), which derives the wait, the next act and the question, so no unit composes them by hand
+  (#587).
 - Reports and relays between units travel by the **inbox** (Rule-16 Store), addressed by unit name and read at the start
   of every turn: information, never authority — a disposition is read from the row and its provenance record, and the
   operator's words relayed to a unit travel verbatim, citing their provenance entry (#536). A message to a session is at
@@ -331,6 +337,8 @@ questions, absorbing #574 and #584, and re-scoped by its plan revision 2 so that
 holds within its own scope. Earlier text, its 29 amendments and the claim table:
 `../falsification/rules/rule-3-d-work.md`. Plan, Completion counter-prompt, Ledger and Mechanisms state the fences of #592 2026-11-05 (d-work
 #606): the plan check at `planned`, the mandate ceiling at `dwork new`, the trace written from the Done words and UTC
-dates had landed as code with no sentence; see the same record, amendment #606.
+dates had landed as code with no sentence; see the same record, amendment #606. Batch disposition and Completion counter-prompt gain the orchestration
+phase and `board draft` 2026-11-05 (d-work #587); see `../falsification/rules/rule-16-concurrent-sessions.md`, amendment
+#587.
 
 Set: System Requirements.
