@@ -249,8 +249,8 @@ class Replays(unittest.TestCase):
 
     def test_s9_a_drafted_done_is_a_phase_the_queue_counts(self):
         """S9: #569's Done held 13 h after its draft. Evidence verified makes the row done-ready, waiting on the holder
-        with `ask the Done question` next, counted in the derived queue. Not caught: W11 tells a done-ready row only
-        after 72 h, so the 13 h hold is not swept."""
+        with `ask the Done question` next, counted in the derived queue. Prevented: W11's done-ready threshold is the
+        tunable `inflight-done-ready-hours` (default 4 h), so the 13 h hold is swept; a 3 h one is not."""
         self.w.write_main(row(569) | phased(569, "verifying", {"unit": [ORC], "pr": ["640 at " + "7" * 40]}, f"{ORC}; {ENG}"))
         rc, out, err = self.adv("569", "evidence-verified", "--expect", "verifying", f"evidence={EV}")
         self.assertEqual(rc, 0, out + err)
@@ -259,24 +259,47 @@ class Replays(unittest.TestCase):
         self.assertTrue(f["next"].startswith("ask the Done question"))
         rc, out, _ = self.board_cli()
         self.assertIn("done-ready 1 (#569)", out)
-        self.assertEqual([l for l in self.sweep(13) if "W11" in l], [])
-        self.assertEqual(len([l for l in self.sweep(73) if "W11 phase age: row #569 in done-ready" in l]), 1)
+        self.assertEqual([l for l in self.sweep(3) if "W11" in l], [])
+        self.assertEqual(dyadlib.tunable("inflight-done-ready-hours", self.w.seat), 4)
+        self.assertEqual(len([l for l in self.sweep(13) if "W11 phase age: row #569 in done-ready" in l]), 1)
 
-    def test_s10_a_read_moves_no_phase(self):
-        """S10: reports marked read unseen. Reading a report changes no phase: the entry still waits on the reader,
-        and the queue still counts it. Not caught: there is no `read` event; `inbox read` still marks on print."""
+    def read_cli(self, *names):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = ib.cli(["read", *names], self.w.seat)
+        self.keep(f"DYAD_SESSION={HOME} dyad inbox read {' '.join(names)}".rstrip(), rc, out.getvalue()[-400:], err.getvalue())
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_s10_reading_is_an_event_with_no_side_effect(self):
+        """S10: reports marked read unseen (#568, #571). Prevented: printing marks nothing; a read is the event `read`
+        naming what was read, which marks exactly the named messages in one land and, a self-loop with no effect on
+        the phased entry, leaves board/568.md byte-identical: still verifying, still waiting on the reader."""
         self.w.write_main(row(568) | phased(568, "building", {"unit": [COU]}, COU))
         rc, out, err = self.adv("568", "pr-up", "--expect", "building", "pr=638", "head=" + "2" * 40, session=COU)
         self.assertEqual(rc, 0, out + err)
-        before = self.entry(568)
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            rc = ib.cli(["read"], self.w.seat)
-        self.keep(f"DYAD_SESSION={HOME} dyad inbox read", rc, out.getvalue()[-400:], err.getvalue())
-        self.assertEqual(rc, 0)
-        self.assertEqual(self.entry(568), before)
-        self.assertEqual(before["waiting-on"], f"unit {HOME}")
-        self.assertNotIn("read", dyadlib.ORCH_EVENT_NAMES)
+        board_text, before = self.show("board/568.md"), self.main_sha()
+        rc, out, err = self.read_cli()
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"row #568 report from {COU}", out); self.assertIn(f"inbox {HOME}: 1 unread, none marked", out)
+        self.assertEqual(self.main_sha(), before)                                       # printing landed nothing
+        r = subprocess.run(["git", "ls-tree", "--name-only", f"main:{INST}/d-work/inbox/{HOME}"], cwd=self.w.origin,
+                           capture_output=True, text=True)
+        (name,) = [n.removesuffix(".md") for n in r.stdout.split() if n.endswith(".md")]
+        self.assertNotIn(f"{name}.read", r.stdout.split())
+        rc, out, err = self.read_cli(name)
+        self.assertEqual(rc, 0, err)
+        self.assertIn("board #568: read at verifying, nothing changed", out)
+        self.assertEqual(git(self.w.origin, "rev-list", "--count", f"{before}..main"), "1")
+        changed = git(self.w.origin, "diff", "--name-only", before, "main").splitlines()
+        self.assertIn(f"{INST}/d-work/inbox/{HOME}/{name}.read", changed)
+        self.assertNotIn(f"{INST}/d-work/board/568.md", changed)
+        self.assertEqual(self.show("board/568.md"), board_text)                          # byte-identical
+        f = self.entry(568)
+        self.assertEqual((bd.phase_name(f), f["waiting-on"]), ("verifying", f"unit {HOME}"))
+        self.assertIn("read", dyadlib.ORCH_NO_EFFECT)
+        self.assertEqual(dyadlib.ORCH_EVENTS[("verifying", "read")], (("verifying",), "home or unit", ()))
+        rc, _, err = self.read_cli(name)
+        self.assertEqual(rc, 1); self.assertIn("already read", err)
 
     # ---- S11 (2026-11-05T05:29:17Z) and plan revision 2
     def test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away(self):

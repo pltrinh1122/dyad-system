@@ -627,6 +627,11 @@ ORCH_HOLDABLE = ("planning", "plan-ready", "plan-asked", "building", "verifying"
 ORCH_WATCHED = ("verifying", "done-ready", "done-asked")   # #587 X6: the phases whose recorded PR heads the automaton
                                                            # compares with the live heads; a move fires `head-moved`
 ORCH_OR = " or "           # an actor cell naming several actors: `home or automaton` (#587 X5), any one may fire it
+# #587 S10 (plan F7's survivor): the events with no side effect on the entry, a self-loop on every phase that changes
+# neither the phase, the derived fields nor `since`. `read` is fired by `dyad inbox read <message>…` (the reader, the
+# box's own seat: the holder or a unit) when a named message's row has a phased entry; its record is the message's
+# `.read` marker, never a board write, so `board advance` does not take it.
+ORCH_NO_EFFECT = frozenset({"read"})
 # (from-phase | None, event) -> (targets, actor, required fields)
 ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str, ...]]] = {
     (None, "opened"):                   (("planning",), "home", ("unit",)),
@@ -653,6 +658,8 @@ ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str,
     # X6 for a batch: a Done question naming several rows is void once any head it names moves (Rule-2, Binding), so
     # every other row it names steps back to done-ready, its own heads and evidence unchanged, its question withdrawn
     ("done-asked", "withdrawn"):        (("done-ready",), "automaton", ("note",)),
+    # S10: reading a message is an event, and changes nothing on the entry (ORCH_NO_EFFECT)
+    **{(p, "read"): ((p,), "home or unit", ()) for p in ORCH_PHASES},
 }
 
 def orch_actors(cell: str) -> frozenset[str]:
@@ -661,9 +668,9 @@ def orch_actors(cell: str) -> frozenset[str]:
 
 ORCH_EVENT_NAMES = frozenset(e for _, e in ORCH_EVENTS)
 # the events some non-automaton actor may fire, so `board advance` takes them; `closed` (steps.close_landed) and
-# `head-moved` (automaton.py) are the automaton's own
+# `head-moved` (automaton.py) are the automaton's own, and `read` (ORCH_NO_EFFECT) is `inbox read`'s
 ORCH_CLI_EVENTS = frozenset(e for _, e in ORCH_EVENTS
-                            if any(orch_actors(a) - {"automaton"} for (_, ee), (_, a, _) in ORCH_EVENTS.items() if ee == e))
+                            if e not in ORCH_NO_EFFECT and any(orch_actors(a) - {"automaton"} for (_, ee), (_, a, _) in ORCH_EVENTS.items() if ee == e))
 
 def orch_release_to(frm: str) -> str:
     """Where `release` returns an entry held at `frm`: an asked phase steps back to its `*-ready`, since `hold` took its
@@ -696,7 +703,7 @@ def orch_reach(events, start) -> set[str]:
 
 def orch_invariants(events, phases=ORCH_PHASES) -> list:
     """The machine's invariants over a table: the module's own (in INVARIANTS), or a patched copy a test passes."""
-    froms = {f for f, _ in events}
+    froms = {f for f, e in events if e not in ORCH_NO_EFFECT}   # a no-effect self-loop is no exit
     answers = {k: v for k, v in events.items() if k[1] in ("answered-Y", "answered-N")}
     return [
         ("orch-keys-known", lambda: all((f is None or f in phases) and orch_actors(a) <= ORCH_ACTORS
@@ -714,7 +721,14 @@ def orch_invariants(events, phases=ORCH_PHASES) -> list:
         # and a batch Y when any head it names moves (`withdrawn`, every other row the batch question names), so the
         # question must come down before it is answered
         ("orch-asked-exits-on-answer", lambda: all(e in ("answered-Y", "answered-N", "hold", "head-moved", "withdrawn")
-                                                   for f, e in events if f in ORCH_ASKED)),
+                                                   or e in ORCH_NO_EFFECT for f, e in events if f in ORCH_ASKED)),
+        # S10: a no-effect event is a self-loop from every phase and from no birth, carrying no field and no words, and
+        # fired by no automaton (the reader is a seat)
+        ("orch-no-effect-is-a-self-loop-everywhere", lambda: all(
+            all(events.get((p, e), ((),))[0] == (p,) for p in phases) and (None, e) not in events
+            for e in ORCH_NO_EFFECT)
+            and all(ts == (f,) and not r and "automaton" not in orch_actors(a)
+                    for (f, e), (ts, a, r) in events.items() if e in ORCH_NO_EFFECT)),
         ("orch-head-moved-returns-to-verifying", lambda: all(ts == ("verifying",) and orch_actors(a) == {"automaton"}
                                                              and {"pr", "head"} <= set(r) and f in ORCH_WATCHED
                                                              for (f, e), (ts, a, r) in events.items() if e == "head-moved")
@@ -997,7 +1011,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("board", "draft"):         CliForm("<id>", (("--out", "<file>"),)),   # #587 X7: the Done skeleton, read-only
     ("inbox", "post"):          CliForm("<unit> [<body>...]", (("--row", "<id>"), ("--kind", "report|relay|ack|notice"),
                                                                ("--body-file", "<path>"), ("--cc", "<unit>")), (), ("--cc",), 1),
-    ("inbox", "read"):          CliForm("", (), ("--all",)),
+    ("inbox", "read"):          CliForm("[<message>...]"),   # #587 S10: no names prints, names mark; `--all` removed
     ("inbox", "list"):          CliForm("[<unit>]"),
     ("automaton", "scan"):      CliForm(),
     ("automaton", "run"):       CliForm("", (("--evidence-from", "<file>"),)),

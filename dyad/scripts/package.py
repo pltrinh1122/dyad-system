@@ -248,10 +248,11 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs;
                                 `phases` prints the orchestration machine; `advance` fires one of its events and lands
                                 its every effect (board, answer's ledger lines, trace, relays) in one commit (#587)
-  dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [--all] | list [<seat>]
+  dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [<message>...] | list [<seat>]
                                 messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
                                 lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
-                                unread and marks them read; `list` is read-only
+                                unread and writes nothing; `read <message>...` marks exactly those
+                                read in one land (#587 S10); `list` is read-only
   dyad automaton scan|run      the d-work automaton (scripts/automaton.py, d-work #556): from ledger lines on origin/main
                                 only, merge the PRs a recorded Y done names (pinned, in order, retried with backoff on a
                                 race), close rows whose heads landed, notify board owners of a Y plan; a refusal is one
