@@ -50,7 +50,19 @@ files and almost never merge.
   session holding the board replaced by another — by `dyad board resume`, which prints what the new holder resumes.
   Its guard, `dyad/guards/agent/board.py`, checks only that each file is well-formed, names a row that is not
   terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
-  runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535).
+  runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535). An entry
+  may carry a `phase` — an **orchestration phase**, the entry's own machine beside the row's and never moving the row:
+  `planning`, `plan-ready`, `plan-asked`, `building`, `verifying`, `done-ready`, `done-asked`, `landing`, or `held` —
+  and a free-text `note`; the phases, the events that move between them, who fires each and the fields it must carry
+  are data, `dyadlib.ORCH_EVENTS`, printed by `dyad board phases`. On a phased entry `phase`, `waiting-on`, `next`,
+  `since` and `question` are derived from that table, and `dyad board advance <id>… <event> --expect <phase>` is their
+  only writer: it refuses an event the table does not allow from the entry's phase, or a phase moved since `--expect`
+  was read, and writes the derived fields, the templated relay to the next unit and, for an answer, the ledger entry and
+  its provenance from `--said-file` (Rule-7), in one ledger-only commit, so a retry recomputes from `main` and never
+  replays. The guard fails a phased entry whose derived fields differ from the table's; an entry with no `phase` reads
+  as before. The automaton fires the table's automaton events from `main` alone — a merged head's `closed`, and
+  `head-moved` when a PR's live head differs from the one a watched phase recorded, which takes back any question asked
+  on it (Rule-2, Binding) (#587).
 - Beside the board, the **inbox**: `<instance>/d-work/inbox/<unit>/<stamp>-<from-unit>-<n>.md` (stamp
   `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by unit
   name and never by session id, so a hop changes nothing for the sender and concurrent senders never collide.
@@ -210,6 +222,8 @@ record, amendment #567. Store names the Done route of `backlog → archived`, `i
 owner 2026-11-04 (d-work #585, carrying #572 and #586): the retirement form had been the only exit named, and two inbox
 verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585. Store and Presence drop
 the #553 aliases 2026-11-05 (d-work #604, H3 step 4 of #573): `seat <name>` and `attended-seats` are refused, naming their
-new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same record, amendment #604.
+new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same record, amendment #604. Store's board
+bullet gains the orchestration phase 2026-11-05 (d-work #587): owner, wait and next act were free text that drifted
+from the work, and ten slips of one day (S1–S10) were each an unrecorded transition; see the same record, amendment #587.
 
 Set: System Requirements.
