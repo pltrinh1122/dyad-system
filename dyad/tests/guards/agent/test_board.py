@@ -1479,6 +1479,8 @@ class AdvanceTests(unittest.TestCase):
                          "rows/6.md": "id: 6\ntitle: six\nopened: 2026-11-01\nstate: planned\n"
                                       f"disposed: 2026-11-01 Y plan; 2026-11-04 Y done (merges PR #650 at {H1})\nrefs: \n",
                          "board/6.md": self.done_asked(6, [f"651 at {H2}"], "Y/N: Done with #6 six (merges PR #651)?")})
+        self.seed_board({"rows/7.md": "id: 7\ntitle: seven\nopened: 2026-11-01\nstate: planned\n"   # the answer, recorded by hand
+                                      "disposed: 2026-11-01 Y plan; 2026-11-05 Y plan\nrefs: \n"})     # after the asking (S11)
         with unittest.mock.patch.object(am, "corroborate", lambda *a: (True, [])):
             _, acts = am.plan(self.seat)
             self.assertIn(("advance", 7, "answered-Y", "plan-asked"), acts)
