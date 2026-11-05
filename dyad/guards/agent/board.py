@@ -47,7 +47,10 @@ place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely;
 `unit`, `pr` (`<n> at <hex>`, repeating), `evidence`, `from`, `on`) and `note` (free text: the one field no table
 derives). On a phased entry `waiting-on`, `next`, `since`, `question` and `phase` are written by `board advance` alone:
 `waiting-on` and `next` are `derive(phase, holder)` and the guard fails a drift; `question` exists only in an asked
-phase. An entry without `phase` behaves exactly as before. `owner` accumulates (`opened` adds the unit).
+phase. An entry without `phase` behaves exactly as before. `owner` accumulates (`opened` adds the unit). One event has no
+effect (`dyadlib.ORCH_NO_EFFECT`, #587 S10): `read`, a self-loop on every phase that changes neither the phase, the
+derived fields nor `since`; `dyad inbox read <message>…` fires it in the land that writes the message's marker, and
+`board advance` refuses it.
 
 `dyad board` and `board set` warn when the file's last `writer` is not this session (an unphased entry only): two holders may be writing
 (plan #535 attack 6; the lease, #537, arbitrates later). A warning, never a refusal. The cos writes the board before
@@ -936,6 +939,8 @@ def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str
     missing = [r for r in required if r != "said-file" and not pairs.get(r)]
     if missing:
         raise Refused(f"#{rid} {event} needs {', '.join(f'{m}=' for m in missing)}")
+    if event in dyadlib.ORCH_NO_EFFECT:                   # S10: a self-loop that changes nothing, `since` and writer kept
+        return targets[0], dict(entry)
     sub = phase_of(entry["phase"])[1] if cur else {}
     new = {k: v for k, v in entry.items() if k not in DERIVED}
     if cur is None:                                       # a birth, or the adoption of an unphased entry
@@ -1041,6 +1046,9 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
     if not ids or i >= len(a) or a[i].startswith("-") or "=" in a[i]:
         raise Refused(ADVANCE_USAGE)
     event, rest = a[i], a[i + 1:]
+    if event in dyadlib.ORCH_NO_EFFECT:
+        raise Refused(f"{event} changes nothing on the entry and is fired by `dyad inbox read <message>…`, which writes its "
+                      f"marker; board advance does not take it (#587 S10)")
     if event not in dyadlib.ORCH_CLI_EVENTS:
         raise Refused(f"{event!r} is not an event (events: {', '.join(sorted(dyadlib.ORCH_CLI_EVENTS))})")
     if len(ids) > 1 and event not in MULTI_ID_EVENTS:
@@ -1312,6 +1320,25 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
         return sorted(set(L.written(wt))), advance_subject(ids, event, frm,
                                                            results[ids[0]][0], bsubj.removeprefix("ledger: batch ")), (head + out).strip("\n")
     return build
+
+
+def read_event(wt: Path, inst: str, rid: int, row, sender: str) -> str | None:
+    """#587 S10: the `read` event on row `rid`'s entry in `wt`, fired by `inbox read <message>…` in its own land: one
+    line naming the phase it was read at, or None when the entry is absent or unphased (no machine to record in).
+    The event changes nothing (ORCH_NO_EFFECT), so no board file is written; the transition is still run, so the table
+    and the fields are checked as for any other event. Raises when the table's self-loop would change the entry — an
+    impossible condition the import-time invariant already rules out (Rule-12 p1: the fail-loud check)."""
+    p = wt / inst / BOARD_REL / f"{rid}.md"
+    if not p.is_file():
+        return None
+    entry = parse_entry(p.read_text(errors="replace"))[0]
+    cur = phase_name(entry)
+    if cur is None:
+        return None
+    target, new = transition(rid, entry, row, "read", {}, sender, now_iso(), recorded=True)
+    if target != cur or new != entry:
+        raise Refused(f"#{rid} read: the table's `read` would move the entry ({cur} -> {target}); it must change nothing (#587 S10)")
+    return f"board #{rid}: read at {cur}, nothing changed (#587 S10)"
 
 
 def advance_subject(ids, event: str, frm: str, to: str, parts: str = "") -> str:
