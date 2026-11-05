@@ -14,7 +14,9 @@ notice between a question and its `Y` breaks the anchor or the wait. #592 R-b: `
 no preview; the store warns on a stored preview while no legacy list is kept and fails one the list does not name; and
 an entry anchored only after whitespace normalisation, or unmatched while its turn is there, is `not verbatim` — never a
 relayed or mandate entry, nor a prompt whose only same-day turns answer a `Y/N:` or are another entry's; `--said-file` is
-read after a refused or voided Done, so the window ends at the Done asked again, and is refused without `--out`."""
+read after a refused or voided Done, so the window ends at the Done asked again, and is refused without `--out`. #602: replies are counted per row by the turns
+naming it (closing `Y/N:` ids, else the trigger's; PR numbers and non-rows dropped; the id token bounded), over the
+operator answers, split by trigger, with the window-wide line and its overlap."""
 import datetime, json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -69,8 +71,8 @@ def transcript() -> list[dict]:
         user(400, "Y", "u14"),
     ]
 
-def record(entries) -> str:
-    out = "# Provenance #7\n"
+def record(entries, rid=7) -> str:
+    out = f"# Provenance #{rid}\n"
     for n, (kind, date, note, body) in enumerate(entries, 1):
         out += f"\n## {n} {kind} {date}{' ' + note if note else ''}\n\n```\n{body}\n```\n"
     return out
@@ -449,23 +451,250 @@ class RepliesPerDispositionTests(unittest.TestCase):
     def test_the_counts_carry_the_ratio(self):
         root, path = fixture()
         out = tr.trace(7, root, [path])
-        self.assertIn("| replies per disposition | 1.0 (2 replies, 2 dispositions) | transcript |", out)
-        self.assertIn("replies per disposition counts the replies the Operator was shown", out)
+        self.assertIn("| replies per disposition | 1.0 (2 replies, 2 answers) | transcript |", out)
+        self.assertIn("replies per disposition counts only the replies of the turns naming #7", out)
 
     def test_the_denominator_is_the_records_not_the_anchors(self):
         lines = [l for l in transcript() if l["uuid"] not in ("u5", "u6")]           # the plan `Y` never anchors
         root, path = fixture(lines=lines)
         out = tr.trace(7, root, [path])
         self.assertIn("unmatched in the transcript", out)
-        self.assertIn("| replies per disposition | 0.5 (1 replies, 2 dispositions) | transcript |", out)   # both counted
+        self.assertIn("| replies per disposition | 0.5 (1 replies, 2 answers) | transcript |", out)   # both counted
         entries = ENTRIES[:2] + [("disposition", "2026-10-06", "Y done merges PR #1", "Y")]   # dated after the window
         root, path = fixture(entries, lines=transcript()[:-1])
-        self.assertIn("(2 replies, 1 dispositions)", tr.trace(7, root, [path]))
+        self.assertIn("(2 replies, 1 answers)", tr.trace(7, root, [path]))
 
     def test_no_disposition_in_the_window(self):
         lines = transcript()[:-1]                                                          # a preview before the Done-`Y`
         root, path = fixture(ENTRIES[:1], lines=lines)
-        self.assertIn("| replies per disposition | no disposition in the window (2 replies) | transcript |", tr.trace(7, root, [path]))
+        self.assertIn("| replies per disposition | no operator answer in the window (2 replies) | transcript |", tr.trace(7, root, [path]))
+
+
+def add_row(root, rid, entries=(), title="gadget"):
+    """Row `rid` beside #7 in a fixture repository, with its provenance record when entries are given."""
+    dw = root / "agent-corpus" / "d-work"
+    (dw / "rows" / f"{rid}.md").write_text(f"id: {rid}\ntitle: {title}\nopened: 2026-10-05\nstate: open\ndisposed: \nrefs: \n")
+    if entries:
+        (dw / "provenance" / f"{rid}.md").write_text(record(entries, rid))
+
+def lines_of(*recs):
+    path = Path(tempfile.mkdtemp()) / "t.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return tr.load([path])[0]
+
+def notify(s, body, uid):
+    return user(s, f"<task-notification>{body}</task-notification>", uid, origin="task-notification")
+
+def queued(s, body, uid):
+    return {"type": "attachment", "timestamp": ts(s), "uuid": uid, "sessionId": "s1",
+            "attachment": {"type": "queued_command", "prompt": body, "origin": {"kind": "task-notification"}}}
+
+def compaction(s, uid):
+    return {"type": "user", "timestamp": ts(s), "uuid": uid, "sessionId": "s1", "isCompactSummary": True,
+            "message": {"role": "user", "content": f"{SECRET} This session is being continued ..."}}
+
+ROWS = {7, 8, 9, 10}
+FULL = (tr.ms(ts(-1000)), tr.ms(ts(10000)))
+
+
+class RepliesPerRowTests(unittest.TestCase):
+    """#602: the replies of the turns naming the row, over the operator answers, by trigger; the window line."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+
+    def attribution(self):
+        return [user(0, "go", "a0"), text(10, f"{SECRET}\nY/N: proceed with #7 as planned?", "a1", "ma"),       # A
+                user(20, "Y", "a2"), text(30, f"{SECRET} noted", "a3", "mc"),                                     # C
+                user(40, "look at #8 please", "a4"), text(50, f"{SECRET} looked", "a5", "mb"),                    # B
+                user(60, "and the other thing", "a6"),
+                text(70, f"{SECRET} #7, #8 and #9 are related\nY/N: proceed with #8 as planned?", "a7", "md"),   # D
+                user(80, "Y", "a8"), text(90, f"{SECRET} ok", "a9", "me")]
+
+    def test_ids_strip_pr_runs_bound_the_token_and_intersect_rows(self):
+        self.assertEqual(tr._ids("Y/N: Done with #7 w (merges PR #8, #9)?"), frozenset({7}))
+        self.assertEqual(tr._ids("PRs #8, #9 and #10 landed; merged #9"), frozenset())
+        self.assertEqual(tr._ids("pull request #8, and #9; #7"), frozenset({7}))
+        self.assertEqual(tr._ids("PR#8 and pr #9, PRs #1, #2, and #3; merged #4 & #5; #6"), frozenset({6}))   # no space
+        self.assertEqual(tr._ids("#7 and #9999", ROWS), frozenset({7}))
+        self.assertEqual(tr._ids("#" + "1" * 5000), frozenset())                   # never int() of 5000 digits
+        self.assertEqual(tr._ids("#12345678 #1234567"), frozenset({1234567}))
+        self.assertTrue(all(type(i) is int for i in tr._ids("#7 #8")))
+        self.assertEqual(tr._yn("x\nY/N: Done with #7 w (merges PR #8, #9)?"), {7})
+        self.assertEqual(tr._yn("Y/N: #" + "9" * 5000), set())
+
+    def test_untrusted_digits_load_and_are_ignored(self):
+        recs = lines_of(notify(0, "#" + "1" * 5000, "n0"), queued(1, "#" + "2" * 5000, "n1"), text(2, "ok", "n2", "m0"))
+        self.assertEqual([r.get("ids") for r in recs if r["kind"] == "notify"], [frozenset(), frozenset()])
+        self.assertTrue(all("text" not in r for r in recs if r["kind"] == "notify"))   # the ids only, never the text
+
+    def test_turns_attribute_by_precedence(self):
+        tns = tr.turns(lines_of(*self.attribution()), ROWS)
+        self.assertEqual([(t["trigger"], sorted(t["ids"]), t["by"]) for t in tns if t["replies"]],
+                         [("operator", [7], "yn"), ("operator", [], "trigger"), ("operator", [8], "trigger"),
+                          ("operator", [8], "yn"), ("operator", [], "trigger")])
+        self.assertEqual([tr.replies_for(tns, i, *FULL)[0] for i in (7, 8, 9, 10)], [1, 2, 0, 0])   # A; B and D; C none
+        self.assertEqual(tr.replies_for(tns, 8, *FULL)[2], 1)                      # B by its trigger, D by its `Y/N:`
+
+    def pr_lines(self):
+        return [user(0, PROMPT, "p0"), text(5, f"{SECRET} started", "p0a", "m9"),
+                user(10, "PRs #8, #9 and #10 are in", "p1"), text(15, f"{SECRET} ok", "p1a", "m0"),
+                user(20, "merged #9, see #9999, and PR#8", "p2"), text(30, f"{SECRET} ok", "p3", "m1"),
+                user(40, "go", "p4"), text(50, f"{SECRET}\nY/N: Done with #7 widget (merges PR #8, #9)?", "p5", "m2"),
+                user(60, "Y", "p6")]
+
+    def test_pr_numbers_and_non_rows_name_nothing(self):
+        recs = lines_of(*self.pr_lines())
+        tns = tr.turns(recs, ROWS)
+        self.assertEqual([sorted(t["ids"]) for t in tns if t["replies"]], [[], [], [], [7]])
+        self.assertEqual([tr.replies_for(tns, i, *FULL)[0] for i in (7, 8, 9, 10)], [1, 0, 0, 0])
+        entries = [("prompt", "2026-10-05", "", PROMPT), ("disposition", "2026-10-05", "Y done merges PR #8, #9", "Y")]
+        root, path = fixture(entries, lines=self.pr_lines())
+        for i in (8, 9, 10):
+            add_row(root, i)
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | 1.0 (1 replies, 1 answers) | transcript |", out)
+        self.assertIn("| replies by trigger | operator 1, notify 0, compact 0 | transcript |", out)
+        for leak in (SECRET, "#9999", "are in", "PR#8"):
+            self.assertNotIn(leak, out)
+
+    def triggers(self):
+        return [text(0, f"{SECRET}\nY/N: proceed with #7 as planned?", "t0", "m0"),                 # none
+                user(10, "Y, and carry on with #7 now", "t1"),
+                tool(20, "x1", "Bash", "t2", "m1", command="ls"), queued(21, "<task-notification>#8 done", "t3"),
+                result(22, "x1", "t4"), text(30, f"{SECRET} working", "t5", "m2"),                  # operator, queued kept out
+                notify(40, "build for #7 done", "t6"), text(50, f"{SECRET} noted", "t7", "m3"),    # notify
+                compaction(60, "t8"), text(70, f"{SECRET} resumed", "t9", "m4"),                     # compact, #7 inherited
+                user(80, "next, #7 still", "t10"), text(90, f"{SECRET}\nY/N: Done with #7 widget?", "t11", "m5"),  # operator
+                user(100, "Y", "t12")]
+
+    def test_turns_by_trigger_with_a_queued_notice_and_a_compaction(self):
+        recs = lines_of(*self.triggers())
+        tns = tr.turns(recs, ROWS)
+        self.assertEqual([t["trigger"] for t in tns if t["replies"]], ["none", "operator", "notify", "compact", "operator"])
+        n, split, by_trigger = tr.replies_for(tns, 7, *FULL)
+        self.assertEqual((n, split, by_trigger), (5, {"operator": 2, "notify": 1, "compact": 1, "none": 1}, 3))
+        self.assertEqual(n, tr.replies(recs, *FULL))
+        self.assertEqual(tr.replies_for(tns, 8, *FULL)[0], 0)                       # the queued notice relabels nothing
+
+    def test_replies_by_trigger_in_the_trace(self):
+        entries = [("disposition", "2026-10-05", "Y plan", "Y, and carry on with #7 now"),
+                   ("disposition", "2026-10-05", "Y done", "Y")]
+        root, path = fixture(entries, lines=self.triggers())
+        add_row(root, 8)
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | 2.5 (5 replies, 2 answers) | transcript |", out)
+        self.assertIn("| replies by trigger | operator 2, notify 1, compact 1, none 1 | transcript |", out)
+        self.assertIn("- 3 of #7's 5 replies were attributed by the turn's trigger (no `Y/N:` naming a row): the shared-turn "
+                      "reading (`turns_naming_others`) reads `Y/N:` lines only, so the two read those 3 turn(s) differently", out)
+        for leak in (SECRET, "build for", "carry on", "resumed"):
+            self.assertNotIn(leak, out)
+        root, path = fixture()                                                      # no `none` reply: not printed
+        self.assertIn("| replies by trigger | operator 2, notify 0, compact 0 | transcript |", tr.trace(7, root, [path]))
+
+    def test_a_compaction_keeps_the_ids(self):
+        lines = [user(0, "handle #7 now", "c0"), compaction(10, "c1"), text(20, f"{SECRET} done", "c2", "m0")]
+        tns = tr.turns(lines_of(*lines), ROWS)
+        self.assertEqual(tr.replies_for(tns, 7, *FULL), (1, {"operator": 0, "notify": 0, "compact": 1, "none": 0}, 1))
+        root, path = fixture([("prompt", "2026-10-05", "", "handle #7 now")], lines=lines)
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | no operator answer in the window (1 replies) | transcript |", out)
+        self.assertIn("| replies by trigger | operator 0, notify 0, compact 1 | transcript |", out)
+        for leak in (SECRET, "handle", "continued"):
+            self.assertNotIn(leak, out)
+
+    def test_a_mid_turn_compaction_relabels_nothing(self):
+        recs = lines_of(user(0, "handle #7 now", "k0"), tool(10, "x1", "Bash", "k1", "m0", command="ls"),
+                        compaction(20, "k2"), tool(30, "x2", "Bash", "k3", "m1", command="ls"),
+                        text(40, f"{SECRET} done", "k4", "m2"))
+        tns = tr.turns(recs, ROWS)
+        self.assertEqual([t["trigger"] for t in tns], ["operator"])
+        self.assertEqual(tr.replies_for(tns, 7, *FULL), (1, {"operator": 1, "notify": 0, "compact": 0, "none": 0}, 1))
+
+    def test_a_trigger_before_the_first_agent_record_joins_the_turn(self):
+        tns = tr.turns(lines_of(user(0, "handle #7 now", "j0"), notify(1, "build finished", "j1"),
+                                text(10, f"{SECRET} done", "j2", "m0")), ROWS)
+        self.assertEqual([(t["trigger"], sorted(t["ids"]), t["replies"]) for t in tns], [("operator", [7], 1)])
+        self.assertEqual(tr.replies_for(tns, 7, *FULL), (1, {"operator": 1, "notify": 0, "compact": 0, "none": 0}, 1))
+        tns = tr.turns(lines_of(user(0, "handle #7 now", "j3"), notify(1, "#8 built", "j4"),
+                                text(10, f"{SECRET} done", "j5", "m1")), ROWS)
+        self.assertEqual([sorted(t["ids"]) for t in tns], [[7, 8]])               # the ids are the union
+        tns = tr.turns(lines_of(user(0, "handle #7 now", "j6"), queued(1, "<task-notification>done", "j7"),
+                                tool(10, "x1", "Bash", "j8", "m2", command="ls"), compaction(20, "j9"),
+                                text(30, f"{SECRET} done", "j10", "m3")), ROWS)
+        self.assertEqual([(t["trigger"], sorted(t["ids"]), t["replies"]) for t in tns], [("operator", [7], 1)])
+        tns = tr.turns(lines_of(user(0, "handle #7 now", "j11"), queued(1, "<task-notification>done", "j12"),
+                                compaction(2, "j13"), text(30, f"{SECRET} done", "j14", "m4")), ROWS)
+        self.assertEqual([(t["trigger"], sorted(t["ids"]), t["replies"]) for t in tns if t["replies"]], [("compact", [7], 1)])
+
+    def test_turns_are_read_per_session(self):
+        b = lambda o: {**o, "sessionId": "s2"}
+        recs = lines_of(user(0, "handle #7 now", "q0"), b(text(1, f"{SECRET} other seat", "q1", "m0")),
+                        b(notify(2, "build finished", "q2")), tool(3, "x1", "Bash", "q3", "m1", command="ls"),
+                        text(4, f"{SECRET} done", "q4", "m2"), user(5, "next", "q5"))
+        tns = tr.turns(recs, ROWS)
+        self.assertEqual(tr.replies_for(tns, 7, *FULL), (1, {"operator": 1, "notify": 0, "compact": 0, "none": 0}, 1))
+        self.assertEqual(sorted((t["trigger"], t["replies"]) for t in tns), [("none", 1), ("notify", 0), ("operator", 0), ("operator", 1)])
+        self.assertEqual(tr.replies(recs, *FULL), 2)
+
+    def test_trace_counts_per_row(self):
+        root, path = fixture([("disposition", "2026-10-05", "Y plan", "Y")], lines=self.attribution())
+        add_row(root, 8, [("prompt", "2026-10-05", "", "look at #8 please"), ("disposition", "2026-10-05", "Y plan", "Y")])
+        add_row(root, 9); add_row(root, 10)
+        out7, out8 = tr.trace(7, root, [path]), tr.trace(8, root, [path])
+        self.assertIn("| replies per disposition | 1.0 (1 replies, 1 answers) | transcript |", out7)
+        self.assertIn("| replies by trigger | operator 1, notify 0, compact 0 | transcript |", out7)
+        self.assertIn("| replies per disposition | 2.0 (2 replies, 1 answers) | transcript |", out8)
+        for out in (out7, out8):
+            self.assertNotIn(SECRET, out); self.assertNotIn("look at", out); self.assertNotIn("related", out)
+
+    def test_answers_per_row(self):
+        d, days = "2026-10-05", ("2026-10-05", "2026-10-05")
+        e = lambda note, date=d: {"kind": "disposition", "note": note, "date": date}
+        self.assertEqual(tr.answers([e("Y plan (mandate #570, 2026-10-01)"), e("Y done")], days), 1)    # (a)
+        self.assertEqual(tr.answers([e("Y plan (mandate #570, 2026-10-01)"), e("Y done (mandate #570, 2026-10-05)")], days), 0)
+        self.assertEqual(tr.answers([e("Y done (batch #7,#8, merges PR #9 at abc)")], days), 1)          # (c) once
+        self.assertEqual(tr.answers([e("Y plan relayed via counsel-ab12cd34")], days), 1)               # (d)
+        self.assertEqual(tr.answers([e("Y plan", "2026-10-06"), {"kind": "prompt", "note": "", "date": d}], days), 0)
+
+    def test_an_all_mandate_row_has_no_operator_answer(self):
+        root, path = fixture(ENTRIES[:1] + [("disposition", "2026-10-05", "Y plan (mandate #6, 2026-10-05)", "Y")],
+                             lines=transcript()[:-1])
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | no operator answer in the window (2 replies) | transcript |", out)
+        self.assertNotIn(SECRET, out)
+
+    def test_a_relayed_disposition_that_anchors_is_counted(self):
+        entries = ENTRIES[:1] + [("disposition", "2026-10-05", "Y plan relayed via counsel-ab12cd34", "Y")] + ENTRIES[2:]
+        root, path = fixture(entries)
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual(got[1]["status"], "anchored")
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies per disposition | 1.0 (2 replies, 2 answers) | transcript |", out)
+        self.assertNotIn(SECRET, out)
+
+    def test_window_answers_count_distinct_answers(self):
+        recs = lines_of(user(0, "go", "w0"), text(10, "status", "w1", "m0"), user(20, "more", "w2"),
+                        text(30, "Y/N: Done with #7 widget, #8 gadget?", "w3", "m1"), user(40, "Y", "w4"))
+        self.assertEqual(tr.window_answers(recs, *FULL), 1)
+        self.assertEqual(tr.window_answers(recs, tr.ms(ts(41)), FULL[1]), 0)         # the window bounds it
+        dup = [{"kind": "text", "ts": 1, "yn": {7}}, {"kind": "operator", "ts": 5},
+               {"kind": "text", "ts": 3, "yn": {8}}, {"kind": "operator", "ts": 5}]
+        self.assertEqual(tr.window_answers(dup, 0, 10), 1)                           # one answer per timestamp
+
+    def test_the_window_line_prints_the_overlap(self):
+        lines = [user(0, PROMPT, "v0"), text(10, f"{SECRET} noted", "v1", "m0"),
+                 user(20, "#7 and #8 together now", "v2"), text(30, f"{SECRET} ok", "v3", "m1"),
+                 user(40, "go", "v4"), text(50, f"{SECRET}\nY/N: Done with #7 widget, #8 gadget?", "v5", "m2"),
+                 user(60, "Y", "v6")]
+        batch = ("disposition", "2026-10-05", "Y done (batch #7,#8)", "Y")
+        root, path = fixture([ENTRIES[0], batch], lines=lines)
+        add_row(root, 8, [batch])
+        recs = tr.load([path])[0]
+        self.assertEqual([a["ts"] for a in tr.anchor(tr.provenance(8, root), recs, 8)], [tr.ms(ts(60))])
+        out = tr.trace(7, root, [path])
+        self.assertIn("| replies in the window, all rows | 3 replies, 1 answers, overlap 1.3 | transcript |", out)
+        self.assertIn("| replies per disposition | 2.0 (2 replies, 1 answers) | transcript |", out)
+        self.assertNotIn(SECRET, out); self.assertNotIn("together", out)
 
 
 class StoredTraceIsNeverAPreviewTests(unittest.TestCase):
