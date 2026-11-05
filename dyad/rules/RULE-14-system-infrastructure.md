@@ -39,7 +39,10 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    called by `dyad/hooks/pre-push` before every push (I2). The hook runs it as `check --guards
    --pre-push`, which judges the refs git pushes (read from its stdin) and refuses a push it cannot
    judge: a ref other than the checked-out HEAD, or a working tree with changes; a deletion, or a
-   ref already on `origin/main`, carries no new commit and passes (d-work #194). CI, hosting
+   ref already on `origin/main`, carries no new commit and passes (d-work #194). It judges only what git sends: a
+   terminal on stdin is refused before any read, a hand run with no ref line fails, and git's own call with no ref
+   line — an up-to-date push, or one git rejected locally — passes with one line; a clone missing the core's release
+   tag fails before any guard runs, and a shallow clone warns (#592). CI, hosting
    and any runner are library adapters; the package must not depend on them to enforce a Rule.
    The kernel-only path is the merge evidence for every merge: `package.py check --evidence`,
    run by the main agent on the exact head being merged, prints the evidence block (head sha,
@@ -96,6 +99,8 @@ the evidence block by its sha256 and its brief form, the full block stored per c
 evidence block gains the code digest and the hook's skip on a head a `Y done` names 2026-11-03 (d-work #562); see
 `../falsification/rules/rule-14-system-infrastructure.md`, amendment #562. Property 3 names corroboration, run where the
 merge ran, and the scheduled sweep 2026-11-03 (d-work #564): the automaton's merges had had no corroboration at all, and
-every merge of a stack started its own full run on a tree nobody lands on; see the same record, amendment #564.
+every merge of a stack started its own full run on a tree nobody lands on; see the same record, amendment #564. Property 3
+names the pre-push outcomes on a terminal, an empty stdin and a missing core tag 2026-11-05 (d-work #606, stating #592);
+see `../falsification/rules/rule-3-d-work.md`, amendment #606.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
