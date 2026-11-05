@@ -1,519 +1,325 @@
 # Rule-3: d-work
 
-**Intent:** Run every body of operator-prompted work as a d-work that opens on the prompt, is authorized by a plan-`Y`, and closes only on the operator's done-`Y`.
+**Intent:** Run every body of operator-prompted work as a d-work that opens on a prompt, is authorized by one plan-`Y` and closes on one done-`Y`, each `Y` binding exactly the acts its question names.
 **Target:** a d-work
 
 ## Boundaries (out of scope)
-- Who may ratify — Rule-2 (applied by reference to the events declared here).
-- Which zone a change belongs to — Rule-1.
-- Bare `Y`/`N` disposals: they answer a counter-prompt and open nothing.
-- What the agent may do on the live host — Rule-8 (a plan names host actions; Rule-8 classes them).
-- Destructive-action counter-prompts: always one-per-question, never batched — Rule-8. Release
-  counter-prompts: one-per-question by default; a release-specific batch naming several tags of
-  one already-`done` d-work's own surfaced output is Rule-11's own form, never Rule-3's plan or
-  Done batch.
-- How another agent frames a proposal to its own operator — that system's Rule-10; Rule-3 judges
-  only what its message carries when it arrives here (Intake, below).
+- Who may ratify, and the kinds of act a `Y` may bind — Rule-2 (Binding of approval), applied by reference to the events
+  declared here.
+- Which zone a change belongs to — Rule-1. The plan file and the two phases — Rule-15. The row store, its transition
+  table, the board store, the inbox and presence — Rule-16. The words of every prompt and disposition — Rule-7.
+- What the agent may do on the live host — Rule-8, which classes every host action a plan names and keeps a destructive
+  action's own question, asked singly and bound by its own `Y`.
+- A release's question, its batch form and the release gate — Rule-11; a release question is asked under that Rule,
+  apart from the plan and Done batches here.
+- How another agent frames a proposal to its own operator — that system's Rule-10; this Rule judges what its message
+  carries when it arrives (Intake, below).
+- The machine step by step — which input moves a row, whose act it is, which record it writes, which layer executes it —
+  the d-work play-book (`dyad/playbooks/d-work.md`), its input alphabet `dyadlib.INPUTS`: read here, never a Rule
+  (#309).
 
 ## Conditions (triggers)
-- The operator sends a prompt (text, including text accompanying a disposal).
-- The agent is about to mutate the repo for a d-work (plan gate).
-- The agent believes a d-work is done (completion counter-prompt).
-- A session starts (ledger report).
+- The operator sends a prompt, or answers a counter-prompt.
+- The agent is about to mutate the repo for a d-work (the plan gate), or believes a d-work is done (the Done question).
+- The agent opens a row while executing another, under the plan-`Y` that carries it (Scope, below).
+- A message from another agent proposes work (Intake, below).
+- A session starts (the ledger report).
 - A PR is opened or edited (`prs.py`); a commit is pushed to `main` (`rows.py`, the main fence).
-- The operator's reply to a counter-prompt is a new prompt rather than its bare disposal: under
-  `batch-disposition-mode: on-ignore` (`preferences-corpus/PREFERENCES.md`), the engagement
-  signal for a batch (Batch disposition, below).
-- A message from another agent — a peer session, an installed system's agent — proposes work
-  (Intake, below).
-- The agent opens a row while executing another, inside the mandate scope its authorized plan
-  states (accretion, Scope below).
+- Under `batch-disposition-mode: on-ignore` (`preferences-corpus/PREFERENCES.md`) the operator's reply to a
+  counter-prompt is a new prompt rather than its bare disposal: the engagement signal for a batch (Batch disposition,
+  below).
 
-A `d-work` starts with an operator prompt and terminates only when the operator
-disposes `Y` to the agent's counter-prompt of completion (`Y/N: Done with {d-work}?`).
-Any other response leaves it incomplete, to be resumed later.
+## Scope (what opens a row)
+Three things open a row: an operator prompt, an operator disposition, and a plan-`Y` whose plan names the row's class
+(accretion).
+- **A prompt**: operator text sent alone, text sent with a `Y`, and an amend's text that asks for something else (Answer
+  grammar). It opens its d-work when the reply writes, proposes or carries a `Y/N` line, and it opens it before that
+  question, so the answer has a row to land on (#492). The test is the reply's form, never the agent's inference. A new
+  prompt while a d-work is open suspends it and opens another: d-works stack.
+- **A disposition that names a row to open**: the `Y` that admits an intake (Intake, below), or files a row as
+  `backlog`. A **bare** answer (`Y` or `N` to a counter-prompt) is not a prompt; the rows it opens are the ones its
+  question names (What a `Y` binds, below).
+- **Accretion**: an **accreted row** is one the agent opens while executing another, under that row's plan-`Y`. Under
+  the preference `accretion: implicit` a plan-`Y` carries the rows its plan names a class for (Plan, below); such a row
+  takes no disposition of its own and opens no d-work in the first bullet's sense, so nothing is suspended and nothing
+  stacks. Under `accretion: explicit` it is asked for like any other row.
 
-## Scope
-- Every operator prompt opens a d-work, with one exemption: a prompt whose answer only reads the corpus, writes
-  nothing and asks no question opens none — like monitoring (Ledger, below), it decides nothing, so nothing is
-  recorded. The test is the reply's form, observable and never the agent's inference: a reply that writes, proposes,
-  or carries a `Y/N` line is no read-only answer, and it opens its d-work before its question, so the answer has a
-  row to land on (#492).
-- A new prompt while a d-work is open suspends it and opens another. d-works stack.
-- A **bare** disposal response (`Y` or `N` to an agent counter-prompt) is not a prompt and opens
-  nothing. Text accompanying a disposal is a prompt and opens a d-work.
-- A third thing opens a row, beside a prompt and a disposition: **accretion**, the agent's own act
-  under an authorized plan. An **accreted row** is one the agent opens while executing another
-  row. Under the preference `accretion: implicit` (`preferences-corpus/PREFERENCES.md`) a row the
-  authorized plan already describes, inside the mandate scope that plan states (Plan, below), is
-  born `open` carrying that plan-`Y` and takes no disposition of its own (Ledger, below); its Done
-  rides the mandate's done-`Y`, which names it (Completion counter-prompt, below). It opens no
-  d-work in the sense of this section's first bullet: no operator prompt was sent, so nothing is
-  suspended and nothing stacks. Under `accretion: explicit` it is asked for like any other row.
-  The terms are the countersign model's (`dyad/playbooks/countersign-model.md`), adopted rather
-  than coined (Rule-13 property 1) and defined in the vocabulary (Rule-6): a **mandate** is the
-  standing countersignature of **implicit mode**; the plan-`Y` that creates one is the **delegate
-  edge**; and an accreted row whose work departs from the mandate scope returns to explicit mode by
-  the **escalate edge** — the agent reports it and asks — the implicit **mode lifecycle** of that
-  play-book's Part II §4. Which acts are never accretable, whatever a plan says, is Rule-2's list
-  (Binding of approval): what a `Y` may bind to is that Rule's concern.
-- A subagent's actions are the agent's actions, bound by the same plan and Rules. Subagents
-  read, search and draft. With the preference `delegation: plan-and-execute`
-  (`preferences-corpus/PREFERENCES.md`), drafting includes the plan file (Rule-15) and an
-  execution branch's changes, so the main agent stays free for the next prompt; a delegated
-  subagent reports the sentinel first, and the main agent reports every delegated d-work's
-  state each turn. Subagents never write a row, ask or answer a counter-prompt, commit to or
-  push a branch, open or update a PR, merge, or run a reversible or destructive host action
-  (Rule-8); those stay with the main agent, the party the operator disposes to. (E7, #107)
+A **read-only answer** — a reply that only reads the corpus, writes nothing and asks no question — opens no row and
+records nothing: it decides nothing (#492). A finding of the agent's reaches a row through one of the three above: the
+agent reports it (Incidents, below) or proposes it, or a plan-`Y` names its class.
+
+A d-work a prompt opened terminates on the operator's `Y` to its Done question; until then it is incomplete, to be
+resumed. A `backlog` row, never started, ends when a `Y` archives it (Ledger).
+
+The terms are the countersign model's (`dyad/playbooks/countersign-model.md`), adopted rather than coined (Rule-13
+property 1) and defined in the vocabulary (Rule-6): a **mandate** is the standing countersignature of **implicit mode**;
+the plan-`Y` that creates one is the **delegate edge**; an accreted row whose work departs from the mandate scope
+returns to explicit mode by the **escalate edge** — the agent reports it and asks — the implicit **mode lifecycle** of
+that play-book's Part II §4.
+
+A subagent's actions are the agent's, bound by the same plan and Rules. Subagents read, search and draft — under
+`delegation: plan-and-execute`, the plan file and an execution branch's changes too — and a delegated subagent reports
+the sentinel first. Writing a row, asking or answering a counter-prompt, committing, pushing, opening or updating a PR,
+merging, and running a reversible or destructive host action (Rule-8) are the main agent's alone, the party the operator
+disposes to, which reports every delegated d-work's state each turn (E7, #107).
 
 ## Answer grammar
-Three answers to a counter-prompt, not two — the countersign model's **answer grammar**
-(`dyad/playbooks/countersign-model.md` Part II §2), adopted rather than coined (Rule-13 property 1):
-- `Y` — the disposition asked for is given, bound as Rule-2's Binding of approval binds it.
-- `N`, bare — nothing is authorized. The d-work stays as it was and the agent revises.
-- `N` with text — **amend**: the proposal is refused *and* its revision is asked for in the same
-  words. The text is a prompt and is entered verbatim as a `prompt` entry of the refused d-work's
-  own record (Rule-7, whose trigger is a prompt that opens *or is received on* a d-work); when
-  what it asks for is that same proposal revised, it opens no second row — the work it names is
-  the row already open — and the plan file is revised in place, the refused revision kept
-  (Rule-15). Text that asks for something else is a prompt like any other and opens its own
-  d-work (Scope, above). Either way the `N` authorizes nothing until the revision takes its own
-  `Y`.
-An answer is read by its meaning, never by its case or spelling: `Y`, `y` and `yes` are one `Y`, and `N`, `n` and
-`no` one `N`. The row records the token and the provenance record keeps the words as typed (Rule-7), so the reading
-stands beside what was written; where two readings would lead to different acts the agent asks, as a blocking
-question (Rule-8's form), and never about spelling alone (#553; the label-case criterion,
-`dyad/dmc/label-case.jsonld`).
-A `Y` with text is a `Y` plus a prompt, which opens its own d-work (Scope). Silence is not
-consent: a counter-prompt left unanswered authorizes nothing and is never read as a `Y`. Until
-2026-10-14 `amend` had no name here and lived inside "any other response" (Plan, below); the live
-instance is this Rule's own amendment, plan #290 refused on 2026-10-14 in the words that became
-its revision 5.
+Three answers to a counter-prompt, the countersign model's **answer grammar** (`dyad/playbooks/countersign-model.md`
+Part II §2):
+- `Y` — the disposition asked for is given, binding the acts the question names (What a `Y` binds, below).
+- `N`, bare — nothing is authorized; the agent revises.
+- `N` with text — **amend**: the proposal refused and its revision asked for in the same words, entered verbatim as a
+  `prompt` entry of the refused d-work's record (Rule-7). When it asks for the same proposal revised it opens no second
+  row, and the plan file is revised in place, the refused revision kept (Rule-15); text that asks for something else
+  opens its own d-work. Either way the `N` authorizes nothing; the revision takes its own `Y`.
+
+A `Y` with text is a `Y` plus a prompt. Silence is not consent: an unanswered counter-prompt authorizes nothing. An
+answer is read by its meaning: `Y`, `y` and `yes` are one `Y`, `N`, `n` and `no` one `N`, the row recording the token
+and the provenance record the words as typed (Rule-7). Where two readings lead to different acts the agent asks, as a
+blocking question (Rule-8's form); the listed variants of one answer lead to one act
+(`dyad/dmc/label-case.jsonld`, #553).
+
+## What a `Y` binds
+A `Y` binds exactly the acts its question names (Rule-2, Binding of approval): what the question states and what it
+cites directly. A row of work takes two questions:
+- the **plan question** cites the plan file, which states each carried class in words and with its number — its
+  mandate scope, or a play-book step's class, the step id only a pointer — so its plan-`Y` binds the mutation the plan describes, every PR of the d-work, and every row the plan carries
+  (Plan, below);
+- the **Done question** names the d-work, its accreted rows, the rows its report retires and its unmerged PRs, so its
+  done-`Y` verifies the output, closes the accreted set, archives exactly the retired rows and ratifies exactly those
+  merges (Completion counter-prompt, below).
+
+A batch counter-prompt binds each d-work it names as its single question would (Batch disposition, below). A row or act
+is **carried** when another's question names it — a plan question naming its class, a Done question naming it under
+`retires` — so that `Y` binds it with no question of its own. Work the plan does not describe, and a row its scope or
+play-book step does not cover, is a new plan needing a new `Y`. What a plan-`Y` may carry is bounded by Rule-2's list:
+it carries no act of these kinds — a destructive host action (Rule-8), a release (Rule-11), an intake (Intake, below), a
+change to a preference value, a mutation the plan did not describe — and each is asked under the Rule that owns it. A
+release under the release gate is named in its own d-work's Done question (Rule-11), so that done-`Y` binds it as a
+named act.
 
 ## Plan (mutation authorization)
-- The agent's first substantive reply to a prompt is a plan, stored first as a plan file
-  (Rule-15): the intent as read, the mutation proposed (falsified first, Rule-9; framed per Rule-10), and the last line `Y/N: proceed with #<id> as planned?` — or the batch form
-  (Batch disposition, below) under `batch-disposition-mode`.
-- `Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs
-  from the plan is a new plan and needs a new `Y`. Any other response leaves the d-work
-  open with no mutation authorized; the agent revises the plan.
-- An **execution detail** is not a departure: a change of the order of the plan's steps, of how its
-  PRs are split or stacked, of which unit executes a step within its charter, or of the tooling route,
-  where the plan's mutation is unchanged in content, the plan stated none of these as a requirement
-  (Rule-15 phase 1), the end state is the same, and no intermediate state is irreversible or reaches
-  the world (a release cut, a tag, a publish, a destructive host action, a preference value). The
-  plan-`Y` covers it, it is never asked, and the completion evidence reports it as a departure line,
-  so the operator verifies it at the Done; if any condition fails it is a new plan
-  (`dyad/dmc/plan-departure.jsonld`, #555).
-- No exemptions, with one: the row the plan-`Y` has already authorized. A plan may be one line,
-  and a PR may accompany it, but the question is asked — and a row accreted inside the plan's own
-  **mandate scope** (next bullet) is not asked for a second time, because the question was asked
-  when the plan that describes it was asked.
-- **Mandate scope.** A plan that intends to accrete states it: a *rule* for the class of row it
-  will open ("one child per failure mode", "a row per surviving fence") and a *ceiling* — at most
-  how many such rows. Both are the operator's to read before the plan-`Y` and to refuse. A plan
-  that states no mandate scope accretes nothing, however much it describes; a row the stated rule
-  does not cover, or the row after the stated ceiling, is work departing from the plan and so a
-  new plan needing a new `Y`. How large a ceiling may be is the operator's number, never this
-  Rule's.
-- A prompt that opens a new body of work is planned by the craft play-book
-  (`dyad/playbooks/craft-instantiation.md`): the plan assumes a new craft instance unless one of
-  the play-book's `craft-instantiation-criteria` fires, in which case it advises a new dyad system
-  naming the criterion; the play-book's steps are its run-book (`dyad/runbooks/craft.md`), whose
-  events the completion reply cites (#165).
-- The plan-`Y` is disposition (2) of the operator's model (audit 2026-09-12, disposition
-  chain); the done-`Y` below is disposition (1).
-
-## Ledger
-- The ledger is the row-file store `agent-corpus/d-work/rows/` (Rule-16), rendered to
-  `agent-corpus/d-work/LEDGER.md` on demand. One row per
-  d-work; `state` is `open`, `planned`, `done`, `blocked`, `backlog` or `archived` — defined in the vocabulary
-  (Rule-6; transitions: Rule-16); the consequences of each state are:
-  - `open` — started; the agent is working it or it is suspended by a newer prompt.
-  - `planned` — the plan file is authorized (plan-`Y`); execution may start in any session (Rule-15).
-  - `blocked` — the operator disposed a deferral naming another d-work; `refs` names it.
-    Returns to `open` when the blocking d-work is `done`.
-  - `backlog` — opened by an operator disposition rather than worked immediately; not
-    started. Becomes `open` when the operator prompts for it, or `archived` when an operator
-    disposition retires it (the retirement form, below).
-  - `done` — the operator answered `Y` to the completion counter-prompt *and* every merge that `Y`
-    named has landed. Between the two the row keeps the state it had, and its `disposed` carries the
-    recorded `Y`; the state guard reads that interval as one warning per row (Mechanisms).
-  - `archived` — retired from the working board by an operator disposition naming the row(s);
-    terminal like `done` (a new row refs it, never reopens it), and reached from `done` or from
-    `backlog` (Rule-16's table). Nothing moves: its row, plan and provenance stay where they are
-    (Rule-16 store; Rule-20 references). The agent never archives on
-    its own judgment; `dyad dwork state <id> archived` is clerical execution of the naming
-    disposition, a ledger-only commit. The question that names them is the **retirement form**,
-    `Y/N: archive #a, #b, … #k?` — one question over k rows, each listed before it with what it
-    holds and why it is proposed for retirement. A `Y` archives exactly the named rows; anything
-    else archives none of them (Rule-2, Binding). It is not a plan or Done batch and does not
-    enter the pending queue: nothing is planned and nothing is delivered by it.
-- The machine whole — which input moves a row along each transition, whose act that input is, and
-  which record the move writes — is stated once, as data beside the table (`dyadlib.INPUTS`) and as the
-  d-work play-book (`dyad/playbooks/d-work.md`), which also lists every record a d-work is made of; read
-  here, never a Rule (#309).
-- The agent may decompose a d-work into child rows (`refs: parent #N`). The parent's
-  counter-prompt is asked only when every child is `done`, `blocked`, `backlog`, or carrying its own
-  recorded done-`Y` and waiting on the merge it ratified (Completion counter-prompt, below: a child in
-  that interval has been verified and its output is landing, so it no longer owes the parent anything);
-  the parent
-  completes only on its own done-`Y`, and the completion evidence names each child's state, so an
-  undelivered child is something the operator sees rather than something the done-`Y` is read as
-  claiming. `backlog` is admitted for the reason `blocked` already was — a child the operator has
-  not asked for is not work the parent owes — and because a `backlog` child could otherwise make
-  the parent's question unaskable: one parent of this instance sat on 23 `backlog` children whose
-  only transition was back to `open` (#290).
-- The agent appends a row when a d-work starts, records the operator's `Y` to the completion
-  counter-prompt when it is given, and sets `done` only once the merges that `Y` named have landed
-  (both clerical execution, Rule-2; Completion counter-prompt, below).
-- Ledger-only commits (touching nothing outside `agent-corpus/d-work/`; row and plan files) are clerical and
-  go directly to `main` without a PR. `dyad/guards/agent/rows.py` (the main fence) fails any direct
-  commit to `main` that touches anything else.
-- Events-only commits are clerical in the same way and go to `main` the same way, without a row or
-  a PR: a commit is events-only when it touches nothing outside `<runbooks>/events/` (the run-book
-  store, `DYAD_RUNBOOKS`, Rule-19 property 1), and a range is events-only when every one of its own non-merge
-  commits is, read commit by commit with rename detection off, as a ledger-only range is read. It
-  holds events of read-only run-book commands only (Rule-8 class; the sysadmin craft's
-  `server-instances.md` property 7): it records an observation, never a decision (Rule-2). One
-  commit stays one zone (Rule-1), so a commit touching both the ledger and the events is neither
-  class. Monitoring is therefore no d-work: a standing read-only check has nothing for a plan-`Y`
-  to authorize and never completes, so it opens no row, and its only write is its events (#438). The scheduled sweep
-  (Rule-14 property 3) is such a check: read-only, it decides nothing, and it writes one event per run and, only for
-  what is new or failing, one notice to the home's inbox (#564).
-- The `disposed` column records every disposition the row receives, in order, as
-  `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`. The agent writes each entry
-  clerically when the disposition is given, so the chain of authorization is reconstructible
-  from the ledger alone (D4). Rows opened before 2026-09-12 #46 are not backfilled. An accreted
-  row's first entry is the mandate's own plan-`Y`, written `<date> Y plan (mandate #<id>)` beside
-  the `(batch #a,#b,#c)` shape this column already carries (Batch disposition, below); its record's
-  entry 1 is that plan-`Y`'s own operator words, copied verbatim with the note
-  `mandate #<id>, <the mandate's own date>` (Rule-7 property 4). A row may also carry the optional
-  field `mode`, `explicit` or `implicit`, absent meaning `explicit` (Rule-16 Store).
-- At session start the agent reads the ledger and reports every row that is not `done`,
-  the current `merge-disposition` value, and the sentinel (`dyad/CLAUDE.md`). If the
-  frame is absent the only permitted action is to say so and stop (E1). The agent also touches
-  its own presence file and reads every other session's (Rule-16); an overlap found there is
-  reported when it bears on the prompt at hand, not narrated for its own sake. Under
-  `organization: m4` (`preferences-corpus/PREFERENCES.md`) what a session reads and reports is its
-  unit's: the home — titled cos — reads the board of programs, a unit with a function the board of its
-  charter's domain (the organization craft's `secretary` and `cos-board`), and the unit name says which (Rule-16 Presence); how a board is read, a unit opened or a
-  charter written is the organization craft's Operating Guide (`crafts/cabinet/docs/operating-guide.md`),
-  read beside the d-work play-book and never a Rule (#369 C7).
-- PR bodies — and, on a branch, the commit messages `dyad/guards/agent/prs.py` reads as the body —
-  cite `d-work #<id>`; the guard resolves each id against
-  the ledger on the base branch and requires it to be `open`, `planned` or `blocked` and to carry a
-  `Y plan` disposition (the plan gate, E3). The phrase is a claim of work on that d-work,
-  not a mention, in a commit message exactly as in a PR body — cross-reference other rows as plain
-  `#<id>` (#23). A ledger-only range claims no d-work — it is clerical (Rule-2) — so the gate skips
-  it wherever it travels, on a branch as on `main`; the fence and the provenance guard judge each of
-  its commits as they would on `main` (#191).
-
-## Mechanisms
-The fence keeps the Done order of the completion clause, on a direct commit to `main`, on each commit
-of a ledger-only branch and in a merge commit's resolution against each parent: one commit may not both
-record a `Y done` that names a merge and set the row `done` (`rows.done_order_problems`), since the
-state follows the merge; the commit that does set `done` must find a `Y done` entry already on the row —
-the `Y` it executes — and must show every head the operative entry names as an ancestor of the base
-branch or of itself (`rows.landing_problems`), a sha this clone cannot resolve printing one line rather
-than failing, because a hard failure on an unresolvable sha is a cross-clone denial of service (#321);
-and the interval between the two is read by the state check as one warning per row
-(`rows.done_recorded_not_closed`), carried in every evidence block and its sha256. Whether a merge ran
-is not decidable from git at the moment of the record — a merge subject naming a PR is no merge of it —
-so only the closing commit is fenced, and only against the head its own entry names (#202). The same fence keeps the trace
-clause of the completion clause: under `dwork-trace: always`, read at the commit's own tree, a commit that adds a
-`Y done` entry to a row must carry that row's `<instance>/d-work/traces/<id>.md` or find it already on its base
-(`rows.trace_problems`), on the same three paths; it judges only entries a commit adds, never history, and exempts a
-mandate close — an entry noted `mandate #<id>`, whose Done rides the mandate's own trace — while a batch's entry needs
-each named row's trace; `dwork state` and `dwork batch` refuse such an entry before their first write (`package.py trace_refusal`) while the trace is
-absent, a batch passing when an earlier `land <instance>/d-work/traces/<id>.md` line carries it (#465).
-
-Rule-3 owns the row guard `rows.py` (the main fence) and the PR guard `prs.py` (the plan gate). They
-live in `dyad/guards/agent/` (agent zone, Rule-1; placed per Rule-11 property 1) and run on the kernel-only path
-as transaction guards (`package.py check --guards`); their workflow wrapper
-(`.github/workflows/dyad-package.yml`, whose one step runs corroboration, `dyad check --corroborate`, its step
-`rule-3 fence (push range)`; Rule-14 property 3) is infra zone. Changing a guard is an agent-zone PR, changing
-the wrapper an infra-zone PR, each citing a Rule-3 d-work. The plan gate is enforced before a push
-by the kernel-only path (the PR guard over `origin/main..HEAD` with the commit messages as body);
-the wrapper corroborates on `main` only (#168). A state guard beside them checks the trace store on every
-push and evidence run: `traces.py`, through `trace.check_store` (#227); the incident log's check stays a
-script run by the suite until #170 lets a released craft's pinned entity list change. A range that touches only `<instance>/d-work/` is
-exempt from the plan gate (`prs.ledger_only`, #191): every one of its own non-merge commits touches
-only that path, read commit by commit with rename detection off, so a branch that ever touched
-anything else — a move into the ledger, a reverted edit, code squashed into `main` since — is not
-ledger-only. Before the exemption, a session fenced off a direct push to `main` (Rule-1, #23) moved
-uncited ledger commits around the hook, which skipped every guard. The exemption rests on `main`
-admitting the same commits, so the fence judges each commit of a ledger-only branch as it would on
-`main`, and each of its merge commits against both parents — a PR merge lands them where the fence's
-first-parent walk never looks. The PR guard (`prs.py`) skips an events-only range (`dyadlib.events_only`,
-the sibling of `ledger_only`) and the fence (`rows.py`) admits an events-only commit to `main` as they do a
-ledger-only one (Ledger, above); a range mixing ledger-only and events-only commits is neither, and is gated;
-that the event store only grows is, on `main`, the sysadmin craft's events guard's (`crafts/sysadmin/guards/events.py`,
-`sysadmin/events`); on an events-only branch the fence judges each commit as it would on `main` (#438). Rule-2 references `rows.py` by name; it does not own it.
+- The agent's first substantive reply to a prompt that opens a d-work is a plan, stored first as a plan file (Rule-15):
+  its definition of done, the intent as read, the mutation proposed (falsified first, Rule-9; framed per Rule-10), and
+  the last line `Y/N: proceed with #<id> as planned?`, or the batch form. The definition of done is the operator's
+  words, quoted from the provenance record, or one marked *proposed* that the plan-`Y` accepts and an amend corrects:
+  one row per definition of done the operator can evaluate, over the largest scope it lets the operator judge (#574).
+- The plan-`Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs from it is a
+  **new plan** needing a new `Y`; until a `Y` the d-work stays open with nothing authorized. Every plan is asked, a
+  one-line plan included; a row the plan-`Y` carries was named in that question and is asked no second time.
+- An **execution detail** is a change of step order, of how PRs are split or stacked, of which unit executes a step
+  within its charter, or of tooling route, where the mutation's content and end state are unchanged, the plan stated
+  none of these as a requirement (Rule-15 phase 1), and no intermediate state is irreversible or reaches the world (a
+  release cut, a tag, a publish, a destructive host action, a preference value). The plan-`Y` covers it and the
+  completion evidence reports it. A change that meets fewer than all of these conditions is a departure, and so a new
+  plan (`dyad/dmc/plan-departure.jsonld`, #555).
+- **Mandate scope.** A plan carries rows from two sources, each stated in the plan file, so the plan question names it.
+  (a) A **mandate scope** the plan states: a *rule* for the class of row it will open ("one child per failure mode") and
+  a *ceiling* on how many. (b) A step of a play-book the plan runs that prescribes a class of row: the plan states that
+  class in words, which is the rule, and a number, which is the ceiling — the step's count, or an upper bound where the
+  count is known only in execution (#574). Rule and ceiling are the operator's to read before the plan-`Y` and to
+  refuse. A play-book that wants a
+  question for a row says so in its step. A plan stating neither source carries no row. A row outside the rule, or past
+  the ceiling, is a new plan.
+- A carried row is born as its scope or step says: `open`, worked under this d-work; or `backlog`, filed for later, its
+  work waiting for an operator prompt. Its Done is the question its plan names: this d-work's done-`Y`, which then names
+  it, or its own (Completion counter-prompt).
+- A prompt that opens a new body of work is planned by the craft play-book (`dyad/playbooks/craft-instantiation.md`):
+  when none of its `craft-instantiation-criteria` fires the plan assumes a new craft instance, and when one fires it
+  advises a new dyad system naming the criterion; its run-book is `dyad/runbooks/craft.md`, whose events the completion
+  reply cites (#165).
 
 ## Completion counter-prompt (intent verification)
-- The done-`Y` is the operator's verification that the original intent of the d-work was
-  delivered in alignment with the operator's expectation of the output. It is asked on the
-  output as it stands in the PR(s), before merge, so `main` never carries unverified output.
-- Always the last line of the agent's reply that believes the d-work is done.
-- The reply that asks does not merge. The reply that receives the done-`Y` records it, merges, and
-  only then closes the row — three acts in that order, so the ledger's own record of the `Y` precedes
-  every merge it ratifies and the row stays pushable until the merges have run. (1) **Record.** The
-  disposition is written with the state left as it is: the `disposed` entry and its provenance entry
-  in one clerical ledger commit, the commit that carries the trace, the entry naming each PR and the
-  head its `Y` was given on — `-d 'Y done (merges PR #a at <head-a>)'`. That entry *is* the ledger's
-  record of the `Y`; the state never was. (2) **Merge**, as clerical execution of it. (3) **Close.**
-  The merge and the close may be executed by the **automaton** (`dyad automaton run`,
-  `dyad/scripts/automaton.py`; the d-work play-book's run-book layer) while the operator's repository variable
-  `DYAD_AUTOMATON` is `on`: it runs from the recorded entry on `main` alone, executes the merges that entry names
-  pinned and in order and the close once every named head is on `main`, and decides nothing — a moved head or a
-  conflict is a refusal posted to the home's inbox, never a resolution — so the reply that records the `Y` is
-  the last act an inferring unit takes for it (#556).
-  A second, dispositionless ledger commit sets `done`, once git shows the head the **operative**
-  entry names — the last `Y done`, since a resolution that changes a head voids the `Y` given against it
-  (Rule-2, Binding) and the question is asked again — on `main` — the hosting's merge, or the local merge of Rule-14 property 3; where a hosting squashes or
-  rebases, the entry records `landed <sha>` instead. A done-`Y` that names no merge is recorded `done`
-  at once, so nothing costs a second commit where nothing is in flight. A merge before the `Y` is
-  self-ratification (Rule-2) and an incident whatever the outcome (#47, #58, #67); `done` written
-  while the head the operative entry names is not yet on `main` is the converse breach, and the fence
-  refuses the commit that writes it (Mechanisms). What the fence can decide is that head's reachability,
-  not that PR #n merged: no resolver maps a PR number to a commit on the kernel-only path, and a merge
-  subject naming a PR is no merge of it. The state is what the merge moves, because `done` is terminal
-  (Rule-16) and the plan gate refuses every commit citing a terminal row: while a ratified merge
-  still owes a push — a rebase onto a moved `main`, a conflict resolved, the second PR of a sequenced
-  set — the row is still `open` or `planned`, and its own plan-`Y` carries that push (not `blocked`:
-  Rule-16's table has no edge from it to `done`, and a row deferred on another d-work has no `Y` to
-  execute). What
-  the interval does not do is re-bind the `Y`: a resolution that changes a head voids it (Rule-2,
-  Binding), the question is asked again, and its answer is a further entry on the same live row.
-- The completion reply carries the evidence the verification needs (E8): every PR of the
-  d-work by number and zone; each check's result as observed, never assumed, or "CI absent"
-  with the local guard results (Rule-2, Binding); every host
-  action taken, with its class and its change-log row (a missing row is stated as a Rule-8
-  breach); every row accreted under this d-work's mandate — its id, its `mode`, what it holds
-  and what it cost in dispositions — and every escalation that returned one to explicit mode;
-  anything in the plan not delivered; any departure from the plan; and anything the
-  agent could not verify, stated before the counter-prompt. An omission is a breach of this
-  Rule, not a style choice.
-- When the preference `dwork-trace` (`preferences-corpus/PREFERENCES.md`) is `always`, the completion
-  evidence cites the d-work trace of the d-work it completes (play-book `dyad/playbooks/dwork-trace.md`);
-  under `on-demand`, only when the operator has prompted for one. The completion reply prints its
-  preview, from the prompt to the Done question; the reply that receives the done-`Y` writes it to
-  `<instance>/d-work/traces/<id>.md` before the Done **record** commit — the first of the two above —
-  which carries it, so it covers the done-`Y` and stays ledger-only; the merges after it, and the
-  commit that closes the row, are not in it. A trace with no transcript is still
-  cited, its buckets marked absent (#213).
-- Form: `Y/N: Done with #<ledger id> <title>?` — one d-work per counter-prompt, or the batch
-  form (Batch disposition, below) under `batch-disposition-mode`. A d-work that accreted rows
-  names them in the question: `Y/N: Done with #<id> <title> (accreted #c, #d)?`. The `Y` verifies
-  and closes that set as the completion evidence listed it (Rule-2, Binding), so the operator
-  verifies the set it got and not the set the plan promised; a row left out of the list is left
-  out of the `Y`, and leaving one out is a breach of this Rule as every other omission is.
-- When `merge-disposition` is `with-done` (`preferences-corpus/PREFERENCES.md`), the form
-  names the d-work's unmerged PR(s): `Y/N: Done with #<id> <title> (merges PR #a, #b)?`.
-  The `Y` ratifies those merges too (Rule-2, binding of approval). With an accreted set the one
-  clause carries both, the rows before the PRs:
-  `Y/N: Done with #<id> <title> (accreted #c, #d, merges PR #a, #b)?`.
-- A Done question the home — titled cos — relays to the operator for a solo, a unit the operator is not paired
-  with (Rule-16 Presence), presents its
-  evidence in the form the preference `relay-form` names (`preferences-corpus/PREFERENCES.md`), the unit's
-  evidence cited as Rule-2's Binding cites it — its `evidence-sha256` and its brief form, the
-  full block on request (Rule-14 property 3) — and the unit's own question its last line; Rule-2's Binding is unchanged, the
-  `Y` binding to what the unit asked.
+- The done-`Y` is the operator's verification that the d-work's intent was delivered as expected, asked on the output as
+  it stands in the PR(s), before merge, so `main` never carries a PR holding a path outside `agent-corpus/d-work/` before its done-`Y`. The question is
+  always the last line of the reply that believes the d-work is done.
+- **Form**: `Y/N: Done with #<id> <title>?`, or the batch form. One parenthetical names what else the `Y` binds, in this
+  order — accreted rows, retired rows, and under `merge-disposition: with-done` the unmerged PRs:
+  `Y/N: Done with #<id> <title> (accreted #c, retires #r, merges PR #a)?`, each clause present when it names something.
+  The `Y` binds those sets exactly as the evidence listed them, so the operator verifies the set it got, not the one the
+  plan promised; leaving a row out is a breach of this Rule. A row named under `retires` is `backlog` or `done` when
+  named; an `open` or `planned` row a report supersedes closes by its own Done first (#574).
+- **Evidence** (E8), before the question, in this order: the plan's definition of done, quoted, and the report that
+  answers it; every PR by number and zone; each check's result as observed, or "CI absent" with the local guard results,
+  the evidence block cited as Rule-2's Binding cites it; every host action with its class and change-log row (a missing
+  row stated as a Rule-8 breach); every accreted or carried row — id, `mode`, what it holds, what it cost in
+  dispositions — and every escalation; every retired row with its state and ground; each child's state; anything not
+  delivered; every departure, execution details included; and anything the agent could not verify. An omission is a
+  breach of this Rule, not a style choice.
+- **Trace.** When the preference `dwork-trace` is `always` the evidence cites the d-work trace (play-book
+  `dyad/playbooks/dwork-trace.md`); under `on-demand` it cites one when the operator prompted for one. The completion
+  reply prints its preview, and the reply that receives the done-`Y` writes it to `<instance>/d-work/traces/<id>.md`,
+  carried by the Record commit, so it covers the `Y` and stays ledger-only; one with no transcript is still cited, its
+  buckets marked absent (#213). A mandate close rides the mandate's own trace.
+- The reply that asks does not merge. A done-`Y` that names no merge has nothing in flight: one ledger commit holds its
+  `disposed` entry, its provenance entry and the trace, sets `done` at once, and archives each retired row it names.
+- **Record, merge, Close** (#202), for a done-`Y` that names a merge. The reply that receives it takes three acts in
+  order, so the ledger's record of the `Y` precedes every merge it ratifies. (1) **Record**: one clerical ledger commit
+  holding the `disposed` entry, its provenance entry and the trace, the state left as it is, the entry naming each
+  retired row and each PR with the head its `Y` was given on — `-d 'Y done (retires #r, merges PR #a at <head-a>)'`;
+  that entry is the record of the `Y`, and the state is not. (2) **Merge**, as clerical execution of it. (3) **Close**:
+  a dispositionless ledger commit that sets `done` once every head the **operative** entry (the last `Y done`) names is
+  on `main` — by the hosting's merge or Rule-14 property 3's local merge, a squash or rebase recorded `landed <sha>` —
+  and archives each retired row.
+- A merge before the `Y` is self-ratification (Rule-2), an incident whatever the outcome (#47, #58, #67); `done` written
+  before the named heads are on `main` is the converse breach, which the fence refuses (Mechanisms). While a ratified
+  merge still owes a push — a rebase, a resolved conflict, the second PR of a sequence — the row stays `open` or
+  `planned` — the states the plan gate admits that have an edge to `done` — its own plan-`Y` carrying the push. A
+  resolution that changes a head voids the `Y` given against it (Rule-2, Binding): the question is asked again, its
+  answer a further entry on the same row.
+- **The automaton.** While the operator's repository variable `DYAD_AUTOMATON` is `on`, the automaton
+  (`dyad automaton run`, `dyad/scripts/automaton.py`) executes the merge and the Close from the recorded entry on `main`
+  alone, pinned and in order. It decides nothing: a moved head, a conflict, or a retired row whose state is `open`,
+  `planned`, `blocked` or `archived` is a refusal posted to the home's inbox, never a resolution, so recording the `Y`
+  is the last act an inferring unit takes for it (#556). While it is `off`, the agent executes both by hand.
+- **A relayed Done.** A Done question the home relays for a solo (Rule-16 Presence) presents its evidence in the form
+  the preference `relay-form` names, cited by its `evidence-sha256` and brief form (Rule-14 property 3), with the unit's
+  own question as its last line; the `Y` binds to what the unit asked.
 
 ## Batch disposition
-Preference `batch-disposition-mode` (`preferences-corpus/PREFERENCES.md`). `off` — every plan
-and completion counter-prompt above is asked and disposed singly. `on-ignore` — singly, until
-the operator leaves one outstanding (Conditions, above: the next message is a prompt, not its
-bare disposal) — the engagement signal itself, nothing else needed. `always` — never singly:
-the first pending item already opens the queue. Release counter-prompts have their own, narrower
-batch form, owned by Rule-11 (several tags whose content one d-work's own done-`Y` already
-verified); it is never a plan or Done batch and never enters this section's pending queue. Nor is
-a mandate a batch, and it likewise never enters the queue: the rows a plan-`Y` accretes are not
-asked about at all, so they are neither plan-ready nor done-ready items (the mandate form, below).
+- Preference `batch-disposition-mode`: `off` — every plan and Done question asked singly; `on-ignore` — singly, until
+  the operator leaves one outstanding, the engagement signal itself; `always` — never singly. Once engaged the agent
+  holds a **pending queue** of plan-ready and, separately, done-ready d-works, reports both counts at the end of every
+  reply while either is non-empty, and drains it by naming items in batch questions; under `on-ignore` engagement lapses
+  once both are empty.
+- The batch forms replace the single forms, one kind per question: `Y/N: proceed with #a, #b, #c as planned?`, each with
+  its own stored plan file, and `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x)?`, full evidence for each
+  before it and each d-work's accreted and retired rows in its own clause. A `Y` binds exactly the named set; every
+  answer short of `Y` binds none of it. Each row's entry names the whole set — `<date> Y plan (batch #a,#b,#c)`,
+  `<date> Y done (batch #a,#b, merges PR #w at <head-w>)` — and the one `Y` is the same provenance entry in every named
+  record (Rule-7). Beside the batch forms stands the **mandate form** — the plan question over a plan that carries rows
+  and the Done question naming them, two questions whatever the set's size: a batch compresses questions, a mandate
+  compresses acts. A carried row, a release question and the retirement form never enter the queue: the first is never
+  asked, the others are asked on their own.
+- The queue is recorded: its counts and the last question asked live in the **board store** (Rule-16 Store), beside each
+  open row's orchestration in flight — holder, wait, next act, the question owed verbatim, promises — so a **hop** of
+  the session holding the board (the home, under `organization: m4`) loses none of it and asks the operator nothing
+  about state. The board is written **write-ahead**: the entry before the dispatch, relay or question it records. Its
+  guard checks shape (#535).
+- Reports and relays between units travel by the **inbox** (Rule-16 Store), addressed by unit name and read at the start
+  of every turn: information, never authority — a disposition is read from the row and its provenance record, and the
+  operator's words relayed to a unit travel verbatim, citing their provenance entry (#536). A message to a session is at
+  most a doorbell, never the carrier. An actionable post to a unit whose current session a direct message reaches is
+  followed by one to that session; an automaton notice goes to the home, which rings the unit it concerns; an
+  information-only copy is posted as a notice and rings nobody; a self-addressed post rings nobody; and a unit no direct
+  message reaches — a terminal desk, a unit with no live session — polls its inbox (`dyad/dmc/message-route.jsonld`,
+  #584).
 
-Once engaged, the agent holds a **pending queue**: every plan-ready d-work (its plan file
-written, Rule-15, counter-prompt not yet asked as part of a batch) and, separately, every
-done-ready d-work (its completion evidence gathered, Done question not yet asked as part of a
-batch). Both counts are reported at the end of every reply while either is non-empty, so an
-unintended engagement is visible within one turn. The queue is recorded, not conversational: its
-counts and the last question asked live in the **board store** (Rule-16 Store), beside every open row's
-orchestration in flight — who holds the work, what it waits on, its next act, the question the operator
-owes verbatim, the follow-ups promised — so a **hop** of the session holding the board (under
-`organization: m4`, the home) loses none of it and asks the operator nothing about state. The board is
-written **write-ahead**: a turn that changes orchestration writes the board entry before it dispatches the
-work, sends the relay or asks the question that entry records, so a hop at any moment loses at most the
-reply being composed, never an act already taken. Its guard checks the files' shape only; whether an entry
-is true of the work is inference, as before (#535). What a unit reports and what the home relays to a unit
-travel by the **inbox** (Rule-16 Store), addressed by unit name, read at the start of every turn: a message to a
-session is at most a doorbell saying one waits, never the carrier, so a report survives a hop and reaches a
-holder that receives no messages. The inbox carries information, never authority; a disposition is read from
-the row and its provenance record, and the operator's words relayed to a unit still travel verbatim, citing
-the provenance entry they were given in (#536).
+## Ledger
+- The ledger is the row-file store `agent-corpus/d-work/rows/` (Rule-16), rendered to `LEDGER.md` on demand, one row per
+  d-work. Its states are defined in the vocabulary (Rule-6) and move along Rule-16's table (a `transition`); the
+  consequences of each:
+  - `open` — being worked, or suspended by a newer prompt. `planned` — its plan file authorized; execution may start in
+    any session (Rule-15). `blocked` — deferred by the operator naming another d-work in `refs`; `open` again when that
+    one is terminal (`done` or `archived`).
+  - `backlog` — opened by an operator disposition, or carried under the plan-`Y` whose play-book prescribes it; not
+    started; `open` when the operator prompts for it, `archived` when retired.
+  - `done` — the operator answered `Y` to the Done question *and* every merge it named has landed; between the two the
+    row keeps its state, `disposed` carries the `Y`, and the state guard warns once per row (Mechanisms).
+  - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`; terminal, nothing moves, and a new
+    row refs it, never reopens it. The question is the Done question of a delivered row whose report retires it, or, for
+    rows no Done covers, the **retirement form** `Y/N: archive #a, #b, … #k?`, each row listed before it with what it
+    holds and why; a `Y` archives exactly the named rows, and every answer short of `Y` archives none. The agent
+    archives on an operator `Y` alone; `dyad dwork state <id> archived` is clerical execution, a ledger-only commit.
+- A d-work may be decomposed into child rows (`refs: parent #N`). The parent's question is asked only when every child
+  is terminal (`done` or `archived`), `blocked`, `backlog`, or holding its own recorded done-`Y` and awaiting its merge
+  — a child the operator never asked for is not work the parent owes, and a stricter gate could leave the parent
+  unaskable (#290). The parent completes on its own done-`Y`, its evidence naming each child's state.
+- For every row opened from 2026-09-12 #46 on, `disposed` records every disposition, in order, as
+  `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`, each written clerically when given, so the chain of
+  authorization is reconstructible from the ledger alone (D4). A carried row's entry names the `Y` it rides — an
+  accreted row's first `<date> Y plan (mandate #<id>)`, a carried `backlog` row's `<date> Y backlog (mandate #<id>)`, a
+  retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
+  or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names how a row was opened (Rule-16 Store):
+  `implicit` on an accreted row, born `open` under another row's plan-`Y`; `explicit`, or the field absent, on every
+  other row, a carried `backlog` row included. It says nothing of which Done closes the row.
+- **Ledger-only commits** (nothing outside `agent-corpus/d-work/`) and **events-only commits** (nothing outside
+  `<runbooks>/events/`, `DYAD_RUNBOOKS`, Rule-19 property 1, holding events of read-only run-book commands) are clerical
+  and go directly to `main` without a PR. One commit stays one zone (Rule-1), so a commit touching both is **neither**
+  and goes by PR, as a commit that **touches anything else** does. Monitoring is no d-work: a standing read-only check
+  authorizes nothing and never completes, so it opens no row (#438). Its writes are its events and, for the scheduled
+  sweep (Rule-14 property 3), one notice to the home's inbox for what is new or failing (#564).
+- At session start the agent reports the rows not `done`, the `merge-disposition` value and the sentinel
+  (`dyad/CLAUDE.md`), or, with the frame absent, says so and stops (E1). Under `organization: flat` it reads the whole
+  ledger; under `organization: m4` it reads its unit's board, the unit name saying which (Rule-16 Presence; the
+  organization craft's `crafts/cabinet/docs/operating-guide.md`, never a Rule; #369 C7). It touches its own presence
+  file and reads every other session's (Rule-16), reporting an overlap that bears on the prompt at hand.
+- PR bodies — and on a branch the commit messages `dyad/guards/agent/prs.py` reads as the body — cite `d-work #<id>` as
+  a claim of work, cross-referencing other rows as plain `#<id>` (#23). The plan gate requires each cited row, on the
+  base branch, to be `open`, `planned` or `blocked` with a `Y plan` disposition (E3), and refuses every commit citing a
+  terminal row.
 
-The batch forms replace the single forms above, one kind at a time — a plan batch and a done
-batch are never the same question:
-- `Y/N: proceed with #a, #b, #c as planned?` — authorizes the mutation of every named d-work;
-  each already has its own stored plan file. A `Y` authorizes exactly the named set (Rule-2,
-  Binding); `N`, or any other response, authorizes none of them (as the single form).
-- `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x, #y)?` — the reply carries full
-  completion evidence for every named d-work before this line; `merges` lists the union of
-  their unmerged PRs (`merge-disposition: with-done`). A `Y` verifies and ratifies the named set
-  together; a d-work not yet done-ready waits for a later batch.
-
-Beside the batch forms, and never one of them, is the **mandate form** — the pair of questions by
-which one d-work's own plan-`Y` and done-`Y` cover every row it accreted (Scope, Plan, Completion
-counter-prompt): `Y/N: proceed with #<id> as planned?` over a plan that states a mandate scope,
-which authorizes the class of row that scope names as well as the mutation (Rule-2, Binding), and
-`Y/N: Done with #<id> <title> (accreted #c, #d)?`, which verifies the delivered set. Two questions
-whatever the set's size, because a mandate compresses *acts* where a batch compresses *questions*.
-That is why nothing about it is pending, and why the two may hold one question without
-interfering: a done batch naming several d-works names each one's accreted set in its own clause.
-
-The queue drains as its items are named in a batch question and disposed. Under `on-ignore`,
-engagement lapses back to singly-asking once both queues are empty; under `always` it never
-lapses. Each disposed row's ledger entry names the full set it was batched with —
-`<date> Y plan (batch #a,#b,#c)` / `<date> Y done (batch #a,#b, merges PR #w at <head-w>, PR #x at
-<head-x>)`, every PR with the head its `Y` was given on, as the completion clause requires of any Done
-entry that ratifies a merge — so the
-chain is reconstructible from any one row alone (D4, Ledger above). Provenance (Rule-7) is
-unaffected: the operator's one `Y` is written as the same entry into every named d-work's own
-record.
+## Mechanisms
+- Rule-3 owns `rows.py` (the main fence) and `prs.py` (the plan gate), in `dyad/guards/agent/` (Rule-11 property 1), run
+  as transaction guards on the kernel-only path (`package.py check --guards`) and re-run after the merge by
+  corroboration, `dyad check --corroborate` in `.github/workflows/dyad-package.yml`, step `rule-3 fence (push range)`
+  (Rule-14 property 3; #168). A guard change is an agent-zone PR, a wrapper change an infra-zone PR, each citing a
+  Rule-3 d-work. Rule-2 cites `rows.py` by name and does not own it.
+- **The main fence** admits a direct commit to `main` that is ledger-only or events-only and fails every direct commit
+  of another class, read commit by commit with rename detection off. On a direct commit, on each commit of a ledger-only
+  branch and in a merge commit against each parent, it keeps the Done order: no commit both records a `Y done` naming a
+  merge and sets `done` (`rows.done_order_problems`); the commit setting `done` finds a `Y done` already on the row and
+  every head the operative entry names an ancestor of the base or of itself (`rows.landing_problems`), judged on the
+  heads this clone resolves, a sha it cannot resolve getting one printed line that states no judgement (#321); the
+  interval is one warning per row (`rows.done_recorded_not_closed`) in every evidence block (#202). Under
+  `dwork-trace: always` a commit adding a `Y done` entry carries or finds `<instance>/d-work/traces/<id>.md` for each
+  d-work its Done question named as `Done with #<id>` — the one, or each one of a batch (`rows.trace_problems`); an
+  accreted row's entry, noted `mandate #<id>`, is a mandate close, and the trace it needs is the mandate's.
+  `dwork state` and `dwork batch` refuse an entry lacking its trace before their first write
+  (`package.py trace_refusal`), a batch passing when an earlier `land <instance>/d-work/traces/<id>.md` line carries it
+  (#465). `traces.py` checks the trace store, through `trace.check_store` (#227).
+- **The plan gate** runs before a push over `origin/main..HEAD`, commit messages as body, and judges every range that
+  claims a d-work. A range whose every non-merge commit, read commit by commit with rename detection off, is ledger-only
+  (`prs.ledger_only`, #191) or events-only (`dyadlib.events_only`, #438) claims none, and the gate skips it; a range
+  mixing the two claims one and is gated. Since the skip rests on `main` admitting the same commits, the fence judges
+  each commit of such a branch as on `main`, and each merge commit against both parents. That the event store only grows
+  is the sysadmin craft's events guard's (`crafts/sysadmin/guards/events.py`, `sysadmin/events`). The incident log's
+  check stays a script run by the suite until #170.
 
 ## Intake (work proposed by another agent)
-A message from another agent opens no d-work: only an operator prompt or disposition does (Scope).
-What a message may carry is an intake — a candidate row — which the agent surfaces to the operator
-with exactly what it carries; the operator's `Y` opens the row (`backlog` or `open`), its `refs`
-naming the origin as `<system>-<id>`. Two shapes are admissible:
-- A **defect** is admissible as an observation with evidence: what was observed, where (path,
-  commit, run id), how it reproduces, the mechanism the sender verified — never a verdict, never a
-  required fix (a fix's shape may be suggested). The evidence goes into the row's plan file; its
-  provenance record's first entry is the operator's own `Y`, since the observation is the sender's
-  words, not the operator's (Rule-7 property 4).
-- An **enhancement** is admissible only with its operator behind it: the verbatim operator prompt
-  that asked for it, or provenance to one — a row id in the sender's ledger whose provenance record
-  holds that prompt, quoted in the message. The relayed prompt is the row's first provenance entry,
-  noted `relayed via <session>` (Rule-7 property 4). An agent's own idea, however well argued, is
-  not an intake: it is a proposal for the sender's own operator, and if that operator prompts for
-  it, the prompt travels with the message.
-Anything else is returned to the sender with the missing shape named, and reported to the operator
-as received, not as work. The operator may still open a row for it by prompting — the rule bounds
-what an agent may bring, never what the operator may ask for.
+Intake judges a message that proposes work no row holds yet. A message about a row already open — a report, a relay of
+the home's instruction, a notice — is information (Batch disposition, the inbox) and is judged by none of what follows.
+Within one dyad system, an operator prompt relayed verbatim by another unit is a **relayed prompt**: a prompt (Scope),
+entered with the note `relayed via <session>` (Rule-7 property 4). A message from another agent that carries no relayed
+prompt of this system's operator opens no d-work. What it may carry is an intake, a candidate row, which the agent
+surfaces to the operator exactly as carried; the operator's `Y` opens the row (`backlog` or `open`), its `refs` naming
+the origin `<system>-<id>`. An agent's message may bring two shapes:
+- a **defect**: an observation with evidence — what, where (path, commit, run id), how it reproduces, the mechanism the
+  sender verified — never a verdict or a required fix. The evidence goes into the plan file; the record's first entry is
+  the operator's own `Y`, since the observation is the sender's words (Rule-7 property 4);
+- an **enhancement**, carrying its operator's verbatim prompt, or a row id in the sender's ledger whose provenance
+  record holds it, quoted. The relayed prompt is the row's first provenance entry, noted `relayed via <session>`. An
+  agent's own idea is a proposal for its own operator, whose prompt travels with it.
+
+A message of neither shape is returned to the sender with the missing shape named, and reported to the operator as
+received, not as work. These shapes bound what an agent's message may bring; an operator prompt on the same matter opens
+a row as every prompt does (Scope).
 
 ## Incidents
-- An incident is any action taken or outcome reached that the plan did not name, or a plan
-  item not achieved as the plan said: an error, a recovery, a failed check, an unplanned edit.
-- Reported in the reply where it occurred or in the completion reply, whichever comes first.
-- Recorded: as an attack in the relevant falsification record if it falsifies a Rule or a
-  mechanism; otherwise as a row in `agent-corpus/audits/INCIDENTS.md` (date, d-work, what,
-  cause, consequence). Written in the d-work's own PR, or the next agent-zone PR for an
-  incident during clerical work.
-- If the plan changes as a result, a fresh plan-`Y` precedes any further mutation. (E9)
-- Under `concise-mode: on` (`preferences-corpus/PREFERENCES.md`) the reply where it occurred and
-  the completion reply are the same reply; the incident's record — the attack row or the
-  `INCIDENTS.md` row, and the plan file's own falsification section — is written during the turn,
-  before that single reply reports it, so an interrupted turn loses narration, never the record.
-- Periodically the incident log is worked whole rather than row by row: an exercise groups an
-  incident ledger into failure modes and closes each one by a fence at a named moment, by a
-  `backlog` row naming the fence still to build, or by a recorded impossibility on this kernel
-  naming the Rule that makes it so — that exercise is the incident-hardening play-book
-  (`dyad/playbooks/incident-hardening.md`), which takes the incident ledger it hardens as its
-  parameter and, on one that has not grown since the last exercise, does nothing beyond
-  re-testing the fences already closed.
+- An incident is an action or outcome the plan did not name, or a plan item not achieved as the plan said: an error, a
+  recovery, a failed check, an unplanned edit. It is reported in the reply where it occurred or the completion reply,
+  whichever is first, and recorded: as an attack in the relevant falsification record when it falsifies a Rule or
+  mechanism, and as a row of `agent-corpus/audits/INCIDENTS.md` (date, d-work, what, cause, consequence) when it
+  falsifies neither — in the d-work's own PR, or for clerical work in the next agent-zone PR. A changed plan takes a
+  fresh plan-`Y` before any further mutation (E9).
+- Under `concise-mode: on` the reply where it occurred is the completion reply, and the record is written during the
+  turn, before that reply, so an interrupted turn loses narration, never the record.
+- Periodically the log is worked whole by the incident-hardening play-book (`dyad/playbooks/incident-hardening.md`),
+  parameterized by the ledger it hardens: it groups incidents into failure modes and closes each by a fence at a named
+  moment, by a `backlog` row naming the fence still to build — carried under the plan-`Y` that runs the exercise and
+  asked no second time — or by a recorded impossibility naming the Rule that makes it so; on a log that has not grown
+  its one act is re-testing the fences already closed.
 
 ## Ratification events
-- Answering `Y` to a plan counter-prompt (mutation authorization).
-- Answering `Y` to a d-work completion counter-prompt (intent verification; under
-  `merge-disposition: with-done` it also ratifies the named merges). Rule-2 applies by reference.
+- Answering `Y` to a plan counter-prompt (mutation authorization, with every row the plan carries).
+- Answering `Y` to a d-work completion counter-prompt (intent verification, with the rows it names as accreted or
+  retired and, under `merge-disposition: with-done`, the named merges).
+- Answering `Y` to the retirement form. Rule-2 applies by reference to all three.
 
 ## Provenance
-Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
-disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
-by an ignored counter-prompt or the `always` preference; see
-`../falsification/rules/rules-2-3-batch-disposition.md`. Intake added 2026-09-16 (d-work #34):
-three intakes from peer sessions in two days — one carrying its operator's plan-`Y`, one a defect
-with evidence, one an agent's own proposal — showed Scope had no clause for a message that is not
-an operator prompt; see `../falsification/rules/rule-3-d-work.md`, amendment #34. `archived` state added 2026-09-16 (d-work #37): a terminal step after `done`, by operator disposition; see the same record, amendment #37. Completion clause gains the merge-sequence bullet 2026-09-18 (d-work #68): three merges run before their done-`Y` in one session; see the same record, amendment #68. Boundaries and Batch disposition reworded 2026-09-21 (d-work #106): release's one-per-question rule rests on Rule-11's own "publishes to the world" reason, not Rule-8 destructiveness, and gains its own narrower batch form (Rule-11); destructive stays unconditional; see the same record, amendment #106. Incidents gains the
-`concise-mode` bullet 2026-09-22 (d-work #113): under one reply per prompt the record precedes the
-reply; see the same record, amendment #113. Incidents gains the periodic-exercise bullet
-2026-09-23 (d-work #137): the grouping-and-mitigation exercise run by hand in #116, #128 and #135
-becomes a play-book Rule-3 reads, parameterized by the ledger it hardens and idempotent on one
-that has not grown; see the same record, amendment #137. Ledger and Mechanisms gain the plan
-gate's ledger-only exemption 2026-09-29 (d-work #191): the gate refused a clerical range, which
-pushed ledger commits around the hook and past every other guard; see the same record, amendment
-#191. Completion counter-prompt gains the d-work trace bullet 2026-10-05 (d-work #213): the
-per-d-work performance measurement done by hand three times (#204, #212) becomes a play-book whose
-trace the completion evidence cites, previewed in the completion reply and stored by the Done ledger
-commit (plan revision 2), as the preference `dwork-trace` reads (revision 3, #215); see the same
-record, amendment #213. Mechanisms gains the trace guard 2026-10-06 (d-work #227): the store's check
-ran only inside Rule-12's suite, which a guard-only push skips (#217); see the same record, amendment #227.
-Scope, Plan, Ledger, Completion counter-prompt and Batch disposition gain accretion under a mandate,
-and Answer grammar is added, 2026-10-14 (d-work #290): 117 of this instance's 280 rows had been
-accreted, and the ones actually worked cost the operator *more* than prompt-born rows — mean 2.65
-disposed entries against 2.15, with not one closing on a single disposition except #162–#165, the
-four handled as a mandate under #199; meanwhile `archived` had been used 0 times in 280 rows, 75
-rows sat in `backlog` at a median age of 21 days, and the transition table gave `backlog` one
-successor, so the one parent ever gated on `backlog` children could not be asked its Done question
-at all. The vocabulary is the countersign model's (then the Tended craft countersign, since #381
-`dyad/playbooks/countersign-model.md`) — mandate, implicit mode, escalate edge, amend — adopted rather
-than coined (Rule-13 property 1), and `amend` is the first of the four refactors that model's Part II
-§7 lists as owed by this system. See the same record, amendment #290. Completion counter-prompt, Ledger and Mechanisms gain the three-act Done order 2026-10-15 (d-work
-#202): recording the done-`Y` set the row `done`, `done` is terminal, and the plan gate refuses every
-commit citing a terminal row, so a ratified merge that still needed one push — a rebase onto a moved
-`main`, a conflict resolved, the second PR of a sequenced set — had no admissible sequence at all.
-Twelve rows of `agent-corpus/audits/INCIDENTS.md` between 2026-09-30 and 2026-10-15 are that one
-mechanism — eleven distinct instances, two of them recorded as one event's two rows, four recovery rows were paid for it, and 164 rows' `disposed` claims a merge that nothing
-reads — five of those claims are known false. The record of the `Y` is now the `disposed` entry and
-its provenance entry, which still precede the merge; the state follows it. See the same record,
-amendment #202. Ledger gains the d-work play-book 2026-10-15 (d-work #309): the lifecycle was spread over
-five Rules, two play-books and the CLI help, and the transition table named no inputs — a successor relation,
-not a machine; the input alphabet is now `dyadlib.INPUTS` with its invariants, and the play-book's tables are
-pinned to it and to the guards; see the same record, amendment #309. Scope and Answer grammar cite the countersign
-model by its core path, and Scope names the delegate edge and the mode lifecycle beside the escalate edge it already
-named, 2026-10-22 (d-work #381, child C3 of #369): the countersign craft is retired and its model carried by the core
-as a play-book; see the same record, amendment #381. Ledger's session-start bullet gains
-the organization sentence 2026-10-22 (d-work #379, #369 C7): under `m4` a session reads a board, not the
-whole ledger, and the Guide that says how is the organization craft's; see the same record, amendment #379. Ledger's
-session-start bullet names the cos and a secretary, and the Guide's path the cabinet craft, 2026-10-25 (d-work #419,
-child C2 of #417): the organization craft is renamed `cabinet` and its role terms cos and secretary; see the same
-record, amendment #419. Completion counter-prompt gains the relayed-Done sentence 2026-10-25
-(d-work #424): a seat's Done question reached the operator in the seat's own shape (#423), while what the operator
-reads from the cos is the matter at the operator's altitude; the form is the preference `relay-form`, the
-evidence block and the question stay the seat's; see the same record, amendment #424. Ledger
-and Mechanisms gain the events-only commit 2026-10-25 (d-work #438): a standing health check's
-events needed an `open` row with a `Y plan`, a PR and the full suite, the row behind them (#431) was
-`done` and refused by the plan gate, and the events held uncommitted blocked the seat's own ledger
-pushes; a standing row would be a d-work that never completes and authorizes no mutation, so
-monitoring is stated to be no d-work and its events clerical, as the ledger's are; see the same
-record, amendment #438. Mechanisms names `.github/workflows/dyad-package.yml` and its step in place of `dyad-d-work.yml` 2026-10-26 (d-work #477, C4
-of #473): the four guard wrappers became steps of one CI job, same guards, same triggers, still detecting; see the same
-record, amendment #477. Mechanisms gains the fence's trace clause 2026-10-26 (d-work
-#465): the completion clause said the Done record commit carries the trace, and nothing checked it; six Done records
-(#455–#460) carried none, because a refused `dwork trace` went unseen; see the same record, amendment #465. Completion's relayed-Done bullet cites the seat's evidence as
-Rule-2's Binding does, by its sha256 and its brief form, 2026-10-26 (d-work #476, child C3 of #473); see the same
-record, amendment #476. Scope gains the read-only answer
-2026-10-27 (d-work #492): a board shown on request had cost a row, a provenance record, a trace, two ledger pushes
-and a Done question for a pure read (#490), while a read's own proposal had been given a `Y` with no row to land on
-(#491); see the same record, amendment #492. Batch disposition records
-the pending queue in the board store, written ahead, 2026-11-02 (d-work #535): the orchestration in flight — the
-queue, every question owed, every dispatched act and its wait — lived only in the cos's chat, and a hop of the cos
-from one session to another would have lost it; see the same record, amendment #535. Batch disposition gains the
-inbox 2026-11-02 (d-work #536): reports and relays travelled as messages to session ids, lost on a hop and
-unreceivable by a terminal holder; see the same record, amendment #536. Plan gains the execution detail
-2026-11-02 (d-work #555): a change of order with the content unchanged had been read as a departure and cost the
-operator a question (#553 revision 3, #532 revision 6), while the operator holds that execution order not stated as a
-requirement is covered by the original mandate; see the same record, amendment #555. Intent, Ledger, Answer grammar,
-Completion counter-prompt and Batch disposition move to the dyad-native terms 2026-11-02 (d-work #553): a d-work is
-a body of work, `unit` now naming a position; a seat is a unit, the leader the home and an unattended seat a solo;
-done-`Y`, operator and agent are lowercase in prose; and Answer grammar reads an answer by meaning, because the
-operator's case and spelling reach no machine directly; history keeps the old words and
-`dyad/vocabulary/crosswalk.md` maps them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Completion counter-prompt lets the automaton execute the merge and the close
-2026-11-02 (d-work #556): after each done-`Y` the home spent six to ten turns dispatching merges, reading reports,
-verifying ancestry and closing, every one of them clerical execution of a recorded `Y`; see
-`../falsification/rules/rule-3-d-work.md`, amendment #556. Ledger's session-start bullet cites the organization craft's roles
-2026-11-02 (d-work #560): `secretary` and `cos-board` were defined in this vocabulary though only a multi-unit
-organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendment #560. Ledger names the scheduled sweep as monitoring, and Mechanisms the fence's corroboration step in place of the CI job's,
-2026-11-03 (d-work #564); see
-`../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
+Operator rule, 2026-09-12. Refactored by d-work #585 (2026-11-04) around what opens a row, what a `Y` binds and the two
+questions, absorbing #574 and #584, and re-scoped by its plan revision 2 so that every claim survives falsification and
+holds within its own scope. Earlier text, its 29 amendments and the claim table:
+`../falsification/rules/rule-3-d-work.md`.
 
 Set: System Requirements.

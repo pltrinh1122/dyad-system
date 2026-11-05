@@ -128,6 +128,7 @@ def cmd_list(repo: Path) -> int:
         print(f"{d.name:<16} {g.version(d) or '?':<10} {origin}")
     return 0
 
+CLI_FLAGS = dyadlib.cli_forms("craft")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads
 SCAFFOLD_VERSION = "0.1.0"
 _NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 
@@ -202,12 +203,12 @@ def stage(src: Path, craft: str | None, tmp: Path) -> Path:
     return tmp
 
 def cmd_install(repo: Path, a) -> int:
-    if not a:
+    got = dyadlib.cli_parse(CLI_FLAGS["install"], list(a))   # the gate's reading: a value is never a flag (#592)
+    if not got.pos:
         print(__doc__, file=sys.stderr); return 2
     g = guard()
-    opt = lambda k: a[a.index(k) + 1] if k in a and a.index(k) + 1 < len(a) else None
-    force, dwork, craft, source = "--force" in a, opt("--dwork"), opt("--craft"), opt("--source")
-    src = Path(a[0])
+    force, dwork, craft, source = "--force" in got.bare, got.one("--dwork"), got.one("--craft"), got.one("--source")
+    src = Path(got.pos[0])
     tmp = Path(tempfile.mkdtemp(prefix="dyad-craft-"))
     try:
         try:
@@ -298,9 +299,10 @@ def patch_text(repo: Path, sroot: Path, diffs) -> str:
 
 def cmd_diff(repo: Path, a) -> int:
     """`dyad craft diff <craft> --against <src> [--patch]` (module docstring; d-work #353). Reads only."""
-    if not a or "--against" not in a or a.index("--against") + 1 >= len(a):
+    got = dyadlib.cli_parse(CLI_FLAGS["diff"], list(a))   # the gate's reading: a value is never a flag (#592)
+    if not got.pos or not got.one("--against"):
         print("usage: dyad craft diff <craft> --against <archive|tree> [--patch]", file=sys.stderr); return 2
-    name, src, patch = a[0], Path(a[a.index("--against") + 1]), "--patch" in a
+    name, src, patch = got.pos[0], Path(got.one("--against")), "--patch" in got.bare
     root = craft_root(name)
     if not (repo / root).is_dir():
         print(f"refused: no {root}/ here (installed crafts: `dyad craft list`)", file=sys.stderr); return 2
@@ -325,7 +327,7 @@ def cmd_diff(repo: Path, a) -> int:
 def main(a=None) -> int:
     a = sys.argv[1:] if a is None else list(a)
     repo = dyadlib.repo_root()
-    if not a or a[0] not in ("new", "list", "check", "export", "install", "diff"):
+    if not a or a[0] not in CLI_FLAGS:
         print(__doc__, file=sys.stderr); return 2
     return {"new": lambda: cmd_new(repo, a[1:]), "list": lambda: cmd_list(repo), "check": lambda: cmd_check(repo, a[1:]), "export": lambda: cmd_export(repo, a[1:]),
             "install": lambda: cmd_install(repo, a[1:]), "diff": lambda: cmd_diff(repo, a[1:])}[a[0]]()

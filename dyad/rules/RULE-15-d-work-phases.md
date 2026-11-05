@@ -28,7 +28,7 @@ that can start in any later session.
    executes as written; the done-`Y` as Rule-3.
 - A d-work interrupted mid-execution resumes from the plan file and the branch; the
   incident is recorded (Rule-3).
-- An **accreted row** (Rule-3, Scope) has no planning phase of its own: its plan *is* the
+- An **accreted row** (Rule-3, Scope; what carries it: Rule-3, What a `Y` binds) has no planning phase of its own: its plan *is* the
   mandate's plan file, which the mandate's plan-`Y` already bound, so it carries no base commit
   of its own and no drift check — the base commit that was read is the mandate's, and re-planning
   fires on that one, for the parent and every row accreted under it together. Nothing fails today
@@ -51,6 +51,7 @@ stated requirement of order or split 2026-11-02 (d-work #555): without it an ord
 told from one it needed; see the same record, amendment #555. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Phase 1 gains the definition
 of done 2026-11-04 (d-work #574): a row's scope follows what the operator can evaluate, and the plan is where that is
-stated and accepted; see the same record, amendment #574.
+stated and accepted; see the same record, amendment #574. The accreted-row bullet points to Rule-3's What a `Y` binds 2026-11-04 (d-work #585, the
+Rule-3 refactor); see `../falsification/rules/rule-3-d-work.md`, amendment #585.
 
 Set: System Requirements.

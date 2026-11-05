@@ -71,6 +71,8 @@ CONT = "  "                                          # a continuation line's pre
 WAITING = re.compile(r"operator|(?:unit|seat) \S+|external \S.*")   # `seat <name>` is `unit <name>`'s alias (#553)
 UNIT_ALIAS = "seat "                                # read until the release after next; `board set` writes `unit `
 KEY = re.compile(r"[a-z][a-z-]*")
+CLI_FLAGS = dyadlib.cli_forms("board")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+DROP, = CLI_FLAGS["set"].bare
 USAGE = ("usage: dyad board | dyad board set <id>|_cos key=value… [--drop] | dyad board resume | dyad board phases | "
          "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>]")
 
@@ -321,8 +323,8 @@ def parse_set(a: list[str]) -> tuple[str, dict[str, str], bool]:
     name, rest = a[0], a[1:]
     if name != COS and not name.isdigit():
         raise Refused(f"{name!r} is not a row id or {COS}")
-    drop = "--drop" in rest
-    rest = [x for x in rest if x != "--drop"]
+    drop = DROP in rest
+    rest = [x for x in rest if x != DROP]
     if drop and rest:
         raise Refused("--drop takes no key=value")
     if not drop and not rest:

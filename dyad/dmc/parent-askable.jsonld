@@ -23,7 +23,7 @@
       "@type": "DefinedTerm",
       "termCode": "askable",
       "name": "asked only when",
-      "dyad:when": "every child is done, blocked, backlog, or carrying its own recorded Done-Y and waiting on its merge",
+      "dyad:when": "every child is terminal (done or archived), blocked or backlog, or carries its own recorded done-Y and waits on its merge",
       "dyad:then": "the parent's question may be asked; its evidence names each child's state"
     },
     {

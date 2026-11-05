@@ -6,7 +6,7 @@ transition is legal now, what input it takes and from whom, and which record the
 decision Rule-3, Rule-7, Rule-15 and Rule-16 each own one part of, and that the agent made by inference
 against the CLI help at every row write (Rule-13 property 1: the recurrence proposes code — the machine's
 input alphabet is `dyadlib.INPUTS`, and this play-book's two tables are pinned to it and to the guards by
-`dyad/tests/test_playbooks.py`). Read by Rule-3's Ledger clause. Steps: `dyad/runbooks/d-work.md` —
+`dyad/tests/test_playbooks.py`). Read by Rule-3's Boundaries. Steps: `dyad/runbooks/d-work.md` —
 `open`, `plan`, `authorize`, `execute`, `verify-prs`, `evidence`, `record`, `done-record`, `complete`,
 `close-landed`, `defer`, `resume`, `sync-mirror` (the four harvested from recurring hand-written scripts, #556,
 implemented by `dyad steps`) — run through
@@ -129,9 +129,11 @@ report + proposal (done) → countersignature — realized as, in order:
 
 Branches. An **accreted row** (implicit mode) skips 2 and 3: born `open` carrying the mandate's plan-`Y`, no
 plan file of its own (Rule-15), its Done riding the mandate's done-`Y`, which names it. A **`backlog`** row is
-born by a disposition and enters at 1 on a later prompt, or leaves by the retirement form. A **`blocked`**
+born by a disposition and enters at 1 on a later prompt, or leaves by the retirement form or the Done of a delivered row
+that names it under `retires`. A **`blocked`**
 row waits on the row its `refs` names and re-enters at 4 when that row is `done`. **`archived`** is the exit
-from `done` and `backlog`, by the retirement form only; a retired or done row is never reopened — a new row
+from `done` and `backlog`, by the retirement form or a done-`Y` naming the row under `retires` (Rule-3 Completion
+counter-prompt); a retired or done row is never reopened — a new row
 refs it.
 
 Layers. The lifecycle is executed in three layers, one per unit kind (Rule-16 Presence; #556 revision 2), and a
@@ -157,12 +159,18 @@ every other message — a hold, an acknowledgement, a still-running note — **s
 to the inbox, the automaton or the orchestrating solo. A mechanism that sends the operator messages is kept only if it
 passes the same test.
 
+Tunables (#590). Every threshold this play-book names is an operator preference whose default its decision criterion
+holds (`dyad/dmc/schema.md`, `dyad:tunables`; the table, `agent-corpus/audits/2026-11-04-tunables.md`): the operator
+tunes it by a preferences-zone PR, never by a code change, and the code reads it through `dyadlib.tunable`. The
+families are hygiene (`hygiene-stale-days`, `hygiene-similar`, `hygiene-top`), work in flight (`inflight-*`), the
+sweep's findings over time (`sweep-*`) and promotion (`promotion-ceiling`, `promotion-adjacency-min`).
+
 Backlog hygiene (#565). The scheduled sweep (Rule-14 property 3; #564) reads the `backlog` rows on `main` after its `check`, whatever `check`
 returned, and finds only what is structural: a row untouched — no commit to its row, plan or provenance record —
-for `HYGIENE_STALE_DAYS`; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
+for `hygiene-stale-days` days; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
 terminal row; a row a commit on any `origin` branch claims as `d-work #N` while it is still `backlog`. Beside those
 it ranks pairs by similarity — TF-IDF cosine over the rows, siblings of one parent skipped, tokens common to more
-than a fifth of the rows dropped — at or above `HYGIENE_SIMILAR`. A ranked pair is a candidate for the review, never
+than a fifth of the rows dropped — at or above `hygiene-similar`, the top `hygiene-top` pairs. A ranked pair is a candidate for the review, never
 a finding. Hygiene is no guard: the runner never discovers it, and neither CI, the pre-push gate, `check --evidence`
 nor `check --corroborate` runs it. The sweep posts what is new since its last run, and nothing else, in its one
 `notice` to the home's inbox.
@@ -187,7 +195,7 @@ a question reaches the operator):
 Work in flight (#569). The same sweep reads the work in flight from records alone — inbox files and their `.read`
 markers, commits and branch tips, PR bodies and heads, the board, presence and the stored plans — and posts what is
 new since its last run, one notice per kind, to the home's inbox. Each threshold is a minimum age, the sweep running
-twice a day. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
+twice a day; the ages below are the defaults of the `inflight-*` preference keys. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
 - **A relay or notice left unread** (4 h): the home rings the unit's doorbell, the one act that wakes a session; a
   reminder in the same unread inbox would go unread too, so the sweep notifies the home alone.
 - **A planned row gone quiet** (3 days, only while its board entry waits on a unit), **an open row with no plan file**
@@ -210,16 +218,24 @@ inference. Clustering the backlog by `refs` waits for typed refs (#569 A12).
 
 Definition of done (#574). A row is partitioned by what the operator will judge it by, never by the shape of the work:
 one **definition of done** (DoD) the operator can evaluate is one row, its plan-`Y` and done-`Y` covering the largest
-scope that DoD lets the operator judge (#570 revision 4). Before the plan, the agent takes the operator's DoD, when the
-prompt gives one, from the provenance record and quotes it with its entry; otherwise it proposes one, marked
-*proposed*, drawn from the prompt, the row's refs and what the operator has judged before. The plan opens with it
+scope that DoD lets the operator judge (#570 revision 4). Before proposing one, the agent checks the row is still owed: a
+trigger already come, nothing left to show, or a premise overtaken is a retirement candidate, not a DoD
+(`dyad/dmc/retirement-candidate.jsonld`). It takes the operator's DoD, when the operator gave one, from the provenance
+record: the row's own record first, then the record of the row its first `disposed` entry or its refs name, since a row
+opened by a bare `Y` holds no words of its own. It quotes the words only where they may be published — a tracked file
+is public to whoever reads the repository — and otherwise cites the entry without quoting it. With no words found, it
+proposes one, marked *proposed*, drawn from the prompt, the row's refs (free text, read as such) and what the operator
+has judged before. The plan opens with it
 (Rule-15 phase 1); the plan-`Y` accepts it and `N` with text amends it (Rule-3 Answer grammar), so a DoD costs no
 question of its own. Work one DoD covers is one row, its parts carried as accreted children verified through that
-DoD's report; work whose parts the operator would judge separately is split into rows, one per DoD; an unfamiliar
+DoD's report; existing `backlog` rows one new DoD covers cannot become its children (an accreted row is born `open`,
+Rule-3 Scope), so the new row is opened for the DoD and its Done question names them under `retires`, the done-`Y`
+archiving them (Rule-3 Completion counter-prompt); work whose parts the operator would judge separately is split into rows, one per DoD; an unfamiliar
 domain draws finer DoDs and so smaller rows, and nothing else models the operator's familiarity. For many rows at
 once — a backlog being re-partitioned — the home proposes every DoD in one document, the operator amends only those
-it would define differently, and the counts are kept: rows in, DoDs out, absorbed, split, and DoDs amended, the
-measure of how well the proposals fit. The completion evidence opens with the DoD, quoted, and the report that answers
+it would define differently, and the counts are kept: rows in, DoDs out, absorbed into an existing row, merged into a new row, split,
+already delivered or no longer owed (each retired by the Done that covers it, or by the retirement form where no Done
+does), and DoDs amended, the measure of how well the proposals fit. The completion evidence opens with the DoD, quoted, and the report that answers
 it (Rule-3 Completion counter-prompt); the rest of the evidence follows. A play-book the plan runs carries the rows its
 own steps prescribe — the incident-hardening play-book's `backlog` row naming a fence — under that plan-`Y`, never
 asked again (Rule-3 Plan, the mandate scope; Ledger, the carried `backlog` row); each is listed in the completion
@@ -266,7 +282,7 @@ Within a class, a candidate another depends on — whose fix the other's assumes
 name as a prerequisite — comes first; within P1, impact comes next: a defect that blocks or corrupts work, before one
 that misleads a reading, before a cosmetic one; dependency and impact are inferred and carry their reason (#568).
 Ties then go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
-smaller of 2 and the number of idle units, each candidate with a different owner: a promoted row costs the operator
+smaller of `promotion-ceiling` (default 2) and the number of idle units, each candidate with a different owner: a promoted row costs the operator
 three answers. The home judges every class; the sweep supplies only P5. The question is one line naming each candidate,
 its class, its reason and its owner — `Y/N: open #a (P1, <reason>, <owner>), #b (P4, <reason>, <owner>)?` — and a `Y`
 opens each named row (`backlog → open`, the operator's words its `prompt` entry, Rule-7) and, for each named promise
