@@ -200,6 +200,7 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         owners = board().owners(entry)
         if (refusal := board().retired_waiting(entry.get("waiting-on", ""))):   # #604: told to home, never rewritten
             why = retired_body(r.id, refusal)
+            to = home(repo, base, row_cabinet(repo, base, r.id))   # the row's cabinet's home (#594)
             if to and not posted(repo, base, to, r.id, why):
                 acts.append(("tell", r.id, why))
         if owners and not board_after_plan_y(repo, base, r.id) and (pairs := planned_flip(r.id, entry, owners)):
