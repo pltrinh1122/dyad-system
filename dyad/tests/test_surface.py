@@ -76,6 +76,17 @@ def stale_keys(listed: dict[str, str], known: set[str], code_keys: set[str]) -> 
     return {k for k, st in listed.items() if not st.startswith("moving") and k not in known | code_keys}
 
 
+def s7_workflow_problems(rows, on_disk: set[str]) -> tuple[list[str], list[str]]:
+    """(workflows on disk that no S7 row lists, listed workflows absent from disk whose row is not `moving`): S7's pin
+    of `.github/workflows/dyad-*.yml`, which admits a row ahead of its file only while it moves (#609 revision 4)."""
+    listed = {}
+    for r in rows:
+        for t in re.findall(r"`(\.github/workflows/[^`]+)`", r[0]):
+            listed[t.rsplit("/", 1)[-1]] = r[-1]
+    return (sorted(on_disk - set(listed)),
+            sorted(n for n in set(listed) - on_disk if not listed[n].startswith("moving")))
+
+
 class SurfaceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -199,11 +210,25 @@ class SurfaceTests(unittest.TestCase):
         self.assertEqual({ticks(r[0])[0] for r in self.s["S6"]}, code)
 
     def test_s7_hooks_and_workflows(self):
+        """Every `dyad-*.yml` workflow on disk is listed in S7; a listed workflow may be absent from disk only while its
+        row's status starts `moving`, the rule S3's test applies to a key the code does not read yet (#609 revision 4:
+        a new workflow's row and its file sit in two zones, so neither could land first). Release mode refuses every
+        `moving` row (test_release_mode_has_no_moving_or_alias_mark), so at a cut the pin holds both ways."""
         text = " ".join(r[0] for r in self.s["S7"])
         for hook in ("pre-commit", "pre-push"):
             self.assertTrue((PKG / "hooks" / hook).is_file()); self.assertIn(f"dyad/hooks/{hook}", text)
-        wf = {p.name for p in (ROOT / ".github" / "workflows").glob("dyad-*.yml")}
-        self.assertEqual({t.rsplit("/", 1)[-1] for t in re.findall(r"`(\.github/workflows/[^`]+)`", text)}, wf)
+        on_disk = {p.name for p in (ROOT / ".github" / "workflows").glob("dyad-*.yml")}
+        self.assertEqual(s7_workflow_problems(self.s["S7"], on_disk), ([], []),
+                         "(a dyad-*.yml on disk with no S7 row, an S7 workflow row with no file and no `moving` mark)")
+
+    def test_s7_admits_a_moving_workflow_not_yet_on_disk(self):
+        """#609 revision 4: the rule above on tables of its own: a `moving` row whose file is absent passes, a `frozen`
+        one fails, and a file with no row fails."""
+        row = lambda name, status: ("`.github/workflows/" + name + "`", status)
+        a = {"dyad-a.yml"}
+        self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen"), row("dyad-b.yml", "moving (#609)")], a), ([], []))
+        self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen"), row("dyad-b.yml", "frozen")], a), ([], ["dyad-b.yml"]))
+        self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen")], a | {"dyad-c.yml"}), (["dyad-c.yml"], []))
 
     def test_no_alias_mark_is_left(self):
         """#604 (#573 DoD): every #554 alias is removed, in every run and not only under `DYAD_SURFACE_RELEASE=1`;
