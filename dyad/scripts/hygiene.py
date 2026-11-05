@@ -32,9 +32,10 @@ worded from fixed record times, never a computed age, so a finding told once is 
   W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
                           `inflight-question-hours` (A9)
   W10' report after board an owner's report on a row, to home, newer than the row's board `since` (A10)
-  W11 phase age           a phased board entry (#587) whose `since` is older than its phase's threshold in
-                          INFLIGHT_W11_HOURS (an asked phase 24 h, every other 3 days): plan #587 F5's one rule,
-                          "phase older than N", worded from the entry's `since` alone
+  W11 phase age           a phased board entry (#587) whose `since` is older than its phase's threshold:
+                          `done-ready` the tunable `inflight-done-ready-hours` (#587 S9: a drafted Done held 13 h), every
+                          other phase INFLIGHT_W11_HOURS (an asked phase 24 h, every other 3 days): plan #587 F5's one
+                          rule, "phase older than N", worded from the entry's `since` alone
 
 A ring owed (#587 X8: a relay posted by home to a unit, unread) is W1: every unread `relay` is one, whoever sent it,
 and a `report` or `notice` home posts never rings (`land.ring_list` rings every kind but `notice`, and the machine's
@@ -76,6 +77,7 @@ TUNABLES = {
     "W6": "inflight-pr-still-days",        # W6: an open PR's head unchanged this long
     "W8": "inflight-promise-days",         # W8: a promise listed this long
     "W9": "inflight-question-hours",       # W9: a recorded question to the operator this old
+    "W11": "inflight-done-ready-hours",    # W11: a phased entry in done-ready this long (#587 S9)
 }
 HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of rows is boilerplate, dropped (an engineering constant)
 PARENT = re.compile(r"\bparent #(\d+)")
@@ -84,13 +86,16 @@ ROW_REF = re.compile(r"\brow #(\d+)")          # the row an `inflight` line is a
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
     "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
-    "done-ready": 72, "done-asked": 24, "landing": 72, "held": 72}
+    "done-asked": 24, "landing": 72, "held": 72}
+INFLIGHT_W11_TUNED = {"done-ready": "W11"}   # #587 S9: the phases whose threshold is a tunable (a TUNABLES key), never a constant
 INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W7c", "W8", "W9", "W10'", "W11")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("max-df-in-range", lambda: 0 < HYGIENE_MAX_DF < 1),
-    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 13),
-    ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) == set(dyadlib.ORCH_PHASES)
+    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 10 and len(set(INFLIGHT_KINDS)) == 13),
+    ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) | set(INFLIGHT_W11_TUNED) == set(dyadlib.ORCH_PHASES)
+                                       and not set(INFLIGHT_W11_HOURS) & set(INFLIGHT_W11_TUNED)
+                                       and set(INFLIGHT_W11_TUNED.values()) <= set(TUNABLES)
                                        and all(h > 0 for h in INFLIGHT_W11_HOURS.values())
                                        and all(INFLIGHT_W11_HOURS[p] == 24 for p in dyadlib.ORCH_ASKED)),
 ]
@@ -286,7 +291,7 @@ def inflight_cabinets(repo: Path, base: str, now: float, pulls: list[dict] | Non
     special: dict[str, str] = {}                         # a line tagged from its file, not its text: W7a, every W8
     def cab(row) -> str:
         return filed.get(int(row), bd.SOLO) if str(row).isdigit() else bd.SOLO
-    w = {k: dyadlib.tunable(TUNABLES[k], prefs or repo) for k in ("W1", "W2", "W3", "W6", "W8", "W9")}   # read now, never at import
+    w = {k: dyadlib.tunable(TUNABLES[k], prefs or repo) for k in ("W1", "W2", "W3", "W6", "W8", "W9", "W11")}   # read now, never at import
     out = []
     # W1: a relay no one has read
     for m in msgs:
@@ -417,22 +422,24 @@ def inflight_cabinets(repo: Path, base: str, now: float, pulls: list[dict] | Non
             m = max(late, key=lambda m: m.get("sent", ""))
             out.append(f"inflight W10' report after board: row #{i}'s board since {f.get('since')}, but {m['from']} "
                        f"reported on it at {m.get('sent')}")
-    out += phase_age(entries, nowdt)
+    out += phase_age(entries, nowdt, {p: w[k] for p, k in INFLIGHT_W11_TUNED.items()})
     return [(special[line] if line in special else cab(m[1]) if (m := ROW_REF.search(line)) else bd.SOLO, line)
             for line in out]
 
 
-def phase_age(entries: dict[int, dict[str, str]], nowdt) -> list[str]:
+def phase_age(entries: dict[int, dict[str, str]], nowdt, tuned: dict[str, int | float]) -> list[str]:
     """W11 (#587 F5): `inflight W11 phase age: row #N in <phase> since <since>` for each phased entry whose `since` is
-    older than its phase's INFLIGHT_W11_HOURS; worded from the record alone, never a computed age, so the line is new
+    older than its phase's threshold, `tuned` (the INFLIGHT_W11_TUNED phases' hours, read by the caller at run time)
+    over INFLIGHT_W11_HOURS; worded from the record alone, never a computed age, so the line is new
     again only when the entry moves. An unphased entry, an unknown phase or an unreadable `since` says nothing (the
     board guard names a malformed one)."""
     bd = dyadlib.load_guard("agent", "board")
+    hours = {**INFLIGHT_W11_HOURS, **tuned}
     out = []
     for i, f in sorted(entries.items()):
         p = bd.phase_name(f)
         t = _when(f.get("since", ""))
-        if p in INFLIGHT_W11_HOURS and t and (nowdt - t).total_seconds() > INFLIGHT_W11_HOURS[p] * 3600:
+        if p in hours and t and (nowdt - t).total_seconds() > hours[p] * 3600:
             out.append(f"inflight W11 phase age: row #{i} in {p} since {f['since']}")
     return out
 

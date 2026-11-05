@@ -6,7 +6,8 @@ What it builds, all in scratch directories:
   cloud, `false` for a terminal) and `DYAD_SIM_OS` (a label: `linux`, `mac`) — and the holder by
   `CLAUDE_CODE_SESSION_ID`, so `board.py` reads them as it reads a real harness's;
 - the inbox (#536): a relay or a report is a real `dyad inbox post`, addressed by seat name and landed on the bare
-  origin, and read by `dyad inbox read`, which a terminal holder runs like any other. `send_message`, which a terminal
+  origin, and read by `dyad inbox read` (printed) and `dyad inbox read <message>...` (marked, #587 S10), which a
+  terminal holder runs like any other. `send_message`, which a terminal
   holder could not receive and which followed a session id rather than a seat, carries nothing here: it would only be
   a doorbell;
 - seats: a seat, cloud or terminal, reads its inbox, runs each relayed act once per message and reports to the seat
@@ -117,9 +118,11 @@ class Session:
             raise WriteRefused(err.getvalue().strip())
 
     def read_inbox(self) -> list[dict[str, str]]:
-        """`dyad inbox read`: this seat's unread messages, marked read."""
+        """`dyad inbox read`, then `dyad inbox read <message>...` naming what it printed: this seat's unread messages,
+        marked read (#587 S10: printing marks nothing, so the seat names what it read)."""
         with self.acting(), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            return ib.read(self.dir)
+            got = ib.read(self.dir)
+            return ib.read(self.dir, [m["_name"] for m in got]) if got else got
 
 
 class WriteRefused(Exception):

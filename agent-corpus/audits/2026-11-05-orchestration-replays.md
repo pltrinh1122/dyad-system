@@ -22,8 +22,8 @@ head, replayed. Each must be caught by the automaton with no unit's turn." Home 
 | S3 | **prevented**: routing reads owners, and the guard warns on an owner missing from the `_cos` seat table |
 | S5 | **prevented** by a transition: one seat is named as acting next. A seat leaving its inbox unread is the sweep's W1, not a transition |
 | S6 | **ring list**. The doorbell stays home's act (X8). |
-| S9 | **partly**. The state is visible, but no timer fires at 13 h. |
-| S10 | **not caught** |
+| S9 | **prevented**: the state is visible, and W11 sweeps a `done-ready` entry after the tunable `inflight-done-ready-hours` (default 4 h) |
+| S10 | **prevented** by a transition: reading is the event `read`, a self-loop with no effect, and printing marks nothing |
 | S11 | **prevented** on both paths: the unphased flip and, after these replays found it, the phased catch-up (#664) |
 | R2 #573 combined red | **caught by the automaton**, no unit's turn |
 | R2 #572 stale #650 head | **caught by the automaton**, no unit's turn |
@@ -50,28 +50,37 @@ none | plan-landed | plan-ready | unit | -
 none | pr-up | verifying | unit | pr, head
 planning | hold | held | home | note, on
 planning | plan-landed | plan-ready | unit | -
+planning | read | planning | home or unit | -
 plan-ready | asked | plan-asked | home | -
 plan-ready | hold | held | home | note, on
+plan-ready | read | plan-ready | home or unit | -
 plan-asked | answered-N | planning | home | said-file
 plan-asked | answered-Y | building | home | said-file
 plan-asked | hold | held | home | note, on
+plan-asked | read | plan-asked | home or unit | -
 building | evidence-verified | done-ready | home | evidence
 building | hold | held | home | note, on
 building | pr-up | verifying | unit | pr, head
+building | read | building | home or unit | -
 verifying | evidence-failed | building | home or automaton | note
 verifying | evidence-verified | done-ready | home or automaton | evidence
 verifying | head-moved | verifying | automaton | pr, head
 verifying | hold | held | home | note, on
 verifying | pr-up | verifying | unit | pr, head
+verifying | read | verifying | home or unit | -
 done-ready | asked | done-asked | home | -
 done-ready | head-moved | verifying | automaton | pr, head
 done-ready | hold | held | home | note, on
+done-ready | read | done-ready | home or unit | -
 done-asked | answered-N | building | home | said-file
 done-asked | answered-Y | landing or (closed) | home | said-file
 done-asked | head-moved | verifying | automaton | pr, head
 done-asked | hold | held | home | note, on
+done-asked | read | done-asked | home or unit | -
 done-asked | withdrawn | done-ready | automaton | note
 landing | closed | (closed) | automaton | -
+landing | read | landing | home or unit | -
+held | read | held | home or unit | -
 held | release | @from | home | -
 ```
 
@@ -215,39 +224,52 @@ ring: orchestrate-d688fecf (…)
 relay. `owner` is now counsel-0032b4c0; orchestrate-d688fecf.
 
 ### S9. #569's Done was held 13 h after its draft
-**Mechanism.** No state said "done-ready, not asked".
+**Mechanism.** No state said "done-ready, not asked", and no timer read one.
 **On main.** The draft is from 02:11Z, the board waited on home, and the question was asked at 15:26Z.
 ```
 $ dyad board advance 569 evidence-verified --expect verifying evidence=8d0ba6f9…
 $ dyad board
 #569 planned  phase done-ready waiting-on unit program-59cec502 for 0h | … | next: ask the Done question: dyad board advance 569 asked --expect done-ready | row 569
 queue (derived, #572): plan-ready 0, done-ready 1 (#569)
-(the sweep's inflight, 13 h later)
+(the sweep's inflight, 3 h later)
                                                            # nothing
-(the sweep's inflight, 73 h later)
-inflight W11 phase age: row #569 in done-ready since 2026-11-05T06:55Z
+(the sweep's inflight, 13 h later)
+inflight W11 phase age: row #569 in done-ready since 2026-11-05T09:06Z
 ```
-**Partly.**
-- The state now exists. The board, `resume` and the derived queue count it, and the `next` act says what is owed.
-- Nothing fires at 13 h. W11's threshold for `done-ready` is 72 h; only the asked phases have 24 h. W2 is 3 days.
-- The hold that happened is now visible, but it is not swept until day 3. Lowering `INFLIGHT_W11_HOURS["done-ready"]`
-  is a tunable for the Operator.
+**Prevented.**
+- The state exists. The board, `resume` and the derived queue count it, and the `next` act says what is owed.
+- W11's threshold for `done-ready` is the tunable `inflight-done-ready-hours` (`dyad/dmc/work-in-flight.jsonld`,
+  default 4 h; the template seeds it, S3 lists it frozen). The sweep reads it when it runs, so the 13 h hold is swept at
+  the first sweep past 4 h, and a 3 h one says nothing. Every other phase keeps W11's fixed age (an asked phase 24 h,
+  every other 3 days).
+- The sweep runs twice a day, so the line comes at most 12 h after the threshold. The threshold is the Operator's.
 
 ### S10. Reports were marked read unseen (#568, #571)
-**Mechanism.** Reading was a side effect, not an event.
+**Mechanism.** Reading was a side effect of printing, not an event.
 ```
 $ DYAD_SESSION=counsel-0032b4c0 dyad board advance 568 pr-up --expect building pr=638 head=2222…
+posted 20261105T090651Z-counsel-0032b4c0-1.md to program-59cec502
 $ DYAD_SESSION=program-59cec502 dyad inbox read
-* …-counsel-0032b4c0-1  row #568 report from counsel-0032b4c0 …
+* 20261105T090651Z-counsel-0032b4c0-1  row #568 report from counsel-0032b4c0 at 2026-11-05T09:06:51Z
+    row #568 verifying: PR #638 at 2222… is up from counsel-0032b4c0; verify PR #638 at 2222…
+inbox program-59cec502: 1 unread, none marked — mark what you have read: `dyad inbox read <message>...`
+$ DYAD_SESSION=program-59cec502 dyad inbox read 20261105T090651Z-counsel-0032b4c0-1
+marked read: 20261105T090651Z-counsel-0032b4c0-1
+board #568: read at verifying, nothing changed (#587 S10)
 inbox program-59cec502: 1 marked read
+$ DYAD_SESSION=program-59cec502 dyad inbox read 20261105T090651Z-counsel-0032b4c0-1
+refused: 20261105T090651Z-counsel-0032b4c0-1 is already read (its marker says 2026-11-05T09:06:51Z); nothing marked
 ```
-After the read, board/568.md is unchanged: `verifying`, waiting on unit program-59cec502.
+After the print, `main` is unmoved. After the read, one commit holds the message's `.read` marker (and the reader's
+presence), and board/568.md is byte-identical: `verifying`, waiting on unit program-59cec502.
 
-**Not caught.**
-- Plan F7's survivor ("S10 becomes an event `read` with no side effect") was not built. `ORCH_EVENTS` has no `read`,
-  and `inbox read` still marks a message read when it prints it.
-- What #587 does change is the consequence. A phase moves only by an event, so a report marked read unseen no longer
-  loses the state. The entry still names the reader, and the queue and W11 still see it.
+**Prevented** by a transition, plan F7's survivor.
+- `read` is an event of `ORCH_EVENTS`, a self-loop on every phase with no effect (`dyadlib.ORCH_NO_EFFECT`): it changes
+  neither the phase, the derived fields nor `since`, and an import-time invariant pins that shape.
+- `dyad inbox read` with no names prints and writes nothing. `dyad inbox read <message>…` marks exactly the named
+  messages, in one land, and fires `read` on each named row's phased entry, writing no board file. It refuses an
+  unknown name, another seat's message and an already-read one before any write. `--all` is removed.
+- `board advance` refuses `read`: its record is the marker, which only the reader writes.
 
 ### S11. The automaton's flip erased plan revision 9's question (05:29:17Z, c31d76d)
 **Mechanism.** K1's `planned_flip` read row 570's older `Y plan` as fresh and overwrote home's later board write.
@@ -329,7 +351,9 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
     `test_a_moved_head_withdraws_the_batch_question_from_its_other_rows`;
   - S11: `test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away` and
     `test_s11_phased_a_question_asked_after_the_plan_y_is_not_caught_up`.
-- `test_hygiene.py`: `test_w11_phase_age`.
+- `test_hygiene.py`: `test_w11_phase_age` and `test_w11_done_ready_is_the_tunable` (S9).
+- `test_inbox.py`: `test_read_prints_and_marks_nothing_naming_marks_exactly_the_named`,
+  `test_naming_refuses_before_any_write` and `test_naming_a_message_on_a_phased_row_fires_read_and_writes_no_board` (S10).
 
 **The replays (`dyad/tests/test_replays.py`, one test per case).**
 - `test_s1_a_pr_up_tells_every_co_owner_and_rings_them`
@@ -340,8 +364,8 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
 - `test_s6_a_relay_names_its_doorbell_on_the_ring_list`
 - `test_s7_record_board_and_relays_are_one_commit_or_none`
 - `test_s8_the_relay_goes_to_an_owner_the_event_made`
-- `test_s9_a_drafted_done_is_a_phase_the_queue_counts`, which also asserts that no W11 line appears at 13 h
-- `test_s10_a_read_moves_no_phase`, which also asserts that there is no `read` event
+- `test_s9_a_drafted_done_is_a_phase_the_queue_counts`, which also asserts the W11 line at 13 h and none at 3 h
+- `test_s10_reading_is_an_event_with_no_side_effect`
 - `test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away`
 - `test_s11_phased_a_revision_asked_through_the_machine_is_never_caught_up`
 - `test_r2_573_combined_red`
@@ -353,9 +377,10 @@ ledger: board advance #572 head-moved (done-ready -> verifying), inbox program-5
   revision asked after a `Y plan` is not answered by it. Still open, stated:
   - `(planning, plan-landed)` does not check the row's state; only the adoption does.
   - The table has no `amend` edge, which plan F5 named. A revision of a planned row is asked by re-entering the entry.
-- **S10 is not built.** There is no `read` event, and a read is still a side effect of printing. Only its consequence
-  is removed.
-- **S9 has no timely timer.** At 13 h, `done-ready` and `verifying` are W11-silent; their threshold is 72 h.
+- **S10's marking is still the reader's word.** `inbox read <message>` records that the seat named the message, not
+  that its chat showed it whole. A seat that names a message it did not read is the residue, stated.
+- **S9's timer is `done-ready` only.** A `verifying` entry stays W11-silent for 72 h; only `done-ready`'s threshold is
+  a tunable. A hold of a drafted Done is swept at the first sweep past `inflight-done-ready-hours`, so up to 12 h late.
 - **S3's table stays hand-written.** It is now checked (a warning per omitted owner), not derived.
 - **The ring stays home's act (S6, X8).** The machine lists the ring; it does not ring.
 - **The scope is phased entries only.** An entry without `phase` behaves as before #587. `board set` still writes its

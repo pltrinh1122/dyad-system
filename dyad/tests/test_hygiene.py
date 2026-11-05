@@ -257,7 +257,7 @@ class InflightTests(unittest.TestCase):
         got = [l for l in self.run_it() if " W11 " in l]
         self.assertEqual(got, ["inflight W11 phase age: row #1 in plan-asked since 2025-11-03T20:00Z",
                                "inflight W11 phase age: row #3 in building since 2025-11-01T00:00Z"])
-        self.assertEqual(set(hy.INFLIGHT_W11_HOURS), set(dyadlib.ORCH_PHASES))
+        self.assertEqual(set(hy.INFLIGHT_W11_HOURS) | set(hy.INFLIGHT_W11_TUNED), set(dyadlib.ORCH_PHASES))
         am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
         groups = am.notice_groups([f"finding: {l}" for l in got] + ["finding: inflight W1 relay unread: x"])
         self.assertEqual([k for k, _ in groups], ["work in flight W1", "work in flight W11"])   # its own notice
@@ -293,6 +293,29 @@ class InflightTests(unittest.TestCase):
         self.commit()
         got = hy.inflight_cabinets(self.d, "HEAD", NOW, [], lambda seat, at: True)
         self.assertIn(("program", "inflight W7a unit not in table: eng-b is named on the board but not in _cos's seats"), got)
+
+    def test_w11_done_ready_is_the_tunable(self):
+        """#587 S9: `done-ready`'s threshold is `inflight-done-ready-hours`, read when the sweep runs (default 4 h from
+        dmc/work-in-flight.jsonld): a drafted Done held 13 h is a W11 line at the default and none under a 24 h
+        preference; a 3 h hold says nothing at the default."""
+        bd = dyadlib.load_guard("agent", "board")
+        def phased(rid, since):
+            f = {"holder": "home-1", "owner": "eng-1", "since": since,
+                 "phase": bd.phase_render("done-ready", {"unit": ["eng-1"]})}
+            f.update(bd.derive(rid, f))
+            return bd.render(f, bd.FIELDS)
+        self.assertEqual(dyadlib.tunable_default("inflight-done-ready-hours"), 4)
+        self.assertNotIn("done-ready", hy.INFLIGHT_W11_HOURS)            # one home: the record's default, no constant
+        self.row(1); self.row(2)
+        self.put("board/1.md", phased(1, "2025-11-04T11:00Z"))             # 13 h before NOW
+        self.put("board/2.md", phased(2, "2025-11-04T21:00Z"))             # 3 h
+        self.commit()
+        got = [l for l in self.run_it() if " W11 " in l]
+        self.assertEqual(got, ["inflight W11 phase age: row #1 in done-ready since 2025-11-04T11:00Z"])
+        prefs = self.d / dyadlib.PREFERENCES_REL; prefs.parent.mkdir(parents=True, exist_ok=True)
+        prefs.write_text("| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+                         "| inflight-done-ready-hours | 24 | a positive integer (hours) | Rule-3 |\n")
+        self.assertEqual([l for l in self.run_it() if " W11 " in l], [])      # read at run time, from the preference
 
     def test_every_line_is_information_and_a_notice_kind(self):
         inbox = dyadlib.load_guard("agent", "inbox")
