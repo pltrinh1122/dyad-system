@@ -67,7 +67,7 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("board", "phases"): ["board", "phases"],
     ("board", "draft"): ["board", "draft", "587", "--out", "/tmp/x/587-done.md"],
     ("inbox", "post"): ["inbox", "post", "engineer-1", "--row", "1", "--kind", "report", "--cc", "counsel-2", "a body"],
-    ("inbox", "read"): ["inbox", "read", "--all"],
+    ("inbox", "read"): ["inbox", "read", "20261102T174400Z-engineer-1537d8fb-1", "20261102T174400Z-counsel-0032b4c0-1"],
     ("inbox", "list"): ["inbox", "list", "engineer-1"],
     ("automaton", "scan"): ["automaton", "scan"],
     ("automaton", "run"): ["automaton", "run", "--evidence-from", "ev.jsonl"],
@@ -289,8 +289,8 @@ class ModuleFlagTests(unittest.TestCase):
         self.assertEqual((mods["land"].MESSAGE, mods["land"].MIRROR, mods["land"].LAND), ("-m", "--mirror", "--land"))
         self.assertEqual(mods["board"].DROP, "--drop")
         self.assertEqual(mods["board"].OUT, "--out")
-        self.assertEqual((mods["inbox"].POST_VALUES, mods["inbox"].CC, mods["inbox"].ALL),
-                         (("--row", "--kind", "--body-file"), "--cc", "--all"))
+        self.assertEqual((mods["inbox"].POST_VALUES, mods["inbox"].CC), (("--row", "--kind", "--body-file"), "--cc"))
+        self.assertEqual(CLI[("inbox", "read")].flags, ())                     # #587 S10: names mark, nothing else; no `--all`
         self.assertEqual(set(mods["inbox"].POST_VALUES) | {mods["inbox"].CC}, set(CLI[("inbox", "post")].value_flags))
 
     def test_every_projector_flag_is_the_project_forms(self):

@@ -34,6 +34,7 @@ defines what each value means.
 | inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-done-ready-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W11` line for a `done-ready` board entry: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
 | sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
@@ -176,7 +177,7 @@ defines what each value means.
   (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
   binds to. Seeded `verbatim`: the conservative default for a fresh install — the seat's own words pass through
   until the Operator has chosen the cos's brief.
-- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the six `inflight-*` keys,
+- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that
   claims the key under `dyad:tunables` (`dyad/dmc/schema.md`; the record named in the row's `read by`), and the rows
