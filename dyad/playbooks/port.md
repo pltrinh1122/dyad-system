@@ -62,6 +62,8 @@ the core's Rule text cites, `check --guards` asked to be clean against the whole
 4. The install's change-log row, in the receiving system's host corpus, as `host-install.md` states
    (class, undo, the install's printed line, the registry row); instance state — ledger, preferences, host
    corpus — never travels (Rule-11 property 1). Each PR cites that system's own d-work.
+A major's upgrade step names each form it removes and the release that deprecated it (`dyad/playbooks/release.md`,
+Major releases after 1.0.0, Q4), so a receiving system on any 1.x reads what to change before it installs.
 
 ### Diff (what a receiving system changed)
 1. `diff` — `dyad craft diff <CRAFT> --against <SRC>`: one line per path, `added`, `removed`, `modified`

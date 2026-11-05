@@ -35,7 +35,7 @@ class the unit cannot evidence is the class below it.
 | critical fix | `critical-fix` | a defect that gives an installing system a wrong result it can act on (a wrong disposition, a ratification or merge path broken, an install or a release refused, a fence that passes what it must refuse), loses or leaks data, or turns its CI red | the incident row, the red run or a reproduction; the fixing PR and its done-`Y` | patch | yes, as soon as the fix lands |
 | new capability | `capability` | something an installing system can do that it could not: a new verb or flag, a new guard or check, a new craft, a new Rule property | the d-work and PR, and the help text, the guard's registry line or the Rule sentence that names it | minor | yes, with the change set |
 | significant enhancement | `enhancement` | an existing capability changed in what it does or decides for an installing system: a new mode of a verb, a check that now catches more, a path materially faster or cheaper in how a unit works | the d-work and PR, and a before/after observation (a timing, a line that now appears) | minor | yes, with the change set |
-| breaking | `breaking` | an installing system must change something on upgrade: a verb or a file format removed or renamed, a Rule that now refuses what it allowed, an install contract changed; combines with the classes above | the changed contract and its upgrade step (`dyad/playbooks/port.md`) | major; minor while the major is 0, the question marking it **breaking** | yes, never without the upgrade step |
+| breaking | `breaking` | an installing system must change something on upgrade: a verb or a file format removed, renamed or narrowed, a Rule whose text now refuses what its text allowed, an install contract changed; adding beside a frozen item is not; combines with the classes above | the changed contract and its upgrade step (`dyad/playbooks/port.md`) | major; minor while the major is 0, the question marking it **breaking** | yes, never without the upgrade step |
 | maintenance | `maintenance` | nothing an installing system would notice: Rule wording with no behaviour change, records, docs, tests, internal refactors, an ordinary fix with no wrong result outside this repo | none | none (the drift guard's working bump only) | no: the change set waits for the next class that releases |
 
 The order, highest first: breaking, then critical fix, new capability and significant enhancement, then maintenance.
@@ -54,11 +54,32 @@ now.
   the bundle's own version; (3) the cut is that merge. A row that names an unreleased number (#522 put 0.12.3 there)
   no longer pins `VERSION`: a later bump past it warns until the infra-zone PR moves the row, and fails once the new
   number is tagged (Rule-11 property 7, #481).
-- **The bundle takes the highest class among its components** since the bundle's last tag, and moves the same part.
-  A release of the core or of a Tended craft always also proposes the bundle that names it (Rule-11 property 7: the
-  bundle is the front door), in the same PR that moves its row.
+- **The bundle takes the highest class among its components** since the bundle's last tag, and moves the same part,
+  except that a break in a component below 1.0.0 moves it by a minor (Major releases after 1.0.0, Q6). A release of
+  the core or of a Tended craft always also proposes the bundle that names it (Rule-11 property 7: the bundle is the
+  front door), in the same PR that moves its row.
 - **Below 1.0.0** a breaking change is a minor bump, as semver allows for a 0 major. Calling 1.0.0 is the operator's
-  decision, never this play-book's.
+  decision, never this play-book's. From 1.0.0 on, what is major is the next section's.
+
+### Major releases after 1.0.0
+The criteria the operator ratified before any 2.0.0 was planned (#611). Each answers one question; together they
+make a major mean "an installing system must change something", rare and planned.
+- **Q1, adding beside a frozen item.** A release is major only when an installing system must change something on
+  upgrade. Removing, renaming or narrowing a frozen item (`dyad/surface.md`) needs a major; adding beside it — a new
+  flag on a frozen verb, a new optional key — is a minor.
+- **Q2, a feature alone.** A major means a breaking change and nothing else. A feature with no break ships as a 1.x
+  minor, however large.
+- **Q3, a new fence.** A fence is a break only when the Rule's text allowed what it now refuses. A fence that
+  refuses what a Rule already forbade enforces existing text: a fix, classed as a fix. A Rule change that forbids
+  what its text allowed is a break.
+- **Q4, deprecation first.** A removal or rename is deprecated in at least one 1.x minor before the major that makes
+  it: the old form warns, naming the new one. The major removes it, with its upgrade step (`dyad/playbooks/port.md`).
+- **Q5, breaks are held.** A deprecation lands in any minor; the removal it announces merges only inside a planned
+  major's window, so a major is a planned event and not the first break ratified. 1.x ends at the major, and no
+  maintenance branch is kept. A critical fix is never a break and ships as a patch at once.
+- **Q6, a Tended craft below 1.0.** A Tended craft below 1.0.0 is unstable by semver: its break moves the bundle by
+  a minor, and the release question marks it **breaking**. The bundle's major follows the core's major and the
+  majors of components at 1.0.0 or later.
 
 ## Steps
 - `changes`: every craft's commits and cited d-works since its last tag, and the bundle's last tag.
