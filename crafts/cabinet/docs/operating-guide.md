@@ -24,7 +24,7 @@ cannot check.
   the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a unit to
   retire or re-home, each by its own row that you dispose.
 - **Desks are not on your board.** A secretary opens desks as its concurrent work needs; a desk is solo
-  unless `paired-units` (its alias `attended-seats`, read until the release after next) names it; the home reads secretaries, never desks. There is no count of desks to keep
+  unless `paired-units` names it; the home reads secretaries, never desks. There is no count of desks to keep
   under seven: what bounds them is the secretary's charter, its ceiling read per plan (#416).
 - **A unit's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
   of your answers), `dyad session list` (every presence file: who holds what, how fresh). A PR number in a row's
