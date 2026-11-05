@@ -183,7 +183,7 @@ def done_record(repo: Path, rid: int, prs: list[int], said: Path, accreted: list
     if not said.is_file():
         raise Refused(f"SAID {said} is not a file (the operator's words, verbatim, Rule-7)")
     trace = dyadlib.instance(repo) / "d-work" / "traces" / f"{rid}.md"
-    run_or_refuse(repo, "dwork", "trace", str(rid), "--out")
+    run_or_refuse(repo, "dwork", "trace", str(rid), "--out", "--said-file", str(said))   # #592 R-b: through the Done words
     if landing:
         rel = trace.relative_to(repo).as_posix()
         out = batch(repo, [f"land {shlex.quote(rel)}",

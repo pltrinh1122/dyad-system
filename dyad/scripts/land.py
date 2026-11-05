@@ -58,7 +58,7 @@ earlier `land <instance>/d-work/traces/<id>.md` line carries its trace — the r
 import sys
 if sys.version_info < (3, 12):
     sys.exit("land.py: Python 3.12+ required")
-import contextlib, datetime, os, shlex, shutil, subprocess
+import contextlib, os, shlex, shutil, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -407,7 +407,7 @@ def refresh_presence(wt: Path, inst: str, rows: list[str], here: Path | None, al
 
 
 def verb_builder(argv: list[str], pos: list[str], vals: dict, bare: set, inst: str, words, repo: Path | None = None):
-    today = datetime.date.today().isoformat()
+    today = dyadlib.utc_date()
     def build(wt: Path):
         why = already_landed(wt, inst, pos, vals, bare, words, today)
         if why:
@@ -431,7 +431,7 @@ def check_only(repo: Path, inst: str, argv: list[str], pos: list[str], vals: dic
     with locked(common):
         base = fetch(repo)
         prepare(repo, wt, base)
-        why = already_landed(wt, inst, pos, vals, bare, words, datetime.date.today().isoformat())
+        why = already_landed(wt, inst, pos, vals, bare, words, dyadlib.utc_date())
         if why:
             raise Refused(f"already landed: {why}; nothing pushed")
         r = run_verb(wt, inst, argv)
@@ -657,7 +657,7 @@ def keep_relay_owners(name: str, pairs: dict[str, str], lines: list[Line]) -> di
 
 
 def batch_builder(repo: Path, lines: list[Line], inst: str, words, ran: list | None = None):
-    today = datetime.date.today().isoformat()
+    today = dyadlib.utc_date()
     ran = [] if ran is None else ran
     def build(wt: Path):
         run = []
@@ -712,7 +712,7 @@ def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror
     if len(a_pos) != 2 or vals or bare - {"--land"}:
         raise Refused(BATCH_USAGE)
     lines = read_batch(a_pos[1], repo, inst, value_flags, parse)
-    done_order(lines, datetime.date.today().isoformat())
+    done_order(lines, dyadlib.utc_date())
     landed = sorted({rel for ln in lines for rel in ln.rels})
     ran: list = []
     rc = land(repo, inst, mirror, batch_builder(repo, lines, inst, words, ran), "dwork batch", landed)

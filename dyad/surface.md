@@ -46,7 +46,7 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |
-| `dyad dwork trace <id>` | `--transcript <path>`, `--out` | frozen |
+| `dyad dwork trace <id>` | `--transcript <path>`, `--out`, `--said-file <f>` (#592: `--out` needs the Done words; `--said-file` needs `--out`) | moving (#592) |
 | `dyad session name` | `--function`, `--topic`, `--hp`, `--system`, `--on` | frozen |
 | `dyad session touch` | `-r <row>`, `-f <file>` (`-r` splits on whitespace; fetches origin first) | moving (#592) |
 | `dyad session list` | — | frozen |
@@ -71,7 +71,7 @@ are each guard's own constant, the source the test reads.
 
 | store | path | keys | source | status |
 |---|---|---|---|---|
-| row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode` | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
+| row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`; every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | moving (#592) |
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
 | board entry | `d-work/board/<id>.md` | `holder`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `writer` | `board.FIELDS` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>`; `seat <name>` | `board.UNIT_ALIAS` | alias → `unit <name>` (#573) |
@@ -80,9 +80,10 @@ are each guard's own constant, the source the test reads.
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
 | presence | `d-work/sessions/<id>.md` | `session`, `seen`, `root`, `rows`, `files`; optional `writer`, `host`, `holder` | `sessions.FIELDS` | frozen |
-| provenance | `d-work/provenance/<id>.md` | title `# Provenance #<id>`; entries `## <n> <kind> <date>[ <note>]`, kind `prompt` or `disposition`, fenced body | `provenance.FIELDS` | frozen |
+| provenance | `d-work/provenance/<id>.md` | title `# Provenance #<id>`; entries `## <n> <kind> <date>[ <note>]`, kind `prompt` or `disposition`, fenced body; the date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `provenance.FIELDS` | moving (#592) |
 | plan file | `d-work/plans/<id>.md` | `Base commit of main:` and `Files touched` as the guards read them | `plans.FIELDS`, `dyadlib.PLAN_PARTS` | frozen |
-| trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits` | `trace.SECTIONS` | frozen |
+| trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits`; a stored trace is never a preview (#592) | `trace.SECTIONS` | moving (#592) |
+| trace preview legacy | `traces_preview_legacy.local.txt` | `<id>` per line, `#` a comment: the stored previews before #592 | `trace.check_store` | moving (#592) |
 | event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
@@ -260,7 +261,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | trace-bucket | frozen |
 | trace-gate-kind | frozen |
 | trace-in-evidence | frozen |
-| trace-window | frozen |
+| trace-window | moving (#592) |
 | transaction-containment | frozen |
 | work-in-flight | frozen |
 | y-binding | frozen |

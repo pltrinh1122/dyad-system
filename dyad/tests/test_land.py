@@ -28,6 +28,7 @@ def load_package():
     spec.loader.exec_module(mod); return mod
 
 
+
 def git(d, *a):
     r = subprocess.run(["git", *a], cwd=d, capture_output=True, text=True, env=dyadlib.git_env())
     if r.returncode:
@@ -513,6 +514,35 @@ class LandTests(unittest.TestCase):
         self.assertIn(f"restored {INST}/d-work/plans/1.md from HEAD", o.getvalue())
         self.assertIn(f"left changed here: {INST}/d-work/plans/2.md", o.getvalue())
         self.assertFalse(same.exists()); self.assertEqual(diff.read_text(), "# Plan #2\nedited after landing\n")
+
+
+
+class UtcDateTests(unittest.TestCase):
+    """#592 R-b: `land`'s already-landed test and the batch's Done-order test are given UTC's date, whatever the host's
+    local day; each is stubbed to capture the date it is handed and stop."""
+    def setUp(self):
+        self.land = dyadlib.load_module(PKG / "scripts" / "land.py", "land_utc")
+
+    def test_already_landed_is_given_the_utc_date(self):
+        got = []
+        def stop(wt, inst, pos, vals, bare, words, today):
+            got.append(today); return "stubbed"
+        with livetest.off_utc() as (utc, local), unittest.mock.patch.object(self.land, "already_landed", stop):
+            self.assertNotEqual(utc, local)
+            build = self.land.verb_builder(["dwork", "state", "1", "planned"], ["state", "1", "planned"], {}, set(), INST, None)
+            with self.assertRaises(self.land.Refused):
+                build(Path("."))
+        self.assertEqual(got, [utc])
+
+    def test_done_order_is_given_the_utc_date(self):
+        got = []
+        def stop(lines, today):
+            got.append(today); raise self.land.Refused("stubbed")
+        with livetest.off_utc() as (utc, local), unittest.mock.patch.object(self.land, "read_batch", lambda *a: []), \
+                unittest.mock.patch.object(self.land, "done_order", stop):
+            with self.assertRaises(self.land.Refused):
+                self.land.batch(["batch", "-"], {}, {"--land"}, Path("."), INST, None, set(), None, None)
+        self.assertEqual(got, [utc])
 
 
 if __name__ == "__main__":

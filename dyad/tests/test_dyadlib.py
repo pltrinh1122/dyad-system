@@ -195,6 +195,14 @@ class EscapedPipeTests(unittest.TestCase):
         pre = dyadlib.table_rows(self.TEXT.replace("\\|", "\x00"))
         self.assertEqual([[c.replace("\x00", "|") for c in r] for r in pre], dyadlib.table_rows(self.TEXT))
 
+class UtcDateTests(unittest.TestCase):
+    """#592 R-b: `utc_date` is UTC's day, never the host's: with the local zone 14 h ahead (or 12 h behind) of UTC,
+    the two differ and `utc_date` gives UTC's."""
+    def test_utc_date_ignores_the_local_zone(self):
+        with livetest.off_utc() as (utc, local):
+            self.assertNotEqual(local, utc)
+            self.assertEqual(dyadlib.utc_date(), utc)
+
 if __name__ == "__main__":
     unittest.main()
 
