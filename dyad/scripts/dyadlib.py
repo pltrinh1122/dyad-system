@@ -8,6 +8,9 @@ from typing import Callable
 
 PKG = Path(__file__).resolve().parent.parent
 GUARDS = PKG / "guards"
+CORE_LIBRARY = "dyad/scripts"   # surface S9 (#612): the repo path every Tended craft guard puts on sys.path for the core's modules
+CRAFT_LAYOUT = ("VERSION", "guards", "tests", "vocabulary/CRAFT.md")   # surface S9 (#612): what makes crafts/<craft>/ a craft, its
+                                                                     # guards and tests roots, and its vocabulary
 
 # ---- guards (crafts/sysarch/rules/guards.md): dyad/guards/<corpus>/<entity>.py (core) and crafts/<craft>/guards/<entity>.py (a
 # Tended craft's, #155), one module per entity kind, loaded by path
@@ -24,7 +27,7 @@ def guard_files(pkg: Path = PKG) -> list[Path]:
     """Every guard module: the core root sorted by corpus then entity, then every craft root sorted by
     craft then entity; names starting `_` are not guards (crafts/sysarch/rules/guards.md p4, two roots)."""
     core = sorted(p for p in (pkg / "guards").glob("*/*.py") if not p.name.startswith("_"))
-    craft = [p for p in craft_glob("guards/*.py", pkg) if not p.name.startswith("_")]
+    craft = [p for p in craft_glob(f"{CRAFT_LAYOUT[1]}/*.py", pkg) if not p.name.startswith("_")]
     return core + craft
 
 def guard_key(py: Path, pkg: Path = PKG) -> tuple[str, str, str]:
@@ -225,7 +228,7 @@ def parse_kv(text: str) -> dict[str, str]:
 def craft_dirs(pkg: Path = PKG) -> list[Path]:
     """Every Tended craft root `crafts/<craft>/` (a directory holding a VERSION), sorted by name."""
     d = crafts_dir(pkg)
-    return sorted(p for p in d.iterdir() if p.is_dir() and (p / "VERSION").exists()) if d.is_dir() else []
+    return sorted(p for p in d.iterdir() if p.is_dir() and (p / CRAFT_LAYOUT[0]).exists()) if d.is_dir() else []
 
 # One version grammar (Rule-11 property 4), shared by every craft, core included: strict
 # MAJOR.MINOR.PATCH, with an optional `+build` suffix for a locally-derived, unreleased tree — the

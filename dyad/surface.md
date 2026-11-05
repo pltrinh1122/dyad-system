@@ -331,12 +331,12 @@ so each is listed and pinned like the rest (#612, plan #570 revision 10).
 
 | contract | form | source | status |
 |---|---|---|---|
-| core library path | `dyad/scripts/`, which every Tended craft guard puts on `sys.path` to import the core's modules | `dyadlib.py` and the inserts in `crafts/*/guards/*.py` | frozen |
+| core library path | `dyad/scripts/`, which every Tended craft guard puts on `sys.path` to import the core's modules | `dyadlib.CORE_LIBRARY`, and the inserts in `crafts/*/guards/*.py` | frozen |
 | guard contract | a guard module declares `ENTITY`, `CORPUS`, `FIELDS`, `TRANSACTION`, `check_package`, and `check_transaction` when `TRANSACTION`; a craft guard's `CORPUS` is a zone name (`crafts/sysarch/rules/guards.md`) | `dyadlib.CONTRACT`, `dyadlib.contract_problem` | frozen |
 | craft registry row | `crafts/REGISTRY.md`, one row per installed craft: `craft`, `version`, `source`, `sha256`, `d-work` (Rule-11 property 2) | `craft.REGISTRY_FIELDS` | frozen |
 | craft manifest | `crafts/<craft>/MANIFEST.md` `key: value` lines; `requires: <craft>>=<semver> …` and `seeds: <template>-><dest> …`, a leading `<host>` in a destination the host path (Rule-11 property 2) | `crafts.FIELDS`, `crafts.requires`, `crafts.seeds` | frozen |
 | bundled-craft declaration | `BUNDLED_WITH_CORE = True` in one of the craft's own guard modules, and `PURPOSE = "<one line>"` beside it when no core Rule cites the craft, both read as text (Rule-11 property 2) | `bundle.DECLARED`, `bundle.PURPOSE_LINE` | frozen |
 | instance manifest contribution | `<host-path>/INFRASTRUCTURE.md`, rows of seven cells: `component`, `partition` (`kernel`, `library`, `The World`), `version`, `purpose`, `license`, `replacement`, `profile` (`authoring`, `operating`, `both`) (Rule-14 property 1) | `manifest.FIELDS`, `manifest.PARTITIONS`, `manifest.PROFILES` | frozen |
-| Tended craft layout | `crafts/<craft>/` is a craft when it holds `VERSION`; the runner discovers `guards/` and `tests/` under it, and `vocabulary/CRAFT.md` is its vocabulary (Rule-11 property 1, Rule-6) | `dyadlib.craft_dirs`, `dyadlib.craft_glob`, `crafts.DIRS` | frozen |
+| Tended craft layout | `crafts/<craft>/` is a craft when it holds `VERSION`; the runner discovers `guards/` and `tests/` under it, and `vocabulary/CRAFT.md` is its vocabulary (Rule-11 property 1, Rule-6) | `dyadlib.CRAFT_LAYOUT`, read by `dyadlib.craft_dirs`, `dyadlib.guard_files`, `package.test_suites` and `vocabulary.check_craft` | frozen |
 
 The three instance `*.local.txt` lists are in S2 beside `traces_preview_legacy.local.txt`.

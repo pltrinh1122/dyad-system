@@ -74,7 +74,7 @@ def check_craft(pkg: Path, craft_root: Path) -> list[str]:
     equal (folded, emphasis stripped) to an Agent vocabulary term — either direction is one fault, reported here.
     Bare lines fail. Whether a differently spelled term collides in *sense* is inference."""
     craft_root = Path(craft_root); name = craft_root.name
-    f = craft_root / "vocabulary" / "CRAFT.md"
+    f = craft_root / dyadlib.CRAFT_LAYOUT[3]
     if not f.exists():
         return [f"crafts/{name}: no vocabulary/CRAFT.md"]
     header = dyadlib.table_header(f.read_text())

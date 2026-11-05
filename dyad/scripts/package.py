@@ -398,7 +398,7 @@ def check_generated(repo, patterns):
 
 def test_suites():
     """The test roots `unittest discover` runs: the core `dyad/tests/`, then every `crafts/<craft>/tests/` present."""
-    return [PKG / "tests"] + dyadlib.craft_glob("tests", PKG)
+    return [PKG / "tests"] + dyadlib.craft_glob(dyadlib.CRAFT_LAYOUT[2], PKG)
 
 _SUITE_RAN = False   # d-work #155: the suite runs at most once per process — `cmd_evidence` calls
                      # both `cmd_check` and `cmd_guards`, and without this the evidence block paid
