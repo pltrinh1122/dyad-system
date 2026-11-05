@@ -546,11 +546,30 @@ def post(repo: Path, to: str, row: int, body: str) -> str:
                 os.environ[k] = v
 
 
+REASON_LINES = 5                                   # at most this many failing lines a notice carries (#592)
+REASON_CHARS = 600                                 # and at most this many characters
+FAILING = re.compile(r"^\s*(FAIL\b|FAIL:|refused\b|error:|fatal:|! \[remote rejected\]|! \[rejected\])")
+
+
+def reason(why: str) -> str:
+    """A refusal's reason for a notice (#592): its first line, and when that line only introduces what follows (a
+    failed push's hook output), the failing lines after it — never an empty reason. Capped, one line."""
+    lines = [l.strip() for l in why.strip().splitlines() if l.strip()]
+    if not lines:
+        return "no reason given"
+    head, rest = lines[0], lines[1:]
+    failing = [l for l in rest if FAILING.match(l)][:REASON_LINES]
+    if not failing and head.endswith(":") and rest:
+        failing = rest[-REASON_LINES:]
+    out = " | ".join([head.rstrip(":") + (":" if failing else "")] + failing) if failing else head
+    return out[:REASON_CHARS]
+
+
 def escalate(repo: Path, row: int, what: str, why: str) -> str:
     """A refusal, posted once to the home's inbox; the home decides."""
     base = land.fetch(repo)
     to = home(repo, base)
-    body = f"automaton: {what} refused for row #{row}: {why.splitlines()[0][:300]}"
+    body = f"automaton: {what} refused for row #{row}: {reason(why)}"
     body = inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
     if not to:
         return f"refused, and no home to tell (no AUTOMATON_HOME and no board _cos holder): {body}"
