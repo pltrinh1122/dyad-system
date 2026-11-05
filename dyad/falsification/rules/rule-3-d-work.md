@@ -1138,6 +1138,15 @@ Exceptions 0; R8 confirmed answered. Two vocabulary divergences fixed (the vocab
 
 **Terms (Rule-6).** `mode` is used by 3 and 16, `explicit mode` by 2 and 3, and `accreted row` by 2, 3, 7, 15 and 16. Each Rule re-read and found to read correctly. The Rules' wording on the never-accretable list, and Rule-7 property 4's copied mandate entry, are unaffected.
 
+### Revision 2, audit's fifth pass answered (audit-e73be78c on head da681201)
+The Rule passes; R9 and R10 are confirmed. One vocabulary residue:
+
+| item | refutation | fix |
+|---|---|---|
+| R11 | `accreted row` covered "one a play-book … prescribes", which includes the play-book's fence rows born `backlog`, while also calling every accreted row born `open`. `mode` therefore read those rows two ways. | `accreted row` is a row born `open` under the row's plan-`Y`, from its mandate scope or a play-book step that prescribes `open` rows. A carried `backlog` row is outside the term, as Rule-3 and `mode` already treat it. |
+
+**Terms (Rule-6).** `accreted row` is used by 2, 3, 7, 15 and 16; each Rule was re-read. Rule-2's mandate clause binds the class of row a play-book step prescribes, which still covers the carried `backlog` row. Rule-7 property 4 copies that row's entry in its own sentence. Rule-15's accreted-row bullet concerns rows with no plan file, and Rule-16's plan-less row bullet concerns open rows. All read correctly.
+
 ### Rule-3's Provenance section before #585 (history, moved here verbatim)
 Operator rule, 2026-09-12. Falsified; see `../falsification/rules/rule-3-d-work.md`. Batch
 disposition added 2026-09-15 (d-work #17): a queued batch counter-prompt over several d-works, engaged
