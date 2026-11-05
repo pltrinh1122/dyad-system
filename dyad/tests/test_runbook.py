@@ -90,6 +90,28 @@ class RunTests(livetest.LiveCase):
         self.assertFalse(rb.events_path(self.root, "x").exists())
         with self.assertRaises(rb.Refused):
             rb.run(self.root, "x", "status", "root", out=self.out)
+    def test_the_automaton_runs_a_read_only_command_under_its_own_role(self):
+        ev = rb.run(self.root, "x", "status", rb.AUTOMATON, out=self.out)
+        self.assertEqual((ev.role, ev.exit), ("automaton", 0))
+        self.assertEqual([e["role"] for e in self.events()], ["automaton"])          # recorded under its own party (#593)
+    def test_the_automaton_is_refused_anything_but_read_only_no_event(self):
+        for name in ("start", "restart", "restore", "rotate"):                       # reversible, destructive, operator-run
+            with self.assertRaises(rb.Refused) as cm:
+                rb.run(self.root, "x", name, rb.AUTOMATON, confirm_tty=False, out=self.out)
+            self.assertEqual(cm.exception.code, 2)
+        self.assertIn("read-only command only", str(self.raised(rb.AUTOMATON, "start")))
+        self.assertFalse(rb.events_path(self.root, "x").exists())
+        self.assertFalse((self.root / "started").exists())                           # nothing ran
+    def raised(self, role, name):
+        try:
+            rb.run(self.root, "x", name, role, confirm_tty=False, out=self.out)
+        except rb.Refused as e:
+            return e
+    def test_the_cli_takes_as_automaton(self):
+        env = dict(os.environ, DYAD_RUNBOOKS=str(self.root / rb.DEFAULT_RUNBOOKS)); env.pop("DYAD_ROLE", None)
+        r = subprocess.run([sys.executable, str(Path(rb.__file__)), "run", "x", "start", "--as", "automaton"],
+                           cwd=self.root, capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr); self.assertIn("read-only command only", r.stderr)
     def test_unknown_runbook_or_command_refused(self):
         with self.assertRaises(rb.Refused): rb.run(self.root, "nope", "status", "agent", out=self.out)
         with self.assertRaises(rb.Refused) as cm: rb.run(self.root, "x", "nope", "agent", out=self.out)

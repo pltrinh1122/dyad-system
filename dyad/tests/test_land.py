@@ -13,6 +13,7 @@ import contextlib, importlib.util, io, os, subprocess, sys, unittest, unittest.m
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
+land_mod = dyadlib.load_module(PKG / "scripts" / "land.py", "land")
 
 SCRATCH = livetest.ScratchInstalls()
 tearDownModule = SCRATCH.cleanup
@@ -220,6 +221,30 @@ class LandTests(unittest.TestCase):
         self.assertIn("has changes", out, "a seat with changes is left as it is")
         rc, _, err = self.dwork("land", str(plan), "-m", "ledger: plan #1")
         self.assertEqual(rc, 1); self.assertIn("already landed", err)
+
+    def test_another_prefix_and_kind_fence_what_lands(self):
+        """`prefix` and `kind` (#593): a builder writing outside the prefix is refused under its kind and nothing
+        lands; the same builder writing only under it lands; with no prefix the fence is `<instance>/d-work/`."""
+        ev = "workstation-corpus/runbooks/events/x.jsonl"
+        def build(outside):
+            def b(w):
+                (w / ev).parent.mkdir(parents=True, exist_ok=True); (w / ev).write_text('{"name": "health"}\n')
+                if outside:
+                    (w / INST / "d-work" / "rows" / "1.md").write_text(ROW.format(id=1, title="one") + "mode: explicit\n")
+                return land_mod.written(w), "events: x", ""
+            return b
+        before = self.main_at_origin()
+        with self.assertRaisesRegex(land_mod.Refused, "would not be events-only"):
+            land_mod.land(self.seat, INST, None, build(True), "x", prefix="workstation-corpus/runbooks/events/",
+                          kind="events-only")
+        self.assertEqual(self.main_at_origin(), before)
+        with self.assertRaisesRegex(land_mod.Refused, f"outside {INST}/d-work/: that commit would not be ledger-only"):
+            land_mod.land(self.seat, INST, None, build(False), "x")
+        self.assertEqual(self.main_at_origin(), before)
+        with contextlib.redirect_stdout(io.StringIO()):
+            land_mod.land(self.seat, INST, None, build(False), "x", prefix="workstation-corpus/runbooks/events/",
+                          kind="events-only")
+        self.assertEqual(self.files_of("main"), [ev])
 
     def test_main_and_the_mirror_go_in_one_push(self):
         git(self.seat, "switch", "-q", "-c", "work")
@@ -432,6 +457,25 @@ class LandTests(unittest.TestCase):
         self.assertEqual(self.main_at_origin(), before)
         self.assertEqual(self.hook_runs(), [])
         self.assertFalse(self.wt.exists(), "refused before the worktree was touched")
+
+    def test_read_batch_text_reads_as_read_batch(self):
+        """#587: `board advance` composes its lines and parses them with `read_batch_text`, `read_batch`'s own loop."""
+        land = dyadlib.load_module(PKG / "scripts" / "land.py", "land")
+        presence = self.seat / INST / "d-work" / "sessions" / "s1.md"
+        presence.parent.mkdir(parents=True); presence.write_text("session: s1\n")
+        said = self.top / "said.txt"; said.write_text("Y\n")
+        text = ("# a round\n\n"
+                f"state 1 planned -d 'Y plan' --said-file {said}\n"
+                f"land {presence}\n"
+                "board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb' next='build it'\n"
+                "post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n"
+                "post orchestrate-cccccccc --row 1 --kind notice --cc counsel-dddddddd 'fyi'\n")
+        f = self.top / "batch.txt"; f.write_text(text)
+        a = land.read_batch(str(f), self.seat, INST, self.pkg.DWORK_VALUE_FLAGS, self.pkg.dwork_args)
+        b = land.read_batch_text(text, self.seat, INST, self.pkg.DWORK_VALUE_FLAGS, self.pkg.dwork_args)
+        shape = lambda ls: [(l.n, l.verb, l.argv, l.rels, getattr(l, "parsed", None)) for l in ls]
+        self.assertEqual(shape(a), shape(b))
+        self.assertEqual([l.verb for l in b], ["state", "land", "board", "post", "post"])
 
     def test_a_racing_commit_rebuilds_the_batch(self):
         git(self.seat.parent, "clone", "-q", str(self.origin), str(self.racer))

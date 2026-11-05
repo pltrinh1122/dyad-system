@@ -612,6 +612,12 @@ class SeatNameTests(unittest.TestCase):
             self.assertIn("is not this holder's", self._touch(self._root("m4"), "engineer-deadbeef"))
             self.assertEqual(self._touch(self._root("m4"), "engineer-1537d8fb"), "")
             self.assertEqual(self._touch(self._root("m4"), "engineer-deadbeef", holder=None), "")   # no holder reported: nothing to compare
+    def test_touch_warns_on_a_leaders_eight_hex_operator_segment(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            for name in ("program-cafebabe-1537d8fb", "program-bob-12345678-1537d8fb"):
+                self.assertIn("reads as a `-<hp>`", self._touch(self._root("m4"), name), name)   # #594: no cabinet recognised
+            for name in ("program-bob-1537d8fb", "program-1537d8fb", "engineer-cafebabe-1537d8fb"):
+                self.assertNotIn("reads as a `-<hp>`", self._touch(self._root("m4"), name), name)
     def test_touch_is_silent_under_flat(self):
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
             self.assertEqual(self._touch(self._root("flat"), "cos-1"), "")
@@ -667,7 +673,7 @@ class SeatNameTests(unittest.TestCase):
 
 class AttendanceTests(unittest.TestCase):
     """d-work #393 (children 1–3 of #388): the record-derived reading, the mode over the live seats, the route of a
-    seat's counter-prompt; d-work #414 (#412 C2): attendance declared by `attended-seats`, the records its fence."""
+    seat's counter-prompt; d-work #414 (#412 C2): attendance declared by `paired-units` (named `attended-seats` until #553), the records its fence."""
     TODAY = __import__("datetime").date(2026, 10, 22)
     def _repo(self, prefs=None, declared=None):
         root = repo()
@@ -677,7 +683,7 @@ class AttendanceTests(unittest.TestCase):
             (root / "preferences-corpus" / "PREFERENCES.md").write_text(
                 "# Operator preferences\n\n| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
                 + (f"| attendance-window | {prefs} | days | Rule-16 |\n" if prefs is not None else "")
-                + (f"| attended-seats | {declared} | seat names | Rule-16 |\n" if declared is not None else ""))
+                + (f"| paired-units | {declared} | unit names | Rule-16 |\n" if declared is not None else ""))
         return root
     def _read(self, root):
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
@@ -802,25 +808,37 @@ class AttendanceTests(unittest.TestCase):
         self.assertEqual((a["mode"], a["relayed"], a["undeclared"]), ("M4", [], []))
         self.assertEqual(a["warnings"], ["counsel", "engineer-1537d8fb"])
         self.assertEqual(sv.fence_lines(a)[0], "warn: counsel is paired but holds no own disposition within 7 day(s)")
-    def test_paired_units_is_read_first_and_attended_seats_is_its_alias(self):
-        """#553: both keys are read until the release after next; `paired-units` wins when both are present."""
-        root = self._repo(declared="counsel")                                   # the alias alone
-        self.assertEqual((sv.declared_seats(root), sv.declared_preference(root)[0]), (["counsel"], "attended-seats"))
+    def test_paired_units_is_read_and_attended_seats_is_not(self):
+        """#604 (#573 step 4): only `paired-units` is read; the removed `attended-seats` pairs nothing."""
+        self.assertFalse(hasattr(sv, "ATTENDED_SEATS"))
+        root = self._repo(prefs=7)
         p = root / "preferences-corpus" / "PREFERENCES.md"
+        p.write_text(p.read_text() + "| attended-seats | counsel | seat names | Rule-16 |\n")
+        self.assertEqual((sv.declared_seats(root), sv.declared_preference(root)), ([], ("paired-units", None)))
         p.write_text(p.read_text() + "| paired-units | engineer, communicate | unit names | Rule-16 |\n")
         self.assertEqual((sv.declared_seats(root), sv.declared_preference(root)[0]), (["communicate", "engineer"], "paired-units"))
         for seat in ("program-59cec502", "engineer-1537d8fb", "counsel-0032b4c0"):
             self._presence(root, seat)
         a = self._read(root)
         self.assertEqual((sorted(a["attended"]), a["relayed"]), (["engineer-1537d8fb", "program-59cec502"], ["counsel-0032b4c0"]))
-    def test_the_alias_key_warns_until_it_is_renamed(self):
-        """#573 step 5: the deprecation warning, one line naming `paired-units`; none once the new key is there."""
+    def test_the_removed_key_fails_the_guard_naming_its_new_name(self):
+        """#604 (plan #573 B4): a table still holding `attended-seats` fails, naming `paired-units`, instead of being
+        ignored — ignoring it would silently unpair every unit it names; none once the key is renamed."""
         root = self._repo(declared="counsel")
-        (w,) = [m for m in sv.check_package(root) if m.startswith("warning:")]
-        self.assertIn("`attended-seats` is the alias of `paired-units`", w); self.assertIn("removed in dyad-operator 1.0", w)
         p = root / "preferences-corpus" / "PREFERENCES.md"
+        p.write_text(p.read_text().replace("| paired-units |", "| attended-seats |"))
+        (f,) = sv.check_package(root)
+        self.assertFalse(f.startswith("warning:"), f)
+        self.assertIn("preference `attended-seats` was removed in dyad-operator 1.0", f); self.assertIn("rename the key to `paired-units`", f)
+        for seat in ("program-59cec502", "counsel-0032b4c0"):                      # the reading that drops it says so
+            self._presence(root, seat)
+        a = self._read(root)
+        self.assertEqual((a["declared"], a["relayed"]), ([], ["counsel-0032b4c0"]))
+        (line,) = [l for l in sv.fence_lines(a) if l.startswith("refused: ")]
+        self.assertIn("rename the key to `paired-units`", line); self.assertIn("pairs none of its units", line)
         p.write_text(p.read_text().replace("| attended-seats |", "| paired-units |"))
         self.assertEqual(sv.check_package(root), [])
+        self.assertFalse([l for l in sv.fence_lines(self._read(root)) if l.startswith("refused: ")])
     def test_no_live_seat_reads_m3(self):
         root = self._repo()
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
