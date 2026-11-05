@@ -169,7 +169,7 @@ defines what each value means.
   Presence; the cabinet craft's `rules/naming.md`), read advisorily by the cabinet craft's `seat` guard and printed
   by `dyad session name`. `flat`: one pair, one board, desks by row; no seat form is read. dyad-system:
   `m4`, the Operator's default since 2026-10-21 ("codify M4 as the default organizational preference").
-- `paired-units` (named `attended-seats` until d-work #573, its alias read until 1.0) — the seats the Operator attends beside the program seat, which is always attended (d-work
+- `paired-units` (named `attended-seats` until d-work #573; the old name is refused, naming this one, since d-work #604) — the seats the Operator attends beside the program seat, which is always attended (d-work
   #412): seat names, or seat names without their `-<hp>` (`counsel` names every holder of the counsel seat), or
   `none`. The constraint it states is the Operator's span — how many seats the Operator sits at, a limit of the
   interface the Operator reads through — never how many seats run: in the Operator's words, "we can have one
