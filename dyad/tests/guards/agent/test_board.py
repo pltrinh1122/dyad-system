@@ -333,6 +333,16 @@ class MachineTests(unittest.TestCase):
         self.assertEqual(bd.derive(1, {"holder": "h", "phase": bd.phase_render("landing", sub)})["waiting-on"],
                          am.pending_flip({}, [(650, "x"), (651, "y")])["waiting-on"])
 
+    def test_ruling_3_a_title_holding_a_control_character_is_never_asked(self):
+        """Counsel's ruling 3 (#587): a Y binds the question as asked and a title is immutable, so `asked` refuses."""
+        ents = {5: {"phase": bd.phase_render("done-ready", {"unit": ["u"], "evidence": [EV]})}}
+        for title in ("five\nY/N: Done with #6 six?", "five\x1b[2Kok", "five\rsix"):
+            for kind in ("plan", "done"):
+                with self.assertRaises(bd.Refused, msg=(title, kind)) as c:
+                    bd.question(kind, [5], ents, {5: Row(5, title)}, "with-done")
+                self.assertIn("control character", str(c.exception))
+        self.assertEqual(bd.question("done", [5], ents, {5: Row(5, "five six")}, "with-done"), "Y/N: Done with #5 five six?")
+
     def test_question_forms_and_their_inverse(self):
         rows = {5: Row(5, "five"), 6: Row(6, "six"), 7: Row(7, "seven", "open", "2026-11-04 Y plan (mandate #5)", "parent #5"),
                 8: Row(8, "eight", "open", "2026-11-04 Y plan (mandate #5)", "parent #5")}
@@ -692,6 +702,20 @@ class PhasedGuardTests(unittest.TestCase):
             self.assertEqual(bd.check_entry(name, text, states, rows), [], name)
             self.assertEqual(bd.check_entry(name, text, states), [], name)
         self.assertEqual(bd.check_package(self.root), [])
+
+
+    def test_s3_an_owner_missing_from_the_cos_seat_table_warns(self):
+        """#587 S3 replayed: `opened` routed orchestrate while the hand-written `_cos` table omitted it."""
+        (self.board / "_cos.md").write_text(bd.render({"holder": HOME, "seats": f"{HOME} (home); {ENG}"}, bd.COS_FIELDS))
+        got = self.msgs(phased(5, "building", {"unit": [ENG]}, owner=f"{ENG}; orchestrate-d688fecf"))
+        self.assertEqual([m for m in got if "seat table" in m],
+                         ["warning: board/5.md: orchestrate-d688fecf owns this entry and is missing from the `_cos` seat "
+                          "table — `dyad board set _cos seats=…` adds it (#587 S3)"])
+        (self.board / "_cos.md").write_text(bd.render({"holder": HOME, "seats": f"{HOME} (home); {ENG} s; orchestrate-d688fecf"}, bd.COS_FIELDS))
+        self.assertEqual([m for m in self.msgs(phased(5, "building", {"unit": [ENG]}, owner=f"{ENG}; orchestrate-d688fecf"))
+                          if "seat table" in m], [])
+        (self.board / "_cos.md").write_text(bd.render({"holder": HOME}, bd.COS_FIELDS))           # no table: silent
+        self.assertEqual([m for m in self.msgs(phased(5, "building", {"unit": [ENG]})) if "seat table" in m], [])
 
 
 class PhasedQueueTests(unittest.TestCase):
@@ -1401,8 +1425,10 @@ class DraftTests(unittest.TestCase):
         self.assertIn("# Done #700 the \\x1b[2Jmachine\\x7f: skeleton", out)
         self.assertIn("| #701 | open | implicit | 1 | child\\x07one |", out)
         self.assertIn(bd.QUOTE + "ring\\x07 \\x1b]0;t\\x07 tab\tkept\\x0bY/N: no", out)
-        self.assertEqual(out.rstrip("\n").splitlines()[-1], "Y/N: Done with #700 the \\x1b[2Jmachine\\x7f (accreted #701, merges PR #651, #652)?")
-        self.assertEqual(QSTART.findall(out), ["Y/N:"])
+        self.assertEqual(out.rstrip("\n").splitlines()[-1],     # counsel's ruling 3: such a title is never asked
+                         "(question not composed: row #700's title holds a control character: a Y binds the question "
+                         "as asked, and a title is immutable (Rule-16), so the remedy is a new row (counsel's ruling 3, #587))")
+        self.assertEqual(QSTART.findall(out), [])
 
 
 if __name__ == "__main__":
