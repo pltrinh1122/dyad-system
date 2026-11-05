@@ -1056,7 +1056,11 @@ class PackageTests(livetest.LiveCase):
         r = self.dwork_state(d, "1", "open")                                                  # no other transition runs it
         self.assertNotIn("warn [plan]", r.stderr)
     def test_plan_check_cli(self):
-        """#592 R-c: `dyad plan check <id>` is a noun of the dispatch; 589 exits 0 on the live store."""
+        """#592 R-c: `dyad plan check <id>` is a noun of the dispatch; 589 exits 0 on the live store, which a fresh install
+        does not have (#608: the test skips there)."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        if not (dyadlib.load_guard("agent", "plans").plans_dir(PKG.parent) / "589.md").is_file():
+            self.skipTest("this instance keeps no plan #589 (a fresh install)")
         run = lambda *a: subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "plan", *a], capture_output=True, text=True)
         r = run("check", "589"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [plan] #589", r.stdout)
         r = run("--help"); self.assertEqual(r.returncode, 0); self.assertIn("usage: dyad plan check <id>", r.stdout)

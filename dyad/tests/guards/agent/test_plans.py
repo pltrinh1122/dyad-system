@@ -6,6 +6,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 import dyadlib
 pl = dyadlib.load_guard("agent", "plans")
 
+
+def live_plan(test: unittest.TestCase, rid: int) -> None:
+    """#608: a test that reads one of this instance's own plan files skips where the file is absent — a fresh install,
+    as corroboration's scratch install builds it (core plus bundled crafts), holds no plans of this instance."""
+    if not (pl.plans_dir(dyadlib.repo_root()) / f"{rid}.md").is_file():
+        test.skipTest(f"this instance keeps no plan #{rid} (a fresh install)")
+
 GOOD = "# Plan #7 — a title\n\nBase commit of `main`: abc1234. Falsification below.\n\n## Intent as read\nx\n## Mutation\ny\nfiles touched: f\n"
 
 def fixture(plans: dict[str, str]):
@@ -167,6 +174,7 @@ class MandateCeilingTests(unittest.TestCase):
     def test_the_live_plan_570_reads_its_last_statement(self):
         """Revision 2 of plan #570 raises the ceiling from 12 to 14 (`the ceiling rises to 14`); the live reading is that,
         or a later revision's, never revision 1's 12."""
+        live_plan(self, 570)
         self.assertGreaterEqual(pl.mandate_ceiling(570), 14)
     def fixture(self, n, ceiling=12, seat=None, charter=None):
         root = fixture({"1.md": plan(1, f"Mandate scope: one child per criterion; ceiling {ceiling}\n")})
@@ -208,6 +216,7 @@ class LivePlanCheckTests(unittest.TestCase):
     def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
     def test_plan_589_has_no_failure(self):
         """#592 DoD: `dyad plan check 589` exits 0."""
+        live_plan(self, 589)
         self.assertEqual([m for m in pl.check_dwork(589) if not m.startswith("warning: ")], [])
 
 if __name__ == "__main__":
