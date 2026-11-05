@@ -308,6 +308,8 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | `.github/workflows/dyad-automaton.yml` | frozen |
 | `.github/workflows/dyad-release.yml` | frozen |
 | `.github/workflows/dyad-sweep.yml` | frozen |
+| `.github/workflows/dyad-probe-app.yml` | moving (#609): a temporary read-only timer that prints `github.event.schedule`, removed at #609 step 4 |
+| `.github/workflows/dyad-probe-user.yml` | moving (#609): a temporary read-only timer that prints `github.event.schedule`, removed at #609 step 4 |
 | the host frame's import line `@dyad/CLAUDE.md` | frozen |
 
 ## S8 Tag forms
