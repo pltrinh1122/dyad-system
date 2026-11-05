@@ -42,7 +42,8 @@ files and almost never merge.
 - Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
   orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the unit table
   with each unit's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
-  (`operator`, `unit <name>` — `seat <name>` its alias until the release after next — or `external <ref>`), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
+  (`operator`, `unit <name>` or `external <ref>`; a stored `seat <name>`, the form before #553, fails the guard and
+  `board set` refuses it, each naming `unit <name>`, #604), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
   written by `dyad board set` as presence's is (#350), never typed. Unlike a row it is **overwritten**, never
   append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
   ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
@@ -100,14 +101,14 @@ files and almost never merge.
   (`crafts/cabinet/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
   Which units an operator sits at is declared by the preference, checked against the records. The operator
-  **pairs** a unit by naming it in the `paired-units` preference (`preferences-corpus/PREFERENCES.md`; `attended-seats`
-  its alias until the release after next, both read; default `none`) and **unpairs** it by removing the name, by its
+  **pairs** a unit by naming it in the `paired-units` preference (`preferences-corpus/PREFERENCES.md`; default `none`;
+  a table still holding the key's name before #553, `attended-seats`, fails the presence guard, naming `paired-units`, #604) and **unpairs** it by removing the name, by its
   unit name or by that name without its `-<hp>`. A unit is then of one kind: a **dyad unit** — the home always, and
   every unit paired — where the operator and the agent are both present and a live disposition is possible, said
   "dyad unit" whenever the system is also in view; a **solo** otherwise, where the agent works alone on authority
   carried verbatim from the ledger and its questions reach the operator through the home; or `auto`, an
   **automaton**'s unit — a non-inferring party running a released definition, the countersign model's executor —
-  reserved, since no automaton keeps a presence file yet. **Attended** is the alias of paired. Pairing changes a unit's
+  reserved, since no automaton keeps a presence file yet. Pairing changes a unit's
   kind and keeps its name and holder; a question already asked keeps the route the board recorded for it. Read over
   the live units this is a mode — every unit dyad, only the home, or some — which `dyad session list` prints with the
   paired set and each unit's kind and route, since a counter-prompt is asked in a dyad unit's own chat and relayed
@@ -207,6 +208,8 @@ presence trigger names the acts that hand a unit a row, and the plan-less-row bu
 "answers a plan-`Y`" touched the home's file and never the owner's, and the files-overlap signal went stale; see the same
 record, amendment #567. Store names the Done route of `backlog → archived`, `inbox post --cc`, and the holder's post that adds an
 owner 2026-11-04 (d-work #585, carrying #572 and #586): the retirement form had been the only exit named, and two inbox
-verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585.
+verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585. Store and Presence drop
+the #553 aliases 2026-11-05 (d-work #604, H3 step 4 of #573): `seat <name>` and `attended-seats` are refused, naming their
+new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same record, amendment #604.
 
 Set: System Requirements.
