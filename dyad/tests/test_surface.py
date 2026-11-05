@@ -12,8 +12,10 @@ Each section is derived from its source and compared with the file's table:
 - S5: every DMC `@id` name.
 - S6: every `DYAD_*` name the package reads outside its tests, and every `vars.*` the `dyad-*` workflows read.
 - S7: the two hooks and the `dyad-*.yml` workflows.
+- S9: the install contracts (#612): each row's form against the constant its `source` cell names, the core library
+  path against every craft guard's own `sys.path` insert, and the craft layout against the discovery that reads it.
 With `DYAD_SURFACE_RELEASE=1` any `moving` mark fails too: the gate before R1's cut (plan #573 step 2)."""
-import json, os, re, sys, unittest
+import json, os, re, shutil, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 ROOT = PKG.parent
@@ -93,7 +95,7 @@ class SurfaceTests(unittest.TestCase):
         cls.s = sections()
 
     def test_every_section_is_present(self):
-        self.assertEqual(sorted(self.s), [f"S{i}" for i in range(1, 9)])
+        self.assertEqual(sorted(self.s), [f"S{i}" for i in range(1, 10)])
 
     def test_s1_cli_nouns_and_dwork_flags(self):
         src = (PKG / "scripts" / "package.py").read_text()
@@ -229,6 +231,62 @@ class SurfaceTests(unittest.TestCase):
         self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen"), row("dyad-b.yml", "moving (#609)")], a), ([], []))
         self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen"), row("dyad-b.yml", "frozen")], a), ([], ["dyad-b.yml"]))
         self.assertEqual(s7_workflow_problems([row("dyad-a.yml", "frozen")], a | {"dyad-c.yml"}), (["dyad-c.yml"], []))
+
+    def test_s9_install_contracts(self):
+        """#612 (plan #570 revision 10): the install contracts, each against the constant the code reads, both ways."""
+        crafts = dyadlib.load_guard("craft", "crafts")
+        bundle = dyadlib.load_guard("infra", "bundle")
+        manifest = dyadlib.load_guard("infra", "manifest")
+        provenance = dyadlib.load_guard("agent", "provenance")
+        craft = dyadlib.load_module(PKG / "scripts" / "craft.py", "craft_surface")
+        privatecite = dyadlib.load_module(PKG / "scripts" / "privatecite.py", "privatecite_surface")
+        rows = {r[0]: r for r in self.s["S9"]}
+        self.assertEqual(sorted(rows), sorted(["core library path", "guard contract", "craft registry row", "craft manifest",
+                                               "bundled-craft declaration", "instance manifest contribution",
+                                               "Tended craft layout"]))
+        # 1. the core library path: the constant, the tree, and the insert in every craft guard
+        lib = rows["core library path"]
+        self.assertEqual(ticks(lib[1])[0].rstrip("/"), dyadlib.CORE_LIBRARY)
+        self.assertEqual((PKG / "scripts").resolve(), (ROOT / dyadlib.CORE_LIBRARY).resolve())
+        insert = " / ".join(f'"{part}"' for part in dyadlib.CORE_LIBRARY.split("/"))
+        guards = [g for g in dyadlib.craft_glob(f"{dyadlib.CRAFT_LAYOUT[1]}/*.py", PKG) if not g.name.startswith("_")]
+        self.assertTrue(guards)
+        self.assertEqual([str(g.relative_to(ROOT)) for g in guards if f'parents[3] / {insert}' not in g.read_text()], [])
+        # 2. the guard contract
+        self.assertEqual({t for t in ticks(rows["guard contract"][1]) if not t.endswith(".md")},
+                         set(dyadlib.CONTRACT) | {"check_transaction"})
+        # 3. the registry row
+        reg = ticks(rows["craft registry row"][1])
+        self.assertEqual(reg[0], "crafts/REGISTRY.md"); self.assertEqual(tuple(reg[1:]), craft.REGISTRY_FIELDS)
+        # 4. the craft manifest: both keys are fields, and each form parses as the guard reads it
+        self.assertTrue({"requires", "seeds"} <= set(crafts.FIELDS))
+        forms = ticks(rows["craft manifest"][1])
+        self.assertIn("requires: <craft>>=<semver> …", forms); self.assertIn("seeds: <template>-><dest> …", forms)
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, True)
+        (d / "MANIFEST.md").write_text("name: x\nrequires: dyad-operator>=1.2.3\nseeds: templates/a.md->agent-corpus/a.md\n")
+        self.assertEqual(crafts.requires(d), [("dyad-operator", "1.2.3")])
+        self.assertEqual(crafts.seeds(d, ROOT), [("templates/a.md", "agent-corpus/a.md")])
+        # 5. the bundled-craft declaration, read as text by the bundle guard's own patterns
+        decl = ticks(rows["bundled-craft declaration"][1])
+        self.assertTrue(bundle.DECLARED.search(decl[0]), decl[0])
+        self.assertTrue(bundle.PURPOSE_LINE.search(decl[1].replace("<one line>", "serves every operator")), decl[1])
+        # 6. the instance `*.local.txt` lists, in S2
+        s2 = {r[0]: r for r in self.s["S2"]}
+        for store, name in (("provenance legacy", provenance.LEGACY), ("public remotes", privatecite.PUBLIC),
+                            ("private repos", privatecite.PRIVATE)):
+            self.assertEqual(ticks(s2[store][1]), [name], f"S2 {store}")
+        # 7. the instance manifest contribution: seven cells, the partitions and the profiles
+        cells = ticks(rows["instance manifest contribution"][1])
+        self.assertEqual(cells[0], "<host-path>/INFRASTRUCTURE.md")
+        self.assertEqual([c for c in cells[1:] if c in manifest.FIELDS], list(manifest.FIELDS))
+        self.assertEqual(set(cells[1:]), set(manifest.FIELDS) | manifest.PARTITIONS | manifest.PROFILES)
+        # 8. the Tended craft layout, which the discovery reads
+        layout = ticks(rows["Tended craft layout"][1])
+        self.assertEqual(layout[0], "crafts/<craft>/")
+        self.assertEqual(tuple(x.rstrip("/") for x in layout[1:]), dyadlib.CRAFT_LAYOUT)
+        self.assertEqual([p.name for p in dyadlib.craft_dirs(PKG)],
+                         sorted(p.name for p in (ROOT / "crafts").iterdir() if (p / dyadlib.CRAFT_LAYOUT[0]).is_file()))
+        self.assertTrue(all((p / dyadlib.CRAFT_LAYOUT[3]).is_file() for p in dyadlib.craft_dirs(PKG)))
 
     def test_no_alias_mark_is_left(self):
         """#604 (#573 DoD): every #554 alias is removed, in every run and not only under `DYAD_SURFACE_RELEASE=1`;

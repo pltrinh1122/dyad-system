@@ -67,14 +67,14 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` | `--drop`; advance: `--expect`, `--said-file`, `--mirror`; draft: `--out <file>` | moving (#587) |
+| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` | `--drop`; advance: `--expect`, `--said-file`, `--mirror`; draft: `--out <file>` | frozen |
 | `dyad inbox post <unit> [<body>...]` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file` | frozen |
-| `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | moving (#587) |
-| `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
-| `dyad automaton scan` / `run` | — | moving (#572) |
-| `dyad automaton run --evidence-from <file>` / `evidence --out <file>` | — | moving (#587) |
-| `dyad automaton sweep` | `--row <id>` | moving (#572) |
-| `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | moving (#572) |
+| `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | frozen |
+| `dyad inbox post … --cc <unit>` | — | frozen |
+| `dyad automaton scan` / `run` | — | frozen |
+| `dyad automaton run --evidence-from <file>` / `evidence --out <file>` | — | frozen |
+| `dyad automaton sweep` | `--row <id>` | moving (#609): its fix may add a flag |
+| `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | frozen |
 | `dyad bootstrap` | `--check` | frozen |
 
 ## S2 Store formats
@@ -86,11 +86,11 @@ are each guard's own constant, the source the test reads.
 |---|---|---|---|---|
 | row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`; every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
-| board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | moving (#587) |
+| board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | frozen |
 | board `cabinet` value | — | `program`, `program-<operator>`; an operator ending in eight hex reads as a seat's hp and is no cabinet | `board.CABINET` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
 | board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `writer`; `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
-| plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | moving (#572, K2) |
+| plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | frozen |
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
 | presence | `d-work/sessions/<id>.md` | `session`, `seen`, `root`, `rows`, `files`; optional `writer`, `host`, `holder` | `sessions.FIELDS` | frozen |
@@ -98,7 +98,10 @@ are each guard's own constant, the source the test reads.
 | plan file | `d-work/plans/<id>.md` | `Base commit of main:` and `Files touched` as the guards read them | `plans.FIELDS`, `dyadlib.PLAN_PARTS` | frozen |
 | trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits`; a stored trace is never a preview (#592) | `trace.SECTIONS` | frozen |
 | trace preview legacy | `traces_preview_legacy.local.txt` | `<id>` per line, `#` a comment: the stored previews before #592 | `trace.check_store` | frozen |
-| event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | moving (#593) |
+| provenance legacy | `provenance_legacy.local.txt` | `<id> <n> <reason>` per line: the rows that predate provenance enforcement and the dispositions each holds without words (Rule-7 Enforcement) | `provenance.LEGACY` | frozen |
+| public remotes | `public_remotes.local.txt` | one remote per line, compared after `normalize_remote`: the remotes the private-citation fence reads pushes to (#518) | `privatecite.PUBLIC` | frozen |
+| private repos | `private_repos.local.txt` | one sha256 hex of a lowercased `owner/repo` per line: the repositories whose quoted text never leaves for a public remote (#518) | `privatecite.PRIVATE` | frozen |
+| event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
 
@@ -319,3 +322,21 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | `dyad-operator-vMAJOR.MINOR.PATCH` (core) | frozen |
 | `<craft>-vMAJOR.MINOR.PATCH` (a Tended craft) | frozen |
 | `vMAJOR.MINOR.PATCH` (bundle) | frozen |
+
+## S9 Install contracts
+
+What an installed system's own crafts and instance files depend on, beyond the forms above: a change to any of them
+is "an install contract changed", breaking under `dyad/playbooks/release.md` (Classes; Major releases after 1.0.0),
+so each is listed and pinned like the rest (#612, plan #570 revision 10).
+
+| contract | form | source | status |
+|---|---|---|---|
+| core library path | `dyad/scripts/`, which every Tended craft guard puts on `sys.path` to import the core's modules | `dyadlib.CORE_LIBRARY`, and the inserts in `crafts/*/guards/*.py` | frozen |
+| guard contract | a guard module declares `ENTITY`, `CORPUS`, `FIELDS`, `TRANSACTION`, `check_package`, and `check_transaction` when `TRANSACTION`; a craft guard's `CORPUS` is a zone name (`crafts/sysarch/rules/guards.md`) | `dyadlib.CONTRACT`, `dyadlib.contract_problem` | frozen |
+| craft registry row | `crafts/REGISTRY.md`, one row per installed craft: `craft`, `version`, `source`, `sha256`, `d-work` (Rule-11 property 2) | `craft.REGISTRY_FIELDS` | frozen |
+| craft manifest | `crafts/<craft>/MANIFEST.md` `key: value` lines; `requires: <craft>>=<semver> …` and `seeds: <template>-><dest> …`, a leading `<host>` in a destination the host path (Rule-11 property 2) | `crafts.FIELDS`, `crafts.requires`, `crafts.seeds` | frozen |
+| bundled-craft declaration | `BUNDLED_WITH_CORE = True` in one of the craft's own guard modules, and `PURPOSE = "<one line>"` beside it when no core Rule cites the craft, both read as text (Rule-11 property 2) | `bundle.DECLARED`, `bundle.PURPOSE_LINE` | frozen |
+| instance manifest contribution | `<host-path>/INFRASTRUCTURE.md`, rows of seven cells: `component`, `partition` (`kernel`, `library`, `The World`), `version`, `purpose`, `license`, `replacement`, `profile` (`authoring`, `operating`, `both`) (Rule-14 property 1) | `manifest.FIELDS`, `manifest.PARTITIONS`, `manifest.PROFILES` | frozen |
+| Tended craft layout | `crafts/<craft>/` is a craft when it holds `VERSION`; the runner discovers `guards/` and `tests/` under it, and `vocabulary/CRAFT.md` is its vocabulary (Rule-11 property 1, Rule-6) | `dyadlib.CRAFT_LAYOUT`, read by `dyadlib.craft_dirs`, `dyadlib.guard_files`, `package.test_suites` and `vocabulary.check_craft` | frozen |
+
+The three instance `*.local.txt` lists are in S2 beside `traces_preview_legacy.local.txt`.
