@@ -1,5 +1,5 @@
 session: distribute-a603e150
-seen: 2026-11-05T17:11:13+00:00
+seen: 2026-11-05T17:52:50+00:00
 root: /home/user/wt-564-eng
 rows: 570 609
 files: .github/workflows/dyad-sweep.yml agent-corpus/d-work/plans/609.md dyad/scripts/automaton.py dyad/tests/test_automaton.py workstation-corpus/runbooks/automaton.md
