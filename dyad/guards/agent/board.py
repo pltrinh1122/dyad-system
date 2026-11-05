@@ -61,7 +61,7 @@ terminal is a stale entry, a warning. Not checked: staleness by age, and append-
 import sys
 if sys.version_info < (3, 12):
     sys.exit("board.py: Python 3.12+ required")
-import datetime, os, re, shlex, subprocess
+import datetime, os, re, shlex, subprocess, unicodedata
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -273,7 +273,31 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     msgs = []
     for p in files:
         msgs += check_entry(p.stem, p.read_text(errors="replace"), states, rows)
-    return msgs
+    return msgs + seat_table_problems(files)
+
+
+def seat_table_problems(files: list[Path]) -> list[str]:
+    """#587 S3: the `_cos` seat table is hand-written, so a phased entry's owner or unit it omits is a warning — the
+    replayed slip had orchestrate routed by `opened` while the table `resume` announces from still lacked it. Silent
+    when `_cos` holds no `seats` (a fresh install, or a flat organization)."""
+    by = {p.stem: parse(p.read_text(errors="replace"))[0] for p in files}
+    table = by.get(COS, {}).get("seats", "")
+    if not table.strip():
+        return []
+    seated = {item.split()[0] for item in table.replace("\n", ";").split(";") if item.split()}
+    out = []
+    for name, f in sorted(by.items()):
+        if name == COS or "phase" not in f:
+            continue
+        try:
+            unit = first(phase_of(f["phase"])[1], "unit")
+        except ValueError:
+            continue
+        for s in dict.fromkeys(owners(f) + ([unit] if unit else [])):
+            if s not in seated:
+                out.append(f"warning: board/{name}.md: {s} owns this entry and is missing from the `_cos` seat table — "
+                           f"`dyad board set {COS} seats=…` adds it (#587 S3)")
+    return out
 
 
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
@@ -705,6 +729,11 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str
     the union in id order. PRs without heads (Rule-3 form). Refused with PRs unless `merge-disposition` is
     `with-done`: under `separate` the merge is its own question, asked by hand (#587 risk 6)."""
     ids = list(ids)
+    for i in ids:
+        r = rows.get(i)
+        if r is not None and any(unicodedata.category(c) == "Cc" for c in r.title):
+            raise Refused(f"row #{i}'s title holds a control character: a Y binds the question as asked, and a title is "
+                          f"immutable (Rule-16), so the remedy is a new row (counsel's ruling 3, #587)")
     if kind == "plan":
         return f"Y/N: proceed with {', '.join(f'#{i}' for i in ids)} as planned?"
     prs = union_prs(ids, entries)
