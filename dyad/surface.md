@@ -67,7 +67,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad board` / `board set <id>\|_cos key=value...` / `board resume` | `--drop` | frozen |
+| `dyad board` / `board set <id>\|_cos key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` | `--drop`; advance: `--expect`, `--said-file`, `--mirror` | moving (#587) |
 | `dyad inbox post <unit> [<body>...]` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
 | `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |
@@ -84,7 +84,7 @@ are each guard's own constant, the source the test reads.
 |---|---|---|---|---|
 | row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`; every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
-| board entry | `d-work/board/<id>.md` | `holder`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `writer` | `board.FIELDS` | frozen |
+| board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer` | `board.FIELDS` | moving (#587) |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
 | board cross-row | `d-work/board/_cos.md` | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `writer`; `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | moving (#572, #573) |
 | plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | moving (#572, K2) |
