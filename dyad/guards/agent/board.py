@@ -1068,7 +1068,7 @@ def answered_already(ids, rows: dict, event: str, said_abs: str | None, wt: Path
     if kind is None:
         return False
     import datetime
-    today = datetime.date.today().isoformat()
+    today = dyadlib.utc_date()
     said = words({"--said-file": said_abs}, "said")
     yn = "Y" if event == "answered-Y" else "N"
     for rid in ids:
@@ -1233,7 +1233,7 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 raise Refused(f"already landed: {', '.join(paths)} on origin/main is identical; nothing pushed")
             return sorted(set(L.written(wt))), subj, head.rstrip("\n")
         parsed = L.read_batch_text("\n".join(lines) + "\n", repo, inst, value_flags, parse)
-        L.done_order(parsed, datetime.date.today().isoformat())
+        L.done_order(parsed, dyadlib.utc_date())
         try:
             _, bsubj, out = L.batch_builder(repo, parsed, inst, words, ran)(wt)
         except L.Refused as e:
