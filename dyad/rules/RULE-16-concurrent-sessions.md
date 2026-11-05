@@ -40,11 +40,16 @@ files and almost never merge.
   Scope). Optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it.
 - Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
-  orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the unit table
-  with each unit's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
+  orchestration in flight, and one cross-row file per **cabinet** — `board/_cos.md` for `program`,
+  `board/_cos-<operator>.md` for `program-<operator>` — for what crosses its rows (the pending queue's counts, the unit
+  table with each unit's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
   (`operator`, `unit <name>` or `external <ref>`; a stored `seat <name>`, the form before #553, fails the guard and
   `board set` refuses it, each naming `unit <name>`, #604), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
-  written by `dyad board set` as presence's is (#350), never typed. Unlike a row it is **overwritten**, never
+  written by `dyad board set` as presence's is (#350), never typed; and an optional `cabinet`, absent meaning
+  `program`, so no entry stored before it migrates — written once, when the entry is created, and never typed or
+  changed. A cabinet's home writes only its own cabinet's entries and cross-row file, a unit's first entry is filed
+  under the cabinet whose cross-row file names that unit (refused when that is ambiguous), `--drop` of a terminal
+  row stays open to any unit, and `dyad board resume` shows the resumer's cabinet alone (#594). Unlike a row it is **overwritten**, never
   append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
   ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
   session holding the board replaced by another — by `dyad board resume`, which prints what the new holder resumes.
@@ -224,6 +229,8 @@ verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`
 the #553 aliases 2026-11-05 (d-work #604, H3 step 4 of #573): `seat <name>` and `attended-seats` are refused, naming their
 new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same record, amendment #604. Store's board
 bullet gains the orchestration phase 2026-11-05 (d-work #587): owner, wait and next act were free text that drifted
-from the work, and ten slips of one day (S1–S10) were each an unrecorded transition; see the same record, amendment #587.
+from the work, and ten slips of one day (S1–S10) were each an unrecorded transition; see the same record, amendment #587. Store's board
+bullet gains the cabinet 2026-11-05 (d-work #594, #548 S13): with two operators' homes on one instance, one shared
+`_cos.md` let one home's queue and question overwrite the other's; see the same record, amendment #594.
 
 Set: System Requirements.
