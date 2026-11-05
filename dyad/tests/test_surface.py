@@ -3,15 +3,16 @@
 Each section is derived from its source and compared with the file's table:
 - S1: the CLI nouns of `package.py`'s dispatch, and each `dwork` verb's flags (`DWORK_VERB_FLAGS`, plus `--land` and
   `--mirror`, land's own); every row's forms and flags equal to `dyadlib.CLI` (#592 R-a).
-- S2: each store's keys, from the guard constant its `source` cell names; the `seat <name>` alias from
-  `board.UNIT_ALIAS`.
+- S2: each store's keys, from the guard constant its `source` cell names; the `waiting-on` forms from `board.WAITING`,
+  the removed `seat <name>` refused (#604).
 - S3: every key of the core's preference template and of this instance's table is listed, and every listed key that
-  is not `moving` is one of them (or the new name `paired-units`, `sessions.PAIRED_UNITS`).
+  is not `moving` is one of them (or `paired-units`, `sessions.PAIRED_UNITS`); a retired key is listed nowhere.
+- No `alias` mark in any run (#604: the #554 aliases are removed, and this pins it).
 - S4: the Rule numbers, their files and their `##` headings; 17 retired.
 - S5: every DMC `@id` name.
 - S6: every `DYAD_*` name the package reads outside its tests, and every `vars.*` the `dyad-*` workflows read.
 - S7: the two hooks and the `dyad-*.yml` workflows.
-With `DYAD_SURFACE_RELEASE=1` any `moving` or `alias` mark fails too: the gate before R1's cut (plan #573 step 2)."""
+With `DYAD_SURFACE_RELEASE=1` any `moving` mark fails too: the gate before R1's cut (plan #573 step 2)."""
 import json, os, re, sys, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -71,7 +72,7 @@ def s1_forms(rows: list[list[str]]) -> tuple[list[tuple[str, str | None]], list[
 
 def stale_keys(listed: dict[str, str], known: set[str], code_keys: set[str]) -> set[str]:
     """S3 keys that are neither `moving` nor a key of the preference tables (`known`) nor one the code still reads
-    (`code_keys`: the new name, and an alias while it is read and warned on, #573 step 5): a listed key nothing has."""
+    (`code_keys`: `paired-units`; no alias is read since #604): a listed key nothing has."""
     return {k for k, st in listed.items() if not st.startswith("moving") and k not in known | code_keys}
 
 
@@ -121,7 +122,11 @@ class SurfaceTests(unittest.TestCase):
             self.assertEqual(set(ticks(rows[store][2])), set(keys), f"S2 {store}")
         self.assertTrue(set(sessions.FIELDS) <= set(ticks(rows["presence"][2])), "S2 presence")
         self.assertEqual(set(ticks(rows["row states"][2])), set(dyadlib.TRANSITIONS))
-        self.assertIn(f"`{board.UNIT_ALIAS.strip()} <name>`", rows["board `waiting-on` value"][2])
+        cell = rows["board `waiting-on` value"]
+        for form in ticks(cell[2]):   # each listed form is one `board.WAITING` reads; `seat <name>` is no longer one (#604)
+            self.assertTrue(board.WAITING.fullmatch(form.replace("<name>", "counsel").replace("<ref>", "run 1")), form)
+        self.assertNotIn("seat", cell[2]); self.assertFalse(hasattr(board, "UNIT_ALIAS"))
+        self.assertFalse(board.WAITING.fullmatch(board.RETIRED_WAITING + "counsel"))
 
     def test_s3_preference_keys(self):
         sessions = dyadlib.load_guard("agent", "sessions")
@@ -133,8 +138,8 @@ class SurfaceTests(unittest.TestCase):
         known |= keys(inst) if inst.exists() else set()
         listed = {r[0]: r[-1] for r in self.s["S3"]}
         self.assertEqual(known - set(listed), set(), "a preference key S3 does not list")
-        code_keys = {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}   # the alias is read (and warns) until step 4
-        self.assertEqual(stale_keys(listed, known, code_keys), set(), "an S3 key that is no preference")
+        self.assertEqual(stale_keys(listed, known, {sessions.PAIRED_UNITS}), set(), "an S3 key that is no preference")
+        self.assertEqual(set(sessions.RETIRED_KEYS) & (set(listed) | known), set(), "a retired key is listed or seeded (#604)")
 
     def test_s3_a_fresh_install_seeds_every_frozen_key(self):
         """A fresh install has the core's template and no instance table (#603: the 0.18.0 cut failed its own suite
@@ -144,16 +149,14 @@ class SurfaceTests(unittest.TestCase):
         tmpl = {c[0] for c in (dyadlib.split_cells(l) for l in (PKG / "templates" / "PREFERENCES.md").read_text().splitlines()
                                if l.startswith("| ")) if c and c[0] != "key" and re.fullmatch(r"[a-z][a-z-]*", c[0])}
         listed = {r[0]: r[-1] for r in self.s["S3"]}
-        self.assertEqual(stale_keys(listed, tmpl, {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}), set(),
+        self.assertEqual(stale_keys(listed, tmpl, {sessions.PAIRED_UNITS}), set(),
                          "an S3 key a fresh install's template does not seed")
-    def test_s3_an_alias_the_code_reads_is_not_stale_once_no_table_holds_it(self):
-        """The operator's rename (step 3) leaves no table with `attended-seats` while the code still reads it: the
-        alias row stays listed and is not stale; once step 4 stops reading it, it is (orchestrate's combined run)."""
+    def test_s3_a_removed_alias_row_is_stale(self):
+        """#604 (step 4): the code no longer reads `attended-seats`, so an S3 row for it is a key nothing has."""
         sessions = dyadlib.load_guard("agent", "sessions")
-        listed = {"paired-units": "frozen", "attended-seats": "alias → `paired-units` (#573)", "altitude": "moving (#570)"}
-        known = {"paired-units"}
-        self.assertEqual(stale_keys(listed, known, {sessions.PAIRED_UNITS, sessions.ATTENDED_SEATS}), set())
-        self.assertEqual(stale_keys(listed, known, {sessions.PAIRED_UNITS}), {"attended-seats"})
+        self.assertFalse(hasattr(sessions, "ATTENDED_SEATS"))
+        listed = {"paired-units": "frozen", "attended-seats": "frozen", "altitude": "moving (#570)"}
+        self.assertEqual(stale_keys(listed, {"paired-units"}, {sessions.PAIRED_UNITS}), {"attended-seats"})
 
     def test_s4_rules_and_their_headings(self):
         listed = {r[0]: r for r in self.s["S4"]}
@@ -187,6 +190,11 @@ class SurfaceTests(unittest.TestCase):
             self.assertTrue((PKG / "hooks" / hook).is_file()); self.assertIn(f"dyad/hooks/{hook}", text)
         wf = {p.name for p in (ROOT / ".github" / "workflows").glob("dyad-*.yml")}
         self.assertEqual({t.rsplit("/", 1)[-1] for t in re.findall(r"`(\.github/workflows/[^`]+)`", text)}, wf)
+
+    def test_no_alias_mark_is_left(self):
+        """#604 (#573 DoD): every #554 alias is removed, in every run and not only under `DYAD_SURFACE_RELEASE=1`;
+        an `alias` mark returning to any section fails here."""
+        self.assertEqual([(sec, r[0]) for sec, rows in self.s.items() for r in rows if r[-1].startswith("alias")], [])
 
     def test_release_mode_has_no_moving_or_alias_mark(self):
         marks = [(sec, r[0]) for sec, rows in self.s.items() for r in rows if r[-1].startswith(("moving", "alias"))]

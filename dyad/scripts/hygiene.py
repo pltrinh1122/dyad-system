@@ -26,10 +26,20 @@ worded from fixed record times, never a computed age, so a finding told once is 
   W7a unit not in table   a unit a live board entry names that `_cos`'s `seats` does not
   W7b unit stale          a live entry waiting on a unit whose presence file is stale; skipped with one line until the
                           presence store holds a fresh file (gated on #567, A7)
+  W7c retired form        a live entry whose `waiting-on` still holds the removed `seat <name>` (#604): W2, W7a and W7b
+                          read `unit <name>` only, so the entry is named here with the board guard's refusal, never skipped
   W8  promise kept listed a `promised` entry of a board file listed over `inflight-promise-days` (its age: git history, A8)
   W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
                           `inflight-question-hours` (A9)
   W10' report after board an owner's report on a row, to home, newer than the row's board `since` (A10)
+  W11 phase age           a phased board entry (#587) whose `since` is older than its phase's threshold in
+                          INFLIGHT_W11_HOURS (an asked phase 24 h, every other 3 days): plan #587 F5's one rule,
+                          "phase older than N", worded from the entry's `since` alone
+
+A ring owed (#587 X8: a relay posted by home to a unit, unread) is W1: every unread `relay` is one, whoever sent it,
+and a `report` or `notice` home posts never rings (`land.ring_list` rings every kind but `notice`, and the machine's
+relays to a unit are all of kind `relay`). W1's threshold is 4 h, not X8's hour: the sweep runs twice a day, so a
+lower threshold would tell nothing sooner.
 
 The hosting's open PRs (W4–W6) are read by the caller with `GITHUB_TOKEN`; without them those kinds print one skip line.
 Clustering waits for typed refs (plan #569 decision 3).
@@ -66,11 +76,17 @@ HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of row
 PARENT = re.compile(r"\bparent #(\d+)")
 CITE = re.compile(r"\bd-work #(\d+)\b")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
-INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'")
+INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
+    "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
+    "done-ready": 72, "done-asked": 24, "landing": 72, "held": 72}
+INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W7c", "W8", "W9", "W10'", "W11")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("max-df-in-range", lambda: 0 < HYGIENE_MAX_DF < 1),
-    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 11),
+    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 13),
+    ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) == set(dyadlib.ORCH_PHASES)
+                                       and all(h > 0 for h in INFLIGHT_W11_HOURS.values())
+                                       and all(INFLIGHT_W11_HOURS[p] == 24 for p in dyadlib.ORCH_ASKED)),
 ]
 TREE_INVARIANTS = [   # loads a guard or reads the DMC store, so never at import
     ("tunables-are-the-records", lambda: set(TUNABLES.values()) == dyadlib.tunables_read_by("scripts/hygiene.py")),   # #590: one home
@@ -80,7 +96,8 @@ TREE_INVARIANTS = [   # loads a guard or reads the DMC store, so never at import
         "hygiene I12 worked: backlog row #3 is cited by abc on origin/x",
         "candidate: #4 and #5 similar (0.40): a / b",
         "inflight W1 relay unread: row #6's relay to engineer-1 sent 2026-11-03T10:00:00Z has no read marker",
-        "inflight W9 operator wait: row #7 waits on the operator with no question recorded"))),
+        "inflight W9 operator wait: row #7 waits on the operator with no question recorded",
+        "inflight W11 phase age: row #8 in done-asked since 2026-11-03T10:00Z"))),
 ]
 
 
@@ -198,9 +215,9 @@ def _board_files(repo: Path, base: str, inst: str) -> dict[str, dict[str, str]]:
 
 
 def _units(field: str) -> list[str]:
-    """The unit a `waiting-on` names (`unit <name>`, alias `seat <name>`), as a one-item list, else []."""
+    """The unit a `waiting-on` names (`unit <name>`; `seat <name>` removed in 1.0, #604), as a one-item list, else []."""
     w = field.split()
-    return [w[1]] if len(w) >= 2 and w[0] in ("unit", "seat") else []
+    return [w[1]] if len(w) >= 2 and w[0] == "unit" else []
 
 
 def _messages(repo: Path, base: str, inst: str) -> list[dict[str, str]]:
@@ -348,6 +365,10 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             for u in _units(f.get("waiting-on", "")):
                 if not presence_fresh(u, nowdt):
                     out.append(f"inflight W7b unit stale: row #{i} waits on {u}, whose presence file is stale")
+    # W7c: the removed `seat <name>` form (#604), which W2/W7a/W7b no longer read, so never skipped without a line
+    for i, f in sorted(entries.items()):
+        if (refusal := bd.retired_waiting(f.get("waiting-on", ""))):
+            out.append(f"inflight W7c retired form: row #{i}'s board entry {refusal}")
     # W8: a promise still listed
     for name, f in [("_cos", cos)] + [(str(i), f) for i, f in sorted(entries.items())]:
         for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:
@@ -374,6 +395,22 @@ def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
             m = max(late, key=lambda m: m.get("sent", ""))
             out.append(f"inflight W10' report after board: row #{i}'s board since {f.get('since')}, but {m['from']} "
                        f"reported on it at {m.get('sent')}")
+    out += phase_age(entries, nowdt)
+    return out
+
+
+def phase_age(entries: dict[int, dict[str, str]], nowdt) -> list[str]:
+    """W11 (#587 F5): `inflight W11 phase age: row #N in <phase> since <since>` for each phased entry whose `since` is
+    older than its phase's INFLIGHT_W11_HOURS; worded from the record alone, never a computed age, so the line is new
+    again only when the entry moves. An unphased entry, an unknown phase or an unreadable `since` says nothing (the
+    board guard names a malformed one)."""
+    bd = dyadlib.load_guard("agent", "board")
+    out = []
+    for i, f in sorted(entries.items()):
+        p = bd.phase_name(f)
+        t = _when(f.get("since", ""))
+        if p in INFLIGHT_W11_HOURS and t and (nowdt - t).total_seconds() > INFLIGHT_W11_HOURS[p] * 3600:
+            out.append(f"inflight W11 phase age: row #{i} in {p} since {f['since']}")
     return out
 
 

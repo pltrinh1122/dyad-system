@@ -458,6 +458,25 @@ class LandTests(unittest.TestCase):
         self.assertEqual(self.hook_runs(), [])
         self.assertFalse(self.wt.exists(), "refused before the worktree was touched")
 
+    def test_read_batch_text_reads_as_read_batch(self):
+        """#587: `board advance` composes its lines and parses them with `read_batch_text`, `read_batch`'s own loop."""
+        land = dyadlib.load_module(PKG / "scripts" / "land.py", "land")
+        presence = self.seat / INST / "d-work" / "sessions" / "s1.md"
+        presence.parent.mkdir(parents=True); presence.write_text("session: s1\n")
+        said = self.top / "said.txt"; said.write_text("Y\n")
+        text = ("# a round\n\n"
+                f"state 1 planned -d 'Y plan' --said-file {said}\n"
+                f"land {presence}\n"
+                "board 1 owner=engineer-bbbbbbbb waiting-on='unit engineer-bbbbbbbb' next='build it'\n"
+                "post engineer-bbbbbbbb --row 1 --kind relay 'row 1 planned; yours: the code'\n"
+                "post orchestrate-cccccccc --row 1 --kind notice --cc counsel-dddddddd 'fyi'\n")
+        f = self.top / "batch.txt"; f.write_text(text)
+        a = land.read_batch(str(f), self.seat, INST, self.pkg.DWORK_VALUE_FLAGS, self.pkg.dwork_args)
+        b = land.read_batch_text(text, self.seat, INST, self.pkg.DWORK_VALUE_FLAGS, self.pkg.dwork_args)
+        shape = lambda ls: [(l.n, l.verb, l.argv, l.rels, getattr(l, "parsed", None)) for l in ls]
+        self.assertEqual(shape(a), shape(b))
+        self.assertEqual([l.verb for l in b], ["state", "land", "board", "post", "post"])
+
     def test_a_racing_commit_rebuilds_the_batch(self):
         git(self.seat.parent, "clone", "-q", str(self.origin), str(self.racer))
         add_row(self.racer, 2, "racer", "open racer")
