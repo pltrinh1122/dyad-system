@@ -371,7 +371,9 @@ class MachineTests(unittest.TestCase):
                 ("evidence-verified", "done-ready"): (HOME, "report", []),
                 ("evidence-failed", "building"): (ENG, "relay", []), ("answered-Y", "landing"): (ENG, "notice", ["--cc", COU]),
                 ("answered-Y", dyadlib.ORCH_DROP): (ENG, "notice", ["--cc", COU]), ("answered-N", "building"): (ENG, "relay", []),
-                ("hold", "held"): (ENG, "notice", ["--cc", COU]), ("release", dyadlib.ORCH_FROM): (ENG, "notice", ["--cc", COU])}
+                ("hold", "held"): (ENG, "notice", ["--cc", COU]), ("release", dyadlib.ORCH_FROM): (ENG, "notice", ["--cc", COU]),
+                ("head-moved", "verifying"): (HOME, "report", ["--cc", ENG, "--cc", COU]),   # #587 X6: the owners relayed
+                ("withdrawn", "done-ready"): (HOME, "report", [])}                     # X6 for a batch's other rows
         self.assertEqual(set(want), set(bd.RELAYS))
         ib = dyadlib.load_guard("agent", "inbox")
         for (event, target), (to, kind, cc) in want.items():
@@ -422,6 +424,69 @@ class MachineTests(unittest.TestCase):
             with self.assertRaises(bd.Refused, msg=event) as c:
                 bd.transition(5, old, row, event, {"pr": "1", "head": H1}, sender, "t")
             self.assertIn(says, str(c.exception))
+
+    def test_head_moved_withdraws_the_question_and_the_evidence(self):
+        """#587 X6: from verifying, done-ready or done-asked a moved head goes back to verifying with the new head
+        recorded, the evidence and any stored question dropped; only the automaton fires it."""
+        row = Row(5, "five")
+        for phase, q in (("verifying", None), ("done-ready", None), ("done-asked", "Y/N: Done with #5 five (merges PR #650)?")):
+            sub = {"unit": [ENG], "pr": [f"650 at {H1}", f"651 at {H2}"]} | ({} if phase == "verifying" else {"evidence": [EV]})
+            old = bd.parse(phased(5, phase, sub, question=q))[0]
+            target, new = bd.transition(5, old, row, "head-moved", {"pr": "650", "head": H3}, "automaton", "2026-11-04T12:00Z",
+                                        automaton=True)
+            got = bd.phase_of(new["phase"])[1]
+            self.assertEqual((target, bd.pr_list(got), got.get("evidence")), ("verifying", [(650, H3), (651, H2)], None), phase)
+            self.assertNotIn("question", new, phase)
+            self.assertEqual(new["waiting-on"], f"unit {HOME}")
+            self.assertEqual(bd.check_phased("5", new, None), [], phase)
+            with self.assertRaises(bd.Refused, msg=phase) as c:                    # never from a seat
+                bd.transition(5, old, row, "head-moved", {"pr": "650", "head": H3}, HOME, "t")
+            self.assertIn("an automaton event never comes from the CLI", str(c.exception))
+        with self.assertRaises(bd.Refused):                                      # not from building
+            bd.transition(5, bd.parse(phased(5, "building", {"unit": [ENG]}))[0], row, "head-moved",
+                          {"pr": "650", "head": H3}, "automaton", "t", automaton=True)
+
+    def test_withdrawn_steps_a_batch_sibling_back_to_done_ready(self):
+        """#587 X6 for a batch: the other rows a withdrawn batch Done question named step back from done-asked to
+        done-ready, their own heads and evidence kept, the question dropped, the note recorded; only the automaton
+        fires it, and only from done-asked."""
+        row = Row(6, "six")
+        sub = {"unit": [ENG], "pr": [f"651 at {H2}"], "evidence": [EV]}
+        old = bd.parse(phased(6, "done-asked", sub, question="Y/N: Done with #5 five, #6 six (merges PR #650, #651)?"))[0]
+        target, new = bd.transition(6, old, row, "withdrawn", {"note": "PR #650 of #5 moved to 0123456789ab"}, "automaton",
+                                    "2026-11-04T12:00Z", automaton=True)
+        got = bd.phase_of(new["phase"])[1]
+        self.assertEqual((target, bd.pr_list(got), got.get("evidence")), ("done-ready", [(651, H2)], [EV]))
+        self.assertNotIn("question", new)
+        self.assertEqual(new["note"], "PR #650 of #5 moved to 0123456789ab")
+        self.assertEqual(bd.check_phased("6", new, None), [])
+        with self.assertRaises(bd.Refused) as c:                                 # never from a seat
+            bd.transition(6, old, row, "withdrawn", {"note": "n"}, HOME, "t")
+        self.assertIn("an automaton event never comes from the CLI", str(c.exception))
+        with self.assertRaises(bd.Refused):                                      # not from done-ready
+            bd.transition(6, bd.parse(phased(6, "done-ready", sub))[0], row, "withdrawn", {"note": "n"}, "automaton", "t",
+                          automaton=True)
+
+    def test_the_automaton_fires_only_its_own_events(self):
+        """#587 X5: evidence-verified and evidence-failed from verifying are home's or the automaton's; the automaton
+        may not fire a home-only event (an answer, asked, hold) nor a unit's."""
+        row = Row(5, "five")
+        ver = bd.parse(phased(5, "verifying", {"unit": [ENG], "pr": [f"650 at {H1}"]}))[0]
+        t, new = bd.transition(5, ver, row, "evidence-verified", {"evidence": EV}, "automaton", "t", automaton=True)
+        self.assertEqual((t, bd.first(bd.phase_of(new["phase"])[1], "evidence")), ("done-ready", EV))
+        t, new = bd.transition(5, ver, row, "evidence-failed", {"note": "combined merge: conflict"}, "automaton", "t", automaton=True)
+        self.assertEqual((t, new["note"]), ("building", "combined merge: conflict"))
+        self.assertEqual(bd.transition(5, ver, row, "evidence-verified", {"evidence": EV}, HOME, "t")[0], "done-ready")   # home still may
+        for event, pairs in (("hold", {"note": "n", "on": "operator"}), ("pr-up", {"pr": "651", "head": H2})):
+            with self.assertRaises(bd.Refused, msg=event) as c:
+                bd.transition(5, ver, row, event, pairs, "automaton", "t", automaton=True)
+            self.assertIn("never the automaton's", str(c.exception))
+        bd_ = bd.parse(phased(5, "building", {"unit": [ENG]}))[0]
+        with self.assertRaises(bd.Refused):                                      # building's evidence-verified is home's
+            bd.transition(5, bd_, row, "evidence-verified", {"evidence": EV}, "automaton", "t", automaton=True)
+        with self.assertRaises(bd.Refused) as c:                                 # the CLI never names head-moved
+            bd.parse_advance(["5", "head-moved", "--expect", "verifying", "pr=650", f"head={H3}"])
+        self.assertIn("is not an event", str(c.exception))
 
     def test_ledger_lines_compose_the_answer(self):
         rows = {5: Row(5, "five", "open"), 6: Row(6, "six", "planned"),
@@ -1064,6 +1129,8 @@ class AdvanceTests(unittest.TestCase):
                          "rows/6.md": "id: 6\ntitle: six\nopened: 2026-11-01\nstate: planned\n"
                                       f"disposed: 2026-11-01 Y plan; 2026-11-04 Y done (merges PR #650 at {H1})\nrefs: \n",
                          "board/6.md": self.done_asked(6, [f"651 at {H2}"], "Y/N: Done with #6 six (merges PR #651)?")})
+        self.seed_board({"rows/7.md": "id: 7\ntitle: seven\nopened: 2026-11-01\nstate: planned\n"   # the answer, recorded by hand
+                                      "disposed: 2026-11-01 Y plan; 2026-11-05 Y plan\nrefs: \n"})     # after the asking (S11)
         with unittest.mock.patch.object(am, "corroborate", lambda *a: (True, [])):
             _, acts = am.plan(self.seat)
             self.assertIn(("advance", 7, "answered-Y", "plan-asked"), acts)
