@@ -7,7 +7,7 @@ it lands one ledger-only commit holding the entry, defaults holder, since and wr
 stands on origin/main, removes a key on `key=`, warns on another writer, refuses a terminal or unknown row, a typed
 `writer` and an identical re-run, and `--drop` removes the file. `dyad board` renders the entries oldest first, and
 `resume` prints the owed question verbatim, the gates and the seats to announce to."""
-import contextlib, datetime, io, os, shutil, subprocess, sys, tempfile, unittest, unittest.mock
+import contextlib, datetime, io, os, re, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PKG / "scripts"))
@@ -1131,6 +1131,276 @@ class AdvanceTests(unittest.TestCase):
         self.assertEqual(self.show("rows/7.md"), rows_before)                     # no ledger line
         self.assertEqual([(m["from"], m["body"]) for m in self.box(ENG)], [("automaton", "row #7 planned; read plans/7.md")])
         self.assertEqual(self.commits(before), 1)
+
+
+QSTART = re.compile(r"(?m)^Y/N:")
+
+
+class DraftTests(unittest.TestCase):
+    """`dyad board draft <id>` (#587 X7) over a scratch world: a bare origin and a clone whose row #700 is phased at
+    done-ready with two PRs in two zones (agent and infra), two rows accreted under its mandate (one terminal), a plan
+    with a DoD section, and its evidence block stored in the clone's evidence store. Each section is asserted, the
+    question equals what `asked` would store, a row not at done-ready is refused, `--out` inside the work tree is
+    refused, and the clone's `git status` is unchanged by every run."""
+    DOD = "## Definition of done\nA report read in one pass:\n1. the `table`.\n```\nnot a fence of ours\n```\n"
+
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        top = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, top, True)
+        seed, self.origin, self.repo = top / "seed", top / "origin.git", top / "repo"
+        seed.mkdir(); git(seed, "init", "-q", "-b", "main")
+        d = seed / INST / "d-work"
+        for sub in ("rows", "plans", "board"):
+            (d / sub).mkdir(parents=True)
+        rows = {700: ("the machine", "planned", "2026-11-01 Y plan", "", ""),
+                701: ("child one", "open", "2026-11-01 Y plan (mandate #700)", "parent #700", "mode: implicit\n"),
+                702: ("child | two", "done", "2026-11-01 Y plan (mandate #700); 2026-11-02 Y done (mandate #700, 2026-11-02)", "parent #700", "mode: implicit\n"),
+                703: ("unrelated", "open", "2026-11-01 Y plan (mandate #9)", "parent #700", ""),
+                704: ("not ready", "planned", "2026-11-01 Y plan", "", "")}
+        for rid, (title, state, disposed, refs, extra) in rows.items():
+            (d / "rows" / f"{rid}.md").write_text(f"id: {rid}\ntitle: {title}\nopened: 2026-11-01\nstate: {state}\n"
+                                                  f"disposed: {disposed}\nrefs: {refs}\n{extra}")
+        (d / "plans" / "700.md").write_text("# Plan #700\n\n## Intent as read\nx\n\n" + self.DOD + "\n## Files touched\ny\n")
+        (seed / "preferences-corpus").mkdir()
+        (seed / "preferences-corpus" / "PREFERENCES.md").write_text(
+            "| key | value | allowed | read by |\n|---|---|---|---|\n| merge-disposition | with-done | `separate` \\| `with-done` | r |\n"
+            "| dwork-trace | always | `always` \\| `on-demand` | r |\n")
+        git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "ledger: rows")
+        heads = []
+        for branch, paths in (("pr-a", ("agent-corpus/notes/a.md",)), ("pr-b", (".github/workflows/b.yml",)),
+                              ("pr-c", ("agent-corpus/notes/a b.md", "agent-corpus/notes/é.md"))):
+            git(seed, "checkout", "-q", "-b", branch, "main")
+            for path in paths:
+                (seed / path).parent.mkdir(parents=True, exist_ok=True); (seed / path).write_text("x\n")
+            git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", branch)
+            heads.append(git(seed, "rev-parse", "HEAD"))
+        git(seed, "checkout", "-q", "main")
+        self.ha, self.hb, self.hc = heads
+        board = d / "board"
+        (board / "700.md").write_text(phased(700, "done-ready", {"unit": [ENG], "pr": [f"651 at {self.ha[:12]}", f"652 at {self.hb}"], "evidence": [EV]}))
+        (board / "704.md").write_text(phased(704, "verifying", {"unit": [ENG], "pr": [f"653 at {self.ha[:12]}"]}))
+        git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "ledger: board")
+        git(top, "clone", "-q", "--bare", str(seed), str(self.origin))
+        git(top, "clone", "-q", str(self.origin), str(self.repo))
+        git(self.repo, "fetch", "-q", str(seed), "pr-a", "pr-b", "pr-c")   # the PR heads are objects of the clone, as a fetched refs/pull/<n>/head is
+        self.pk = dyadlib.runner_module()
+
+    def store_block(self):
+        body = [f"head={self.ha}", "tree=" + "1" * 40, "dirty=no", "code=x", "ok   [rule-12] tests pass", "FAIL [guards] agent/x: broken",
+                "warn [guards] agent/plans 9.md: never mentions `intent as read` (dyadlib.PLAN_PARTS)"]
+        block = body + [self.pk.EVIDENCE_SHA + self.pk.evidence_sha256(body)]
+        sha = self.pk.evidence_sha256(body)
+        d = Path(git(self.repo, "rev-parse", "--path-format=absolute", "--git-common-dir")) / self.pk.EVIDENCE_STORE
+        d.mkdir(parents=True, exist_ok=True); (d / f"{sha}.txt").write_text("\n".join(block) + "\n")
+        return sha
+
+    def status(self):
+        return git(self.repo, "status", "--porcelain", "--untracked-files=all")
+
+    def draft(self, *argv, repo=None):
+        out, err = io.StringIO(), io.StringIO()
+        before = self.status()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = bd.cli(["draft", *argv], repo or self.repo)
+        self.assertEqual(self.status(), before)                              # nothing in the repo changed
+        self.assertEqual(self.status(), "")
+        return rc, out.getvalue(), err.getvalue()
+
+    def section(self, text, heading):
+        parts = text.split("\n## ")
+        return next(p for p in parts if p.startswith(heading))
+
+    def test_mandated_includes_terminal_and_accreted_of_does_not(self):
+        rows = {r.id: r for r in dyadlib.read_rows(self.repo)}
+        self.assertEqual(bd.mandated(700, rows), [701, 702])
+        self.assertEqual(bd.accreted_of(700, rows), [701])
+
+    def test_dod_sections_and_fenced(self):
+        self.assertEqual(bd.dod_sections("# P\n## Intent\na\n" + self.DOD + "## Next\nb\n## Definition of done, revised\nc\n"),
+                         [self.DOD.rstrip("\n"), "## Definition of done, revised\nc"])
+        self.assertEqual(bd.dod_sections("# P\n## Intent\na\n"), [])
+        f = bd.fenced("a\n```\nb")
+        self.assertEqual((f[0], f[-1], f[1:-1]), ("````", "````", [bd.QUOTE + "a", bd.QUOTE + "```", bd.QUOTE + "b"]))
+
+    def test_the_skeleton_of_a_done_ready_row(self):
+        sha = self.store_block()
+        bd_entry = self.repo / INST / "d-work" / "board" / "700.md"
+        bd_entry.write_text(bd_entry.read_text().replace(EV, sha))
+        git(self.repo, *livetest.IDENTITY, "commit", "-qam", "ledger: evidence")
+        rc, out, err = self.draft("700")
+        self.assertEqual((rc, err), (0, ""), err)
+        self.assertTrue(out.startswith("# Done #700 the machine: skeleton\n"), out)
+        quoted = "\n".join(bd.QUOTE + l for l in self.DOD.rstrip("\n").split("\n"))
+        self.assertIn("## Definition of done (quoted from agent-corpus/d-work/plans/700.md)\n\n````\n" + quoted
+                      + "\n````\n\n## PRs", out)                                        # verbatim behind the prefix, its own fence kept
+        prs = self.section(out, "PRs")
+        self.assertIn(f"| #651 | agent | {self.ha[:12]} | 1 |", prs)
+        self.assertIn(f"| #652 | infra | {self.hb} | 1 |", prs)
+        ev = self.section(out, "Evidence")
+        self.assertIn(f"evidence-sha256 `{sha}`, recorded on the phase over PR #651 at {self.ha[:12]}, PR #652 at {self.hb}", ev)
+        self.assertIn("counts: ok=1 warn=1 skip=0 fail=1", ev)
+        self.assertIn("FAIL [guards] agent/x: broken", ev)
+        self.assertIn("not computed by board draft", ev)                                # never computes a baseline
+        acc = self.section(out, "Accreted rows")
+        self.assertIn("| #701 | open | implicit | 1 | child one |", acc)
+        self.assertIn("| #702 (terminal: not in the question) | done | implicit | 2 | child \\| two |", acc)
+        self.assertNotIn("#703", acc)                                                   # another mandate's row
+        self.assertIn("`agent-corpus/d-work/traces/700.md`: absent (dwork-trace: always; write it with `dyad dwork trace 700 --out`)",
+                      self.section(out, "Trace"))
+        for head, _ in bd.ORCHESTRATE_SECTIONS:
+            self.assertIn(bd.ORCHESTRATE, self.section(out, f"{head} (orchestrate)"))
+        last = out.rstrip("\n").splitlines()[-1]
+        self.assertEqual(last, "Y/N: Done with #700 the machine (accreted #701, merges PR #651, #652)?")
+        rows = {r.id: r for r in dyadlib.read_rows(self.repo)}
+        entry = bd.parse(bd_entry.read_text())[0]
+        self.assertEqual(last, bd.question("done", [700], {700: entry}, rows, "with-done"))   # what `asked` stores
+        self.assertEqual(QSTART.findall(out), ["Y/N:"])
+
+    def test_an_unstored_block_and_a_present_trace(self):
+        t = self.repo / INST / "d-work" / "traces" / "700.md"
+        t.parent.mkdir(parents=True); t.write_text("# Trace #700\n")
+        git(self.repo, "add", "-A"); git(self.repo, *livetest.IDENTITY, "commit", "-qm", "ledger: trace")
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        self.assertIn(f"block not stored here; run `dyad check --evidence --show {EV}`", self.section(out, "Evidence"))
+        self.assertIn("`agent-corpus/d-work/traces/700.md`: present", self.section(out, "Trace"))
+
+    def test_a_head_not_in_the_clone(self):
+        bd_entry = self.repo / INST / "d-work" / "board" / "700.md"
+        bd_entry.write_text(bd_entry.read_text().replace(self.hb, "f" * 40))
+        git(self.repo, *livetest.IDENTITY, "commit", "-qam", "ledger: moved")
+        rc, out, _ = self.draft("700")
+        self.assertIn(f"| #652 | ? (head not in this clone: fetch refs/pull/652/head) | {'f' * 40} | ? |", out)
+
+    def test_refusals(self):
+        for rid, says in (("704", "#704 is at verifying"), ("703", "#703 is at no board entry"), ("999", "no board entry")):
+            rc, out, err = self.draft(rid)
+            self.assertEqual((rc, out), (1, ""), rid)
+            self.assertEqual(len(err.strip().splitlines()), 1, err)
+            self.assertIn(says, err)
+        rc, _, err = self.draft("700", "--out", str(self.repo / "draft.md"))
+        self.assertEqual(rc, 1); self.assertIn("a worktree or the git dir of this repository", err)
+        self.assertEqual(self.draft("x")[0], 2)
+        self.assertEqual(self.draft("700", "--out")[0], 2)
+
+    def test_out_writes_a_scratch_file_only(self):
+        dest = Path(tempfile.mkdtemp()) / "sub" / "700-done.md"
+        self.addCleanup(shutil.rmtree, dest.parent.parent, True)
+        rc, out, _ = self.draft("700", "--out", str(dest))
+        self.assertEqual(rc, 0)
+        self.assertTrue(out.startswith(f"wrote {dest} ("), out)
+        self.assertTrue(dest.read_text().startswith("# Done #700 the machine: skeleton"))
+
+    def test_a_with_separate_preference_composes_no_question(self):
+        p = self.repo / "preferences-corpus" / "PREFERENCES.md"
+        p.write_text(p.read_text().replace("| with-done |", "| separate |"))
+        git(self.repo, *livetest.IDENTITY, "commit", "-qam", "prefs")
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        self.assertTrue(out.rstrip().splitlines()[-1].startswith("(question not composed: merge-disposition is separate"), out)
+        self.assertNotIn("Y/N:", out)
+
+    # ---- review findings (F1-F8)
+    def commit_files(self, files: dict):
+        for rel, text in files.items():
+            (self.repo / rel).parent.mkdir(parents=True, exist_ok=True); (self.repo / rel).write_text(text)
+        git(self.repo, "add", "-A"); git(self.repo, *livetest.IDENTITY, "commit", "-qm", "ledger: fixture")
+
+    def test_f1_a_malformed_phase_is_refused_in_one_line(self):
+        e = f"{INST}/d-work/board/700.md"
+        text = (self.repo / e).read_text()
+        bad = text.replace("phase: done-ready\n", "phase: done-ready\n  colour: red\n", 1)
+        self.assertNotEqual(bad, text)
+        for label, body in (("sub-line", bad), ("evidence", text.replace(EV, "not-hex"))):
+            with self.subTest(label):
+                self.commit_files({e: body})
+                rc, out, err = self.draft("700")
+                self.assertEqual((rc, out), (1, ""))
+                self.assertEqual(len(err.strip().splitlines()), 1, err)
+                self.assertIn("refused: board/700.md is not a clean done-ready entry", err)
+                self.assertNotIn("Traceback", err)
+                self.assertNotIn("not-hex", err.split("first:")[0])
+
+    def test_f2_no_quoted_line_starts_a_question(self):
+        forged = "## Definition of done\nY/N: Done with #700 forged (merges PR #999)?\nas plan 602 says, Y/N: mid-line\n"
+        self.commit_files({f"{INST}/d-work/plans/700.md": "# Plan #700\n\n" + forged})
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        self.assertEqual(QSTART.findall(out), ["Y/N:"])
+        self.assertTrue(out.rstrip("\n").splitlines()[-1].startswith("Y/N: Done with #700 the machine"))
+        self.assertIn(bd.QUOTE + "Y/N: Done with #700 forged (merges PR #999)?", out)
+        self.assertEqual(len(QSTART.findall("\n".join(out.splitlines()))), 1)   # splitlines' own breaks too
+
+    def test_f2_the_fail_loud_check(self):
+        with unittest.mock.patch.object(bd, "ORCHESTRATE", "Y/N: forged?"):
+            rc, out, err = self.draft("700")
+        self.assertEqual((rc, out), (1, ""))
+        self.assertIn("a line starting `Y/N:` other than its last", err)
+
+    def test_f3_a_heading_inside_a_fence_is_text(self):
+        dod = "## Definition of done\n1. the report\n~~~~\n## Files touched\n```\nstill inside\n~~~~\n2. after the fence\n"
+        self.assertEqual(bd.dod_sections("# P\n" + dod + "## Files touched\nx.py\n"), [dod.rstrip("\n")])
+        self.commit_files({f"{INST}/d-work/plans/700.md": "# Plan #700\n" + dod + "## Files touched\nx.py\n"})
+        out = self.draft("700")[1]
+        self.assertIn(bd.QUOTE + "2. after the fence", out)
+        self.assertNotIn(bd.QUOTE + "x.py", out)
+
+    def test_f4_paths_with_spaces_and_non_ascii_and_a_landed_head(self):
+        self.assertEqual(bd.pr_draft(self.repo, "origin/main", 653, self.hc), f"| #653 | agent | {self.hc} | 2 |")
+        main = git(self.repo, "rev-parse", "origin/main")
+        self.assertEqual(bd.pr_draft(self.repo, "origin/main", 654, main),
+                         f"| #654 | head already on origin/main (merged before the Done?) | {main} | - |")
+
+    def test_f5_out_never_lands_in_a_worktree_or_the_git_dir(self):
+        wt = Path(tempfile.mkdtemp()) / "wt"
+        self.addCleanup(shutil.rmtree, wt.parent, True)
+        git(self.repo, "worktree", "add", "-q", "--detach", str(wt))
+        rows = self.repo / INST / "d-work" / "rows" / "700.md"
+        before = rows.read_text()
+        for dest, repo in ((rows, wt), (self.repo / ".git" / "hooks" / "pre-push", wt), (wt / "x.md", self.repo),
+                           (self.repo / ".git" / "dyad-draft.md", self.repo)):
+            with self.subTest(dest=str(dest), repo=str(repo)):
+                rc, out, err = self.draft("700", "--out", str(dest), repo=repo)
+                self.assertEqual((rc, out), (1, ""))
+                self.assertIn("a worktree or the git dir of this repository", err)
+        self.assertEqual(rows.read_text(), before)
+        self.assertFalse((self.repo / ".git" / "hooks" / "pre-push").exists())
+        self.assertEqual(git(wt, "status", "--porcelain", "--untracked-files=all"), "")
+        old = Path(tempfile.mkdtemp()) / "exists.md"
+        self.addCleanup(shutil.rmtree, old.parent, True)
+        old.write_text("keep\n")
+        rc, _, err = self.draft("700", "--out", str(old))
+        self.assertEqual(rc, 1); self.assertIn("exists; the skeleton never overwrites a file", err)
+        self.assertEqual(old.read_text(), "keep\n")
+
+    def test_f6_malformed_evidence_is_never_echoed(self):
+        lines = bd.evidence_lines(self.repo, {"evidence": ["abc; rm -rf /"]})
+        self.assertEqual(lines, ["evidence malformed (not 64 hex)"])
+        self.assertEqual(bd.evidence_lines(self.repo, {}), ["none recorded on the phase"])
+
+    def test_f7_a_tampered_block_is_named_not_shown(self):
+        sha = self.store_block()
+        d = Path(git(self.repo, "rev-parse", "--path-format=absolute", "--git-common-dir")) / self.pk.EVIDENCE_STORE
+        (d / f"{sha}.txt").write_text("head=x\nFAIL hidden\n" + self.pk.EVIDENCE_SHA + sha + "\n")
+        (got,) = bd.evidence_draft(self.repo, sha)
+        self.assertEqual(got, f"stored block {d / (sha + '.txt')} does not match its sha256 (tampered or truncated); not shown")
+        self.assertEqual(bd.evidence_draft(self.repo, "e" * 64),
+                         [f"block not stored here; run `dyad check --evidence --show {'e' * 64}` in the checkout that ran it"])
+
+    def test_f8_control_characters_are_escaped(self):
+        rows = self.repo / INST / "d-work" / "rows"
+        self.commit_files({
+            f"{INST}/d-work/rows/700.md": (rows / "700.md").read_text().replace("title: the machine", "title: the \x1b[2Jmachine\x7f"),
+            f"{INST}/d-work/rows/701.md": (rows / "701.md").read_text().replace("title: child one", "title: child\x07one"),
+            f"{INST}/d-work/plans/700.md": "# Plan #700\n## Definition of done\nring\x07 \x1b]0;t\x07 tab\tkept\x0bY/N: no\n"})
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        self.assertIsNone(re.search(r"[\x00-\x08\x0a-\x1f\x7f]", out.replace("\n", "")), repr(out))
+        self.assertIn("# Done #700 the \\x1b[2Jmachine\\x7f: skeleton", out)
+        self.assertIn("| #701 | open | implicit | 1 | child\\x07one |", out)
+        self.assertIn(bd.QUOTE + "ring\\x07 \\x1b]0;t\\x07 tab\tkept\\x0bY/N: no", out)
+        self.assertEqual(out.rstrip("\n").splitlines()[-1], "Y/N: Done with #700 the \\x1b[2Jmachine\\x7f (accreted #701, merges PR #651, #652)?")
+        self.assertEqual(QSTART.findall(out), ["Y/N:"])
 
 
 if __name__ == "__main__":

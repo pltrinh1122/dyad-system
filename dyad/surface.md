@@ -66,7 +66,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad board` / `board set <id>\|_cos key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` | `--drop`; advance: `--expect`, `--said-file`, `--mirror` | moving (#587) |
+| `dyad board` / `board set <id>\|_cos key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` | `--drop`; advance: `--expect`, `--said-file`, `--mirror`; draft: `--out <file>` | moving (#587) |
 | `dyad inbox post <unit> [<body>...]` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
 | `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |

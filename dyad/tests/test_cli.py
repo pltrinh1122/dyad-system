@@ -65,6 +65,7 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("board", "resume"): ["board", "resume"],
     ("board", "advance"): ["board", "advance", "1", "2", "pr-up", "--expect", "building", "pr=7", "head=abc1234"],
     ("board", "phases"): ["board", "phases"],
+    ("board", "draft"): ["board", "draft", "587", "--out", "/tmp/x/587-done.md"],
     ("inbox", "post"): ["inbox", "post", "engineer-1", "--row", "1", "--kind", "report", "--cc", "counsel-2", "a body"],
     ("inbox", "read"): ["inbox", "read", "--all"],
     ("inbox", "list"): ["inbox", "list", "engineer-1"],
@@ -93,7 +94,7 @@ PARSERS = {   # the functions of each noun's module that compare argv words with
     "runbook": ("script", "runbook", ("main",)), "release": ("script", "release", ("main",)),
     "merge": ("script", "merge", ("parse", "main")), "craft": ("script", "craft", ("cmd_install", "cmd_diff", "main")),
     "bootstrap": ("script", "bootstrap", ("main",)), "automaton": ("script", "automaton", ("main",)),
-    "steps": ("script", "steps", ("main",)), "board": ("guard", "board", ("parse_set", "cli", "main")),
+    "steps": ("script", "steps", ("main",)), "board": ("guard", "board", ("parse_set", "cli", "cmd_draft", "main")),
     "inbox": ("guard", "inbox", ("parse_post", "cli", "main")), "session": ("guard", "sessions", ("seat_name_report", "main")),
     "plan": ("guard", "plans", ("cli", "main")), "dwork": ("script", "trace", ("main",)),
 }
@@ -287,6 +288,7 @@ class ModuleFlagTests(unittest.TestCase):
         self.assertEqual(mods["automaton"].ROW_FLAG, "--row")
         self.assertEqual((mods["land"].MESSAGE, mods["land"].MIRROR, mods["land"].LAND), ("-m", "--mirror", "--land"))
         self.assertEqual(mods["board"].DROP, "--drop")
+        self.assertEqual(mods["board"].OUT, "--out")
         self.assertEqual((mods["inbox"].POST_VALUES, mods["inbox"].CC, mods["inbox"].ALL),
                          (("--row", "--kind", "--body-file"), "--cc", "--all"))
         self.assertEqual(set(mods["inbox"].POST_VALUES) | {mods["inbox"].CC}, set(CLI[("inbox", "post")].value_flags))
