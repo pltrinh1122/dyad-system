@@ -242,10 +242,12 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
-  dyad board [set <id>|_cos key=value… [--drop] | resume]
+  dyad board [set <id>|_cos key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none …]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
-                                fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs
+                                fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs;
+                                `phases` prints the orchestration machine; `advance` fires one of its events and lands
+                                its every effect (board, answer's ledger lines, trace, relays) in one commit (#587)
   dyad inbox post <seat> --row <id> --kind report|relay|ack|notice (<body> | --body-file <path>) | read [--all] | list [<seat>]
                                 messages between seats, addressed by seat (guards/agent/inbox.py, d-work #536): `post`
                                 lands one ledger-only, never a disposition-shaped body; `read` prints this seat's
@@ -2447,6 +2449,8 @@ def cmd_board(a):
     """The board store's CLI lives at guards/agent/board.py (it is also the guard); this is dispatch only (S4, d-work
     #535)."""
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    if a and a[0] == "advance":   # #587: the composed `state` lines are read by this runner's own readers
+        return dyadlib.load_guard("agent", "board").cmd_advance(a[1:], REPO, DWORK_VALUE_FLAGS, dwork_args, words)
     return dyadlib.load_guard("agent", "board").cli(a, REPO)
 
 def cmd_inbox(a):

@@ -15,7 +15,11 @@ ledger lines only and never from a conversation:
       waiting on its first owner, the plan its next act, its question removed (#572 K1), and each owner's inbox gets
       one `notice`, "row #N planned; read plans/N.md", with "; yours: <part>" when the plan's `parts:` line names the
       owner's part (K2, the relay that restated the plan). A `Y done` whose cut does not land in the run sets the
-      entry waiting on that merge (K3). The seat still infers from the plan.
+      entry waiting on that merge (K3). The seat still infers from the plan. An entry that carries a `phase` (#587) gets
+      none of the three: its `board advance answered-Y` wrote the flip and the relay, and its landing waits on the merge;
+      one still at plan-ready, plan-asked, done-ready or done-asked whose answer home recorded with plain `dwork state` is
+      caught up instead — the same builder, `recorded`, writing the board and its relays and no ledger line ("catch up
+      #N answered-Y"); a `Y done` recorded at any other phase is reported by `run` and left to home (the guard warns).
   (d) **corroborate** — after a cut lands, `check --corroborate <before> <after>` runs on the landed tree in the same
       job: what hosted CI on `main` checks, which a push made with the workflow's token never starts (d-work #564 E1).
       The suite runs only when the landed code differs from an evidenced PR head. A failure is posted to home and the
@@ -129,6 +133,7 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
     base = land.fetch(repo)
     rows = dyadlib.read_rows(repo, at=base)
     rg, acts = rows_guard(), []
+    acts += catch_ups(repo, base, rows)                                # #587: the board follows a Y recorded by hand
     for r in rows:
         if r.state in dyadlib.TERMINAL_STATES or not rg.operative_done(r.disposed):
             continue
@@ -164,6 +169,8 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if not text:
             continue
         entry = board().parse(text)[0]
+        if entry.get("phase"):
+            continue                                                   # #587: `answered-Y` wrote the flip and the relay
         owners = board().owners(entry)
         if (refusal := board().retired_waiting(entry.get("waiting-on", ""))):   # #604: told to home, never rewritten
             why = retired_body(r.id, refusal)
@@ -177,6 +184,58 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
             if not posted(repo, base, owner, r.id, body):
                 acts.append(("notice", r.id, owner, body))
     return base, acts
+
+
+def catch_ups(repo: Path, base: str, rows) -> list[tuple]:
+    """#587: ("advance", rid, "answered-Y", phase) for each phased entry whose answer the ledger already holds — home
+    recorded it with plain `dwork state`, asked through `board advance asked` or in chat without it: at `plan-ready` or
+    `plan-asked` with the row planned and its last disposition a `Y plan`, or at `done-ready` or `done-asked` with an
+    operative `Y done` naming every PR the phase lists (the others only under a batch entry naming the row,
+    `board.recorded_done_heads`). A Y done that does not cover the phase, or one recorded at another phase, proposes
+    nothing; the guard's warning stands and `run` says so."""
+    rg, b, out = rows_guard(), board(), []
+    by_id = {r.id: r for r in rows}
+    d = f"{inst(repo)}/d-work/board"
+    for name in ls(repo, base, d):
+        if not name.endswith(".md") or not name[:-3].isdigit():
+            continue
+        rid = int(name[:-3])
+        r = by_id.get(rid)
+        f = b.parse(show(repo, base, f"{d}/{name}") or "")[0]
+        if r is None or r.state in dyadlib.TERMINAL_STATES or not f.get("phase"):
+            continue
+        try:
+            phase, sub = b.phase_of(f["phase"])
+        except ValueError:
+            continue
+        last = [e for e in rg.entries(r.disposed) if not rg.is_ready(e)][-1:] or [""]
+        if phase in b.CATCH_UP_PLAN and r.state == "planned" and rg.PLAN_Y.match(last[0]):
+            out.append(("advance", rid, "answered-Y", phase))
+        elif phase in b.CATCH_UP_DONE and rg.operative_done(r.disposed) and b.recorded_done_heads(rid, r, sub) is not None:
+            out.append(("advance", rid, "answered-Y", phase))
+    return out
+
+
+def catch_up(repo: Path, rid: int, phase: str) -> str:
+    """One catch-up (#587): `board advance`'s own builder with `recorded=True`, from the automaton's seat — the board
+    flip and its relays only, no ledger line (the ledger already holds the answer), no trace, no actor check."""
+    with_env = {"DYAD_SESSION": SEAT}
+    old = {k: os.environ.get(k) for k in with_env}
+    os.environ.update(with_env)
+    try:
+        i, run = inst(repo), dyadlib.runner_module()
+        build = board().advance_builder([rid], "answered-Y", {}, phase, None, i, repo, run.DWORK_VALUE_FLAGS,
+                                        run.dwork_args, run.words, SEAT, recorded=True)
+        land.land(repo, i, None, build, "board advance")
+        return f"board #{rid}: caught up answered-Y from {phase} (recorded on the ledger)"
+    except (Refused, board().Refused) as e:
+        return f"board #{rid} not caught up: {e}"
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
 
 def stray_body(rid: int, x: int, state: str) -> str:
@@ -259,6 +318,8 @@ def describe(act: tuple) -> str:
         return f"merge {', '.join(f'PR #{pr} at {h}' for pr, h in act[2])} (row #{act[1]})"
     if kind == "close":
         return f"close row #{act[1]} (every named head is on main)"
+    if kind == "advance":
+        return f"catch up #{act[1]} {act[2]} (recorded on the ledger)"
     if kind == "archive":
         return f"archive {', '.join(f'#{x}' for x in act[2])} (retired by row #{act[1]}'s Done)"
     if kind == "tell":
@@ -569,6 +630,8 @@ def run(repo: Path) -> list[str]:
 
         elif act[0] == "board":
             out.append(board_set(repo, act[1], act[2]))
+        elif act[0] == "advance":
+            out.append(catch_up(repo, act[1], act[3]))
         else:
             try:
                 out.append(post(repo, act[2], act[1], act[3]))
@@ -581,8 +644,12 @@ def run(repo: Path) -> list[str]:
     for a in again:
         if a[0] == "merge":
             text = show(repo, base, f"{inst(repo)}/d-work/board/{a[1]}.md")
-            if text and (pairs := pending_flip(board().parse(text)[0], a[2])):
+            entry = board().parse(text)[0] if text else {}
+            if text and not entry.get("phase") and (pairs := pending_flip(entry, a[2])):   # #587: landing already says it
                 out.append(board_set(repo, a[1], pairs))
+            elif text and (ph := board().phase_name(entry)) not in (None, "landing", "held"):
+                out.append(f"board #{a[1]} phase {ph}: Y done recorded by hand, merge "            # #587: never board_set,
+                           f"{', '.join(f'PR #{pr}' for pr, _ in a[2])} pending; board not flipped")   # the guard fails it
     return out or ["nothing to do"]
 
 
