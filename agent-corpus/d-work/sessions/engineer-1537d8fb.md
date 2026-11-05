@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-04T21:24:05+00:00
+seen: 2026-11-04T23:51:32+00:00
 root: /home/user/wt-main
 rows: 587 592 593 602 604
 files: agent-corpus/traces_preview_legacy.local.txt dyad/dmc/prepush-judgeable.jsonld dyad/dmc/trace-window.jsonld dyad/guards/agent/plans.py dyad/guards/agent/rows.py dyad/guards/agent/sessions.py dyad/playbooks/dwork-trace.md dyad/scripts/dyadlib.py dyad/scripts/land.py dyad/scripts/package.py dyad/scripts/release.py dyad/scripts/trace.py dyad/surface.md dyad/tests/guards/agent/test_plans.py dyad/tests/guards/agent/test_rows.py dyad/tests/guards/agent/test_sessions.py dyad/tests/guards/agent/test_traces.py dyad/tests/test_cli.py dyad/tests/test_land.py dyad/tests/test_package.py dyad/tests/test_release.py dyad/tests/test_surface.py dyad/tests/test_trace.py
