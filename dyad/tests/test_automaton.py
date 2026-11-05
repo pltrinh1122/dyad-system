@@ -182,6 +182,29 @@ class AutomatonTests(unittest.TestCase):
         rc, out, _ = run(["run"], self.w.seat)
         self.assertEqual(out.strip(), "nothing to do")
 
+    def test_a_retired_seat_entry_is_told_to_home_and_never_rewritten(self):
+        """#604: a planned row's entry still waiting on `seat <name>` (removed in 1.0) is not flipped — the unit it names
+        and its open question would be lost — but told once to home, with the form to write."""
+        self.assertIsNone(am.planned_flip(5, {"waiting-on": "seat counsel-0032b4c0", "question": "Y/N: x?", "holder": "h"},
+                                          ["engineer-1537d8fb"]))
+        b = f"{INST}/d-work/board/12.md"
+        entry = (f"holder: {HOME}\nowner: engineer-1537d8fb s1\nwaiting-on: seat counsel-0032b4c0\n"
+                 f"question: Y/N: x?\nwriter: h1\n")
+        self.w.write_main({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
+                           f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",
+                           b: entry, f"{INST}/d-work/board/_cos.md": f"holder: {HOME}\nwriter: h1\n"})
+        rc, out, err = run(["scan"], self.w.seat)
+        self.assertIn("tell home: automaton: board flip refused for row #12", out)
+        self.assertIn("write `waiting-on: unit counsel-0032b4c0`", out)
+        self.assertNotIn("board #12:", out)
+        rc, out, err = run(["run"], self.w.seat)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(self.on_main(b), entry)                                        # left as it stands
+        (msg,) = self.inbox(HOME)
+        self.assertIn("board flip refused for row #12", msg)
+        rc, out, _ = run(["run"], self.w.seat)
+        self.assertNotIn("tell home", out); self.assertEqual(len(self.inbox(HOME)), 1)
+
     def test_a_done_whose_cut_does_not_land_waits_on_its_merge(self):
         """#572 K3: the merge is refused this run, so the board waits on the merge, its question removed; once."""
         files = dict(self.files)
