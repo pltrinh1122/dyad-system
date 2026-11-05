@@ -5,7 +5,7 @@ changed. Under semver, 1.0.0 freezes it (plan #570, attack A1). The bundle and t
 craft keeps its own number and its own surface, so crafts are out of scope here (decision 1 of #570).
 
 Each item has a status:
-- `frozen`: changing it after 1.0.0 needs 2.0.0.
+- `frozen`: removing, renaming or narrowing it needs a major; adding beside it is a minor.
 - `moving (#<row>)`: a 1.0 child row is still changing it.
 - `alias → <new>`: an old spelling still accepted beside the new one. None is left: the #554 aliases warned in
   `dyad-operator-v0.18.0` and were removed by #604 for 1.0.0 (the operator's decision on B3, provenance #573), and a
