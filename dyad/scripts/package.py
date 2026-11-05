@@ -214,7 +214,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 advisory, never a guard (Rule-16 Presence); the remedy is the writer's
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
-  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
+  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent|automaton] | new <instance>
                                 Rule-19 run-books (scripts/runbook.py, the core runner; the check is the
                                 sysadmin craft's guard, crafts/sysadmin/guards/runbooks.py): check every
                                 run-book (exit 2 when no craft provides the check), list one's commands,
@@ -1797,7 +1797,7 @@ def cmd_corroborate(before=None, after="HEAD"):
         for run in runs:
             r = run()
             if r.returncode or (expect and expect not in r.stdout):
-                print(f"FAIL [corroborate] {name}: " + " | ".join((r.stdout + r.stderr).strip().splitlines()[-3:])); rc = 1
+                print(f"FAIL [corroborate] {name}: " + " | ".join(failing_lines(r.stdout + r.stderr))); rc = 1
                 return False
         print(f"ok   [corroborate] {name}")
         return True
@@ -1827,6 +1827,19 @@ def cmd_corroborate(before=None, after="HEAD"):
                                                                            craft_arc, cwd=t), expect=" 0 changes")
             step("core reinstall is idempotent", lambda: corroborate_py(pkg_py, "install", t), expect=" 0 changes")
     return rc
+
+FAILING_LINE = re.compile(r"^\s*(FAIL\b|FAIL:|refused\b|error:|fatal:|Traceback)")
+
+
+def failing_lines(output: str, most: int = 5) -> list[str]:
+    """A failed step's lines for its one FAIL line (#607): the child's failing lines first, then its last line, so
+    a suite's FAIL never scrolls out behind its summary (#603's cut-off notice); the last three when none fail."""
+    lines = [l.strip() for l in output.strip().splitlines() if l.strip()]
+    fails = [l for l in lines if FAILING_LINE.match(l)][:most]
+    if not fails:
+        return lines[-3:]
+    return fails + ([lines[-1]] if lines[-1] not in fails else [])
+
 
 def corroborate_env(skip_suite: bool) -> dict:
     """The environment of every corroboration child: GIT_VARS dropped, no bytecode, and DYAD_NO_NESTED_TESTS set only

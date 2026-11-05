@@ -13,6 +13,7 @@ import contextlib, importlib.util, io, os, subprocess, sys, unittest, unittest.m
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
+land_mod = dyadlib.load_module(PKG / "scripts" / "land.py", "land")
 
 SCRATCH = livetest.ScratchInstalls()
 tearDownModule = SCRATCH.cleanup
@@ -220,6 +221,30 @@ class LandTests(unittest.TestCase):
         self.assertIn("has changes", out, "a seat with changes is left as it is")
         rc, _, err = self.dwork("land", str(plan), "-m", "ledger: plan #1")
         self.assertEqual(rc, 1); self.assertIn("already landed", err)
+
+    def test_another_prefix_and_kind_fence_what_lands(self):
+        """`prefix` and `kind` (#593): a builder writing outside the prefix is refused under its kind and nothing
+        lands; the same builder writing only under it lands; with no prefix the fence is `<instance>/d-work/`."""
+        ev = "workstation-corpus/runbooks/events/x.jsonl"
+        def build(outside):
+            def b(w):
+                (w / ev).parent.mkdir(parents=True, exist_ok=True); (w / ev).write_text('{"name": "health"}\n')
+                if outside:
+                    (w / INST / "d-work" / "rows" / "1.md").write_text(ROW.format(id=1, title="one") + "mode: explicit\n")
+                return land_mod.written(w), "events: x", ""
+            return b
+        before = self.main_at_origin()
+        with self.assertRaisesRegex(land_mod.Refused, "would not be events-only"):
+            land_mod.land(self.seat, INST, None, build(True), "x", prefix="workstation-corpus/runbooks/events/",
+                          kind="events-only")
+        self.assertEqual(self.main_at_origin(), before)
+        with self.assertRaisesRegex(land_mod.Refused, f"outside {INST}/d-work/: that commit would not be ledger-only"):
+            land_mod.land(self.seat, INST, None, build(False), "x")
+        self.assertEqual(self.main_at_origin(), before)
+        with contextlib.redirect_stdout(io.StringIO()):
+            land_mod.land(self.seat, INST, None, build(False), "x", prefix="workstation-corpus/runbooks/events/",
+                          kind="events-only")
+        self.assertEqual(self.files_of("main"), [ev])
 
     def test_main_and_the_mirror_go_in_one_push(self):
         git(self.seat, "switch", "-q", "-c", "work")

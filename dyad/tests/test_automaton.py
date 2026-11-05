@@ -17,6 +17,8 @@ The cases:
   (#564).
 - The sweep (#564) prints every finding, tells the home only what no automaton notice has told yet, and exits 1
   when a finding fails.
+- A health run the sweep makes that appends an event (`role: automaton`) is landed on main as an events-only commit
+  citing no d-work; a second, identical reading lands nothing; without `--row` nothing lands (#593).
 - #587 X6: a PR head that moved off the head a phased entry records (verifying, done-ready, done-asked) fires
   `head-moved`: back to verifying, the new head recorded, the evidence and the question withdrawn, the holder told and
   the owners cc'd; the new heads are then verified in the same run.
@@ -27,7 +29,7 @@ The cases:
   holding a write token; `run --evidence-from` fires each line only once it passes every check (its shape, a verdict
   of the machine's table, the row in verifying, its heads the board's recorded and the live ones), never computing.
 - Misuse is exit 2."""
-import contextlib, io, os, subprocess, sys, unittest, unittest.mock
+import contextlib, io, json, os, subprocess, sys, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -908,6 +910,127 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(sum(len(p) for p in parts), 40)                          # every line in exactly one part
         self.assertTrue(all(len(" | ".join(p)) < am.NOTICE_CHARS for p in parts))
 
+    def test_the_sweeps_health_run_is_the_automatons_own(self):
+        """The sweep reads `released` health as the automaton, a read-only run under its own party (#593)."""
+        seen = []
+        def fake(argv, **kw):
+            seen.append(argv); return subprocess.CompletedProcess(argv, 0, "", "")
+        with unittest.mock.patch.object(am.subprocess, "run", fake), unittest.mock.patch.dict(os.environ, {"MIRROR": ""}):
+            am.sweep_drift(PKG.parent, PKG.parent, "HEAD")
+        self.assertEqual(seen[0][-4:], ["released", "health", "--as", "automaton"])
+    HEALTH = ("# Run-book: released\n# sections: Status/health\n\n## Status/health\n```dyad-cmd\nname: health\n"
+              "class: read-only\nrole: any\nundo: none\npostcondition: none\nscope: nothing (read)\n\necho '0 entries read'\n```\n")
+    EVENTS = "workstation-corpus/runbooks/events/released.jsonl"
+
+    def real_drift_sweep(self, argv=("sweep", "--row", "9")):
+        """The sweep with its real `released` health run in the swept worktree; every other kind of finding stubbed."""
+        env = {k: v for k, v in os.environ.items() if k not in ("DYAD_RUNBOOKS", "DYAD_HOST", "MIRROR")}
+        with unittest.mock.patch.dict(os.environ, env, clear=True), \
+             unittest.mock.patch.object(am, "sweep_check", lambda wt: []), \
+             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: ([], [])), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: []), \
+             unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
+             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
+            return run(list(argv), self.w.seat)
+
+    def test_the_sweeps_health_event_lands_events_only(self):
+        """#593 DoD 2: the sweep's own `released` health run, recorded under `role: automaton`, reaches main as an
+        events-only commit that cites no d-work; an identical second reading lands nothing."""
+        self.w.write_main({**self.files, "workstation-corpus/runbooks/released.md": self.HEALTH})
+        before = git(self.w.origin, "rev-parse", "main")
+        rc, out, err = self.real_drift_sweep(("sweep",))                          # no --row: nothing lands
+        self.assertIn("events: released not landed (no --row", out, out + err)
+        self.assertEqual(git(self.w.origin, "rev-parse", "main"), before)
+        rc, out, err = self.real_drift_sweep()
+        self.assertRegex(out, r"events: released landed on main as [0-9a-f]{12} \(events-only\)", out + err)
+        (ev,) = [json.loads(l) for l in self.on_main(self.EVENTS).splitlines()]
+        self.assertEqual((ev["role"], ev["instance"], ev["name"], ev["exit"]), ("automaton", "released", "health", 0))
+        commits = git(self.w.origin, "rev-list", f"{before}..main").split()
+        landed = next(c for c in commits if self.EVENTS in git(self.w.origin, "diff-tree", "--no-commit-id", "--name-only", "-r", c))
+        self.assertEqual(git(self.w.origin, "diff-tree", "--no-commit-id", "--name-only", "-r", landed).split(), [self.EVENTS])
+        self.assertNotIn("d-work #", git(self.w.origin, "log", "-1", "--format=%B", landed))
+        self.assertTrue(dyadlib.events_only(self.w.origin, f"{landed}^1", landed))
+        head = git(self.w.origin, "rev-parse", "main")
+        rc, out, err = self.real_drift_sweep()                                    # the same reading again
+        self.assertIn("events: no new reading to land", out, out + err)
+        self.assertEqual(git(self.w.origin, "rev-parse", "main"), head)
+        self.assertEqual(len(self.on_main(self.EVENTS).splitlines()), 1)
+
+    def test_a_refused_event_landing_never_fails_the_sweep(self):
+        fresh = {self.EVENTS: '{"name": "health", "output_sha256": "x", "exit": 0}\n'}
+        def refuse(*a, **kw):
+            raise am.Refused("the push failed with main unmoved; nothing landed:\npermission denied")
+        with unittest.mock.patch.object(am.land, "land", refuse):
+            line = am.land_events(self.w.seat, "workstation-corpus/runbooks/events", fresh, 9)
+        self.assertEqual(line, "events: released not landed (the push failed with main unmoved; nothing landed:)")
+        with unittest.mock.patch.object(am.land, "land", lambda *a, **kw: 1 / 0):
+            self.assertIn("not landed (ZeroDivisionError", am.land_events(self.w.seat, "x", fresh, 9))
+
+    LINE = '{"name": "health", "instance": "released", "output_sha256": "abc", "exit": 0, "role": "automaton"}\n'
+
+    def clean_racer(self, files):
+        """The racer at a main holding `files`: a clean worktree to read or build in, with the default event store."""
+        self.w.write_main(files)
+        env = {k: v for k, v in os.environ.items() if k not in ("DYAD_RUNBOOKS", "DYAD_HOST")}
+        e = unittest.mock.patch.dict(os.environ, env, clear=True); e.start(); self.addCleanup(e.stop)
+        return self.w.racer
+
+    def test_a_rebuild_over_the_same_reading_lands_nothing(self):
+        """events_builder on a main whose events file already ends with the same reading: refused, nothing written."""
+        wt = self.clean_racer({self.EVENTS: self.LINE})
+        with self.assertRaisesRegex(am.Refused, "already landed"):
+            am.events_builder({self.EVENTS: self.LINE})(wt)
+        self.assertEqual(am.land.written(wt), [])
+        self.assertEqual((wt / self.EVENTS).read_text(), self.LINE)
+        other = self.LINE.replace('"abc"', '"def"')                      # a different reading is appended
+        paths, msg, _ = am.events_builder({self.EVENTS: other})(wt)
+        self.assertEqual((paths, msg), ([self.EVENTS], "events: released (automaton sweep)"))
+        self.assertEqual((wt / self.EVENTS).read_text(), self.LINE + other)
+
+    def test_new_events_notes_a_rewrite_and_a_removal_and_lands_neither(self):
+        wt = self.clean_racer({self.EVENTS: self.LINE})
+        (wt / self.EVENTS).write_text(self.LINE.replace('"abc"', '"zzz"'))
+        rel, fresh, notes = am.new_events(wt)
+        self.assertEqual((rel, fresh), ("workstation-corpus/runbooks/events", {}))
+        self.assertEqual(notes, [f"events: {self.EVENTS} changed other than by an append; not landed"])
+        (wt / self.EVENTS).unlink()
+        self.assertEqual(am.new_events(wt)[1:], ({}, [f"events: {self.EVENTS} removed or not a file; not landed"]))
+        (wt / self.EVENTS).write_bytes(self.LINE.encode() + b"\xff\n")
+        self.assertEqual(am.new_events(wt)[1:], ({}, [f"events: {self.EVENTS} not read (UnicodeDecodeError); not landed"]))
+
+    def test_a_removed_events_file_never_stops_the_sweeps_findings(self):
+        """An events file deleted in the swept worktree is one note; the findings and the summary still print."""
+        self.w.write_main({**self.files, self.EVENTS: self.LINE})
+        def drift(repo, wt, base):
+            (wt / self.EVENTS).unlink(); return [(True, "finding: released: no tag: x")]
+        with unittest.mock.patch.object(am, "sweep_drift", drift):
+            rc, out, err = self.real_drift_sweep()
+        self.assertEqual(rc, 1, out + err)
+        self.assertIn("finding: released: no tag: x", out)
+        self.assertIn(f"events: {self.EVENTS} removed or not a file; not landed", out)
+        self.assertIn("events: no new reading to land", out)
+        self.assertIn("sweep of main", out)
+        with unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
+             unittest.mock.patch.object(am, "new_events", lambda wt: 1 / 0):
+            rc, out, err = self.real_drift_sweep()
+        self.assertIn("events: not read (ZeroDivisionError); not landed", out, out + err)
+        self.assertIn("sweep of main", out)
+
+    def test_a_refusal_reason_carries_the_failing_lines_never_empty(self):
+        """#592: a failed push's refusal ends its first line with a colon and puts the hook's output after it; the
+        notice carried only that first line, so its reason read empty."""
+        why = ("the push failed with main unmoved; nothing landed:\n"
+               "ok   [guards] agent/rules (19 Rules)\n"
+               "FAIL [guards] agent/traces 584.md: a stored preview\n"
+               "FAIL [guards] agent/traces 585.md: a stored preview\n"
+               "error: failed to push some refs to 'origin'")
+        r = am.reason(why)
+        self.assertTrue(r.startswith("the push failed with main unmoved; nothing landed: | FAIL [guards] agent/traces 584.md"))
+        self.assertIn("585.md", r); self.assertIn("error: failed to push", r); self.assertNotIn("ok   [guards]", r)
+        self.assertEqual(am.reason("a one-line refusal"), "a one-line refusal")
+        self.assertEqual(am.reason("introduced:\nsome plain line"), "introduced: | some plain line")
+        self.assertEqual(am.reason(""), "no reason given")
+        self.assertLessEqual(len(am.reason("x:\n" + "\n".join(f"FAIL {'y' * 300}" for _ in range(9)))), am.REASON_CHARS)
     def test_misuse(self):
         self.assertEqual(run([], self.w.seat)[0], 2)
         self.assertEqual(run(["go"], self.w.seat)[0], 2)
