@@ -290,6 +290,44 @@ or finding, one new row born `open` with the operator's words as its first entry
 opens without it, and the overhead test above applies. Under `organization: flat` there is one unit, so S6 and the
 unit tie-breaks drop out. Adjacency moves to its own `dyad/dmc/adjacency.jsonld` when a second decision needs it.
 
+### Orchestration (#587)
+Between a row's plan-`Y` and its Done the row machine stays still; what moves is its board entry's **orchestration
+phase** (Rule-16 Store), a second machine beside the row's that never moves the row. Its table is data,
+`dyadlib.ORCH_EVENTS`; `dyad board phases` prints it, with each phase's wait and next act.
+
+| phase | waiting on | the act that moves it (event, actor) |
+|---|---|---|
+| `planning` | the unit | `plan-landed` (unit) → `plan-ready` |
+| `plan-ready` | the home | `asked` (home) → `plan-asked` |
+| `plan-asked` | the operator | `answered-Y` → `building`; `answered-N` → `planning` (home, with `--said-file`) |
+| `building` | the unit | `pr-up` (unit, `pr`, `head`) → `verifying`; `evidence-verified` (home, no PR) → `done-ready` |
+| `verifying` | the home | `evidence-verified` (home or automaton, `evidence`) → `done-ready`; `evidence-failed` → `building` |
+| `done-ready` | the home | `asked` (home) → `done-asked`; `board draft` prints the data half of the evidence |
+| `done-asked` | the operator | `answered-Y` → `landing`, or the entry dropped when nothing merges; `answered-N` → `building` |
+| `landing` | the automaton | `closed` (automaton) drops the entry once the merges have landed |
+| `held` | what `on` names | `release` (home) → the phase it was held from, an asked phase stepping back to its `*-ready` |
+
+Any phase but `landing` and `held` may be `hold`-ed with a `note` and an `on`. In `verifying`, `done-ready` and
+`done-asked` the automaton compares each recorded PR head with the live one; a moved head fires `head-moved`, back to
+`verifying`, and takes down any question asked on the old head (Rule-2, Binding: a `Y` binds only while the heads are
+unchanged), a batch question's other rows stepping back to `done-ready` (`withdrawn`).
+
+How a unit works it:
+- **Fire, don't write.** On a phased entry, `phase`, `waiting-on`, `next`, `since` and `question` are derived; the one
+  writer is `dyad board advance <id>… <event> --expect <phase> [key=value…]`. `--expect` names the phase read; a moved
+  phase is refused, and the retry re-reads `main` and recomputes, never replaying a relay. Free text goes in `note`.
+- **One commit per transition.** An advance writes the board, the templated relay to the next unit, and for an answer
+  the ledger entry and its provenance from `--said-file`, all in one ledger-only commit; it prints the ring list, the
+  doorbells only a session can ring (#586).
+- **The question is composed, not typed.** `asked` stores the question line from the row's title, PRs and heads, a batch
+  question from several rows; `answered-Y` writes the `Y plan` or `Y done` entry from the stored question, so the entry
+  names what was asked.
+- **The Done draft.** At `done-ready`, `dyad board draft <id>` prints the definition of done quoted, the PRs with their
+  zones and recorded heads, the evidence by its sha256, the accreted rows, the trace and the question; the unit writes
+  the judgment around it (Rule-3, Completion counter-prompt).
+- **Unphased entries.** An entry with no `phase` behaves as before #587 (`board set`); the first `plan-landed` or `pr-up`
+  adopts it into the machine.
+
 ## Reading
 - **The machine before the forms.** What a row may do next is its state's rows of δ: the input named there
   is the only thing that moves it, and the kind says whose act it is.
