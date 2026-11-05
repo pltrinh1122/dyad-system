@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-05T19:10:56+00:00
+seen: 2026-11-05T19:12:55+00:00
 root: /home/user/dyad-system
 rows: 570 609 610 612 613
 files: .github/workflows/dyad-sweep.yml agent-corpus/d-work/plans/609.md agent-corpus/d-work/plans/610.md dyad/scripts/automaton.py dyad/tests/test_automaton.py workstation-corpus/runbooks/automaton.md
