@@ -1267,3 +1267,22 @@ it writes. **11–14**: the gate is the entrypoint's (Rule-11); the pre-push out
 orthogonal.
 
 Disposition: see ledger #606.
+
+## Amendment — d-work #593 (2026-11-05: the automaton as the third party, P6)
+Claim (plan #593, accreted under mandate #570, P6): Rule-3 names the automaton as a party — an executor that opens no
+row, answers no question and decides nothing, recording what it runs under its own name. Rules 8, 14 and 19 carry
+#593's other sentences (their own records, amendment #593); this one is Rule-3's, and the vocabulary's `used by` cells
+follow.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Naming a third party lets it dispose. | Refuted: the sentence says it decides nothing; Rule-2's Enforcement already classes it as execution, and Rule-3's Scope lists only prompts, dispositions and plan-`Y`s as what opens a row. |
+| 2 | It duplicates Rule-2's automaton bullet. | Refuted, scoped: Rule-2 owns what the automaton may execute; Rule-3 states only that it is a party of the d-work, with no row, question or decision of its own, and points to the records it writes (Rules 8 and 19). |
+| 3 | The vocabulary already says so. | Confirmed for `party`: its definition names the automaton since #556. Its `used by` gains 8 and 14, which now use the word; `automaton` gains 8, 14 and 19; `host action` names an automaton's, bounded by Rule-8's Classes. |
+
+**Rule-6.** `party` used by 2 3 8 14 18 19; `automaton` used by 2 3 8 14 16 19; `host action` redefined to include an
+automaton's, used by unchanged (3 7 8): each still reads correctly.
+**Pairwise (Rule-5).** **3–2**: what the automaton executes stays Rule-2's. **3–8**, **3–19**: the records it writes
+are theirs. **3–14**: its kernel is Rule-14 property 2's. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #593.

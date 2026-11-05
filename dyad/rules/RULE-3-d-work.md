@@ -63,6 +63,10 @@ the sentinel first. Writing a row, asking or answering a counter-prompt, committ
 merging, and running a reversible or destructive host action (Rule-8) are the main agent's alone, the party the operator
 disposes to, which reports every delegated d-work's state each turn (E7, #107).
 
+The automaton (Rule-2 Enforcement) is the third party, an executor: it opens no row, answers no question and decides
+nothing; what it runs it records under its own name — a run-book event's `role: automaton` (Rule-19), a change-log
+row's `actor: automaton` (Rule-8) (#593).
+
 ## Answer grammar
 Three answers to a counter-prompt, the countersign model's **answer grammar** (`dyad/playbooks/countersign-model.md`
 Part II §2):
@@ -339,6 +343,7 @@ holds within its own scope. Earlier text, its 29 amendments and the claim table:
 #606): the plan check at `planned`, the mandate ceiling at `dwork new`, the trace written from the Done words and UTC
 dates had landed as code with no sentence; see the same record, amendment #606. Batch disposition and Completion counter-prompt gain the orchestration
 phase and `board draft` 2026-11-05 (d-work #587); see `../falsification/rules/rule-16-concurrent-sessions.md`, amendment
-#587.
+#587. Scope names the automaton as the third party 2026-11-05 (d-work #593, P6): Rules 8, 14 and 19 had made it a
+party in their records, and this Rule still knew two; see `../falsification/rules/rule-3-d-work.md`, amendment #593.
 
 Set: System Requirements.
