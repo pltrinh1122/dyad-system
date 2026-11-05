@@ -82,29 +82,29 @@ class CorroboratedTests(unittest.TestCase):
         g("checkout", "-qb", "side", self.a); self.side = commit("s"); g("checkout", "-q", "main")
         self.fp = set(g("rev-list", "--first-parent", "main").split())
 
-    run = staticmethod(lambda sha, conclusion="success", name="rule-11 package", at="2026-11-05T21:00:00Z":
+    wf = staticmethod(lambda sha, conclusion="success", name="rule-11 package", at="2026-11-05T21:00:00Z":
                        {"head_sha": sha, "conclusion": conclusion, "name": name, "created_at": at})
 
     def test_a_cancelled_run_a_later_success_covers_is_corroborated(self):
-        listed = [self.run(self.c)]
+        listed = [self.wf(self.c)]
         for sha in (self.a, self.b):
-            self.assertTrue(am.corroborated(self.d, sha, [self.run(sha, "cancelled")], listed, self.fp, []), sha)
-        self.assertTrue(am.corroborated(self.d, self.c, [self.run(self.c)], listed, self.fp, []))
+            self.assertTrue(am.corroborated(self.d, sha, [self.wf(sha, "cancelled")], listed, self.fp, []), sha)
+        self.assertTrue(am.corroborated(self.d, self.c, [self.wf(self.c)], listed, self.fp, []))
 
     def test_a_cancelled_run_no_later_success_covers_fails(self):
-        listed = [self.run(self.c), self.run(self.d_, "cancelled")]
-        self.assertFalse(am.corroborated(self.d, self.d_, [self.run(self.d_, "cancelled")], listed, self.fp, []))
-        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.c, "failure")], self.fp, []))    # a failed run covers nothing
-        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.side)], self.fp, []))           # off main's first parent
-        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.c, name="d-work sweep")], self.fp, []))   # not a corroborating workflow
+        listed = [self.wf(self.c), self.wf(self.d_, "cancelled")]
+        self.assertFalse(am.corroborated(self.d, self.d_, [self.wf(self.d_, "cancelled")], listed, self.fp, []))
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.wf(self.c, "failure")], self.fp, []))    # a failed run covers nothing
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.wf(self.side)], self.fp, []))           # off main's first parent
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.wf(self.c, name="d-work sweep")], self.fp, []))   # not a corroborating workflow
 
     def test_a_dyad_merge_is_corroborated_by_the_automaton_run_that_merged_it(self):
         (self.d / "m").write_text("m"); self.g("add", "-A")
         self.g("commit", "-qm", "Merge PR #1 at x\n\nExecuted by `dyad merge` on the Done-Y recorded on main")
         m = self.g("rev-parse", "HEAD"); fp = self.fp | {m}
-        later = self.run(m, name="d-work automaton", at="2999-01-01T00:00:00Z")
+        later = self.wf(m, name="d-work automaton", at="2999-01-01T00:00:00Z")
         self.assertTrue(am.corroborated(self.d, m, [], [], fp, [later]))
-        earlier = self.run(m, name="d-work automaton", at="2000-01-01T00:00:00Z")
+        earlier = self.wf(m, name="d-work automaton", at="2000-01-01T00:00:00Z")
         self.assertFalse(am.corroborated(self.d, m, [], [], fp, [earlier]))
 
 
