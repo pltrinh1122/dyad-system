@@ -34,7 +34,12 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
 2. **Kernel.** Claude Code (or another CLI inferencing agent), Python at a pinned version, Git
    as a local repository, and pydantic at a pinned version — the one third-party package the
    kernel-only path may import directly. Minimal; versions recorded as observed, with the
-   minimum the package was last verified on. A hosted git service is never kernel.
+   minimum the package was last verified on. A hosted git service is never kernel. The kernel is
+   one and serves both profiles, because the agent is the proposer of every system; but the
+   kernel-only path (property 3) and every run of an automaton need only Python, Git and pydantic,
+   so a host that runs only those — the guards and the automaton, with no agent session — runs on
+   the kernel without its agent, while the system it serves keeps its agent party elsewhere, or it
+   is no dyad system (#593).
 3. **Kernel-only path.** Every guard runs on the kernel alone: `package.py check --guards`,
    called by `dyad/hooks/pre-push` before every push (I2). The hook runs it as `check --guards
    --pre-push`, which judges the refs git pushes (read from its stdin) and refuses a push it cannot
@@ -101,6 +106,8 @@ evidence block gains the code digest and the hook's skip on a head a `Y done` na
 merge ran, and the scheduled sweep 2026-11-03 (d-work #564): the automaton's merges had had no corroboration at all, and
 every merge of a stack started its own full run on a tree nobody lands on; see the same record, amendment #564. Property 3
 names the pre-push outcomes on a terminal, an empty stdin and a missing core tag 2026-11-05 (d-work #606, stating #592);
-see `../falsification/rules/rule-3-d-work.md`, amendment #606.
+see `../falsification/rules/rule-3-d-work.md`, amendment #606. Property 2
+states what a host running only the automaton needs 2026-11-04 (d-work #593, backlog row #55): the kernel listed a CLI
+agent, so such a host had no reading; see the same record, amendment #593.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).

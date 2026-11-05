@@ -97,7 +97,7 @@ are each guard's own constant, the source the test reads.
 | plan file | `d-work/plans/<id>.md` | `Base commit of main:` and `Files touched` as the guards read them | `plans.FIELDS`, `dyadlib.PLAN_PARTS` | frozen |
 | trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits`; a stored trace is never a preview (#592) | `trace.SECTIONS` | frozen |
 | trace preview legacy | `traces_preview_legacy.local.txt` | `<id>` per line, `#` a comment: the stored previews before #592 | `trace.check_store` | frozen |
-| event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
+| event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | moving (#593) |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
 
