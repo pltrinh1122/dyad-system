@@ -49,7 +49,8 @@ files and almost never merge.
   `program`, so no entry stored before it migrates — written once, when the entry is created, and never typed or
   changed. A cabinet's home writes only its own cabinet's entries and cross-row file, a unit's first entry is filed
   under the cabinet whose cross-row file names that unit (refused when that is ambiguous), `--drop` of a terminal
-  row stays open to any unit, and `dyad board resume` shows the resumer's cabinet alone (#594). Unlike a row it is **overwritten**, never
+  row stays open to any unit, `dyad board resume` shows the resumer's cabinet alone, every notice the automaton or the sweep tells about a row
+  goes to the home of that row's cabinet, and each cabinet's unit table is read from its own cross-row file (#594). Unlike a row it is **overwritten**, never
   append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
   ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
   session holding the board replaced by another — by `dyad board resume`, which prints what the new holder resumes.

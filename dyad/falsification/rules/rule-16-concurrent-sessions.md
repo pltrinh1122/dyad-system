@@ -438,6 +438,7 @@ write each other's queue or question. The plan's attacks K1–K7 are its record;
 | 3 | (K3) The cabinet can be read from `holder`. | Refuted: a hop changes `holder`. The key is written once at creation and never typed or changed. |
 | 4 | (K6) A home could still write another cabinet's state. | Survives, built: a home writes only its own cabinet's entries and cross-row file; a terminal row's `--drop` stays open to any unit, since it owes nothing. |
 | 5 | (K7, the departure #674 states) A unit's first entry is filed under `program` when one cross-row file exists. | Refuted by the code: it is filed under the cabinet whose cross-row file names the unit, which avoids the S13 leak; the sentence says so. |
+| 7 | (#674 at fad6cb61) A notice about a row, and the sweep's unit-table check, still read `program`'s home and `_cos.md`. | Refuted by the code: the retired-form notice goes to the row's cabinet's home, as every other tell does, and the S3 seat-table warning reads each cabinet's own cross-row file. The Store sentence names both. |
 | 6 | `cabinet` collides with the cabinet craft's name. | Survives, scoped: the craft's vocabulary defines no `cabinet` term (`check_craft` passes), and the row says the craft's name is a different thing. |
 
 **Rule-6.** New row `cabinet` (owner 16, used by 16). `board store` gains the key and the per-cabinet file; `used by`
