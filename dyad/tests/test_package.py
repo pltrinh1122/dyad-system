@@ -952,7 +952,7 @@ class PackageTests(livetest.LiveCase):
         d, rows = self.dwork_repo(); before = rows.joinpath("1.md").read_text()
         cases = [(self.dwork_state, ("1", "planned", "-d", "Y plan\n## 9 prompt 2026-01-01", "--said", "Y"), "line break"),
                  (self.dwork_new, ("three", "--prompt", "p", "--promt-file", "x"), "does not take --promt-file"),
-                 (self.dwork_new, ("three", "#1", "extra", "--prompt", "p"), "unexpected argument"),
+                 (self.dwork_new, ("three", "#1", "extra", "--prompt", "p"), "does not take extra"),   # the gate's bound (#592 R-a)
                  (self.dwork_new, ("three", "#1", "-r", "#2", "--prompt", "p"), "refs given twice"),
                  (self.dwork_new, ("three", "--relayed-via", "peer"), "give them with --prompt[-file] or --said[-file]"),
                  (self.dwork_state, ("1", "planned", "--relayed-via", "peer"), "give them with --prompt[-file] or --said[-file]"),
@@ -2458,6 +2458,7 @@ class SuiteMemoTests(unittest.TestCase):
             self.assertEqual(self.pkg.cmd_tests(), 0)
             self.assertEqual(self.memos(d), [])
             (d / "stray.txt").unlink()
+            (d / "dyad" / "tests").mkdir(parents=True, exist_ok=True)   # #592 R-a: a dotted target's first part must import
             self.assertEqual(self.pkg.cmd_tests("dyad.tests.test_x"), 0)  # a targeted run
             self.assertEqual(self.pkg.cmd_tests(str(d / "dyad" / "tests")), 0)   # one root by path
             self.assertEqual(self.memos(d), [])

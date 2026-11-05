@@ -84,6 +84,7 @@ _BY_REFERENCE_NOTE = "by reference"   # #545: a hosting approval (provenance.BY_
 TITLE_FORM = re.compile(r"^(?P<seat>\S+): (?P<kernel>\S+) \((?P<system>[^()]*)\)(?:\s*[-–—|:·,]\s*(?P<on>.*))?$")
 READINGS = ("no harness session", "no presence", "title differs", "stale while titled")
 FETCH_TIMEOUT = 10                              # #592 R-e (mode 07): seconds `touch` gives `git fetch` before it reports and goes on
+CLI_FLAGS = dyadlib.cli_forms("session")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 NO_LIVE_SEAT = "no live seat"                   # #592 (mode 28): `session list` with no live seat reads no mode
 INVARIANTS = [("fields-are-five", lambda: FIELDS == ("session", "seen", "root", "rows", "files")),
               ("stale-window-positive", lambda: STALE_AFTER.total_seconds() > 0),
@@ -472,7 +473,7 @@ def seat_name_report(root: Path, args: list[str]) -> tuple[int, list[str]]:
     hosting is The World (Rule-14) and nothing here sets a title."""
     opts, i = {}, 0
     while i < len(args):
-        if args[i].startswith("--") and i + 1 < len(args):
+        if args[i] in CLI_FLAGS["name"].value_flags and i + 1 < len(args):
             opts[args[i][2:]] = args[i + 1]; i += 2
         else:
             return 2, [f"usage: dyad session name [--function <f>] [--topic <t>] [--hp <8 hex>] [--system <handle>] [--on <text>] (got {args[i]!r})"]
@@ -751,7 +752,7 @@ def main(a: list[str]) -> int:
             print(TOUCH_USAGE); return 0
         rows, files, i = [], [], 1
         while i < len(a):   # #479 P1 (mode G): every word is -r <id> or -f <path>; anything else refuses, nothing written
-            if a[i] in ("-r", "-f") and i + 1 < len(a) and (a[i] == "-f" or a[i + 1].split()):   # `-r ""` claims nothing: refused
+            if a[i] in CLI_FLAGS["touch"].value_flags and i + 1 < len(a) and (a[i] == "-f" or a[i + 1].split()):   # `-r ""` claims nothing: refused
                 if a[i] == "-r":
                     rows.extend(a[i + 1].split())   # #592 R-e: `-r "592 594"` claims both rows
                 else:

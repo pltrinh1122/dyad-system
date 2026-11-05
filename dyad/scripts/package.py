@@ -890,6 +890,53 @@ def run_suites(suites):
     with ThreadPoolExecutor(len(suites)) as pool:
         return list(pool.map(run_suite, suites))
 
+def _dotted_module(base: Path, parts: list[str]) -> tuple[Path, int] | None:
+    """(the module file or package directory, the parts it consumed) that `parts` names under `base`, read as
+    `unittest` imports it — packages while a directory holds the next part, then one `<part>.py`, the rest attributes
+    (a class, a method); None when the first part names nothing there."""
+    at, k = Path(base), 0
+    for p in parts:
+        if (at / f"{p}.py").is_file():
+            return at / f"{p}.py", k + 1
+        if not (at / p).is_dir():
+            break
+        at, k = at / p, k + 1
+    return (at, k) if k else None
+
+def tests_target_refusal(target, repo=None, roots=None):
+    """#592 R-a (INCIDENTS row 179): the refusal line for a `check --tests` target `unittest` cannot import, or None.
+    The child runs from the repo root (`suite_child`), so a dotted target whose first part names nothing at the root
+    — `test_incidents`, not `dyad.tests.test_incidents` — would fail as an import error deep in the child's output.
+    It is refused here: with the qualified name of every module of that dotted path under a test root, at any depth
+    (`test_provenance` is `dyad.tests.guards.agent.test_provenance`), or with none when no root holds it. A path, or a
+    dotted name whose first part names a package or module at the root, runs as today. A dotted name ending in `.py`
+    (`test_cli.py`, which `unittest` would read as an attribute `py`) is refused with the module's path form."""
+    repo, roots = Path(repo or REPO), list(test_suites() if roots is None else roots)
+    if not target or "/" in target or Path(target).exists() or (repo / target).exists():
+        return None   # a path, which `unittest` reads as one
+    py = target.endswith(".py")
+    parts = (target[:-3] if py else target).split(".")
+    at_root = _dotted_module(repo, parts)
+    if at_root and not py:
+        return None
+    named = lambda got: got and (got[0].suffix == ".py" or got[1] == len(parts))   # a module, or the whole name a package
+    hits = [at_root] if named(at_root) else []
+    for r in roots:
+        if not Path(r).is_dir() or not Path(r).resolve().is_relative_to(repo.resolve()):
+            continue
+        for d in [Path(r), *sorted(d for d in Path(r).rglob("*") if d.is_dir() and d.name != "__pycache__")]:
+            got = _dotted_module(d, parts)
+            if named(got) and got[0] not in [h[0] for h in hits]:
+                hits.append(got)
+    def name(got) -> str:
+        m, k = got
+        mod = Path(m).resolve().relative_to(repo.resolve())
+        if py or not all(x.isidentifier() for x in mod.with_suffix("").parts):
+            return str(mod)   # the path form the child reads as one (a craft named with a `-`, a `.py` target)
+        return ".".join((*mod.with_suffix("").parts, *parts[k:]))
+    head = f"refused: dyad check --tests: no test root or module named {target}"
+    return f"{head}; qualify it ({', '.join(name(h) for h in hits)})" if hits else head
+
 def cmd_tests(target=None, roots=None):
     """Rule-13 property 1: the suites, run the way the runner runs them, as one verb. Without a
     target every root of `test_suites()`; with a directory that root; with anything else a dotted
@@ -899,6 +946,9 @@ def cmd_tests(target=None, roots=None):
     partial run, never memoized, like a targeted one."""
     global _SUITE_RAN
     rc = 0
+    if (refusal := tests_target_refusal(target)):   # #592 R-a: before the nesting test, so a refusal is the same everywhere
+        print(refusal, file=sys.stderr)
+        return 1
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
     _SUITE_RAN = True
@@ -1896,12 +1946,15 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
+# #592 R-a: views of `dyadlib.CLI`, the one table the gate in `__main__` and `test_surface`'s S1 read. The value flags are
+# every `dwork` verb's but `trace`'s (trace parses its own words, before `dwork_args` runs); `--land` and `--mirror`
+# are land.py's, read before the verb is (`cmd_dwork`), so the verbs' own sets leave them out.
+DWORK_VALUE_FLAGS = tuple(sorted({f for (n, v), x in dyadlib.CLI.items() if n == "dwork" and v != "trace" for f in x.value_flags}))
+_LAND = {dyadlib.LAND_FLAG, *(f for f, _ in dyadlib.LAND_FLAGS)}
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
-    "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--mandate", "--retired-by"}, {"--check"}, 3),   # #464; --said-ref #545
-    "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
-    "list": ({"--state", "--craft"}, set(), 1)}
+    v: (set(dyadlib.CLI[("dwork", v)].value_flags) - _LAND, set(dyadlib.CLI[("dwork", v)].bare) - _LAND,
+        None if dyadlib.CLI[("dwork", v)].most is None else dyadlib.CLI[("dwork", v)].most + 1)   # + the verb itself
+    for v in ("new", "state", "retire", "list")}   # #290: `retire` takes k ids, an unbounded count (None)
 
 def dwork_args(a):
     """`dwork` argv as (positionals, {flag: value}, {bare flags}). A flag's value is never a
@@ -2424,6 +2477,8 @@ dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at im
 
 if __name__ == "__main__":
     a = sys.argv[1:]
+    if (gated := dyadlib.cli_gate(a, doc=__doc__)) is not None:   # #592 R-a: `-h`/`--help` and unknown flags, before any dispatch
+        sys.exit(gated)
     if a and a[0] == "runbook":
         sys.exit(cmd_runbook(a[1:]))
     if a and a[0] == "craft":
@@ -2456,25 +2511,25 @@ if __name__ == "__main__":
         sys.exit(cmd_project(a[1:]))
     if not a or a[0] not in ("check", "build", "install"):
         sys.exit(__doc__)
+    got = dyadlib.cli_parse(dyadlib.CLI[dyadlib.cli_form(a)[0]], dyadlib.cli_form(a)[1])   # the gate's own reading (#592)
     if a[0] == "check" and "--evidence" in a:
-        if "--show" in a:                                                # check --evidence --show <sha256> (#476)
-            i = a.index("--show"); sys.exit(cmd_evidence_show(a[i + 1] if i + 1 < len(a) else None))
-        brief = "--brief" in a                                           # check --evidence --brief (#476)
-        if "--at" in a:                                                  # check --evidence --at <rev> (#448)
-            i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None, brief=brief))
+        if "--show" in got.values:                                       # check --evidence --show <sha256> (#476)
+            sys.exit(cmd_evidence_show(got.one("--show")))
+        brief = "--brief" in got.bare                                    # check --evidence --brief (#476)
+        if "--at" in got.values:                                         # check --evidence --at <rev> (#448)
+            sys.exit(cmd_evidence_at(got.one("--at"), brief=brief))
         sys.exit(cmd_evidence(brief=brief))
     if a[0] == "check" and "--corroborate" in a:                       # check --corroborate [<before> [<after>]] (#564)
-        i = a.index("--corroborate"); sys.exit(cmd_corroborate(*a[i + 1:i + 3]))
+        sys.exit(cmd_corroborate(*got.pos[:2]))
     if a[0] == "check" and "--pr" in a:
-        i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
+        sys.exit(cmd_pr(*got.pos[:2]))
     if a[0] == "check" and "--guards" in a:
-        hook = a[a.index("--pre-push") + 1:a.index("--pre-push") + 3] if "--pre-push" in a else []   # git's <remote> <url> (#518)
-        sys.exit(cmd_guards(pre_push="--pre-push" in a, remote=(hook[0] if hook else None), url=(hook[1] if len(hook) > 1 else None)))
+        pre_push = "--pre-push" in got.bare; hook = got.pos if pre_push else []   # git's <remote> <url> (#518)
+        sys.exit(cmd_guards(pre_push=pre_push, remote=(hook[0] if hook else None), url=(hook[1] if len(hook) > 1 else None)))
     if a[0] == "check" and "--list" in a:
         sys.exit(cmd_list())
     if a[0] == "check" and "--tests" in a:
-        i = a.index("--tests"); sys.exit(cmd_tests(*a[i + 1:i + 2]))
+        sys.exit(cmd_tests(*got.pos[:1]))
     if a[0] == "install" and "--from" in a:                              # dyad install <repo> --from <src> (#353)
-        i = a.index("--from"); rest = a[1:i] + a[i + 2:]
-        sys.exit(cmd_install(rest[0], a[i + 1]) if rest and i + 1 < len(a) else __doc__)
+        sys.exit(cmd_install(got.pos[0], got.one("--from")) if got.pos and got.one("--from") else __doc__)
     sys.exit({"check": lambda: cmd_check(), "build": lambda: cmd_build(*a[1:2]), "install": lambda: cmd_install(*a[1:2])}[a[0]]())

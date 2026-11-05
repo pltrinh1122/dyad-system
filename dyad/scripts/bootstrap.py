@@ -48,6 +48,8 @@ HOOKS_PATH = "dyad/hooks"                       # Rule-1 Enforcement: `git confi
 REMOTE = "origin"
 CORE_TAGS = f"{dyadlib.CORE_CRAFT}-v*"          # Rule-11 property 4: every core release tag, `dyad-operator-vX.Y.Z`
 STATES = ("ok", "changed", "warn")
+CLI_FLAGS = dyadlib.cli_forms("bootstrap")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+CHECK_FLAG, = CLI_FLAGS[None].bare
 FETCH_TIMEOUT = 600                             # an unshallow of a long history; a SessionStart hook has its own bound
 UNSHALLOW = ("fetch", "--unshallow", "--tags", REMOTE)
 FETCH_TAGS = ("fetch", "--tags", REMOTE)
@@ -246,9 +248,9 @@ def main(argv, repo: Path) -> int:
     a = list(argv)
     if a and a[0] in ("-h", "--help"):
         print(__doc__); return 0
-    if any(x != "--check" for x in a):
+    if any(x != CHECK_FLAG for x in a):
         print("usage: dyad bootstrap [--check]", file=sys.stderr); return 2
-    for l in run(Path(repo), check="--check" in a):
+    for l in run(Path(repo), check=CHECK_FLAG in a):
         print(l)
     return 0
 

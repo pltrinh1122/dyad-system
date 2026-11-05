@@ -160,7 +160,8 @@ class BootstrapTests(World):
         self.assertIn("usage: dyad bootstrap [--check]", err)
         r = subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "bootstrap", "--bogus"],
                            capture_output=True, text=True, env=dyadlib.git_env())   # dispatched by the runner; nothing run
-        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)   # #592 R-a: the runner's gate refuses an unknown flag, exit 1
+        self.assertEqual(r.stderr, "refused: dyad bootstrap does not take --bogus\n")
 
     def test_clone_problems_names_shallow_first_then_the_missing_tag(self):
         work = self.shallow()
