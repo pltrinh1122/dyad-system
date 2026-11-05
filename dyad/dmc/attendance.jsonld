@@ -17,7 +17,7 @@
   "dyad:inputs": [
     "the seat name",
     "whether it is the leader",
-    "the attended-seats preference",
+    "the paired-units preference",
     "whether the unit's work is a hard context switch for the operator",
     "whether it is asynchronous, independent of other matters and long-lived",
     "the operator's span: how many units are already paired"
@@ -27,7 +27,7 @@
       "@type": "DefinedTerm",
       "termCode": "attended",
       "name": "attended",
-      "dyad:when": "the seat is the leader, or the attended-seats preference names it by its seat name or by that name without its -<hp>",
+      "dyad:when": "the seat is the leader, or the paired-units preference names it by its seat name or by that name without its -<hp>",
       "dyad:then": "a counter-prompt is asked in the seat's own chat"
     },
     {
