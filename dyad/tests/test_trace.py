@@ -9,7 +9,12 @@ push's suite/guards kind is read from the gate's skip line, `Ran N tests` or the
 its duration — a hand-run `unittest` is suite only when it ran, and the Bottleneck's agent-side table renders. #240:
 an opening disposition (`Y open`, `Y backlog`) anchors to a question naming no id or an origin's, never another
 row's, and the window starts at it. #286: a compaction summary is never the Operator's, and neither it nor a harness
-notice between a question and its `Y` breaks the anchor or the wait."""
+notice between a question and its `Y` breaks the anchor or the wait. #592 R-b: `--out` refuses without the Done words
+(the record's Done entry or `--said-file`) and writes nothing; with `--said-file` it writes a trace through the Done and
+no preview; the store warns on a stored preview while no legacy list is kept and fails one the list does not name; and
+an entry anchored only after whitespace normalisation, or unmatched while its turn is there, is `not verbatim` — never a
+relayed or mandate entry, nor a prompt whose only same-day turns answer a `Y/N:` or are another entry's; `--said-file` is
+read after a refused or voided Done, so the window ends at the Done asked again, and is refused without `--out`."""
 import datetime, json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -463,10 +468,165 @@ class RepliesPerDispositionTests(unittest.TestCase):
         self.assertIn("| replies per disposition | no disposition in the window (2 replies) | transcript |", tr.trace(7, root, [path]))
 
 
+class StoredTraceIsNeverAPreviewTests(unittest.TestCase):
+    """#592 R-b: `--out` needs the Done words (the record's Done entry, or `--said-file`), the store fails a preview the
+    instance's legacy list does not name and warns while it keeps none, and an entry anchored only after whitespace
+    normalisation, or unmatched while its turn is there, is listed under Limits as `not verbatim`."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+
+    def run_main(self, argv, root):
+        from io import StringIO
+        from contextlib import redirect_stdout
+        with redirect_stdout(StringIO()) as buf:
+            rc = tr.main(argv, root=root)
+        return rc, buf.getvalue()
+
+    def test_out_with_no_done_entry_and_no_said_file_refuses_and_writes_nothing(self):
+        root, path = fixture(ENTRIES[:2])
+        with self.assertRaises(SystemExit) as cm:
+            self.run_main(["7", "--transcript", str(path), "--out"], root)
+        self.assertIn("refused:", str(cm.exception)); self.assertIn("no Done disposition", str(cm.exception))
+        self.assertIn("--said-file", str(cm.exception))
+        self.assertFalse((root / "agent-corpus" / "d-work" / "traces").exists())
+        missing = root / "nowhere.txt"
+        with self.assertRaises(SystemExit) as cm:
+            self.run_main(["7", "--transcript", str(path), "--out", "--said-file", str(missing)], root)
+        self.assertIn("is not a file", str(cm.exception))
+        self.assertFalse((root / "agent-corpus" / "d-work" / "traces").exists())
+
+    def test_out_with_said_file_writes_a_trace_through_the_done_and_no_preview(self):
+        from unittest import mock
+        root, path = fixture(ENTRIES[:2])
+        said = root.parent / f"{root.name}-said.txt"; said.write_text("Y\n")
+        with mock.patch.object(dyadlib, "utc_date", lambda: "2026-10-05"):   # the Done words given on the fixture's day
+            rc, out = self.run_main(["7", "--transcript", str(path), "--out", "--said-file", str(said)], root)
+        self.assertEqual(rc, 0); self.assertEqual(out.strip(), "wrote agent-corpus/d-work/traces/7.md")
+        text = (root / "agent-corpus" / "d-work" / "traces" / "7.md").read_text()
+        self.assertFalse(tr.is_preview(text)); self.assertNotIn("\n- preview:", text)
+        self.assertIn("Window: 2026-10-05 10:00:00 → 2026-10-05 10:06:40 UTC", text)   # through the Done-`Y` at 400 s
+        self.assertIn("the Done entry is read from --said-file (entry 3, dated 2026-10-05 UTC)", text)
+        self.assertEqual(tr.check_store(root), [])
+        self.assertEqual((root / "agent-corpus" / "d-work" / "provenance" / "7.md").read_text(), record(ENTRIES[:2]))   # read, never written
+
+    def test_said_file_on_another_day_still_writes_no_preview(self):
+        root, path = fixture(ENTRIES[:2])
+        said = root.parent / f"{root.name}-said.txt"; said.write_text("Y\n")
+        self.assertEqual(self.run_main(["7", "--transcript", str(path), "--out", "--said-file", str(said)], root)[0], 0)
+        text = (root / "agent-corpus" / "d-work" / "traces" / "7.md").read_text()
+        self.assertFalse(tr.is_preview(text)); self.assertIn("the Done disposition is not anchored", text)
+
+    def test_store_warns_on_a_preview_with_no_list_and_fails_one_the_list_does_not_name(self):
+        root, path = fixture(ENTRIES[:2], lines=transcript()[:-1])
+        store = root / "agent-corpus" / "d-work" / "traces"; store.mkdir()
+        preview = tr.trace(7, root, [path])
+        self.assertTrue(tr.is_preview(preview))
+        (store / "7.md").write_text(preview)
+        msgs = tr.check_store(root)                                       # no list: one warning, nothing fails
+        self.assertEqual(len(msgs), 1, msgs); self.assertTrue(msgs[0].startswith("warning: 7.md: a stored preview"), msgs)
+        traces = dyadlib.load_guard("agent", "traces")
+        from io import StringIO
+        from contextlib import redirect_stdout
+        with redirect_stdout(StringIO()) as buf:
+            self.assertEqual(traces.main([str(root)]), 0)                 # the guard's own main: warn, exit 0
+        self.assertIn("warn [rule-3] 7.md: a stored preview", buf.getvalue())
+        legacy = root / "agent-corpus" / tr.PREVIEW_LEGACY
+        legacy.write_text("# previews before #592\n6\n")
+        msgs = tr.check_store(root)
+        self.assertEqual(len(msgs), 1, msgs); self.assertIn("7.md: a stored preview", msgs[0])
+        self.assertFalse(msgs[0].startswith("warning:"))
+        legacy.write_text("# previews before #592\n6\n7\n")
+        self.assertEqual(tr.check_store(root), [])
+        legacy.write_text("7\n#7 a comment\nseven\n7\n")
+        msgs = tr.check_store(root)
+        self.assertEqual(sorted(m.split(":")[1] for m in msgs), ["3", "4"], msgs)   # a malformed line, a repeated id
+
+    def test_the_live_store_passes_with_its_generated_list(self):
+        repo = PKG.parent
+        listed, problems = tr.preview_legacy(repo)
+        if listed is None:
+            self.skipTest("this instance keeps no preview legacy list")
+        self.assertEqual(problems, [])
+        self.assertEqual([m for m in tr.check_store(repo) if "stored preview" in m], [])
+
+    def test_an_entry_anchored_only_after_normalisation_or_never_is_not_verbatim(self):
+        entries = [("prompt", "2026-10-05", "", "please trace  the widget\npipeline end to end"),   # spaces differ
+                   ("disposition", "2026-10-05", "Y plan", "Yes, go"),                               # its turn is there
+                   ("disposition", "2026-10-05", "Y done merges PR #1", "Y")]
+        root, path = fixture(entries)
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([(a["status"], a["verbatim"]) for a in got],
+                         [("anchored", False), ("unmatched", False), ("anchored", None)])
+        out = tr.trace(7, root, [path])
+        limits = out.split("## Limits", 1)[1].splitlines()
+        self.assertIn("- provenance entry 1 (prompt) not verbatim: anchored only after whitespace normalisation", limits)
+        self.assertIn("- provenance entry 2 (disposition) not verbatim: its turn is in the transcript and its words never anchor", limits)
+        self.assertNotIn("Yes, go", out); self.assertNotIn("please trace  the widget", out)   # number and kind, never words
+        root, path = fixture()                                           # the verbatim fixture: no such line
+        self.assertNotIn("not verbatim", tr.trace(7, root, [path]))
+
+    def test_said_file_after_a_refused_done_ends_the_window_at_the_done_asked_again(self):
+        from unittest import mock
+        lines = transcript()[:-2] + [text(230, f"{SECRET}\nY/N: Done with #7 widget (merges PR #1)?", "u13", "m7"),
+                                     user(400, "N", "u14"),            # refused, then asked again and answered
+                                     text(500, f"{SECRET}\nY/N: Done with #7 widget (merges PR #1 at abc)?", "u15", "m8"),
+                                     user(600, "Y", "u16")]
+        root, path = fixture(ENTRIES[:2] + [("disposition", "2026-10-05", "N done (amend)", "N")], lines=lines)
+        with mock.patch.object(dyadlib, "utc_date", lambda: "2026-10-05"):
+            out = tr.trace(7, root, [path], said="Y")
+        self.assertIn("Window: 2026-10-05 10:00:00 → 2026-10-05 10:10:00 UTC", out)   # the second answer, never the `N`
+        self.assertIn("the Done entry is read from --said-file (entry 4, dated 2026-10-05 UTC)", out)
+
+    def test_said_file_after_a_voided_done_on_an_earlier_day_ends_at_the_new_done(self):
+        from unittest import mock
+        lines = transcript()[:-2] + [text(230, f"{SECRET}\nY/N: Done with #7 widget (merges PR #1)?", "u13", "m7"),
+                                     user(400, "Y", "u14"),
+                                     text(86400 + 100, f"{SECRET}\nY/N: Done with #7 widget (merges PR #1 at abc)?", "u15", "m8"),
+                                     user(86400 + 200, "Y", "u16")]
+        root, path = fixture(ENTRIES, lines=lines)                      # `Y done` on day 1, voided; asked again on day 2
+        with mock.patch.object(dyadlib, "utc_date", lambda: "2026-10-06"):
+            out = tr.trace(7, root, [path], said="Y")
+        self.assertIn("→ 2026-10-06 10:03:20 UTC", out)
+        self.assertIn("the Done entry is read from --said-file (entry 4, dated 2026-10-06 UTC)", out)
+
+    def test_said_file_already_recorded_is_not_read_twice(self):
+        from unittest import mock
+        root, path = fixture()                                           # the record's last entry is today's `Y done`
+        with mock.patch.object(dyadlib, "utc_date", lambda: "2026-10-05"):
+            out = tr.trace(7, root, [path], said="Y")
+        self.assertNotIn("--said-file", out.split("## Limits", 1)[1])
+        self.assertIn("(3 entries, 3 anchored)", out)
+        self.assertIn("→ 2026-10-05 10:06:40 UTC", out)
+
+    def test_a_relayed_prompt_or_a_same_day_prompt_from_another_session_is_never_not_verbatim(self):
+        entries = [("prompt", "2026-10-05", "", PROMPT),
+                   ("prompt", "2026-10-05", "relayed via cos-1234abcd", "carry on with the gadget as the cos said"),
+                   ("prompt", "2026-10-05", "", "a prompt typed in another session today"),
+                   ("disposition", "2026-10-05", "Y plan", "Y"), ("disposition", "2026-10-05", "Y done merges PR #1", "Y")]
+        root, path = fixture(entries, lines=transcript() + [user(500, "an unrelated message", "u20")])
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([(a["status"], a["verbatim"]) for a in got][1:3], [("unmatched", None), ("unmatched", False)])
+        self.assertNotIn("entry 2 (prompt) not verbatim", tr.trace(7, root, [path]))   # relayed: given in the cos's chat
+        root, path = fixture(entries)                                    # no free turn at all: only answers to `Y/N:`
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual([a["verbatim"] for a in got], [None] * 5)
+
+    def test_an_unanchored_prompt_with_a_free_turn_of_its_own_is_not_verbatim(self):
+        entries = [("prompt", "2026-10-05", "", PROMPT), ("prompt", "2026-10-05", "", "a second  prompt, words lost"),
+                   ("disposition", "2026-10-05", "Y plan", "Y"), ("disposition", "2026-10-05", "Y done merges PR #1", "Y")]
+        lines = transcript()
+        lines.insert(4, user(6, "a second prompt, words changed", "u21"))   # a free turn no entry anchors
+        root, path = fixture(entries, lines=lines)
+        got = tr.anchor(tr.provenance(7, root), tr.load([path])[0], 7)
+        self.assertEqual(got[1]["verbatim"], False)
+
+
 class LiveTests(unittest.TestCase):
     def test_refusals(self):
         root, path = fixture()
-        for argv in (["7", "--transcript"], ["7", "--bogus"], ["7", "--transcript", str(path) + ".missing"], []):
+        said = root.parent / f"{root.name}-said.txt"; said.write_text("Y\n")
+        for argv in (["7", "--transcript"], ["7", "--bogus"], ["7", "--transcript", str(path) + ".missing"], [],
+                     ["7", "--said-file"], ["7", "--transcript", str(path), "--said-file", str(said)]):
             with self.assertRaises(SystemExit):
                 tr.main(argv, root=root)
 

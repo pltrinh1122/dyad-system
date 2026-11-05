@@ -45,6 +45,7 @@ def git(d, *a):
     return r.stdout.strip()
 
 
+
 def entry(tag, sha, digest=DIGEST):
     return f"2026-10-26 Y release {tag} at {sha} (archive {digest})"
 
@@ -361,6 +362,15 @@ class ReadyTests(World):
         rc, out, _ = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
         self.assertEqual(rc, 0); self.assertTrue(out.startswith("already:"), out)
         self.assertEqual(self.row().count("release-ready"), 1)
+
+    def test_the_line_carries_the_utc_date(self):
+        # #592 R-b: the release-ready entry is dated UTC's day, whatever the host's local one
+        with livetest.off_utc() as (utc, local):
+            self.assertNotEqual(utc, local)
+            rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 0, err)
+        self.assertIn(f"; {utc} release-ready dyad-operator-v0.1.0 at {self.cut_sha}", self.row())
+        self.assertNotIn(f"{local} release-ready", self.row())
 
     def test_a_root_changed_after_the_verified_head_is_refused(self):
         (self.work / "dyad" / "late.py").write_text("late\n"); git(self.work, "add", "-A"); git(self.work, "commit", "-qm", "late")
