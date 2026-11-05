@@ -104,6 +104,10 @@ named act.
   the last line `Y/N: proceed with #<id> as planned?`, or the batch form. The definition of done is the operator's
   words, quoted from the provenance record, or one marked *proposed* that the plan-`Y` accepts and an amend corrects:
   one row per definition of done the operator can evaluate, over the largest scope it lets the operator judge (#574).
+- A row moved to `planned` (`dwork state <id> planned`) has had its plan read by `dyad plan check <id>` — a second
+  zone among the files touched, a touched module whose test is not listed, a released craft touched without a
+  `VERSION` bump, callers of a function the mutation names, a `refs` row not done, `order: required` with no `step:`
+  line — each a warning for the plan's reader, never a refusal (#592).
 - The plan-`Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs from it is a
   **new plan** needing a new `Y`; until a `Y` the d-work stays open with nothing authorized. Every plan is asked, a
   one-line plan included; a row the plan-`Y` carries was named in that question and is asked no second time.
@@ -120,7 +124,8 @@ named act.
   count is known only in execution (#574). Rule and ceiling are the operator's to read before the plan-`Y` and to
   refuse. A play-book that wants a
   question for a row says so in its step. A plan stating neither source carries no row. A row outside the rule, or past
-  the ceiling, is a new plan.
+  the ceiling, is a new plan, so `dwork new … --mandate <id>` refuses, before any write, the row past the ceiling the
+  mandate's latest plan revision states (#592).
 - A carried row is born as its scope or step says: `open`, worked under this d-work; or `backlog`, filed for later, its
   work waiting for an operator prompt. Its Done is the question its plan names: this d-work's done-`Y`, which then names
   it, or its own (Completion counter-prompt).
@@ -148,8 +153,9 @@ named act.
   breach of this Rule, not a style choice.
 - **Trace.** When the preference `dwork-trace` is `always` the evidence cites the d-work trace (play-book
   `dyad/playbooks/dwork-trace.md`); under `on-demand` it cites one when the operator prompted for one. The completion
-  reply prints its preview, and the reply that receives the done-`Y` writes it to `<instance>/d-work/traces/<id>.md`,
-  carried by the Record commit, so it covers the `Y` and stays ledger-only; one with no transcript is still cited, its
+  reply prints its preview, and the reply that receives the done-`Y` writes it to `<instance>/d-work/traces/<id>.md`
+  from the Done words (`dwork trace --out --said-file`), never as the preview (Mechanisms); the Record commit carries
+  it, so it covers the `Y` and stays ledger-only; one with no transcript is still cited, its
   buckets marked absent (#213). A mandate close rides the mandate's own trace.
 - The reply that asks does not merge. A done-`Y` that names no merge has nothing in flight: one ledger commit holds its
   `disposed` entry, its provenance entry and the trace, sets `done` at once, and archives each retired row it names.
@@ -226,7 +232,8 @@ named act.
   — a child the operator never asked for is not work the parent owes, and a stricter gate could leave the parent
   unaskable (#290). The parent completes on its own done-`Y`, its evidence naming each child's state.
 - For every row opened from 2026-09-12 #46 on, `disposed` records every disposition, in order, as
-  `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`, each written clerically when given, so the chain of
+  `<date> <Y|N> <plan|done|merge #n|reason>` separated by `;`, `<date>` the UTC date (`dyadlib.utc_date`, #592), each
+  written clerically when given, so the chain of
   authorization is reconstructible from the ledger alone (D4). A carried row's entry names the `Y` it rides — an
   accreted row's first `<date> Y plan (mandate #<id>)`, a carried `backlog` row's `<date> Y backlog (mandate #<id>)`, a
   retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
@@ -267,7 +274,9 @@ named act.
   accreted row's entry, noted `mandate #<id>`, is a mandate close, and the trace it needs is the mandate's.
   `dwork state` and `dwork batch` refuse an entry lacking its trace before their first write
   (`package.py trace_refusal`), a batch passing when an earlier `land <instance>/d-work/traces/<id>.md` line carries it
-  (#465). `traces.py` checks the trace store, through `trace.check_store` (#227).
+  (#465). It fails such an entry whose trace, carried or already on the base, is a preview; `traces.py` checks the
+  trace store, through `trace.check_store` (#227), and fails a stored preview the instance's
+  `traces_preview_legacy.local.txt` does not name (#592).
 - **The plan gate** runs before a push over `origin/main..HEAD`, commit messages as body, and judges every range that
   claims a d-work. A range whose every non-merge commit, read commit by commit with rename detection off, is ledger-only
   (`prs.ledger_only`, #191) or events-only (`dyadlib.events_only`, #438) claims none, and the gate skips it; a range
@@ -320,6 +329,8 @@ a row as every prompt does (Scope).
 Operator rule, 2026-09-12. Refactored by d-work #585 (2026-11-04) around what opens a row, what a `Y` binds and the two
 questions, absorbing #574 and #584, and re-scoped by its plan revision 2 so that every claim survives falsification and
 holds within its own scope. Earlier text, its 29 amendments and the claim table:
-`../falsification/rules/rule-3-d-work.md`.
+`../falsification/rules/rule-3-d-work.md`. Plan, Completion counter-prompt, Ledger and Mechanisms state the fences of #592 2026-11-05 (d-work
+#606): the plan check at `planned`, the mandate ceiling at `dwork new`, the trace written from the Done words and UTC
+dates had landed as code with no sentence; see the same record, amendment #606.
 
 Set: System Requirements.
