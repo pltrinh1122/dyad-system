@@ -1,5 +1,5 @@
 session: audit-e73be78c
-seen: 2026-11-05T01:16:26+00:00
+seen: 2026-11-05T02:19:08+00:00
 root: /home/user/dyad-system
 rows: 570 585
 files: 
