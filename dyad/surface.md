@@ -24,43 +24,53 @@ here fails the suite, and so does an entry here that the code no longer has. Wit
 ## S1 CLI
 
 The entrypoint is `dyad/bin/dyad`, invoked by path (Rule-11 p2), in the form `dyad <noun> [<verb>] [flags]`. The
-nouns are the dispatch in `dyad/scripts/package.py`.
+nouns are the dispatch in `dyad/scripts/package.py`. Every form is a row of one table, `dyadlib.CLI`, which this section
+equals (the flags of each row, both directions) and which a gate reads before any dispatch (#592): `-h` or `--help`
+anywhere outside a flag's value prints the form's usage and exits 0, running nothing; a flag the form does not take
+prints `refused: dyad <noun> <verb> does not take <flag>` and exits 1, as does a word past the form's positionals; a
+flag given twice that the form reads once prints `refused: dyad <noun> <verb> takes <flag> once` and exits 1
+(`inbox post --cc`, `dwork trace --transcript`, `session touch -r`/`-f` repeat). A flag that takes a value takes the
+next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item`, `-1 rows`) is a word, and from
+`inbox post`'s body on every word is.
 
 | form | flags | status |
 |---|---|---|
 | `dyad check` | — | frozen |
 | `dyad check --list` | — | frozen |
-| `dyad check --guards` | `--pre-push [<remote> <url>]` | frozen |
+| `dyad check --guards` | `--pre-push [<remote> <url>]` (empty stdin fails with its line on a hand run, passes when git sends `<remote> <url>`; a tty is refused; a missing core tag fails) | frozen |
 | `dyad check --corroborate [<before> [<after>]]` | — | frozen |
 | `dyad check --pr <base> [<head>]` | — | frozen |
-| `dyad check --tests [<target>]` | — | frozen |
+| `dyad check --tests [<target>]` | — (a dotted target whose first part names nothing at the repo root is refused, with the qualified name of every test-root module of that path, at any depth, #592) | frozen |
 | `dyad check --evidence` | `--brief`, `--at <rev>`, `--show <sha256>` | frozen |
 | `dyad build [<out>]` | — | frozen |
 | `dyad install <repo>` | `--from <src>` | frozen |
 | `dyad bundle check` / `build [<dir>]` | — | frozen |
-| `dyad craft new <name>` / `list` / `check [<craft>]` / `export <craft> [<out>]` / `install <src>` | `--force`, `--dwork <N>` | frozen |
+| `dyad craft new <name>` / `list` / `check [<craft>]` / `export <craft> [<out>]` / `install <src>` | `--force`, `--dwork <N>`, `--craft <name>`, `--source <text>` | frozen |
+| `dyad craft diff <craft>` | `--against <src>`, `--patch` | frozen |
 | `dyad ledger` | — | frozen |
-| `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate`, `--land`, `--mirror` | frozen |
-| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--check`, `--land`, `--mirror` | frozen |
+| `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate` (refuses past the plan's stated ceiling, #592), `--land`, `--mirror` | frozen |
+| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--check`, `--land`, `--mirror` (`planned` prints the plan check, #592) | frozen |
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |
-| `dyad dwork trace <id>` | `--transcript <path>`, `--out` | frozen |
+| `dyad dwork trace <id>` | `--transcript <path>`, `--out`, `--said-file <f>` (#592: `--out` needs the Done words; `--said-file` needs `--out`) | frozen |
+| `dyad plan check <id>` | — | frozen |
+| `dyad session [<root>]` | — (the presence guard by hand) | frozen |
 | `dyad session name` | `--function`, `--topic`, `--hp`, `--system`, `--on` | frozen |
-| `dyad session touch` | `-r <row>`, `-f <file>` | frozen |
+| `dyad session touch` | `-r <row>`, `-f <file>` (`-r` splits on whitespace; fetches origin first) | frozen |
 | `dyad session list` | — | frozen |
 | `dyad session reconcile` | — | frozen |
-| `dyad project <surface>` / `--list` | — | frozen |
+| `dyad project <surface>` / `--list` | `--craft <name>` (the kanban projector's, #22) | frozen |
 | `dyad runbook check` / `list <instance>` / `run <instance> <name>` / `new <instance>` | `--as operator\|agent\|automaton` (automaton: a read-only command only, #593) | frozen |
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
 | `dyad board` / `board set <id>\|_cos key=value...` / `board resume` | `--drop` | frozen |
-| `dyad inbox post <unit>` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
+| `dyad inbox post <unit> [<body>...]` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
 | `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |
-| `dyad automaton sweep` | — | moving (#572) |
+| `dyad automaton sweep` | `--row <id>` | moving (#572) |
 | `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | moving (#572) |
 | `dyad bootstrap` | `--check` | frozen |
 
@@ -71,7 +81,7 @@ are each guard's own constant, the source the test reads.
 
 | store | path | keys | source | status |
 |---|---|---|---|---|
-| row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode` | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
+| row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`; every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
 | board entry | `d-work/board/<id>.md` | `holder`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `writer` | `board.FIELDS` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>`; `seat <name>` | `board.UNIT_ALIAS` | alias → `unit <name>` (#573) |
@@ -80,9 +90,10 @@ are each guard's own constant, the source the test reads.
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
 | presence | `d-work/sessions/<id>.md` | `session`, `seen`, `root`, `rows`, `files`; optional `writer`, `host`, `holder` | `sessions.FIELDS` | frozen |
-| provenance | `d-work/provenance/<id>.md` | title `# Provenance #<id>`; entries `## <n> <kind> <date>[ <note>]`, kind `prompt` or `disposition`, fenced body | `provenance.FIELDS` | frozen |
+| provenance | `d-work/provenance/<id>.md` | title `# Provenance #<id>`; entries `## <n> <kind> <date>[ <note>]`, kind `prompt` or `disposition`, fenced body; the date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `provenance.FIELDS` | frozen |
 | plan file | `d-work/plans/<id>.md` | `Base commit of main:` and `Files touched` as the guards read them | `plans.FIELDS`, `dyadlib.PLAN_PARTS` | frozen |
-| trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits` | `trace.SECTIONS` | frozen |
+| trace | `d-work/traces/<id>.md` | sections `Timeline`, `Buckets`, `Counts`, `Bottleneck`, `Limits`; a stored trace is never a preview (#592) | `trace.SECTIONS` | frozen |
+| trace preview legacy | `traces_preview_legacy.local.txt` | `<id>` per line, `#` a comment: the stored previews before #592 | `trace.check_store` | frozen |
 | event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
@@ -113,7 +124,6 @@ the operator's. The key names and allowed values are the surface.
 | attended-seats | alias → `paired-units` (#573) |
 | attendance-window | frozen |
 | relay-form | frozen |
-| altitude | moving (#570 A1t; not yet a key) |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
@@ -135,7 +145,7 @@ the operator's. The key names and allowed values are the surface.
 |---|---|---|---|
 | 1 | `RULE-1-containment.md` | Boundaries; Conditions; Provenance | frozen |
 | 2 | `RULE-2-no-self-ratify.md` | Boundaries; Conditions; Ratification events; Not ratification; Binding of approval; Enforcement; Provenance | frozen |
-| 3 | `RULE-3-d-work.md` | Boundaries; Conditions; Scope; Answer grammar; Plan; Ledger; Mechanisms; Completion counter-prompt; Batch disposition; Intake; Incidents; Ratification events; Provenance | frozen |
+| 3 | `RULE-3-d-work.md` | Boundaries; Conditions; Scope; Answer grammar; What a `Y` binds; Plan; Completion counter-prompt; Batch disposition; Ledger; Mechanisms; Intake; Incidents; Ratification events; Provenance | frozen |
 | 4 | `RULE-4-integrity.md` | Boundaries; Conditions; Criteria; Mechanisms; Provenance | frozen |
 | 5 | `RULE-5-coherence.md` | Boundaries; Conditions; Definitions; Sets; Enforcement; Provenance | frozen |
 | 6 | `RULE-6-vocabulary.md` | Boundaries; Conditions; Master record; Mechanisms; Provenance | frozen |
@@ -161,6 +171,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | name | status |
 |---|---|
 | agent-vs-tended-rule | frozen |
+| altitude | frozen |
 | amend-scope | frozen |
 | answer-grammar | frozen |
 | attack-result | frozen |
@@ -215,6 +226,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | manifest-token | frozen |
 | merge-question | frozen |
 | message-kind | frozen |
+| message-route | frozen |
 | message-overhead | frozen |
 | mitigation-status | frozen |
 | mode-edge | frozen |

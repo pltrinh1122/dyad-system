@@ -1,0 +1,72 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/message-route",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "message-route",
+  "name": "Message route",
+  "description": "Decides whether a message between units goes by the inbox alone, by the inbox and a doorbell, or by the inbox with the receiver polling.",
+  "dyad:decides": "How does this message reach the unit that must read it?",
+  "dyad:inputs": [
+    "the sender: a session, or the automaton",
+    "whether the receiver must act on it, or it is a copy for information",
+    "whether the receiver is the sender",
+    "whether a direct message reaches the receiver's current session"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "post-and-ring",
+      "name": "actionable post",
+      "dyad:when": "a session posts a message the receiving unit must act on, and a direct message reaches that unit's current session",
+      "dyad:then": "the inbox carries the content and a doorbell to the receiving unit's current session wakes it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "home-rings",
+      "name": "automaton notice",
+      "dyad:when": "the automaton posts, having no session to ring from",
+      "dyad:then": "the notice goes to the home's inbox, and the home rings the unit it concerns"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "copy",
+      "name": "information-only copy",
+      "dyad:when": "a copy the receiver need not act on",
+      "dyad:then": "posted with kind notice; no doorbell, read at the receiver's next turn or relay"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "self",
+      "name": "self-addressed",
+      "dyad:when": "the receiver is the sending unit",
+      "dyad:then": "inbox only"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "poll",
+      "name": "polls",
+      "dyad:when": "no direct message reaches the receiving unit (a terminal desk, a session without a chat)",
+      "dyad:then": "inbox only; the receiver polls: dyad inbox read at each turn start, and a scheduled wake where its host offers one"
+    }
+  ],
+  "dyad:precedence": "self-addressed, then automaton notice, then polls, then information-only copy, then actionable post",
+  "dyad:default": "actionable post",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:alsoIn": [
+    "playbooks/d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

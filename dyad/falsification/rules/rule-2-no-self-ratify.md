@@ -198,3 +198,10 @@ This Rule's sentence changes with Rule-3's; the claims, their attacks and the pa
 d-work touches are recorded once, in `rule-3-d-work.md`, amendment #574.
 
 Disposition: see ledger #574.
+
+
+## Amendment — d-work #585 (2026-11-04: pointer to the Rule-3 refactor)
+This Rule's sentence changes with Rule-3's refactor. The claims, attacks and pairwise statements are recorded once, in
+`rule-3-d-work.md`, amendment #585.
+
+Disposition: see ledger #585.

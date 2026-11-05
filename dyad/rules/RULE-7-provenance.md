@@ -62,7 +62,9 @@ built on.
    operator. The note is what discloses that the words predate the row they open; the agent's own
    account of why the row exists stays in the mandate's plan file (#290). The same holds of the
    entry that closes it, the mandate's done-`Y` words under the same note (#422), and of a carried
-   `backlog` row's entry 1 (Rule-3, Ledger), the words of the plan-`Y` whose play-book prescribed it (#574). A disposition the operator gives
+   `backlog` row's entry 1 (Rule-3, Ledger), the words of the plan-`Y` whose play-book prescribed it (#574). A row a done-`Y` archives under `retires` (Rule-3,
+   Completion counter-prompt) gains that `Y`'s words the same way, noted `done #<id>, <date>`, so each retired row's
+   record holds the disposition its `disposed` gains (#585). A disposition the operator gives
    on the hosting rather than in words — the approval of a publishing run under Rule-11's release gate — has no
    words to copy, so its entry holds the reference instead, noted `by reference`, its fenced body
    `run <run id> approved by <login> at <ISO-8601 UTC time>` as the hosting reports them. The reference is verifiable on the hosting,
@@ -136,6 +138,7 @@ publishing run is a tap with no words; see the same record, amendment #545. Prop
 says unit for seat and lowercases operator and agent 2026-11-02 (d-work #553); see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Enforcement's alarm moves to the evidence run
 and the scheduled sweep 2026-11-03 (d-work #564); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Property 4 and Enforcement gain the carried `backlog` row 2026-11-04 (d-work #574): a
 row a play-book the plan runs prescribes is born under that plan-`Y`, its words copied as an accreted row's are; see the
-same record, amendment #574.
+same record, amendment #574. Property 4 gains the retired row's copied entry 2026-11-04 (d-work #585); see
+`../falsification/rules/rule-3-d-work.md`, amendment #585.
 
 Set: System Requirements.

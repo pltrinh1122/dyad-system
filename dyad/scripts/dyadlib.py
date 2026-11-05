@@ -1,7 +1,7 @@
 """dyad package: shared path resolution, ledger and Rule parsing, and the guard registry loader over two
 roots — the core craft's `dyad/guards/` and every Tended craft's `crafts/<craft>/guards/` (Rule-11 property 3;
 crafts/sysarch/rules/guards.md; #155). Owns no check semantics (S4). Kernel: Python 3.12+."""
-import importlib.util, os, re, subprocess, sys
+import datetime, importlib.util, os, re, subprocess, sys
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Callable
@@ -250,6 +250,13 @@ MODE_EXEC, MODE_FILE = "100755", "100644"   # the index modes tracked_mode repor
 def git_env() -> dict[str, str]:
     """`os.environ` without GIT_VARS, for a git call that must see the tree it is pointed at."""
     return {k: v for k, v in os.environ.items() if k not in GIT_VARS}
+
+def utc_date() -> str:
+    """Today in UTC, `YYYY-MM-DD`: the one date every store writes — a row's `disposed` entry, a provenance entry's
+    heading, `land`'s already-landed and Done-order tests, `release ready`'s entry (#592 R-b, the audit's mode 41).
+    The host's local day differed from it by one around midnight, while every reader (`board.parse_since`, the
+    trace's anchoring) already read a bare date as UTC. Earlier entries keep the date they were written with."""
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
 def repo_root(start: Path | None = None) -> Path:
     """The git work tree containing the package. Git hooks export GIT_DIR, under which
@@ -777,6 +784,209 @@ def plain(text: str) -> str:
     """Strip markdown emphasis so `Y` and *coherent* match their vocabulary terms."""
     return text.replace("`", "").replace("*", "")
 
+# ---- the CLI table (#592 R-a; the S1 surface of `dyad/surface.md`): every `dyad <noun> [<verb>] [flags]` form, the
+# words it takes, and the gate `package.py`'s `__main__` runs before any dispatch. The sub-parsers stay where they are
+# (each noun's own module); the gate only refuses a flag no form of that verb takes and answers `-h`/`--help` with the
+# form's usage, then passes `a` through unchanged (plan #592 F2). A flag that takes a value takes the next word whole,
+# whatever it spells (`dwork state 1 open --said -x`), as `package.dwork_args` reads it (#133). `check` picks its
+# form by the first mode flag in `__main__`'s own order (CHECK_MODES), every other noun by the word after it; a noun
+# with a `None` verb has a form of its own for any other word. `package.DWORK_VERB_FLAGS` and `DWORK_VALUE_FLAGS` are
+# views of this table; every other module's own flag constant is pinned to it by `dyad/tests/test_cli.py`.
+class CliForm(tuple):
+    """(positionals as usage shows them, ((flag, metavar), …) for the flags that take a value, (flag, …) for the bare
+    ones, (flag, …) for the flags that may be given more than once, the index of the positional from which every word
+    is free text or None). Every other flag is read once: a second copy is refused, never silently kept over the first
+    (the Operator's words would be lost). The positional bound, `most`, is read off `pos`: one per `<…>`, none when it
+    holds `...` (k words) or the form has free text."""
+    __slots__ = ()
+    def __new__(cls, pos: str = "", values: tuple = (), bare: tuple = (), repeat: tuple = (), text: int | None = None):
+        return super().__new__(cls, (pos, tuple(values), tuple(bare), tuple(repeat), text))
+    pos = property(lambda s: s[0])
+    values = property(lambda s: s[1])
+    bare = property(lambda s: s[2])
+    repeat = property(lambda s: s[3])
+    text = property(lambda s: s[4])
+    most = property(lambda s: None if s[4] is not None or "..." in s[0] else s[0].count("<"))
+    value_flags = property(lambda s: tuple(f for f, _ in s[1]))
+    flags = property(lambda s: tuple(f for f, _ in s[1]) + s[2])
+
+class CliRead(tuple):
+    """What `cli_parse` read: positionals, {value flag: [values]} (a flag given last, with no value, maps to []), the
+    bare flags given, the unknown flags, the positionals past the form's bound, the flags given twice that may not be,
+    and whether `-h`/`--help` was a word."""
+    __slots__ = ()
+    pos = property(lambda s: s[0]); values = property(lambda s: s[1]); bare = property(lambda s: s[2])
+    unknown = property(lambda s: s[3]); extra = property(lambda s: s[4]); twice = property(lambda s: s[5])
+    helped = property(lambda s: s[6])
+    def one(self, flag: str) -> str | None:
+        """The value given to `flag`, or None when it was not given or given last with no value."""
+        return self[1][flag][0] if self[1].get(flag) else None
+
+HELP_FLAGS = ("-h", "--help")
+FLAG_SHAPE = re.compile(r"--?[A-Za-z][A-Za-z0-9-]*")   # a word read as a flag: `-x`, `--x-y`; `-`, `-1 rows`, `- item` are words
+CHECK_MODES = ("--evidence", "--corroborate", "--pr", "--guards", "--list", "--tests")   # `__main__`'s order of tests
+LAND_FLAG = "--land"
+LAND_FLAGS = (("--mirror", "<branch>"),)   # `dwork new|state … --land [--mirror <branch>]`: land.py's, beside the verb's own (#447)
+_SAID = (("-d", "<entry>"), ("--said", "<words>"), ("--said-file", "<file>"))
+CLI: dict[tuple[str, str | None], CliForm] = {
+    ("check", None):            CliForm(),
+    ("check", "--list"):        CliForm(),
+    ("check", "--guards"):      CliForm("[<remote> <url>]", (), ("--pre-push",)),
+    ("check", "--corroborate"): CliForm("[<before> [<after>]]"),
+    ("check", "--pr"):          CliForm("<base> [<head>]"),
+    ("check", "--tests"):       CliForm("[<target>]"),
+    ("check", "--evidence"):    CliForm("", (("--at", "<rev>"), ("--show", "<sha256>")), ("--brief",)),
+    ("build", None):            CliForm("[<out>]"),
+    ("install", None):          CliForm("<repo>", (("--from", "<src>"),)),
+    ("bundle", "check"):        CliForm(),
+    ("bundle", "build"):        CliForm("[<dir>]"),
+    ("craft", "new"):           CliForm("<name>"),
+    ("craft", "list"):          CliForm(),
+    ("craft", "check"):         CliForm("[<craft>]"),
+    ("craft", "export"):        CliForm("<craft> [<out>]"),
+    ("craft", "install"):       CliForm("<src>", (("--dwork", "<N>"), ("--craft", "<name>"), ("--source", "<text>")), ("--force",)),
+    ("craft", "diff"):          CliForm("<craft>", (("--against", "<src>"),), ("--patch",)),
+    ("ledger", None):           CliForm(),
+    ("dwork", "new"):           CliForm("<title> [<refs>]", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
+                                                             *_SAID[1:], ("--relayed-via", "<seat>"), ("--mandate", "<id>")) + LAND_FLAGS, ("--backlog", LAND_FLAG)),
+    ("dwork", "state"):         CliForm("<id> <state>", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
+                                                         *_SAID[1:], ("--said-ref", "<ref>"), ("--relayed-via", "<seat>"),
+                                                         ("--mandate", "<id>"), ("--retired-by", "<id>")) + LAND_FLAGS,
+                                        ("--check", LAND_FLAG)),
+    ("dwork", "retire"):        CliForm("<id>...", _SAID),
+    ("dwork", "list"):          CliForm("", (("--state", "<state>"), ("--craft", "<craft>"))),
+    ("dwork", "land"):          CliForm("<path>...", (("-m", "<message>"),) + LAND_FLAGS),
+    ("dwork", "batch"):         CliForm("<file>|-", LAND_FLAGS, (LAND_FLAG,)),
+    ("dwork", "trace"):         CliForm("<id>", (("--transcript", "<path>"), ("--said-file", "<file>")), ("--out",), ("--transcript",)),
+    ("plan", "check"):          CliForm("<id>"),
+    ("session", None):          CliForm("[<root>]"),
+    ("session", "name"):        CliForm("", (("--function", "<f>"), ("--topic", "<t>"), ("--hp", "<8 hex>"), ("--system", "<handle>"), ("--on", "<text>"))),
+    ("session", "touch"):       CliForm("", (("-r", "<rows>"), ("-f", "<file>")), (), ("-r", "-f")),
+    ("session", "list"):        CliForm(),
+    ("session", "reconcile"):   CliForm(),
+    ("project", None):          CliForm("[<surface>]", (("--craft", "<name>"),), ("--list",)),   # --craft: the kanban projector's (#22)
+    ("runbook", "check"):       CliForm(),
+    ("runbook", "list"):        CliForm("<instance>"),
+    ("runbook", "run"):         CliForm("<instance> <name>", (("--as", "operator|agent|automaton"),)),
+    ("runbook", "new"):         CliForm("<instance>"),
+    ("release", None):          CliForm("", (), ("--scan",)),
+    ("release", "ready"):       CliForm("<row> <tag>", (("--at", "<cut>"), ("--archive", "<sha256>"))),
+    ("merge", None):            CliForm("<pr>", (("--head", "<sha>"),)),
+    ("board", None):            CliForm(),
+    ("board", "set"):           CliForm("<id>|_cos key=value...", (), ("--drop",)),
+    ("board", "resume"):        CliForm(),
+    ("inbox", "post"):          CliForm("<unit> [<body>...]", (("--row", "<id>"), ("--kind", "report|relay|ack|notice"),
+                                                               ("--body-file", "<path>"), ("--cc", "<unit>")), (), ("--cc",), 1),
+    ("inbox", "read"):          CliForm("", (), ("--all",)),
+    ("inbox", "list"):          CliForm("[<unit>]"),
+    ("automaton", "scan"):      CliForm(),
+    ("automaton", "run"):       CliForm(),
+    ("automaton", "sweep"):     CliForm("", (("--row", "<id>"),)),
+    ("steps", "verify-prs"):    CliForm(),
+    ("steps", "done-record"):   CliForm("", (), (LAND_FLAG,)),
+    ("steps", "close-landed"):  CliForm("", (), (LAND_FLAG,)),
+    ("steps", "sync-mirror"):   CliForm(),
+    ("bootstrap", None):        CliForm("", (), ("--check",)),
+}
+
+def cli_nouns() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(n for n, _ in CLI))
+
+def cli_forms(noun: str, verbs=None) -> dict[str | None, CliForm]:
+    """{verb: form} of one noun, every verb or the ones named: the `CLI_FLAGS` a module's own parser reads (#592 F3)."""
+    return {v: f for (n, v), f in CLI.items() if n == noun and (verbs is None or v in verbs)}
+
+def cli_usage(key: tuple[str, str | None]) -> str:
+    """`usage: dyad <noun> [<verb>] <positionals> [<flag> <metavar>]… [<flag>]…` for one form."""
+    f = CLI[key]
+    words = ["dyad", key[0], *([key[1]] if key[1] else []), *([f.pos] if f.pos else []),
+             *(f"[{flag} {meta}]" for flag, meta in f.values), *(f"[{flag}]" for flag in f.bare)]
+    return "usage: " + " ".join(words)
+
+def cli_form(a: list[str]) -> tuple[tuple[str, str | None] | None, list[str]]:
+    """(the form `a` names, the words after its noun and verb); (None, …) when the noun has no form for it — an
+    unknown noun, or a word after the noun that is no verb of a noun without a `None` form: its module answers."""
+    if not a or a[0] not in cli_nouns():
+        return None, a[1:]
+    noun, rest = a[0], a[1:]
+    if noun == "check":
+        flagged = [m for m in CHECK_MODES if m in rest]   # `__main__` tests `in a`, in this order
+        return ("check", flagged[0] if flagged else None), [x for x in rest if not flagged or x != flagged[0]]
+    if rest and (noun, rest[0]) in CLI:
+        return (noun, rest[0]), rest[1:]
+    if (noun, None) in CLI:
+        return (noun, None), rest
+    return None, rest
+
+def cli_parse(form: CliForm, rest: list[str]) -> CliRead:
+    """The gate's one reading of the words after a form's noun and verb, which a module that reads flags by hand
+    calls too, so both read `a` alike (#592): a value flag takes the next word whole, whatever it spells
+    (`dwork state 1 open --said -x`); a word not shaped like a flag (`-`, `- item`, `-1 rows`) is a positional; from
+    the form's free-text positional on (`inbox post`'s body) every word not one of its flags is a positional."""
+    pos, vals, bare, unknown, twice, helped, seen, i = [], {}, [], [], [], False, set(), 0
+    value_flags = set(form.value_flags)
+    while i < len(rest):
+        x = rest[i]
+        if x in value_flags or x in form.bare:
+            if x in seen and x not in form.repeat and x not in twice:
+                twice.append(x)
+            seen.add(x)
+            if x in form.bare:
+                bare.append(x); i += 1; continue
+            vals.setdefault(x, []).extend(rest[i + 1:i + 2])
+            i += 2; continue
+        if x in HELP_FLAGS:
+            helped = True
+        elif FLAG_SHAPE.fullmatch(x) and (form.text is None or len(pos) < form.text):
+            unknown.append(x)
+        else:
+            pos.append(x)
+        i += 1
+    extra = pos[form.most:] if form.most is not None else []
+    return CliRead((pos, vals, bare, unknown, extra, twice, helped))
+
+def cli_words(form: CliForm, rest: list[str]) -> tuple[list[str], bool]:
+    """(the unknown flags in `rest`, whether `-h`/`--help` is one of its words): `cli_parse`, two of its fields."""
+    r = cli_parse(form, rest)
+    return r.unknown, r.helped
+
+def _noun_value_flags(noun: str) -> set[str]:
+    return {f for (n, _), x in CLI.items() if n == noun for f in x.value_flags}
+
+def cli_gate(a: list[str], doc: str | None = None, out=None, err=None) -> int | None:
+    """Before any dispatch (#592 R-a): None to run `a` as given; else the exit code, after printing — the usage and
+    0 for `-h`/`--help` anywhere outside a flag's value (nothing else runs: no child, no write), one `refused:` line
+    and 1 for a flag the form does not take (`refused: dyad <noun> <verb> does not take <flag>`), a word past the
+    form's positionals (`… does not take <word>`) or a flag given twice that is read once (`… takes <flag> once`)."""
+    out, err = out or sys.stdout, err or sys.stderr
+    if a and a[0] in HELP_FLAGS:
+        print(doc or "\n".join(cli_usage(k) for k in CLI), file=out); return 0
+    key, rest = cli_form(a)
+    if key is None:
+        if a and a[0] in cli_nouns() and rest:
+            noun = a[0]
+            forms = [k for k in CLI if k[0] == noun]
+            vals, i, helped = _noun_value_flags(noun), 0, False
+            while i < len(rest):   # `--help` before the verb, or after an unknown one, outside any of the noun's values
+                if rest[i] in vals:
+                    i += 2; continue
+                helped = helped or rest[i] in HELP_FLAGS; i += 1
+            if helped:
+                print("\n".join(cli_usage(k) for k in forms), file=out); return 0
+            if FLAG_SHAPE.fullmatch(rest[0]) and not any(rest[0] in CLI[k].flags for k in forms):
+                print(f"refused: dyad {noun} does not take {rest[0]}", file=err); return 1   # a known flag before the verb: its module's
+        return None
+    r = cli_parse(CLI[key], rest)
+    if r.helped:
+        forms = [k for k in CLI if k[0] == key[0]] if key[1] is None else [key]
+        print("\n".join(cli_usage(k) for k in forms), file=out); return 0
+    name = " ".join(w for w in key if w)
+    if r.unknown or r.extra:
+        print(f"refused: dyad {name} does not take {' '.join(r.unknown + r.extra)}", file=err); return 1
+    if r.twice:
+        print(f"refused: dyad {name} takes {' '.join(r.twice)} once", file=err); return 1
+    return None
+
 # crafts/syseng/rules/invariants.md: the architectural facts this module's tables encode, enforced at import (the
 # call at the bottom), run again by the runner's pass and before every row write (`dyad dwork new|state`). Each
 # names a fact a guard or a past incident relied on.
@@ -812,6 +1022,27 @@ INVARIANTS: list[Invariant] = [
     ("tunable-value-reads-allowed", lambda: tunable_value("7 days", 1, "a positive integer (days)") == 7
         and tunable_value("-2", 1, "a positive integer") is None and tunable_value("none", 1, "a positive integer") is None
         and tunable_value("0.5", 0.35, "a number between 0 and 1") == 0.5 and tunable_value("1", 0.35, "a number between 0 and 1") is None),   # #590
+    ("cli-flags-are-flags", lambda: all(f.startswith("-") and f not in HELP_FLAGS and f != "-" for x in CLI.values() for f in x.flags)),   # #592 R-a
+    ("cli-form-flags-distinct", lambda: all(len(set(x.flags)) == len(x.flags) for x in CLI.values())),   # a flag takes a value or none, never both
+    ("cli-check-modes-are-its-forms", lambda: set(CHECK_MODES) == {v for n, v in CLI if n == "check" and v}
+                                              and all(v is None or not v.startswith("-") for n, v in CLI if n != "check")),
+    ("cli-land-rides-new-and-state", lambda: all("--land" in CLI[("dwork", v)].bare and "--mirror" in CLI[("dwork", v)].value_flags for v in ("new", "state"))),
+    ("cli-a-value-is-never-a-flag", lambda: cli_words(CLI[("dwork", "state")], ["1", "open", "--said", "-x", "-d", "--help"]) == ([], False)
+                                            and cli_words(CLI[("dwork", "batch")], ["-", "--land"]) == ([], False)
+                                            and cli_words(CLI[("check", "--guards")], ["--pre-push", "--bogus", "-h"]) == (["--bogus"], True)),
+    ("cli-a-word-not-shaped-as-a-flag-is-a-word", lambda: cli_parse(CLI[("check", "--tests")], ["-1 rows"]).pos == ["-1 rows"]
+                                                         and cli_parse(CLI[("inbox", "post")], ["cos", "- item", "-urgent", "--row", "5"]).pos
+                                                             == ["cos", "- item", "-urgent"]
+                                                         and cli_parse(CLI[("inbox", "post")], ["--bogus"]).unknown == ["--bogus"]),
+    ("cli-positionals-bounded-by-the-form", lambda: cli_parse(CLI[("check", "--list")], ["x"]).extra == ["x"]
+                                                    and cli_parse(CLI[("dwork", "retire")], ["1", "2", "3"]).extra == []
+                                                    and (CLI[("dwork", "new")].most, CLI[("dwork", "list")].most, CLI[("dwork", "retire")].most) == (2, 0, None)),
+    ("cli-a-flag-read-once-is-given-once", lambda: cli_parse(CLI[("dwork", "new")], ["t", "--prompt", "a", "--prompt", "b"]).twice == ["--prompt"]
+                                                   and cli_parse(CLI[("inbox", "post")], ["x", "--cc", "a", "--cc", "b"]).twice == []
+                                                   and all(f in x.flags for x in CLI.values() for f in x.repeat)),
+    ("cli-text-index-within-the-positionals", lambda: all(x.text is None or 0 <= x.text <= x.pos.count("<") for x in CLI.values())),
+    ("cli-check-form-by-mode-order", lambda: cli_form(["check", "--brief", "--evidence"]) == (("check", "--evidence"), ["--brief"])
+                                             and cli_form(["check", "--tests", "x"]) == (("check", "--tests"), ["x"])),
     ("events-store-relative", lambda: bool(EVENTS_REL) and not EVENTS_REL.startswith("/") and not EVENTS_REL.endswith("/") and "d-work" not in EVENTS_REL),   # #438: the event store never overlaps the ledger
 ]
 TREE_INVARIANTS: list[Invariant] = [   # reads the DMC store, so the runner's pass only, never at import
