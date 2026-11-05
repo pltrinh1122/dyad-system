@@ -102,6 +102,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 play-book the mandate's plan runs prescribes, carried under that
                                 plan-`Y` — born backlog, no `mode` line, entry `<date> Y backlog
                                 (mandate #<id>)`, entry 1 noted as above
+                                It refuses when <id> already has as many `parent #<id>` children as its
+                                plan's mandate scope states as its ceiling, and warns past the seat's
+                                charter ceiling in MANDATES.md (#592 R-c, mode 31)
   dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
@@ -180,6 +183,13 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 provenance and plan, git and the harness transcript (read in place, never
                                 copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
                                 at the Done-Y, in the commit that records it; without it, a preview to stdout
+  dyad plan check <id>    the plan check (guards/agent/plans.py, #592 R-c): the plan file's own check, then
+                                warnings — files touched in a second zone; a touched module whose mapped test
+                                is not listed; a touched craft whose VERSION is already its release tag (mode
+                                18); the callers of each `module.function` the Mutation names (mode 37); a refs
+                                dependency not done; `order: required` with no `step:` line (mode 17). Exit 0
+                                with warnings, 1 with no plan file. `dwork state <id> planned` runs it before
+                                its first write and never refuses on it
   dyad session name [--function <f>] [--topic <t>] [--hp <h>] [--system <s>] [--on <text>]
                                 print this seat's name, <function>[-<topic>]-<hp>, and the harness session
                                 title to set, from the environment (Rule-16 Presence; the organization
@@ -2096,6 +2106,13 @@ def cmd_dwork(a):
                          "it takes no -d, --said or --prompt")
             mid, mwords, mdate = mandate_words(rows, mandate)
             fence_for("disposition", mwords)
+            # #592 R-c (mode 31): the mandate scope's ceiling is the Operator's number (Rule-3 Plan). The plan's stated
+            # ceiling refuses the row past it; the seat's charter ceiling (MANDATES.md) only warns (the home, F11)
+            refusal, warns = dyadlib.load_guard("agent", "plans").ceiling_check(rows, mid, REPO)
+            for w in warns:
+                print(f"warn [plan] {w.removeprefix('warning: ')}", file=sys.stderr)
+            if refusal:
+                sys.exit(refusal)
             # #574 revision 2: with --backlog, a row the plan's play-book prescribes is carried under the plan-`Y`
             # that runs it — born backlog, explicit (its Done never rides the parent's), entry 1 the mandate's words
             entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], (dyadlib.DEFAULT_MODE if backlog else "implicit")
@@ -2212,6 +2229,10 @@ def cmd_dwork(a):
             refusal = landing_refusal(rg, done_entries)
             if refusal:
                 sys.exit(refusal)
+        if state == "planned" and r.state != "planned":
+            # #592 R-c: the plan check runs at the transition, before the first write (not on a Done record of a planned row) — warnings, never a refusal (counsel's, hand-off)
+            for m in dyadlib.load_guard("agent", "plans").check_dwork(rid, REPO):
+                print(f"warn [plan] {m.removeprefix('warning: ')}", file=sys.stderr)
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
@@ -2356,6 +2377,11 @@ def cmd_automaton(a):
     """The d-work automaton lives in scripts/automaton.py (d-work #556); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton").main(a, REPO)
 
+def cmd_plan(a):
+    """The plan check's CLI lives at guards/agent/plans.py (it is also the guard); this is dispatch only (S4, d-work #592)."""
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    return dyadlib.load_guard("agent", "plans").cli(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2392,6 +2418,8 @@ if __name__ == "__main__":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":
         sys.exit(cmd_dwork(a[1:]))
+    if a and a[0] == "plan":
+        sys.exit(cmd_plan(a[1:]))
     if a and a[0] == "project":
         sys.exit(cmd_project(a[1:]))
     if not a or a[0] not in ("check", "build", "install"):

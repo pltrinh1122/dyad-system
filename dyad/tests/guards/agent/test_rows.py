@@ -659,6 +659,50 @@ class MergeDispositionWarnTests(unittest.TestCase):
         self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: merge "), out)
         self.assertIn("Y merge #10", out[0])
 
+class PlanTitleWarnTests(unittest.TestCase):
+    """#592 R-c (mode 03): a commit that rewrites an existing plan's `# Plan #<id> — …` title line warns as
+    `[main-fence]` — never a failure, since an amend revises a plan in place (counsel rules whether it may retitle);
+    an edit below the title, or a new plan file, says nothing; a merge resolving the title in warns against its parent."""
+    P = "agent-corpus/d-work/plans/1.md"
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+        self.r = Repo(); self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one"))
+        self.r.write(self.P, "# Plan #1 — the first title\n\nBase commit: abc\n"); self.base = self.r.commit("root")
+    def test_a_retitled_plan_warns_never_fails(self):
+        self.r.write(self.P, "# Plan #1 — a second title\n\nBase commit: abc\n"); out = m.check_range(self.base, self.r.commit(), cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: [main-fence] "), out)
+        self.assertIn("the first title", out[0]); self.assertIn("a second title", out[0]); self.assertIn(self.P, out[0])
+    def test_a_body_edit_or_a_new_plan_is_silent(self):
+        self.r.write(self.P, "# Plan #1 — the first title\n\nBase commit: def\n")
+        self.r.write("agent-corpus/d-work/plans/2.md", "# Plan #2 — new\n")
+        self.assertEqual(m.check_range(self.base, self.r.commit(), cwd=self.r.d), [])
+    def test_a_merge_that_retitles_warns(self):
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("side")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "--no-ff", "side", cwd=self.r.d)
+        self.r.write(self.P, "# Plan #1 — retitled in the merge\n\nBase commit: abc\n")
+        sh("git", "commit", "-qm", "merge side", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_merge(h, self.r.d, "agent-corpus")
+        self.assertTrue(out and all(o.startswith("warning: [main-fence] merge ") for o in out), out)
+        self.assertTrue(any("retitled in the merge" in o for o in out), out)
+        self.assertEqual(len(out), 1, out)                       # judged once per path, not once per parent
+    def test_a_merge_taking_the_other_sides_retitle_cleanly_is_silent(self):
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("side")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.P, "# Plan #1 — second\n\nBase commit: abc\n"); self.r.commit("retitle on main")
+        sh("git", "checkout", "-q", "side", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-ff", "-m", "merge main", "main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.assertEqual(m.check_merge(h, self.r.d, "agent-corpus"), [])
+    def test_an_agent_zone_branch_retitling_its_plan_warns(self):
+        sh("git", "checkout", "-q", "-b", "work", cwd=self.r.d)
+        self.r.write("dyad/scripts/x.py", "x = 1\n")
+        self.r.write(self.P, "# Plan #1 — revised on the branch\n\nBase commit: abc\n"); h = self.r.commit("work")
+        out = [o for o in m.check_transaction(self.r.d, self.base, h) if "title line" in o]
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: [main-fence] "), out)
+        self.assertIn("revised on the branch", out[0])
+
 class EventsOnlyFenceTests(unittest.TestCase):
     """#438: the main fence admits an events-only direct commit (`<host>/runbooks/events/` only) as it admits a
     ledger-only one — it carries no row for the fence to judge, and the store's append-only rule stays the
