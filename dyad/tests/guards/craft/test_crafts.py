@@ -242,7 +242,24 @@ class FloorTests(unittest.TestCase):
     def test_no_local_tag_skips(self):
         (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=9.9.9\n")
         msgs = cg.floor_problems(self.r, self.d)
-        self.assertEqual(msgs, ["warning: fx: floor dyad-operator>=9.9.9: no tag dyad-operator-v9.9.9 here (not yet released, or tags not fetched)"])
+        self.assertEqual(msgs, ["warning: fx: floor dyad-operator>=9.9.9: no tag dyad-operator-v<version> at or above 9.9.9 here (not yet released, or tags not fetched)"])
+    def test_a_floor_never_released_is_checked_against_the_first_tag_above_it(self):
+        """#613 (#248): `>=0.0.9` with only v0.1.0 cut is checked against v0.1.0, not skipped for want of v0.0.9."""
+        (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=0.0.9\n")
+        self.assertEqual(cg.floor_problems(self.r, self.d), [
+            "crafts/fx/guards/w.py: floor dyad-operator>=0.0.9 (tag dyad-operator-v0.1.0): widget-exists is false against 0.1.0 — raise the floor"])
+    def test_the_lowest_tag_at_or_above_the_floor_is_the_one_checked(self):
+        """#613: with v0.1.0 (no WIDGET) and v0.2.0 (WIDGET) cut, `>=0.0.9` reads v0.1.0 and fails, `>=0.1.1` reads
+        v0.2.0 and holds; a `+build` tag and another craft's tags are never a floor."""
+        subprocess.run(["git", "-C", str(self.r), "tag", "dyad-operator-v0.2.0", "HEAD"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "dyad-operator-v0.1.5+local", "HEAD"], check=True)
+        subprocess.run(["git", "-C", str(self.r), "tag", "sysadmin-v0.1.2", "HEAD"], check=True)
+        self.assertEqual(cg.floor_tag(self.r, "dyad-operator", "0.0.9"), "dyad-operator-v0.1.0")
+        self.assertEqual(cg.floor_tag(self.r, "dyad-operator", "0.1.0"), "dyad-operator-v0.1.0")
+        self.assertEqual(cg.floor_tag(self.r, "dyad-operator", "0.1.1"), "dyad-operator-v0.2.0")
+        self.assertIsNone(cg.floor_tag(self.r, "dyad-operator", "0.2.1"))
+        (self.d / "MANIFEST.md").write_text("name: fx\nrequires: dyad-operator>=0.1.1\n")
+        self.assertEqual(cg.floor_problems(self.r, self.d), [])
     def test_no_requires_is_silent(self):
         (self.d / "MANIFEST.md").write_text("name: fx\n")
         self.assertEqual(cg.floor_problems(self.r, self.d), [])
