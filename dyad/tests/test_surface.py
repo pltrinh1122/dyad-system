@@ -2,7 +2,7 @@
 
 Each section is derived from its source and compared with the file's table:
 - S1: the CLI nouns of `package.py`'s dispatch, and each `dwork` verb's flags (`DWORK_VERB_FLAGS`, plus `--land` and
-  `--mirror`, land's own).
+  `--mirror`, land's own); every row's forms and flags equal to `dyadlib.CLI` (#592 R-a).
 - S2: each store's keys, from the guard constant its `source` cell names; the `waiting-on` forms from `board.WAITING`,
   the removed `seat <name>` refused (#604).
 - S3: every key of the core's preference template and of this instance's table is listed, and every listed key that
@@ -45,6 +45,31 @@ def ticks(cell: str) -> list[str]:
     return TICK.findall(cell)
 
 
+def s1_forms(rows: list[list[str]]) -> tuple[list[tuple[str, str | None]], list[tuple[set, set]]]:
+    """(every (noun, verb) an S1 row names, [(the row's forms, the row's flags)…]). A form cell is `dyad <noun> …` and
+    then further verbs of that noun (`list`, `board resume`), a `--flag` there a flag of the noun's `None` form
+    (`project --list`), and `check`'s verb is its mode flag; the flags are each tick's first word that is a flag, in the
+    flags cell and after the verb in a form cell (`inbox post … --cc <unit>`)."""
+    named, out = [], []
+    for r in rows:
+        cells = ticks(r[0]); noun = cells[0].split()[1]
+        keys, flags = set(), {t.split()[0] for t in ticks(r[1]) if t.startswith("-")}
+        for n, cell in enumerate(cells):
+            words = cell.split()[2:] if n == 0 else cell.split()
+            if n and words[:1] == [noun]:
+                words = words[1:]
+            if noun == "check":
+                verb = next((w for w in words if w in dyadlib.CHECK_MODES), None)
+            elif words and (noun, words[0]) in dyadlib.CLI:
+                verb = words[0]
+            else:
+                verb = None
+            keys.add((noun, verb))
+            flags |= {w for w in words if w.startswith("-") and len(w) > 1 and w != verb}
+        named += sorted(keys, key=str); out.append((keys, flags))
+    return named, out
+
+
 def stale_keys(listed: dict[str, str], known: set[str], code_keys: set[str]) -> set[str]:
     """S3 keys that are neither `moving` nor a key of the preference tables (`known`) nor one the code still reads
     (`code_keys`: `paired-units`; no alias is read since #604): a listed key nothing has."""
@@ -69,7 +94,21 @@ class SurfaceTests(unittest.TestCase):
         for verb, (vals, bare, _) in pkg.DWORK_VERB_FLAGS.items():
             row = next(r for r in self.s["S1"] if ticks(r[0])[0].startswith(f"dyad dwork {verb}"))
             want = set(vals) | set(bare) | ({"--land", "--mirror"} if verb in ("new", "state") else set())
-            self.assertEqual({t.split()[0] for t in ticks(row[1])}, want, f"S1 `dwork {verb}` flags")
+            self.assertEqual({t.split()[0] for t in ticks(row[1]) if t.startswith("-")}, want, f"S1 `dwork {verb}` flags")
+
+    def test_s1_every_row_equals_the_cli_table(self):
+        """#592 R-a: S1 is `dyadlib.CLI` — every form a row names is a form of the table and every form of the table is
+        named by a row; a row's flags are the union of its forms' flags in the table, and every flag of a form is in a
+        row naming it (`dyad inbox post … --cc` is a row of its own)."""
+        named, row_flags = s1_forms(self.s["S1"])
+        self.assertEqual(set(named), set(dyadlib.CLI), "S1 forms differ from dyadlib.CLI")
+        for i, forms in enumerate(row_flags):
+            keys, flags = forms
+            want = {f for k in keys for f in dyadlib.CLI[k].flags}
+            self.assertTrue(flags <= want, f"S1 row {self.s['S1'][i][0]}: {sorted(flags - want)} no form of it takes")
+        for k, x in dyadlib.CLI.items():
+            got = set().union(*(fl for keys, fl in row_flags if k in keys))
+            self.assertEqual(set(x.flags) - got, set(), f"S1 lists no row with {k}'s flags")
 
     def test_s2_store_keys_match_their_guards(self):
         board, inbox, sessions = (dyadlib.load_guard("agent", n) for n in ("board", "inbox", "sessions"))

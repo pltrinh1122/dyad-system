@@ -14,12 +14,18 @@ through the runner by choice (`DWORK=<id> dyad runbook run dwork-trace <step>`),
 ## Parameter
 The id of the d-work to trace, `<id>`:
 
-    dyad dwork trace <id> [--out]
+    dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]
 
 The run-book's steps take the same id from the environment as `DWORK`, exactly as the incident-hardening
 run-book reads `LEDGER` and the craft run-book `CRAFT`:
 
     DWORK=<id> dyad runbook run dwork-trace trace
+
+Its `trace` step, which writes the stored trace, also reads `SAID`, the file holding the Operator's Done words —
+the one the `state` line then records with `--said-file` — and passes it as `--said-file` (#592 R-b); without it,
+the step refuses unless the provenance record already holds the Done:
+
+    DWORK=<id> SAID=<f> dyad runbook run dwork-trace trace
 
 The transcript is not a parameter of the run-book. `dyad dwork trace` reads the newest one of the working
 tree's harness project directory (`projects/<slug>/` under the harness's home directory, `~/.claude/`; the
@@ -35,13 +41,16 @@ moments, both inside it:
 1. **Done-ready.** The completion evidence is being gathered and the Done question is about to be asked.
    `dyad dwork trace <id>`, without `--out`, prints a **preview**: the window runs from the first anchored
    prompt to the transcript's last record — the Done question being asked. Nothing is written.
-2. **Done-`Y` received.** The reply that receives it records the disposition first (`dyad dwork state <id>
-   <the state it is in> -d 'Y done (merges PR #a at <head-a>)' --said …`, which writes the row and its
-   provenance entry in the working tree with the state unchanged, Rule-3 Completion), then runs
-   `dyad dwork trace <id> --out` — the command the run-book's `record` step calls — before the clerical Done
-   **record** commit, so that commit carries the trace with the row and the record. The window now runs
-   through the Done-`Y`: it covers the work PR's push, its evidence run and the Operator's wait on the Done
-   question. The merges come after that commit (Rule-3: the record of the `Y` precedes every merge it
+2. **Done-`Y` received.** The reply that receives it writes the Operator's Done words to a file and runs
+   `dyad dwork trace <id> --out --said-file <f>` — the command the run-book's `record` step calls — then records
+   the disposition from the same file (`dyad dwork state <id> <the state it is in> -d 'Y done (merges PR #a at
+   <head-a>)' --said-file <f>`, which writes the row and its provenance entry with the state unchanged, Rule-3
+   Completion); under `--land` the two ride one batch, a `land <instance>/d-work/traces/<id>.md` line before the
+   `state` line, so the clerical Done **record** commit carries the trace with the row and the record. The
+   `--said-file` words are read as the Done entry the record is about to hold, dated UTC today, and the window
+   runs through the Done-`Y` they anchor: it covers the work PR's push, its evidence run and the Operator's wait on
+   the Done question. `--out` with neither those words nor a Done entry in the record refuses and writes nothing:
+   a stored trace is never a preview, and the main fence fails a Done record whose trace is one (#592 R-b). The merges come after that commit (Rule-3: the record of the `Y` precedes every merge it
    ratifies), and so does the second commit that sets the row `done`; both are the clerical tail, visible in
    git and never in the trace (plan #213, attack 3; #202).
 
@@ -101,7 +110,13 @@ counts of each), then five sections in this order:
      table, its run never summed a second time.
 3. **Counts.** Commits (ledger-only among them) and merges, ledger and work (git); PRs created by head
    branch (`ledger-…` is a ledger PR) and merged, full-suite runs and guards-only push gates, tool calls and output tokens
-   (transcript, the window only). Last, the **delegated share** — the `subagent` bucket over the agent
+   (transcript, the window only). Then three reply lines (#602): **replies per disposition** — the replies of
+   the turns naming this d-work, a turn named by its closing `Y/N:` line's ids, else by what opened it (an Operator
+   message or a harness notice; a compaction inherits the one before it), never by the Agent's prose, PR and merge
+   numbers stripped — over the record's dispositions in the window less those noted `mandate #<id>`; **replies by
+   trigger**, the same replies split by what woke their turn (operator, notify, compact, none); and **replies in the
+   window, all rows**, every reply, the distinct answers and the overlap (the per-row counts summed over that total).
+   Last, the **delegated share** — the `subagent` bucket over the agent
    partition, beside the output tokens of the same window: a share at 0% on a d-work that drafted heavily is
    `delegation: plan-and-execute` not firing for work the preference covers (Rule-3 Scope, Rule-10's
    concise-mode clause), which is what leaves a turn open long enough for a lost segment to cost it (#254).

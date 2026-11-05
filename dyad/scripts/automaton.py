@@ -63,6 +63,8 @@ SEAT = "automaton"                           # the inbox sender; path-shaped, so
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
 PLANNED = "row #{rid} planned; read plans/{rid}.md"
 USAGE = "usage: dyad automaton scan|run|sweep [--row <id>]"
+CLI_FLAGS = dyadlib.cli_forms("automaton")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+ROW_FLAG, = CLI_FLAGS["sweep"].value_flags
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seat-is-path-shaped", lambda: bool(re.fullmatch(r"[A-Za-z0-9._-]+", SEAT))),
@@ -595,7 +597,7 @@ def main(argv: list[str], repo: Path) -> int:
             return 0
         if a[:1] == ["sweep"]:
             rest = a[1:]
-            if rest not in ([],) and not (len(rest) == 2 and rest[0] == "--row" and rest[1].isdigit()):
+            if rest not in ([],) and not (len(rest) == 2 and rest[0] == ROW_FLAG and rest[1].isdigit()):
                 print(USAGE, file=sys.stderr); return 2
             lines, rc = sweep(Path(repo), int(rest[1]) if rest else None)
             print("\n".join(lines)); return rc

@@ -194,6 +194,7 @@ class DoneRecordTests(unittest.TestCase):
         row = main(f"{INST}/d-work/rows/11.md").stdout
         self.assertIn(f"Y done (merges PR #7 at {self.sha})", row); self.assertIn("state: planned", row)   # the state waits for the merge
         self.assertEqual(main(f"{INST}/d-work/traces/11.md").returncode, 0)
+        self.assertNotIn("\n- preview:", main(f"{INST}/d-work/traces/11.md").stdout)   # #592 R-b: through the Done words
         self.assertIn("Y done", main(f"{INST}/d-work/provenance/11.md").stdout)
         rc, _, err = run(["done-record", "--land"], self.w.seat, DWORK="11", PRS="7", SAID=str(self.said))
         self.assertEqual(rc, 1); self.assertIn("already recorded", err)

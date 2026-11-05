@@ -539,7 +539,7 @@ class TraceFenceTests(unittest.TestCase):
     def test_a_done_record_without_its_trace_fails(self):
         self.done(); out = self.fails(self.r.commit())
         self.assertEqual(len(out), 1, out)
-        self.assertIn(f"without its trace {self.T}", out[0]); self.assertIn("dyad dwork trace 1 --out", out[0])
+        self.assertIn(f"without its trace {self.T}", out[0]); self.assertIn("dyad dwork trace 1 --out --said-file", out[0])
         self.assertIn(f"`land {self.T}`", out[0]); self.assertIn("[main-fence]", out[0])
     def test_the_trace_in_the_same_commit_passes(self):
         self.done(); self.r.write(self.T, "# Trace #1\n")
@@ -547,6 +547,24 @@ class TraceFenceTests(unittest.TestCase):
     def test_the_trace_already_on_the_base_passes(self):
         self.r.write(self.T, "# Trace #1\n"); base = self.r.commit("trace first")
         self.done(); self.assertEqual(self.fails(self.r.commit(), base), [])
+    PREVIEW = "# Trace #1 — one\n\n## Limits\n\n- preview: the d-work has no Done disposition yet\n"
+    def test_a_preview_carried_by_the_done_record_fails(self):
+        # #592 R-b: the trace the record carries runs through the Done-`Y`, never the preview written before it
+        self.done(); self.r.write(self.T, self.PREVIEW)
+        out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("[main-fence]", out[0]); self.assertIn(f"beside a trace {self.T} that is a preview", out[0])
+        self.assertIn("dyad dwork trace 1 --out --said-file", out[0])
+    def test_a_preview_already_on_the_base_fails_the_done_record(self):
+        self.r.write(self.T, self.PREVIEW); base = self.r.commit("an earlier preview landed")
+        self.done(); out = self.fails(self.r.commit(), base)
+        self.assertEqual(len(out), 1, out); self.assertIn("that is a preview", out[0])
+        self.r.write(self.T, "# Trace #1 — one\n\n## Limits\n\n- inference is a wall-clock gap\n")   # rewritten through the Done
+        sh("git", "commit", "-q", "-a", "--amend", "--no-edit", cwd=self.r.d)
+        self.assertEqual(self.fails(sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip(), base), [])
+    def test_the_preview_mark_is_the_traces(self):
+        tr = dyadlib.load_module(dyadlib.PKG / "scripts" / "trace.py", "dyad_trace_rows")
+        self.assertEqual(m.PREVIEW_MARK, tr.PREVIEW_MARK)
     def test_a_record_with_the_state_left_as_it_is_is_judged_too(self):
         self.done(entry="2026-01-02 Y done (merges PR #9 at abc1234)", state="planned")
         out = self.fails(self.r.commit())
@@ -658,6 +676,50 @@ class MergeDispositionWarnTests(unittest.TestCase):
         out = m.check_merge(h, self.r.d, "agent-corpus")
         self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: merge "), out)
         self.assertIn("Y merge #10", out[0])
+
+class PlanTitleWarnTests(unittest.TestCase):
+    """#592 R-c (mode 03): a commit that rewrites an existing plan's `# Plan #<id> — …` title line warns as
+    `[main-fence]` — never a failure, since an amend revises a plan in place (counsel rules whether it may retitle);
+    an edit below the title, or a new plan file, says nothing; a merge resolving the title in warns against its parent."""
+    P = "agent-corpus/d-work/plans/1.md"
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None)
+        self.r = Repo(); self.r.write("agent-corpus/d-work/rows/1.md", row(1, "one"))
+        self.r.write(self.P, "# Plan #1 — the first title\n\nBase commit: abc\n"); self.base = self.r.commit("root")
+    def test_a_retitled_plan_warns_never_fails(self):
+        self.r.write(self.P, "# Plan #1 — a second title\n\nBase commit: abc\n"); out = m.check_range(self.base, self.r.commit(), cwd=self.r.d)
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: [main-fence] "), out)
+        self.assertIn("the first title", out[0]); self.assertIn("a second title", out[0]); self.assertIn(self.P, out[0])
+    def test_a_body_edit_or_a_new_plan_is_silent(self):
+        self.r.write(self.P, "# Plan #1 — the first title\n\nBase commit: def\n")
+        self.r.write("agent-corpus/d-work/plans/2.md", "# Plan #2 — new\n")
+        self.assertEqual(m.check_range(self.base, self.r.commit(), cwd=self.r.d), [])
+    def test_a_merge_that_retitles_warns(self):
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("side")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "--no-ff", "side", cwd=self.r.d)
+        self.r.write(self.P, "# Plan #1 — retitled in the merge\n\nBase commit: abc\n")
+        sh("git", "commit", "-qm", "merge side", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_merge(h, self.r.d, "agent-corpus")
+        self.assertTrue(out and all(o.startswith("warning: [main-fence] merge ") for o in out), out)
+        self.assertTrue(any("retitled in the merge" in o for o in out), out)
+        self.assertEqual(len(out), 1, out)                       # judged once per path, not once per parent
+    def test_a_merge_taking_the_other_sides_retitle_cleanly_is_silent(self):
+        sh("git", "checkout", "-q", "-b", "side", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("side")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.P, "# Plan #1 — second\n\nBase commit: abc\n"); self.r.commit("retitle on main")
+        sh("git", "checkout", "-q", "side", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-ff", "-m", "merge main", "main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        self.assertEqual(m.check_merge(h, self.r.d, "agent-corpus"), [])
+    def test_an_agent_zone_branch_retitling_its_plan_warns(self):
+        sh("git", "checkout", "-q", "-b", "work", cwd=self.r.d)
+        self.r.write("dyad/scripts/x.py", "x = 1\n")
+        self.r.write(self.P, "# Plan #1 — revised on the branch\n\nBase commit: abc\n"); h = self.r.commit("work")
+        out = [o for o in m.check_transaction(self.r.d, self.base, h) if "title line" in o]
+        self.assertEqual(len(out), 1, out); self.assertTrue(out[0].startswith("warning: [main-fence] "), out)
+        self.assertIn("revised on the branch", out[0])
 
 class EventsOnlyFenceTests(unittest.TestCase):
     """#438: the main fence admits an events-only direct commit (`<host>/runbooks/events/` only) as it admits a

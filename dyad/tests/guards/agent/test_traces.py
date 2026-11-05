@@ -1,6 +1,7 @@
 """Trace-store guard tests (agent/traces.py, #227): the guard declares the contract and delegates to
 `trace.check_store` — a well-formed trace for an existing row passes, a trace for no row or with a bad header
-fails, an absent store passes; `describe` names the trace's sections."""
+fails, an absent store passes; a stored preview warns while the instance keeps no legacy list and fails one the list
+does not name (#592 R-b); `describe` names the trace's sections."""
 import os, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
@@ -33,6 +34,18 @@ class TraceGuardTests(unittest.TestCase):
     def test_absent_store_passes(self):
         root = fixture(None)
         self.assertEqual(g.check_package(root), []); self.assertEqual(g.summary(root), "0 traces")
+    def test_a_stored_preview_warns_without_a_list_and_fails_off_it(self):
+        # #592 R-b: a stored trace is never a preview; the instance's legacy list names the ones written before
+        preview = TRACE.replace("## Limits\n\nx\n", "## Limits\n\n- preview: no Done disposition yet\n")
+        root = fixture({"7.md": preview})
+        msgs = g.check_package(root)
+        self.assertEqual(len(msgs), 1, msgs); self.assertTrue(msgs[0].startswith("warning: 7.md: a stored preview"))
+        (root / "agent-corpus" / "traces_preview_legacy.local.txt").write_text("# none yet\n")
+        msgs = g.check_package(root)
+        self.assertEqual(len(msgs), 1, msgs); self.assertFalse(msgs[0].startswith("warning:"))
+        (root / "agent-corpus" / "traces_preview_legacy.local.txt").write_text("7\n")
+        self.assertEqual(g.check_package(root), [])
+        self.assertEqual(g.main([str(root)]), 0)
     def test_describe(self):
         d = g.describe(fixture({"7.md": TRACE}), dyadlib.PKG)
         self.assertEqual([f[0] for f in d["fields"]], list(g.FIELDS)); self.assertEqual(d["observed"], 1)

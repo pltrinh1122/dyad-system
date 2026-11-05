@@ -42,6 +42,8 @@ Refused = land.Refused
 TRIES = 2                                   # the first try and one re-read after a push race (plan #532)
 FULL_SHA = re.compile(r"[0-9a-f]{40}")
 USAGE = "usage: dyad merge <pr> --head <full sha>"
+CLI_FLAGS = dyadlib.cli_forms("merge")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+HEAD_FLAG, = CLI_FLAGS[None].value_flags
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("one-retry-after-a-race", lambda: TRIES == 2),
@@ -52,7 +54,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
 def parse(argv: list[str]) -> tuple[int, str]:
     """(pr, sha) from `<pr> --head <sha>`; Refused on anything else."""
     a = list(argv)
-    if len(a) != 3 or a[1] != "--head" or not a[0].isdigit() or not FULL_SHA.fullmatch(a[2]):
+    if len(a) != 3 or a[1] != HEAD_FLAG or not a[0].isdigit() or not FULL_SHA.fullmatch(a[2]):
         raise Refused(USAGE)
     return int(a[0]), a[2]
 
