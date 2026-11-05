@@ -347,11 +347,14 @@ def fast_forward(repo: Path, sha: str, landed=()) -> None:
         print(f"this checkout {why}: left as it is (origin/main is {sha[:12]})")
 
 
-def land(repo: Path, inst: str, mirror: str | None, build, label: str, landed=()) -> int:
+def land(repo: Path, inst: str, mirror: str | None, build, label: str, landed=(), prefix: str | None = None,
+         kind: str = "ledger-only") -> int:
     """The loop: fetch, prepare, `build(wt)` -> (paths, subject, verb stdout) or a Refused, commit, push; a push
     refused while `origin/main` moved is rebuilt, at most TRIES times. `landed` names the caller's paths a `land`
-    copies, for the caller-copy fix after the push (`fast_forward`)."""
-    prefix = f"{inst}/d-work/"
+    copies, for the caller-copy fix after the push (`fast_forward`). `prefix` is the one directory every written
+    path must lie under, `<instance>/d-work/` by default; the automaton's sweep passes the run-book event store,
+    `<runbooks>/events/`, with `kind` `events-only` (Rule-3 Ledger, #438; #593)."""
+    prefix = prefix or f"{inst}/d-work/"
     common = Path(out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
     wt = common / WORKTREE
     with locked(common):
@@ -361,7 +364,7 @@ def land(repo: Path, inst: str, mirror: str | None, build, label: str, landed=()
             paths, msg, stdout = build(wt)
             bad = outside(paths, prefix)
             if bad:
-                raise Refused(f"{label} wrote {', '.join(bad)}, outside {prefix}: that commit would not be ledger-only; nothing landed")
+                raise Refused(f"{label} wrote {', '.join(bad)}, outside {prefix}: that commit would not be {kind}; nothing landed")
             if not paths:
                 raise Refused(f"{label} wrote nothing; nothing to land")
             git(wt, "add", "-A", "--", *paths)

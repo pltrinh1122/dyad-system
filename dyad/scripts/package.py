@@ -214,7 +214,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 advisory, never a guard (Rule-16 Presence); the remedy is the writer's
   dyad project <surface> | --list   run a projector: the core's dyad/scripts/project_*.py, or one discovered under crafts/*/projectors/ (crafts/sysarch/rules/projection.md)
                                 / print the registry as `<surface> <craft> <module>`; no craft: one line, exit 2
-  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent] | new <instance>
+  dyad runbook check | list <instance> | run <instance> <name> [--as operator|agent|automaton] | new <instance>
                                 Rule-19 run-books (scripts/runbook.py, the core runner; the check is the
                                 sysadmin craft's guard, crafts/sysadmin/guards/runbooks.py): check every
                                 run-book (exit 2 when no craft provides the check), list one's commands,
