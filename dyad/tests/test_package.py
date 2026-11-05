@@ -901,13 +901,26 @@ class PackageTests(livetest.LiveCase):
             with self.subTest(args=args):
                 r = self.dwork_state(d, *args)
                 self.assertNotEqual(r.returncode, 0); self.assertIn("refused: a `Y done` entry is recorded with its trace", r.stderr)
-                self.assertIn("write it first: dyad dwork trace 1 --out", r.stderr); self.assertNotIn("Traceback", r.stderr)
+                self.assertIn("write it first: dyad dwork trace 1 --out --said-file", r.stderr); self.assertNotIn("Traceback", r.stderr)
         self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rec.exists())
         r = self.dwork_state(d, "1", "open", "-d", "Y plan", "--said", "Y")               # a disposition other than `Y done`
         self.assertEqual(r.returncode, 0, r.stderr)
         self.trace(rows, 1)
         r = self.dwork_state(d, "1", "done", "-d", "Y done", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("state: done", rows.joinpath("1.md").read_text())
+    def test_dwork_refuses_a_done_record_beside_a_preview_trace(self):
+        """#592 R-b: the fence fails a `Y done` commit whose trace is a preview; `dwork state` says so before any write,
+        naming the rewrite, and records the same entry once the trace runs through the Done."""
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"; before = rows.joinpath("1.md").read_text()
+        t = rows.parent / "traces"; t.mkdir(exist_ok=True)
+        t.joinpath("1.md").write_text("# Trace #1\n\n## Limits\n\n- preview: no Done disposition yet\n")
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("is a preview", r.stderr)
+        self.assertIn("dyad dwork trace 1 --out --said-file", r.stderr); self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written"); self.assertFalse(rec.exists())
+        self.trace(rows, 1)                                               # rewritten through the Done
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr)
     def test_dwork_state_mandate_close_needs_no_trace(self):
         """#465: a `--mandate` close writes `Y done (mandate #<id>, …)`; the accreted row's Done rides the mandate's,
         whose own trace covers the set, so no trace of its own is asked for."""
@@ -1362,6 +1375,31 @@ def _split(cls, n, together):
     return made
 globals().update(_split(PackageTests, PACKAGE_SPLIT, PACKAGE_TOGETHER))
 
+class UtcDateTests(PackageTests):
+    """#592 R-b: every date `dwork new` and `dwork state` write is UTC's, whatever the host's local day (the row and
+    provenance helpers are PackageTests', whose own tests `_split` has moved to its numbered classes)."""
+    def test_dwork_new_and_state_write_the_utc_date(self):
+        d, rows = self.dwork_repo()
+        with livetest.off_utc() as (utc, local):
+            self.assertNotEqual(utc, local)
+            r = self.dwork_new(d, "three", "#1", "--prompt", "open three")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            s = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")
+            self.assertEqual(s.returncode, 0, s.stderr)
+        self.assertIn(f"opened: {utc}\n", rows.joinpath("3.md").read_text())
+        self.assertIn(f"\n## 1 prompt {utc}\n", (rows.parent / "provenance" / "3.md").read_text())
+        self.assertIn(f"disposed: {utc} Y plan\n", rows.joinpath("1.md").read_text())
+        self.assertIn(f"disposition {utc} Y plan\n", (rows.parent / "provenance" / "1.md").read_text())
+        for f in ("3.md", "1.md"):
+            self.assertNotIn(local, rows.joinpath(f).read_text())
+    def test_no_writer_reads_the_local_date(self):
+        """#592 R-b: `dyadlib.utc_date` is the one date a store is written with; a grep of the core's scripts and guards
+        for the host's local day finds none, so a seventh writer cannot reintroduce it unseen."""
+        hits = [f"{p.relative_to(PKG)}:{n}" for root in ("scripts", "guards") for p in sorted((PKG / root).rglob("*.py"))
+                for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1) if "date.today(" in line]
+        self.assertEqual(hits, [])
+        self.assertIs(load_package().dyadlib.utc_date, dyadlib.utc_date)
+
 class BundledCraftTests(unittest.TestCase):
     """Rule-11 property 2's bundled craft (d-work #114). The core keeps no list: a craft is bundled
     only by its own `BUNDLED_WITH_CORE` declaration in one of its guard modules, so these tests
@@ -1645,6 +1683,112 @@ class PrePushTests(unittest.TestCase):
         pkg = load_package()
         z = "0" * 40
         self.assertEqual(pkg.pushed_refs(["", "garbage", f"(delete) {z} refs/heads/x {'1' * 40}"]), (None, []))
+
+class PrePushStdinTests(unittest.TestCase):
+    """d-work #592 (mode 28, F13): `check --guards --pre-push` with no ref line on stdin judged nothing and printed the
+    deletion line, passing; on a hand run (no argv) it now prints its own line and fails, while git's own call (argv
+    `<remote> <url>`, an up-to-date or git-rejected push) passes. A terminal on stdin is refused before `read()`, which
+    would block. Under `--pre-push` a clone missing the core tag `BUNDLE.md` names fails, a shallow one only warns.
+    A deletion-only push carries a ref line and still passes. Each case runs `cmd_guards` in process over a scratch repo."""
+    class Reached(Exception):
+        pass
+    def setUp(self):
+        self.pkg = load_package()
+        self.d = scratch_repo(["a.txt"])
+        self.pkg.REPO = self.d
+    def git(self, *a):
+        return subprocess.run(["git", "-C", str(self.d), *a], check=True, capture_output=True, text=True, env=dyadlib.git_env()).stdout.strip()
+    def run_guards(self, stdin, argv=None, **patches):
+        """(rc, output, reached): `reached` is True when the run got past the pre-push gate to the guards; `argv` is
+        git's hook argv `(remote, url)`, absent on a hand run."""
+        buf = io.StringIO()
+        def reach():
+            raise self.Reached()
+        with contextlib.ExitStack() as st:
+            st.enter_context(unittest.mock.patch.object(sys, "stdin", stdin))
+            st.enter_context(unittest.mock.patch.object(self.pkg, "cmd_invariants", reach))
+            for k, v in patches.items():
+                st.enter_context(unittest.mock.patch.object(self.pkg, k, v))
+            st.enter_context(contextlib.redirect_stdout(buf))
+            try:
+                rc = self.pkg.cmd_guards(pre_push=True, **dict(zip(("remote", "url"), argv or ())))
+            except self.Reached:
+                return None, buf.getvalue(), True
+        return rc, buf.getvalue(), False
+    def head_line(self):
+        head = self.git("rev-parse", "HEAD")
+        return f"refs/heads/main {head} refs/heads/main {'0' * 40}\n"
+    def test_no_ref_line_fails_with_its_own_line(self):
+        for text in ("", "\n", "garbage\n"):
+            with self.subTest(stdin=text):
+                rc, out, reached = self.run_guards(io.StringIO(text))
+                self.assertEqual((rc, out, reached), (1, self.pkg.PRE_PUSH_EMPTY + "\n", False))
+                self.assertEqual(out, "warn [pre-push] no ref line on stdin: nothing judged\n")
+    def test_git_s_empty_stdin_passes(self):
+        """git runs the hook with `<remote> <url>` and an empty stdin for an up-to-date push and for one it rejects
+        itself (non-fast-forward): nothing to judge, so it passes and git reports its own outcome."""
+        for text in ("", "\n"):
+            with self.subTest(stdin=text):
+                rc, out, reached = self.run_guards(io.StringIO(text), argv=("origin", "/x"))
+                self.assertEqual((rc, out, reached), (0, self.pkg.PRE_PUSH_NOTHING + "\n", False))
+                self.assertNotIn(self.pkg.PRE_PUSH_EMPTY, out)
+    def test_an_up_to_date_git_push_exits_0_through_the_hook(self):
+        """End to end: a clone whose pre-push hook execs this package's gate as `dyad/hooks/pre-push` does; an
+        up-to-date `git push` runs it with argv and an empty stdin, and git prints `Everything up-to-date`, exit 0."""
+        up = SCRATCH.mkdtemp() / "up.git"
+        subprocess.run(["git", "init", "-q", "--bare", str(up)], check=True, env=dyadlib.git_env())
+        self.git("remote", "add", "origin", str(up)); self.git("push", "-q", "origin", "HEAD:main")
+        hooks = SCRATCH.mkdtemp()
+        hook = hooks / "pre-push"
+        hook.write_text(f'#!/usr/bin/env bash\nexec "{PKG / "bin" / "dyad-python"}" "{PKG / "scripts" / "package.py"}" '
+                        f'check --guards --pre-push "$@"\n')
+        hook.chmod(0o755)
+        self.git("config", "core.hooksPath", str(hooks))
+        r = subprocess.run(["git", "-C", str(self.d), "push", "origin", "HEAD:main"], capture_output=True, text=True,
+                           env=dyadlib.git_env(), stdin=subprocess.DEVNULL, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Everything up-to-date", r.stdout + r.stderr)
+        self.assertIn(self.pkg.PRE_PUSH_NOTHING, r.stdout + r.stderr)
+    def test_a_terminal_is_refused_before_reading(self):
+        test = self
+        class Tty(io.StringIO):
+            def isatty(self):
+                return True
+            def read(self, *a):
+                test.fail("read() on a terminal")
+        rc, out, reached = self.run_guards(Tty())
+        self.assertEqual((rc, reached), (1, False))
+        self.assertEqual(out, "refused: --pre-push reads git's ref lines on stdin; run it from the hook\n")
+    def test_a_deletion_only_push_still_passes(self):
+        called = []
+        line = f"(delete) {'0' * 40} refs/heads/gone {'a' * 40}\n"
+        rc, out, reached = self.run_guards(io.StringIO(line), clone_lines=lambda repo: called.append(repo) or ["FAIL [pre-push] x"])
+        self.assertEqual((rc, reached, called), (0, False, []), out)
+        self.assertIn("ok   [pre-push] nothing new to judge", out)
+        self.assertNotIn(self.pkg.PRE_PUSH_EMPTY, out)
+    def test_a_clone_missing_the_core_tag_fails_before_any_guard(self):
+        (self.d / "BUNDLE.md").write_text("# Bundle\n\nversion: 0.2.0\n\n| component | version |\n|-----------|---------|\n| dyad-operator | 0.1.0 |\n")
+        self.git("add", "BUNDLE.md"); self.git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "bundle")
+        rc, out, reached = self.run_guards(io.StringIO(self.head_line()))
+        self.assertEqual((rc, reached), (1, False), out)
+        self.assertIn("FAIL [pre-push] no dyad-operator-v0.1.0 tag while BUNDLE.md names dyad-operator 0.1.0", out)
+        self.git("tag", "dyad-operator-v0.1.0")                                 # the tag present: on to the guards
+        rc, out, reached = self.run_guards(io.StringIO(self.head_line()))
+        self.assertTrue(reached, out); self.assertNotIn("[pre-push]", out)
+    def test_a_shallow_clone_only_warns(self):
+        rc, out, reached = self.run_guards(io.StringIO(self.head_line()),
+                                           clone_lines=lambda repo: ["warn [pre-push] shallow clone: fetch it"])
+        self.assertTrue(reached, out); self.assertIn("warn [pre-push] shallow clone: fetch it\n", out)
+    def test_clone_lines_classes_bootstrap_s_problems(self):
+        bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+        probs = ["shallow clone: run bootstrap (git fetch --unshallow --tags)", "no dyad-operator-v1.0.0 tag while BUNDLE.md names dyad-operator 1.0.0: x"]
+        with unittest.mock.patch.object(bs, "clone_problems", lambda repo: probs):
+            self.assertEqual(self.pkg.clone_lines(self.d), ["warn [pre-push] " + probs[0], "FAIL [pre-push] " + probs[1]])
+        with unittest.mock.patch.object(bs, "clone_problems", lambda repo: []):
+            self.assertEqual(self.pkg.clone_lines(self.d), [])
+        with unittest.mock.patch.object(bs, "is_shallow", lambda repo: True):   # the prefix is bootstrap's own shallow line
+            (line,) = self.pkg.clone_lines(self.d)
+        self.assertTrue(line.startswith("warn [pre-push] " + self.pkg.SHALLOW_PREFIX), line)
 
 class DoneHeadPrePushTests(unittest.TestCase):
     """d-work #495 (F1 of #487): the pre-push gate refuses a push that moves a head the operative `Y done` of a row

@@ -111,7 +111,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
                                 call once that head is on `main` (Rule-3 Completion, #202). Under `dwork-trace:
                                 always` a `Y done` is refused until <instance>/d-work/traces/<id>.md exists
-                                (`dwork trace <id> --out`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
+                                (`dwork trace <id> --out --said-file <f>`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191).
                                 --relayed-via notes the entries as relayed from <seat> (`relayed via
                                 <seat>`, appended to a disposition's note), with --prompt or --said (#422).
@@ -177,12 +177,15 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
                                 carries the bare token `<c>` (row.refs->craft, Rule-20; d-work #22)
                                 — a routing tag, not a re-check of the guard's own resolution
-  dyad dwork trace <id> [--transcript <path>]... [--out]
+  dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]
                                 the d-work trace (scripts/trace.py, play-book dyad/playbooks/dwork-trace.md;
                                 #213): timeline, buckets, counts and bottleneck line from the row, its
                                 provenance and plan, git and the harness transcript (read in place, never
                                 copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
-                                at the Done-Y, in the commit that records it; without it, a preview to stdout
+                                at the Done-Y, in the commit that records it; without it, a preview to stdout.
+                                --out needs the Done words: the record's Done entry or --said-file <f>, the
+                                file the `state` line records, read as a Done entry dated UTC today; with
+                                neither it refuses and writes nothing — a stored trace is never a preview (#592)
   dyad plan check <id>    the plan check (guards/agent/plans.py, #592 R-c): the plan file's own check, then
                                 warnings — files touched in a second zone; a touched module whose mapped test
                                 is not listed; a touched craft whose VERSION is already its release tag (mode
@@ -487,7 +490,7 @@ def _git(*a):
     return r.stdout.strip() if r.returncode == 0 else None
 
 def utc_date() -> str:
-    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+    return dyadlib.utc_date()   # #592 R-b: the one home, dyadlib; kept here as the suite memo's own name
 
 def code_digest(rev="HEAD"):
     """The sha256 of `rev`'s tree listing (`git ls-tree -r`) with the ledger (`<instance>/d-work/`) and the run-book
@@ -1166,6 +1169,18 @@ def swept(mod, clerical) -> bool:
     wanted = tuple(f"{rel}/{r}" for r in reads)
     return not any(p.startswith(wanted) for p in clerical) if wanted else True
 
+PRE_PUSH_EMPTY = "warn [pre-push] no ref line on stdin: nothing judged"
+PRE_PUSH_NOTHING = "ok   [pre-push] git sent no ref line: every ref is up to date or rejected by git; nothing to judge"
+PRE_PUSH_TTY = "refused: --pre-push reads git's ref lines on stdin; run it from the hook"
+SHALLOW_PREFIX = "shallow clone:"
+
+def clone_lines(repo):
+    """#592 (F13, Rule-14 p3): `bootstrap.clone_problems` as the pre-push gate reads it — a missing core tag is a
+    `FAIL [pre-push]` line, as at `check --evidence`; a shallow clone only a `warn` line, since a cloud session clones
+    50 deep and pushes ledger commits (it still refuses at evidence)."""
+    bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+    return [f"{'warn' if m.startswith(SHALLOW_PREFIX) else 'FAIL'} [pre-push] {m}" for m in bs.clone_problems(repo)]
+
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -1176,7 +1191,13 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     not only those beyond `base`: `remote` and `url` are git's hook argv, and a push to a declared
     public remote carrying a private citation beside a quoted body is refused, with no override."""
     if pre_push:
+        if sys.stdin is None or sys.stdin.isatty():   # #592 (mode 28): `read()` would block on a terminal, and judge nothing
+            print(PRE_PUSH_TTY); return 1
         lines = sys.stdin.read().splitlines()
+        if not any(len(l.split()) == 4 for l in lines):   # #592 (mode 28): no ref line is not a deletion; nothing was judged
+            if remote is not None:   # git's own call (argv `<remote> <url>`): an up-to-date or locally rejected push
+                print(PRE_PUSH_NOTHING); return 0
+            print(PRE_PUSH_EMPTY); return 1   # a hand run (`</dev/null`, no argv)
         import privatecite                               # #518: a public remote never receives a private citation's body
         cite_refusals, cite_info = privatecite.check_push(REPO, remote, url, lines)
         for m in cite_info:
@@ -1197,6 +1218,11 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         if pushed is None:
             print(f"ok   [pre-push] nothing new to judge: every ref is a deletion or already on {base}")
             return 0
+        unfit = clone_lines(REPO)   # #592 (F13): a clone missing the core tag yields false FAILs; a shallow one only warns here
+        for m in unfit:
+            print(m)
+        if any(m.startswith("FAIL") for m in unfit):
+            return 1
     else:
         pushed = None
     rc = cmd_invariants()
@@ -2006,23 +2032,29 @@ def trace_refusal(rg, rid, d):
     """The fence's `rows.trace_problems` said before the first write (#465): under `dwork-trace: always` a `Y done`
     entry — a mandate close excepted, whose note holds `mandate #` — is recorded only with
     `<instance>/d-work/traces/<id>.md` already in this work tree, so the commit that records it can carry it
-    (Rule-3 Completion). Returns the refusal text, or None."""
+    (Rule-3 Completion), and never beside a preview (#592 R-b) — in a batch's worktree too, where a `land` line has
+    carried it or `origin/main` already holds it. Returns the refusal text, or None."""
     import dyadlib
     if d is None or not rg.DONE_Y.match(f"2000-01-01 {d}") or "mandate #" in d:
         return None
     if dyadlib.preference(rg.TRACE_KEY, REPO) != rg.TRACE_ALWAYS:
         return None
     tp = dyadlib.instance(REPO) / "d-work" / "traces" / f"{rid}.md"
-    if tp.is_file():
-        return None
     rel = tp.relative_to(REPO).as_posix() if tp.is_relative_to(REPO) else str(tp)
+    if tp.is_file():   # #592 R-b: the fence's preview clause said here too — a preview beside a Done record fails the push
+        if not any(l.startswith(rg.PREVIEW_MARK) for l in tp.read_text(encoding="utf-8").splitlines()):
+            return None
+        return (f"refused: {rel} is a preview (`{rg.PREVIEW_MARK}` under Limits), and the Done record carries the trace "
+                f"through the Done-`Y` (#592 R-b; the fence refuses the commit otherwise); rewrite it first: "
+                f"dyad dwork trace {rid} --out --said-file <the Done words, the file this line records>, and re-run; "
+                f"under --land the rewritten trace rides the same commit: a `land {rel}` line before this line")
     return (f"refused: a `Y done` entry is recorded with its trace under `dwork-trace: always` (Rule-3 Completion: "
             f"the Done record commit carries it, #465), and {rel} does not exist; write it first: "
-            f"dyad dwork trace {rid} --out, and re-run; under --land the trace rides the same commit: "
+            f"dyad dwork trace {rid} --out --said-file <the Done words, the file this line records>, and re-run; under --land the trace rides the same commit: "
             f"`dyad dwork batch <file> --land` with a `land {rel}` line before this line")
 
 def cmd_dwork(a):
-    sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
         return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
     pos, _, bare = dwork_args(a)
@@ -2036,7 +2068,7 @@ def cmd_dwork(a):
     except dyadlib.InvariantError as e:
         sys.exit(f"refused: {e}")
     rows = {r.id: r for r in dyadlib.read_rows(REPO)}
-    today = datetime.date.today().isoformat()
+    today = dyadlib.utc_date()   # #592 R-b: a stored date is UTC, never the host's local day
     pos, vals, bare = dwork_args(a)
     verb = pos[0] if pos else None
     if verb in DWORK_VERB_FLAGS:

@@ -1,7 +1,7 @@
 """dyad package: shared path resolution, ledger and Rule parsing, and the guard registry loader over two
 roots — the core craft's `dyad/guards/` and every Tended craft's `crafts/<craft>/guards/` (Rule-11 property 3;
 crafts/sysarch/rules/guards.md; #155). Owns no check semantics (S4). Kernel: Python 3.12+."""
-import importlib.util, os, re, subprocess, sys
+import datetime, importlib.util, os, re, subprocess, sys
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Callable
@@ -250,6 +250,13 @@ MODE_EXEC, MODE_FILE = "100755", "100644"   # the index modes tracked_mode repor
 def git_env() -> dict[str, str]:
     """`os.environ` without GIT_VARS, for a git call that must see the tree it is pointed at."""
     return {k: v for k, v in os.environ.items() if k not in GIT_VARS}
+
+def utc_date() -> str:
+    """Today in UTC, `YYYY-MM-DD`: the one date every store writes — a row's `disposed` entry, a provenance entry's
+    heading, `land`'s already-landed and Done-order tests, `release ready`'s entry (#592 R-b, the audit's mode 41).
+    The host's local day differed from it by one around midnight, while every reader (`board.parse_since`, the
+    trace's anchoring) already read a bare date as UTC. Earlier entries keep the date they were written with."""
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
 def repo_root(start: Path | None = None) -> Path:
     """The git work tree containing the package. Git hooks export GIT_DIR, under which

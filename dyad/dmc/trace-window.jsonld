@@ -16,6 +16,7 @@
   "dyad:decides": "Where does this trace's window end?",
   "dyad:inputs": [
     "whether --out is given",
+    "whether --said-file is given",
     "whether the transcript holds the Done-Y",
     "the row's record"
   ],
@@ -31,8 +32,8 @@
       "@type": "DefinedTerm",
       "termCode": "done",
       "name": "through the Done",
-      "dyad:when": "the Done-Y has been received and the trace is written with --out",
-      "dyad:then": "the window runs through the Done-Y; the merges and the closing commit are the clerical tail, outside it"
+      "dyad:when": "the Done-Y has been received and the trace is written with --out --said-file <the Done words>, or the record already holds the Done; with neither, --out refuses and writes nothing",
+      "dyad:then": "the window runs through the Done-Y the words anchor, read as a Done entry dated UTC today; the merges and the closing commit are the clerical tail, outside it; a stored trace is never a preview"
     },
     {
       "@type": "DefinedTerm",

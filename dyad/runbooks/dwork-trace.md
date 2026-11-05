@@ -33,10 +33,11 @@ I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; for k in rows prove
 ```
 
 ## Trace
-The trace itself, written to the trace store at the Done-`Y` — after the record act has written the row
-and its provenance entry with the state left as it is (`dyad dwork state <DWORK> <that state> -d 'Y done
-(merges PR #n at <head>)' --said-file …`, Rule-3 Completion, #202), and before the Done record commit,
-which then carries all three (the store lies under `<instance>/d-work/`, so that commit stays
+The trace itself, written to the trace store at the Done-`Y` — through the Operator's Done words, the file
+`SAID` names, which the record act then records with the state left as it is (`dyad dwork state <DWORK> <that
+state> -d 'Y done (merges PR #n at <head>)' --said-file "$SAID"`, Rule-3 Completion, #202); without `SAID`, and
+with no Done entry in the record, the command refuses and writes nothing, since a stored trace is never a preview
+(#592) — and before the Done record commit, which then carries all three (the store lies under `<instance>/d-work/`, so that commit stays
 ledger-only). Timeline, buckets, counts,
 bottleneck line and limits, in the play-book's format, from the row, its provenance and plan, git and the
 newest transcript of this working tree's harness project directory (read in place, never copied, never
@@ -51,7 +52,7 @@ undo: rm "${DYAD_INSTANCE:-agent-corpus}/d-work/traces/${DWORK:?d-work id}.md"
 postcondition: test -s "${DYAD_INSTANCE:-agent-corpus}/d-work/traces/${DWORK:?d-work id}.md"
 scope: <instance>/d-work/traces/<DWORK>.md (one new file)
 
-dyad/bin/dyad dwork trace "${DWORK:?d-work id}" --out
+dyad/bin/dyad dwork trace "${DWORK:?d-work id}" --out ${SAID:+--said-file "$SAID"}
 ```
 
 ## Compare

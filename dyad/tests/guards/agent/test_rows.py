@@ -539,7 +539,7 @@ class TraceFenceTests(unittest.TestCase):
     def test_a_done_record_without_its_trace_fails(self):
         self.done(); out = self.fails(self.r.commit())
         self.assertEqual(len(out), 1, out)
-        self.assertIn(f"without its trace {self.T}", out[0]); self.assertIn("dyad dwork trace 1 --out", out[0])
+        self.assertIn(f"without its trace {self.T}", out[0]); self.assertIn("dyad dwork trace 1 --out --said-file", out[0])
         self.assertIn(f"`land {self.T}`", out[0]); self.assertIn("[main-fence]", out[0])
     def test_the_trace_in_the_same_commit_passes(self):
         self.done(); self.r.write(self.T, "# Trace #1\n")
@@ -547,6 +547,24 @@ class TraceFenceTests(unittest.TestCase):
     def test_the_trace_already_on_the_base_passes(self):
         self.r.write(self.T, "# Trace #1\n"); base = self.r.commit("trace first")
         self.done(); self.assertEqual(self.fails(self.r.commit(), base), [])
+    PREVIEW = "# Trace #1 — one\n\n## Limits\n\n- preview: the d-work has no Done disposition yet\n"
+    def test_a_preview_carried_by_the_done_record_fails(self):
+        # #592 R-b: the trace the record carries runs through the Done-`Y`, never the preview written before it
+        self.done(); self.r.write(self.T, self.PREVIEW)
+        out = self.fails(self.r.commit())
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("[main-fence]", out[0]); self.assertIn(f"beside a trace {self.T} that is a preview", out[0])
+        self.assertIn("dyad dwork trace 1 --out --said-file", out[0])
+    def test_a_preview_already_on_the_base_fails_the_done_record(self):
+        self.r.write(self.T, self.PREVIEW); base = self.r.commit("an earlier preview landed")
+        self.done(); out = self.fails(self.r.commit(), base)
+        self.assertEqual(len(out), 1, out); self.assertIn("that is a preview", out[0])
+        self.r.write(self.T, "# Trace #1 — one\n\n## Limits\n\n- inference is a wall-clock gap\n")   # rewritten through the Done
+        sh("git", "commit", "-q", "-a", "--amend", "--no-edit", cwd=self.r.d)
+        self.assertEqual(self.fails(sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip(), base), [])
+    def test_the_preview_mark_is_the_traces(self):
+        tr = dyadlib.load_module(dyadlib.PKG / "scripts" / "trace.py", "dyad_trace_rows")
+        self.assertEqual(m.PREVIEW_MARK, tr.PREVIEW_MARK)
     def test_a_record_with_the_state_left_as_it_is_is_judged_too(self):
         self.done(entry="2026-01-02 Y done (merges PR #9 at abc1234)", state="planned")
         out = self.fails(self.r.commit())
