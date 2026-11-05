@@ -42,6 +42,7 @@ Refused = land.Refused
 STEPS = ("verify-prs", "done-record", "close-landed", "sync-mirror")
 ACCRETED = re.compile(r"\b(?:accreted|mandate rows) (#\d+(?:, #\d+)*)")
 FULL_SHA = re.compile(r"[0-9a-f]{40}")
+CLI_FLAGS = dyadlib.cli_forms("steps", STEPS)   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 USAGE = "usage: dyad steps verify-prs|done-record|close-landed|sync-mirror [--land] (parameters from the environment)"
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
@@ -265,7 +266,7 @@ def main(argv: list[str], repo: Path) -> int:
         print(__doc__); return 0 if a else 2
     name, flags = a[0], set(a[1:])
     try:
-        if name not in STEPS or flags - {"--land"} or ("--land" in flags and name not in ("done-record", "close-landed")):
+        if name not in STEPS or flags - set(CLI_FLAGS[name].flags):
             raise Refused(USAGE)
         repo = Path(repo)
         if name == "verify-prs":

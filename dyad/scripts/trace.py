@@ -82,6 +82,8 @@ DONE_ASKED = re.compile(r"^Y/N:\s*Done with\b", re.I)    # the completion counte
 PREVIEW_MARK = "- preview:"                # a Limits line only a preview carries: a stored trace never does (#592 R-b)
 PREVIEW_LEGACY = "traces_preview_legacy.local.txt"   # <instance>/: the stored previews before #592, `<id>` per line
 ELSEWHERE = re.compile(r"relayed via|\bmandate #\d+")   # a note whose words were given in another chat (Rule-7 p4, #422)
+CLI_FLAGS = dyadlib.cli_forms("dwork", ("trace",))   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+(TRANSCRIPT, SAID_FILE), (OUT,) = CLI_FLAGS["trace"].value_flags, CLI_FLAGS["trace"].bare
 SAID_NOTE = "Y done (--said-file)"         # the note of the Done entry `--said-file` stands in for (#592 R-b)
 TRIGGERS = ("operator", "notify", "compact")    # what wakes a turn: the record kinds that end the previous one (#602)
 PR_RUN = re.compile(r"\b(?:pull request|PRs?|pulls?|merges?|merged)\s*#\d+(?:\s*(?:,\s*and|,|and|&)\s*#\d+)*", re.I)   # PR/merge numbers, never rows (#602 F2)
@@ -883,15 +885,15 @@ def main(argv=None, root: Path | None = None) -> int:
     usage = "usage: dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]"
     ids, paths, out, said_file, i = [], [], False, None, 0
     while i < len(a):
-        if a[i] == "--transcript":
+        if a[i] == TRANSCRIPT:
             if i + 1 >= len(a):
                 sys.exit(f"refused: --transcript needs a path; {usage}")
             paths.append(Path(a[i + 1])); i += 2; continue
-        if a[i] == "--said-file":
+        if a[i] == SAID_FILE:
             if i + 1 >= len(a) or said_file is not None:
                 sys.exit(f"refused: --said-file needs one path; {usage}")
             said_file = Path(a[i + 1]); i += 2; continue
-        if a[i] == "--out":
+        if a[i] == OUT:
             out = True
         elif a[i].isdigit():
             ids.append(int(a[i]))
