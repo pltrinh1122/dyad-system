@@ -64,6 +64,50 @@ def run(argv, repo, corroborate=passing, evidence=evidence_ok, **envs):
     return rc, out.getvalue(), err.getvalue()
 
 
+class CorroboratedTests(unittest.TestCase):
+    """#614: `sweep_ci`'s decision on one code push, over a real first-parent history and the runs the hosting reports."""
+    def setUp(self):
+        import tempfile, shutil
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
+        g = lambda *a: subprocess.run(["git", "-C", str(self.d), *a], check=True, capture_output=True, text=True).stdout.strip()
+        self.g = g
+        g("init", "-q", "-b", "main"); g("config", "user.email", "t@t"); g("config", "user.name", "t")
+        def commit(name, msg=None):
+            (self.d / name).write_text(name); g("add", "-A"); g("commit", "-qm", msg or name)
+            return g("rev-parse", "HEAD")
+        self.a = commit("a")                          # #693's merge: its run cancelled by the next push
+        self.b = commit("b")                          # #694's merge: likewise
+        self.c = commit("c")                          # #695's merge: its run succeeded
+        self.d_ = commit("d")                         # a later push whose run was cancelled, no success after it
+        g("checkout", "-qb", "side", self.a); self.side = commit("s"); g("checkout", "-q", "main")
+        self.fp = set(g("rev-list", "--first-parent", "main").split())
+
+    run = staticmethod(lambda sha, conclusion="success", name="rule-11 package", at="2026-11-05T21:00:00Z":
+                       {"head_sha": sha, "conclusion": conclusion, "name": name, "created_at": at})
+
+    def test_a_cancelled_run_a_later_success_covers_is_corroborated(self):
+        listed = [self.run(self.c)]
+        for sha in (self.a, self.b):
+            self.assertTrue(am.corroborated(self.d, sha, [self.run(sha, "cancelled")], listed, self.fp, []), sha)
+        self.assertTrue(am.corroborated(self.d, self.c, [self.run(self.c)], listed, self.fp, []))
+
+    def test_a_cancelled_run_no_later_success_covers_fails(self):
+        listed = [self.run(self.c), self.run(self.d_, "cancelled")]
+        self.assertFalse(am.corroborated(self.d, self.d_, [self.run(self.d_, "cancelled")], listed, self.fp, []))
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.c, "failure")], self.fp, []))    # a failed run covers nothing
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.side)], self.fp, []))           # off main's first parent
+        self.assertFalse(am.corroborated(self.d, self.a, [], [self.run(self.c, name="d-work sweep")], self.fp, []))   # not a corroborating workflow
+
+    def test_a_dyad_merge_is_corroborated_by_the_automaton_run_that_merged_it(self):
+        (self.d / "m").write_text("m"); self.g("add", "-A")
+        self.g("commit", "-qm", "Merge PR #1 at x\n\nExecuted by `dyad merge` on the Done-Y recorded on main")
+        m = self.g("rev-parse", "HEAD"); fp = self.fp | {m}
+        later = self.run(m, name="d-work automaton", at="2999-01-01T00:00:00Z")
+        self.assertTrue(am.corroborated(self.d, m, [], [], fp, [later]))
+        earlier = self.run(m, name="d-work automaton", at="2000-01-01T00:00:00Z")
+        self.assertFalse(am.corroborated(self.d, m, [], [], fp, [earlier]))
+
+
 class AutomatonTests(unittest.TestCase):
     def setUp(self):
         seed = SCRATCH.copy(False)
