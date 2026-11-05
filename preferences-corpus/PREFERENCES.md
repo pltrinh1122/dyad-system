@@ -35,6 +35,7 @@ defines what each value means.
 | inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
 | inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-done-ready-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, W11: a done-ready row whose Done is not asked; default `dyad/dmc/work-in-flight.jsonld`; d-work #587) |
 | sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep; default `dyad/dmc/sweep-findings.jsonld`) |
 | sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep; default `dyad/dmc/sweep-findings.jsonld`) |
@@ -197,7 +198,7 @@ defines what each value means.
   binds to.
   dyad-system: `brief`, the Operator's prompt of 2026-10-25 ("I need dispositions to be presented by you by
   explaining WHAT is the matter, WHY is the matter important and HOW is the matter being addressed").
-- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the six `inflight-*` keys,
+- The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
   (`dyad/dmc/schema.md`, `dyad:tunables`), and the code reads each through `dyadlib.tunable`, so a missing or
