@@ -115,3 +115,23 @@ Boundaries bullet 2 gains one sentence: a run-book's section set is declared in 
 `Set: System Architecture.` → `Set: System Requirements (kernel; content: crafts/sysadmin/rules/server-instances.md).`
 — the System Architecture set is the sysarch craft's directory since #160 and Rule-19 is a core kernel whose content
 is the sysadmin craft's (#160 finding). No clause changes. Disposition: see ledger #162.
+
+## Amendment — d-work #593 (2026-11-04, the automaton runs read-only run-book commands; backlog row #54)
+Accreted under mandate #570; plan `agent-corpus/d-work/plans/593.md`. The run-book condition ("Either party runs …")
+and property 1 name the automaton.
+
+| # | attack | result | survivor |
+|---|---|---|---|
+| P2 | `role: automaton` lets an automaton act on its own. | Survives, scoped | An automaton decides nothing (Rule-2 Enforcement): it runs a run-book command only when that command is `read-only`, its event naming `role: automaton`; a reversible or destructive command stays the operator's or the agent's (Rule-8, Classes). |
+| P7 | It changes the 1.0 surface. | Confirmed | The event `role` is a store value (`dyad/surface.md` S2), marked `moving (#593)` until engineer's `RUN_ROLES` lands; the run-book command header's own `role` (`any`, `operator`: who *may* run it) is unchanged. |
+| A1 | The Rule text lands before the runner accepts `--as automaton`. | Refuted by order | The plan's `Order: required`: step 2's code is the referent and lands first (Rule-1); this PR is stacked on it. |
+| A2 | "Either party" already admitted any party, the automaton included. | Refuted | Until #556 a party was the operator or the agent, and the event's `role` held only those; the text now names all three and the automaton's limit. |
+
+**Rule-4.** Block holds: intent 1, target 1, boundaries 6, conditions 5. **Rule-6.** `party` is still used (Rule-19's
+listing stands); `automaton` is now used by Rule-19, its `used by` cell gaining 19 in #585's window (reported to counsel).
+**Pairwise (Rule-5).** **19–2**: the automaton's limits are Rule-2's; Rule-19 cites them. **19–8**: Rule-8 owns the class
+and who may take each; Rule-19 restates the read-only limit for run-book commands and cites Rule-8. **19–3**: an event is
+monitoring, events-only (Rule-3); unchanged. **19–18**: ops scripts stay the operator's. Others unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #593.

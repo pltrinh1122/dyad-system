@@ -38,13 +38,16 @@ built on.
 
        ## <n> <kind> <YYYY-MM-DD>[ <note>]
 
-   numbered from 1 without gaps, `kind` either `prompt` or `disposition`, each followed by a fenced
+   numbered from 1 without gaps, the date the UTC date of the write (#592), `kind` either `prompt` or `disposition`,
+   each followed by a fenced
    block holding the text exactly as the operator gave it. The fence is what makes the text data:
    a prompt containing a heading, a pipe or a backtick cannot reshape the file that stores it.
 2. **The raw transcript is never committed.** It carries whatever the session carried, credentials
    included; it is megabytes per session, permanent once pushed; and its location is a property of
    one kernel and one host, not of the dyad (Rule-14 property 2). The agent therefore writes the
-   entry from the prompt it received, and never reads a harness file to do it.
+   entry from the prompt it received, and never reads a harness file to do it. What reads a transcript on the
+   machine — the d-work trace (Rule-3) — writes none of its text: an entry it cannot match word for word is named
+   under its Limits as `not verbatim` by its number and kind alone (#592).
 3. **Written when it happens, never gathered later.** An entry is appended in the clerical commit
    of the event it records (Rule-3: the store is under `<instance>/d-work/`, so the fence already
    admits it). No session is required to reach its own end, because nothing waits for the end.
@@ -139,6 +142,8 @@ says unit for seat and lowercases operator and agent 2026-11-02 (d-work #553); s
 and the scheduled sweep 2026-11-03 (d-work #564); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564. Property 4 and Enforcement gain the carried `backlog` row 2026-11-04 (d-work #574): a
 row a play-book the plan runs prescribes is born under that plan-`Y`, its words copied as an accreted row's are; see the
 same record, amendment #574. Property 4 gains the retired row's copied entry 2026-11-04 (d-work #585); see
-`../falsification/rules/rule-3-d-work.md`, amendment #585.
+`../falsification/rules/rule-3-d-work.md`, amendment #585. Property 1's date is UTC, and property 2 names what the
+d-work trace writes of a transcript, 2026-11-05 (d-work #606, stating #592); see `../falsification/rules/rule-3-d-work.md`,
+amendment #606.
 
 Set: System Requirements.

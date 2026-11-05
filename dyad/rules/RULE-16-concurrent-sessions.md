@@ -42,14 +42,31 @@ files and almost never merge.
 - Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
   orchestration in flight, and one `board/_cos.md` for what crosses rows (the pending queue's counts, the unit table
   with each unit's session id, the last question asked). `key: value` lines: `holder`, `owner`, `waiting-on`
-  (`operator`, `unit <name>` — `seat <name>` its alias until the release after next — or `external <ref>`), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
+  (`operator`, `unit <name>` or `external <ref>`; a stored `seat <name>`, the form before #553, fails the guard and
+  `board set` refuses it, each naming `unit <name>`, #604), `next`, `since`, `question` (verbatim), `promised`, and `writer`,
   written by `dyad board set` as presence's is (#350), never typed. Unlike a row it is **overwritten**, never
   append-only: it holds what is in flight now, and its history is git's. It is written by `dyad board set` as a
   ledger-only commit (Rule-3: it sits under `<instance>/d-work/`), read by `dyad board` and, after a **hop** — the
   session holding the board replaced by another — by `dyad board resume`, which prints what the new holder resumes.
   Its guard, `dyad/guards/agent/board.py`, checks only that each file is well-formed, names a row that is not
   terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
-  runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535).
+  runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535). An entry
+  may carry a `phase` — an **orchestration phase**, the entry's own machine beside the row's and never moving the row:
+  `planning`, `plan-ready`, `plan-asked`, `building`, `verifying`, `done-ready`, `done-asked`, `landing`, or `held` —
+  and a free-text `note`; the phases, the events that move between them, who fires each and the fields it must carry
+  are data, `dyadlib.ORCH_EVENTS`, printed by `dyad board phases`. On a phased entry `phase`, `waiting-on`, `next`,
+  `since` and `question` are derived from that table, and `dyad board advance <id>… <event> --expect <phase>` is their
+  only writer: it refuses an event the table does not allow from the entry's phase, or a phase moved since `--expect`
+  was read, and writes the derived fields, the templated relay to the next unit and, for an answer, the ledger entry and
+  its provenance from `--said-file` (Rule-7), in one ledger-only commit, so a retry recomputes from `main` and never
+  replays. The guard fails a phased entry whose derived fields differ from the table's; an entry with no `phase` reads
+  as before. The automaton fires, from `main` alone, every event the table names it an actor of: `closed` once the
+  merges have landed; `head-moved` when a PR's live head differs from the one a watched phase recorded, which takes back
+  any question asked on it (Rule-2, Binding), and `withdrawn` for every other row a batch question named;
+  `evidence-verified` or `evidence-failed` from `verifying`, from its own evidence run on the merge; and the catch-up
+  `answered-Y` for a `Y` already recorded on `main` by hand. A recorded `Y` answers only the question it was given to:
+  the catch-up, and any flip a `Y plan` implies, is skipped when the entry was written after the commit that recorded
+  that `Y` (S11, `automaton.board_after_plan_y`) (#587).
 - Beside the board, the **inbox**: `<instance>/d-work/inbox/<unit>/<stamp>-<from-unit>-<n>.md` (stamp
   `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by unit
   name and never by session id, so a hop changes nothing for the sender and concurrent senders never collide.
@@ -100,14 +117,14 @@ files and almost never merge.
   (`crafts/cabinet/docs/operating-guide.md`), never this Rule's: this Rule keeps the form's existence and its
   advisory reading, as Rule-19 keeps a run-book's existence (#369 revision 4, attack 2).
   Which units an operator sits at is declared by the preference, checked against the records. The operator
-  **pairs** a unit by naming it in the `paired-units` preference (`preferences-corpus/PREFERENCES.md`; `attended-seats`
-  its alias until the release after next, both read; default `none`) and **unpairs** it by removing the name, by its
+  **pairs** a unit by naming it in the `paired-units` preference (`preferences-corpus/PREFERENCES.md`; default `none`;
+  a table still holding the key's name before #553, `attended-seats`, fails the presence guard, naming `paired-units`, #604) and **unpairs** it by removing the name, by its
   unit name or by that name without its `-<hp>`. A unit is then of one kind: a **dyad unit** — the home always, and
   every unit paired — where the operator and the agent are both present and a live disposition is possible, said
   "dyad unit" whenever the system is also in view; a **solo** otherwise, where the agent works alone on authority
   carried verbatim from the ledger and its questions reach the operator through the home; or `auto`, an
   **automaton**'s unit — a non-inferring party running a released definition, the countersign model's executor —
-  reserved, since no automaton keeps a presence file yet. **Attended** is the alias of paired. Pairing changes a unit's
+  reserved, since no automaton keeps a presence file yet. Pairing changes a unit's
   kind and keeps its name and holder; a question already asked keeps the route the board recorded for it. Read over
   the live units this is a mode — every unit dyad, only the home, or some — which `dyad session list` prints with the
   paired set and each unit's kind and route, since a counter-prompt is asked in a dyad unit's own chat and relayed
@@ -207,6 +224,10 @@ presence trigger names the acts that hand a unit a row, and the plan-less-row bu
 "answers a plan-`Y`" touched the home's file and never the owner's, and the files-overlap signal went stale; see the same
 record, amendment #567. Store names the Done route of `backlog → archived`, `inbox post --cc`, and the holder's post that adds an
 owner 2026-11-04 (d-work #585, carrying #572 and #586): the retirement form had been the only exit named, and two inbox
-verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585.
+verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585. Store and Presence drop
+the #553 aliases 2026-11-05 (d-work #604, H3 step 4 of #573): `seat <name>` and `attended-seats` are refused, naming their
+new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same record, amendment #604. Store's board
+bullet gains the orchestration phase 2026-11-05 (d-work #587): owner, wait and next act were free text that drifted
+from the work, and ten slips of one day (S1–S10) were each an unrecorded transition; see the same record, amendment #587.
 
 Set: System Requirements.
