@@ -35,6 +35,7 @@ _TITLE = re.compile(r"^# Plan #(\d+)(?:\s*[—–-]+\s*(.*))?$")
 _BASE = re.compile(r"(?i)base commit[^:\n]*:\s*(\S+)")
 _INTENT = re.compile(r"(?i)\bintent\b")
 VERBS = ("check",)                                  # `dyad plan <verb>` (#592 R-c)
+CLI_FLAGS = dyadlib.cli_forms("plan", VERBS)   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 REFS_NOT_DEPENDENCY = ("parent", "PR", "PRs", "children", "child", "modes", "mode")   # a refs id after one of these is not a dependency of the plan
 REFS_ONE = ("parent",)                              # of those, the ones naming one id; the rest name every id up to the next word
 DEPENDENCY_DONE = ("done", "archived")              # a dependency in one of these states is met

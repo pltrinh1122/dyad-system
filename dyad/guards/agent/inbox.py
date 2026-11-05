@@ -56,6 +56,9 @@ FIELDS = ("from", "to", "row", "kind", "sent", "body", "writer")
 REQUIRED = ("from", "to", "row", "kind", "sent", "body")
 MARK_FIELDS = ("read", "reader", "writer")
 KINDS = ("report", "relay", "ack", "notice")
+CLI_FLAGS = dyadlib.cli_forms("inbox")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+(CC,), (ALL,) = CLI_FLAGS["post"].repeat, CLI_FLAGS["read"].bare
+POST_VALUES = tuple(f for f in CLI_FLAGS["post"].value_flags if f != CC)
 SEAT = re.compile(r"[A-Za-z0-9._-]{1,80}")
 NAME_RE = re.compile(r"(?P<stamp>\d{8}T\d{6}Z)-(?P<sender>[A-Za-z0-9._-]+)-(?P<n>\d+)\.(?P<ext>md|read)")
 STAMP = "%Y%m%dT%H%M%SZ"
@@ -298,11 +301,11 @@ def parse_post(a: list[str]) -> tuple[str, int, str, str, tuple[str, ...]]:
     to, rest, vals, words, cc = a[0], a[1:], {}, [], []
     i = 0
     while i < len(rest):
-        if rest[i] == "--cc" and i + 1 < len(rest):
+        if rest[i] == CC and i + 1 < len(rest):
             if not SEAT.fullmatch(rest[i + 1]) or rest[i + 1] == to or rest[i + 1] in cc:
                 raise Refused(f"--cc takes another seat, once each, not {rest[i + 1]!r}")
             cc.append(rest[i + 1]); i += 2
-        elif rest[i] in ("--row", "--kind", "--body-file") and i + 1 < len(rest):
+        elif rest[i] in POST_VALUES and i + 1 < len(rest):
             vals[rest[i]] = rest[i + 1]; i += 2
         else:
             words.append(rest[i]); i += 1
@@ -399,8 +402,8 @@ def cli(a: list[str], repo: Path | None = None) -> int:
             print(__doc__); return 0
         if a and a[0] == "post":
             return post(repo, *parse_post(a[1:]))
-        if a and a[0] == "read" and a[1:] in ([], ["--all"]):
-            read(repo, a[1:] == ["--all"]); return 0
+        if a and a[0] == "read" and a[1:] in ([], [ALL]):
+            read(repo, a[1:] == [ALL]); return 0
         if a and a[0] == "list" and len(a) <= 2:
             seat = a[1] if len(a) == 2 else this_seat()
             ms = messages(repo, seat)

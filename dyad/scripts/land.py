@@ -67,6 +67,12 @@ import dyadlib
 TRIES = 3                       # plan #443 attack 11: at most three tries, then stop and print the state
 WORKTREE = "dyad-land"          # under the git common dir, beside the suite memo (Rule-12 p2)
 NETWORK_TIMEOUT = 300           # seconds for a fetch or a push; the push includes the hook's guards
+CLI_FLAGS = dyadlib.cli_forms("dwork", ("land", "batch"))   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+(MESSAGE, MIRROR), (LAND,) = CLI_FLAGS["land"].value_flags, CLI_FLAGS["batch"].bare
+INVARIANTS = [   # crafts/syseng/rules/invariants.md
+    ("cli-flags-land-and-batch", lambda: (MIRROR, LAND) == (dyadlib.LAND_FLAGS[0][0], dyadlib.LAND_FLAG)
+                                         and MIRROR in CLI_FLAGS["batch"].value_flags),
+]
 
 
 class Refused(Exception):
@@ -98,16 +104,16 @@ def split_argv(a: list[str], value_flags) -> tuple[list[str], str | None]:
     argv, mirror, i = [], None, 0
     while i < len(a):
         x = a[i]
-        if x in value_flags or x in ("--mirror", "-m"):
+        if x in value_flags or x in (MIRROR, MESSAGE):
             if i + 1 >= len(a):
                 raise Refused(f"{x} needs a value")
             v = a[i + 1]
-            if x == "--mirror":
+            if x == MIRROR:
                 mirror = v
             else:
                 argv += [x, os.path.abspath(v) if x in ("--prompt-file", "--said-file") else v]
             i += 2; continue
-        if x != "--land":
+        if x != LAND:
             argv.append(x)
         i += 1
     return argv, mirror
@@ -558,7 +564,7 @@ def read_batch(src: str, repo: Path, inst: str, value_flags, parse) -> list[Line
             lines.append(other_line(n, t, toks))
             continue
         pos, vals, bare = as_refused(n, parse, toks)
-        for flag, given in (("-m", "-m" in vals), ("--mirror", "--mirror" in vals), ("--land", "--land" in bare)):
+        for flag, given in ((MESSAGE, MESSAGE in vals), (MIRROR, MIRROR in vals), (LAND, LAND in bare)):
             if given:
                 raise Refused(f"line {n}: {flag} is the batch's, never a line's: the batch generates one subject, "
                               f"takes one --mirror and lands every line ({BATCH_USAGE})")
@@ -707,9 +713,9 @@ def batch_builder(repo: Path, lines: list[Line], inst: str, words, ran: list | N
 
 
 def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror: str | None, value_flags, parse, words) -> int:
-    if "--land" not in bare:
+    if LAND not in bare:
         raise Refused(f"dwork batch runs only with --land ({BATCH_USAGE})")
-    if len(a_pos) != 2 or vals or bare - {"--land"}:
+    if len(a_pos) != 2 or vals or bare - {LAND}:
         raise Refused(BATCH_USAGE)
     lines = read_batch(a_pos[1], repo, inst, value_flags, parse)
     done_order(lines, dyadlib.utc_date())
@@ -745,24 +751,24 @@ def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
             argv, mirror = split_argv(a, value_flags)
             check_mirror(repo, mirror)
             pos, vals, bare = parse(argv)
-            return batch(pos, vals, bare | (given & {"--land"}), repo, inst, mirror, value_flags, parse, words)
+            return batch(pos, vals, bare | (given & {LAND}), repo, inst, mirror, value_flags, parse, words)
         argv, mirror = split_argv(a, value_flags)
         check_mirror(repo, mirror)
         pos, vals, bare = parse(argv)
         verb = pos[0] if pos else None
         if verb == "land":
-            msg = vals.get("-m")
+            msg = vals.get(MESSAGE)
             if not msg or not msg.strip():
                 raise Refused("usage: dwork land <path>... -m <message> [--mirror <branch>]")
-            if set(vals) - {"-m"} or bare:
-                raise Refused(f"dwork land does not take {' '.join(sorted((set(vals) - {'-m'}) | bare))}")
+            if set(vals) - {MESSAGE} or bare:
+                raise Refused(f"dwork land does not take {' '.join(sorted((set(vals) - {MESSAGE}) | bare))}")
             if dyadlib.load_guard("agent", "prs").CITE.search(msg):
                 raise Refused("-m cites a `d-work #`; a ledger-only commit claims no d-work (Rule-3 Ledger): write it as #<id>")
             rels = land_rels(repo, inst, pos[1:])
             return land(repo, inst, mirror, paths_builder(repo, rels, msg), "dwork land", rels)
         if verb not in ("new", "state"):
             raise Refused(f"--land lands `dwork new` or `dwork state`, not {verb!r}")
-        if "-m" in vals:
+        if MESSAGE in vals:
             raise Refused(f"dwork {verb} --land generates its own subject; -m is `dwork land`'s")
         if "--check" in bare:
             return check_only(repo, inst, argv, pos, vals, bare, words)
@@ -770,3 +776,6 @@ def main(a: list[str], repo: Path, value_flags, parse, words) -> int:
     except Refused as e:
         print(f"refused: {e}", file=sys.stderr)
         return 1
+
+
+dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import
