@@ -994,6 +994,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("board", "advance"):       CliForm("<id>... <event> key=value...", (("--expect", "<phase>|none"), ("--said-file", "<path>"),
                                                                        ("--mirror", "<branch>"))),
     ("board", "phases"):        CliForm(),
+    ("board", "draft"):         CliForm("<id>", (("--out", "<file>"),)),   # #587 X7: the Done skeleton, read-only
     ("inbox", "post"):          CliForm("<unit> [<body>...]", (("--row", "<id>"), ("--kind", "report|relay|ack|notice"),
                                                                ("--body-file", "<path>"), ("--cc", "<unit>")), (), ("--cc",), 1),
     ("inbox", "read"):          CliForm("", (), ("--all",)),

@@ -26,6 +26,8 @@ worded from fixed record times, never a computed age, so a finding told once is 
   W7a unit not in table   a unit a live board entry names that its cabinet's `_cos` `seats` does not
   W7b unit stale          a live entry waiting on a unit whose presence file is stale; skipped with one line until the
                           presence store holds a fresh file (gated on #567, A7)
+  W7c retired form        a live entry whose `waiting-on` still holds the removed `seat <name>` (#604): W2, W7a and W7b
+                          read `unit <name>` only, so the entry is named here with the board guard's refusal, never skipped
   W8  promise kept listed a `promised` entry of a board file listed over `inflight-promise-days` (its age: git history, A8)
   W9  operator wait       a live row waiting on the operator: with no question, once; with a question older than
                           `inflight-question-hours` (A9)
@@ -83,11 +85,11 @@ TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
     "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
     "done-ready": 72, "done-asked": 24, "landing": 72, "held": 72}
-INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W8", "W9", "W10'", "W11")
+INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W7c", "W8", "W9", "W10'", "W11")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("max-df-in-range", lambda: 0 < HYGIENE_MAX_DF < 1),
-    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 12),
+    ("tunable-keys-distinct", lambda: len(set(TUNABLES.values())) == len(TUNABLES) == 9 and len(set(INFLIGHT_KINDS)) == 13),
     ("w11-covers-every-phase", lambda: set(INFLIGHT_W11_HOURS) == set(dyadlib.ORCH_PHASES)
                                        and all(h > 0 for h in INFLIGHT_W11_HOURS.values())
                                        and all(INFLIGHT_W11_HOURS[p] == 24 for p in dyadlib.ORCH_ASKED)),
@@ -219,9 +221,9 @@ def _board_files(repo: Path, base: str, inst: str) -> dict[str, dict[str, str]]:
 
 
 def _units(field: str) -> list[str]:
-    """The unit a `waiting-on` names (`unit <name>`, alias `seat <name>`), as a one-item list, else []."""
+    """The unit a `waiting-on` names (`unit <name>`; `seat <name>` removed in 1.0, #604), as a one-item list, else []."""
     w = field.split()
-    return [w[1]] if len(w) >= 2 and w[0] in ("unit", "seat") else []
+    return [w[1]] if len(w) >= 2 and w[0] == "unit" else []
 
 
 def _messages(repo: Path, base: str, inst: str) -> list[dict[str, str]]:
@@ -383,6 +385,10 @@ def inflight_cabinets(repo: Path, base: str, now: float, pulls: list[dict] | Non
             for u in _units(f.get("waiting-on", "")):
                 if not presence_fresh(u, nowdt):
                     out.append(f"inflight W7b unit stale: row #{i} waits on {u}, whose presence file is stale")
+    # W7c: the removed `seat <name>` form (#604), which W2/W7a/W7b no longer read, so never skipped without a line
+    for i, f in sorted(entries.items()):
+        if (refusal := bd.retired_waiting(f.get("waiting-on", ""))):
+            out.append(f"inflight W7c retired form: row #{i}'s board entry {refusal}")
     # W8: a promise still listed
     for name, f in [(bd.cos_name(c), f) for c, f in coses.items()] + [(str(i), f) for i, f in sorted(entries.items())]:
         for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:

@@ -7,12 +7,13 @@ craft keeps its own number and its own surface, so crafts are out of scope here 
 Each item has a status:
 - `frozen`: changing it after 1.0.0 needs 2.0.0.
 - `moving (#<row>)`: a 1.0 child row is still changing it.
-- `alias → <new> (#573)`: an old spelling still accepted beside the new one. It warns in the deprecation release
-  `dyad-operator-v0.18.0` and is removed in 1.0.0 (the operator's decision on B3, provenance #573; #554).
+- `alias → <new>`: an old spelling still accepted beside the new one. None is left: the #554 aliases warned in
+  `dyad-operator-v0.18.0` and were removed by #604 for 1.0.0 (the operator's decision on B3, provenance #573), and a
+  stored old form now fails its guard naming the new one. The suite fails on any `alias` mark.
 
 `dyad/tests/test_surface.py` pins this file (`dyad/surface.md`) against the code in both directions. A surface change without an edit
-here fails the suite, and so does an entry here that the code no longer has. With `DYAD_SURFACE_RELEASE=1`, any
-`moving` or `alias` mark fails too, which is the gate before R1's cut.
+here fails the suite, and so does an entry here that the code no longer has, or any `alias` mark (#604). With
+`DYAD_SURFACE_RELEASE=1`, any `moving` mark fails too, which is the gate before R1's cut.
 
 **Not surface:**
 - internal modules, their functions and their flags to git;
@@ -66,7 +67,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` | `--drop`; advance: `--expect`, `--said-file`, `--mirror` | moving (#587) |
+| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` | `--drop`; advance: `--expect`, `--said-file`, `--mirror`; draft: `--out <file>` | moving (#587) |
 | `dyad inbox post <unit> [<body>...]` / `read` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file`, `--all` | frozen |
 | `dyad inbox post … --cc <unit>` | — | moving (#572, K6) |
 | `dyad automaton scan` / `run` | — | moving (#572) |
@@ -86,7 +87,7 @@ are each guard's own constant, the source the test reads.
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions | `dyadlib.TRANSITIONS` | frozen |
 | board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | moving (#587) |
 | board `cabinet` value | — | `program`, `program-<operator>`; an operator ending in eight hex reads as a seat's hp and is no cabinet | `board.CABINET` | frozen |
-| board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>`; `seat <name>` | `board.UNIT_ALIAS` | alias → `unit <name>` (#573) |
+| board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
 | board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `writer`; `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
 | plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | moving (#572, K2) |
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
@@ -123,7 +124,6 @@ the operator's. The key names and allowed values are the surface.
 | accretion | frozen |
 | organization | frozen |
 | paired-units | frozen |
-| attended-seats | alias → `paired-units` (#573) |
 | attendance-window | frozen |
 | relay-form | frozen |
 | hygiene-stale-days | frozen |

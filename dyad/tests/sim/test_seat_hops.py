@@ -94,7 +94,7 @@ class Run:
         crash = b if b in ("before-wa", "after-wa") else None
         self.put(c, crash)
         if b == "merge":
-            self.old.s.set(9, next=f"merge 7 at {self.w.pr_sha}", waiting_on="seat " + SEAT)
+            self.old.s.set(9, next=f"merge 7 at {self.w.pr_sha}", waiting_on="unit " + SEAT)
             self.w.merge(self.old.s, 7, self.w.pr_sha)            # landed; the hop comes before the board says so
         if b == "release":
             self.w.runs["42"] = "pending"
@@ -270,7 +270,7 @@ class SeatHopTests(unittest.TestCase):
         op = Operator()
         old = w.cos(OLD, host("cloud", "old"), "h-old", op)
         w.seat("communicate-22222222", host("cloud", "c"), "h-comm")
-        old.s.set(5, owner="communicate-22222222 h-comm", waiting_on="seat communicate-22222222",
+        old.s.set(5, owner="communicate-22222222 h-comm", waiting_on="unit communicate-22222222",
                   next="attended: asks in its own chat")
         op.show(QUESTION)                                          # asked in the attended seat's own chat
         mark = len(op.lines)
