@@ -1238,3 +1238,32 @@ organization has them; see `../falsification/rules/rule-6-vocabulary.md`, amendm
 `../falsification/rules/rule-14-system-infrastructure.md`, amendment #564.
 
 Disposition: see ledger #585.
+
+## Amendment — d-work #606 (2026-11-05: the fences of #592 stated in their Rules)
+Claim (plan #606, carried under mandate #570): every refusal, warning or write #592's four code PRs (#673, #675, #676,
+#678) landed and listed as a stated departure has one sentence in the Rule that owns it, saying what a reader may rely
+on. One amendment here covers the sentences this d-work adds to Rules 3, 7, 11, 12 and 14.
+
+| # | attack | result |
+|---|---|---|
+| 1 | (D1) The text could land before the code. | Refuted: the referent goes before the referrer (Rule-1). The code landed with #592's done-`Y`; this text follows it. |
+| 2 | (D2) The verb gate belongs in Rule-14 property 3. | Refuted: property 3 owns the kernel-only path, the guards. The gate is the entrypoint's, which Rule-11 property 2 names; Rule-11 states it. |
+| 3 | (D3) Each refusal line belongs in its Rule. | Survives, scoped: this Rule holds no exception clause (amendment #585, X1–X4). Each sentence states what a reader relies on — a `planned` row's plan was read, a mandate is never accreted past its ceiling, a stored trace carries the Done words — and names the command. The lines it prints stay the code's. |
+| 4 | (D4) The plan-title warning needs a Rule. | Refuted: counsel ruled during #592 that an amend may retitle a plan's heading while the row's title stays immutable (Rule-16), so a retitled plan is no breach. The fence's warning is advisory; no sentence is added, and engineer may drop it. |
+| 5 | (D5) UTC is Rule-7's alone. | Refuted: Rule-3 owns the `disposed` form `<date> …`, Rule-7 the entry heading. Each states its own date as UTC (`dyadlib.utc_date`). |
+| 6 | The plan check refuses. | Refuted by the code: `dyad plan check` warns and exits 0 on every finding; only a missing plan, a bad id or an unknown flag exits 1. The sentence says "never a refusal". |
+| 7 | The charter's ceiling also refuses. | Refuted by the code: `dwork new --mandate` refuses past the plan's stated ceiling and only warns past the charter's (`MANDATES.md`), which is the home's to reconcile (#679). The sentence names only the plan's. |
+| 8 | (Rule-7 p2) A `not verbatim` label quotes the entry. | Refuted: the trace names the entry by its number and kind alone, and exempts an entry noted `relayed via` or `mandate #<id>`, whose words were given in another chat. Property 2 states that the trace writes none of the transcript's text. |
+| 9 | (Rule-14 p3) An empty stdin is always a failure. | Refuted: git calls the hook with no ref line for an up-to-date push or one it rejected locally, and failing it would block nothing real. Only a hand run with no ref line fails; a terminal on stdin is refused before any read. |
+
+**Rule-6.** No term is added or changed: `d-work trace`, `plan file`, `mandate scope`, `entrypoint` and `kernel` are used
+in their existing senses.
+**Pairwise (Rule-5).** **3–15**: Rule-15 owns the plan file and its phases; Rule-3's new bullet states what `planned`
+guarantees of it, not its parts. **3–2**: the ceiling refusal executes Rule-2's "a row past the stated ceiling is not
+bound"; Rule-2 is unchanged. **3–7**: each states its own date. **3–16**: the transition into `planned` stays Rule-16's;
+Rule-3 states what the verb runs on it. **7–3**: property 2's sentence names the trace, which Rule-3 owns, only for what
+it writes. **11–14**: the gate is the entrypoint's (Rule-11); the pre-push outcomes are the kernel-only path's
+(Rule-14). **12–11**: `--tests` is Rule-12's child, behind the gate Rule-11 states. Others unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #606.

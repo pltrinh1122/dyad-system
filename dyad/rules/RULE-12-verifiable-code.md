@@ -60,7 +60,8 @@ behind reusable code carrying a mechanical check.
    the core's tree is too — unless the pushed range changes the registry; `check --evidence` runs
    every root. One target — a module, a
    class, a method — is run while fixing it, through `dyad check --tests <target>`, which is the
-   same child the runner spawns. A hand-typed `unittest` over a whole test root is not an error and
+   same child the runner spawns; a target that resolves to no test root or module is refused, never run as an empty
+   suite (#592). A hand-typed `unittest` over a whole test root is not an error and
    nothing refuses it; it is the expensive path, because it does not set the environment the runner
    sets for itself and so pays about three times (120 s against 40 s on the core root, measured in
    `agent-corpus/audits/2026-09-24-performance-bottlenecks.md`), and it re-runs what the gate will
@@ -106,6 +107,8 @@ code-keyed skip 2026-11-03 (d-work #562): a cut of three PRs ran the suite three
 code the Done-`Y`'s evidence had already passed, because the memo keyed on the whole tree and a merged tree never equals the
 PR head's; see the same record, amendment #562. Property 2 moves the whole-store state guards to the scheduled sweep
 2026-11-03 (d-work #564): they re-scanned every record on every ledger push; see the same record, amendment #564. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
-(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 2's
+`--tests` refuses a target that resolves to no test 2026-11-05 (d-work #606, stating #592); see
+`../falsification/rules/rule-3-d-work.md`, amendment #606.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

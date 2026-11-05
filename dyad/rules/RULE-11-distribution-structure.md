@@ -52,6 +52,9 @@ dyad system without clashes or hand-editing.
    templates corresponds to; `craft check`/`install` warn when the destination is absent —
    advisory only, never written by install (host-side hooks stay the core craft's only, above).
    The one command-line entrypoint is `dyad/bin/dyad`, invoked by path (its shape: `distribution.md`).
+   Every `dyad <noun> [<verb>]` form it accepts is one row of one table, `dyadlib.CLI`, read before anything runs:
+   `-h` or `--help` prints the form's usage and runs nothing, and an unknown flag, a word past the form's positionals
+   or a flag repeated that is read once is refused in one line, exit 1, before any write (#592).
    A core-owned table that holds craft-varying data accepts a craft-shipped contribution,
    discovered like a guard and reported under the contributing craft's own name, so the data
    leaves when the craft does (`agent-corpus/falsification/extensibility.md`, #101). A **bundled
@@ -221,6 +224,8 @@ amendment #481. Ratification events gains the release gate 2026-11-01 (d-work #5
 d-work's done-`Y` had already verified the bytes of the cut, so the chat question after it was a second ask of the same
 decision, while the hosting approval stays as the authentication no agent can forge; see the same record, amendment
 #545. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
-(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D).
+(d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 2 states the
+one table every `dyad` form is read through 2026-11-05 (d-work #606, stating #592's gate); see
+`../falsification/rules/rule-3-d-work.md`, amendment #606.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
