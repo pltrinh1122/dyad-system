@@ -40,13 +40,14 @@ nouns are the dispatch in `dyad/scripts/package.py`.
 | `dyad bundle check` / `build [<dir>]` | — | frozen |
 | `dyad craft new <name>` / `list` / `check [<craft>]` / `export <craft> [<out>]` / `install <src>` | `--force`, `--dwork <N>` | frozen |
 | `dyad ledger` | — | frozen |
-| `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate`, `--land`, `--mirror` | frozen |
-| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--check`, `--land`, `--mirror` | frozen |
+| `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate`, `--land`, `--mirror` | moving (#592, `--mandate` refuses past the plan's stated ceiling) |
+| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--check`, `--land`, `--mirror` | moving (#592, `planned` prints the plan check) |
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |
 | `dyad dwork trace <id>` | `--transcript <path>`, `--out`, `--said-file <f>` (#592: `--out` needs the Done words; `--said-file` needs `--out`) | moving (#592) |
+| `dyad plan check <id>` | — | moving (#592) |
 | `dyad session name` | `--function`, `--topic`, `--hp`, `--system`, `--on` | frozen |
 | `dyad session touch` | `-r <row>`, `-f <file>` (`-r` splits on whitespace; fetches origin first) | moving (#592) |
 | `dyad session list` | — | frozen |

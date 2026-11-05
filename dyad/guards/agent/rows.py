@@ -46,6 +46,11 @@ warns — a `warning:` line, never a failure (`merge_disposition_warnings`, d-wo
 merge, so a separate merge question was asked against the preference (#486); a note naming a preference-zone or
 charter PR (`per #427`, `preference`, `charter`, `MANDATES`) is exempt; a merge commit warns only on an entry no
 parent holds. The transaction runners print `warning:` lines as `warn` and keep the push.
+A commit that rewrites an existing plan file's `# Plan #<id> — …` title line warns (`plan_title_warnings`, #592 R-c,
+mode 03) — never a failure, until counsel rules whether an amend may retitle: on `main` and a ledger-only branch per
+commit, on any other branch over the range's own non-merge commits (`plan_title_range`), and a merge only for a title
+no parent holds (`merge_plan_title_warnings`); `main`'s first-parent walk never visits a PR's own commits, which the
+branch check judged before the push.
 On `main` and on a branch alike, the row ids a range adds run contiguously from the base's highest id + 1
 (`contiguity_problems`, R4 of d-work #467): no id skipped, none typed by hand, a batch of k new rows passing.
 The append-only rule of the run-book event store
@@ -82,6 +87,7 @@ PLAN_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y plan(?:$|[ ,])")              # a *giv
 DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")                    # a *given* completion disposition (Rule-3 Completion, #202)
 DONE_MERGES = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b[^;]*\bmerge[sd]?\b[^;]*#\d+")   # one that ratifies a merge: the state waits for it
 HEAD_AT = re.compile(r"\bat ([0-9a-f]{7,40})\b")                       # the head the `Y` was given on
+PLAN_TITLE = re.compile(r"^# Plan #\d+")                                  # a plan file's title line (plans.py), whose rewrite warns (#592 R-c)
 REFS_REFUSED = "[]'\","   # #439: no refs a commit writes holds these; `dwork` refuses them at -r (package.py)
 REFS_BRACKETS = "[]"      # #439: the store-wide clause; zero rows hold one once the 28 are restored (0c8b260)
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -403,6 +409,49 @@ def check_disposed(root: Path, base: str, head: str) -> list[str]:
         fails += done_order_problems(path, before_row, after_row, "range")   # #202: the order, on a work branch too
     return fails
 
+def plan_title_warnings(path: str, before_sha: str, sha: str, label: str, cwd) -> list[str]:
+    """#592 R-c (mode 03): a commit that rewrites an existing plan file's `# Plan #<id> — …` title line warns — never a
+    failure: an amend revises the plan in place (Rule-3 Answer grammar, Rule-15) and whether it may retitle is
+    counsel's to rule (hand-off). Read against the commit's parent, or a merge's own parent."""
+    try:
+        old = git("show", f"{before_sha}:{path}", cwd=cwd, stderr=subprocess.DEVNULL).split("\n", 1)[0]
+        new = git("show", f"{sha}:{path}", cwd=cwd, stderr=subprocess.DEVNULL).split("\n", 1)[0]
+    except subprocess.CalledProcessError:
+        return []
+    if old == new or not PLAN_TITLE.match(old):
+        return []
+    return [f"warning: [main-fence] {label} changes the title line of plan file {path}: {old!r} → {new!r} "
+            f"(a plan's title is read as its row's; a warning until counsel rules, #592 R-c)"]
+
+def _first_line(rev: str, path: str, cwd) -> str | None:
+    try:
+        return git("show", f"{rev}:{path}", cwd=cwd, stderr=subprocess.DEVNULL).split("\n", 1)[0]
+    except subprocess.CalledProcessError:
+        return None
+
+def merge_plan_title_warnings(path: str, parents: list[str], sha: str, label: str, cwd) -> list[str]:
+    """`plan_title_warnings` for a merge: warns only when the merge's title line is held by no parent and some parent
+    held a `# Plan #` title — a resolution that writes a new title, never one taken cleanly from either side."""
+    new = _first_line(sha, path, cwd)
+    olds = [t for t in (_first_line(p, path, cwd) for p in parents) if t is not None]
+    plan_olds = [t for t in olds if PLAN_TITLE.match(t)]
+    if new is None or not plan_olds or new in olds:
+        return []
+    return [f"warning: [main-fence] {label} changes the title line of plan file {path}: {plan_olds[0]!r} → {new!r} "
+            f"(a plan's title is read as its row's; a warning until counsel rules, #592 R-c)"]
+
+def plan_title_range(root: Path, base: str, head: str) -> list[str]:
+    """`plan_title_warnings` over every non-merge commit of base..head that modifies a plan file: a branch that is not
+    ledger-only (an agent-zone PR revising its own plan) reaches neither `check_commit` nor `check_merge` (#592 R-c)."""
+    rel = dyadlib.instance_rel(root) or os.environ.get("DYAD_INSTANCE", "agent-corpus")
+    prefix, out = f"{rel}/d-work/plans/", []
+    for sha in dyadlib.range_commits(root, base, head) or []:
+        par = parent(sha, root)
+        for st, path in (l.split("\t", 1) for l in git("diff-tree", "--root", "--no-commit-id", "-r", "--name-status", "--no-renames", sha, cwd=root).splitlines() if "\t" in l):
+            if st.startswith("M") and path.startswith(prefix):
+                out += plan_title_warnings(path, par, sha, sha[:9], root)
+    return out
+
 # ---- transaction check (the main fence)
 def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[str]:
     label = sha[:9]
@@ -416,6 +465,8 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
     fails = []
     par = parent(sha, cwd)
     for st, path in (l.split("\t", 1) for l in git("diff-tree", "--root", "--no-commit-id", "-r", "--name-status", "--no-renames", sha, cwd=cwd).splitlines() if "\t" in l):
+        if st.startswith("M") and path.startswith(f"{instance}/d-work/plans/"):
+            fails += plan_title_warnings(path, par, sha, label, cwd)   # #592 R-c (mode 03): warns
         if not path.startswith(f"{instance}/d-work/rows/"):
             continue
         if st.startswith("D"):
@@ -473,7 +524,8 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
         # a ledger-only or events-only branch gets the fence per commit, which already judges each added `disposed` entry
         clerical = dyadlib.ledger_only(root, base, head) or dyadlib.events_only(root, base, head)
         whole = check_ledger_branch if clerical else check_disposed
-        return check_id_collisions(root, base, head) + contiguity_problems(root, base, head) + whole(root, base, head)
+        titles = [] if clerical else plan_title_range(root, base, head)   # #592 R-c: the clerical walk already warns
+        return check_id_collisions(root, base, head) + contiguity_problems(root, base, head) + whole(root, base, head) + titles
     return check_range(base, head, cwd=root) + contiguity_problems(root, base, head)
 
 def check_ledger_branch(root: Path, base: str, head: str) -> list[str]:
@@ -495,10 +547,16 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
     """Each row file of a merge commit against each parent: present in a parent means present here,
     id and title unchanged, state equal or a legal transition (Rule-16)."""
     label, prefix, fails = sha[:9], f"{instance}/d-work/rows/", []
+    plans_prefix = f"{instance}/d-work/plans/"
     parents = git("rev-list", "--parents", "-n", "1", sha, cwd=cwd).split()[1:]
     touched: set[str] = set()        # #519: row files the merge differs on from some parent
+    plan_paths: set[str] = set()     # #592 R-c: plan files the merge differs on from some parent
     for par in parents:
-        for st, path in (l.split("\t", 1) for l in git("diff", "--no-renames", "--name-status", par, sha, "--", prefix, cwd=cwd).splitlines() if "\t" in l):
+        for st, path in (l.split("\t", 1) for l in git("diff", "--no-renames", "--name-status", par, sha, "--", prefix, plans_prefix, cwd=cwd).splitlines() if "\t" in l):
+            if path.startswith(plans_prefix):   # #592 R-c: judged once per path below; nothing else is judged here
+                if st.startswith("M"):
+                    plan_paths.add(path)
+                continue
             if st.startswith("D"):
                 fails.append(f"FAIL [main-fence]: merge {label} drops row file {path} that parent {par[:9]} has"); continue
             touched.add(path)
@@ -521,6 +579,10 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
             fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
             fails += refs_shape_problems(path, before, after, f"merge {label}")   # #439: a refs rewritten while resolving
             fails += trace_problems(path, before, after, f"merge {label}", sha, cwd)   # #465: a Done record resolved in without its trace
+    # #592 R-c: a title line the resolution itself writes — held by no parent — warns once; a retitle that arrived from
+    # either side was warned on the commit that made it, and is never re-judged here.
+    for path in sorted(plan_paths):
+        fails += merge_plan_title_warnings(path, parents, sha, f"merge {label}", cwd)
     # #519: a `Y merge` entry the resolution itself adds — held by no parent — warns once; one that arrived from
     # either side was judged by the commit that added it, and is never re-judged here.
     for path in sorted(touched):
