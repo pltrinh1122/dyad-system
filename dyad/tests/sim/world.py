@@ -33,6 +33,8 @@ import dyadlib, livetest
 INST = "agent-corpus"
 ROW = "id: {id}\ntitle: row {id}\nopened: 2026-11-02\nstate: {state}\ndisposed: {disposed}\nrefs: \n"
 RESUMED = "cos resumed in {seat}"
+PREFERENCES = ("| key | value | allowed | read by |\n|-----|-------|---------|---------|\n"
+               "| organization | {org} | `flat` \\| `m4` | Rule-16 |\n")
 bd = dyadlib.load_guard("agent", "board")
 ib = dyadlib.load_guard("agent", "inbox")
 
@@ -267,12 +269,18 @@ class Item:
 
 
 class World:
-    def __init__(self, scratch: livetest.ScratchInstalls, rows: dict[int, str] | None = None, pr: bool = False):
+    def __init__(self, scratch: livetest.ScratchInstalls, rows: dict[int, str] | None = None, pr: bool = False,
+                 organization: str | None = None):
+        """`organization` seeds `preferences-corpus/PREFERENCES.md` holding that `organization` value in the seed
+        commit (#594: two cabinets need `m4`); None seeds no preferences corpus, which reads as `flat`."""
         self.top = scratch.mkdtemp(prefix="dyad-sim-")
         seed, self.origin, self.hooks = self.top / "seed", self.top / "origin.git", self.top / "hooks"
         seed.mkdir(); git(seed, "init", "-q", "-b", "main")
         rows_dir = seed / INST / "d-work" / "rows"; rows_dir.mkdir(parents=True)
         (seed / "dyad").mkdir(); (seed / "dyad" / "a.txt").write_text("a\n")
+        if organization:
+            prefs = seed / dyadlib.PREFERENCES_REL; prefs.parent.mkdir(parents=True)
+            prefs.write_text(PREFERENCES.format(org=organization))
         self.rows = dict(rows or {5: "planned", 6: "done"})
         for rid, state in self.rows.items():
             (rows_dir / f"{rid}.md").write_text(ROW.format(id=rid, state=state, disposed="2026-11-02 Y plan"))

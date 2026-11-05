@@ -6,7 +6,10 @@ absent store passes. `board set` over a scratch world (a bare origin, a seat clo
 it lands one ledger-only commit holding the entry, defaults holder, since and writer, merges into the entry as it
 stands on origin/main, removes a key on `key=`, warns on another writer, refuses a terminal or unknown row, a typed
 `writer` and an identical re-run, and `--drop` removes the file. `dyad board` renders the entries oldest first, and
-`resume` prints the owed question verbatim, the gates and the seats to announce to."""
+`resume` prints the owed question verbatim, the gates and the seats to announce to. #594, the board keyed by cabinet:
+`cabinet_of` reads the organization, `check_entry` and `parse_set` judge the `cabinet` key and a `_cos-<operator>` file,
+`board set` fences one leader off another cabinet's entries and `_cos` file and files a unit's first write by the seats
+that name it, `resume` and `dyad board` read the resumer's cabinet, and a board without `cabinet` keys reads the same."""
 import contextlib, datetime, io, os, re, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parents[3]
@@ -279,6 +282,350 @@ class SetTests(unittest.TestCase):
         self.assertEqual(rc, 2); self.assertIn(bd.USAGE, err)
         rc, _, err = self.run_cli("set")
         self.assertEqual(rc, 2); self.assertIn(bd.USAGE, err)
+
+
+# ---- d-work #594: the board store keyed by cabinet
+PREFS = "| key | value | allowed | read by |\n|-----|-------|---------|---------|\n| organization | {org} | `flat` \\| `m4` | Rule-16 |\n"
+BOB, A_LEAD, B_UNIT, A_UNIT = "program-bob-cccccccc", "program-aaaaaaaa", "engineer-22222222", "counsel-11111111"
+COS_A = f"holder: {A_LEAD}\nseats: {A_UNIT} s1\nwriter: h1\n"
+COS_B = f"holder: {BOB}\nseats: {B_UNIT} s2\nwriter: h2\n"
+
+
+def prefs(root: Path, org: str = "m4") -> None:
+    p = root / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(PREFS.format(org=org))
+
+
+# The exact lines the pre-#594 board.py (origin/587-automaton, 7244db36) printed for the zero-migration fixture,
+# captured once by running that file on it: the DoD's before, which the patched code must still print (#594).
+PRE_594_RESUME = [
+    "resume: this session program-59cec502 (writer h9); the board's holder program-aaaaaaaa, last written by h1",
+    'inbox program-59cec502: 0 unread — `dyad inbox read` before any other act',
+    'queue (derived, #572): plan-ready 0, done-ready 0',
+    '_cos:',
+    '  holder: program-aaaaaaaa',
+    '  seats: counsel-11111111 s1',
+    '  writer: h1',
+    '#5:',
+    '  holder: program-aaaaaaaa',
+    '  owner: engineer-1537d8fb session_01x',
+    '  waiting-on: operator',
+    '  next: re-present the question',
+    '  since: 2026-11-02T10:00Z',
+    '  question: Release run 41331223332 is waiting.',
+    '    ',
+    '    # not a comment: part of the words',
+    '    Y/N: approve the release run?',
+    '  writer: h1',
+    '#8:',
+    '  holder: program-aaaaaaaa',
+    '  owner: engineer-1537d8fb session_01x',
+    '  waiting-on: external run 41',
+    '  next: re-present the question',
+    '  since: 2026-11-02T10:00Z',
+    '  promised: Release run 41331223332 is waiting.',
+    '    ',
+    '    # not a comment: part of the words',
+    '    Y/N: approve the release run?',
+    '  writer: h1',
+    'owed to the Operator (1): re-present each question verbatim, or report it pending',
+    '  #5 since 2026-11-02T10:00Z:',
+    '    Release run 41331223332 is waiting.',
+    '    ',
+    '    # not a comment: part of the words',
+    '    Y/N: approve the release run?',
+    'external gates (1): #8 external run 41',
+    'announce to (1): engineer-1537d8fb; seat table: counsel-11111111 s1',
+    'last ledger act (presence `seen`, information only, #567): engineer-1537d8fb none',
+    'then: `dyad board set _cos holder=<this seat>` before any other act (write-ahead)',
+]
+PRE_594_BOARD = [
+    "board: 2 entries, holder program-aaaaaaaa (read from the working tree; `git pull` first for main's)",
+    '#5 planned  waiting-on operator for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 5',
+    '    question: Y/N: approve the release run?',
+    '#8 planned  waiting-on external run 41 for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 8',
+    'queue (derived, #572): plan-ready 0, done-ready 0',
+    '_cos seats: counsel-11111111 s1',
+    '0 open, planned or blocked row(s) carry no board entry',
+    'warn: board/5.md was last written by h1, not this session (h9): two holders may be writing (plan #535 attack 6; the lease, #537, arbitrates)',
+    'warn: board/8.md was last written by h1, not this session (h9): two holders may be writing (plan #535 attack 6; the lease, #537, arbitrates)',
+    'warn: board/_cos.md was last written by h1, not this session (h9): two holders may be writing (plan #535 attack 6; the lease, #537, arbitrates)',
+]
+
+
+class CabinetFormTests(unittest.TestCase):
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_cabinet_of_reads_the_organization(self):
+        self.assertEqual(bd.cabinet_of(BOB, self.root), "program")                         # flat: every seat
+        self.assertEqual(bd.cabinet_of(None, self.root), "program")
+        prefs(self.root)
+        self.assertEqual([bd.cabinet_of(s, self.root) for s in (BOB, A_LEAD, B_UNIT, "automaton", None)],
+                         ["program-bob", "program", None, None, None])
+
+    def test_cos_names_and_cabinet_values(self):
+        self.assertEqual([bd.is_cos(n) for n in ("_cos", "_cos-bob", "_cos-bob-cccccccc", "_cosx", "8")],
+                         [True, True, False, False, False])
+        self.assertEqual((bd.cos_cabinet("_cos-bob"), bd.cos_name("program-bob"), bd.cos_name("program")), ("program-bob", "_cos-bob", "_cos"))
+        self.assertEqual([bd.valid_cabinet(v) for v in ("program", "program-bob", "program-bob-cccccccc", "someone", "")],
+                         [True, True, False, False, False])
+        self.assertEqual((bd.entry_cabinet({}), bd.entry_cabinet({"cabinet": "program-bob"})), ("program", "program-bob"))
+
+    def test_names_seat_and_the_filing_cabinet(self):
+        self.assertTrue(bd.names_seat({"seats": "engineer-99999999 s9\ncounsel-1 x"}, B_UNIT))   # by seat key: outlives a hop
+        self.assertFalse(bd.names_seat({"seats": "counsel-11111111 x"}, B_UNIT))
+        self.assertFalse(bd.names_seat({}, None))
+        a, b = bd.parse(COS_A)[0], bd.parse(COS_B)[0]
+        self.assertEqual(bd.filing_cabinet(B_UNIT, {}), "program")
+        self.assertEqual(bd.filing_cabinet(B_UNIT, {"program": a}), "program")
+        self.assertEqual(bd.filing_cabinet(B_UNIT, {"program": a, "program-bob": b}), "program-bob")
+        for seat, both in (("ops-33333333", False), (B_UNIT, True)):
+            coses = {"program": a if not both else {"seats": B_UNIT}, "program-bob": b}
+            with self.assertRaises(bd.Refused) as e:
+                bd.filing_cabinet(seat, coses)
+            self.assertIn("exactly one cabinet", str(e.exception))
+
+    def test_same_function_units_of_two_cabinets_match_by_full_name(self):
+        """#594: `engineer-aaaaaaaa` (A's) and `engineer-bbbbbbbb` (B's) share the seat key `engineer`, so a seat is
+        matched by its full name first and its key only as the fallback."""
+        ea, eb = "engineer-aaaaaaaa", "engineer-bbbbbbbb"
+        coses = {"program": {"seats": f"{ea} s1"}, "program-bob": {"seats": f"{eb} s2"}}
+        self.assertEqual((bd.filing_cabinet(ea, coses), bd.filing_cabinet(eb, coses)), ("program", "program-bob"))
+        self.assertEqual(bd.naming_cabinets(ea, coses), (["program"], True))
+        self.assertEqual(bd.naming_cabinets("engineer-cccccccc", coses), (["program", "program-bob"], False))
+        self.assertEqual(bd.naming_cabinets(None, coses), ([], True))
+        self.assertFalse(bd.names_seat(coses["program"], eb, exact=True)); self.assertTrue(bd.names_seat(coses["program"], eb))
+        for seat in ("engineer-cccccccc", "engineer-dddddddd"):                          # a bare function's key: never filed by it
+            with self.assertRaises(bd.Refused):
+                bd.filing_cabinet(seat, {"program": coses["program"], "program-bob": {"seats": "counsel-11111111 x"}})
+        desk = {"program": {"seats": "engineer-ledger-aaaaaaaa s1"}, "program-bob": {"seats": f"{eb} s2"}}
+        self.assertEqual(bd.filing_cabinet("engineer-ledger-dddddddd", desk), "program")   # a topic's key outlives a hop
+        self.assertIsNone(bd.cabinet_fence("_cos-bob", coses["program-bob"], {"queue": "8"}, False, eb, None, coses))
+        self.assertIsNone(bd.cabinet_fence("_cos", coses["program"], {"queue": "8"}, False, ea, None, coses))
+        for name, seat in (("_cos", eb), ("_cos-bob", ea), ("_cos-bob", "engineer-cccccccc")):   # K6: never the other's
+            with self.assertRaises(bd.Refused, msg=(name, seat)):
+                bd.cabinet_fence(name, coses[bd.cos_cabinet(name)], {"queue": "8"}, False, seat, None, coses)
+        self.assertIsNone(bd.cabinet_fence("_cos-bob", coses["program-bob"], {"queue": "8"}, False, "engineer-cccccccc",
+                                           None, {"program": {"seats": "counsel-11111111 x"}}))   # the key, held by B alone
+
+    def test_one_cos_file_is_its_own_cabinets(self):
+        """A board holding only `_cos-bob.md` files a unit's new entry under `program-bob` (a stated departure from plan
+        #594 K7's `program`, which would put B's entry on A's board)."""
+        self.assertEqual(bd.filing_cabinet(B_UNIT, {"program-bob": bd.parse(COS_B)[0]}), "program-bob")
+        self.assertEqual(bd.filing_cabinet("ops-33333333", {"program-bob": bd.parse(COS_B)[0]}), "program-bob")
+
+    def test_check_entry_judges_cabinet_and_cos_files(self):
+        states = {8: "planned"}
+        ok = ENTRY.replace("holder: program-aaaaaaaa\n", f"holder: {BOB}\ncabinet: program-bob\n")
+        self.assertEqual(bd.check_entry("8", ok, states), [])
+        for bad in ("someone", BOB):
+            (m,) = bd.check_entry("8", ok.replace("cabinet: program-bob", f"cabinet: {bad}"), states)
+            self.assertIn("'cabinet' is not `program` or `program-<operator>`", m)
+        self.assertEqual(bd.check_entry("_cos-bob", f"holder: {BOB}\nqueue: 8\nseats: {B_UNIT} s2\n", states), [])
+        for extra in ("owner: x\n", "phase: building\n"):
+            msgs = bd.check_entry("_cos-bob", f"holder: {BOB}\n" + extra, states)
+            self.assertTrue(any("unknown key" in m for m in msgs), msgs)
+        self.assertIn("not `<id>.md` or `_cos[-<operator>].md`", bd.check_entry("_cos-bob-cccccccc", COS_B, states)[0])
+
+    def test_parse_set_refuses_a_typed_cabinet_and_reads_a_cabinets_cos(self):
+        for argv in (["8", "cabinet=program-bob"], ["8", "cabinet="], ["_cos-bob", "cabinet=program"]):
+            with self.assertRaises(bd.Refused) as e:
+                bd.parse_set(argv)
+            self.assertIn("`cabinet` is written by `board set` itself, never typed", str(e.exception))
+        self.assertEqual(bd.parse_set(["_cos-bob", "queue=8"]), ("_cos-bob", {"queue": "8"}, False))
+        for argv, says in ((["_cos-bob", "owner=x"], "unknown key"), (["_cos-bob-cccccccc", "queue=8"], "not a row id")):
+            with self.assertRaises(bd.Refused) as e:
+                bd.parse_set(argv)
+            self.assertIn(says, str(e.exception))
+
+    def test_cabinet_fence_cos_files_and_the_viewers_split(self):
+        b = bd.parse(COS_B)[0]
+        for name, old, pairs, drop, seat, mine in (("8", {"cabinet": "program-bob"}, {"next": "x"}, False, BOB, "program-bob"),
+                                                   ("8", {"cabinet": "program-bob"}, {"next": "x"}, False, B_UNIT, None),
+                                                   ("8", {"cabinet": "program-bob"}, {}, True, A_LEAD, "program"),
+                                                   ("_cos-bob", b, {"seats": "x"}, False, B_UNIT, None)):
+            self.assertIsNone(bd.cabinet_fence(name, old, pairs, drop, seat, mine))
+        for name, old, pairs, drop, seat, mine in (("8", {"cabinet": "program-bob"}, {"next": "x"}, False, A_LEAD, "program"),
+                                                   ("_cos-bob", b, {"queue": "8"}, False, A_LEAD, "program"),
+                                                   ("_cos-bob", b, {"next": "x"}, False, B_UNIT, None),
+                                                   ("_cos-bob", b, {}, True, B_UNIT, None)):
+            with self.assertRaises(bd.Refused, msg=(name, seat)):
+                bd.cabinet_fence(name, old, pairs, drop, seat, mine)
+        self.board_at({"5": ENTRY, "_cos": COS_A, "_cos-bob": COS_B})
+        self.assertEqual(sorted(bd.cos_files(self.root / INST / "d-work" / "board")), ["program", "program-bob"])
+        self.assertEqual(bd.cos_files(self.root / "nowhere"), {})
+        got = [("5", {"holder": "a"}), ("8", {"cabinet": "program-bob"}), ("_cos", {"holder": "a"}), ("_cos-bob", {"holder": "b"})]
+        self.assertEqual(bd.split_cabinets(got, "program-bob"), ({"holder": "b"}, [("8", {"cabinet": "program-bob"})], [("5", {"holder": "a"})]))
+        prefs(self.root)
+        for seat, cab in ((BOB, "program-bob"), (B_UNIT, "program"), ("", "program")):
+            with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": seat}):
+                self.assertEqual(bd.viewer_cabinet(self.root), cab)
+
+    def board_at(self, files):
+        rows = self.root / INST / "d-work" / "rows"; rows.mkdir(parents=True, exist_ok=True)
+        for rid in (5, 8):
+            (rows / f"{rid}.md").write_text(ROW.format(id=rid, state="planned"))
+        b = self.root / INST / "d-work" / "board"; b.mkdir(parents=True, exist_ok=True)
+        for n, t in files.items():
+            (b / f"{n}.md").write_text(t)
+
+    def views(self, seat):
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": seat, "CLAUDE_CODE_SESSION_ID": "h9"}):
+            now = datetime.datetime(2026, 11, 2, 14, tzinfo=datetime.timezone.utc)
+            return bd.resume_lines(self.root), bd.board_lines(self.root, now), bd.resume_view(self.root)
+
+    def test_resume_and_board_read_the_resumers_cabinet(self):
+        prefs(self.root)
+        b8 = ENTRY.replace("holder: program-aaaaaaaa\n", f"holder: {BOB}\ncabinet: program-bob\n").replace(
+            "Y/N: approve the release run?", "Y/N: B's question?")
+        self.board_at({"5": ENTRY, "8": b8, "_cos": COS_A, "_cos-bob": COS_B})
+        res_a, lines_a, v_a = self.views("program-dddddddd")                               # A's new holder
+        self.assertEqual(([n for n, _ in v_a["live"]], [n for n, _ in v_a["owed"]], v_a["cabinet"]), (["5"], ["5"], "program"))
+        self.assertNotIn("B's question", "\n".join(res_a))
+        self.assertIn("1 entry on other cabinets' boards (program-bob: #8)", lines_a)
+        self.assertNotIn("#8 ", "\n".join(l for l in lines_a if l.startswith("#")))
+        res_b, lines_b, v_b = self.views("program-bob-eeeeeeee")                           # B's new holder
+        self.assertEqual(([n for n, _ in v_b["live"]], v_b["cabinet"]), (["8"], "program-bob"))
+        self.assertIn("_cos-bob:", res_b); self.assertIn(f"  seats: {B_UNIT} s2", res_b)
+        self.assertIn("1 entry on other cabinets' boards (program: #5)", lines_b)
+        self.assertIn("0 open, planned or blocked row(s) carry no board entry", lines_b)   # A's entry is still an entry
+        self.board_at({"5": ENTRY, "_cos": COS_A})
+        (self.root / INST / "d-work" / "board" / "8.md").unlink(); (self.root / INST / "d-work" / "board" / "_cos-bob.md").unlink()
+        self.assertFalse(any("other cabinets'" in l for l in self.views("program-dddddddd")[1]))   # only when N > 0
+
+    def test_zero_migration_a_board_without_cabinet_keys_reads_the_same(self):
+        """A board written before #594 (no `cabinet` key, one `_cos.md`) gives `resume_lines` and `board_lines`
+        byte-identical to what the pre-#594 code printed (`PRE_594_*`, its writer warnings included) to a
+        `program-<hp>` resumer, under `flat` and under `m4`, and no line #594 adds."""
+        later = ENTRY.replace("waiting-on: operator", "waiting-on: external run 41").replace("question:", "promised:")
+        self.board_at({"5": ENTRY, "8": later, "_cos": COS_A})
+        flat = self.views("program-59cec502")[:2]
+        prefs(self.root)
+        m4 = self.views("program-59cec502")[:2]
+        self.assertEqual(flat, (PRE_594_RESUME, PRE_594_BOARD))                        # before #594 and after it
+        self.assertEqual(m4, (PRE_594_RESUME, PRE_594_BOARD))
+        self.assertEqual(sum(l.startswith("warn: board/") for l in m4[1]), 3)          # the writer warnings (h1, not h9)
+        text = "\n".join(m4[0] + m4[1])
+        self.assertNotIn("cabinet", text); self.assertIn("_cos:", m4[0]); self.assertIn("_cos seats: " + A_UNIT + " s1", m4[1])
+
+
+class CabinetWorld:
+    """A seat clone of an `m4` world whose board holds `FILES`; `as_(seat, …)` runs `board set` as that seat."""
+    FILES: dict[str, str] = {}
+
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "DYAD_SESSION": BOB, "CLAUDE_CODE_SESSION_ID": "h2"})
+        e.start(); self.addCleanup(e.stop)
+        top = SCRATCH.mkdtemp()
+        seed, self.origin, self.seat, hooks = top / "seed", top / "origin.git", top / "seat", top / "hooks"
+        seed.mkdir(); git(seed, "init", "-q", "-b", "main")
+        rows = seed / INST / "d-work" / "rows"; rows.mkdir(parents=True)
+        for rid, state in ((5, "planned"), (6, "done"), (8, "planned")):
+            (rows / f"{rid}.md").write_text(ROW.format(id=rid, state=state))
+        b = seed / INST / "d-work" / "board"; b.mkdir()
+        for n, t in self.FILES.items():
+            (b / f"{n}.md").write_text(t)
+        prefs(seed)
+        git(seed, "add", "-A"); git(seed, *livetest.IDENTITY, "commit", "-qm", "seed")
+        git(top, "clone", "-q", "--bare", str(seed), str(self.origin))
+        git(top, "clone", "-q", str(self.origin), str(self.seat))
+        for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+            git(self.seat, "config", k, v)
+        hooks.mkdir(); (hooks / "pre-push").write_text("#!/bin/sh\ncat >/dev/null\nexit 0\n"); (hooks / "pre-push").chmod(0o755)
+        git(self.seat, "config", "core.hooksPath", str(hooks))
+
+    def as_(self, seat, *argv):
+        out, err = io.StringIO(), io.StringIO()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": seat}), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(err):
+            rc = bd.cli(["set", *argv], self.seat)
+        return rc, err.getvalue()
+
+    def on_main(self, name):
+        r = subprocess.run(["git", "show", f"main:{INST}/d-work/board/{name}.md"], cwd=self.origin, capture_output=True, text=True)
+        return r.stdout if r.returncode == 0 else None
+
+
+class CabinetSetTests(CabinetWorld, unittest.TestCase):
+    """`board set` on an `m4` world with two cabinets: A (`program`, `_cos.md`) and B (`program-bob`, `_cos-bob.md`)."""
+    FILES = {"_cos": COS_A, "_cos-bob": COS_B}
+
+    def test_a_leaders_create_files_under_its_cabinet_and_the_other_leader_is_fenced(self):
+        self.assertEqual(self.as_(BOB, "8", "waiting-on=operator")[0], 0)
+        self.assertEqual(bd.parse(self.on_main("8"))[0]["cabinet"], "program-bob")
+        rc, err = self.as_(A_LEAD, "8", "next=mine now")
+        self.assertEqual(rc, 1); self.assertIn("a leader writes only its own cabinet's entries (#594 K6)", err)
+        self.assertEqual(self.as_(B_UNIT, "8", "next=the unit's write")[0], 0)              # a unit writes it, cabinet kept
+        self.assertEqual(bd.parse(self.on_main("8"))[0]["cabinet"], "program-bob")
+        self.assertEqual(self.as_(A_LEAD, "8", "--drop")[0], 0)                            # --drop is cabinet-agnostic
+        self.assertIsNone(self.on_main("8"))
+        self.assertEqual(self.as_(A_LEAD, "5", "waiting-on=operator")[0], 0)
+        self.assertNotIn("cabinet", self.on_main("5"))                                     # `program` is never written
+
+    def test_a_cabinets_cos_file(self):
+        self.assertEqual(self.as_(BOB, "_cos-bob", "queue=8")[0], 0)
+        f = bd.parse(self.on_main("_cos-bob"))[0]
+        self.assertEqual((f["queue"], f["seats"]), ("8", f"{B_UNIT} s2"))                  # seats kept
+        self.assertEqual(self.as_(BOB, "_cos", "next=resolved")[0], 0)                      # `_cos` is B's own file
+        self.assertEqual(bd.parse(self.on_main("_cos-bob"))[0]["next"], "resolved")
+        self.assertEqual(self.on_main("_cos"), COS_A)
+        rc, err = self.as_(A_LEAD, "_cos-bob", "holder=program-aaaaaaaa")
+        self.assertEqual(rc, 1); self.assertIn("a leader writes only its own cabinet's `_cos` file (_cos, #594 K6)", err)
+        rc, err = self.as_(BOB, "_cos-bob", "owner=x")
+        self.assertEqual(rc, 1); self.assertIn("unknown key 'owner'", err)
+        self.assertEqual(self.as_(B_UNIT, "_cos-bob", "seats=" + B_UNIT + " s2; ops-1 s3")[0], 0)   # named: seats only
+        rc, err = self.as_(B_UNIT, "_cos-bob", "next=x")
+        self.assertEqual(rc, 1); self.assertIn("only `queue` or `seats`", err)
+        rc, err = self.as_(A_UNIT, "_cos-bob", "queue=9")
+        self.assertEqual(rc, 1); self.assertIn("whose `seats` names it", err)
+
+    def test_a_units_first_write_is_filed_by_the_seats_that_name_it(self):
+        self.assertEqual(self.as_(B_UNIT, "5", "next=x")[0], 0)
+        self.assertEqual(bd.parse(self.on_main("5"))[0]["cabinet"], "program-bob")
+        rc, err = self.as_("ops-33333333", "8", "next=x")
+        self.assertEqual(rc, 1); self.assertIn("no cabinet among program, program-bob", err)
+        self.assertIsNone(self.on_main("8"))
+
+    def test_named_by_both_cabinets_is_refused(self):
+        self.assertEqual(self.as_(A_LEAD, "_cos", f"seats={A_UNIT} s1; {B_UNIT} s2")[0], 0)
+        rc, err = self.as_(B_UNIT, "8", "next=x")
+        self.assertEqual(rc, 1); self.assertIn("program, program-bob among program, program-bob", err)
+
+    def test_no_dyad_session_the_holder_pair_names_the_writer(self):
+        """#594: with no `DYAD_SESSION`, `board set _cos holder=<seat>` (the path the no-holder refusal names) writes
+        as that seat: a leader's own `_cos` file, and another cabinet's refused."""
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": ""}):
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                self.assertEqual(bd.cli(["set", "_cos", f"holder={A_LEAD}", "question=Y/N: go?"], self.seat), 0, err.getvalue())
+                self.assertEqual(bd.cli(["set", "_cos-bob", f"holder={A_LEAD}", "next=x"], self.seat), 1)
+                self.assertEqual(bd.cli(["set", "_cos-bob", "next=x"], self.seat), 1)
+        self.assertEqual(bd.parse(self.on_main("_cos"))[0]["question"], "Y/N: go?")
+        self.assertIn("a leader writes only its own cabinet's `_cos` file", err.getvalue())
+        self.assertIn("pass holder=<the leader's seat>", err.getvalue())
+        self.assertNotIn("next", bd.parse(self.on_main("_cos-bob"))[0])
+
+    def test_set_builder_under_a_solo_leader_renders_no_cabinet_line(self):
+        for seat in ("program-59cec502", A_UNIT):
+            with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": seat}):
+                wt = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, wt, True)
+                (wt / INST / "d-work" / "rows").mkdir(parents=True)
+                (wt / INST / "d-work" / "rows" / "5.md").write_text(ROW.format(id=5, state="planned"))
+                prefs(wt)
+                (wt / INST / "d-work" / "board").mkdir(); (wt / INST / "d-work" / "board" / "_cos.md").write_text(COS_A)
+                bd.set_builder("5", {"next": "x"}, False, INST)(wt)
+                self.assertNotIn("cabinet", (wt / INST / "d-work" / "board" / "5.md").read_text(), seat)
+
+
+class OneCabinetSetTests(CabinetWorld, unittest.TestCase):
+    """With only `_cos.md`, a unit's first write is filed `program`, and no `cabinet` line is written."""
+    FILES = {"_cos": COS_A}
+
+    def test_a_units_first_write_is_filed_by_the_seats_that_name_it(self):
+        for seat in (B_UNIT, "ops-33333333"):                                         # named or not: one cabinet
+            self.assertEqual(self.as_(seat, "5" if seat == B_UNIT else "8", "next=x")[0], 0)
+        self.assertNotIn("cabinet", self.on_main("5")); self.assertNotIn("cabinet", self.on_main("8"))
 
 
 # ---- d-work #587 PR2: the orchestration machine (X1, X2, X3, X4, X9)
@@ -729,6 +1076,10 @@ class PhasedGuardTests(unittest.TestCase):
                           if "seat table" in m], [])
         (self.board / "_cos.md").write_text(bd.render({"holder": HOME}, bd.COS_FIELDS))           # no table: silent
         self.assertEqual([m for m in self.msgs(phased(5, "building", {"unit": [ENG]})) if "seat table" in m], [])
+        (self.board / "_cos.md").write_text(bd.render({"holder": HOME, "seats": f"{HOME} (home)"}, bd.COS_FIELDS))
+        (self.board / "_cos-bob.md").write_text(bd.render({"holder": HOME, "seats": f"{HOME}; {ENG}; {COU}"}, bd.COS_FIELDS))
+        entry = phased(5, "building", {"unit": [ENG]}).replace("holder:", "cabinet: program-bob\nholder:", 1)
+        self.assertEqual([m for m in self.msgs(entry) if "seat table" in m], [], "read against its own cabinet's table")
 
 
 class PhasedQueueTests(unittest.TestCase):
@@ -833,6 +1184,22 @@ class AdvanceTests(unittest.TestCase):
     def done_asked(self, rid, prs, question, owner=f"{ENG}; {COU}"):
         return phased(rid, "done-asked", {"unit": [ENG], "pr": prs, "evidence": [EV]} if prs else {"unit": [ENG], "evidence": [EV]},
                       owner=owner, question=question)
+
+    # ---- cabinets (#594)
+    def test_advance_files_a_birth_under_the_leaders_cabinet_and_fences_the_other(self):
+        bob = "program-bob-dddddddd"
+        self.seed_board({"board/_cos.md": f"holder: {HOME}\nwriter: h1\n", "board/_cos-bob.md": f"holder: {bob}\nwriter: h2\n"})
+        prefs = self.seat / dyadlib.PREFERENCES_REL
+        self.assertIn("| organization | m4 |", prefs.read_text())                     # the scratch install's default
+        rc, out, err = self.adv("5", "opened", "--expect", "none", f"unit={ENG}", session=bob)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual((self.entry(5)["cabinet"], self.entry(5)["holder"]), ("program-bob", bob))
+        before = self.main()
+        rc, out, err = self.adv("5", "hold", "--expect", "planning", "on=operator", "note=mine now", session=HOME)
+        self.assertEqual(rc, 1, out + err); self.assertIn("a leader writes only its own cabinet's entries (#594 K6)", err)
+        self.assertEqual(self.main(), before)
+        rc, out, err = self.adv("6", "opened", "--expect", "none", f"unit={ENG}", session=HOME)
+        self.assertEqual(rc, 0, out + err); self.assertNotIn("cabinet", self.entry(6))      # `program` is never written
 
     # ---- transitions
     def test_opened_lands_one_commit_with_its_owner_and_relay(self):
