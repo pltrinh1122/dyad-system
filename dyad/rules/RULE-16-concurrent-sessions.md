@@ -60,9 +60,13 @@ files and almost never merge.
   was read, and writes the derived fields, the templated relay to the next unit and, for an answer, the ledger entry and
   its provenance from `--said-file` (Rule-7), in one ledger-only commit, so a retry recomputes from `main` and never
   replays. The guard fails a phased entry whose derived fields differ from the table's; an entry with no `phase` reads
-  as before. The automaton fires the table's automaton events from `main` alone — a merged head's `closed`, and
-  `head-moved` when a PR's live head differs from the one a watched phase recorded, which takes back any question asked
-  on it (Rule-2, Binding) (#587).
+  as before. The automaton fires, from `main` alone, every event the table names it an actor of: `closed` once the
+  merges have landed; `head-moved` when a PR's live head differs from the one a watched phase recorded, which takes back
+  any question asked on it (Rule-2, Binding), and `withdrawn` for every other row a batch question named;
+  `evidence-verified` or `evidence-failed` from `verifying`, from its own evidence run on the merge; and the catch-up
+  `answered-Y` for a `Y` already recorded on `main` by hand. A recorded `Y` answers only the question it was given to:
+  the catch-up, and any flip a `Y plan` implies, is skipped when the entry was written after the commit that recorded
+  that `Y` (S11, `automaton.board_after_plan_y`) (#587).
 - Beside the board, the **inbox**: `<instance>/d-work/inbox/<unit>/<stamp>-<from-unit>-<n>.md` (stamp
   `YYYYMMDDTHHMMSSZ`, UTC; `n` counting from 1 within one stamp and sender), one file per message, addressed by unit
   name and never by session id, so a hop changes nothing for the sender and concurrent senders never collide.
