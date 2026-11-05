@@ -39,7 +39,11 @@ class OrchestrationMachineTests(unittest.TestCase):
         names = [n for n, _ in dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)]
         self.assertEqual(dyadlib.false_invariants(dyadlib.orch_invariants(dyadlib.ORCH_EVENTS)), [])
         self.assertTrue(set(names) <= {n for n, _ in dyadlib.INVARIANTS})       # enforced at import
-        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed", "head-moved", "withdrawn"})   # the automaton's own
+        self.assertEqual(dyadlib.ORCH_CLI_EVENTS, dyadlib.ORCH_EVENT_NAMES - {"closed", "head-moved", "withdrawn"}   # the automaton's own
+                         - {"read"})                                                 # S10: inbox read's, never board advance's
+        self.assertEqual(dyadlib.ORCH_NO_EFFECT, {"read"})
+        self.assertEqual({k: v for k, v in dyadlib.ORCH_EVENTS.items() if k[1] == "read"},          # S10: a self-loop everywhere
+                         {(p, "read"): ((p,), "home or unit", ()) for p in dyadlib.ORCH_PHASES})
         self.assertEqual(dyadlib.orch_actors("home or automaton"), {"home", "automaton"})
         for e in ("evidence-verified", "evidence-failed"):                                   # #587 X5: either may fire it
             self.assertEqual(dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]), {"home", "automaton"})
@@ -67,6 +71,10 @@ class OrchestrationMachineTests(unittest.TestCase):
             "orch-automaton-evidence-from-verifying-only": {**E, ("building", "evidence-verified"): (("done-ready",), "home or automaton", ("evidence",))},
             "orch-withdrawn-is-the-automatons-from-done-asked": {**E, ("done-asked", "withdrawn"): (("done-ready",), "home", ("note",))},
             "orch-withdrawn-is-the-automatons-from-done-asked ": {**E, ("plan-asked", "withdrawn"): (("plan-ready",), "automaton", ("note",))},
+            "orch-no-effect-is-a-self-loop-everywhere": without(("held", "read")),
+            "orch-no-effect-is-a-self-loop-everywhere ": {**E, ("building", "read"): (("verifying",), "home or unit", ())},
+            "orch-no-effect-is-a-self-loop-everywhere  ": {**E, ("building", "read"): (("building",), "automaton", ())},
+            "orch-no-effect-is-a-self-loop-everywhere   ": {**E, (None, "read"): (("planning",), "unit", ())},
         }
         for name, table in cases.items():
             self.assertIn(name.strip(), dyadlib.false_invariants(dyadlib.orch_invariants(table)), name)

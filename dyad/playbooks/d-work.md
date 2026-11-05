@@ -211,6 +211,9 @@ twice a day; the ages below are the defaults of the `inflight-*` preference keys
   promise is one still owed; its age is read from the history of `_cos.md`.
 - **A row waiting on the operator with no question recorded**, reported once and again only if it changes, or **a
   recorded question older than 24 h**: the home asks it, or records the question it is waiting on.
+- **A drafted Done not asked** (4 h): a phased board entry in `done-ready`, its Done question drafted and not yet
+  asked; the home asks the Done question or names what holds it (#587 S9: a drafted Done was held 13 h). Every other
+  phase keeps W11's fixed age, an asked phase 24 h and every other 3 days.
 - **A report newer than the board**: the owner posted a report on the row after the board entry's `since`, so the
   board may be stale; the home reads the report and fixes the board.
 What cannot be read from records — a unit's chat state, a hold said only in conversation — stays the home's
