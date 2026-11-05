@@ -398,3 +398,31 @@ names `unit`, `paired-units` and the automaton.
 unchanged. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #604.
+
+## Amendment — d-work #587 (2026-11-05: the board entry's orchestration phase)
+Claim (plan #587, carried under mandate #570): a board entry may carry an orchestration phase, a machine beside the
+row's whose transitions are recorded events; on a phased entry the wait, the next act and the question are derived by
+one writer, `dyad board advance`, and the automaton fires the events its own records decide. One amendment here covers
+the sentences this d-work adds to Rule-16 and Rule-3, the vocabulary row and the d-work play-book's subsection of The lifecycle.
+
+| # | attack | result |
+|---|---|---|
+| 1 | (F1) The row machine already is the orchestration machine. | Refuted: `dyadlib.TRANSITIONS` says nothing of who acts between a plan-`Y` and a Done. The phase sits beside it on the board and never moves the row. |
+| 2 | (X1) Derived fields can still be hand-written. | Survives, built: on a phased entry `board advance` is their only writer, and the board guard fails an entry whose derived fields differ from the table's. |
+| 3 | (X9) Two units advance one row at once. | Survives, built: `--expect` refuses a moved phase, and a retry recomputes from `main`. |
+| 4 | (X6) A Y binds a head that has since moved. | Survives, built: in the watched phases the automaton fires `head-moved`, taking the question down (Rule-2, Binding); a batch question's other rows step back by `withdrawn`. |
+| 5 | (F5) A rigid machine blocks real variation. | Survives with escape edges: `hold` with a note and an `on`, `release`, and `answered-N` back to `planning` or `building`. |
+| 6 | (Engineer's hand-off 2) A terminal accreted row belongs in the Done question's `accreted` clause. | Refuted: the clause names what the `Y` closes; a row already terminal by its own Done is closed, so it is reported in the evidence and not named (Rule-3, Completion counter-prompt). |
+| 7 | (Engineer's hand-off 3) `asked` may store a cleaned title holding control characters. | Refuted: a `Y` binds the question as asked (Rule-2, Binding), and a cleaned line would differ from the stored one. `asked` should refuse such a title, naming the row; the row's title is immutable (Rule-16), so the remedy is a new row. Counsel's ruling for engineer's code; no Rule sentence. |
+| 8 | (Engineer's hand-off 1) `board draft` writes the evidence. | Refuted by the code: it prints only the data half and refuses unless the entry is `done-ready` and well-formed; the judgment stays the agent's. Rule-3 says so. |
+| 10 | (Orchestrate's T1) The Store sentence lists only `closed` and `head-moved`, and reads as all the automaton fires. | Confirmed: the code also fires `withdrawn`, the X5 `evidence-verified`/`evidence-failed`, and the catch-up `answered-Y`. The sentence names every event whose actor cell includes the automaton, and states S11's rule: a `Y` answers only the question it was given to. |
+| 9 | (The plan's inbox `event`) The inbox gains an `event` key. | Refuted by the code: the relays an advance posts are templated `relay` messages of the existing shape; no inbox field changed, so Rule-16's inbox bullet is unchanged. |
+
+**Rule-6.** New row `orchestration phase` (owner 16, used by 3 and 16); each Rule now uses it in that sense.
+**Pairwise (Rule-5).** **16–3**: Rule-3's write-ahead and pending queue are kept; Rule-3 states only that a phased entry
+moves by the table's events, and Rule-16 owns the table's store. **16–2**: `head-moved` applies Rule-2's
+heads-unchanged condition before the asking; Rule-2 is unchanged. **16–7**: an answer's provenance entry comes from
+`--said-file`, the operator's words (Rule-7 property 4). **3–15**: `board draft` quotes the plan's definition of done
+(Rule-15 phase 1). Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #587.
