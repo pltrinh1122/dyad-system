@@ -1023,6 +1023,44 @@ class PackageTests(livetest.LiveCase):
         r = self.dwork_state(d, "3", "done", "-d", "Y done, with #1", "--said", "Y")           # its Done rides the mandate's
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).mode, "implicit")   # carried, never rewritten
+    def test_dwork_new_mandate_refuses_past_the_plans_stated_ceiling(self):
+        """#592 R-c (mode 31): with 12 of the plan's stated 12 children, `dwork new --mandate` refuses before any write;
+        with 11 it writes the 12th. The ceiling is the plan's `Mandate scope:` line (`plans.mandate_ceiling`)."""
+        d, rows = self.dwork_repo()
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        plans = rows.parent / "plans"; plans.mkdir(exist_ok=True)
+        plans.joinpath("1.md").write_text("# Plan #1 — m\n\nBase commit: abc\n\nMandate scope: one child per item; ceiling 12\n")
+        for rid in range(3, 14):
+            rows.joinpath(f"{rid}.md").write_text(f"id: {rid}\ntitle: c{rid}\nopened: d\nstate: open\ndisposed: d Y plan (mandate #1)\nrefs: parent #1\nmode: implicit\n")
+        r = self.dwork_new(d, "the twelfth", "--mandate", "1")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertEqual(r.stdout.strip(), "14")
+        before = sorted(p.name for p in rows.iterdir())
+        r = self.dwork_new(d, "the thirteenth", "--mandate", "1")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("already has 12 children, its plan's stated ceiling 12", r.stderr)
+        self.assertEqual(sorted(p.name for p in rows.iterdir()), before)                      # nothing written
+        self.assertFalse((rows.parent / "provenance" / "15.md").exists())
+    def test_dwork_state_planned_runs_the_plan_check_first(self):
+        """#592 R-c: `dwork state <id> planned` prints the plan check's lines before its write, and never refuses on them."""
+        d, rows = self.dwork_repo()
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y", "--check")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [plan] no plan file", r.stderr)
+        plans = rows.parent / "plans"; plans.mkdir(exist_ok=True)
+        plans.joinpath("1.md").write_text("# Plan #1 — p\n\nBase commit: abc\n\n## Intent as read\nx\norder: required\n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y")
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("warn [plan] 1.md: says `order: required`", r.stderr)
+        self.assertIn("state: planned", rows.joinpath("1.md").read_text())
+        (rows.parent / "traces").mkdir(exist_ok=True); rows.parent.joinpath("traces", "1.md").write_text("# Trace #1\n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y done", "--said", "Y")                # already planned: a Done record
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertNotIn("warn [plan]", r.stderr)
+        r = self.dwork_state(d, "1", "open")                                                  # no other transition runs it
+        self.assertNotIn("warn [plan]", r.stderr)
+    def test_plan_check_cli(self):
+        """#592 R-c: `dyad plan check <id>` is a noun of the dispatch; 589 exits 0 on the live store."""
+        run = lambda *a: subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "plan", *a], capture_output=True, text=True)
+        r = run("check", "589"); self.assertEqual(r.returncode, 0, r.stderr); self.assertIn("ok   [plan] #589", r.stdout)
+        r = run("--help"); self.assertEqual(r.returncode, 0); self.assertIn("usage: dyad plan check <id>", r.stdout)
+        r = run("check", "589", "--bogus"); self.assertEqual(r.returncode, 1); self.assertIn("does not take --bogus", r.stderr)
     def test_dwork_new_backlog_mandate_carries_a_prescribed_row(self):
         """#574 revision 2: a row a play-book the mandate's plan runs prescribes is carried under that plan-`Y`: born
         backlog, explicit (no `mode` line, its Done never rides the parent's), its entry `Y backlog (mandate #<id>)`,
