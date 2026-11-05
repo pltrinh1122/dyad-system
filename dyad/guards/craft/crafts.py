@@ -299,6 +299,21 @@ def _check_files_against_floor(files: list[Path], floor_pkg: Path) -> list[tuple
                 results.append((inv_name, ok == "True"))
     return [done[i] if i in done else _check_invariants_against_floor(py, floor_pkg) for i, py in enumerate(files)]
 
+def floor_tag(repo: Path, req_name: str, ver: str) -> str | None:
+    """The tag a `requires: <req_name>>=<ver>` floor is checked against: the lowest `<req_name>-vY` tag here with
+    Y >= ver — the floor itself when it was released, else the first release above it (#613, promoting #248: an
+    exact-tag lookup left floors such as `>=0.10.0` unchecked, `v0.10.0` never having been cut). None when no tag
+    at or above the floor resolves (not yet released, or tags not fetched)."""
+    r = subprocess.run(["git", "tag", "-l", f"{req_name}-v*"], cwd=repo, capture_output=True, text=True)
+    floor = dyadlib.semver_tuple(ver)
+    found = []
+    for t in r.stdout.split():
+        v = t.removeprefix(f"{req_name}-v")
+        if SEMVER.fullmatch(v) and "+" not in v and dyadlib.semver_tuple(v) >= floor:
+            found.append((dyadlib.semver_tuple(v), t))
+    return min(found)[1] if found else None
+
+
 def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, cache: FloorCache | None = None) -> list[str]:
     """D1 (#100): for each `requires: dyad-operator>=X` whose tag `dyad-operator-vX` resolves
     locally, re-run the craft's own guard and projector `INVARIANTS` against that tag's
@@ -321,22 +336,25 @@ def floor_problems(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, cache: 
     for req_name, ver in requires(d):
         if req_name != CORE_NAME:
             continue
-        tag = f"{req_name}-v{ver}"
-        rp = subprocess.run(["git", "rev-parse", "-q", "--verify", f"{tag}^{{commit}}"], cwd=repo, capture_output=True, text=True)
-        if rp.returncode != 0:
-            msgs.append(f"warning: {name}: floor {req_name}>={ver}: no tag {tag} here (not yet released, or tags not fetched)")
+        tag = floor_tag(repo, req_name, ver)
+        if tag is None:
+            msgs.append(f"warning: {name}: floor {req_name}>={ver}: no tag {req_name}-v<version> at or above {ver} here "
+                        f"(not yet released, or tags not fetched)")
             continue
+        rp = subprocess.run(["git", "rev-parse", "-q", "--verify", f"{tag}^{{commit}}"], cwd=repo, capture_output=True, text=True)
         floor_pkg = cache.get(repo, tag, rp.stdout.strip())
         if floor_pkg is None:
             msgs.append(f"warning: {name}: floor {req_name}>={ver}: {tag}:dyad/ not found")
             continue
+        at = tag.removeprefix(f"{req_name}-v")
+        ver = ver if at == ver else f"{ver} (tag {tag})"
         for py, (error, results) in zip(files, _check_files_against_floor(files, floor_pkg)):
             if error is not None:
                 msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: does not load against floor {req_name}>={ver}: {error}")
                 continue
             for inv_name, ok in results:
                 if not ok:
-                    msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: floor {req_name}>={ver}: {inv_name} is false against {ver} — raise the floor")
+                    msgs.append(f"crafts/{name}/{py.parent.name}/{py.name}: floor {req_name}>={ver}: {inv_name} is false against {at} — raise the floor")
     return msgs
 
 def check_craft(repo: Path, craft_dir: Path, pkg: Path = dyadlib.PKG, others=(), floor_cache: FloorCache | None = None) -> list[str]:
