@@ -220,6 +220,23 @@ class AutomatonTests(unittest.TestCase):
             f["question"] = question
         return b.render(f, b.FIELDS)
 
+    def test_s11_a_question_asked_of_a_planned_row_is_never_flipped_away(self):
+        """#587 S11, the 05:29:17Z replay: row 570 planned with a `Y plan` last, then home asks plan revision 9 on its
+        board (a later commit). K1's flip read that as a fresh plan-Y and erased the question (c31d76d); a board written
+        after the row's last `Y plan` is home's act, so the automaton writes nothing over it."""
+        row, board_f = f"{INST}/d-work/rows/570.md", f"{INST}/d-work/board/570.md"
+        self.w.write_main({row: ROW.format(id=570, state="planned", disposed="2026-11-04 Y plan; 2026-11-05 Y plan (revision 8)"),
+                           f"{INST}/d-work/provenance/570.md": "# Provenance #570\n\n## 1 disposition 2026-11-04 Y plan\n\n```\nY\n```\n\n"
+                                                               "## 2 disposition 2026-11-05 Y plan (revision 8)\n\n```\nY\n```\n\n",
+                           board_f: f"holder: {HOME}\nowner: audit-e73be78c s1\nwaiting-on: unit audit-e73be78c\nwriter: h1\n"})
+        asked = (f"holder: {HOME}\nowner: audit-e73be78c s1\nwaiting-on: operator\nnext: answer plan revision 9\n"
+                 "question: Y/N: proceed with #570 revision 9 as planned?\nwriter: h1\n")
+        self.w.write_main({board_f: asked})
+        rc, out, err = run(["scan"], self.w.seat)
+        self.assertEqual(rc, 0, out + err); self.assertNotIn("board #570", out)
+        run(["run"], self.w.seat)
+        self.assertEqual(self.on_main(board_f), asked)                                  # the question stands
+
     def test_a_phased_planned_entry_gets_no_k1_flip_and_no_k2_notice(self):
         self.w.write_main({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="planned", disposed="2026-11-02 Y plan"),
                            f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y plan\n\n```\nY\n```\n\n",

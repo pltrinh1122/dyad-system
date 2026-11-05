@@ -187,7 +187,7 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if entry.get("phase"):
             continue                                                   # #587: `answered-Y` wrote the flip and the relay
         owners = board().owners(entry)
-        if owners and (pairs := planned_flip(r.id, entry, owners)):
+        if owners and not board_after_plan_y(repo, base, r.id) and (pairs := planned_flip(r.id, entry, owners)):
             acts.append(("board", r.id, pairs))                       # #572 K1: before the notices it announces
         parts = plan_parts(show(repo, base, f"{inst(repo)}/d-work/plans/{r.id}.md") or "")
         for owner in owners:
@@ -662,6 +662,19 @@ def notice_body(rid: int, part: str | None) -> str:
     plan); masked as `post` masks it, so the told text and the compared text are the same."""
     body = PLANNED.format(rid=rid) + (f"; yours: {part}" if part else "")
     return inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
+
+def board_after_plan_y(repo: Path, base: str, rid: int) -> bool:
+    """#587 S11: the row's board entry was written after the commit that recorded its last `Y plan` — home's own act
+    (a new question asked of a planned row, a re-route), which a flip the older `Y` implies must never overwrite. Read
+    from git on `base`: the newest commit touching the board file is not an ancestor of the newest touching the row."""
+    i = inst(repo)
+    def last(rel: str) -> str:
+        return land.git(repo, "log", "-1", "--format=%H", base, "--", rel, check=False).stdout.strip()
+    row, brd = last(f"{i}/d-work/rows/{rid}.md"), last(f"{i}/d-work/board/{rid}.md")
+    if not row or not brd or row == brd:
+        return False
+    return land.git(repo, "merge-base", "--is-ancestor", brd, row, check=False).returncode != 0
+
 
 def planned_flip(rid: int, entry: dict[str, str], owners: list[str]) -> dict[str, str] | None:
     """#572 K1: the board pairs a recorded `Y plan` decides — waiting on the first owner, the plan as the next act, no
