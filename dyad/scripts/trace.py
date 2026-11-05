@@ -18,10 +18,22 @@ Anchoring: each provenance entry's fenced text is matched to an Operator message
 equal, or contained when the entry is at least SHORT characters long), in record order, each after the
 previous anchor. A disposition is anchored only to a message that answers a `Y/N:` line naming `#<id>`; a
 prompt that matches more than one message is ambiguous. An unmatched or ambiguous entry is reported under
-Limits and never guessed.
+Limits and never guessed. An entry is **not verbatim** (#592 R-b, mode 49) when it anchors only after that whitespace
+normalisation, or when its turn is in the transcript (a disposition: the reply asking it, on its date; a prompt: an
+Operator message on its date answering no `Y/N:`), no other entry anchors that turn, and its words never anchor — never
+for an entry noted `relayed via` or `mandate #<id>`, whose words were given in another chat; Limits names its number
+and kind, nothing more.
 The store `<instance>/d-work/traces/<id>.md` (written by `--out`, in the commit that records the Done-`Y`; plan #213 revision 2, #202)
-is checked by `check_store`: one `<id>.md` per existing row, headed `# Trace #<id> — <title>`, its five sections.
-  trace.py <id> [--transcript <path>]... [--out]     (reached as `dyad dwork trace`)
+is checked by `check_store`: one `<id>.md` per existing row, headed `# Trace #<id> — <title>`, its five sections, and
+never a preview (#592 R-b): a stored trace holding the preview line (`PREVIEW_MARK`) fails unless the instance's
+`<instance>/traces_preview_legacy.local.txt` (`<id>` per line, generated once at PR-b's head) names it, and warns
+while the instance keeps no such list. `--out` therefore needs the Done words: the record's own Done entry, or
+`--said-file <f>` — the words the `state` line is about to record, read as a Done entry dated UTC today — and
+refuses, writing nothing, with neither. `--said-file` is read even when the record already holds a Done (a refused
+`N done`, or a `Y done` a changed head voided, Rule-2 Binding), so the window ends at the Done asked again; it is
+skipped only when the record's last entry already is those words, recorded today, and no later answer anchors them.
+`--said-file` without `--out` is refused: the preview runs to the Done question, before any Done words.
+  trace.py <id> [--transcript <path>]... [--out [--said-file <f>]]     (reached as `dyad dwork trace`)
 """
 import sys
 if sys.version_info < (3, 12):
@@ -67,6 +79,12 @@ PLAN = re.compile(r"\bplan\b", re.I)       # a disposition note naming a plan-`Y
 OPENING = re.compile(r"\s*Y (?:open|backlog)\b", re.I)   # a note (or a row's first `disposed` entry) opening the row (#240)
 PROCEED = re.compile(r"^Y/N:\s*proceed with\b", re.I)    # the plan counter-prompt's form (Rule-3 Plan)
 DONE_ASKED = re.compile(r"^Y/N:\s*Done with\b", re.I)    # the completion counter-prompt's form (Rule-3)
+PREVIEW_MARK = "- preview:"                # a Limits line only a preview carries: a stored trace never does (#592 R-b)
+PREVIEW_LEGACY = "traces_preview_legacy.local.txt"   # <instance>/: the stored previews before #592, `<id>` per line
+ELSEWHERE = re.compile(r"relayed via|\bmandate #\d+")   # a note whose words were given in another chat (Rule-7 p4, #422)
+CLI_FLAGS = dyadlib.cli_forms("dwork", ("trace",))   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+(TRANSCRIPT, SAID_FILE), (OUT,) = CLI_FLAGS["trace"].value_flags, CLI_FLAGS["trace"].bare
+SAID_NOTE = "Y done (--said-file)"         # the note of the Done entry `--said-file` stands in for (#592 R-b)
 TRIGGERS = ("operator", "notify", "compact")    # what wakes a turn: the record kinds that end the previous one (#602)
 PR_RUN = re.compile(r"\b(?:pull request|PRs?|pulls?|merges?|merged)\s*#\d+(?:\s*(?:,\s*and|,|and|&)\s*#\d+)*", re.I)   # PR/merge numbers, never rows (#602 F2)
 ROW_ID = re.compile(r"#(\d{1,7})(?!\d)")         # bounded: untrusted text never reaches int() unbounded (#602 F3)
@@ -81,6 +99,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("sections-are-the-five-parts", lambda: SECTIONS == ("Timeline", "Buckets", "Counts", "Bottleneck", "Limits")),
     ("traces-in-the-d-work-store", lambda: TRACES_REL.startswith("d-work/")),
     ("header-names-the-d-work", lambda: bool(HEADER.match("# Trace #1 — t")) and not HEADER.match("# Trace 1")),
+    ("preview-legacy-is-instance-local", lambda: PREVIEW_LEGACY.endswith(".local.txt") and "/" not in PREVIEW_LEGACY),
+    ("said-note-names-the-done", lambda: bool(DONE.search(SAID_NOTE)) and not OPENING.match(SAID_NOTE)),
     ("none-is-no-trigger", lambda: "none" not in TRIGGERS),
     ("trigger-names-unique", lambda: len(set(TRIGGERS)) == len(TRIGGERS)),
 ]
@@ -349,10 +369,18 @@ def _matches(entry_text: str, msg_text: str) -> bool:
     e, m = norm(entry_text), norm(msg_text)
     return bool(e) and (e == m or (len(e) >= SHORT and e in m))
 
+def _verbatim(entry_text: str, msg_text: str) -> bool:
+    """The match `_matches` makes, without its whitespace normalisation (only the ends trimmed): the words as given."""
+    e, m = (entry_text or "").strip(), (msg_text or "").strip()
+    return bool(e) and (e == m or (len(norm(e)) >= SHORT and e in m))
+
 def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = frozenset(),
            opened: bool = False) -> list[dict]:
-    """One result per entry, in order: {n, kind, note, date, ts|None, status, asked_ts}. Status is `anchored`,
-    `unmatched` or `ambiguous`; only an anchored entry carries a timestamp. `origins` are the ids the row refs and
+    """One result per entry, in order: {n, kind, note, date, ts|None, status, asked_ts, verbatim}. Status is `anchored`,
+    `unmatched` or `ambiguous`; only an anchored entry carries a timestamp. `verbatim` is False for an entry anchored
+    only after whitespace normalisation, or unmatched while its turn is there (a disposition: the reply asking it, on
+    its date; a prompt: an Operator message on its date, after the previous anchor, answering no `Y/N:`) and no other
+    entry anchors that turn, its note naming no other chat (`relayed via`, `mandate #<id>`) — #592 R-b; else None. `origins` are the ids the row refs and
     `opened` says its first `disposed` entry opened it (`Y open`, `Y backlog`): an opening disposition is asked before
     the row exists, so it may anchor to a `Y/N:` reply naming no id or an origin's id (#240)."""
     ops, last_text = [], None
@@ -362,10 +390,12 @@ def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = 
             ops.append((r, ans)); last_text = None       # compactions, thinking and tools (#286)
         elif r["kind"] == "text":
             last_text = r
-    out, pos = [], 0
+    out, pos, used, turns_of = [], 0, set(), {}
     for e in entries:
-        res = {"n": e["n"], "kind": e["kind"], "note": e["note"], "date": e["date"], "ts": None, "status": "unmatched", "asked_ts": None}
-        cands = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos and _matches(e["text"], m["text"])]
+        res = {"n": e["n"], "kind": e["kind"], "note": e["note"], "date": e["date"], "ts": None, "status": "unmatched",
+               "asked_ts": None, "verbatim": None}
+        open_turns = [(i, m, ans) for i, (m, ans) in enumerate(ops) if i >= pos]   # the turns it may be; words not yet read
+        cands = [c for c in open_turns if _matches(e["text"], c[1]["text"])]
         if e["kind"] == "disposition":
             want = _note_kind(e["note"])                 # a plan `Y` answers a plan question, a Done `Y` a Done one
             if want == "open" or (opened and str(e["n"]) == "1" and want is None):   # never a plan or Done question
@@ -376,13 +406,25 @@ def anchor(entries: list[dict], recs: list[dict], rid: int, origins: set[int] = 
                          and (want is None or c[2].get("ynk") == want)]
             cands = [c for c in cands if utc(c[1]["ts"])[:10] == e["date"]]   # a wrong date is unmatched, never guessed
             cands = cands[:1]                            # dispositions are taken in sequence (plan #213, attack 4)
+            asked = [c for c in open_turns if c[2] is not None and rid in c[2]["yn"] and utc(c[1]["ts"])[:10] == e["date"]
+                     and (want in (None, "open") or c[2].get("ynk") == want)]
+        else:
+            asked = [c for c in open_turns if utc(c[1]["ts"])[:10] == e["date"]]
+        if e["kind"] != "disposition":                   # a prompt's turn: an Operator message answering no `Y/N:`
+            asked = [c for c in asked if c[2] is None]
         if len(cands) > 1:
             res["status"] = "ambiguous"
         elif cands:
             i, m, ans = cands[0]
-            res.update(ts=m["ts"], status="anchored", asked_ts=ans["ts"] if ans else None)
-            pos = i + 1
+            res.update(ts=m["ts"], status="anchored", asked_ts=ans["ts"] if ans else None,
+                       verbatim=None if _verbatim(e["text"], m["text"]) else False)
+            used.add(i); pos = i + 1
+        elif asked and norm(e["text"]) and not ELSEWHERE.search(e["note"] or ""):
+            turns_of[len(out)] = {c[0] for c in asked}   # judged once every anchor is known, below
         out.append(res)
+    for k, idx in turns_of.items():                      # its turn is there, its words are not (#592 R-b) — a turn
+        if idx - used:                                   # another entry anchors is that entry's, never this one's
+            out[k]["verbatim"] = False
     return out
 
 # ---- buckets
@@ -552,15 +594,39 @@ def median_agent_side(root: Path, rid: int) -> tuple[float | None, int]:
             vals.append(int(m.group(1)))
     return (statistics.median(vals) if vals else None), len(vals)
 
+def is_preview(text: str) -> bool:
+    """Whether a trace's text is a preview: its Limits carry the preview line (`PREVIEW_MARK`)."""
+    return any(l.startswith(PREVIEW_MARK) for l in text.splitlines())
+
+def preview_legacy(root: Path) -> tuple[set[int] | None, list[str]]:
+    """The instance's list of stored previews that predate #592 (`<instance>/traces_preview_legacy.local.txt`, `<id>`
+    per line, `#` a comment): (ids, problems), ids None when the file is absent."""
+    p = dyadlib.instance(root) / PREVIEW_LEGACY
+    if not p.is_file():
+        return None, []
+    ids, problems = set(), []
+    for n, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if not line.isdigit():
+            problems.append(f"{PREVIEW_LEGACY}:{n}: not `<id>`"); continue
+        if int(line) in ids:
+            problems.append(f"{PREVIEW_LEGACY}:{n}: #{line} named twice")
+        ids.add(int(line))
+    return ids, problems
+
 def check_store(root: Path | None = None) -> list[str]:
     """Well-formedness of the trace store `<instance>/d-work/traces/`: every file is `<id>.md` for an existing row,
     opens with `# Trace #<id> — <title>` naming that same id, and holds the five sections in order. An absent store
-    passes (no d-work traced yet, a fresh install)."""
+    passes (no d-work traced yet, a fresh install). A stored trace is never a preview (#592 R-b): one carrying the
+    preview line fails unless `PREVIEW_LEGACY` names it, and warns (`warning:`) while the instance keeps no list."""
     root = root or dyadlib.repo_root()
     d = dyadlib.instance(root) / TRACES_REL
     if not d.is_dir():
         return []
-    ids, msgs = {r.id for r in dyadlib.read_rows(root)}, []
+    legacy, problems = preview_legacy(root)
+    ids, msgs = {r.id for r in dyadlib.read_rows(root)}, list(problems)
     for p in sorted(d.iterdir()):
         if not (p.suffix == ".md" and p.stem.isdigit()):
             msgs.append(f"{p.name}: not `<id>.md` (the trace store holds one trace per d-work)"); continue
@@ -573,9 +639,34 @@ def check_store(root: Path | None = None) -> list[str]:
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
         if tuple(heads) != SECTIONS:
             msgs.append(f"{p.name}: sections {heads}, not {list(SECTIONS)}")
+        if is_preview(text):
+            if legacy is None:
+                msgs.append(f"warning: {p.name}: a stored preview (`{PREVIEW_MARK}` under Limits), and this instance has no "
+                            f"{PREVIEW_LEGACY} naming the previews stored before #592; a trace is written through the Done-`Y` "
+                            f"(`dyad dwork trace {p.stem} --out --said-file <f>`)")
+            elif int(p.stem) not in legacy:
+                msgs.append(f"{p.name}: a stored preview (`{PREVIEW_MARK}` under Limits): a trace is written through the Done-`Y`, "
+                            f"with the Done words (`dyad dwork trace {p.stem} --out --said-file <f>`; #592), and "
+                            f"{PREVIEW_LEGACY} does not name it")
     return msgs
 
-def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
+def has_done(entries: list[dict]) -> bool:
+    """Whether a record holds a Done disposition (`Y done …`)."""
+    return any(e["kind"] == "disposition" and DONE.search(e["note"]) for e in entries)
+
+def recorded_done(entries: list[dict], extra: dict) -> bool:
+    """Whether the record's last entry already is the Done `extra` stands in for: a Done disposition of its date whose
+    words match (`state` ran before `trace`, #592 R-b)."""
+    last = entries[-1] if entries else None
+    return bool(last and last["kind"] == "disposition" and DONE.search(last["note"] or "")
+                and last["date"] == extra["date"] and norm(last["text"]) == norm(extra["text"]))
+
+def said_entry(entries: list[dict], said: str) -> dict:
+    """The Done entry `--said-file` stands in for (#592 R-b): the words the `state` line will record, numbered after
+    the record's last entry and dated UTC today, as `append_provenance` will write it."""
+    return {"n": str(len(entries) + 1), "kind": "disposition", "date": dyadlib.utc_date(), "note": SAID_NOTE, "text": said}
+
+def trace(rid: int, root: Path, transcripts: list[Path] | None, said: str | None = None) -> str:
     rows = {r.id: r for r in dyadlib.read_rows(root)}
     if rid not in rows:
         raise SystemExit(f"no row {rid}")
@@ -587,9 +678,20 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
     paths = transcripts if transcripts is not None else default_transcripts(root)
     recs, problems = load(paths, commits) if paths else ([], [])
     first = (row.disposed or "").split(";")[0]
-    anchors = anchor(entries, recs, rid, {int(i) for i in re.findall(r"\d+", row.refs or "")} - {rid},
-                     bool(OPENING.match(re.sub(r"^\s*\d{4}-\d{2}-\d{2}", "", first)))) if recs else []
+    anchor_all = lambda es: anchor(es, recs, rid, {int(i) for i in re.findall(r"\d+", row.refs or "")} - {rid},
+                                   bool(OPENING.match(re.sub(r"^\s*\d{4}-\d{2}-\d{2}", "", first)))) if recs else []
+    said_used = said is not None                         # #592 R-b: the window anchored on the Done words to be recorded,
+    if said_used:                                        # whatever Done the record already holds (a refused or voided one)
+        extra = said_entry(entries, said)
+        if recorded_done(entries, extra):                # unless `state` already wrote these words: then they are the
+            said_used = bool(recs) and anchor_all(entries + [extra])[-1]["status"] == "anchored"   # record's, unless a
+        if said_used:                                    # later answer of their own shows the Done asked again
+            entries = entries + [extra]
+    anchors = anchor_all(entries)
     limits: list[str] = list(problems)
+    if said_used:
+        limits.append(f"the Done entry is read from --said-file (entry {entries[-1]['n']}, dated {entries[-1]['date']} UTC): the words "
+                      "the Done record is about to carry, not yet in the provenance record")
     home = str(Path.home())
     shown = ", ".join("`" + (str(p).replace(home, "~", 1) if str(p).startswith(home) else str(p)) + "`" for p in paths)
     n_anch = sum(a["status"] == "anchored" for a in anchors)
@@ -622,6 +724,10 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
         if a["status"] != "anchored":
             limits.append(f"provenance entry {a['n']} ({a['kind']} {a['date']}{' ' + a['note'] if a['note'] else ''}) "
                           f"{a['status']} in the transcript: not used as an anchor, never guessed")
+        if a.get("verbatim") is False:                   # #592 R-b (mode 49): its number and kind only, never its words
+            limits.append(f"provenance entry {a['n']} ({a['kind']}) not verbatim: "
+                          + ("anchored only after whitespace normalisation" if a["status"] == "anchored"
+                             else "its turn is in the transcript and its words never anchor"))
     if entries and paths and not anchored:
         limits.append("no provenance entry anchored in the transcript (another session's, or a transcript that does not cover this d-work): buckets absent")
     # timeline
@@ -776,14 +882,18 @@ def trace(rid: int, root: Path, transcripts: list[Path] | None) -> str:
 
 def main(argv=None, root: Path | None = None) -> int:
     a = list(sys.argv[1:] if argv is None else argv)
-    usage = "usage: dyad dwork trace <id> [--transcript <path>]... [--out]"
-    ids, paths, out, i = [], [], False, 0
+    usage = "usage: dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]"
+    ids, paths, out, said_file, i = [], [], False, None, 0
     while i < len(a):
-        if a[i] == "--transcript":
+        if a[i] == TRANSCRIPT:
             if i + 1 >= len(a):
                 sys.exit(f"refused: --transcript needs a path; {usage}")
             paths.append(Path(a[i + 1])); i += 2; continue
-        if a[i] == "--out":
+        if a[i] == SAID_FILE:
+            if i + 1 >= len(a) or said_file is not None:
+                sys.exit(f"refused: --said-file needs one path; {usage}")
+            said_file = Path(a[i + 1]); i += 2; continue
+        if a[i] == OUT:
             out = True
         elif a[i].isdigit():
             ids.append(int(a[i]))
@@ -796,7 +906,21 @@ def main(argv=None, root: Path | None = None) -> int:
     if missing:
         sys.exit(f"refused: no transcript at {', '.join(map(str, missing))}")
     root = root or dyadlib.repo_root()
-    text = trace(ids[0], root, paths or None)
+    said = None
+    if said_file is not None:
+        if not said_file.is_file():
+            sys.exit(f"refused: --said-file {said_file} is not a file (the Operator's Done words, verbatim, Rule-7)")
+        said = said_file.read_text(encoding="utf-8").rstrip("\n")
+        if not said.strip():
+            sys.exit(f"refused: --said-file {said_file} is empty")
+        if not out:                                      # the preview runs to the Done question, before any Done words
+            sys.exit(f"refused: --said-file needs --out; {usage}")
+    if out and said is None and not has_done(provenance(ids[0], root)):
+        sys.exit(f"refused: dyad dwork trace {ids[0]} --out: row #{ids[0]}'s provenance record holds no Done disposition and no "
+                 f"--said-file was given, so the trace would be a preview, and a stored trace never is (#592 R-b); pass the "
+                 f"Operator's Done words: dyad dwork trace {ids[0]} --out --said-file <f>, then record the same file with "
+                 f"`dwork state … --said-file <f>`; nothing written")
+    text = trace(ids[0], root, paths or None, said)
     if out:
         dest = dyadlib.instance(root) / TRACES_REL / f"{ids[0]}.md"
         dest.parent.mkdir(parents=True, exist_ok=True)

@@ -55,6 +55,8 @@ _FENCE = re.compile(r"^```\s*(\S*)\s*$")
 # ---- the event: constants (the craft's events guard re-exports them; Rule-19 property 7)
 EVENT_FIELDS = ("id", "ts", "role", "instance", "name", "cmd", "class", "scope", "exit", "duration_ms",
                 "postcondition", "output_sha256", "output_tail", "commit", "runbook_sha256")
+CLI_FLAGS = dyadlib.cli_forms("runbook")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
+ROLE_FLAG, = CLI_FLAGS["run"].value_flags
 RUN_ROLES = ("operator", "agent")                                        # who ran it (event `role`)
 POSTCONDITION_RESULTS = ("n/a", "already", "ok", "failed")
 TAIL_LINES, TAIL_CHARS = 5, 400
@@ -384,7 +386,7 @@ def main(argv=None) -> int:
                 print(f"{c.name:<26} {c.cls:<11} {c.role:<9} {c.section}")
             return 0
         if a and a[0] == "run" and len(a) >= 3:
-            role = a[a.index("--as") + 1] if "--as" in a else os.environ.get("DYAD_ROLE", "agent")
+            role = a[a.index(ROLE_FLAG) + 1] if ROLE_FLAG in a else os.environ.get("DYAD_ROLE", "agent")
             return exit_code(run(root, a[1], a[2], role))
         if a and a[0] == "new" and len(a) == 2:
             dst = new(root, a[1])

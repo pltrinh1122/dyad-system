@@ -102,13 +102,16 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 play-book the mandate's plan runs prescribes, carried under that
                                 plan-`Y` — born backlog, no `mode` line, entry `<date> Y backlog
                                 (mandate #<id>)`, entry 1 noted as above
+                                It refuses when <id> already has as many `parent #<id>` children as its
+                                plan's mandate scope states as its ceiling, and warns past the seat's
+                                charter ceiling in MANDATES.md (#592 R-c, mode 31)
   dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
                                 change state. A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
                                 call once that head is on `main` (Rule-3 Completion, #202). Under `dwork-trace:
                                 always` a `Y done` is refused until <instance>/d-work/traces/<id>.md exists
-                                (`dwork trace <id> --out`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
+                                (`dwork trace <id> --out --said-file <f>`; a `--mandate` close excepted, #465) / append a disposition to the row and its words to
                                 the record in one step; --prompt records a prompt received (#191).
                                 --relayed-via notes the entries as relayed from <seat> (`relayed via
                                 <seat>`, appended to a disposition's note), with --prompt or --said (#422).
@@ -174,12 +177,22 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
                                 carries the bare token `<c>` (row.refs->craft, Rule-20; d-work #22)
                                 — a routing tag, not a re-check of the guard's own resolution
-  dyad dwork trace <id> [--transcript <path>]... [--out]
+  dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]
                                 the d-work trace (scripts/trace.py, play-book dyad/playbooks/dwork-trace.md;
                                 #213): timeline, buckets, counts and bottleneck line from the row, its
                                 provenance and plan, git and the harness transcript (read in place, never
                                 copied, never quoted); --out writes <instance>/d-work/traces/<id>.md,
-                                at the Done-Y, in the commit that records it; without it, a preview to stdout
+                                at the Done-Y, in the commit that records it; without it, a preview to stdout.
+                                --out needs the Done words: the record's Done entry or --said-file <f>, the
+                                file the `state` line records, read as a Done entry dated UTC today; with
+                                neither it refuses and writes nothing — a stored trace is never a preview (#592)
+  dyad plan check <id>    the plan check (guards/agent/plans.py, #592 R-c): the plan file's own check, then
+                                warnings — files touched in a second zone; a touched module whose mapped test
+                                is not listed; a touched craft whose VERSION is already its release tag (mode
+                                18); the callers of each `module.function` the Mutation names (mode 37); a refs
+                                dependency not done; `order: required` with no `step:` line (mode 17). Exit 0
+                                with warnings, 1 with no plan file. `dwork state <id> planned` runs it before
+                                its first write and never refuses on it
   dyad session name [--function <f>] [--topic <t>] [--hp <h>] [--system <s>] [--on <text>]
                                 print this seat's name, <function>[-<topic>]-<hp>, and the harness session
                                 title to set, from the environment (Rule-16 Presence; the organization
@@ -477,7 +490,7 @@ def _git(*a):
     return r.stdout.strip() if r.returncode == 0 else None
 
 def utc_date() -> str:
-    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+    return dyadlib.utc_date()   # #592 R-b: the one home, dyadlib; kept here as the suite memo's own name
 
 def code_digest(rev="HEAD"):
     """The sha256 of `rev`'s tree listing (`git ls-tree -r`) with the ledger (`<instance>/d-work/`) and the run-book
@@ -877,6 +890,53 @@ def run_suites(suites):
     with ThreadPoolExecutor(len(suites)) as pool:
         return list(pool.map(run_suite, suites))
 
+def _dotted_module(base: Path, parts: list[str]) -> tuple[Path, int] | None:
+    """(the module file or package directory, the parts it consumed) that `parts` names under `base`, read as
+    `unittest` imports it — packages while a directory holds the next part, then one `<part>.py`, the rest attributes
+    (a class, a method); None when the first part names nothing there."""
+    at, k = Path(base), 0
+    for p in parts:
+        if (at / f"{p}.py").is_file():
+            return at / f"{p}.py", k + 1
+        if not (at / p).is_dir():
+            break
+        at, k = at / p, k + 1
+    return (at, k) if k else None
+
+def tests_target_refusal(target, repo=None, roots=None):
+    """#592 R-a (INCIDENTS row 179): the refusal line for a `check --tests` target `unittest` cannot import, or None.
+    The child runs from the repo root (`suite_child`), so a dotted target whose first part names nothing at the root
+    — `test_incidents`, not `dyad.tests.test_incidents` — would fail as an import error deep in the child's output.
+    It is refused here: with the qualified name of every module of that dotted path under a test root, at any depth
+    (`test_provenance` is `dyad.tests.guards.agent.test_provenance`), or with none when no root holds it. A path, or a
+    dotted name whose first part names a package or module at the root, runs as today. A dotted name ending in `.py`
+    (`test_cli.py`, which `unittest` would read as an attribute `py`) is refused with the module's path form."""
+    repo, roots = Path(repo or REPO), list(test_suites() if roots is None else roots)
+    if not target or "/" in target or Path(target).exists() or (repo / target).exists():
+        return None   # a path, which `unittest` reads as one
+    py = target.endswith(".py")
+    parts = (target[:-3] if py else target).split(".")
+    at_root = _dotted_module(repo, parts)
+    if at_root and not py:
+        return None
+    named = lambda got: got and (got[0].suffix == ".py" or got[1] == len(parts))   # a module, or the whole name a package
+    hits = [at_root] if named(at_root) else []
+    for r in roots:
+        if not Path(r).is_dir() or not Path(r).resolve().is_relative_to(repo.resolve()):
+            continue
+        for d in [Path(r), *sorted(d for d in Path(r).rglob("*") if d.is_dir() and d.name != "__pycache__")]:
+            got = _dotted_module(d, parts)
+            if named(got) and got[0] not in [h[0] for h in hits]:
+                hits.append(got)
+    def name(got) -> str:
+        m, k = got
+        mod = Path(m).resolve().relative_to(repo.resolve())
+        if py or not all(x.isidentifier() for x in mod.with_suffix("").parts):
+            return str(mod)   # the path form the child reads as one (a craft named with a `-`, a `.py` target)
+        return ".".join((*mod.with_suffix("").parts, *parts[k:]))
+    head = f"refused: dyad check --tests: no test root or module named {target}"
+    return f"{head}; qualify it ({', '.join(name(h) for h in hits)})" if hits else head
+
 def cmd_tests(target=None, roots=None):
     """Rule-13 property 1: the suites, run the way the runner runs them, as one verb. Without a
     target every root of `test_suites()`; with a directory that root; with anything else a dotted
@@ -886,6 +946,9 @@ def cmd_tests(target=None, roots=None):
     partial run, never memoized, like a targeted one."""
     global _SUITE_RAN
     rc = 0
+    if (refusal := tests_target_refusal(target)):   # #592 R-a: before the nesting test, so a refusal is the same everywhere
+        print(refusal, file=sys.stderr)
+        return 1
     if os.environ.get("DYAD_NO_NESTED_TESTS"):
         return rc       # already inside a test run (a suite invoking `check`); do not recurse
     _SUITE_RAN = True
@@ -1156,6 +1219,18 @@ def swept(mod, clerical) -> bool:
     wanted = tuple(f"{rel}/{r}" for r in reads)
     return not any(p.startswith(wanted) for p in clerical) if wanted else True
 
+PRE_PUSH_EMPTY = "warn [pre-push] no ref line on stdin: nothing judged"
+PRE_PUSH_NOTHING = "ok   [pre-push] git sent no ref line: every ref is up to date or rejected by git; nothing to judge"
+PRE_PUSH_TTY = "refused: --pre-push reads git's ref lines on stdin; run it from the hook"
+SHALLOW_PREFIX = "shallow clone:"
+
+def clone_lines(repo):
+    """#592 (F13, Rule-14 p3): `bootstrap.clone_problems` as the pre-push gate reads it — a missing core tag is a
+    `FAIL [pre-push]` line, as at `check --evidence`; a shallow clone only a `warn` line, since a cloud session clones
+    50 deep and pushes ledger commits (it still refuses at evidence)."""
+    bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
+    return [f"{'warn' if m.startswith(SHALLOW_PREFIX) else 'FAIL'} [pre-push] {m}" for m in bs.clone_problems(repo)]
+
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
     then every TRANSACTION guard over base..HEAD. Returns rc. With `pre_push` (the hook, #194) the
@@ -1166,7 +1241,13 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     not only those beyond `base`: `remote` and `url` are git's hook argv, and a push to a declared
     public remote carrying a private citation beside a quoted body is refused, with no override."""
     if pre_push:
+        if sys.stdin is None or sys.stdin.isatty():   # #592 (mode 28): `read()` would block on a terminal, and judge nothing
+            print(PRE_PUSH_TTY); return 1
         lines = sys.stdin.read().splitlines()
+        if not any(len(l.split()) == 4 for l in lines):   # #592 (mode 28): no ref line is not a deletion; nothing was judged
+            if remote is not None:   # git's own call (argv `<remote> <url>`): an up-to-date or locally rejected push
+                print(PRE_PUSH_NOTHING); return 0
+            print(PRE_PUSH_EMPTY); return 1   # a hand run (`</dev/null`, no argv)
         import privatecite                               # #518: a public remote never receives a private citation's body
         cite_refusals, cite_info = privatecite.check_push(REPO, remote, url, lines)
         for m in cite_info:
@@ -1187,6 +1268,11 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         if pushed is None:
             print(f"ok   [pre-push] nothing new to judge: every ref is a deletion or already on {base}")
             return 0
+        unfit = clone_lines(REPO)   # #592 (F13): a clone missing the core tag yields false FAILs; a shallow one only warns here
+        for m in unfit:
+            print(m)
+        if any(m.startswith("FAIL") for m in unfit):
+            return 1
     else:
         pushed = None
     rc = cmd_invariants()
@@ -1873,12 +1959,15 @@ def cmd_ledger():
     out = dyadlib.ledger_path(REPO); out.write_text(dyadlib.render(rows))
     print(f"rendered {out.relative_to(REPO)}: {len(rows)} rows"); return 0
 
-DWORK_VALUE_FLAGS = ("-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m")   # the last two: `--land` and `land` (#447)
+# #592 R-a: views of `dyadlib.CLI`, the one table the gate in `__main__` and `test_surface`'s S1 read. The value flags are
+# every `dwork` verb's but `trace`'s (trace parses its own words, before `dwork_args` runs); `--land` and `--mirror`
+# are land.py's, read before the verb is (`cmd_dwork`), so the verbs' own sets leave them out.
+DWORK_VALUE_FLAGS = tuple(sorted({f for (n, v), x in dyadlib.CLI.items() if n == "dwork" and v != "trace" for f in x.value_flags}))
+_LAND = {dyadlib.LAND_FLAG, *(f for f, _ in dyadlib.LAND_FLAGS)}
 DWORK_VERB_FLAGS = {   # what each verb reads; anything else is refused before a write, never silently dropped (#191)
-    "new": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--relayed-via", "--mandate"}, {"--backlog"}, 3),
-    "state": ({"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via", "--mandate", "--retired-by"}, {"--check"}, 3),   # #464; --said-ref #545
-    "retire": ({"-d", "--said", "--said-file"}, set(), None),   # #290: k ids, so the positional count is unbounded (None)
-    "list": ({"--state", "--craft"}, set(), 1)}
+    v: (set(dyadlib.CLI[("dwork", v)].value_flags) - _LAND, set(dyadlib.CLI[("dwork", v)].bare) - _LAND,
+        None if dyadlib.CLI[("dwork", v)].most is None else dyadlib.CLI[("dwork", v)].most + 1)   # + the verb itself
+    for v in ("new", "state", "retire", "list")}   # #290: `retire` takes k ids, an unbounded count (None)
 
 def dwork_args(a):
     """`dwork` argv as (positionals, {flag: value}, {bare flags}). A flag's value is never a
@@ -2009,23 +2098,29 @@ def trace_refusal(rg, rid, d):
     """The fence's `rows.trace_problems` said before the first write (#465): under `dwork-trace: always` a `Y done`
     entry — a mandate close excepted, whose note holds `mandate #` — is recorded only with
     `<instance>/d-work/traces/<id>.md` already in this work tree, so the commit that records it can carry it
-    (Rule-3 Completion). Returns the refusal text, or None."""
+    (Rule-3 Completion), and never beside a preview (#592 R-b) — in a batch's worktree too, where a `land` line has
+    carried it or `origin/main` already holds it. Returns the refusal text, or None."""
     import dyadlib
     if d is None or not rg.DONE_Y.match(f"2000-01-01 {d}") or "mandate #" in d:
         return None
     if dyadlib.preference(rg.TRACE_KEY, REPO) != rg.TRACE_ALWAYS:
         return None
     tp = dyadlib.instance(REPO) / "d-work" / "traces" / f"{rid}.md"
-    if tp.is_file():
-        return None
     rel = tp.relative_to(REPO).as_posix() if tp.is_relative_to(REPO) else str(tp)
+    if tp.is_file():   # #592 R-b: the fence's preview clause said here too — a preview beside a Done record fails the push
+        if not any(l.startswith(rg.PREVIEW_MARK) for l in tp.read_text(encoding="utf-8").splitlines()):
+            return None
+        return (f"refused: {rel} is a preview (`{rg.PREVIEW_MARK}` under Limits), and the Done record carries the trace "
+                f"through the Done-`Y` (#592 R-b; the fence refuses the commit otherwise); rewrite it first: "
+                f"dyad dwork trace {rid} --out --said-file <the Done words, the file this line records>, and re-run; "
+                f"under --land the rewritten trace rides the same commit: a `land {rel}` line before this line")
     return (f"refused: a `Y done` entry is recorded with its trace under `dwork-trace: always` (Rule-3 Completion: "
             f"the Done record commit carries it, #465), and {rel} does not exist; write it first: "
-            f"dyad dwork trace {rid} --out, and re-run; under --land the trace rides the same commit: "
+            f"dyad dwork trace {rid} --out --said-file <the Done words, the file this line records>, and re-run; under --land the trace rides the same commit: "
             f"`dyad dwork batch <file> --land` with a `land {rel}` line before this line")
 
 def cmd_dwork(a):
-    sys.path.insert(0, str(PKG / "scripts")); import dyadlib, datetime
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
         return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
     pos, _, bare = dwork_args(a)
@@ -2039,7 +2134,7 @@ def cmd_dwork(a):
     except dyadlib.InvariantError as e:
         sys.exit(f"refused: {e}")
     rows = {r.id: r for r in dyadlib.read_rows(REPO)}
-    today = datetime.date.today().isoformat()
+    today = dyadlib.utc_date()   # #592 R-b: a stored date is UTC, never the host's local day
     pos, vals, bare = dwork_args(a)
     verb = pos[0] if pos else None
     if verb in DWORK_VERB_FLAGS:
@@ -2109,6 +2204,13 @@ def cmd_dwork(a):
                          "it takes no -d, --said or --prompt")
             mid, mwords, mdate = mandate_words(rows, mandate)
             fence_for("disposition", mwords)
+            # #592 R-c (mode 31): the mandate scope's ceiling is the Operator's number (Rule-3 Plan). The plan's stated
+            # ceiling refuses the row past it; the seat's charter ceiling (MANDATES.md) only warns (the home, F11)
+            refusal, warns = dyadlib.load_guard("agent", "plans").ceiling_check(rows, mid, REPO)
+            for w in warns:
+                print(f"warn [plan] {w.removeprefix('warning: ')}", file=sys.stderr)
+            if refusal:
+                sys.exit(refusal)
             # #574 revision 2: with --backlog, a row the plan's play-book prescribes is carried under the plan-`Y`
             # that runs it — born backlog, explicit (its Done never rides the parent's), entry 1 the mandate's words
             entries, mode = [("disposition", mwords, f"mandate #{mid}, {mdate}")], (dyadlib.DEFAULT_MODE if backlog else "implicit")
@@ -2225,6 +2327,10 @@ def cmd_dwork(a):
             refusal = landing_refusal(rg, done_entries)
             if refusal:
                 sys.exit(refusal)
+        if state == "planned" and r.state != "planned":
+            # #592 R-c: the plan check runs at the transition, before the first write (not on a Done record of a planned row) — warnings, never a refusal (counsel's, hand-off)
+            for m in dyadlib.load_guard("agent", "plans").check_dwork(rid, REPO):
+                print(f"warn [plan] {m.removeprefix('warning: ')}", file=sys.stderr)
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
@@ -2369,6 +2475,11 @@ def cmd_automaton(a):
     """The d-work automaton lives in scripts/automaton.py (d-work #556); this is dispatch only (S4)."""
     return dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton").main(a, REPO)
 
+def cmd_plan(a):
+    """The plan check's CLI lives at guards/agent/plans.py (it is also the guard); this is dispatch only (S4, d-work #592)."""
+    sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    return dyadlib.load_guard("agent", "plans").cli(a, REPO)
+
 def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
@@ -2379,6 +2490,8 @@ dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at im
 
 if __name__ == "__main__":
     a = sys.argv[1:]
+    if (gated := dyadlib.cli_gate(a, doc=__doc__)) is not None:   # #592 R-a: `-h`/`--help` and unknown flags, before any dispatch
+        sys.exit(gated)
     if a and a[0] == "runbook":
         sys.exit(cmd_runbook(a[1:]))
     if a and a[0] == "craft":
@@ -2405,29 +2518,31 @@ if __name__ == "__main__":
         sys.exit(cmd_ledger())
     if a and a[0] == "dwork":
         sys.exit(cmd_dwork(a[1:]))
+    if a and a[0] == "plan":
+        sys.exit(cmd_plan(a[1:]))
     if a and a[0] == "project":
         sys.exit(cmd_project(a[1:]))
     if not a or a[0] not in ("check", "build", "install"):
         sys.exit(__doc__)
+    got = dyadlib.cli_parse(dyadlib.CLI[dyadlib.cli_form(a)[0]], dyadlib.cli_form(a)[1])   # the gate's own reading (#592)
     if a[0] == "check" and "--evidence" in a:
-        if "--show" in a:                                                # check --evidence --show <sha256> (#476)
-            i = a.index("--show"); sys.exit(cmd_evidence_show(a[i + 1] if i + 1 < len(a) else None))
-        brief = "--brief" in a                                           # check --evidence --brief (#476)
-        if "--at" in a:                                                  # check --evidence --at <rev> (#448)
-            i = a.index("--at"); sys.exit(cmd_evidence_at(a[i + 1] if i + 1 < len(a) else None, brief=brief))
+        if "--show" in got.values:                                       # check --evidence --show <sha256> (#476)
+            sys.exit(cmd_evidence_show(got.one("--show")))
+        brief = "--brief" in got.bare                                    # check --evidence --brief (#476)
+        if "--at" in got.values:                                         # check --evidence --at <rev> (#448)
+            sys.exit(cmd_evidence_at(got.one("--at"), brief=brief))
         sys.exit(cmd_evidence(brief=brief))
     if a[0] == "check" and "--corroborate" in a:                       # check --corroborate [<before> [<after>]] (#564)
-        i = a.index("--corroborate"); sys.exit(cmd_corroborate(*a[i + 1:i + 3]))
+        sys.exit(cmd_corroborate(*got.pos[:2]))
     if a[0] == "check" and "--pr" in a:
-        i = a.index("--pr"); sys.exit(cmd_pr(*a[i + 1:i + 3]))
+        sys.exit(cmd_pr(*got.pos[:2]))
     if a[0] == "check" and "--guards" in a:
-        hook = a[a.index("--pre-push") + 1:a.index("--pre-push") + 3] if "--pre-push" in a else []   # git's <remote> <url> (#518)
-        sys.exit(cmd_guards(pre_push="--pre-push" in a, remote=(hook[0] if hook else None), url=(hook[1] if len(hook) > 1 else None)))
+        pre_push = "--pre-push" in got.bare; hook = got.pos if pre_push else []   # git's <remote> <url> (#518)
+        sys.exit(cmd_guards(pre_push=pre_push, remote=(hook[0] if hook else None), url=(hook[1] if len(hook) > 1 else None)))
     if a[0] == "check" and "--list" in a:
         sys.exit(cmd_list())
     if a[0] == "check" and "--tests" in a:
-        i = a.index("--tests"); sys.exit(cmd_tests(*a[i + 1:i + 2]))
+        sys.exit(cmd_tests(*got.pos[:1]))
     if a[0] == "install" and "--from" in a:                              # dyad install <repo> --from <src> (#353)
-        i = a.index("--from"); rest = a[1:i] + a[i + 2:]
-        sys.exit(cmd_install(rest[0], a[i + 1]) if rest and i + 1 < len(a) else __doc__)
+        sys.exit(cmd_install(got.pos[0], got.one("--from")) if got.pos and got.one("--from") else __doc__)
     sys.exit({"check": lambda: cmd_check(), "build": lambda: cmd_build(*a[1:2]), "install": lambda: cmd_install(*a[1:2])}[a[0]]())

@@ -3,7 +3,8 @@
 `dwork-trace`, placed per Rule-11 property 1). Kernel: Python 3.12+.
 The registry entry for the trace store `<instance>/d-work/traces/`, whose parser and check stay in
 `dyad/scripts/trace.py` (`check_store`): every file is `<id>.md` for an existing row, opens with
-`# Trace #<id> — <title>`, and holds the five sections in order. Run in the guard pass on every push
+`# Trace #<id> — <title>`, and holds the five sections in order; a stored preview fails unless the instance's
+`traces_preview_legacy.local.txt` names it, and warns while it keeps none (#592 R-b). Run in the guard pass on every push
 and evidence run instead of only inside Rule-12's suite (d-work #227; #217 found it suite-only).
 Whether a trace's figures are right stays inference: its own Limits section says what it could not
 anchor. An absent store passes (no d-work traced yet, a fresh install).
@@ -48,11 +49,15 @@ def main(argv=None) -> int:
     a = argv if argv is not None else sys.argv[1:]
     root = Path(a[0]).resolve() if a else dyadlib.repo_root()
     msgs = check_package(root)
+    fails = [m for m in msgs if not m.startswith("warning:")]   # #592: a stored preview warns while no list is kept
     for m in msgs:
-        print(f"FAIL [rule-3] {m}", file=sys.stderr)
-    if not msgs:
+        if m in fails:
+            print(f"FAIL [rule-3] {m}", file=sys.stderr)
+        else:
+            print(f"warn [rule-3] {m.removeprefix('warning:').strip()}")
+    if not fails:
         print(f"ok   [rule-3] {summary(root)}")
-    return 1 if msgs else 0
+    return 1 if fails else 0
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import (crafts/syseng/rules/invariants.md p1)
 

@@ -34,7 +34,8 @@ files and almost never merge.
   `package.py dwork state` locally; a done d-work is never reopened — a new row refs it;
   `archived` (Rule-3) is its one further step, itself terminal (#37). `backlog → archived` is the
   board's only other exit: a row the operator never asked for is retired by the disposition that
-  names it (Rule-3's retirement form) instead of being worked to `done` first (#290).
+  names it — the retirement form, or the done-`Y` of a delivered row whose Done question names it under `retires`
+  (Rule-3, #585) — instead of being worked to `done` first (#290).
 - A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
   Scope). Optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it.
@@ -60,7 +61,9 @@ files and almost never merge.
   (`<date> Y|N plan|done|release|backlog`), or a `Y plan (`, `Y done (` or `Y release (` entry — is refused at post
   and by the guard, because authority is read from the rows and the provenance store alone; a report therefore names
   the row whose entry it means and never quotes the entry. It is written by `dyad inbox post` (the sender is
-  `DYAD_SESSION`) as a ledger-only commit, read by `dyad inbox read` (its markers one ledger-only commit) and
+  `DYAD_SESSION`) as a ledger-only commit — the same message to each `--cc` unit's box in that one commit (#572),
+  and a post from the board's holder to a unit its entry does not yet name adds that unit to `owner` in the same commit,
+  so the relay fence's write-ahead holds without a second write (#586) — read by `dyad inbox read` (its markers one ledger-only commit) and
   `dyad inbox list`, and its unread count is printed by `dyad board resume` and `dyad session touch`. Its guard,
   `dyad/guards/agent/inbox.py` (entity `message`), checks shape — `to` the box, `from` the sender in the name, `row`
   an existing row, no marker without its message — the refusal, and, on each commit pushed, append-only (#536).
@@ -202,6 +205,8 @@ craft's roles and names the reconcile check's owner by charter 2026-11-02 (d-wor
 cabinet's, and "the operate unit's" named an instance position; see the same record, amendment #560. Conditions'
 presence trigger names the acts that hand a unit a row, and the plan-less-row bullet names `touch_owned`, 2026-11-03 (d-work #567): under `m4` the home answers every plan-`Y`, so
 "answers a plan-`Y`" touched the home's file and never the owner's, and the files-overlap signal went stale; see the same
-record, amendment #567.
+record, amendment #567. Store names the Done route of `backlog → archived`, `inbox post --cc`, and the holder's post that adds an
+owner 2026-11-04 (d-work #585, carrying #572 and #586): the retirement form had been the only exit named, and two inbox
+verbs had landed with no sentence; see `../falsification/rules/rule-3-d-work.md`, amendment #585.
 
 Set: System Requirements.
