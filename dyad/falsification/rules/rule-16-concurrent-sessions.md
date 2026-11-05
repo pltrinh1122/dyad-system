@@ -374,3 +374,27 @@ PR #653): the same message in each `--cc` box in one commit, and the holder's po
 are statements of the store, Rule-16's concern, and decide nothing.
 
 Disposition: see ledger #585.
+
+## Amendment — d-work #604 (2026-11-05: the #553 aliases removed; H3 step 4 of #573)
+Claim (plan #604, carried under mandate #570; #573 step 4, counsel's half): once the 0.18.0 cut shipped the deprecation
+warnings (#573 B3), the old forms `waiting-on: seat <name>` and `attended-seats` are no longer read. Store and Presence
+say they are refused, naming their new forms. The vocabulary's alias rows `seat`, `attended` and `executor` go, and the
+crosswalk marks the two read aliases removed.
+
+| # | attack | result |
+|---|---|---|
+| 1 | (#573 B3) The removal comes one release early. | Refuted: `dyad-operator-v0.18.0` shipped both forms with a `warn` line naming the new one (#573 step 5), so the next core release is the release after next the crosswalk promised. |
+| 2 | (#573 B4) Dropping the key silently unpairs `communicate`. | Refuted: the instance's table holds `paired-units` (#573 step 3); and a table still holding `attended-seats` now fails the presence guard, naming `paired-units` (#604 R1), so no table unpairs silently. |
+| 3 | The text may land before the code (#671). | Survives, scoped: both are named by #604's one Done question and land together. The code merges first (Rule-1: referent before referrer), and the automaton merges in the order the entry names them. |
+| 4 | (#573 B5) `executor` is a read alias. | Refuted: no tool reads it as an alias. The countersign play-book keeps the word as the model's own; only the vocabulary row goes. |
+| 5 | Rules 3 and 7 use "seat" for the generic. | Refuted: grep finds "seat" in their Provenance only, which is history (#553: history keeps its words). No edit. |
+| 6 | Removing the `attended` row orphans Rule-16's attendance check. | Refuted: the check is stated in Presence over `paired-units` and the records; the alias row carried no definition of its own. |
+
+**Rule-6.** Rows removed: `seat`, `attended`, `executor`. No remaining row's `used by` loses a Rule. `holder` reads
+"holds a unit", and `pair` loses its alias clause. Each Rule that used a removed row (16) still reads correctly: it
+names `unit`, `paired-units` and the automaton.
+**Pairwise (Rule-5).** **16–3**: Rule-3 reads the board's `waiting-on` through the store; its form is Rule-16's.
+**16–6**: the vocabulary loses three alias rows; no term is redefined. **16–7**: Rule-7's attendance-free text is
+unchanged. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #604.
