@@ -127,6 +127,20 @@ class SurfaceTests(unittest.TestCase):
             self.assertTrue(board.WAITING.fullmatch(form.replace("<name>", "counsel").replace("<ref>", "run 1")), form)
         self.assertNotIn("seat", cell[2]); self.assertFalse(hasattr(board, "UNIT_ALIAS"))
         self.assertFalse(board.WAITING.fullmatch(board.RETIRED_WAITING + "counsel"))
+        values = ticks(rows["board `cabinet` value"][2])                       # #594: the cabinet form
+        self.assertEqual(values, ["program", "program-<operator>"])
+        self.assertTrue(board.CABINET.fullmatch(values[0]) and board.CABINET.fullmatch(values[1].replace("<operator>", "bob")))
+        self.assertEqual(rows["board `cabinet` value"][3], "`board.CABINET`")
+        self.assertEqual(ticks(rows["board cross-row"][1]), [f"d-work/board/{board.COS}.md", f"{board.cos_name('program-<operator>')}.md"])
+
+    def test_s1_the_board_names_every_cabinets_cos(self):
+        """#594: `board set <id>|_cos[-<operator>]`, in the surface row, the board's usage and `dyad help`."""
+        board = dyadlib.load_guard("agent", "board")
+        row = next(r for r in self.s["S1"] if ticks(r[0])[0] == "dyad board")
+        self.assertIn("board set <id>|_cos[-<operator>] key=value...", ticks(row[0]))
+        self.assertIn("board set <id>|_cos[-<operator>] key=value…", board.USAGE)
+        self.assertIn("set <id>|_cos[-<operator>] key=value…", (PKG / "scripts" / "package.py").read_text())
+        self.assertFalse([r[0] for rows in self.s.values() for r in rows if "#594" in r[-1]], "no `moving (#594)` mark")
 
     def test_s3_preference_keys(self):
         sessions = dyadlib.load_guard("agent", "sessions")

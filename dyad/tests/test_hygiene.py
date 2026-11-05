@@ -7,7 +7,8 @@
 - placement: no runner path (`check`, `--evidence`, `--corroborate`, the gate) and no guard reaches it;
 - every line is information, never a disposition shape (the module's TREE_INVARIANTS);
 - work in flight (d-work #569): one fixture per kind W1-W10', and the exemptions (A3, A4, A6, A9);
-- W11 phase age (d-work #587 F5): a phased entry past its phase's threshold, worded from its `since` alone."""
+- W11 phase age (d-work #587 F5): a phased entry past its phase's threshold, worded from its `since` alone;
+- two cabinets (d-work #594): each entry read with its own cabinet's `_cos` file, each line tagged with its cabinet."""
 import os, shutil, subprocess, sys, tempfile, time, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -260,6 +261,38 @@ class InflightTests(unittest.TestCase):
         am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
         groups = am.notice_groups([f"finding: {l}" for l in got] + ["finding: inflight W1 relay unread: x"])
         self.assertEqual([k for k, _ in groups], ["work in flight W1", "work in flight W11"])   # its own notice
+
+    def test_two_cabinets_each_read_with_its_own_cos(self):
+        """#594: on a two-cabinet board B's unit raises no W7a against A's seats, `_cos-bob`'s promise and row 2's entry's
+        promise (whose text names row #1, of A's cabinet) are aged by W8 and tagged with their own files' cabinet,
+        and B's W9 line and W10' read go to B's leader's home — each line tagged with its cabinet."""
+        B = "program-bob-cccccccc"
+        self.row(1); self.row(2)
+        self.put("board/_cos.md", "holder: home-a\nseats: eng-1 s1\n")
+        self.put("board/_cos-bob.md", f"holder: {B}\nseats: eng-b s2\npromised: B's follow-up\n")
+        self.put("board/1.md", "holder: home-a\nowner: eng-1\nwaiting-on: unit eng-1\nsince: 2025-11-04T10:00Z\n")
+        self.put("board/2.md", f"holder: {B}\ncabinet: program-bob\nowner: eng-b\nwaiting-on: operator\n"
+                               "since: 2025-11-01T00:00Z\nquestion: Y/N: B's question?\npromised: merge after row #1\n")
+        for box, n in ((B, "a"), ("home-a", "b")):
+            self.put(f"inbox/{box}/{n}.md", "from: eng-b\nto: x\nrow: 2\nkind: report\nsent: 2025-11-04T12:00:00Z\nbody: done\n")
+        self.commit(at=NOW - 5 * DAY)
+        got = hy.inflight_cabinets(self.d, "HEAD", NOW, [], lambda seat, at: True)
+        self.assertEqual([l for _, l in got], self.run_it(fresh=lambda seat, at: True))   # `inflight` is its lines
+        self.assertFalse([l for _, l in got if " W7a " in l], got)                         # eng-b is in B's own seats
+        w8 = sorted((c, l.split(" has promised")[0]) for c, l in got if " W8 " in l)
+        self.assertEqual(w8, [("program-bob", "inflight W8 promise still listed: board 2"),     # its file's cabinet, never
+                              ("program-bob", "inflight W8 promise still listed: board _cos-bob")])   # the `row #1` it names
+        self.assertTrue(any(c == "program-bob" and l.startswith("inflight W8 promise still listed: board _cos-bob has promised")
+                            for c, l in got), got)
+        self.assertIn(("program-bob", "inflight W9 operator wait: row #2's question to the operator stands since "
+                                      "2025-11-01T00:00Z (over 24h)"), got)
+        w10 = [(c, l) for c, l in got if " W10' " in l]
+        self.assertEqual(w10, [("program-bob", "inflight W10' report after board: row #2's board since 2025-11-01T00:00Z, "
+                                               "but eng-b reported on it at 2025-11-04T12:00:00Z")])   # B's home's box, once
+        self.put("board/1.md", "holder: home-a\nowner: eng-1; eng-b\nwaiting-on: unit eng-1\nsince: 2025-11-04T10:00Z\n")
+        self.commit()
+        got = hy.inflight_cabinets(self.d, "HEAD", NOW, [], lambda seat, at: True)
+        self.assertIn(("program", "inflight W7a unit not in table: eng-b is named on the board but not in _cos's seats"), got)
 
     def test_w11_done_ready_is_the_tunable(self):
         """#587 S9: `done-ready`'s threshold is `inflight-done-ready-hours`, read when the sweep runs (default 4 h from

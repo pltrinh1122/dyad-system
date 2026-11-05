@@ -24,8 +24,8 @@ ledger lines only and never from a conversation:
       job: what hosted CI on `main` checks, which a push made with the workflow's token never starts (d-work #564 E1).
       The suite runs only when the landed code differs from an evidenced PR head. A failure is posted to home and the
       run exits 1, so the run's conclusion shows it.
-A refusal decides nothing: it is posted once to the home's inbox as a `notice` (the board's `_cos` holder, or
-`AUTOMATON_HOME`), and the home takes it from there by inference. Every message names the row and never quotes an entry
+A refusal decides nothing: it is posted once to the home's inbox as a `notice` (the holder of the `_cos[-<operator>]`
+file of the row's cabinet, #594, or `AUTOMATON_HOME`), and the home takes it from there by inference. Every message names the row and never quotes an entry
 (the inbox carries information, never authority, #536).
 
 **Stateless.** Every run re-reads `origin/main` (the rows, the board, the inbox) and every act is idempotent: a merged
@@ -125,12 +125,23 @@ def inst(repo: Path) -> str:
     return rel
 
 
-def home(repo: Path, base: str) -> str | None:
-    """The home's seat: `AUTOMATON_HOME`, else the holder of the board's `_cos` entry on main."""
+def home(repo: Path, base: str, cabinet: str) -> str | None:
+    """The home's seat: `AUTOMATON_HOME`, else the holder of `cabinet`'s `_cos[-<operator>]` file on main (#594), else —
+    when that file is absent or holds no holder — `program`'s, so a finding or a refusal always reaches some leader.
+    `cabinet` has no default: a row-scoped call names its row's cabinet (`row_cabinet`), so a missed site fails loudly."""
     if os.environ.get("AUTOMATON_HOME"):
         return os.environ["AUTOMATON_HOME"]
-    text = show(repo, base, f"{inst(repo)}/d-work/board/{board().COS}.md")
-    return board().parse(text)[0].get("holder") if text else None
+    for c in dict.fromkeys([cabinet, board().SOLO]):
+        text = show(repo, base, f"{inst(repo)}/d-work/board/{board().cos_name(c)}.md")
+        if text and (h := board().parse(text)[0].get("holder")):
+            return h
+    return None
+
+
+def row_cabinet(repo: Path, base: str, rid: int) -> str:
+    """The cabinet row `rid`'s board entry on main is filed under; `program` when it has no entry (#594)."""
+    text = show(repo, base, f"{inst(repo)}/d-work/board/{rid}.md")
+    return board().entry_cabinet(board().parse(text)[0] if text else {})
 
 
 def box_messages(repo: Path, base: str, seat: str) -> list[dict[str, str]]:
@@ -166,7 +177,6 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         if not owed:
             acts.append(("close", r.id))
     byid = {r.id: r for r in rows}
-    to = home(repo, base)
     for r in rows:   # #574 G5: a Done naming no merge is `done` at once and no close runs; its retires are archived here
         op = (rg.operative_done(r.disposed) or "") if r.state == "done" else ""
         if not op or rg.DONE_MERGES.search(f"2000-01-01 {op}"):
@@ -178,6 +188,7 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         for x in named:                                # told once, never resolved (G5): a row no longer backlog or done
             if x not in byid or byid[x].state not in ("backlog", "done", "archived"):
                 why = stray_body(r.id, x, byid[x].state if x in byid else "no row")
+                to = home(repo, base, row_cabinet(repo, base, r.id))   # the row's cabinet's home (#594)
                 if to and not posted(repo, base, to, r.id, why):
                     acts.append(("tell", r.id, why))
     for r in rows:
@@ -193,6 +204,7 @@ def plan(repo: Path) -> tuple[str, list[tuple]]:
         owners = board().owners(entry)
         if (refusal := board().retired_waiting(entry.get("waiting-on", ""))):   # #604: told to home, never rewritten
             why = retired_body(r.id, refusal)
+            to = home(repo, base, row_cabinet(repo, base, r.id))   # the row's cabinet's home (#594)
             if to and not posted(repo, base, to, r.id, why):
                 acts.append(("tell", r.id, why))
         if owners and not board_after_plan_y(repo, base, r.id) and (pairs := planned_flip(r.id, entry, owners)):
@@ -439,7 +451,7 @@ def evidence_verdict(repo: Path, base: str, rid: int, cut: list[tuple[int, str]]
     or `evidence-failed`, or None when the evidence says nothing about the PRs (note: why, for home). (None, line) when
     that refusal is already told to home for these heads: it is neither re-run nor re-told until a head moves."""
     what = evidence_what(cut)
-    to, prefix = home(repo, base), f"automaton: {what} refused for row #{rid}:"
+    to, prefix = home(repo, base, row_cabinet(repo, base, rid)), f"automaton: {what} refused for row #{rid}:"
     if to and any(m.get("from") == SEAT and m.get("row") == str(rid) and m.get("body", "").startswith(prefix)
                   for m in box_messages(repo, base, to)):
         return None, f"refused, already told {to}: {prefix} (not re-run)"
@@ -983,7 +995,8 @@ def notice_parts(group: list[str]) -> list[list[str]]:
 def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     """(lines, rc). Read-only but for one write: the event its own health run recorded, landed events-only on `row`
     (#593, `land_events`). Every finding prints; findings no automaton notice in the home's inbox has told yet are
-    posted in one notice on `row`; rc 1 when any finding fails."""
+    posted in one notice on `row`; rc 1 when any finding fails. Per cabinet (#594): an in-flight line goes to the home
+    of the cabinet it concerns (`hygiene.inflight_cabinets`), every other line to `program`'s."""
     import datetime
     now = datetime.datetime.now(datetime.timezone.utc)
     base = land.fetch(repo)
@@ -995,28 +1008,39 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
         found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
         hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
         found += [(False, f"finding: {h}") for h in hyg]
-        found += [(False, f"finding: {h}") for h in hygiene_mod.inflight(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)]   # #569
+        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)   # #569, per cabinet #594
+        found += [(False, f"finding: {h}") for _, h in flight]
         try:                                                 # read before the lock goes: the next land resets wt
             events_at, fresh, event_notes = new_events(wt)
         except Exception as e:                               # the event step never fails the sweep's findings
             events_at, fresh, event_notes = None, {}, [f"events: not read ({type(e).__name__}); not landed"]
     lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
+    cabinet = {f"finding: {h}": c for c, h in flight}
     rc = 1 if any(f for f, _ in found) else 0
-    to = home(repo, base)
-    told = " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
-    new = [l for l in lines if finding_key(l.removeprefix("finding: ")) not in told]
-    summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {len(new)} new"
-    if new and row and to:
-        sent = []
-        for kind, group in notice_groups(new):
-            for part in notice_parts(group):
-                body = f"automaton sweep at {base[:12]}, {kind}: " + " | ".join(part)
-                try:
-                    sent.append(post(repo, to, row, body))
-                except (Refused, inbox().Refused) as e:
-                    sent.append(f"the notice to {to} was refused ({e})")
+    homes = {c: home(repo, base, c) for c in dict.fromkeys([board().SOLO, *cabinet.values()])}
+    routed: dict[str | None, list[str]] = {}
+    for l in lines:
+        routed.setdefault(homes[cabinet.get(l, board().SOLO)], []).append(l)
+    told = {to: " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
+            for to in routed}
+    new = {to: [l for l in ls if finding_key(l.removeprefix("finding: ")) not in told[to]] for to, ls in routed.items()}
+    count = sum(len(v) for v in new.values())
+    summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {count} new"
+    sent, untold = [], False
+    for to, ls in new.items():
+        if ls and row and to:
+            for kind, group in notice_groups(ls):
+                for part in notice_parts(group):
+                    body = f"automaton sweep at {base[:12]}, {kind}: " + " | ".join(part)
+                    try:
+                        sent.append(post(repo, to, row, body))
+                    except (Refused, inbox().Refused) as e:
+                        sent.append(f"the notice to {to} was refused ({e})")
+        elif ls:
+            untold = True
+    if sent:
         summary += "; " + "; ".join(sent)
-    elif new:
+    if untold:
         summary += "; not told (no --row or no home)"
     event_lines = event_notes + [land_events(repo, events_at, fresh, row)]   # after the notices; never changes rc
     return lines + event_lines + [summary], rc
@@ -1061,11 +1085,11 @@ def reason(why: str) -> str:
 def escalate(repo: Path, row: int, what: str, why: str) -> str:
     """A refusal, posted once to the home's inbox; the home decides."""
     base = land.fetch(repo)
-    to = home(repo, base)
+    to = home(repo, base, row_cabinet(repo, base, row))
     body = f"automaton: {what} refused for row #{row}: {reason(why)}"
     body = inbox().DISPOSITION.sub("[an entry, read in the ledger]", body)
     if not to:
-        return f"refused, and no home to tell (no AUTOMATON_HOME and no board _cos holder): {body}"
+        return f"refused, and no home to tell (no AUTOMATON_HOME and no holder of the row's cabinet's _cos file): {body}"
     if posted(repo, base, to, row, body):
         return f"refused, already told {to}: {body}"
     try:
@@ -1158,7 +1182,8 @@ def run(repo: Path, evidence_from: Path | None = None) -> list[str]:
                 else:
                     out.append(escalate(repo, act[1], "archive of the rows its Done retires", str(e)))
         elif act[0] == "tell":
-            to = home(repo, land.fetch(repo))
+            fresh = land.fetch(repo)
+            to = home(repo, fresh, row_cabinet(repo, fresh, act[1]))   # the row's cabinet's home (#594)
             try:
                 out.append(f"refused, {post(repo, to, act[1], act[2])}: {act[2]}")
             except (Refused, inbox().Refused) as e:

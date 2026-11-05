@@ -184,7 +184,8 @@ def seat_kind(seat: dict[str, str | None], functions: list[str] | None) -> str:
 
 def name_problems(sid: str, root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
     """Advisory lines about a seat name under `organization: m4`: outside the form, or a function the installed
-    craft does not list, or an `<hp>` that is not the holder's. Empty under `flat`, and never a guard failure."""
+    craft does not list, or a leader whose operator segment ends in eight hex (#594: it reads as a `-<hp>`, so no
+    cabinet is recognised), or an `<hp>` that is not the holder's. Empty under `flat`, and never a guard failure."""
     if organization(root) != "m4":
         return []
     form, functions, source = seat_form(pkg)
@@ -194,6 +195,9 @@ def name_problems(sid: str, root: Path | None = None, pkg: Path = dyadlib.PKG) -
     out = []
     if seat_kind(seat, functions) == "unknown-function":
         out.append(f"seat name {sid!r}: function {seat['function']!r} is none of {', '.join(functions or [])} (the organization craft's data)")
+    if seat["function"] == LEADER_FUNCTION and seat["topic"] and re.search(r"-[0-9a-f]{%d}$" % HP_LEN, "-" + seat["topic"]):
+        out.append(f"seat name {sid!r}: the operator segment {seat['topic']!r} ends in {HP_LEN} hex, which reads as a `-<hp>`: "
+                   f"this leader's cabinet is not recognised (board.valid_cabinet, #594) — name the operator otherwise")
     h = holder()
     if h and seat["hp"] != h[:HP_LEN]:
         out.append(f"seat name {sid!r}: <hp> {seat['hp']} is not this holder's ({h[:HP_LEN]}…) — a renamed session or a reused file")
@@ -286,7 +290,7 @@ def owned_rows(root: Path) -> list[str]:
     sid = os.environ.get("DYAD_SESSION", "")
     b = dyadlib.load_guard("agent", "board")
     states = {str(r.id): r.state for r in dyadlib.read_rows(root)}
-    return sorted((n for n, f in b.load(root) if n != b.COS and sid in b.owners(f)
+    return sorted((n for n, f in b.load(root) if not b.is_cos(n) and sid in b.owners(f)
                    and states.get(n) not in (None, *dyadlib.TERMINAL_STATES)), key=int)
 
 def touch(root: Path, rows: list[str], files: list[str], here: Path | None = None) -> Path:

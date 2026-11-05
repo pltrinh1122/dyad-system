@@ -612,6 +612,12 @@ class SeatNameTests(unittest.TestCase):
             self.assertIn("is not this holder's", self._touch(self._root("m4"), "engineer-deadbeef"))
             self.assertEqual(self._touch(self._root("m4"), "engineer-1537d8fb"), "")
             self.assertEqual(self._touch(self._root("m4"), "engineer-deadbeef", holder=None), "")   # no holder reported: nothing to compare
+    def test_touch_warns_on_a_leaders_eight_hex_operator_segment(self):
+        with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
+            for name in ("program-cafebabe-1537d8fb", "program-bob-12345678-1537d8fb"):
+                self.assertIn("reads as a `-<hp>`", self._touch(self._root("m4"), name), name)   # #594: no cabinet recognised
+            for name in ("program-bob-1537d8fb", "program-1537d8fb", "engineer-cafebabe-1537d8fb"):
+                self.assertNotIn("reads as a `-<hp>`", self._touch(self._root("m4"), name), name)
     def test_touch_is_silent_under_flat(self):
         with mock.patch.object(sv.dyadlib, "find_guard", return_value=None):
             self.assertEqual(self._touch(self._root("flat"), "cos-1"), "")

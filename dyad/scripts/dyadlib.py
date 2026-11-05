@@ -1003,7 +1003,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("release", "ready"):       CliForm("<row> <tag>", (("--at", "<cut>"), ("--archive", "<sha256>"))),
     ("merge", None):            CliForm("<pr>", (("--head", "<sha>"),)),
     ("board", None):            CliForm(),
-    ("board", "set"):           CliForm("<id>|_cos key=value...", (), ("--drop",)),
+    ("board", "set"):           CliForm("<id>|_cos[-<operator>] key=value...", (), ("--drop",)),
     ("board", "resume"):        CliForm(),
     ("board", "advance"):       CliForm("<id>... <event> key=value...", (("--expect", "<phase>|none"), ("--said-file", "<path>"),
                                                                        ("--mirror", "<branch>"))),

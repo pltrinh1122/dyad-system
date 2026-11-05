@@ -25,6 +25,8 @@ The cases:
 - #587 X5: a verifying entry whose every PR is up at its recorded head gets the combined merge onto main and its
   evidence: `evidence-verified` with the sha256, or `evidence-failed` with the conflict or the first FAIL line as the
   note; an evidence run that says nothing about the PRs is told to home and fires nothing.
+- #594: the home is per cabinet — `home(…, cabinet)` reads that cabinet's `_cos[-<operator>]` file, `escalate` tells
+  the home of the row's cabinet, and the sweep tells each cabinet's home its own in-flight lines.
 - #587 X10: `evidence --out` writes those verdicts as JSON lines and fires, posts and lands nothing, refused in a job
   holding a write token; `run --evidence-from` fires each line only once it passes every check (its shape, a verdict
   of the machine's table, the row in verifying, its heads the board's recorded and the live ones), never computing.
@@ -40,6 +42,7 @@ SCRATCH = livetest.ScratchInstalls()
 tearDownModule = SCRATCH.cleanup
 am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
 HOME = "program-aaaaaaaa"
+BOB = "program-bob-cccccccc"                 # a second cabinet's leader (#594)
 
 
 CORROBORATED = []
@@ -848,7 +851,8 @@ class AutomatonTests(unittest.TestCase):
     def sweep(self, check=(), hygiene=((), ()), inflight=(), **kw):
         with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
-             unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: list(inflight)), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight_cabinets", lambda repo, base, now, pulls, prefs=None:
+                                        [l if isinstance(l, tuple) else ("program", l) for l in inflight]), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
              unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
@@ -902,6 +906,72 @@ class AutomatonTests(unittest.TestCase):
         self.assertTrue(any("work in flight W9: inflight W9 operator wait: row #9" in m and "row #10" in m for m in msgs), msgs)
         rc, out, _ = self.sweep(inflight=flight)
         self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
+
+    def two_cabinets(self):
+        """#594: B's cabinet beside A's — `_cos-bob.md` held by B's leader, row 12 filed under `program-bob`."""
+        files = dict(self.files)
+        files.update({f"{INST}/d-work/board/_cos-bob.md": f"holder: {BOB}\nwriter: h2\n",
+                      f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="open", disposed="2026-11-02 Y open"),
+                      f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y open\n\n```\nY\n```\n\n",
+                      f"{INST}/d-work/board/12.md": f"holder: {BOB}\ncabinet: program-bob\nwaiting-on: operator\nwriter: h2\n"})
+        self.w.write_main(files)
+
+    def test_home_is_per_cabinet(self):
+        self.two_cabinets()
+        base = git(self.w.origin, "rev-parse", "main")
+        git(self.w.seat, "fetch", "-q", "origin")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_HOME": ""}):
+            self.assertEqual((am.home(self.w.seat, base, "program"), am.home(self.w.seat, base, "program-bob"),
+                              am.home(self.w.seat, base, "program-eve")), (HOME, BOB, HOME))   # no _cos-eve: program's
+            with self.assertRaises(TypeError):
+                am.home(self.w.seat, base)                                    # no default: a missed site fails loudly
+            self.assertEqual((am.row_cabinet(self.w.seat, base, 12), am.row_cabinet(self.w.seat, base, 9),
+                              am.row_cabinet(self.w.seat, base, 10)), ("program-bob", "program", "program"))
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_HOME": "ops-1"}):
+            self.assertEqual(am.home(self.w.seat, base, "program-bob"), "ops-1")       # the override wins
+
+    def test_escalate_for_a_row_of_bs_cabinet_posts_to_bs_home(self):
+        self.two_cabinets()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_HOME": ""}):
+            got = am.escalate(self.w.seat, 12, "a test act", "because")
+        self.assertIn(f"posted a notice to {BOB} (row #12)", got)
+        (msg,) = self.inbox(BOB)
+        self.assertIn("automaton: a test act refused for row #12: because", msg)
+        self.assertEqual(self.inbox(HOME), [])
+
+    def eve_entry(self):
+        """#594: row 12 filed under `program-eve`, a cabinet with no `_cos-eve.md` and so no holder of its own."""
+        files = dict(self.files)
+        files.update({f"{INST}/d-work/rows/12.md": ROW.format(id=12, state="open", disposed="2026-11-02 Y open"),
+                      f"{INST}/d-work/provenance/12.md": "# Provenance #12\n\n## 1 disposition 2026-11-02 Y open\n\n```\nY\n```\n\n",
+                      f"{INST}/d-work/board/12.md": "holder: program-eve-dddddddd\ncabinet: program-eve\nwaiting-on: operator\nwriter: h3\n"})
+        self.w.write_main(files)
+
+    def test_a_cabinet_with_no_home_falls_back_to_programs(self):
+        self.eve_entry()
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_HOME": ""}):
+            got = am.escalate(self.w.seat, 12, "a test act", "because")
+        self.assertIn(f"posted a notice to {HOME} (row #12)", got)
+        (msg,) = self.inbox(HOME)
+        self.assertIn("automaton: a test act refused for row #12: because", msg)
+        flight = [("program-eve", "inflight W9 operator wait: row #12 waits on the operator with no question recorded")]
+        rc, out, err = self.sweep(inflight=flight)
+        self.assertEqual(rc, 0, out + err); self.assertNotIn("not told", out)
+        self.assertTrue(any("work in flight W9: inflight W9 operator wait: row #12 waits" in m for m in self.inbox(HOME)))
+
+    def test_the_sweep_tells_each_cabinets_home_its_own_lines(self):
+        self.two_cabinets()
+        flight = [("program-bob", "inflight W9 operator wait: row #12 waits on the operator with no question recorded"),
+                  ("program", "inflight W9 operator wait: row #9 waits on the operator with no question recorded")]
+        rc, out, err = self.sweep(inflight=flight)
+        self.assertEqual(rc, 0, out + err)
+        (b,) = self.inbox(BOB)                                                    # B's home: its own line only
+        self.assertIn("work in flight W9: inflight W9 operator wait: row #12 waits", b); self.assertNotIn("row #9 waits", b)
+        told_a = len(self.inbox(HOME))
+        (a,) = [m for m in self.inbox(HOME) if "work in flight W9" in m]          # A's home: A's line, and every other finding
+        self.assertIn("row #9 waits", a); self.assertNotIn("row #12 waits", a)
+        rc, out, _ = self.sweep(inflight=flight)
+        self.assertIn("0 new", out); self.assertEqual((len(self.inbox(BOB)), len(self.inbox(HOME))), (1, told_a))   # told once each
 
     def test_a_long_group_is_split_never_cut(self):
         lines = [f"finding: warn [x/y] line {i} " + "z" * 200 for i in range(40)]
