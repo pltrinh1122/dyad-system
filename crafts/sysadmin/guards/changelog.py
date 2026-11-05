@@ -8,7 +8,8 @@ columns dropped (`actor`, #216 — an instance mid-migration between a craft-zon
 workstation-zone PR that backfills it, Rule-1: referent before referrer). Each row has a `YYYY-MM-DD` date, a
 `#<id>` d-work cell (resolved by `references.py`, Rule-20), a class in dyadlib.HOST_CLASSES, a non-empty
 action, an `actor` in ACTORS where the column is present (the party whose hands executed the action
-— an Operator-run ops script is `operator`, an Agent-run command `agent`; a divergent credential is
+— an Operator-run ops script is `operator`, an Agent-run command `agent`, the automaton's execution of a reversible
+action a recorded plan-Y names `automaton`, never a destructive one (#593); a divergent credential is
 named in `outcome`, host-mutation.md), and — for a reversible or
 destructive action — a non-empty undo (Rule-8 Conduct; a destructive action may say `none` and why). A missing
 change log passes (fresh install before the first host action). Whether the row matches the plan's H-row
@@ -38,10 +39,12 @@ NAME, OWNER = "change-log row", "Rule-8"
 FIELDS = ("date", "d-work", "class", "action", "undo", "outcome", "actor")
 OPTIONAL = ("actor",)   # trailing suffix of FIELDS an *instance* header may omit while migrating (#216);
                         # the template (check_package) is always FIELDS exactly — never truncated
-ACTORS = ("operator", "agent")   # actor enum: the party whose hands executed the action (a divergent credential is named in outcome, host-mutation.md)
+AUTOMATON = "automaton"   # the third party, an executor (#593 P3): only a reversible action a recorded plan-Y names
+ACTORS = ("operator", "agent", AUTOMATON)   # actor enum: the party whose hands executed the action (a divergent credential is named in outcome, host-mutation.md)
 CLASSES = dyadlib.HOST_CLASSES
 LOGGED = ("reversible", "destructive")      # classes that need an undo cell (read-only is not normally logged)
 INVARIANTS = [("logged-classes-subset", lambda: set(LOGGED) <= set(CLASSES)),   # crafts/syseng/rules/invariants.md
+              ("automaton-is-an-actor", lambda: AUTOMATON in ACTORS and "destructive" in CLASSES),
               ("fields-name-key-columns", lambda: {"d-work", "class", "action", "undo", "outcome"} <= set(FIELDS)),
               ("optional-is-fields-suffix", lambda: FIELDS[len(FIELDS) - len(OPTIONAL):] == OPTIONAL)]
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -119,6 +122,8 @@ def check_text(text: str, where: str) -> list[str]:
             msgs.append(f"{where} row {k}: {d['class']} action with an empty undo (Rule-8)")
         if "actor" in d and d["actor"] not in ACTORS:
             msgs.append(f"{where} row {k}: actor `{d['actor']}` is not one of {', '.join(ACTORS)}")
+        elif d.get("actor") == AUTOMATON and d["class"] == "destructive":
+            msgs.append(f"{where} row {k}: a destructive action is never the automaton's (Rule-8 keeps its own question; #593)")
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG, craft: Path = CRAFT) -> list[str]:

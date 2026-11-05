@@ -41,10 +41,15 @@ class ChangelogTests(unittest.TestCase):
     def test_contract(self):
         self.assertEqual((cl.ENTITY, cl.CORPUS, cl.TRANSACTION, cl.FIELDS), ("changelog", "workstation", False, ("date", "d-work", "class", "action", "undo", "outcome", "actor")))
         self.assertIs(cl.CLASSES, dyadlib.HOST_CLASSES)
-        self.assertEqual(cl.OPTIONAL, ("actor",)); self.assertEqual(cl.ACTORS, ("operator", "agent"))
+        self.assertEqual(cl.OPTIONAL, ("actor",)); self.assertEqual(cl.ACTORS, ("operator", "agent", "automaton"))
     def test_good_rows_pass(self):
         root, pkg = fixture(HEAD + ROW + "| 2026-09-14 | #8 | destructive | rm -rf /y | none: throwaway data | done | operator |\n| 2026-09-14 | #9 | read-only | first runs | — | done; event: x-1 | agent |\n")
         self.assertEqual(cl.check_package(root, craft=pkg), []); self.assertEqual(cl.summary(root), "3 rows")
+    def test_the_automaton_is_an_actor_never_of_a_destructive_action(self):
+        root, pkg = fixture(HEAD + ROW + "| 2026-11-04 | #9 | reversible | restart x | systemctl start x | done | automaton |\n")
+        self.assertEqual(cl.check_package(root, craft=pkg), [])
+        root, pkg = fixture(HEAD + ROW + "| 2026-11-04 | #9 | destructive | rm -rf /y | none: throwaway | done | automaton |\n")
+        self.assertEqual(len(msgs := cl.check_package(root, craft=pkg)), 1); self.assertIn("never the automaton's", msgs[0])
     def test_absent_log_passes_and_template_header_checked(self):
         root, pkg = fixture(None); self.assertEqual(cl.check_package(root, craft=pkg), [])
         root, pkg = fixture(None, template="# log\n\n| when | what |\n|---|---|\n")

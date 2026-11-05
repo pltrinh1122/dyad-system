@@ -64,7 +64,10 @@ event, so it works with no craft installed; #155 amendment).
    out; a bare shell block in a run-book fails the check. The role (vocabulary) gates who may run
    it: a command whose line names `sudo` or a credential word (`runbook.CREDENTIAL_WORDS`) is role
    `operator` and the runner refuses it under the agent role (exit 2) — the mechanical form of
-   property 3's "Operator-run" (Rule-8). *(Borderline, moved with a note — #155 attack 3: this
+   property 3's "Operator-run" (Rule-8). An event's `role` may also be `automaton` (`runbook.RUN_ROLES`, #593): the
+   runner admits `--as automaton` only for a `read-only` command and refuses any other class (exit 2, no event, nothing
+   run), so a scheduled run records under its own party and a reversible or destructive command stays the
+   operator's or the agent's. *(Borderline, moved with a note — #155 attack 3: this
    sentence binds the runner, craft-served code; Rule-8's kernel already binds the Agent to
    Operator-run for sudo and credentials.)* The header vocabulary (class, undo, postcondition,
    destructive confirmation) is the ops-scripts rule's; this rule adds role, scope and the event.
