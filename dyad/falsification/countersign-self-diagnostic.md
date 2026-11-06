@@ -90,3 +90,21 @@ run at a time. D15 reads `dyad/playbooks/audit.md` at this row's base (`bdd74b3`
 landed attack is really a gap, and whether a module is rightly `unit`, is inference.
 
 Disposition: disposed by the Done-Y of dyad-system d-work #308 (see ledger #308).
+
+## Amendment — d-work #619 (2026-11-06: the diagnostic reads the automaton sweep's report)
+The self-diagnostic's L1 and L2 ran the suite's modules again, one by one, and L2 ran `dyad check --evidence` in a
+clean clone, while the automaton sweep run on `main` with no `--row` already runs every root, every check and every
+guard and names each failing test (plan #619, F5). Its section in `dyad/playbooks/audit.md` (When: "a level ... changes")
+now reads its coded checks from that report. Three entries are restated; the rest stand.
+
+| # | claim, restated | result | survivor |
+|---|---|---|---|
+| D4 | A system diagnosing itself is circular. | **Survives, with a new countermeasure** | The report's `checks-sha256`, the digest of the tree's own check lines in the order they printed, lets anyone re-run the sweep on the same head of `main` and compare. Not the `report-sha256`: the report's stall lines read time, its standing marks the inbox and its drift the world, so its whole text never repeats (plan #619, F6). No L3 or L4 finding settles itself (§5). The `**Diagnosed:**` seam cites `checks-sha256`; a record written before #619 keeps `evidence-sha256`. |
+| D15 | The core already has this: the standing audit. | **Survives, scoped** | They overlap in one place, now the automaton sweep's report on `main`: the audit's Regression phase reads its suite, L1 and L2 its failing tests and check lines, L3 its invariant reading, and neither re-runs what the report carries. Otherwise they still differ in kind, and a diagnostic record's dated name still falls outside the audit's watermark. |
+| D21 | The evidence block can be re-run on the same head and compared, once computed in a clean clone. | **Superseded** | The run computes no evidence block. The report reads the committed tree of `main`, so the run's own uncommitted events cannot reach `checks-sha256`, and no clean clone is needed. The `health` step requires HEAD to equal `origin/main`, so the record's head is the one the report read (D24 unchanged in intent). |
+
+**Limits.** That `checks-sha256` repeats on one head is plan #619's claim (F6), tested by engineer's test that runs the
+sweep twice on one head; it is not yet observed in countersign-system, whose next diagnostic record is the first to
+use the new seam (plan #619, Q3).
+
+Disposition: see ledger #619.

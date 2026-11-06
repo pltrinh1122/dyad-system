@@ -342,3 +342,41 @@ the split says which tests run where, and Rule-12's pre-push path is unchanged. 
 evidence; the criterion schedules its check and changes nothing of the event. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #618.
+
+## Amendment — d-work #619 (2026-11-06: the audit's coded checks in the sweep; the report; a sweep not delivered)
+Claim (plan #619): every coded check the audit and hardening play-books ran by their own steps runs in the full
+automaton sweep instead, as the part `sweep_audit` — each a warning, its counts never-posted `reading:` lines — so it
+runs after each landed merge and is told to the home once. Run with no `--row`, the sweep lands and posts nothing and
+prints the report (every check line, findings `standing` and `new`, readings, the stall block, `checks-sha256`,
+`report-sha256`), stored per checkout, which the audit reads in place of running those checks. Among the absences the
+home reads, a sweep not delivered: no full sweep at or after the newest landed merge, or no stores sweep at or after
+the newest ledger-only or events-only push. The check-trigger test also fails on a part classed with an input whose
+trigger never calls it.
+
+| # | attack | result |
+|---|---|---|
+| F1 | The no-`--row` sweep lands its health event, so an auditor's run writes an event recorded `role: automaton`. | Refuted: `land_events` returns before any landing without `--row`. Survivor: nothing lands; the audit's own record of the run is its run-book step's event, under the auditing party's role. |
+| F2 | The exec-bit check runs only in the audit. | Refuted: `syseng/naming` reads `dyad/bin/*` and `dyad/hooks/*` at `100755` from git's index, and syseng is bundled with the core. Survivor: a duplicate, so the audit step goes and the report carries the guard's line. |
+| F6 | The report can anchor the self-diagnostic's re-run by one digest. | Survives, scoped: the stall lines read time, the standing marks read the inbox and drift reads the world, so the whole text never repeats. Survivor: `checks-sha256` over the tree's own check lines, which repeats on one head; `report-sha256` names the stored text. |
+| F7 | The audit's watermark, counts and listings can be findings. | Refuted: the watermark differs after every merge, a hosted run's interpreter is the runner's, and counts grow. Survivor: they print as `reading:` lines, never posted and never compared. |
+| F9 | `sweep_ci`'s outside-world input is delivered by the merge sweep. | Refuted: `sweep()` never calls it; only the home's read does. Survivor: its input is absence, and the behavioural test fails a part classed with an input whose trigger never calls it. |
+| F10 | Delivery counts successful runs. | Refuted: a sweep with a failing finding exits 1 and was delivered, and one still running after a merge would read as missing. Survivor: queued, in progress, success and failure count; cancelled and skipped do not. |
+| F11 | Every ledger push starts a stores sweep. | Survives, scoped: the workflow's token starts no workflow, so the automaton's own pushes are swept by its same run's stores step and skipped by the delivery check; the sweep's own events commit is swept by none, its pre-push gate its only check. Stated, not fixed. |
+| F18 | The automaton run-book's health can read delivery from the event store. | Refuted: `--stores` lands no event (#617). Survivor: the health reads the home's read, and a hosting not read is no pass. |
+
+The plan's other attacks (F3–F5, F8, F12–F17) bear on the play-books, the audit module and the run-books, not on this
+Rule's sentence; they are in plan #619's falsification table.
+
+**Rule-6.** No term is added. `automaton sweep` gains the audit part, the no-`--row` report and the sweep not
+delivered; each Rule in its `used by` still reads correctly: Rule-3 Ledger (the home's read, now naming a sweep not
+delivered), Rule-7 Enforcement (its alarm at the next stores check, unchanged), Rule-12 property 2 and Boundaries
+(where the suite runs, and the self-diagnostic reading the report), Rule-14 property 3 (the definition's home),
+Rule-19 property 1 (an automaton's read-only health commands, unchanged). `coded check` gains that the
+self-diagnostic reads them from the report; Rule-12, its one user, reads correctly.
+**Pairwise (Rule-5).** **14–3**: Rule-14 says which sweep runs and when; Rule-3's Ledger lists what the home reads,
+and a sweep not delivered is one of those absences — named in both, owned by Rule-14, read by Rule-3. **14–12**:
+Rule-12 keeps the names of the two kinds of check and that a module carries one; Rule-14 says where the coded ones
+run; the audit play-book reads them. **14–7**: Rule-7's alarm reads the stores check, unchanged. **14–19**: the sweep
+is one runner of read-only health commands; Rule-19 keeps the event's `role`. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #619.

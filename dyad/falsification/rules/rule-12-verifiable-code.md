@@ -274,3 +274,9 @@ This Rule's sentence changes with Rule-14's (property 2 names where the whole-st
 in `rule-14-system-infrastructure.md`, amendment #617.
 
 Disposition: see ledger #617.
+
+## Amendment — d-work #619 (2026-11-06: the self-diagnostic reads the report)
+This Rule's sentence changes with Rule-14's (Boundaries: the self-diagnostic reads its coded checks from the automaton sweep's report and runs only the prose claims). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #619.
+
+Disposition: see ledger #619.
