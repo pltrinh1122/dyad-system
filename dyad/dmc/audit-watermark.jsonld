@@ -15,7 +15,7 @@
   "description": "Compares the live audit watermark with the newest record's to decide how much of the standing audit runs.",
   "dyad:decides": "Does the standing audit run its full exercise, a first derivation, or only its ungated phase?",
   "dyad:inputs": [
-    "the live tree hash, minus the dated audit records",
+    "the code tree's hash (the ledger and the event store pruned, #619), minus the dated audit records",
     "the interpreter and git versions",
     "the Audited line of the newest audit record"
   ],
@@ -44,7 +44,7 @@
   ],
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
-    "dyad:implementation": null
+    "dyad:implementation": "scripts/audits.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/audit.md",

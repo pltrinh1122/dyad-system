@@ -762,7 +762,8 @@ INPUT_TRIGGERS: dict[str, tuple[str, str]] = {   # input -> (its trigger, the de
     CODE:    ("each landed merge: the full sweep (dyad-sweep.yml, dispatched by dyad-automaton.yml or started by a code push)", "none"),
     LEDGER:  ("each ledger push: `dyad automaton sweep --stores` (dyad-automaton.yml)", "until the next ledger push"),
     EVENTS:  ("each events-only push: `dyad automaton sweep --stores` (dyad-automaton.yml)", "until the next events push"),
-    ABSENCE: ("the home's read at each operator prompt: `dyad board resume`, its stall lines", "until the operator's next prompt"),
+    ABSENCE: ("the home's read at each operator prompt: `dyad board resume`, its stall lines (a sweep not delivered among them, #619)",
+              "until the operator's next prompt"),
     WORLD:   ("the next landed merge's full sweep (dyad-sweep.yml)", "until the next merge"),
 }
 CHECK_INPUTS: dict[str, tuple[str, ...]] = {
@@ -777,12 +778,12 @@ CHECK_INPUTS: dict[str, tuple[str, ...]] = {
     "sysadmin/events": (EVENTS,), "sysadmin/ops_scripts": (CODE,), "sysadmin/runbooks": (CODE,), "sysarch/registry": (CODE,),
     "syseng/invariants": (CODE,), "syseng/naming": (CODE,), "syseng/tests": (CODE,),
     # the sweep's parts (scripts/automaton.py, scripts/hygiene.py)
-    "sweep_check": (CODE, LEDGER, EVENTS), "sweep_drift": (WORLD,), "sweep_ledger": (ABSENCE,), "sweep_ci": (ABSENCE, WORLD),
-    "hygiene": (ABSENCE,), "inflight": (ABSENCE,),
+    "sweep_check": (CODE, LEDGER, EVENTS), "sweep_drift": (WORLD,), "sweep_ledger": (ABSENCE,), "sweep_ci": (ABSENCE,),
+    "hygiene": (ABSENCE,), "inflight": (ABSENCE,), "sweep_audit": (CODE,),   # #619: the audit's coded checks, the full sweep only
     # the suite: every test that is not a livetest.LiveCase reads the tree; the LiveCase tests read the stores (H4)
     "suite": (CODE,), "suite:live": (LEDGER, EVENTS),
 }
-SWEEP_PARTS = ("sweep_check", "sweep_drift", "sweep_ledger", "sweep_ci", "hygiene", "inflight")
+SWEEP_PARTS = ("sweep_check", "sweep_drift", "sweep_ledger", "sweep_ci", "hygiene", "inflight", "sweep_audit")
 
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.

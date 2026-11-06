@@ -457,6 +457,14 @@ class TrackedModeTests(unittest.TestCase):
         for rel in ("dyad/bin/dyad", "dyad/hooks/pre-commit", "dyad/hooks/pre-push"):
             self.assertEqual(dyadlib.tracked_mode(root, rel), dyadlib.MODE_EXEC, rel)
 
+class CheckInputsTests(unittest.TestCase):
+    def test_the_audit_part_reads_the_code_tree_and_sweep_ci_absence(self):
+        """#619: `sweep_audit` runs in the full sweep only; `sweep_ci` reads the hosting at the home's read alone (F9)."""
+        self.assertIn("sweep_audit", dyadlib.SWEEP_PARTS)
+        self.assertEqual(dyadlib.CHECK_INPUTS["sweep_audit"], (dyadlib.CODE,))
+        self.assertEqual(dyadlib.CHECK_INPUTS["sweep_ci"], (dyadlib.ABSENCE,))
+        self.assertIn("a sweep not delivered", dyadlib.INPUT_TRIGGERS[dyadlib.ABSENCE][0])
+
 class InvariantTests(livetest.LiveCase):
     """crafts/syseng/rules/invariants.md: the protocol — INVARIANTS and TREE_INVARIANTS are data, check_invariants runs
     both sorted, an InvariantError names every false one; `enforce` runs the pure list at import (Rule-12 p1, #203)

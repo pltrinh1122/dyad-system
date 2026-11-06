@@ -49,8 +49,11 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
   dyad automaton sweep [--stores] [--row <id>]
                            read-only, after each landed merge (d-work #564, #617): every guard over every store and
                            the full suite on origin/main, released tags against their entries and the mirror
-                           against main. One `finding:` line each; a finding not yet told is posted, in one notice,
-                           to the home's inbox on `--row`. Exit 1 when a finding fails. The stall findings (heads
+                           against main, and the audit's coded checks (#619, `scripts/audits.py`: `reading:` lines,
+                           never posted, and warnings). One `finding:` line each, in two groups, `standing` (told
+                           already) and `new`; a new finding is posted, in one notice, to the home's inbox on
+                           `--row`. Exit 1 when a finding fails. With no `--row` it is the audit's report: the stall
+                           block, `checks-sha256=` and `report-sha256=`, the text stored under the git common dir. The stall findings (heads
                            not landed, corroboration, stale board, work in flight, backlog hygiene) are the home's
                            read since #617: `dyad board resume` prints them (`stall_lines`). With --stores, after
                            each ledger push: the whole-store guards only (`check --guards`, no suite, no drift, no
@@ -792,6 +795,7 @@ def sweep_check(wt: Path, stores: bool = False) -> list[tuple[bool, str]]:
         argv, env = ["check", "--guards"], {**env, "DYAD_NO_NESTED_TESTS": "1"}
     r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), *argv], cwd=wt,
                        capture_output=True, text=True, env=env)
+    CHECK_LINES[:] = r.stdout.splitlines()           # #619: the report's checks-sha256 reads them, in check's order
     out = [(l.startswith("FAIL"), l) for l in (r.stdout + r.stderr).splitlines() if l.startswith(("FAIL", "warn"))]
     if r.returncode and not any(f for f, _ in out):
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
@@ -871,6 +875,15 @@ def sweep_drift(repo: Path, wt: Path, base: str) -> list[tuple[bool, str]]:
         if at != base:
             out.append((False, f"finding: mirror {mirror} at {at[:12] or 'absent'}, main at {base[:12]}"))
     return out
+
+def sweep_audit(wt: Path) -> list[str]:
+    """The audit's coded checks on the swept tree (#619, `scripts/audits.py`): `reading:` lines, never posted or
+    counted, and `finding:` lines, each a warning; the full sweep only, after each landed merge (`CHECK_INPUTS`: the
+    code tree), and one more reading of its own time, F15's measure."""
+    import time
+    t = time.monotonic()
+    out = dyadlib.load_module(HERE / "audits.py", "audits").audit(wt)
+    return out + [f"reading: audit: {time.monotonic() - t:.1f} s"]
 
 def new_events(wt: Path) -> tuple[str | None, dict[str, str], list[str]]:
     """(store, {path: appended text}, notes) for the run-book event files the sweep's runs appended to in the swept
@@ -969,9 +982,14 @@ def corroborated(repo: Path, c: str, own: list[dict], listed: list[dict], firstp
     return False
 
 
-CI_FILES = {"rule-11 package": "dyad-package.yml", "d-work automaton": "dyad-automaton.yml"}   # CI_WORKFLOWS' files
-CI_PAGE = 30   # the newest successes read per workflow: a day of package runs, and the automaton's latest (#617, the ceiling)
+CI_FILES = {"rule-11 package": "dyad-package.yml", "d-work automaton": "dyad-automaton.yml",
+            "d-work sweep": "dyad-sweep.yml"}   # CI_WORKFLOWS' files, and the full sweep's (#619 delivery)
+CI_ANY = ("d-work automaton", "d-work sweep")   # listed at every status (delivery counts a run in progress); the rest successes only
+CI_PAGE = 30   # the newest runs read per workflow: a day of package runs, and the automaton's latest (#617, the ceiling)
 CI_TIMEOUT_S = 3   # the hosting's round trip the home's read waits for; slower reads as "not read" (STALL_CEILING_S)
+DELIVERED = ("success", "failure")   # #619 F10: a completed run that ran; cancelled and skipped deliver nothing
+DELIVERY_GRACE_S = 300   # #619: a push younger than this is not yet judged; a run on it or a later push still covers the older
+WORKFLOW_IDENTITY = "41898282+github-actions[bot]@users.noreply.github.com"   # the jobs' committer (dyad-automaton.yml)
 
 def repo_slug(repo: Path) -> str | None:
     """`owner/name` of the hosting: GITHUB_REPOSITORY in a job, else read off `origin`'s URL (#617: a session's home
@@ -982,12 +1000,24 @@ def repo_slug(repo: Path) -> str | None:
     m = re.search(r"(?:github\.com[:/]|/git/)([A-Za-z0-9._-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?$", url)   # github, or a git proxy's /git/
     return m.group(1) if m else None
 
+def delivered(c: str, order: dict[str, int], listed: list[dict], name: str) -> bool:
+    """Whether a `name` run started on main at `c` or at a later first-parent commit (`order`: newest first), queued,
+    in progress or completed with a result (`DELIVERED`, #619 F10)."""
+    for w in listed:
+        h = w.get("head_sha") or ""
+        ran = w.get("status") != "completed" or w.get("conclusion") in DELIVERED
+        if w.get("name") == name and ran and h in order and order[h] <= order[c]:
+            return True
+    return False
+
 def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
-    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
-    hosting: the repository is public, so the run list reads with `GITHUB_TOKEN` when set and without it otherwise
-    (#617: the home's read in a session). One listing per workflow (`CI_FILES`), the newest successes on main, fetched in
-    parallel with the commits' classing, so `board resume` stays under its ceiling; a hosting that cannot be read is
-    one finding saying so, never a crash."""
+    """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), and sweeps not
+    delivered (#619): the newest code push with no `d-work sweep` run at it or after, and the newest ledger-only or
+    events-only push not made by the jobs' own identity (`WORKFLOW_IDENTITY`: the same run's stores step sweeps those)
+    with no `d-work automaton` run at it or after; a push younger than `DELIVERY_GRACE_S` waits. Read from the hosting:
+    the repository is public, so the run list reads with `GITHUB_TOKEN` when set and without it otherwise (#617: the
+    home's read in a session). One listing per workflow (`CI_FILES`), fetched in parallel with the commits' classing, so
+    `board resume` stays under its ceiling; a hosting that cannot be read is one finding saying so, never a crash."""
     import datetime, json, urllib.request
     from concurrent.futures import ThreadPoolExecutor
     token, slug = os.environ.get("GITHUB_TOKEN"), repo_slug(repo)
@@ -996,39 +1026,51 @@ def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tupl
     except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
         since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
     since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
-    log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
+    meta = [l.split() for l in land.git(repo, "log", "--first-parent", "--format=%H %ct %ce", f"--since={since}", base,
+                                        check=False).stdout.splitlines() if len(l.split()) == 3]
+    log = [m[0] for m in meta]
     if not log:
         return []
     def is_code(c):
         return not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))
     def runs(name):
+        status = "" if name in CI_ANY else "&status=success"
         req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/workflows/{CI_FILES[name]}/runs"
-                                     f"?branch=main&status=success&per_page={CI_PAGE}",
+                                     f"?branch=main{status}&per_page={CI_PAGE}",
                                      headers={"Accept": "application/vnd.github+json",
                                               **({"Authorization": f"Bearer {token}"} if token else {})})
         with urllib.request.urlopen(req, timeout=CI_TIMEOUT_S) as resp:
             return [{**w, "name": w.get("name") or name} for w in json.load(resp).get("workflow_runs", [])]
     with ThreadPoolExecutor(8) as pool:                  # #617: the hosting and git at once, the home's ceiling
         fetched = [pool.submit(runs, n) for n in CI_FILES] if slug else []
-        code = [c for c, k in zip(log, pool.map(is_code, log)) if k]
+        kinds = dict(zip(log, pool.map(is_code, log)))
         listed, error = [], None
         for f in fetched:
             try:
                 listed += f.result()
             except Exception as e:                       # the hosting is The World: unreadable is a finding
                 error = e
-    if not code:
+    code = [c for c in log if kinds[c]]
+    ripe = [c for c, t, _ in meta if now.timestamp() - int(t) >= DELIVERY_GRACE_S]
+    full = next((c for c in ripe if kinds[c]), None)
+    stores = next((c for c, _, e in meta if c in ripe and not kinds[c] and e != WORKFLOW_IDENTITY), None)
+    if not (code or full or stores):
         return []
     if not slug:
         return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no hosting named by origin or GITHUB_REPOSITORY)")]
     if error is not None:
         return [(False, f"finding: corroboration not read from the hosting ({type(error).__name__})")]
-    recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
-    firstparent, out = set(log), []
+    ok = [w for w in listed if w.get("conclusion") == "success"]
+    recent = [w for w in ok if w.get("name") == "d-work automaton"]
+    firstparent, out, order = set(log), [], {c: i for i, c in enumerate(log)}
     for c in code:
-        own = [w for w in listed if w.get("head_sha") == c]
-        if not corroborated(repo, c, own, listed, firstparent, recent):
+        own = [w for w in ok if w.get("head_sha") == c]
+        if not corroborated(repo, c, own, ok, firstparent, recent):
             out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
+    if full and not delivered(full, order, listed, "d-work sweep"):
+        out.append((False, f"finding: delivery: no full sweep started on main at or after the landed merge {full[:12]}"))
+    if stores and not delivered(stores, order, listed, "d-work automaton"):
+        out.append((False, f"finding: delivery: no stores sweep started on main at or after the push {stores[:12]}"))
     return out
 
 def sweep_pulls() -> list[dict] | None:
@@ -1106,21 +1148,36 @@ def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabi
     flight = [h for _, h in flight]
     return ([l for _, l in found] + [f"finding: {h}" for h in hyg + flight] + candidates)
 
+SWEEP_STORE = "dyad-sweep"   # `<git common dir>/dyad-sweep/<report-sha256>.txt`: every no-`--row` report, never tracked (#619)
+CHECK_LINES: list[str] = []   # the swept tree's own `check` stdout, in order, as `sweep_check` read it: `checks-sha256`
+
 def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str], int]:
     """(lines, rc). Read-only but for one write: the event its own health run recorded, landed events-only on `row`
-    (#593, `land_events`). Every finding prints; findings no automaton notice in `program`'s home inbox has told yet
-    are posted in one notice on `row`; rc 1 when any finding fails. The stall findings (heads not landed, corroboration,
-    stale board, work in flight, backlog hygiene) are not the sweep's since #617: the home reads them in
-    `dyad board resume` (`stall_lines`). With `stores` (#617): the whole-store guards only — no suite, no drift, no
-    events — run after each ledger push in the automaton's job, folded against what was told the same way."""
-    import datetime
+    (#593, `land_events`). The full sweep's readings print first (#619: the audit's, never posted or counted), then the
+    findings in two groups, `standing` (already told to the home) and `new`; the new ones are posted in one notice on
+    `row`; rc 1 when any finding fails. The stall findings (heads not landed, corroboration, stale board, work in
+    flight, backlog hygiene, sweeps not delivered) are not the sweep's since #617: the home reads them in `dyad board
+    resume` (`stall_lines`). With `stores` (#617): the whole-store guards only — no suite, no drift, no audit, no
+    events — run after each ledger push in the automaton's job, folded against what was told the same way. With no
+    `row` (#619) it is the audit's report: the stall block too, `checks-sha256=` over the tree's own `check` lines and
+    `report-sha256=` over the whole text, which is stored under the git common dir (`SWEEP_STORE`); nothing lands."""
+    import datetime, hashlib
     now = datetime.datetime.now(datetime.timezone.utc)
     base = land.fetch(repo)
     common = Path(land.out(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"))
     wt = common / land.WORKTREE
+    CHECK_LINES.clear()
     with land.locked(common):
         land.prepare(repo, wt, base)
         found = sweep_check(wt, stores) + ([] if stores else sweep_drift(repo, wt, base))
+        readings = []
+        if not stores:
+            try:
+                audit = sweep_audit(wt)
+            except Exception as e:                           # the audit never fails the sweep's other findings
+                audit = [f"finding: audit not read ({type(e).__name__})"]
+            readings = [l for l in audit if l.startswith("reading: ")]
+            found += [(False, l) for l in audit if not l.startswith("reading: ")]
         events_at, fresh, event_notes = None, {}, []
         if not stores:
             try:                                             # read before the lock goes: the next land resets wt
@@ -1133,6 +1190,8 @@ def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str],
     told = {to: " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
             for to in routed}
     new = {to: [l for l in ls if finding_key(l.removeprefix("finding: ")) not in told[to]] for to, ls in routed.items()}
+    fresh_lines = {l for v in new.values() for l in v}
+    standing = [l for l in lines if l not in fresh_lines]
     count = sum(len(v) for v in new.values())
     summary = (f"{'stores sweep' if stores else 'sweep'} of main {base[:12]}: {len(lines)} finding(s), "
                f"{sum(f for f, _ in found)} failing, {count} new")
@@ -1153,7 +1212,24 @@ def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str],
     if untold:
         summary += "; not told (no --row or no home)"
     event_lines = [] if stores else event_notes + [land_events(repo, events_at, fresh, row)]   # after the notices; never changes rc
-    return lines + event_lines + [summary], rc
+    out = (readings + [f"standing: {len(standing)} finding(s) already told to the home"] + standing
+           + [f"new: {count} finding(s) not yet told"] + [l for l in lines if l in fresh_lines] + event_lines + [summary])
+    if row:
+        return out, rc
+    try:
+        stalls = stall_lines(repo, base, now=now)
+    except Exception as e:                               # the report still prints; the home's read says the same
+        stalls = [f"finding: stalls not read ({type(e).__name__})"]
+    out += [f"stalls: {len(stalls)} line(s), the home's read (`dyad board resume`)"] + stalls
+    out.append(f"checks-sha256={hashlib.sha256(chr(10).join(CHECK_LINES).encode()).hexdigest()}")
+    out.append(f"report-sha256={(digest := hashlib.sha256(chr(10).join(out).encode()).hexdigest())}")
+    try:
+        (common / SWEEP_STORE).mkdir(exist_ok=True)
+        (common / SWEEP_STORE / f"{digest}.txt").write_text("\n".join(out) + "\n")
+        out.append(f"stored: {common / SWEEP_STORE / f'{digest}.txt'}")
+    except OSError:
+        out.append("stored: none")
+    return out, rc
 
 # ---- taking them
 def post(repo: Path, to: str, row: int, body: str) -> str:

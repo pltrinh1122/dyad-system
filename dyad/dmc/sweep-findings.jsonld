@@ -18,7 +18,8 @@
     "each operative Y done and whether its named heads are on main",
     "each board entry's since",
     "code pushes to main and their corroboration runs",
-    "the preferences sweep-landing-hours, sweep-board-stale-days and sweep-ci-hours"
+    "the preferences sweep-landing-hours, sweep-board-stale-days and sweep-ci-hours",
+    "the full sweep's and the automaton's runs on main, and who pushed each ledger or events commit (#619)"
   ],
   "hasDefinedTerm": [
     {
@@ -41,6 +42,13 @@
       "name": "code pushes to main with no completed corroboration",
       "dyad:when": "a code push to main within the last sweep-ci-hours has no completed corroboration",
       "dyad:then": "a finding, told once to the home"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "undelivered",
+      "name": "sweeps not delivered",
+      "dyad:when": "the newest code push to main within sweep-ci-hours has no d-work sweep run at it or after, or the newest ledger-only or events-only push not made by the jobs' own identity has no d-work automaton run at it or after; a run queued, in progress or completed with a result counts, a cancelled or skipped one does not",
+      "dyad:then": "one finding per kind in the home's read: `finding: delivery: no full sweep …` or `finding: delivery: no stores sweep …`"
     }
   ],
   "dyad:tunables": [

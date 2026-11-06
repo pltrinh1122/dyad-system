@@ -2641,6 +2641,17 @@ class CodeKeyedSkipTests(unittest.TestCase):
         (d / "code.txt").write_text("other\n"); git("commit", "-qam", "code")
         self.assertNotEqual(self.pkg.code_digest(), before)
 
+    def test_code_digest_prunes_more_and_reads_another_repo_when_asked(self):
+        """#619 P1: an optional predicate prunes more paths, and `repo` names the repository read; callers pass neither."""
+        d, seed, git = self.repo()
+        before, pruned = self.pkg.code_digest(), self.pkg.code_digest(prune=lambda p: p.startswith("dated/"))
+        self.assertEqual(before, pruned)                                             # nothing under dated/ yet
+        (d / "dated").mkdir(); (d / "dated" / "r.md").write_text("x\n"); git("add", "-A"); git("commit", "-qm", "dated")
+        self.assertNotEqual(self.pkg.code_digest(), before)
+        self.assertEqual(self.pkg.code_digest(prune=lambda p: p.startswith("dated/")), before)
+        self.assertEqual(self.pkg.code_digest(repo=d), self.pkg.code_digest())
+        self.assertIsNone(self.pkg.code_digest("no-such-rev", repo=d))
+
     def test_b1_a_ledger_drift_after_a_pass_skips_and_a_code_drift_runs(self):
         d, seed, git = self.repo()
         passed = git("rev-parse", "HEAD^{tree}")

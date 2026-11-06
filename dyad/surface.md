@@ -18,7 +18,7 @@ here fails the suite, and so does an entry here that the code no longer has, or 
 **Not surface:**
 - internal modules, their functions and their flags to git;
 - `LEDGER.md` (rendered, untracked);
-- the suite memo and the `dyad-evidence/` cache;
+- the suite memo, the `dyad-evidence/` cache and the `dyad-sweep/` report cache (#619);
 - falsification records and audits (history);
 - the cabinet guard's entity `seat`, a craft identifier (`dyad/vocabulary/crosswalk.md`).
 

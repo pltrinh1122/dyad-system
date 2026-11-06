@@ -123,6 +123,9 @@ class CheckTriggerTests(unittest.TestCase):
                 if (PKG / "guards" / c / f"{e}.py").is_file() or not (REPO / "crafts" / c).is_dir()}
         stale = sorted(k for k in dyadlib.CHECK_INPUTS if "/" in k and k not in labels and (REPO / "crafts" / k.split("/")[0]).is_dir())
         self.assertEqual(stale, [], "a row names a guard its installed craft no longer has")   # a departed craft's rows are ignored (Q3)
+        corpora = {p.name for p in (PKG / "guards").iterdir() if p.is_dir()}
+        stale_core = sorted(k for k in dyadlib.CHECK_INPUTS if "/" in k and k.split("/")[0] in corpora and k not in labels)
+        self.assertEqual(stale_core, [], "a core row names a guard with no file")   # #619 F13: a removed core guard's row
         self.assertTrue(core)
         am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
         hy = dyadlib.load_module(PKG / "scripts" / "hygiene.py", "hygiene")
@@ -140,6 +143,41 @@ class CheckTriggerTests(unittest.TestCase):
 
     def test_every_trigger_is_delivered(self):
         self.assertEqual({i: w for i, w in delivered().items() if w}, {})
+
+    def test_each_part_runs_where_its_inputs_triggers_run(self):
+        """#619 Decision 4 (F9): `sweep`, `sweep --stores` and `stall_lines` run with every part stubbed; a part classed
+        with an input fails when the mode that input's trigger runs never calls it."""
+        import contextlib, datetime, tempfile, unittest.mock
+        am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
+        tmp = tempfile.mkdtemp(); self.addCleanup(__import__("shutil").rmtree, tmp, True)
+        calls: list[str] = []
+        def rec(name, ret):
+            return lambda *a, **k: (calls.append(name), ret)[1]
+        parts = {(am, "sweep_check"): [], (am, "sweep_drift"): [], (am, "sweep_ledger"): [], (am, "sweep_ci"): [],
+                 (am, "sweep_audit"): [], (am.hygiene_mod, "hygiene"): ([], []), (am.hygiene_mod, "inflight_cabinets"): []}
+        names = {"inflight_cabinets": "inflight"}
+        others = {(am, "new_events"): (None, {}, []), (am, "home"): None, (am, "box_messages"): [],
+                  (am, "land_events"): "events: none", (am, "sweep_pulls"): None, (am.land, "fetch"): "b" * 40,
+                  (am.land, "prepare"): None, (am.land, "out"): tmp}
+        modes = {"full": lambda: am.sweep(Path(tmp), 1), "stores": lambda: am.sweep(Path(tmp), 1, stores=True),
+                 "resume": lambda: am.stall_lines(Path(tmp), "b" * 40, now=datetime.datetime.now(datetime.timezone.utc))}
+        called = {}
+        with contextlib.ExitStack() as st:
+            for (mod, attr), ret in parts.items():
+                st.enter_context(unittest.mock.patch.object(mod, attr, rec(names.get(attr, attr), ret)))
+            for (mod, attr), ret in others.items():
+                st.enter_context(unittest.mock.patch.object(mod, attr, lambda *a, ret=ret, **k: ret))
+            st.enter_context(unittest.mock.patch.object(am.land, "locked", lambda common: contextlib.nullcontext()))
+            st.enter_context(unittest.mock.patch.dict(__import__("os").environ, {"GITHUB_TOKEN": ""}))
+            for mode, go in modes.items():
+                calls.clear(); go(); called[mode] = set(calls)
+        runs = {dyadlib.CODE: "full", dyadlib.WORLD: "full", dyadlib.LEDGER: "stores", dyadlib.EVENTS: "stores",
+                dyadlib.ABSENCE: "resume"}
+        self.assertEqual(set(runs), set(dyadlib.CHECK_INPUT_NAMES))
+        missed = sorted(f"{p} ({i}: {runs[i]})" for p in dyadlib.SWEEP_PARTS for i in dyadlib.CHECK_INPUTS[p]
+                        if p not in called[runs[i]])
+        self.assertEqual(missed, [], "a part classed with an input whose trigger never calls it")
+        self.assertNotIn("sweep_audit", called["stores"])                         # the full sweep only
 
     def test_mixed_checks_take_the_union(self):
         """H1: a check reading the code tree and the ledger runs on both triggers."""

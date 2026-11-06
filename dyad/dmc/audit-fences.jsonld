@@ -38,7 +38,7 @@
   ],
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
-    "dyad:implementation": null
+    "dyad:implementation": "scripts/audits.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/audit.md",

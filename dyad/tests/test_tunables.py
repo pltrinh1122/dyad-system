@@ -124,6 +124,8 @@ class ReaderTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", "-b", "main", str(self.d)], check=True, capture_output=True)
         am.sweep_ci(self.d, "HEAD", datetime.datetime.now(datetime.timezone.utc))
         self.assertIn(("sweep-ci-hours", self.d), {c.args[:2] for c in self.calls.call_args_list})
+        import inspect                                                         # #619: delivery reuses the same window
+        self.assertEqual(inspect.getsource(am.sweep_ci).count("dyadlib.tunable("), 1)
         self.assertIn("dyadlib.tunable(SWEEP_LANDING_HOURS, prefs or repo)", (PKG / "scripts" / "automaton.py").read_text())
         self.assertIn("dyadlib.tunable(SWEEP_STALE_DAYS, prefs or repo)", (PKG / "scripts" / "automaton.py").read_text())
 
