@@ -26,6 +26,7 @@ defines what each value means.
 | paired-units | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
+| intent-reading | on | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -198,6 +199,13 @@ defines what each value means.
   binds to.
   dyad-system: `brief`, the Operator's prompt of 2026-10-25 ("I need dispositions to be presented by you by
   explaining WHAT is the matter, WHY is the matter important and HOW is the matter being addressed").
+- `intent-reading` — whether a prompt that opens a row, or reopens one from `backlog`, is first answered by an
+  intent reading and its own question, `Y/N: intent aligned for #<id> <title>?`, before any plan is drafted (Rule-3
+  Plan and Answer grammar, Rule-15 phase 1; the criterion `dyad/dmc/intent-reading.jsonld`; d-work #615). `off`: two
+  `Y`, the plan-`Y` accepting the definition of done; `on`: three `Y`, the intent-`Y` accepting it, a bare `N`
+  archiving the row. The template ships `off`. A form preference: it authorizes nothing.
+  dyad-system: `on`, the Operator's prompt of 2026-11-06: "even though default is 'off' for shipping, i want it 'on'
+  for current use."
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
