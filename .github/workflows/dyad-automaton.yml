@@ -7,6 +7,8 @@ name: d-work automaton
 #   (b) closes a row whose every named head landed, with its accreted rows and its board entry
 #       (`dyad steps close-landed --land`);
 #   (c) posts one inbox notice to each board owner of a row just planned.
+# Then (#617): the whole-store guards on main (`dyad automaton sweep --stores --row 564`: no suite, new findings only),
+# and, when `run` landed a merge (its output `landed`), a dispatch of the full sweep (`dyad-sweep.yml`) once for the cut.
 # A refusal decides nothing: one notice to the home's inbox. Stateless and idempotent: every run re-reads main, so a
 # run may be retried and a run that dies loses nothing. Its pushes go through the same pre-push gate as a seat's
 # (core.hooksPath dyad/hooks, Rule-14 property 3), and its commits carry the workflow's identity.
@@ -14,7 +16,7 @@ name: d-work automaton
 on:
   push:
     branches: [main]
-    paths: ["agent-corpus/d-work/rows/**", "agent-corpus/d-work/board/**", "agent-corpus/d-work/inbox/**"]   # inbox: typed events (#587 X10)
+    paths: ["agent-corpus/d-work/**"]   # every ledger push (#617): the stores step reads every store; inbox: typed events (#587 X10)
   workflow_dispatch: {}
 # Two jobs (#587 X10). `evidence` runs the PR heads' own code to take combined evidence, so it holds no write token:
 # `contents: read`, no persisted credentials, and AUTOMATON_EVIDENCE_SANDBOX=on, the only place `automaton evidence`
@@ -50,6 +52,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write   # #617: this job alone dispatches the full sweep after a landed cut
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0, fetch-tags: true }
@@ -59,6 +62,7 @@ jobs:
         continue-on-error: true   # no artifact (the evidence job failed or wrote none): run without it
         with: { name: automaton-evidence, path: "${{ runner.temp }}/evidence" }
       - name: run the d-work automaton
+        id: run
         env:
           DYAD_SESSION: automaton   # the inbox sender's seat
         run: |
@@ -72,3 +76,16 @@ jobs:
           else
             python3 dyad/scripts/package.py automaton run
           fi
+      - name: the whole-store guards after a ledger push (#617; no suite, new findings only)
+        if: ${{ !cancelled() }}
+        env:
+          DYAD_SESSION: automaton
+        run: |
+          start=$(date +%s)
+          python3 dyad/scripts/package.py automaton sweep --stores --row 564
+          echo "stores step: $(( $(date +%s) - start )) s"
+      - name: dispatch the full sweep once for a landed cut (#617 P1)
+        if: ${{ !cancelled() && steps.run.outputs.landed == 'true' }}
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: gh workflow run dyad-sweep.yml --ref main --repo "${{ github.repository }}"

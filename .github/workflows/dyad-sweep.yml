@@ -1,26 +1,24 @@
 name: d-work sweep
-# The automaton's scheduled sweep (d-work #564; run-book `workstation-corpus/runbooks/automaton.md`, operate's,
-# Rule-19). Twice a day, at 14:17 and 02:17 UTC (schedule below), it runs the run-book's `sweep`
+# The automaton's sweep (d-work #564, #617; run-book `workstation-corpus/runbooks/automaton.md`, operate's, Rule-19).
+# No clock since #617: it runs after each landed merge, once per landed cut, through the run-book's `sweep`
 # (`dyad automaton sweep --row 564`, read-only):
-#   - every guard over every store and the full suite;
-#   - the outside-repo drift checks: archives against BUNDLE.sha256 and their tags, moved tags, the mirror against main;
-#   - code pushes to main with no successful corroboration;
-#   - a Y done whose heads have not landed, and stale board entries.
+#   - every guard over every store and the full suite, in GitHub's environment;
+#   - the outside-repo drift checks: archives against BUNDLE.sha256 and their tags, moved tags, the mirror against main.
+# The stall findings (heads not landed, corroboration, stale board, work in flight, backlog hygiene) are the home's
+# read at each prompt, `dyad board resume` (#617), and the whole-store guards also run after each ledger push in the
+# automaton's job (`sweep --stores`).
+# Two starts: the automaton's job dispatches it when its run landed a merge (a push made with the workflow token
+# starts no workflow, but `workflow_dispatch` does, #617 P1), and a push to main that changes code starts it, which
+# covers a merge made outside the automaton (the home's app merge, a hand merge, P2); ledger-only and events-only
+# pushes are left out by paths-ignore. A cut of several merges may start it more than once; the concurrency group
+# queues them, and a second run tells nothing new (P3).
 # It posts one notice to the home's inbox only for a finding that is new or failing. The core runner records the
 # sweep's event, which this job commits events-only (clerical, Rule-3; no row, no PR) through the pre-push gate.
-# That commit is the heartbeat the run-book's health reads (last sweep under 13 h), and it is the repository activity
-# that keeps GitHub from disabling the schedule. A red sweep notifies; it holds nothing (plan #564, decision 2).
-# Schedule (d-work #575, #609): the cron is UTC, with no `timezone` key. Why the first run came at 08:53 UTC
-# (41802948988) has two readings: GitHub ignored the key, and it was the 06:00 UTC slot 2 h 53 m late; or GitHub
-# honoured it, and it was the 18:00 Pacific (02:00 UTC) slot 6 h 53 m late. #575 took the first as fact; the lags
-# measured since fit the second better without proving it: the 2026-11-05 slots ran 7 h 09 m (02:17 UTC) and
-# 6 h 47 m (14:17 UTC) late, and #609's probes' first slots about 5 h late (4 h 57 m to 5 h 29 m), the same for a
-# user's and the app's registration. GitHub's schedule delivery is best-effort, so the run-book's health, not the
-# slot, is the bound. 14:17 and 02:17 UTC are 06:17 and 18:17 Pacific under standard time. Minute 17, off the hour,
-# because top-of-the-hour runs are the ones GitHub delays most.
+# A red sweep notifies; it holds nothing (plan #564, decision 2).
 on:
-  schedule:
-    - cron: '17 14,2 * * *'
+  push:
+    branches: [main]
+    paths-ignore: ["agent-corpus/d-work/**", "workstation-corpus/runbooks/events/**"]   # ledger and events: no code
   workflow_dispatch: {}
 permissions:
   contents: write   # the events-only commit and the inbox notice
@@ -41,7 +39,7 @@ jobs:
           GITHUB_TOKEN: "${{ github.token }}"
           GITHUB_REPOSITORY: "${{ github.repository }}"
         run: |
-          TZ=America/Los_Angeles printf 'sweep at %(%Y-%m-%d %H:%M %Z)T (scheduled 14:17 and 02:17 UTC)\n' -1
+          TZ=America/Los_Angeles printf 'sweep at %(%Y-%m-%d %H:%M %Z)T (%s)\n' -1 "${{ github.event_name }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config core.hooksPath dyad/hooks   # every push through the gate a seat's push passes
