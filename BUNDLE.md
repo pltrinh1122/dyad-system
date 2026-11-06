@@ -9,6 +9,10 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
+## Known limitations (1.0.0)
+
+The twice-daily health sweep (`.github/workflows/dyad-sweep.yml`) depends on GitHub Actions' `schedule` event, which this release has not fully verified. Observed runs arrived about 5 to 7 hours after their slots, and missed slots were not made up. Push-triggered corroboration and the evidence gate do not depend on the schedule. A fix is planned for 1.x.
+
 version: 1.0.0
 
 | component | version |
