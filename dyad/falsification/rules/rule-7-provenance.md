@@ -239,3 +239,9 @@ This Rule's sentence changes with Rule-3's refactor. The claims, attacks and pai
 `rule-3-d-work.md`, amendment #585.
 
 Disposition: see ledger #585.
+
+## Amendment — d-work #617 (2026-11-06: the automaton sweep)
+This Rule's sentence changes with Rule-14's (Enforcement's alarm comes at the next ledger push's stores check). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #617.
+
+Disposition: see ledger #617.

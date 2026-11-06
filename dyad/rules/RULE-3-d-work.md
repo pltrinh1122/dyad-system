@@ -270,13 +270,16 @@ named act.
   `<runbooks>/events/`, `DYAD_RUNBOOKS`, Rule-19 property 1, holding events of read-only run-book commands) are clerical
   and go directly to `main` without a PR. One commit stays one zone (Rule-1), so a commit touching both is **neither**
   and goes by PR, as a commit that **touches anything else** does. Monitoring is no d-work: a standing read-only check
-  authorizes nothing and never completes, so it opens no row (#438). Its writes are its events and, for the scheduled
-  sweep (Rule-14 property 3), one notice to the home's inbox for what is new or failing (#564).
+  authorizes nothing and never completes, so it opens no row (#438). Its writes are its events and, for the automaton
+  sweep (Rule-14 property 3), one notice to the home's inbox for what is new or failing (#564, #617).
 - At session start the agent reports the rows not `done`, the `merge-disposition` value and the sentinel
   (`dyad/CLAUDE.md`), or, with the frame absent, says so and stops (E1). Under `organization: flat` it reads the whole
   ledger; under `organization: m4` it reads its unit's board, the unit name saying which (Rule-16 Presence; the
   organization craft's `crafts/cabinet/docs/operating-guide.md`, never a Rule; #369 C7). It touches its own presence
-  file and reads every other session's (Rule-16), reporting an overlap that bears on the prompt at hand.
+  file and reads every other session's (Rule-16), reporting an overlap that bears on the prompt at hand. The home
+  reads `dyad board resume` at session start and at each operator prompt: it prints, from the ledger alone, what waits
+  on time rather than on activity — heads not landed, a code push not corroborated, a stale board, work in flight and
+  backlog hygiene — which no sweep posts (Rule-14 property 3, #617).
 - PR bodies — and on a branch the commit messages `dyad/guards/agent/prs.py` reads as the body — cite `d-work #<id>` as
   a claim of work, cross-referencing other rows as plain `#<id>` (#23). The plan gate requires each cited row, on the
   base branch, to be `open`, `planned` or `blocked` with a `Y plan` disposition (E3), and refuses every commit citing a
@@ -365,6 +368,9 @@ party in their records, and this Rule still knew two; see `../falsification/rule
 Conditions, Answer grammar, What a `Y` binds, Plan, Batch disposition, Ledger and Ratification events gain the intent
 question 2026-11-06 (d-work #615), under the preference `intent-reading` (`off` ships): 27 of 60 refusals in the
 ledger had restated intent or scope after a full plan, six of them after a delivery, and nothing asked the reading
-before the plan; see `../falsification/rules/rule-3-d-work.md`, amendment #615.
+before the plan; see `../falsification/rules/rule-3-d-work.md`, amendment #615. Ledger names the automaton sweep and
+the home's read of `dyad board resume` at session start and at each operator prompt 2026-11-06 (d-work #617): the
+stall findings left the twice-daily sweep for the home's read; see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
 
 Set: System Requirements.

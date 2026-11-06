@@ -106,8 +106,8 @@ Rule-11's runner as `agent/provenance`). Its two checks are split by what a fail
   no record passes only while its `disposed` holds n. A list line of another shape, an id listed
   twice, a listed id that is no row, or an n above the row's count fails too. With the transaction
   check in place, a gap reaches the tree only around the hook; it then fails this check in every
-  evidence run and in the scheduled sweep, within 12 hours, until it is recorded or listed — the alarm for that bypass,
-  a cost the design accepts; the push gate judges only the records a push touches (#564).
+  evidence run and in the automaton sweep, at the next ledger push's stores check (#617), until it is recorded or
+  listed — the alarm for that bypass, a cost the design accepts; the push gate judges only the records a push touches (#564).
   Naming a row in the list is a decision, made in a reviewed agent-zone PR (the list lies outside
   `<instance>/d-work/`, so no ledger-only commit can touch it). The list is instance data and never
   the core's (Rule-11 property 1). It warns on every unrecorded row while an instance keeps no list
@@ -144,6 +144,8 @@ row a play-book the plan runs prescribes is born under that plan-`Y`, its words 
 same record, amendment #574. Property 4 gains the retired row's copied entry 2026-11-04 (d-work #585); see
 `../falsification/rules/rule-3-d-work.md`, amendment #585. Property 1's date is UTC, and property 2 names what the
 d-work trace writes of a transcript, 2026-11-05 (d-work #606, stating #592); see `../falsification/rules/rule-3-d-work.md`,
-amendment #606.
+amendment #606. Enforcement's alarm comes at the next ledger push's
+stores check, in the automaton sweep, in place of a twice-daily scheduled sweep 2026-11-06 (d-work #617); see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
 
 Set: System Requirements.

@@ -45,7 +45,7 @@ health command whose observed pass is the deploying d-work's completion evidence
    manner of Rule-11 property 3) in the active craft's run-book form
    (`crafts/sysadmin/rules/server-instances.md`), with a health command whose pass criterion is
    stated. `dyad runbook new <instance>` seeds it from the craft's template. Its commands are run
-   by the operator or the agent and, when `read-only`, by an automaton too — the scheduled sweep's
+   by the operator or the agent and, when `read-only`, by an automaton too — the automaton sweep's
    health commands — whose event names `role: automaton`; a reversible or destructive command is
    never an automaton's (Rule-8, Classes) (#593).
 2. **Deployed means run-book and health.** A server's deploying d-work is not Done until the
@@ -69,6 +69,8 @@ Operator rule, 2026-09-14 (ledger #134). Falsified; see
 moved to the sysadmin craft; its `Set:` line names that (#160 finding, fixed by #162). The run-book condition and
 property 1 name the automaton as a third runner of `read-only` commands 2026-11-04 (d-work #593, backlog row #54): the
 event's `role` knew only the operator and the agent, while the scheduled sweep runs health commands; see the same
-record, amendment #593.
+record, amendment #593. Property 1 names the automaton sweep, the term
+the scheduled sweep became, 2026-11-06 (d-work #617); see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
 
 Set: System Requirements (kernel; content: crafts/sysadmin/rules/server-instances.md).

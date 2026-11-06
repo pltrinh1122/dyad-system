@@ -1319,3 +1319,9 @@ board. **3–10**: the intent question is a proposal framed like the others. **3
 `dyadlib.CLI` row. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #615.
+
+## Amendment — d-work #617 (2026-11-06: the automaton sweep)
+This Rule's sentence changes with Rule-14's (Ledger names the automaton sweep and the home's read of `dyad board resume`). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #617.
+
+Disposition: see ledger #617.

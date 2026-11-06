@@ -135,3 +135,9 @@ monitoring, events-only (Rule-3); unchanged. **19–18**: ops scripts stay the o
 orthogonal.
 
 Disposition: see ledger #593.
+
+## Amendment — d-work #617 (2026-11-06: the automaton sweep)
+This Rule's sentence changes with Rule-14's (property 1 names the automaton sweep). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #617.
+
+Disposition: see ledger #617.

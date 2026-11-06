@@ -288,3 +288,32 @@ meaning is unchanged (A1). **14–19**: Rule-19's automaton runs its read-only c
 code. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #593.
+
+## Amendment — d-work #617 (2026-11-06: the scheduled sweep becomes the automaton sweep, on activity)
+Claim (plan #617, revision 3): the term `scheduled sweep` becomes `automaton sweep`, matching its verb (`sweep` alone is
+Rule-5's). It runs after each landed merge, once per landed cut: every whole-store guard, the suite in the hosting's
+environment, and drift. Its `--stores` mode runs the whole-store guards alone after each ledger push, in the
+automaton's job. No clock starts either. What waits on time rather than activity (heads not landed, a code push not
+corroborated, a stale board, work in flight, backlog hygiene) leaves the sweep's notice for the home's read, `dyad board
+resume`, at session start and at each operator prompt. Rules 3, 7, 12, 14 and 19 read the new way; their records point
+here.
+
+| # | attack | result |
+|---|---|---|
+| 1 | Code can change between merges, so a sweep per merge misses some. | Refuted: the main fence refuses every direct code commit to `main` (Rule-3 Mechanisms); code arrives only by a merge (plan G1). |
+| 2 | The stores change between merges, unswept. | Confirmed for the stores, so built: 315 ledger commits against 14 merges in one day, 36 of them the automaton's own with no pre-push hook (G2, G3). The `--stores` mode runs after each ledger push. |
+| 3 | Stalls need a clock. | Survives, moved: none of them is an event, so the home reads them at each prompt, from the ledger, under a 5-second ceiling (G4, P5). |
+| 4 | Outside drift goes unseen between merges. | Survives, delayed: found at the next merge's sweep; nothing ships before then (G5). |
+| 5 | Renaming the term breaks installers. | Refuted: vocabulary terms are not on the frozen surface; `dyad automaton sweep` and `dyad-sweep.yml` keep their names (P6). |
+| 6 | Rule-7's alarm is weaker without the 12-hour bound. | Refuted: a gap reaches the tree only by a push, and every ledger push now runs the stores check, so the alarm comes at the next push, never later than the bound did. |
+
+**Rule-6.** `scheduled sweep` is renamed `automaton sweep` and redefined; `used by` gains 19, which already used the
+term (3 7 12 14 19). Each user still reads correctly: Rule-3 Ledger (its notice, and the home's read), Rule-7
+Enforcement (the alarm at the next stores check), Rule-12 property 2 (where the whole-store guards and the hosting's
+suite run), Rule-14 property 3 (the definition's home), Rule-19 property 1 (an automaton's read-only health commands).
+Provenance sentences that say "scheduled sweep" are history and keep their words.
+**Pairwise (Rule-5).** **14–3**: the sweep is Rule-14's; the home's read of what it no longer posts is Rule-3's Ledger.
+**14–12**: Rule-12 names where its suite runs, Rule-14 when. **14–7**: Rule-7's alarm reads the stores check Rule-14
+schedules. **14–19**: Rule-19 keeps the event's `role`; the sweep is one runner. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #617.

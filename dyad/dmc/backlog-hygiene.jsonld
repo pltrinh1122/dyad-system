@@ -12,8 +12,8 @@
   ],
   "identifier": "backlog-hygiene",
   "name": "Backlog hygiene",
-  "description": "Which backlog rows and row pairs the scheduled sweep's hygiene reports to the home.",
-  "dyad:decides": "Which backlog rows, and which pairs of rows, does the sweep's hygiene report?",
+  "description": "Which backlog rows and row pairs the home's read (dyad board resume) shows as backlog hygiene.",
+  "dyad:decides": "Which backlog rows, and which pairs of rows, does the home's read show as hygiene?",
   "dyad:inputs": [
     "each backlog row's last commit to its row, plan or provenance record",
     "the TF-IDF cosine of each pair of backlog rows, siblings of one parent skipped",
@@ -25,7 +25,7 @@
       "termCode": "untouched",
       "name": "a row untouched",
       "dyad:when": "no commit has touched the row, its plan or its provenance record for hygiene-stale-days",
-      "dyad:then": "a structural finding, posted once in the sweep's notice: a reason to read the row, never a verdict on it"
+      "dyad:then": "a structural finding, printed in the home's read: a reason to read the row, never a verdict on it"
     },
     {
       "@type": "DefinedTerm",

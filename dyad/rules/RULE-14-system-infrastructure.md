@@ -68,10 +68,14 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    to `main` — once per landed tree (a newer push to `main` cancels the run on the older one), never on a branch push,
    a PR event, or a ledger-only or events-only commit. It runs the guards, the containment range, the fence, the
    build and a scratch install every time, and the suite only when the landed code differs from code an operative
-   `Y done`'s evidence passed; the **scheduled sweep** (`dyad automaton sweep`, twice a day) runs the suite on `main`
-   in the hosting's environment and every whole-store guard, read-only, and posts one notice to the home's inbox
-   only for what is new or failing (#564). The pre-push hook is the only check run before a merge (local CI first,
-   ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
+   `Y done`'s evidence passed; the **automaton sweep** (`dyad automaton sweep`) runs after each landed merge, once
+   per landed cut, the suite on `main` in the hosting's environment, every whole-store guard and drift, read-only,
+   and its `--stores` mode runs the whole-store guards alone after each ledger push, in the automaton's job; each
+   posts one notice to the home's inbox only for what is new or failing (#564, #617). No clock starts it: code reaches
+   `main` only by a merge, and the stores change only by pushes, so each check follows the activity that can change
+   what it reads. What waits on time rather than on activity — heads not landed, a code push not corroborated, a
+   stale board, work in flight, backlog hygiene — is read by the home in `dyad board resume` (Rule-3 Ledger). The
+   pre-push hook is the only check run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
    --no-ff` of the branch into `main`, commit message citing the PR and the done-Y — and is
    pushed when the hosting returns; the plan gate and the fence read the local `main`, and
    the completion reply states "evidence at <sha>, hosting unreachable" (#138).
@@ -108,6 +112,9 @@ every merge of a stack started its own full run on a tree nobody lands on; see t
 names the pre-push outcomes on a terminal, an empty stdin and a missing core tag 2026-11-05 (d-work #606, stating #592);
 see `../falsification/rules/rule-3-d-work.md`, amendment #606. Property 2
 states what a host running only the automaton needs 2026-11-04 (d-work #593, backlog row #55): the kernel listed a CLI
-agent, so such a host had no reading; see the same record, amendment #593.
+agent, so such a host had no reading; see the same record, amendment #593. Property 3's
+scheduled sweep becomes the automaton sweep 2026-11-06 (d-work #617): run after each landed merge, with a guards-only
+`--stores` mode after each ledger push, and no clock, the stall findings moving to the home's read; GitHub delivered
+the twice-daily schedule about seven hours late (#609); see the same record, amendment #617.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).

@@ -20,7 +20,7 @@
     "the backlog rows, their plans, refs and titles",
     "the anchors: every row on the board and the row just delivered, with their plan files and completion evidence",
     "the board's promised entries",
-    "the scheduled sweep's hygiene notice, for a backlog row a commit already claims",
+    "the home's read of backlog hygiene (dyad board resume), for a backlog row a commit already claims",
     "the charters of the instance's mandates table, for the unit that owns a candidate's files",
     "the failure-mode derivation of the incident log, for a candidate's incident mode",
     "a candidate need not be a row: a promise or a finding, named by its source (promise on #N, I12 on #N, finding) and a one-line title",
@@ -60,7 +60,7 @@
       "@type": "DefinedTerm",
       "termCode": "P5",
       "name": "worked under backlog",
-      "dyad:when": "the scheduled sweep reports a commit claiming the row while it is still backlog; the sweep's other hygiene findings (orphaned, untouched, malformed) are reasons to read a row, never grounds to retire it or to promote it",
+      "dyad:when": "the home's read shows a commit claiming the row while it is still backlog; its other hygiene findings (orphaned, untouched, malformed) are reasons to read a row, never grounds to retire it or to promote it",
       "dyad:then": "proposed after P4"
     },
     {
