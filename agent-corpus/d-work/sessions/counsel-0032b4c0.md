@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-06T00:38:04+00:00
+seen: 2026-11-06T02:28:08+00:00
 root: /home/user/wt/inbox
 rows: 570 609
 files: .github/workflows/dyad-sweep.yml agent-corpus/d-work/plans/609.md dyad/scripts/automaton.py dyad/tests/test_automaton.py workstation-corpus/runbooks/automaton.md
