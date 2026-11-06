@@ -133,13 +133,17 @@ def last_touched(repo: Path, base: str, inst: str) -> dict[int, int]:
 def cited_on_branches(repo: Path) -> dict[int, tuple[str, str]]:
     """{row id: (commit, branch)} for `d-work #N` cited by a commit on a fetched `origin/*` branch other than main."""
     out = {}
-    for ref in git(repo, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split():
-        if ref in ("origin/main", "origin/HEAD", "origin"):
+    # #617: one `git log --source` over every origin branch, not one log per branch (511 branches took 20 s); each
+    # commit is named with the ref git reached it from, and the newest citing commit wins
+    for block in git(repo, "log", "--source", "--format=%H%x00%S%x00%B%x01", "--remotes=origin",
+                     "--exclude=refs/remotes/origin/HEAD", "--not", "origin/main").split("\x01"):
+        sha, _, rest = block.strip().partition("\x00")
+        ref, _, body = rest.partition("\x00")
+        ref = ref.removeprefix("refs/remotes/")
+        if not sha or ref in ("origin/main", "origin/HEAD", "origin"):
             continue
-        for block in git(repo, "log", "--format=%H%x00%B%x01", f"origin/main..{ref}").split("\x01"):
-            sha, _, body = block.strip().partition("\x00")
-            for n in CITE.findall(body):
-                out.setdefault(int(n), (sha[:12], ref))
+        for n in CITE.findall(body):
+            out.setdefault(int(n), (sha[:12], ref))
     return out
 
 
@@ -203,9 +207,8 @@ def hygiene(repo: Path, base: str, now: float, prefs: Path | None = None) -> tup
         if r.id in cited:
             sha, ref = cited[r.id]
             findings.append(f"hygiene I12 worked: backlog row #{r.id} is cited by {sha} on {ref}")
-    texts = {}
-    for r in backlog:
-        texts[r.id] = r.title + "\n" + git(repo, "show", f"{base}:{inst}/d-work/plans/{r.id}.md")
+    plans = dyadlib.show_many(repo, base, [f"{inst}/d-work/plans/{r.id}.md" for r in backlog])   # one process (#617)
+    texts = {r.id: r.title + "\n" + plans.get(f"{inst}/d-work/plans/{r.id}.md", "") for r in backlog}
     malformed = {r.id for r in backlog if not r.title.strip() or r.title.lstrip().startswith("-")}
     ranked = [r for r in rows if r.id not in malformed]          # an I2 row has no title to compare: a finding already
     candidates = [f"candidate: #{a} and #{b} similar ({c:.2f}): {byid[a].title[:50]} / {byid[b].title[:50]}"
@@ -231,8 +234,9 @@ def _when(v: str):
 def _board_files(repo: Path, base: str, inst: str) -> dict[str, dict[str, str]]:
     bd = dyadlib.load_guard("agent", "board")
     d = f"{inst}/d-work/board"
-    return {n[:-3]: bd.parse(git(repo, "show", f"{base}:{d}/{n}"))[0]
-            for n in git(repo, "ls-tree", "--name-only", f"{base}:{d}").split() if n.endswith(".md")}
+    names = [n for n in git(repo, "ls-tree", "--name-only", f"{base}:{d}").split() if n.endswith(".md")]
+    got = dyadlib.show_many(repo, base, [f"{d}/{n}" for n in names])
+    return {n[:-3]: bd.parse(got.get(f"{d}/{n}", ""))[0] for n in names}
 
 
 def _units(field: str) -> list[str]:
@@ -247,10 +251,11 @@ def _messages(repo: Path, base: str, inst: str) -> list[dict[str, str]]:
     root = f"{inst}/d-work/inbox/"
     names = git(repo, "ls-tree", "-r", "--name-only", base, root).split()
     marks = {n[:-5] for n in names if n.endswith(".read")}
+    got = dyadlib.show_many(repo, base, [n for n in names if n.endswith(".md")])   # one process (#617)
     out = []
     for n in names:
         if n.endswith(".md"):
-            f = bd.parse(git(repo, "show", f"{base}:{n}"))[0]
+            f = bd.parse(got.get(n, ""))[0]
             f["_box"], f["_read"] = n[len(root):].split("/")[0], n[:-3] in marks
             out.append(f)
     return out
@@ -267,10 +272,26 @@ def _cited_times(repo: Path) -> dict[int, int]:
     return out
 
 
-def _promise_since(repo: Path, base: str, rel: str, text: str) -> int | None:
-    """Unix time of the newest commit on `base` that added `text` to `rel` (git's pickaxe), the start of its listing."""
-    ts = git(repo, "log", "--format=%ct", "-S", text, base, "--", rel).split()
-    return int(ts[0]) if ts else None
+def _promise_since(repo: Path, base: str, rel: str, text: str, log: dict | None = None) -> int | None:
+    """Unix time of the newest commit on `base` that added `text` to `rel`, the start of its listing: the newest commit
+    whose patch adds more occurrences of `text` than it removes, as git's pickaxe (`-S`) reads a change of count. `log`
+    caches each file's one `git log -p` across promises (#617: one process per file, not one pickaxe per promise)."""
+    if log is None or rel not in log:
+        commits, cur = [], None
+        for line in git(repo, "log", "-p", "--format=@%ct", "--no-color", "--no-ext-diff", base, "--", rel).splitlines():
+            if line.startswith("@") and line[1:].isdigit():
+                cur = [int(line[1:]), [], []]; commits.append(cur)
+            elif cur is not None and line.startswith("+") and not line.startswith("+++"):
+                cur[1].append(line[1:])
+            elif cur is not None and line.startswith("-") and not line.startswith("---"):
+                cur[2].append(line[1:])
+        if log is None:
+            log = {}
+        log[rel] = commits
+    for when, added, removed in log[rel]:                 # newest first
+        if "\n".join(added).count(text) > "\n".join(removed).count(text):
+            return when
+    return None
 
 
 def inflight(repo: Path, base: str, now: float, pulls: list[dict] | None,
@@ -405,9 +426,10 @@ def inflight_cabinets(repo: Path, base: str, now: float, pulls: list[dict] | Non
         if (refusal := bd.retired_waiting(f.get("waiting-on", ""))):
             out.append(f"inflight W7c retired form: row #{i}'s board entry {refusal}")
     # W8: a promise still listed
+    patches: dict = {}                                   # one `git log -p` per board file (#617)
     for name, f in [(bd.cos_name(c), f) for c, f in coses.items()] + [(str(i), f) for i, f in sorted(entries.items())]:
         for promise in [x.strip() for x in f.get("promised", "").replace("\n", ";").split(";") if x.strip()]:
-            t = _promise_since(repo, base, f"{inst}/d-work/board/{name}.md", promise)
+            t = _promise_since(repo, base, f"{inst}/d-work/board/{name}.md", promise, patches)
             if t and now - t > w["W8"] * 86400:
                 stamp = datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%d")
                 line = (f"inflight W8 promise still listed: board {name} has promised {promise[:80]!r} since {stamp} "

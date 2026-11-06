@@ -879,6 +879,25 @@ def format_row_file(r: Row) -> str:
     return ("".join(f"{k}: {getattr(r, k)}\n" for k in FIELDS)
             + "".join(f"{k}: {getattr(r, k)}\n" for k in OPTIONAL_FIELDS if getattr(r, k) != getattr(Row, k)))
 
+def show_many(root: Path, at: str, paths: list[str]) -> dict[str, str]:
+    """{path: text} of every `paths` entry at commit `at`, read in one `git cat-file --batch` (#617: one process, not
+    one `git show` per file, so `dyad board resume`'s ledger reads stay under its ceiling); a path absent at `at` is
+    left out. Raises CalledProcessError when git fails."""
+    if not paths:
+        return {}
+    r = subprocess.run(["git", "cat-file", "--batch"], cwd=root, input="".join(f"{at}:{p}\n" for p in paths).encode(),
+                       capture_output=True, check=True)
+    out, data, i = {}, r.stdout, 0
+    for p in paths:
+        nl = data.index(b"\n", i)
+        head = data[i:nl].split()
+        i = nl + 1
+        if len(head) == 3 and head[1] == b"blob":
+            size = int(head[2])
+            out[p] = data[i:i + size].decode("utf-8", errors="replace")
+            i += size + 1
+    return out
+
 def read_rows(root: Path | None = None, at: str | None = None) -> list[Row]:
     """All rows from rows_dir(); with `at`, from that git commit (Rule-16)."""
     root = root or repo_root()
@@ -893,8 +912,10 @@ def read_rows(root: Path | None = None, at: str | None = None) -> list[Row]:
             # transition / legacy: a commit before Rule-16 has only the table
             table_rel = ledger_path(root).relative_to(root)
             return ledger_rows(subprocess.check_output(["git", "show", f"{at}:{table_rel}"], cwd=root, text=True))
-        texts = [subprocess.check_output(["git", "show", f"{at}:{rel}/{n}"], cwd=root, text=True)
-                 for n in sorted(names, key=lambda n: int(n[:-3]) if n[:-3].isdigit() else -1) if n.endswith(".md") and n[:-3].isdigit()]
+        want = [f"{rel.as_posix()}/{n}" for n in sorted(names, key=lambda n: int(n[:-3]) if n[:-3].isdigit() else -1)
+                if n.endswith(".md") and n[:-3].isdigit()]
+        got = show_many(root, at, want)                 # one process for every row file (#617)
+        texts = [got[w] for w in want]
     rows = [parse_row_file(t) for t in texts]
     ids = [r.id for r in rows]
     if len(ids) != len(set(ids)):
@@ -1026,7 +1047,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("automaton", "scan"):      CliForm(),
     ("automaton", "run"):       CliForm("", (("--evidence-from", "<file>"),)),
     ("automaton", "evidence"):  CliForm("", (("--out", "<file>"),)),
-    ("automaton", "sweep"):     CliForm("", (("--row", "<id>"),)),
+    ("automaton", "sweep"):     CliForm("", (("--row", "<id>"),), ("--stores",)),   # #617: --stores, the whole-store guards only
     ("steps", "verify-prs"):    CliForm(),
     ("steps", "done-record"):   CliForm("", (), (LAND_FLAG,)),
     ("steps", "close-landed"):  CliForm("", (), (LAND_FLAG,)),

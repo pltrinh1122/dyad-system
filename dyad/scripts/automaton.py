@@ -34,7 +34,9 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
 
   dyad automaton scan      read-only: the acts a run would take now, one line each
   dyad automaton run [--evidence-from <file>]
-                           take them; one line per act and per refusal; exit 1 when a landed cut failed
+                           take them; one line per act and per refusal, then `landed: <n> merge(s)` (#617: with
+                           GITHUB_OUTPUT set, the outputs `landed` and `landed-at` too, so the job dispatches the
+                           full sweep once per landed cut); exit 1 when a landed cut failed
                            corroboration, else 0 unless the automaton itself failed. With --evidence-from (#587 X10)
                            the evidence acts fire the file's verdicts instead of computing them: each line is
                            untrusted, checked strictly (shape, a verdict of the machine's table, the row in
@@ -44,14 +46,15 @@ nothing. Memory across runs (a retry) lives in the run itself or in the store, n
                            read-only, sandbox-only (never in a job holding a write token): the combined evidence of
                            every evidence act, one JSON line each, {rid, event, evidence or note, heads}, to <file>;
                            fires, posts and commits nothing
-  dyad automaton sweep [--row <id>]
-                           read-only, twice a day (d-work #564): every guard over every store and the full suite on
-                           origin/main, Y dones whose heads never landed, stale board entries, released tags
-                           against their entries, the mirror against main, and code pushes to main with no
-                           completed corroboration, the backlog's hygiene (scripts/hygiene.py, #565: findings
-                           and `candidate:` similarity lines) and the work in flight (W1-W10', #569, one notice
-                           per kind). One `finding:` line each; a finding not yet told is posted, in
-                           one notice, to the home's inbox on `--row`. Exit 1 when a finding fails. A health
+  dyad automaton sweep [--stores] [--row <id>]
+                           read-only, after each landed merge (d-work #564, #617): every guard over every store and
+                           the full suite on origin/main, released tags against their entries and the mirror
+                           against main. One `finding:` line each; a finding not yet told is posted, in one notice,
+                           to the home's inbox on `--row`. Exit 1 when a finding fails. The stall findings (heads
+                           not landed, corroboration, stale board, work in flight, backlog hygiene) are the home's
+                           read since #617: `dyad board resume` prints them (`stall_lines`). With --stores, after
+                           each ledger push: the whole-store guards only (`check --guards`, no suite, no drift, no
+                           events), told the same way. A health
                            run that appended an event (a changed reading, #438) has it landed on main as an
                            events-only commit citing no d-work, on `--row` only (#593); one `events:` line says
                            what happened, and a landing that fails never changes a finding or the exit
@@ -79,15 +82,17 @@ Refused = land.Refused
 SEAT = "automaton"                           # the inbox sender; path-shaped, so a box name too
 RACE_TRIES = 5                               # a push that lost a race to main, re-merged at once (#562 (c))
 PLANNED = "row #{rid} planned; read plans/{rid}.md"
-USAGE = "usage: dyad automaton scan | run [--evidence-from <file>] | evidence --out <file> | sweep [--row <id>]"
+USAGE = "usage: dyad automaton scan | run [--evidence-from <file>] | evidence --out <file> | sweep [--stores] [--row <id>]"
 CLI_FLAGS = dyadlib.cli_forms("automaton")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 ROW_FLAG, = CLI_FLAGS["sweep"].value_flags
+STORES_FLAG, = CLI_FLAGS["sweep"].bare                # #617: the whole-store guards only, after each ledger push
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seat-is-path-shaped", lambda: bool(re.fullmatch(r"[A-Za-z0-9._-]+", SEAT))),
     ("retries-bounded", lambda: 1 < RACE_TRIES <= 10),
     ("evidence-events-are-the-automatons-from-verifying",          # #587 X10: an evidence line fires only these
      lambda: all("automaton" in dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]) for e in EVIDENCE_EVENTS)),
+    ("ci-read-within-the-ceiling", lambda: 0 < CI_TIMEOUT_S < STALL_CEILING_S and 0 < CI_PAGE <= 100),   # #617 P5
     ("evidence-file-bounded", lambda: 0 < EVIDENCE_FILE_LINES and 0 < EVIDENCE_HEADS <= 100 and EVIDENCE_FILE_BYTES <= 1 << 24),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import (crafts/syseng/rules/invariants.md)
@@ -777,10 +782,15 @@ def finding_key(line: str) -> str:
     entry-shaped fragment masked as `post` masks it, so the told text and the key compare equal."""
     return inbox().DISPOSITION.sub("[an entry, read in the ledger]", HEXWORD.sub("<sha>", " ".join(line.split())))
 
-def sweep_check(wt: Path) -> list[tuple[bool, str]]:
-    """(fails, line) for every FAIL and warn line `check` prints on the swept tree (every guard, the full suite)."""
-    r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check"], cwd=wt,
-                       capture_output=True, text=True, env=dyadlib.git_env())
+def sweep_check(wt: Path, stores: bool = False) -> list[tuple[bool, str]]:
+    """(fails, line) for every FAIL and warn line `check` prints on the swept tree (every guard, the full suite); with
+    `stores` (#617), `check --guards` on that tree — every guard's whole-store check and the transaction guards over an
+    empty range, the suite never run (`DYAD_NO_NESTED_TESTS`)."""
+    argv, env = ["check"], dyadlib.git_env()
+    if stores:
+        argv, env = ["check", "--guards"], {**env, "DYAD_NO_NESTED_TESTS": "1"}
+    r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), *argv], cwd=wt,
+                       capture_output=True, text=True, env=env)
     out = [(l.startswith("FAIL"), l) for l in (r.stdout + r.stderr).splitlines() if l.startswith(("FAIL", "warn"))]
     if r.returncode and not any(f for f, _ in out):
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
@@ -926,38 +936,66 @@ def corroborated(repo: Path, c: str, own: list[dict], listed: list[dict], firstp
     return False
 
 
+CI_FILES = {"rule-11 package": "dyad-package.yml", "d-work automaton": "dyad-automaton.yml"}   # CI_WORKFLOWS' files
+CI_PAGE = 30   # the newest successes read per workflow: a day of package runs, and the automaton's latest (#617, the ceiling)
+CI_TIMEOUT_S = 3   # the hosting's round trip the home's read waits for; slower reads as "not read" (STALL_CEILING_S)
+
+def repo_slug(repo: Path) -> str | None:
+    """`owner/name` of the hosting: GITHUB_REPOSITORY in a job, else read off `origin`'s URL (#617: a session's home
+    reads the public run list too); None when neither names one."""
+    if os.environ.get("GITHUB_REPOSITORY"):
+        return os.environ["GITHUB_REPOSITORY"]
+    url = land.git(repo, "remote", "get-url", "origin", check=False).stdout.strip()
+    m = re.search(r"(?:github\.com[:/]|/git/)([A-Za-z0-9._-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?$", url)   # github, or a git proxy's /git/
+    return m.group(1) if m else None
+
 def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
     """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
-    hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
+    hosting: the repository is public, so the run list reads with `GITHUB_TOKEN` when set and without it otherwise
+    (#617: the home's read in a session). One listing per workflow (`CI_FILES`), the newest successes on main, fetched in
+    parallel with the commits' classing, so `board resume` stays under its ceiling; a hosting that cannot be read is
+    one finding saying so, never a crash."""
     import datetime, json, urllib.request
-    token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+    from concurrent.futures import ThreadPoolExecutor
+    token, slug = os.environ.get("GITHUB_TOKEN"), repo_slug(repo)
     try:
         since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
     except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
         since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
     since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
-    code = [c for c in log if not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))]
+    if not log:
+        return []
+    def is_code(c):
+        return not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))
+    def runs(name):
+        req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/workflows/{CI_FILES[name]}/runs"
+                                     f"?branch=main&status=success&per_page={CI_PAGE}",
+                                     headers={"Accept": "application/vnd.github+json",
+                                              **({"Authorization": f"Bearer {token}"} if token else {})})
+        with urllib.request.urlopen(req, timeout=CI_TIMEOUT_S) as resp:
+            return [{**w, "name": w.get("name") or name} for w in json.load(resp).get("workflow_runs", [])]
+    with ThreadPoolExecutor(8) as pool:                  # #617: the hosting and git at once, the home's ceiling
+        fetched = [pool.submit(runs, n) for n in CI_FILES] if slug else []
+        code = [c for c, k in zip(log, pool.map(is_code, log)) if k]
+        listed, error = [], None
+        for f in fetched:
+            try:
+                listed += f.result()
+            except Exception as e:                       # the hosting is The World: unreadable is a finding
+                error = e
     if not code:
         return []
-    if not (token and slug):
-        return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")]
-    def runs(sha=None, name=None):
-        q = f"head_sha={sha}" if sha else "branch=main&status=success&per_page=100"   # the successes on main a later tree may cover with (#614)
-        req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/runs?{q}",
-                                     headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.load(resp).get("workflow_runs", [])
-    out = []
-    try:
-        listed = runs()
-        recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
-        firstparent = set(log)
-        for c in code:
-            if not corroborated(repo, c, runs(sha=c), listed, firstparent, recent):
-                out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
-    except Exception as e:                               # the hosting is The World: unreadable is a finding, never a crash
-        out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
+    if not slug:
+        return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no hosting named by origin or GITHUB_REPOSITORY)")]
+    if error is not None:
+        return [(False, f"finding: corroboration not read from the hosting ({type(error).__name__})")]
+    recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
+    firstparent, out = set(log), []
+    for c in code:
+        own = [w for w in listed if w.get("head_sha") == c]
+        if not corroborated(repo, c, own, listed, firstparent, recent):
+            out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
     return out
 
 def sweep_pulls() -> list[dict] | None:
@@ -1010,11 +1048,38 @@ def notice_parts(group: list[str]) -> list[list[str]]:
         cur.append(line); size += len(line) + 3
     return parts + ([cur] if cur else [])
 
-def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
+STALL_CEILING_S = 5.0   # #617 P5: `dyad board resume` prints the stall lines within this; dyad/tests/guards/agent/test_board.py holds it
+
+def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabinet: str | None = None) -> list[str]:
+    """The stall findings the home reads at each prompt (`dyad board resume`, #617), read from the ledger at `base`:
+    Y dones whose heads never landed and stale board entries (`sweep_ledger`), code pushes to main with no completed
+    corroboration (`sweep_ci`, which needs the hosting and otherwise says it was not read), the work in flight (W-lines, the hosting's PRs read only with
+    a token) and the backlog's hygiene (I-lines and `candidate:` pairs). With `cabinet` (#594), only the in-flight lines
+    whose home is that cabinet's — a cabinet with no home of its own falls back to `program`'s, as the sweep once routed
+    them. Read-only: it posts nothing."""
+    import datetime
+    from concurrent.futures import ThreadPoolExecutor
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    with ThreadPoolExecutor(2) as pool:                 # the hosting's round trip beside the ledger reads (the ceiling)
+        ci = pool.submit(sweep_ci, repo, base, now, prefs)
+        found = sweep_ledger(repo, base, now, prefs)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), prefs)
+        pulls = sweep_pulls() if os.environ.get("GITHUB_TOKEN") else None
+        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), pulls, prefs=prefs)
+        found += ci.result()
+    if cabinet is not None:                              # the lines whose home is this cabinet's (`home` falls back)
+        mine = home(repo, base, cabinet)
+        flight = [(c, h) for c, h in flight if home(repo, base, c) == mine]
+    flight = [h for _, h in flight]
+    return ([l for _, l in found] + [f"finding: {h}" for h in hyg + flight] + candidates)
+
+def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str], int]:
     """(lines, rc). Read-only but for one write: the event its own health run recorded, landed events-only on `row`
-    (#593, `land_events`). Every finding prints; findings no automaton notice in the home's inbox has told yet are
-    posted in one notice on `row`; rc 1 when any finding fails. Per cabinet (#594): an in-flight line goes to the home
-    of the cabinet it concerns (`hygiene.inflight_cabinets`), every other line to `program`'s."""
+    (#593, `land_events`). Every finding prints; findings no automaton notice in `program`'s home inbox has told yet
+    are posted in one notice on `row`; rc 1 when any finding fails. The stall findings (heads not landed, corroboration,
+    stale board, work in flight, backlog hygiene) are not the sweep's since #617: the home reads them in
+    `dyad board resume` (`stall_lines`). With `stores` (#617): the whole-store guards only — no suite, no drift, no
+    events — run after each ledger push in the automaton's job, folded against what was told the same way."""
     import datetime
     now = datetime.datetime.now(datetime.timezone.utc)
     base = land.fetch(repo)
@@ -1022,34 +1087,28 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
     wt = common / land.WORKTREE
     with land.locked(common):
         land.prepare(repo, wt, base)
-        found = sweep_check(wt) + sweep_drift(repo, wt, base)
-        found += sweep_ledger(repo, base, now, wt) + sweep_ci(repo, base, now, wt)   # tunables read at `base` (#590)
-        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), wt)   # after check, whatever check returned (#565 A8)
-        found += [(False, f"finding: {h}") for h in hyg]
-        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), sweep_pulls(), prefs=wt)   # #569, per cabinet #594
-        found += [(False, f"finding: {h}") for _, h in flight]
-        try:                                                 # read before the lock goes: the next land resets wt
-            events_at, fresh, event_notes = new_events(wt)
-        except Exception as e:                               # the event step never fails the sweep's findings
-            events_at, fresh, event_notes = None, {}, [f"events: not read ({type(e).__name__}); not landed"]
-    lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found] + candidates
-    cabinet = {f"finding: {h}": c for c, h in flight}
+        found = sweep_check(wt, stores) + ([] if stores else sweep_drift(repo, wt, base))
+        events_at, fresh, event_notes = None, {}, []
+        if not stores:
+            try:                                             # read before the lock goes: the next land resets wt
+                events_at, fresh, event_notes = new_events(wt)
+            except Exception as e:                           # the event step never fails the sweep's findings
+                events_at, fresh, event_notes = None, {}, [f"events: not read ({type(e).__name__}); not landed"]
+    lines = [l if l.startswith("finding: ") else f"finding: {l}" for _, l in found]
     rc = 1 if any(f for f, _ in found) else 0
-    homes = {c: home(repo, base, c) for c in dict.fromkeys([board().SOLO, *cabinet.values()])}
-    routed: dict[str | None, list[str]] = {}
-    for l in lines:
-        routed.setdefault(homes[cabinet.get(l, board().SOLO)], []).append(l)
+    routed: dict[str | None, list[str]] = {home(repo, base, board().SOLO): lines} if lines else {}
     told = {to: " ".join(m.get("body", "") for m in box_messages(repo, base, to) if m.get("from") == SEAT) if to else ""
             for to in routed}
     new = {to: [l for l in ls if finding_key(l.removeprefix("finding: ")) not in told[to]] for to, ls in routed.items()}
     count = sum(len(v) for v in new.values())
-    summary = f"sweep of main {base[:12]}: {len(lines)} finding(s), {sum(f for f, _ in found)} failing, {count} new"
+    summary = (f"{'stores sweep' if stores else 'sweep'} of main {base[:12]}: {len(lines)} finding(s), "
+               f"{sum(f for f, _ in found)} failing, {count} new")
     sent, untold = [], False
     for to, ls in new.items():
         if ls and row and to:
             for kind, group in notice_groups(ls):
                 for part in notice_parts(group):
-                    body = f"automaton sweep at {base[:12]}, {kind}: " + " | ".join(part)
+                    body = f"automaton {'stores sweep' if stores else 'sweep'} at {base[:12]}, {kind}: " + " | ".join(part)
                     try:
                         sent.append(post(repo, to, row, body))
                     except (Refused, inbox().Refused) as e:
@@ -1060,7 +1119,7 @@ def sweep(repo: Path, row: int | None) -> tuple[list[str], int]:
         summary += "; " + "; ".join(sent)
     if untold:
         summary += "; not told (no --row or no home)"
-    event_lines = event_notes + [land_events(repo, events_at, fresh, row)]   # after the notices; never changes rc
+    event_lines = [] if stores else event_notes + [land_events(repo, events_at, fresh, row)]   # after the notices; never changes rc
     return lines + event_lines + [summary], rc
 
 # ---- taking them
@@ -1138,6 +1197,7 @@ def do_merge(repo: Path, rid: int, cut: list[tuple[int, str]]) -> tuple[bool, st
             heads = [m.group(1) for m in (LANDED.search(l) for l in lines) if m]
             if not heads:
                 return True, "\n".join(lines)
+            MERGES_LANDED.extend(heads)                    # #617: the job starts the full sweep once per landed cut
             before = land.out(repo, "rev-parse", f"{heads[0]}^1")
             ok, out = corroborate(repo, before, heads[-1])
             fails = [l for l in out if l.startswith("FAIL")]
@@ -1170,6 +1230,16 @@ def do_close(repo: Path, rid: int) -> str:
 
 
 CORROBORATION_FAILED: set[int] = set()   # rows whose landed cut failed corroboration in this run: the run exits 1
+MERGES_LANDED: list[str] = []            # #617: the merge commits this run landed, reported for the job
+
+def landed_report(heads: list[str]) -> str:
+    """The one line `run` ends with (#617), and, when the job set `GITHUB_OUTPUT`, its outputs `landed` (`true` or
+    `false`) and `landed-at` (the last merge this run landed), which the job reads to dispatch the full sweep."""
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        with open(out, "a") as f:
+            f.write(f"landed={'true' if heads else 'false'}\nlanded-at={heads[-1] if heads else ''}\n")
+    return f"landed: {len(heads)} merge(s)" + (f", the last at {heads[-1][:12]}" if heads else "")
 
 def run(repo: Path, evidence_from: Path | None = None) -> list[str]:
     """Take the acts. With `evidence_from` (#587 X10) the evidence acts are served from that file, which an
@@ -1254,9 +1324,11 @@ def main(argv: list[str], repo: Path) -> int:
             return 0
         if a[:1] == ["sweep"]:
             rest = a[1:]
-            if rest not in ([],) and not (len(rest) == 2 and rest[0] == ROW_FLAG and rest[1].isdigit()):
+            stores = STORES_FLAG in rest
+            rest = [x for x in rest if x != STORES_FLAG]
+            if (stores and a[1:].count(STORES_FLAG) > 1) or (rest not in ([],) and not (len(rest) == 2 and rest[0] == ROW_FLAG and rest[1].isdigit())):
                 print(USAGE, file=sys.stderr); return 2
-            lines, rc = sweep(Path(repo), int(rest[1]) if rest else None)
+            lines, rc = sweep(Path(repo), int(rest[1]) if rest else None, stores)
             print("\n".join(lines)); return rc
         if a[:1] == ["evidence"]:
             if len(a) != 3 or a[1] != "--out":
@@ -1264,8 +1336,10 @@ def main(argv: list[str], repo: Path) -> int:
             print("\n".join(evidence_out(Path(repo), Path(a[2]))))
             return 0
         if a == ["run"] or (len(a) == 3 and a[:2] == ["run", "--evidence-from"]):
-            CORROBORATION_FAILED.clear()
-            print("\n".join(run(Path(repo), Path(a[2]) if len(a) == 3 else None)))
+            CORROBORATION_FAILED.clear(); MERGES_LANDED.clear()
+            lines = run(Path(repo), Path(a[2]) if len(a) == 3 else None)
+            report = landed_report(MERGES_LANDED)             # always the job's outputs; the line only when one landed
+            print("\n".join(lines + ([report] if MERGES_LANDED else [])))
             return 1 if CORROBORATION_FAILED else 0
         print(USAGE, file=sys.stderr)
         return 2
