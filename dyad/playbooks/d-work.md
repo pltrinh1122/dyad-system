@@ -105,8 +105,23 @@ report + proposal (done) → countersignature — realized as, in order:
 1. **Initiation.** An operator prompt; the row is born `open` and the record holds the words (Rule-7). An
    intake (Rule-3) is a signal admitted by the operator's `Y`; a relayed prompt is still the operator's words,
    noted `relayed via <session>`.
+1a. **Intent reading** (under the preference `intent-reading: on`; under `off`, the default, this step is skipped and
+   2 opens the row's questions, #615). Before any plan is drafted, the reply to a prompt that opens a row, or that
+   reopens one from `backlog`, is the intent reading: the prompt's portions, each classed by
+   `dyad/dmc/intent-reading.jsonld` against the candidates `dyad dwork intent <id>` prints (rows of any state and
+   surface items, ranked, never thresholded) and against the play-books and the Rules. A portion is **new**; an
+   **overlap** of a row or capability, a **duplicate** when the overlap is complete, so no row is opened for it;
+   a **supersede** of one, the superseded row named for the Done's `retires`; **adjacent** to one, noted for the
+   plan; **ambiguous**, both readings stated and one taken; or a **false premise**, assuming what is not true on
+   `main`, read against `main` and never against an age. False premise and duplicate are judged first, then
+   ambiguous. The reading proposes the definition of done (below, sized by `altitude`) and is stored as the plan
+   file's first section; its last line is the **intent question**, `Y/N: intent aligned for #<id> <title>?`.
+   `Y` (the **intent-Y**) accepts the reading and the definition of done, and the plan follows; `N` with text
+   amends the reading in place; a bare `N` archives the row (`open → archived`), since nothing was built to
+   revise from. The board's phase while it is asked is `intent-asked` (Orchestration, below).
 2. **Proposal.** The plan file (Rule-15 phase 1; Rule-10's path, counter and reconciliation; the disposition
-   budget and the mandate scope of `disposition-digest.md`), opening with its definition of done (below), then the
+   budget and the mandate scope of `disposition-digest.md`), opening with its definition of done (below) — the one
+   the intent-`Y` accepted under `intent-reading: on`, or one marked proposed under `off` — then the
    plan counter-prompt as the reply's last line. The Rule-16 presence read precedes the file.
 3. **Countersignature.** `Y`: `open → planned`, the presence touched. A bare `N`: nothing moves, the agent
    revises. `N` with text: amend — the plan revised in place and asked again.

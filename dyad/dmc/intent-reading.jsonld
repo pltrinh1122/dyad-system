@@ -1,0 +1,89 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/intent-reading",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "intent-reading",
+  "name": "Intent reading",
+  "description": "Classifies each portion of a prompt that opens or reopens a row against what the system already has and holds, before any plan is drafted, so the intent question can be answered on what the prompt asks rather than on a plan.",
+  "dyad:decides": "For each portion of this prompt, is it new work, work a row or capability already covers, a change to one, work beside one, unclear, or resting on a premise not true on main?",
+  "dyad:inputs": [
+    "the prompt's words, from the provenance record",
+    "the candidates dwork intent prints: the rows of any state and the surface items nearest the prompt, ranked and never thresholded",
+    "the capabilities: dyad/surface.md, the play-books and the Rules",
+    "the board: what is in flight now",
+    "the altitude record, for how many rows the portions make"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "false-premise",
+      "name": "false premise",
+      "dyad:when": "the portion assumes something not true on main when the reading is made: the work already there, the thing it names removed or changed, or a claim about the system that does not hold; read against main, never against a date or an age",
+      "dyad:then": "the premise as checked on main is stated, and the portion is dropped unless the operator keeps it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "duplicate",
+      "name": "duplicate",
+      "dyad:when": "a live row, or a capability on main, already holds the whole portion: overlap that is complete",
+      "dyad:then": "no row is opened for it; the work rides the holding row, which the reading names, or nothing is done"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ambiguous",
+      "name": "ambiguous",
+      "dyad:when": "the portion has two readings that lead to different work",
+      "dyad:then": "both readings are stated and one is taken, so the intent question asks about the reading taken"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "overlap",
+      "name": "overlap",
+      "dyad:when": "a row or a capability already holds part of the portion",
+      "dyad:then": "the holder is named; only the part it does not hold is new"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "supersede",
+      "name": "supersede",
+      "dyad:when": "the portion replaces what a row or a capability states",
+      "dyad:then": "a superseded row is named for the Done question's retires; a superseded capability is named for deprecation before its removal (dyad/playbooks/release.md, Q4)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "adjacent",
+      "name": "adjacent",
+      "dyad:when": "the portion is new but touches a row or a capability it does not change",
+      "dyad:then": "the neighbour is noted in the plan, for the overlap of files and for the reader"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new",
+      "name": "new",
+      "dyad:when": "no row and no capability holds or touches the portion",
+      "dyad:then": "it is work for the row the prompt opens, sized by the altitude record"
+    }
+  ],
+  "dyad:precedence": "false premise and duplicate first, since each removes the portion's work; then ambiguous, since a reading must be taken before the rest can be judged; then overlap, supersede, adjacent and new on the reading taken.",
+  "dyad:default": "a portion no candidate reaches and that reads one way is new.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "scripts/intent.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
+    "scripts/hygiene.py",
+    "dmc/altitude.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

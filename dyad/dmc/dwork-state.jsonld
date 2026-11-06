@@ -24,7 +24,7 @@
       "@type": "DefinedTerm",
       "termCode": "in-table",
       "name": "in the table",
-      "dyad:when": "the transition is one of: open to planned, blocked or done; planned to open, blocked or done; blocked to open; backlog to open or archived; done to archived; or a new row starting open or backlog",
+      "dyad:when": "the transition is one of: open to planned, blocked or done, or to archived on the intent question's bare N while the row holds no Y plan; planned to open, blocked or done; blocked to open; backlog to open or archived; done to archived; or a new row starting open or backlog",
       "dyad:then": "allowed"
     },
     {

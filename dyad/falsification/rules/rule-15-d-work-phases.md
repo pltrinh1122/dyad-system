@@ -76,3 +76,10 @@ This Rule's sentence changes with Rule-3's refactor. The claims, attacks and pai
 `rule-3-d-work.md`, amendment #585.
 
 Disposition: see ledger #585.
+
+## Amendment — d-work #615 (2026-11-06: phase 1 under the intent question)
+This Rule's sentences change with Rule-3's intent question: under `intent-reading: on` the intent-`Y` accepts the
+definition of done, and the plan file opens with the intent reading, asked before the plan. The claims, attacks and
+pairwise statements for every Rule this d-work touches are recorded once, in `rule-3-d-work.md`, amendment #615.
+
+Disposition: see ledger #615.

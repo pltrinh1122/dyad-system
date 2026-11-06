@@ -1286,3 +1286,36 @@ automaton's, used by unchanged (3 7 8): each still reads correctly.
 are theirs. **3–14**: its kernel is Rule-14 property 2's. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #593.
+
+## Amendment — d-work #615 (2026-11-06: the intent question, under the preference `intent-reading`)
+Claim (plan #615, revision 6): under `intent-reading: on`, the first reply to a prompt that opens a row, or reopens
+one from `backlog`, is the intent reading — each portion of the prompt classed by `dyad/dmc/intent-reading.jsonld` —
+asked as `Y/N: intent aligned for #<id> <title>?` before any plan. Its `Y` accepts the reading and the definition of
+done; an amend corrects it; a bare `N` archives the row. Under `off`, the shipped default, nothing changes. The
+evidence is the ledger audit `agent-corpus/audits/2026-11-06-intent-and-scope.md`: 27 of 60 refusals restated intent
+or scope after a full plan, six of them after a delivery.
+
+| # | attack | result |
+|---|---|---|
+| 1 | The plan-`Y` already checks intent. | Refuted as sufficient: the 27 class-I refusals each came after a full plan, six after a delivery (the audit). |
+| 2 | A third question costs more attention than it saves. | Survives, scoped: the reading replaces the plan's opening, which the operator reads either way; the cost is one round trip per prompt-opened row, batchable (Batch disposition gains the intent form); and it is the operator's preference, `off` by default, never the agent's judgment. |
+| 3 | The agent could ask only when it judges the reading unclear. | Refuted as a gate: #461 and #532 were misreads the agent judged clear. Who skips the question is the preference. |
+| 4 | A bare `N` that archives breaks the answer grammar. | Survives, scoped: on a plan a bare `N` leaves a proposal to revise; at intent nothing is built, so there is nothing to revise from. The bare `N` archives at intent only; `N` with text amends there as everywhere. |
+| 5 | `open → archived` lets the agent abandon work. | Refuted: the input is the operator's bare `N` to the intent question, a disposition, and the fence admits the edge only on a row whose last entry is `N intent` and that holds no `Y plan` (Rule-16). "Only the operator closes" holds. |
+| 6 | Refusing a plan with no intent-`Y` would be a fence. | Refuted for 1.x: a Rule that now refuses what its text allowed is a break (#611 Q3). `plan check` warns instead, as #592's checks do. |
+| 7 | "Intake" names the step. | Refuted: Rule-3's `intake` is another agent's message. The step is the intent reading, its answer the intent-`Y`. |
+| 8 | The intent-`Y` is a plan-`Y` under another name. | Refuted: it binds the reading and the definition of done and authorizes no mutation, row or PR (What a `Y` binds); the plan-`Y` still authorizes the mutation. |
+| 9 | A preference doubles the machine. | Refuted: the table is one table; the new edge fires only on `N intent`, which `off` never asks, so `off` is the earlier machine exactly. |
+
+**Rule-6.** New terms `intent reading` (used by 3 15) and `intent-Y` (used by 3 15). Amended: `definition of done`
+(accepted by the intent-`Y` under `on`), `archived` (reached from `open` by the intent question's bare `N`), `answer
+grammar` (a bare `N` to the intent question archives), `pending queue` (intent-ready rows). Each Rule in their `used by`
+still reads correctly.
+**Pairwise (Rule-5).** **3–2**: the intent-`Y` is a ratification event Rule-2 applies to by reference; it carries no act
+of Rule-2's never-carried list, since it carries no act at all. **3–7**: the intent question's answer is a disposition,
+its words a record entry as every disposition's are. **3–15**: the plan file opens with the reading; phase 1 states
+which `Y` accepts the definition of done. **3–16**: the edge and the `intent-asked` phase are Rule-16's table and
+board. **3–10**: the intent question is a proposal framed like the others. **3–11**: a new verb (`dwork intent`) is one
+`dyadlib.CLI` row. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #615.

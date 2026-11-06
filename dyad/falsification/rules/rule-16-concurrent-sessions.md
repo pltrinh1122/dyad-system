@@ -447,3 +447,20 @@ unchanged, each Rule still reads correctly.
 store. **16–6**: one new term, no redefinition. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #594.
+
+## Amendment — d-work #615 (2026-11-06: `open → archived` and the `intent-asked` phase)
+Claim (plan #615, revision 6): the transition table gains `open → archived`, admitted only on a row whose last
+`disposed` entry is a bare `N intent` and that holds no `Y plan`; the board's orchestration phases gain `intent-asked`.
+Both serve Rule-3's intent question, under `intent-reading: on`.
+
+| # | attack | result |
+|---|---|---|
+| 1 | State regresses, or an open row can be dropped at will. | Refuted: `archived` is terminal and later than `open`; the fence admits the edge on one input only, the operator's bare `N` to the intent question, with no `Y plan` on the row. |
+| 2 | The edge breaks an installing system (#611). | Refuted: an edge added beside the table refuses nothing a row did before; under `off`, the shipped default, no intent question is asked, so it never fires. |
+| 3 | `intent-asked` duplicates `plan-asked`. | Refuted: the two wait on different questions binding different acts (Rule-3, What a `Y` binds); one phase per question keeps the derived wait and question exact. |
+
+**Rule-6.** No Rule-16 term is added; `archived` and `orchestration phase` read correctly with the edge and the phase.
+**Pairwise (Rule-5).** **16–3**: the question and what its answer binds are Rule-3's; the edge and the phase are this
+Rule's store. Others unchanged; the full statement is in `rule-3-d-work.md`, amendment #615. Coherent, orthogonal.
+
+Disposition: see ledger #615.

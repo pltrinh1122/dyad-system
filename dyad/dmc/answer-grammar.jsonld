@@ -29,8 +29,15 @@
       "@type": "DefinedTerm",
       "termCode": "n-bare",
       "name": "bare",
-      "dyad:when": "N with no text",
+      "dyad:when": "N with no text, to any question but the intent question",
       "dyad:then": "nothing is authorized; the Agent revises"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "n-bare-intent",
+      "name": "intent question",
+      "dyad:when": "N with no text to the intent question",
+      "dyad:then": "the row is archived: nothing was built, so there is nothing to revise from (Rule-3, Answer grammar)"
     },
     {
       "@type": "DefinedTerm",
