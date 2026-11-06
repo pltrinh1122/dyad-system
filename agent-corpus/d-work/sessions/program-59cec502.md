@@ -1,7 +1,7 @@
 session: program-59cec502
-seen: 2026-11-05T23:19:14+00:00
+seen: 2026-11-06T00:23:52+00:00
 root: /home/user/dyad-system
-rows: 570 609 614
+rows: 570 609
 files: .github/workflows/dyad-sweep.yml agent-corpus/d-work/plans/609.md dyad/scripts/automaton.py dyad/tests/test_automaton.py workstation-corpus/runbooks/automaton.md
 writer: 59cec502-8c78-5e74-ae6a-66a4f0271c17
 host: cloud linux x86_64
