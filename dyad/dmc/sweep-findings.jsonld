@@ -12,8 +12,8 @@
   ],
   "identifier": "sweep-findings",
   "name": "Sweep findings over time",
-  "description": "How long the scheduled sweep lets a landing, a board entry or a code push wait before it is a finding.",
-  "dyad:decides": "Has a recorded done answer, a board entry or a code push to main waited long enough to be a sweep finding?",
+  "description": "How long a landing, a board entry or a code push may wait before the home's read (dyad board resume) shows it as a stall finding.",
+  "dyad:decides": "Has a recorded done answer, a board entry or a code push to main waited long enough to be a stall finding in the home's read?",
   "dyad:inputs": [
     "each operative Y done and whether its named heads are on main",
     "each board entry's since",

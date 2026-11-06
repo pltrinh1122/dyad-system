@@ -26,19 +26,19 @@ defines what each value means.
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 | intent-reading | off | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
-| hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
-| hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
-| hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
-| inflight-unread-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-planned-quiet-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-unplanned-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W…` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| inflight-done-ready-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the sweep's `inflight W11` line for a `done-ready` board entry: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
-| sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
-| sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
-| sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the scheduled sweep's findings over time: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
+| inflight-unread-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-planned-quiet-days | 3 | a positive integer (days) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-unplanned-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-pr-still-days | 3 | a positive integer (days) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-promise-days | 3 | a positive integer (days) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-question-hours | 24 | a positive integer (hours) | Rule-3 (work in flight, the `inflight W…` lines of the home's read: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| inflight-done-ready-hours | 4 | a positive integer (hours) | Rule-3 (work in flight, the home's read's `inflight W11` line for a `done-ready` board entry: `dyad/scripts/hygiene.py`; default `dyad/dmc/work-in-flight.jsonld`) |
+| sweep-landing-hours | 24 | a positive integer (hours) | Rule-14 (the stall findings of the home's read, `dyad board resume`: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-board-stale-days | 3 | a positive integer (days) | Rule-14 (the stall findings of the home's read, `dyad board resume`: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
+| sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the stall findings of the home's read, `dyad board resume`: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | promotion-ceiling | 2 | a positive integer (rows proposed at once, never more than the idle units) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
 | promotion-adjacency-min | 3 | a positive integer (the adjacency score that alone makes a candidate adjacent) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
 

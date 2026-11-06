@@ -12,8 +12,8 @@
   ],
   "identifier": "work-in-flight",
   "name": "Work in flight",
-  "description": "How old a piece of work in flight must be before the sweep reports it to the home.",
-  "dyad:decides": "Has this piece of work in flight been still long enough for the sweep to report it?",
+  "description": "How old a piece of work in flight must be before the home's read (dyad board resume) shows it.",
+  "dyad:decides": "Has this piece of work in flight been still long enough for the home's read to show it?",
   "dyad:inputs": [
     "inbox files and their read markers",
     "board entries, their phase and their since",
@@ -75,7 +75,7 @@
       "termCode": "young",
       "name": "Each threshold is a minimum age",
       "dyad:when": "the work is younger than its threshold",
-      "dyad:then": "nothing is reported; the sweep runs twice a day, so each threshold is a minimum"
+      "dyad:then": "nothing is shown; the home reads at each operator prompt, so each threshold is a minimum"
     }
   ],
   "dyad:tunables": [

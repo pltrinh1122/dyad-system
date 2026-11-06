@@ -268,3 +268,9 @@ This Rule's sentence changes with property 3 of Rule-14; the claim, its attacks 
 Rule this d-work touches are recorded once, in `rule-14-system-infrastructure.md`, amendment #564.
 
 Disposition: see ledger #564.
+
+## Amendment — d-work #617 (2026-11-06: the automaton sweep)
+This Rule's sentence changes with Rule-14's (property 2 names where the whole-store guards and the hosting's suite now run). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #617.
+
+Disposition: see ledger #617.

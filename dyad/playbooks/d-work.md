@@ -179,20 +179,18 @@ Tunables (#590). Every threshold this play-book names is an operator preference 
 holds (`dyad/dmc/schema.md`, `dyad:tunables`; the table, `agent-corpus/audits/2026-11-04-tunables.md`): the operator
 tunes it by a preferences-zone PR, never by a code change, and the code reads it through `dyadlib.tunable`. The
 families are hygiene (`hygiene-stale-days`, `hygiene-similar`, `hygiene-top`), work in flight (`inflight-*`), the
-sweep's findings over time (`sweep-*`) and promotion (`promotion-ceiling`, `promotion-adjacency-min`).
+stall findings over time (`sweep-*`, keys named for the sweep that posted them until #617) and promotion (`promotion-ceiling`, `promotion-adjacency-min`).
 
-Backlog hygiene (#565). The scheduled sweep (Rule-14 property 3; #564) reads the `backlog` rows on `main` after its `check`, whatever `check`
-returned, and finds only what is structural: a row untouched — no commit to its row, plan or provenance record —
+Backlog hygiene (#565). The home's read, `dyad board resume` (Rule-3 Ledger, at session start and at each operator
+prompt; #617), reads the `backlog` rows on `main` and finds only what is structural: a row untouched — no commit to its row, plan or provenance record —
 for `hygiene-stale-days` days; a title that is empty or shaped like a flag; a child whose `refs: parent #N` names a
 terminal row; a row a commit on any `origin` branch claims as `d-work #N` while it is still `backlog`. Beside those
 it ranks pairs by similarity — TF-IDF cosine over the rows, siblings of one parent skipped, tokens common to more
 than a fifth of the rows dropped — at or above `hygiene-similar`, the top `hygiene-top` pairs. A ranked pair is a candidate for the review, never
 a finding. Hygiene is no guard: the runner never discovers it, and neither CI, the pre-push gate, `check --evidence`
-nor `check --corroborate` runs it. The sweep posts what is new since its last run, and nothing else, in its one
-`notice` to the home's inbox.
+nor `check --corroborate` runs it, and no sweep posts it (#617): the home reads it where it reads the board.
 
-On that notice the home judges what no automaton can (the overhead test above: the notice is the inbox's, and only
-a question reaches the operator):
+On that reading the home judges what no automaton can (the overhead test above: only a question reaches the operator):
 - **The candidates.** Whether a ranked pair is the same work twice, whether a row is superseded by work since
   landed, whether its reason is gone, or whether it is still owed; a structural finding is a reason to read the
   row, never a verdict on it. An orphaned, untouched or malformed row is not thereby obsolete: a parent may close
@@ -208,12 +206,12 @@ a question reaches the operator):
   provenance record and `archived` in the one ledger commit: an archive has no merge between its record and its
   act, so it takes one commit where a Done takes two. Anything else retires none of them.
 
-Work in flight (#569). The same sweep reads the work in flight from records alone — inbox files and their `.read`
-markers, commits and branch tips, PR bodies and heads, the board, presence and the stored plans — and posts what is
-new since its last run, one notice per kind, to the home's inbox. Each threshold is a minimum age, the sweep running
-twice a day; the ages below are the defaults of the `inflight-*` preference keys. On that notice the home acts per kind, and decides nothing an owner or the operator owns:
+Work in flight (#569). The same read reads the work in flight from records alone — inbox files and their `.read`
+markers, commits and branch tips, PR bodies and heads, the board, presence and the stored plans — and prints it, one
+line per finding, each kind under its own heading (#617). Each threshold is a minimum age, the home reading at every
+operator prompt; the ages below are the defaults of the `inflight-*` preference keys. On that reading the home acts per kind, and decides nothing an owner or the operator owns:
 - **A relay or notice left unread** (4 h): the home rings the unit's doorbell, the one act that wakes a session; a
-  reminder in the same unread inbox would go unread too, so the sweep notifies the home alone.
+  reminder in the same unread inbox would go unread too, so it surfaces in the home's read alone.
 - **A planned row gone quiet** (3 days, only while its board entry waits on a unit), **an open row with no plan file**
   (24 h; a child or a row under a mandate has none of its own and is exempt), or **a PR whose head has not moved**
   (3 days): the home asks the owner by relay what holds it.

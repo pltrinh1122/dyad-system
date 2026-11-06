@@ -54,8 +54,8 @@ behind reusable code carrying a mechanical check.
    identical code: the operator's decision on plan #562, given with its plan-`Y`. Any path outside those two stores
    changes the code, so code the evidence did not pass is never skipped, and the guards judge every pushed tree. The
    pre-push path runs every transaction guard and the state checks of the records the push touches; the whole-store
-   state guards, and the suite in the hosting's environment, run in the scheduled sweep twice a day (Rule-14 property 3,
-   #564), which is also where the suite corroborates the skip above. That path also skips a test root whose installed tree is
+   state guards run in the automaton sweep after each ledger push, and the suite in the hosting's environment after each
+   landed merge (Rule-14 property 3, #564, #617), which is also where the suite corroborates the skip above. That path also skips a test root whose installed tree is
    byte-identical to its craft registry row (Rule-11 property 2) — a Tended craft's root only while
    the core's tree is too — unless the pushed range changes the registry; `check --evidence` runs
    every root. One target — a module, a
@@ -109,6 +109,8 @@ PR head's; see the same record, amendment #562. Property 2 moves the whole-store
 2026-11-03 (d-work #564): they re-scanned every record on every ledger push; see the same record, amendment #564. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 2's
 `--tests` refuses a target that resolves to no test 2026-11-05 (d-work #606, stating #592); see
-`../falsification/rules/rule-3-d-work.md`, amendment #606.
+`../falsification/rules/rule-3-d-work.md`, amendment #606. Property 2's whole-store guards run in the automaton sweep
+after each ledger push and the hosting's suite after each landed merge, in place of the twice-daily scheduled sweep,
+2026-11-06 (d-work #617); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).
