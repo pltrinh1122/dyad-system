@@ -71,10 +71,17 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    `Y done`'s evidence passed; the **automaton sweep** (`dyad automaton sweep`) runs after each landed merge, once
    per landed cut, the suite on `main` in the hosting's environment, every whole-store guard and drift, read-only,
    and its `--stores` mode runs the whole-store guards alone after each ledger push, in the automaton's job; each
-   posts one notice to the home's inbox only for what is new or failing (#564, #617). No clock starts it: code reaches
-   `main` only by a merge, and the stores change only by pushes, so each check follows the activity that can change
-   what it reads. What waits on time rather than on activity — heads not landed, a code push not corroborated, a
-   stale board, work in flight, backlog hygiene — is read by the home in `dyad board resume` (Rule-3 Ledger). The
+   posts one notice to the home's inbox only for what is new or failing (#564, #617). No clock starts it: each check
+   follows the activity that can change what it reads. Which activity that is, is the check-trigger criterion
+   (`check-trigger`, a decision record of `dyad/dmc/`): a check reads one or more inputs and runs on the union of their triggers — the
+   **code tree**, which only a merge changes, after each landed merge; the **ledger stores**, after each ledger push,
+   by `--stores`; the **event store**, after each events-only push, by `--stores` too; **absence**, the time since an
+   event — heads not landed, a code push not corroborated, a stale board, work in flight, backlog hygiene — which
+   nothing changes, at the home's read in `dyad board resume` at each operator prompt (Rule-3 Ledger); and the
+   **outside world** — the runner image, released assets, a mirror — at the next merge's sweep. The suite is split by
+   the same reading: `suite`, the tests that read the code tree, after each landed merge, and `suite:live`, the
+   tests that read the stores, in `--stores`. A registry label or sweep part the criterion's table does not class,
+   or an input with no delivered trigger, fails a test (#618). The
    pre-push hook is the only check run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
    --no-ff` of the branch into `main`, commit message citing the PR and the done-Y — and is
    pushed when the hosting returns; the plan gate and the fence read the local `main`, and
@@ -115,6 +122,9 @@ states what a host running only the automaton needs 2026-11-04 (d-work #593, bac
 agent, so such a host had no reading; see the same record, amendment #593. Property 3's
 scheduled sweep becomes the automaton sweep 2026-11-06 (d-work #617): run after each landed merge, with a guards-only
 `--stores` mode after each ledger push, and no clock, the stall findings moving to the home's read; GitHub delivered
-the twice-daily schedule about seven hours late (#609); see the same record, amendment #617.
+the twice-daily schedule about seven hours late (#609); see the same record, amendment #617. Property 3 names the
+check-trigger criterion and its five inputs 2026-11-06 (d-work #618): #617 gave the code and the ledger their triggers,
+and the event store, which only events-only pushes change, had none but the next merge; see the same record, amendment
+#618.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
