@@ -92,6 +92,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("retries-bounded", lambda: 1 < RACE_TRIES <= 10),
     ("evidence-events-are-the-automatons-from-verifying",          # #587 X10: an evidence line fires only these
      lambda: all("automaton" in dyadlib.orch_actors(dyadlib.ORCH_EVENTS[("verifying", e)][1]) for e in EVIDENCE_EVENTS)),
+    ("ci-read-within-the-ceiling", lambda: 0 < CI_TIMEOUT_S < STALL_CEILING_S and 0 < CI_PAGE <= 100),   # #617 P5
     ("evidence-file-bounded", lambda: 0 < EVIDENCE_FILE_LINES and 0 < EVIDENCE_HEADS <= 100 and EVIDENCE_FILE_BYTES <= 1 << 24),
 ]
 TREE_INVARIANTS = [   # loads a guard, so never at import (crafts/syseng/rules/invariants.md)
@@ -935,42 +936,66 @@ def corroborated(repo: Path, c: str, own: list[dict], listed: list[dict], firstp
     return False
 
 
+CI_FILES = {"rule-11 package": "dyad-package.yml", "d-work automaton": "dyad-automaton.yml"}   # CI_WORKFLOWS' files
+CI_PAGE = 30   # the newest successes read per workflow: a day of package runs, and the automaton's latest (#617, the ceiling)
+CI_TIMEOUT_S = 3   # the hosting's round trip the home's read waits for; slower reads as "not read" (STALL_CEILING_S)
+
+def repo_slug(repo: Path) -> str | None:
+    """`owner/name` of the hosting: GITHUB_REPOSITORY in a job, else read off `origin`'s URL (#617: a session's home
+    reads the public run list too); None when neither names one."""
+    if os.environ.get("GITHUB_REPOSITORY"):
+        return os.environ["GITHUB_REPOSITORY"]
+    url = land.git(repo, "remote", "get-url", "origin", check=False).stdout.strip()
+    m = re.search(r"(?:github\.com[:/]|/git/)([A-Za-z0-9._-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?$", url)   # github, or a git proxy's /git/
+    return m.group(1) if m else None
+
 def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
     """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
-    hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
+    hosting: the repository is public, so the run list reads with `GITHUB_TOKEN` when set and without it otherwise
+    (#617: the home's read in a session). One listing per workflow (`CI_FILES`), the newest successes on main, fetched in
+    parallel with the commits' classing, so `board resume` stays under its ceiling; a hosting that cannot be read is
+    one finding saying so, never a crash."""
     import datetime, json, urllib.request
-    token, slug = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+    from concurrent.futures import ThreadPoolExecutor
+    token, slug = os.environ.get("GITHUB_TOKEN"), repo_slug(repo)
     try:
         since = now - datetime.timedelta(hours=dyadlib.tunable(SWEEP_CI_HOURS, prefs or repo))
     except OverflowError:   # a valid but huge preference falls back, as a malformed one does (#590)
         since = now - datetime.timedelta(hours=dyadlib.tunable_default(SWEEP_CI_HOURS))
     since = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     log = land.git(repo, "log", "--first-parent", "--format=%H", f"--since={since}", base, check=False).stdout.split()
-    from concurrent.futures import ThreadPoolExecutor   # #617: the home reads this at each prompt; git calls in parallel
+    if not log:
+        return []
     def is_code(c):
         return not (dyadlib.ledger_only(repo, f"{c}^1", c) or dyadlib.events_only(repo, f"{c}^1", c))
-    with ThreadPoolExecutor(8) as pool:
+    def runs(name):
+        req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/workflows/{CI_FILES[name]}/runs"
+                                     f"?branch=main&status=success&per_page={CI_PAGE}",
+                                     headers={"Accept": "application/vnd.github+json",
+                                              **({"Authorization": f"Bearer {token}"} if token else {})})
+        with urllib.request.urlopen(req, timeout=CI_TIMEOUT_S) as resp:
+            return [{**w, "name": w.get("name") or name} for w in json.load(resp).get("workflow_runs", [])]
+    with ThreadPoolExecutor(8) as pool:                  # #617: the hosting and git at once, the home's ceiling
+        fetched = [pool.submit(runs, n) for n in CI_FILES] if slug else []
         code = [c for c, k in zip(log, pool.map(is_code, log)) if k]
+        listed, error = [], None
+        for f in fetched:
+            try:
+                listed += f.result()
+            except Exception as e:                       # the hosting is The World: unreadable is a finding
+                error = e
     if not code:
         return []
-    if not (token and slug):
-        return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")]
-    def runs(sha=None, name=None):
-        q = f"head_sha={sha}" if sha else "branch=main&status=success&per_page=100"   # the successes on main a later tree may cover with (#614)
-        req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/runs?{q}",
-                                     headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.load(resp).get("workflow_runs", [])
-    out = []
-    try:
-        listed = runs()
-        recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
-        firstparent = set(log)
-        for c in code:
-            if not corroborated(repo, c, runs(sha=c), listed, firstparent, recent):
-                out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
-    except Exception as e:                               # the hosting is The World: unreadable is a finding, never a crash
-        out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
+    if not slug:
+        return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no hosting named by origin or GITHUB_REPOSITORY)")]
+    if error is not None:
+        return [(False, f"finding: corroboration not read from the hosting ({type(error).__name__})")]
+    recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
+    firstparent, out = set(log), []
+    for c in code:
+        own = [w for w in listed if w.get("head_sha") == c]
+        if not corroborated(repo, c, own, listed, firstparent, recent):
+            out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
     return out
 
 def sweep_pulls() -> list[dict] | None:
@@ -1023,7 +1048,7 @@ def notice_parts(group: list[str]) -> list[list[str]]:
         cur.append(line); size += len(line) + 3
     return parts + ([cur] if cur else [])
 
-STALL_CEILING_S = 5.0   # #617 P5: `dyad board resume` prints the stall lines within this; dyad/tests/test_automaton.py holds it
+STALL_CEILING_S = 5.0   # #617 P5: `dyad board resume` prints the stall lines within this; dyad/tests/guards/agent/test_board.py holds it
 
 def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabinet: str | None = None) -> list[str]:
     """The stall findings the home reads at each prompt (`dyad board resume`, #617), read from the ledger at `base`:
@@ -1033,11 +1058,15 @@ def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabi
     whose home is that cabinet's — a cabinet with no home of its own falls back to `program`'s, as the sweep once routed
     them. Read-only: it posts nothing."""
     import datetime
+    from concurrent.futures import ThreadPoolExecutor
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    found = sweep_ledger(repo, base, now, prefs) + sweep_ci(repo, base, now, prefs)
-    hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), prefs)
-    pulls = sweep_pulls() if os.environ.get("GITHUB_TOKEN") else None
-    flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), pulls, prefs=prefs)
+    with ThreadPoolExecutor(2) as pool:                 # the hosting's round trip beside the ledger reads (the ceiling)
+        ci = pool.submit(sweep_ci, repo, base, now, prefs)
+        found = sweep_ledger(repo, base, now, prefs)
+        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), prefs)
+        pulls = sweep_pulls() if os.environ.get("GITHUB_TOKEN") else None
+        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), pulls, prefs=prefs)
+        found += ci.result()
     if cabinet is not None:                              # the lines whose home is this cabinet's (`home` falls back)
         mine = home(repo, base, cabinet)
         flight = [(c, h) for c, h in flight if home(repo, base, c) == mine]
