@@ -317,3 +317,28 @@ Provenance sentences that say "scheduled sweep" are history and keep their words
 schedules. **14–19**: Rule-19 keeps the event's `role`; the sweep is one runner. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #617.
+
+## Amendment — d-work #618 (2026-11-06: property 3 names the check-trigger criterion and its five inputs)
+Claim (plan #618, revision 2): which event runs each check is a decision criterion, `dyad/dmc/check-trigger.jsonld`,
+home Rule-14 property 3. A check reads one or more inputs and runs on the union of their triggers. There are five
+inputs: the code tree (after each landed merge), the ledger stores (after each ledger push, `sweep --stores`), the
+event store (after each events-only push, `sweep --stores`), absence (the home's read in `dyad board resume` at each
+operator prompt) and the outside world (the next merge's sweep). The suite splits into `suite` (code tree) and
+`suite:live` (the `LiveCase` tests, stores). A test fails on an unclassed registry label or sweep part, and on an input
+with no delivered trigger.
+
+| # | attack | result |
+|---|---|---|
+| H1 | Every check fits exactly one class. | Refuted: `agent/references`, `agent/plans` and `agent/merges` each read records and code or commits, so each changes on a merge and on a ledger push. Survivor: a check declares its inputs, one or more, and runs on the union of their triggers; the class belongs to the input. |
+| H2 | Four classes cover the inputs. | Refuted: `sysadmin/events` reads the run-book event store, which only events-only pushes change (Rule-3 Ledger), and #617's triggers sent the sweep only code pushes and ledger pushes, so the event store waited for the next merge. Survivor: a fifth input, the event store, its trigger each events-only push (the stores path of `dyad-automaton.yml`). |
+| H3 | A test can list the checks the sweep runs. | Survives, scoped: the guards come from one registry and the sweep's parts are a fixed set, so the table is keyed by registry label and sweep part; a craft guard's row whose label is no longer registered is ignored, a registered label with no row fails. The guard contract is unchanged. |
+| H4 | The suite reads only the code tree. | Refuted: the `LiveCase` tests (15 classes) read the live stores. Survivor: `suite` after each landed merge, `suite:live` in `--stores`; measured about 36 s for `suite:live` and 12 s for the whole-store guards, inside #617's 2-minute ceiling. |
+
+**Rule-6.** No term is added: the five inputs and `suite:live` are named in the criterion and its table, and `automaton
+sweep` keeps its definition, its `--stores` mode now also running after events-only pushes.
+**Pairwise (Rule-5).** **14–3**: the absence input is read where Rule-3's Ledger already puts the home's read; Rule-3's
+events-only commit is the event store's trigger, unchanged. **14–12**: Rule-12 property 2 names where the suite runs;
+the split says which tests run where, and Rule-12's pre-push path is unchanged. **14–19**: the event store is Rule-19's
+evidence; the criterion schedules its check and changes nothing of the event. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #618.
