@@ -23,7 +23,8 @@ step from the environment. No default for either: a number for the wrong craft o
 ## Trigger
 A d-work whose done-`Y` lands a change under a craft's root (`dyad/` or `crafts/<craft>/`). The unit runs `changes`,
 classifies every d-work the list names since that craft's last tag, and takes the change set's class, the highest of
-them (Classes, below). If that class releases, the unit proposes the release to the home. If it does not, the change
+them (Classes, below). If that class releases, the unit proposes the release to the home; a change set holding a
+critical fix is proposed when the release timing says (Classes, Release timing, below). If it does not, the change
 set waits. The operator may also ask for a release at any time; the classes still say which number it takes.
 
 ## Classes
@@ -32,7 +33,7 @@ class the unit cannot evidence is the class below it.
 
 | class | `CLASS` | what counts | evidence the unit cites | number | release |
 |---|---|---|---|---|---|
-| critical fix | `critical-fix` | a defect that gives an installing system a wrong result it can act on (a wrong disposition, a ratification or merge path broken, an install or a release refused, a fence that passes what it must refuse), loses or leaks data, or turns its CI red | the incident row, the red run or a reproduction; the fixing PR and its done-`Y` | patch | yes, as soon as the fix lands |
+| critical fix | `critical-fix` | a defect that gives an installing system a wrong result it can act on (a wrong disposition, a ratification or merge path broken, an install or a release refused, a fence that passes what it must refuse), loses or leaks data, or turns its CI red | the incident row, the red run or a reproduction; the fixing PR and its done-`Y` | patch | yes, when the release timing says (below): at once by default |
 | new capability | `capability` | something an installing system can do that it could not: a new verb or flag, a new guard or check, a new craft, a new Rule property | the d-work and PR, and the help text, the guard's registry line or the Rule sentence that names it | minor | yes, with the change set |
 | significant enhancement | `enhancement` | an existing capability changed in what it does or decides for an installing system: a new mode of a verb, a check that now catches more, a path materially faster or cheaper in how a unit works | the d-work and PR, and a before/after observation (a timing, a line that now appears) | minor | yes, with the change set |
 | breaking | `breaking` | an installing system must change something on upgrade: a verb or a file format removed, renamed or narrowed, a Rule whose text now refuses what its text allowed, an install contract changed; adding beside a frozen item is not; combines with the classes above | the changed contract and its upgrade step (`dyad/playbooks/port.md`) | major; minor while the major is 0, the question marking it **breaking** | yes, never without the upgrade step |
@@ -41,6 +42,24 @@ class the unit cannot evidence is the class below it.
 The order, highest first: breaking, then critical fix, new capability and significant enhancement, then maintenance.
 A change set holding a critical fix and a new capability takes the minor number; the critical fix is why it is asked
 now.
+
+### Release timing
+When a change set since a craft's last tag holds a critical fix, `dyad/dmc/release-timing.jsonld` decides when it is
+proposed (#616). One fact frames it. A release is cut from `main`, and 1.x keeps no maintenance branch (#611 Q5), so
+a release now carries everything on `main` since the tag: a patch exists only when nothing above a fix has landed,
+and otherwise the fix ships as the minor `main` already holds (Numbers says which part moves). The criterion reads
+five inputs — whether the defect breaks the release path, whether an installing system is exposed (unknown counts as
+exposed), whether a workaround is stated, whether the fix has landed, and whether a minor is in reach — and takes the
+first outcome that applies:
+- **fix first** — the defect breaks the release path itself (it refuses a cut, a publish or an install): no release
+  is cut until the fix is on `main`, and the next cut, whatever its number, carries it.
+- **cut now** — an installing system is exposed with no workaround, or data is lost or leaked: the release is
+  proposed as soon as the fix lands. This is also the default, whenever exposure cannot be read.
+- **fold** — no system is exposed, or a workaround is stated, and a minor is in reach: the fix rides that minor,
+  which the critical fix makes a release to propose at once when it lands.
+- **hold** — no system is exposed, or a workaround is stated, and no minor is in reach: the change set waits, and is
+  decided again when a done-`Y` lands a change under the craft's root, when a report or incident shows an installing
+  system exposed, or when the operator asks. No time cap applies: elapsed time changes no system's exposure.
 
 ## Numbers
 - **`VERSION` follows the class at release time, not the drift guard.** Between releases the first change under a

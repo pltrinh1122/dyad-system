@@ -262,6 +262,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | release-batch | frozen |
 | release-class | frozen |
 | release-number | frozen |
+| release-timing | frozen |
 | replan | frozen |
 | report-level | frozen |
 | retirement-candidate | frozen |

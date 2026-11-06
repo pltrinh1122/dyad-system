@@ -24,7 +24,7 @@
       "termCode": "critical-fix",
       "name": "critical fix",
       "dyad:when": "a defect that gives an installing system a wrong result it can act on, loses or leaks data, or turns its CI red",
-      "dyad:then": "patch; released as soon as the fix lands"
+      "dyad:then": "patch; released when dyad/dmc/release-timing.jsonld says"
     },
     {
       "@type": "DefinedTerm",
@@ -64,7 +64,8 @@
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/release.md",
   "dyad:alsoIn": [
-    "runbooks/release.md"
+    "runbooks/release.md",
+    "dmc/release-timing.jsonld"
   ],
   "dyad:owner": "Rule-11"
 }
