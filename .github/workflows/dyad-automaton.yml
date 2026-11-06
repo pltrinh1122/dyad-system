@@ -16,7 +16,7 @@ name: d-work automaton
 on:
   push:
     branches: [main]
-    paths: ["agent-corpus/d-work/**"]   # every ledger push (#617): the stores step reads every store; inbox: typed events (#587 X10)
+    paths: ["agent-corpus/d-work/**", "workstation-corpus/runbooks/events/**"]   # every ledger push (#617) and every events push (#618 H2): the stores step reads every store; inbox: typed events (#587 X10)
   workflow_dispatch: {}
 # Two jobs (#587 X10). `evidence` runs the PR heads' own code to take combined evidence, so it holds no write token:
 # `contents: read`, no persisted credentials, and AUTOMATON_EVIDENCE_SANDBOX=on, the only place `automaton evidence`
