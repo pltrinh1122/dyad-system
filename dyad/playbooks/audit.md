@@ -230,7 +230,8 @@ in the order above, so the gate and the budget stay one.
 - **Verifies:** each unit's own tests — the test modules the levels file (§6) classifies `unit`.
 - **How:** the step `unit` runs the report once — `dyad automaton sweep` on `main` with no `--row`, whose suite runs
   every root, observed and never from a memo (dyad-system Rule-12 property 2, Rule-14 property 3) — and classes its
-  failing tests by the levels file's `unit` list (`levels.py list unit`). No module is run a second time: the report
+  failing tests by the levels file's `unit` list (`audits.py level unit`, through `levels.py`'s own listing). No module
+  is run a second time: the report
   names each failing test, and the levels file says which level it belongs to (#619). The step's event carries the
   report's two digests.
 - **Passes:** no failing test in a `unit` module.
@@ -239,8 +240,8 @@ in the order above, so the gate and the budget stay one.
 - **Verifies:** modules together — the test modules classified `integration` (scratch repos, git, installs, the
   runner spawned); the guards on the live tree, among them the coded checks of prose (Rule blocks, vocabulary,
   references, provenance counts, zones, the manifest) — every check the automaton sweep's report on `main` carries.
-- **How:** the step `integration` reads the report L1 stored, never a second run: its failing tests in the modules
-  the levels file classes `integration`, and every failing check line — the runner's invariant pass, every check and
+- **How:** the step `integration` reads the report L1 stored, never a second run (`audits.py level integration`): its
+  failing tests in the modules the levels file classes `integration`, and every failing check line — the runner's invariant pass, every check and
   every guard on the kernel alone, which the sweep runs on `main` (dyad-system Rule-14 property 3). The record keeps
   the report's `checks-sha256`, the digest of the tree's own check lines in the order they printed, so anyone can
   re-run the sweep on the same head of `main` and compare (D4). It is not the `report-sha256`, which names the stored
