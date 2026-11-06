@@ -1,8 +1,8 @@
 session: counsel-0032b4c0
-seen: 2026-11-06T17:31:21+00:00
+seen: 2026-11-06T19:31:31+00:00
 root: /home/user/wt/inbox
-rows: 616
-files: dyad/dmc/release-class.jsonld dyad/dmc/release-timing.jsonld dyad/playbooks/release.md dyad/tests/test_playbooks.py dyad/tests/test_surface.py
+rows: 617
+files: .github/workflows/dyad-sweep.yml RULE-12-verifiable-code.md RULE-14-system-infrastructure.md RULE-7-provenance.md dyad/dmc/backlog-hygiene.jsonld dyad/dmc/promotion.jsonld dyad/rules/RULE-3-d-work.md dyad/scripts/automaton.py dyad/scripts/dyadlib.py dyad/scripts/hygiene.py dyad/scripts/package.py dyad/tests/test_automaton.py dyad/tests/test_hygiene.py dyad/tests/test_package.py dyad/tests/test_surface.py dyad/vocabulary/VOCABULARY.md
 writer: 0032b4c0-1c5b-5779-bdb8-e2280d00681c
 host: cloud linux x86_64
 holder: 0032b4c0-1c5b-5779-bdb8-e2280d00681c
