@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-06T17:30:20+00:00
+seen: 2026-11-06T17:31:08+00:00
 root: /home/user/dyad-system
 rows: 616
 files: dyad/dmc/release-class.jsonld dyad/dmc/release-timing.jsonld dyad/playbooks/release.md dyad/tests/test_playbooks.py dyad/tests/test_surface.py
