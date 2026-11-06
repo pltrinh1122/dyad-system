@@ -212,8 +212,8 @@ class LevelsTests(unittest.TestCase):
 # the craft's template, which #369 C5 deletes — so the tests always read the one copy the tree holds, never a fixture.
 _CORE_RUNBOOK = lv.PKG / "runbooks" / "self-diagnostic.md"
 RUNBOOK = _CORE_RUNBOOK if _CORE_RUNBOOK.exists() else lv.PKG.parent / "crafts" / "countersign" / "templates" / "runbooks" / "self-diagnostic.md"
-STEPS = ("health", "unit", "integration", "evidence", "invariants", "units", "acts", "pairs", "host", "record")
-GATED = ("integration", "evidence", "invariants", "units", "acts", "pairs", "host")
+STEPS = ("health", "unit", "integration", "invariants", "units", "acts", "pairs", "host", "record")   # #619: no `evidence`
+GATED = ("integration", "invariants", "units", "acts", "pairs", "host")
 _GATE = re.compile(r"sys\.exit\(3 if bad else 0\)' ([a-z ]+) \|\| exit$", re.M)
 _LEVELS = re.compile(r"^LEVELS = (\{.*\})$", re.M)
 
@@ -245,6 +245,18 @@ class RunbookTemplateTests(unittest.TestCase):
         for lvl, steps in levels.items():
             for n in steps:
                 self.assertTrue(rb.in_section(sec[n], f"Level {lvl}"), (n, sec[n]))
+
+    def test_the_coded_levels_read_the_report_and_never_rerun_it(self):
+        """#619 Decision 3: `unit` runs the report once; `integration` and `invariants` read it; the record cites
+        checks-sha256; `health` requires the head the report reads."""
+        cmd = {c.name: c.cmd for c in self.cmds}
+        self.assertIn("dyad/bin/dyad automaton sweep", cmd["unit"])
+        for n, lvl in (("unit", "unit"), ("integration", "integration"), ("invariants", "invariants")):
+            self.assertIn(f"audits.py level {lvl}", cmd[n], n)
+        self.assertFalse(any("check --tests" in c or "check --evidence" in c or "cmd_invariants" in c for c in cmd.values()))
+        self.assertIn("checks-sha256", cmd["record"]); self.assertNotIn("evidence-sha256", self.text)
+        health = next(c for c in self.cmds if c.name == "health")
+        self.assertIn("origin/main", health.postcondition); self.assertIn("levels.py list unit", health.postcondition)
 
     def test_passes_the_run_book_check_when_present(self):
         guard = dyadlib.find_guard("workstation", "runbooks")

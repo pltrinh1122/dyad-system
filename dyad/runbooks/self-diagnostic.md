@@ -7,7 +7,7 @@ its own L4 claims in a run-book copies it to `<host>/runbooks/self-diagnostic.md
 preference `host-path`), which the runner then finds first (`runbook.all_runbooks`: an instance run-book of the
 same name wins), and from then on that copy is the system's own. The
 levels file it reads is instance data: `<host>/self-diagnostic-levels.txt`, seeded by hand from
-`dyad/templates/self-diagnostic-levels.txt` and the levels script `dyad/scripts/levels.py` (the core's since C4 of #369, d-work #378, which re-pointed the paths below from the craft's). Its section set is its own (the `# sections:` line above), one section per diagnostic level in the
+`dyad/templates/self-diagnostic-levels.txt` and the levels script `dyad/scripts/levels.py` (the core's since C4 of #369, d-work #378, which re-pointed the paths below from the craft's). Since #619 the coded halves are not run here: `unit` runs the automaton sweep's report once (`dyad automaton sweep` with no `--row`, the audit's report), and `unit`, `integration` and `invariants` read it, classing its failing tests by the levels file (`audits.py level`), so no step re-runs a check the report carries. Its section set is its own (the `# sections:` line above), one section per diagnostic level in the
 model's order — L1 unit × coded check, L2 system × coded check, L3 unit × prose claim, L4 system × prose claim
 (the play-book §2) — so the sysadmin craft's run-book guard checks it against these four and not
 against a server's ten. Each step is a `dyad-cmd` block run by either party through the core runner, which prints
@@ -37,23 +37,24 @@ the latest event of each step it names must have exit 0 at the commit checked ou
 `gate closed at <sha>: not passed at this head: <steps>` and the step exits 3 having run nothing else; the record
 writes that level, and every later one, `not run (gate)`. A run asked to end after level n (`/diagnose n`) runs no
 later step, and the record writes each later level `not run (last level <n>)` (play-book §3). Exit status throughout:
-0 pass, 1 fail, 2 refused — by the runner (a role, a missing run-book or command) or by `levels.py list` (no levels
-file), or by `evidence` when it cannot make its clone — 3 gate closed. The gate keys on the head, so on a head whose
+0 pass, 1 fail, 2 refused — by the runner (a role, a missing run-book or command), or by `levels.py list` or
+`audits.py level` (no levels file, no stored report at this head) — 3 gate closed. The gate keys on the head, so on a head whose
 earlier levels already passed a later level may be run alone. The run's own events are a change in the working tree
-until they are committed, so the evidence block is never computed there: `evidence` runs it in a clean clone of the
-head (below), and prints first what the checkout holds besides the event store (L4's S4 reads that line). The gate
+until they are committed, so the report is never computed there: the sweep runs in its own worktree, on `main` as
+fetched, and `unit` prints first what the checkout holds besides the event store (L4's S4 reads that line). The gate
 is mechanical between coded steps only: L3's prose half — no attack landed on a sampled unit — is read, so the
-L3 → L4 gate is the reading's, and the record holds it. The diagnostic reads the head of `main`: off `main` the
-evidence block's plan gate judges the checked-out ref's own range rather than the system (play-book §2, L2), so
-`health` names the branch and its pass criterion fails off `main`.
+L3 → L4 gate is the reading's, and the record holds it. The diagnostic reads the head of `main`: the report is
+always `origin/main`'s, so `health` names the branch and the fetched `main`, and its pass criterion fails off `main`
+or on a head that is not `origin/main` (D24).
 
 ## Level 1 (unit × coded check)
-`health` first: whether the diagnostic can run here at all. It prints the head and the branch, the budget, the
-newest previous record's `**Diagnosed:**` and `**Cursor:**` lines (none: the first run, and every rotation starts at
-its first item) and the levels file's own check (`dyad/scripts/levels.py`, play-book §6 — a script, not a
-guard, so this step and the `list` calls below are the only places it runs, never a push); its pass criterion, the
-postcondition, is that `main` is checked out and the levels file exists and passes that check, so a run off `main`,
-or a file that is absent, classifies too little or names what is gone, is red before any test runs. It is named
+`health` first: whether the diagnostic can run here at all. It prints the head and the branch, `origin/main`, the
+budget, and the newest previous record's `**Diagnosed:**` and `**Cursor:**` lines (none: the first run, and every
+rotation starts at its first item). The levels file's own check (`dyad/scripts/levels.py`, play-book §6) is in the
+report (`finding: levels: …`, #619 P21); its pass criterion, the postcondition, is that `main` is checked out at
+`origin/main` and the levels file classifies (`levels.py list unit`, the classification the levels use), so a run off
+`main`, on a head the report does not read, or with a file that is absent, classifies too little or names what is
+gone, is red before the report runs. It is named
 `health` because a run-book under `<host>/runbooks/` carries a health command whose postcondition is its pass
 criterion (dyad-system Rule-19 property 1; the core's live run-book test asserts it of every instance run-book). A
 record already carrying today's date is named: the record's path is one per day, so this run reads its cursor and
@@ -63,89 +64,61 @@ name: health
 class: read-only
 role: any
 undo: none
-postcondition: [ "$(git symbolic-ref -q --short HEAD)" = main ] && dyad/bin/dyad-python dyad/scripts/levels.py list unit >/dev/null 2>&1
-scope: HEAD and its branch, <host>/self-diagnostic-levels.txt and <instance>/audits/ (read)
+postcondition: [ "$(git symbolic-ref -q --short HEAD)" = main ] && [ "$(git rev-parse HEAD)" = "$(git rev-parse -q --verify origin/main)" ] && dyad/bin/dyad-python dyad/scripts/levels.py list unit >/dev/null 2>&1
+scope: HEAD, its branch and origin/main, <host>/self-diagnostic-levels.txt and <instance>/audits/ (read)
 
 I="${DYAD_INSTANCE:-agent-corpus}"; R="$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)"; T="$I/audits/$(date -u +%F)-self-diagnostic.md"; B="$(git symbolic-ref -q --short HEAD || echo 'a detached HEAD')"
 printf 'head %s on %s · K %s · P %s · today %s\n' "$(git rev-parse --short HEAD)" "$B" "${K:-4}" "${P:-3}" "$(date -u +%F)"
-[ "$B" = main ] || echo "not on main: the evidence block would judge this ref's own range, not the system (play-book §2, L2)"
+[ "$B" = main ] || echo "not on main: the report reads main, not this ref (play-book §2, L2)"
+O="$(git rev-parse -q --verify origin/main || echo absent)"; [ "$O" = "$(git rev-parse HEAD)" ] || echo "HEAD is not origin/main (${O:0:7}): the report reads origin/main (D24)"
 printf 'last record: %s\n' "${R:-none: the first run, every rotation starts at its first item}"; [ -z "$R" ] || grep -h '^\*\*Diagnosed:\*\*\|^\*\*Cursor:\*\*' "$R"
 [ ! -f "$T" ] || echo "a record already carries today's date: $T"
-dyad/bin/dyad-python dyad/scripts/levels.py
 ```
 
-`unit` runs every module the levels file classifies `unit`, one at a time through the runner's one-target path
-(`dyad check --tests <path>`, the same child the full suite spawns, dyad-system Rule-12 property 2; a file path is a
-target `unittest` accepts from the git root). `levels.py list` refuses (exit 1) a levels file that fails its check,
-or any run while one of the script's own invariants is false, and (exit 2) an absent file, so an unclassified module
-never drops silently out of both coded levels. The step runs every module rather than stopping at the first failure,
-so the record names each, and ends on one summary line:
+`unit` runs the report once — `dyad automaton sweep` with no `--row`, every check of `main` the automaton runs after
+each landed merge, the whole suite observed among them, its text stored under the git common dir — after one line
+naming what the checkout holds besides the event store (S4's coded half, at L4). It then reads the report's failing
+tests of the modules the levels file classifies `unit` (`audits.py level unit`, through `levels.py`'s own listing,
+which refuses a levels file that fails its check, exit 1, or an absent one, exit 2, so an unclassified module never
+drops silently out of both coded levels), and ends on one summary line and the report's `checks-sha256=` and
+`report-sha256=`, so the step's event (`output_tail`) carries both digests. A report whose check ran no suite fails
+the level:
 ```dyad-cmd
 name: unit
 class: read-only
 role: any
 undo: none
 postcondition: none
-scope: the test modules classified unit (read; a test writes only its own temporary directories)
+scope: origin/main (read, fetched), the sweep's worktree and dyad-sweep/ store under the git common dir
 
-L="$(dyad/bin/dyad-python dyad/scripts/levels.py list unit)" || exit
-n=0; f=0; bad=""; for m in $L; do n=$((n+1)); dyad/bin/dyad check --tests "$m" || { f=$((f+1)); bad="$bad $m"; }; done
-printf 'L1 unit: %s modules, %s failed%s\n' "$n" "$f" "${bad:+:$bad}"; [ "$f" -eq 0 ]
+D="$(git status --porcelain | grep -Ev 'runbooks/events/(self-diagnostic\.jsonl)?$' || true)"; printf 'changed besides the event store: %s\n' "${D:-none}"
+T="$(mktemp)"; trap 'rm -f "$T"' EXIT; dyad/bin/dyad automaton sweep >"$T" 2>&1; printf 'report: exit %s\n' "$?"; cat "$T"
+dyad/bin/dyad-python dyad/scripts/audits.py level unit "$(sed -n 's/^report-sha256=//p' "$T")"
 ```
 
 ## Level 2 (system × coded check)
-`integration` runs every module classified `integration` — the ones that build a scratch repo, run git, install or
-spawn the runner (play-book §6) — exactly as `unit` runs its own, behind the gate on `unit`:
+`integration` reads the same stored report, behind the gate on `unit`: the failing tests of every module classified
+`integration` — the ones that build a scratch repo, run git, install or spawn the runner (play-book §6) — and every
+failing check line, the coded checks of prose among them (Rule blocks, vocabulary, references, provenance counts,
+zones, the manifest). It runs nothing; `checks-sha256=`, the tree's own check lines, is the level's evidence, and
+anyone may re-run the report on the same head and compare it (D4, D21):
 ```dyad-cmd
 name: integration
 class: read-only
 role: any
 undo: none
 postcondition: none
-scope: the test modules classified integration (read; scratch repos and installs live in their own temporary directories)
+scope: the stored report at HEAD under the git common dir (read)
 
 dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit || exit
-L="$(dyad/bin/dyad-python dyad/scripts/levels.py list integration)" || exit
-n=0; f=0; bad=""; for m in $L; do n=$((n+1)); dyad/bin/dyad check --tests "$m" || { f=$((f+1)); bad="$bad $m"; }; done
-printf 'L2 integration: %s modules, %s failed%s\n' "$n" "$f" "${bad:+:$bad}"; [ "$f" -eq 0 ]
-```
-
-`evidence` is the kernel-only path's evidence block on this head (dyad-system Rule-14 property 3): the invariant
-pass, every check — the whole suite, observed and never read from a suite memo — every guard on the live tree, the
-coded checks of prose among them (Rule blocks, vocabulary, references, provenance counts, zones, the manifest), the
-transaction guards, and the sha256 of those lines. It runs in a clean clone of the head, made in its own temporary
-directory and removed on exit: the same commit, the same branch name, `origin/main` set to the checkout's, nothing
-uncommitted. So the block reads `dirty=no` and the event store as committed, never this run's own events, and a
-clean re-run of `dyad check --evidence` on the same head, on `main`, prints the same block (D4, D21). Its last line,
-`evidence-sha256=…`, is the level's evidence: it lands in the step's event (`output_tail`), the record copies it
-into its `**Diagnosed:**` line, and anyone may re-run the block on the same head and compare. What the checkout holds
-besides the event store is printed first — S4's coded half, at L4. The step's exit status is the evidence run's, or
-2 when the clone cannot be made:
-```dyad-cmd
-name: evidence
-class: read-only
-role: any
-undo: none
-postcondition: none
-scope: repo (read); a clean clone of HEAD in its own temporary directory, removed on exit
-
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration || exit
-D="$(git status --porcelain | grep -Ev 'runbooks/events/(self-diagnostic\.jsonl)?$' || true)"; printf 'changed besides the event store: %s\n' "${D:-none}"
-H="$(git rev-parse HEAD)"; B="$(git symbolic-ref -q --short HEAD || true)"; O="$(git rev-parse -q --verify origin/main || true)"; T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-git clone -q --shared --no-checkout . "$T/r" || exit 2
-if [ -n "$B" ]; then git -C "$T/r" checkout -q -B "$B" "$H"; else git -C "$T/r" checkout -q --detach "$H"; fi || exit 2
-if [ -n "$O" ]; then git -C "$T/r" update-ref refs/remotes/origin/main "$O"; else git -C "$T/r" update-ref -d refs/remotes/origin/main; fi || exit 2
-printf 'evidence in a clean clone at %s on %s, origin/main %s\n' "${H:0:7}" "${B:-a detached HEAD}" "$(printf '%.7s' "${O:-absent}")"
-(cd "$T/r" && dyad/bin/dyad check --evidence)
+dyad/bin/dyad-python dyad/scripts/audits.py level integration
 ```
 
 ## Level 3 (unit × prose claim)
-`invariants` is L3's coded half: the runner's invariant pass, one `[invariant]` line per module — the runner's own
-function, `cmd_invariants` in `dyad/scripts/package.py`, which `dyad check`, `--guards` and `--evidence` each run
-before any check (L2's block already holds the same lines, and a false invariant has already turned it red, D2).
-Called alone it runs no guard and no test, so re-reading the lines costs under a second and puts them in this
-level's own event. It exits 1 on any `FAIL [invariant]` line — the pass's own exit status — or when no invariant
-line is printed at all:
+`invariants` is L3's coded half: the runner's invariant pass, as the report counts it (`reading: invariants <i> ok,
+<f> FAIL`, read off the check's own `[invariant]` lines, which a false invariant has already turned red, D2). It runs
+nothing, so this level's own event holds the count. It exits 1 on any `FAIL`, or when the report holds no invariant
+reading at all:
 ```dyad-cmd
 name: invariants
 class: read-only
@@ -154,10 +127,8 @@ undo: none
 postcondition: none
 scope: repo (read)
 
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence || exit
-O="$(dyad/bin/dyad-python -c 'import sys;sys.path.insert(0,"dyad/scripts");import package;sys.exit(package.cmd_invariants())' 2>&1)"; rc=$?; printf '%s\n' "$O"
-printf 'invariant pass: %s ok, %s FAIL\n' "$(printf '%s\n' "$O" | grep -c '^ok   \[invariant\]')" "$(printf '%s\n' "$O" | grep -c '^FAIL \[invariant\]')"
-[ "$rc" -eq 0 ] && printf '%s\n' "$O" | grep -q '^ok   \[invariant\]'
+dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration || exit
+dyad/bin/dyad-python dyad/scripts/audits.py level invariants
 ```
 
 `units` names the K units the prose half reads: a unit is a tracked module declaring an `INVARIANTS` list
@@ -175,7 +146,7 @@ undo: none
 postcondition: none
 scope: the tracked modules and test modules, <instance>/audits/ (read)
 
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence invariants || exit
+dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration invariants || exit
 I="${DYAD_INSTANCE:-agent-corpus}"; C="$(grep -h '^\*\*Cursor:\*\*' "$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)" 2>/dev/null | sed -n '$p')"
 dyad/bin/dyad-python - "${K:-4}" "$C" <<'PY'
 import ast, re, subprocess, sys
@@ -220,7 +191,7 @@ undo: none
 postcondition: test -d "${DYAD_INSTANCE:-agent-corpus}/d-work/rows"
 scope: <instance>/d-work/ and <instance>/audits/ (read; the projection is computed, not written)
 
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence invariants || exit
+dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration invariants || exit
 dyad/bin/dyad-python -c 'import sys;sys.path[:0]=["dyad/scripts"];import dyadlib,project_countersign as pc;d=pc.collect(dyadlib.repo_root(),dyadlib.PKG);p=pc.check(d);[print("FAIL [project] countersign:",x) for x in p];print(("ok  " if not p else "FAIL")+" [project] countersign: "+pc.counts(d));print(pc.interaction_line(pc.interaction(d)));sys.exit(1 if p else 0)'; rc=$?
 I="${DYAD_INSTANCE:-agent-corpus}"; C="$(grep -h '^\*\*Cursor:\*\*' "$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)" 2>/dev/null | sed -n '$p')"
 dyad/bin/dyad-python - "${P:-3}" "$C" "$I" <<'PY'
@@ -256,7 +227,7 @@ undo: none
 postcondition: test -d dyad/rules
 scope: dyad/rules/ and <instance>/audits/ (read)
 
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence invariants || exit
+dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration invariants || exit
 I="${DYAD_INSTANCE:-agent-corpus}"; C="$(grep -h '^\*\*Cursor:\*\*' "$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)" 2>/dev/null | sed -n '$p')"
 dyad/bin/dyad-python - "${P:-3}" "$C" <<'PY'
 import re, sys
@@ -287,7 +258,7 @@ undo: none
 postcondition: none
 scope: the host's kernel and the host path's records (read)
 
-dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration evidence invariants || exit
+dyad/bin/dyad-python -c 'import subprocess,sys;sys.path.insert(0,"dyad/scripts");import runbook as r;h=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip();ev={e["name"]:e for e in r.read_events(r.events_path(r.dyadlib.repo_root(),"self-diagnostic"))};bad=[n for n in sys.argv[1:] if not(n in ev and ev[n]["exit"]==0 and ev[n]["commit"]==h)];print("gate "+("open" if not bad else "closed")+" at "+h+("" if not bad else ": not passed at this head: "+" ".join(bad)));sys.exit(3 if bad else 0)' unit integration invariants || exit
 H="$(dyad/bin/dyad-python -c 'import sys;sys.path.insert(0,"dyad/scripts");import dyadlib;print(dyadlib.host_path(dyadlib.repo_root()))')"
 printf 'observed: %s · %s · python %s · %s · %s\n' "$(uname -sr)" "$(git --version)" "$(dyad/bin/dyad-python -c 'import sys;print("%d.%d.%d" % sys.version_info[:3])')" "$(dyad/bin/dyad-python -c 'import pydantic;print("pydantic", pydantic.VERSION)' 2>/dev/null || echo 'pydantic not importable')" "$(timeout 10 claude --version 2>/dev/null || echo 'claude not on PATH')"
 grep -H '| kernel |' dyad/infrastructure/INFRASTRUCTURE.md "$H/INFRASTRUCTURE.md" 2>/dev/null | cut -c1-200
@@ -297,7 +268,7 @@ grep -HE '^\| (Claude Code|Git|Python|pydantic) \|' "$H"/*.md 2>/dev/null | grep
 S2, S4 and S11 are read whole and by no step, over the one conversation a run can see, the session running the
 diagnostic (play-book §2, L4; D23): S2 finds a reply of that session asking more than one question, or one anywhere but
 its last line, or does not; S4 finds a finding of this run repaired rather than proposed, or a change to the tree
-since the head diagnosed besides the run's two writes — `evidence`'s first line is its coded half — or does not; S11
+since the head diagnosed besides the run's two writes — `unit`'s first line is its coded half — or does not; S11
 finds the frame's sentinel in that session's start report, or does not. No step prints the sentinel, since a step's
 output lands in the committed event store and the frame's sentinel is never cached anywhere.
 
@@ -321,7 +292,7 @@ not reach L3 or L4 carries the previous `**Cursor:**` values forward (`none` on 
 day rewrites that day's record (play-book §7):
 
     # Self-diagnostic <YYYY-MM-DD>
-    **Diagnosed:** head <short sha> · K <k> · P <p> · evidence-sha256 <the evidence step's value, or not run>
+    **Diagnosed:** head <short sha> · K <k> · P <p> · checks-sha256 <the unit step's value, or not run>
 
     ## Level 1 — unit × coded check
     **Result:** pass | fail | not run (gate) | not run (last level <n>)
@@ -329,7 +300,7 @@ day rewrites that day's record (play-book §7):
 
     ## Level 2 — system × coded check
     **Result:** pass | fail | not run (gate) | not run (last level <n>)
-    Evidence: the `integration` summary line; the `evidence` step's `evidence-sha256=` line, its event id.
+    Evidence: the `integration` summary line, its event id; the report's `checks-sha256=` line.
     Findings: each failing module or check line, or none.
 
     ## Level 3 — unit × prose claim
@@ -350,9 +321,9 @@ day rewrites that day's record (play-book §7):
 
 `record` runs last, whatever the gate did, and needs no gate, once the record is written. It reads the newest
 record's `**Diagnosed:**` head and judges the record against the events the steps left **at that head** — the latest
-event of each step there (`pass`, `fail`, `gate` or `absent`) and the `evidence` step's `evidence-sha256` — so a
+event of each step there (`pass`, `fail`, `gate` or `absent`) and the `unit` step's `checks-sha256` — so a
 commit made since the run (the plan file's, the record's own) moves nothing it reads. It fails when that head does
-not resolve, when the record's evidence sha is not the events', when a level's result is one the events rule out —
+not resolve, when the record's checks sha is not the events', when a level's result is one the events rule out —
 a step that failed recorded as anything but `fail`, a gated step recorded as anything but `not run (gate)`, a coded
 level recorded `pass` that its events do not show, a level whose steps all left no event recorded as anything but
 `not run (last level <n>)` for the level before it, a level only partly run — when a level after a `fail` or a
@@ -375,28 +346,28 @@ recs = sorted((Path(sys.argv[1]) / "audits").glob("*-self-diagnostic.md"))
 if not recs:
     print("no record yet: write it, then run this step"); sys.exit(1)
 rec, text, fails = recs[-1], recs[-1].read_text(), []
-d = re.search(r"^\*\*Diagnosed:\*\*.*?head ([0-9a-f]{7,40})\b.*?evidence-sha256 (.+?)\s*$", text, re.M)
+d = re.search(r"^\*\*Diagnosed:\*\*.*?head ([0-9a-f]{7,40})\b.*?checks-sha256 (.+?)\s*$", text, re.M)
 if not d:
-    print(f"FAIL [record] {rec}: no **Diagnosed:** line naming a head and an evidence-sha256"); sys.exit(1)
+    print(f"FAIL [record] {rec}: no **Diagnosed:** line naming a head and a checks-sha256"); sys.exit(1)
 h = d.group(1)
 if subprocess.run(["git", "rev-parse", "--verify", "-q", f"{h}^{{commit}}"], capture_output=True).returncode:
     fails.append(f"**Diagnosed:** names head {h}, which this repository does not hold")
 at = lambda c: bool(c) and (c.startswith(h) or h.startswith(c))
 ev = {e["name"]: e for e in r.read_events(r.events_path(r.dyadlib.repo_root(), "self-diagnostic")) if at(e.get("commit", ""))}
 st = lambda n: "absent" if n not in ev else {0: "pass", 3: "gate"}.get(ev[n]["exit"], "fail")
-for n in ("health", "unit", "integration", "evidence", "invariants", "units", "acts", "pairs", "host"):
+for n in ("health", "unit", "integration", "invariants", "units", "acts", "pairs", "host"):
     print(f"event {n}: {st(n)}" + (f" ({ev[n]['id']})" if n in ev else ""))
-m = re.search(r"evidence-sha256=(\w+)", ev["evidence"]["output_tail"]) if "evidence" in ev else None
+m = re.search(r"checks-sha256=(\w+)", ev["unit"]["output_tail"]) if "unit" in ev else None
 sha = m.group(1) if m else "not run"
-print(f"record {rec}: head {h} · evidence-sha256 {sha} in its events")
+print(f"record {rec}: head {h} · checks-sha256 {sha} in its events")
 if d.group(2) != sha:
-    fails.append(f"**Diagnosed:** evidence-sha256 {d.group(2)}, the events at {h} {sha}")
+    fails.append(f"**Diagnosed:** checks-sha256 {d.group(2)}, the events at {h} {sha}")
 got, lv = {}, None
 for line in text.splitlines():
     lv = int(mm.group(1)) if (mm := re.match(r"## Level (\d)", line)) else lv
     if lv and (mm := re.match(r"\*\*Result:\*\*\s*(pass|fail|not run \((?:gate|last level \d)\))", line)):
         got.setdefault(lv, mm.group(1))
-LEVELS = {1: ("unit",), 2: ("integration", "evidence"), 3: ("invariants", "units"), 4: ("acts", "pairs", "host")}
+LEVELS = {1: ("unit",), 2: ("integration",), 3: ("invariants", "units"), 4: ("acts", "pairs", "host")}
 CODED = {1: True, 2: True, 3: False, 4: False}
 stopped = None
 for lv, steps in LEVELS.items():

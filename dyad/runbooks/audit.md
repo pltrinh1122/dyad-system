@@ -1,5 +1,5 @@
-# Run-book: audit (the standing whole-system audit) — play-book `dyad/playbooks/audit.md`, #223
-# sections: Survey, Regression, Fences, Drift, Incidents, Record
+# Run-book: audit (the standing whole-system audit) — play-book `dyad/playbooks/audit.md`, #223, #619
+# sections: Report, Fences, Drift, Record
 
 A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the audit play-book as `dyad-cmd`
 blocks, run by either party through the core runner, which prints the native line, records an event in the
@@ -7,126 +7,87 @@ instance's `<runbooks>/events/audit.jsonl` and tests the postcondition. Its sect
 `# sections:` line above; the sysadmin craft's server sections are a server's). The audit takes no parameter:
 it reads the running system, and reaches the instance through `${DYAD_INSTANCE:-agent-corpus}` (Rule-11
 property 3). Every command runs from the git root and every command is **read-only**: the audit detects and
-sizes, and the writing it leads to — the record, a proposed row, a mitigation's own PR — is the Agent's own
-d-work work under its own plan-`Y` (Rule-3), never a run-book command. No command here is new code: each is one
-the system already has (`dyad check`, `dyad dwork list`, `dyad session list`, the incident parser,
-`incident-hardening`'s own `survey`, `git`); what the run-book adds is their order and the record they feed.
+sizes, and the writing it leads to — the record, a proposed row, a mitigation's own PR — is the agent's own
+d-work work under its own plan-`Y` (Rule-3), never a run-book command. Since #619 the coded checks are the
+automaton's: the first step runs `dyad automaton sweep` with no `--row`, whose report carries every check the
+automaton runs after each landed merge, the audit's own among them (`dyad/scripts/audits.py`, the sweep part
+`sweep_audit`), and the stall lines the home reads. The steps after it are what only the auditor's checkout can
+read, and the reading the play-book keeps as inference.
 
 ```text
 dyad runbook list audit
-dyad runbook run audit survey
+dyad runbook run audit report
 ```
 
-## Survey
-Phase 0, the idempotence gate: the live watermark of the tree, then the one of the newest record
-(`**Audited:** tree <hash> · python <v> · git <v> · covered through <sha>, <date>`), and the verdict of their
-comparison. The tree hash is that of `git ls-tree -r HEAD` **minus the dated audit records** of the instance
-(`<instance>/audits/<date>-*.md`), which are the audit's own output — with them in the hash, the record the
-audit commits would change the tree and no later audit could ever find it unchanged. `INCIDENTS.md` is not
-dated and stays in. An unchanged line makes phases 1 and 3 a no-op and phase 2 still runs; a changed line is
-the full exercise; no line anywhere is the first one, and the step says so rather than failing. The
-postcondition tests the one thing the comparison needs, a head to hash:
+## Report
+Phases 0 to 3b, coded: `dyad automaton sweep` with no `--row`, run on `origin/main` as fetched. It prints the
+readings first — the watermark (`reading: audit watermark: … unchanged | changed | first exercise`, the gate of
+phase 0, read off the code tree with the dated audit records pruned), the registry's count and digest, the incident
+sizing and the hardening watermark, stale presence files, unmerged branches, the suite per root and the invariant
+pass — then the findings in two groups, `standing` (told to the home already) and `new`, every check of the tree
+among them (the suite observed, every root, never from a memo), then the stall block the home reads, and last
+`checks-sha256=`, `report-sha256=` and where the text is stored (`<git common dir>/dyad-sweep/`, never tracked). It
+posts nothing and lands nothing. Its exit is the sweep's: 1 when a finding fails. The postcondition tests what the
+report reads, a fetched `main`:
 ```dyad-cmd
-name: survey
+name: report
 class: read-only
 role: any
 undo: none
-postcondition: git rev-parse --verify HEAD
-scope: the tracked tree at HEAD and <instance>/audits/ (read)
+postcondition: git rev-parse --verify -q origin/main
+scope: origin/main (read, fetched), the git common dir's sweep worktree and dyad-sweep/ store
 
-I="${DYAD_INSTANCE:-agent-corpus}"; T="$(git ls-tree -r HEAD | awk -F'\t' -v re="^$I/audits/20[0-9-]+-.*[.]md\$" '$2 !~ re' | sha256sum | cut -d' ' -f1)"; PYV="$(dyad/bin/dyad-python --version 2>&1)"; PYV="${PYV#Python }"; GV="$(git --version)"; GV="${GV#git version }"; LIVE="tree $T · python $PYV · git $GV"; LAST="$(grep -h '^\*\*Audited:\*\*' "$I"/audits/*-audit.md 2>/dev/null | sed -n '$p')"
-printf 'live: %s · head %s\n' "$LIVE" "$(git rev-parse --short HEAD)"; printf 'last: %s\n' "${LAST:-none}"
-case "$LAST" in "") echo "verdict: no record carries a watermark: first exercise, full derivation";; *"$LIVE"*) echo "verdict: unchanged: phases 1 and 3 are a no-op, phase 2 still runs, nothing is written";; *) echo "verdict: changed: the full exercise";; esac
+dyad/bin/dyad automaton sweep
 ```
 
-## Regression
-Phase 1: the whole suite, every root, observed on the exact head and never read from the suite memo — the
-evidence command the merge evidence already runs (Rule-14 property 3), so the audit's result and a merge's are
-the same read at different heads. Its block is pasted into the record verbatim. The step's exit status is the
-evidence run's: a red check makes the step red, and the record says which:
+## Fences
+Phase 2's one local check, what only the auditor's checkout holds: `core.hooksPath`, which the report cannot read
+(the sweep's worktree is the automaton's), beside the newest record's `**Fences:**` line, into which the auditor
+writes it. The registry's count and digest, a guard that left the registry, and the mode of `dyad/hooks/*` and
+`dyad/bin/*` (`syseng/naming`) are in the report. The postcondition is the fence itself: hooks enabled:
 ```dyad-cmd
-name: regression
+name: hooks
+class: read-only
+role: any
+undo: none
+postcondition: [ "$(git config core.hooksPath)" = dyad/hooks ]
+scope: the checkout's git config and <instance>/audits/ (read)
+
+I="${DYAD_INSTANCE:-agent-corpus}"; printf 'live: hooksPath %s\n' "$(git config core.hooksPath || echo unset)"
+grep -h '^\*\*Fences:\*\*' "$I"/audits/*-audit.md 2>/dev/null | sed -n '$p' || echo "no record carries a Fences line: first exercise"
+```
+
+## Drift
+Phase 3's one listing the report does not hold: the host documents and when each was last edited, beside the
+running kernel, for the operate unit's reading of whether a document older than the kernel still holds (the frame's
+convention: re-verify before relying on it). The Rules against the newest Rule-5 sweep record, presence and
+branches are in the report; rows with no activity are the home's read. Staleness is stated and the pruning question
+asked by the auditor; nothing here judges it:
+```dyad-cmd
+name: host
 class: read-only
 role: any
 undo: none
 postcondition: none
-scope: repo (read)
+scope: the host path's tracked documents (read)
 
-dyad/bin/dyad check --evidence
-```
-
-## Fences
-Phase 2, ungated: the guard registry as installed, with its line count and a digest to compare against the
-newest record's `**Fences:**` line; `core.hooksPath`; and the mode of every file git or the entrypoint runs by
-path, which must be `100755` (#24). The registry is what is installed, not what a record claims. The step
-exits non-zero when a mode is wrong, so a fence that cannot execute shows red in the event. The
-postcondition tests that the hooks exist to be checked:
-```dyad-cmd
-name: fences
-class: read-only
-role: any
-undo: none
-postcondition: test -d dyad/hooks
-scope: repo and <instance>/audits/ (read)
-
-I="${DYAD_INSTANCE:-agent-corpus}"; L="$(dyad/bin/dyad check --list)"; printf 'live: registry %s lines, sha256 %s · hooksPath %s\n' "$(printf '%s\n' "$L" | wc -l | tr -d ' ')" "$(printf '%s\n' "$L" | sha256sum | cut -c1-16)" "$(git config core.hooksPath || echo unset)"
-grep -h '^\*\*Fences:\*\*' "$I"/audits/*-audit.md 2>/dev/null | sed -n '$p' || echo "no record carries a Fences line: first exercise"
-git ls-files -s -- dyad/hooks dyad/bin | awk '$1 != "100755" {print "not 100755: " $4; bad = 1} END {exit bad}'
-```
-
-## Drift
-Phase 3, detect only: when the Rules were last edited against the newest sweep record in the audits
-directory (a sweep is inference, Rule-5, so the step prints both dates and the Agent states the staleness); the
-last activity of every `open`, `planned` and `blocked` row, and the `backlog` count; presence files past the
-stale window; and the remote branches not merged into `origin/main`. Host documents are not read here: they are
-read only on the host that keeps them, and the record says "unobserved" anywhere else. The postcondition tests
-the row store the listing reads:
-```dyad-cmd
-name: drift
-class: read-only
-role: any
-undo: none
-postcondition: test -d "${DYAD_INSTANCE:-agent-corpus}/d-work/rows"
-scope: repo, <instance>/audits/ and <instance>/d-work/ (read)
-
-I="${DYAD_INSTANCE:-agent-corpus}"; git log -1 --format='rules last edited %ad (%h)' --date=short -- dyad/rules
-ls -1 "$I/audits" | grep -i sweep | tail -n 1 || echo "no sweep record in $I/audits"
-for s in open planned blocked; do dyad/bin/dyad dwork list --state "$s" | while read -r id rest; do printf '%s last activity %s %s\n' "$id" "$(git log -1 --format=%ad --date=short -- "$I/d-work/rows/${id#\#}.md")" "$rest"; done; done | cut -c1-150
-printf 'backlog: %s rows\n' "$(dyad/bin/dyad dwork list --state backlog | wc -l | tr -d ' ')"; printf 'presence files stale: %s\n' "$(dyad/bin/dyad session list | grep -c ' stale ' || true)"
-git branch -r --no-merged origin/main
-```
-
-## Incidents
-Phase 3b: the incident log ingested through its one parser — the shape verdict and count of `incidents.py`, then
-the rows per month and the d-works that carry two or more rows, read from `incidents.parse()` — and then the
-survey of `incident-hardening`, the comparison of the live row count to the newest index audit's watermark, run
-through the runner so it leaves its own event. Nothing is grouped here: the delta is reported and
-`incident-hardening` classifies it. The postcondition tests the log exists to be read:
-```dyad-cmd
-name: incidents
-class: read-only
-role: any
-undo: none
-postcondition: test -f "${DYAD_INSTANCE:-agent-corpus}/audits/INCIDENTS.md"
-scope: <instance>/audits/ (read)
-
-dyad/bin/dyad-python dyad/scripts/incidents.py
-dyad/bin/dyad-python -c "import sys,collections;sys.path.insert(0,'dyad/scripts');import incidents;r=incidents.parse();m=incidents.by_year_month(r);c=collections.Counter(i for x in r for i in set(x['ids']));print(len(r),'rows;',', '.join(k+': '+str(len(v)) for k,v in sorted(m.items())));print(sum(v>=2 for v in c.values()),'d-works carry two or more rows')"
-dyad/bin/dyad runbook run incident-hardening survey
+H="$(dyad/bin/dyad-python -c 'import sys;sys.path.insert(0,"dyad/scripts");import dyadlib;print(dyadlib.host_path(dyadlib.repo_root()))')" || exit
+printf 'running kernel: %s · %s\n' "$(uname -sr)" "$(dyad/bin/dyad-python --version 2>&1)"
+git ls-files -- "$H" | grep '[.]md$' | while read -r f; do printf '%s last edited %s\n' "$f" "$(git log -1 --format='%ad (%h)' --date=short -- "$f")"; done
 ```
 
 ## Record
-Phase 4, last: the newest record and its two watermark lines, read back after the Agent writes it. The record
-is written by the Agent under the d-work's plan-`Y`, never by this step; the step tests that what was written
-carries both lines, so the next audit's survey has something to compare to. An unchanged tree writes no record
-and this step is not run for it:
+Phase 4: the record is the auditor's, written after the report, its mechanical section the report verbatim, cited by
+its two digests. `record` reads the newest record's `**Audited:**` and `**Fences:**` lines back through the same
+function the report's P19 finding uses (`audits.py record`): a check of the new file, which the report, run before it
+existed, could not see. The postcondition is the same reading:
 ```dyad-cmd
 name: record
 class: read-only
 role: any
 undo: none
-postcondition: R="$(ls -1 "${DYAD_INSTANCE:-agent-corpus}"/audits/*-audit.md 2>/dev/null | tail -n 1)"; test -n "$R" && grep -q '^\*\*Audited:\*\*' "$R" && grep -q '^\*\*Fences:\*\*' "$R"
+postcondition: dyad/bin/dyad-python dyad/scripts/audits.py record >/dev/null
 scope: <instance>/audits/ (read)
 
-R="$(ls -1 "${DYAD_INSTANCE:-agent-corpus}"/audits/*-audit.md 2>/dev/null | tail -n 1)"; echo "newest record: ${R:-none}"; grep -H '^\*\*Audited:\*\*\|^\*\*Fences:\*\*' "$R"
+dyad/bin/dyad-python dyad/scripts/audits.py record
 ```

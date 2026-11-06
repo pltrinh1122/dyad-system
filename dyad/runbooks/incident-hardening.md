@@ -11,7 +11,7 @@ location (Rule-11 property 3: a craft file reaches an instance path through that
 default is the expansion and not a written-out path) — and each resolves that default itself, in its
 command's first line and in the postcondition that tests it, so one expansion is the only form in which
 either step reads the parameter. The other four take none: the guard registry, the row store and the
-evidence block are the same reads whatever ledger is being hardened, exactly as the craft run-book's own
+automaton sweep are the same reads whatever ledger is being hardened, exactly as the craft run-book's own
 argument-less commands are. Every command runs from the git root, and every command is **read-only**: the
 exercise reads and reports, and the writing it leads to — a mode record, an index audit, a `backlog` row,
 a mitigation's own PR — is the Agent's own d-work work under its own plan-`Y` (Rule-3), never a run-book
@@ -31,7 +31,9 @@ step says so rather than failing. The watermark is only ever compared, never bel
 is derived from the ledger here, now — the count, and the date that answers the count's own weakness, a
 row inserted mid-file while the total stands still. The postcondition tests what makes the comparison
 possible — the ledger exists and holds at least one dated row; that no index audit names it yet is an
-outcome, not a failure:
+outcome, not a failure. Since #619 the comparison is one function, `audits.py hardening`, the same the automaton
+sweep runs on the default ledger after each landed merge (its P11 lines), so the step and the report never read
+the watermark two ways; its last line, `verdict: first exercise | no-op | delta`, is the gate's outcome:
 ```dyad-cmd
 name: survey
 class: read-only
@@ -41,8 +43,7 @@ postcondition: grep -q '^| 20' "${LEDGER:-${DYAD_INSTANCE:-agent-corpus}/audits/
 scope: <LEDGER> and the audits/ directory beside it (read)
 
 LEDGER="${LEDGER:-${DYAD_INSTANCE:-agent-corpus}/audits/INCIDENTS.md}"
-printf 'live: %s rows, latest %s  (%s)\n' "$(grep -c '^| 20' "$LEDGER")" "$(grep -o '^| 20[0-9-]*' "$LEDGER" | tr -d '| ' | sort | tail -n 1)" "$LEDGER"
-grep -h 'covered through:' "$(dirname "$LEDGER")"/*-incident-failure-modes.md 2>/dev/null | grep -F "$LEDGER" | sed -n '$p' || echo "no index audit names $LEDGER: first exercise, full derivation"
+dyad/bin/dyad-python dyad/scripts/audits.py hardening "$LEDGER"
 ```
 
 ## Group
@@ -123,9 +124,10 @@ Phase 4 is not gated by the watermark: a shipped fence can rot with no new incid
 survey's no-op would hide exactly that — so an invocation on an unchanged ledger is not "do nothing" but
 "re-verify the fences and report", writing no file when every fence still holds. Each closed mode is
 re-tested against two reads: the guard registry, which says what is installed rather than what a record
-claims, and the evidence path, every check and guard as observed on this head. The registry is read first
-and unconditionally, so a fence that has left the registry stays visible in the same run that reports a red
-check; the step's own exit status is the evidence run's. A check that no longer passes, or a fence no
+claims, and the automaton sweep's report on `main` (#619), every check and guard as observed there, a guard that
+left the registry since the last release, and the newest index's fence rows and fences resolved (P16, P17). The
+registry is read first and unconditionally, so a fence that has left the registry stays visible in the same run that
+reports a red check; the step's own exit status is the sweep's. A check that no longer passes, or a fence no
 longer in the registry, reopens its mode; a mode closes only by one of the play-book's three exits — fenced
 at a named moment, a `backlog` row naming the fence to build, or recorded unfenceable on this kernel — and
 a mode holding none of them is open whatever its record says:
@@ -137,5 +139,5 @@ undo: none
 postcondition: none
 scope: repo (read)
 
-dyad/bin/dyad check --list; dyad/bin/dyad check --evidence
+dyad/bin/dyad check --list; dyad/bin/dyad automaton sweep
 ```
