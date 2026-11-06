@@ -1,0 +1,69 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/check-trigger",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "check-trigger",
+  "name": "What starts each check",
+  "description": "Every check reads one or more inputs; each input has the trigger that runs the checks reading it after it changes, and the delay that trigger accepts. A check's triggers are the union of its inputs' (plan #618 H1).",
+  "dyad:decides": "Which event runs a given check, and how long may a change to what it reads wait to be checked?",
+  "dyad:inputs": [
+    "the guard registry (dyad check --list) and the sweep's parts",
+    "the inputs each one reads (dyadlib.CHECK_INPUTS)",
+    "the triggers the delivered workflows and dyad board resume provide"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "code",
+      "name": "code tree",
+      "dyad:when": "a check reads what only a merge changes: dyad/, crafts/, the workflows, the preferences, the instance's records outside the d-work store",
+      "dyad:then": "it runs in the full sweep after each landed merge, dispatched by the automaton's job or started by a code push; no delay accepted"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ledger",
+      "name": "ledger stores",
+      "dyad:when": "a check reads agent-corpus/d-work/, which every ledger push changes, the automaton's and API writes included",
+      "dyad:then": "it runs in dyad automaton sweep --stores after each ledger push; it waits at most until the next ledger push"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "events",
+      "name": "event store",
+      "dyad:when": "a check reads the run-book event store, which events-only pushes change",
+      "dyad:then": "it runs in dyad automaton sweep --stores after each events-only push; it waits at most until the next events push"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "absence",
+      "name": "absence",
+      "dyad:when": "a check reads the time since an event, which nothing changes: a head not landed, a corroboration not run, a stale board, work in flight, backlog hygiene",
+      "dyad:then": "the home reads it at each operator prompt in dyad board resume's stall lines; it waits at most until the operator's next prompt"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "world",
+      "name": "outside world",
+      "dyad:when": "a check reads what changes outside the repository: the runner image, released assets, the mirror",
+      "dyad:then": "it runs in the next landed merge's full sweep; it waits at most until the next merge"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "tests/test_check_trigger.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-14-system-infrastructure.md",
+  "dyad:alsoIn": [
+    "scripts/dyadlib.py"
+  ],
+  "dyad:owner": "Rule-14"
+}

@@ -177,6 +177,7 @@ the operator's. The key names and allowed values are the surface.
 
 Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shared context and carries none.
 
+| check-trigger | frozen |
 | name | status |
 |---|---|
 | agent-vs-tended-rule | frozen |

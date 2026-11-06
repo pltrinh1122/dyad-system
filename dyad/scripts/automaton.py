@@ -785,7 +785,8 @@ def finding_key(line: str) -> str:
 def sweep_check(wt: Path, stores: bool = False) -> list[tuple[bool, str]]:
     """(fails, line) for every FAIL and warn line `check` prints on the swept tree (every guard, the full suite); with
     `stores` (#617), `check --guards` on that tree — every guard's whole-store check and the transaction guards over an
-    empty range, the suite never run (`DYAD_NO_NESTED_TESTS`)."""
+    empty range, the suite never run (`DYAD_NO_NESTED_TESTS`) — and then `suite:live`, the tests that read the stores
+    (`sweep_live`, #618 H4)."""
     argv, env = ["check"], dyadlib.git_env()
     if stores:
         argv, env = ["check", "--guards"], {**env, "DYAD_NO_NESTED_TESTS": "1"}
@@ -794,6 +795,38 @@ def sweep_check(wt: Path, stores: bool = False) -> list[tuple[bool, str]]:
     out = [(l.startswith("FAIL"), l) for l in (r.stdout + r.stderr).splitlines() if l.startswith(("FAIL", "warn"))]
     if r.returncode and not any(f for f, _ in out):
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
+    return out + (sweep_live(wt) if stores else [])
+
+# #618 H4: the LiveCase tests read the instance's stores, so they run after each ledger push, in `sweep --stores`;
+# listed per root by the runner's own child, each id kept only when its test is a `livetest.LiveCase`
+LIVE_LIST_CHILD = ("import sys, unittest\nsys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])\nimport livetest\n"
+                   "def ids(s):\n    for t in s:\n        yield from ids(t) if isinstance(t, unittest.TestSuite) else "
+                   "([t.id()] if isinstance(t, livetest.LiveCase) else [])\n"
+                   "print(*ids(unittest.defaultTestLoader.discover(sys.argv[1])), sep='\\n')")
+
+def sweep_live(wt: Path) -> list[tuple[bool, str]]:
+    """(fails, line) of `suite:live` (#618 H4) on the swept tree: every `livetest.LiveCase` test of every test root,
+    run class by class through the tree's own runner child (`package.suite_child`, the environment `check --tests`
+    sets), the classes in parallel. One FAIL line per failing test, and one per root whose listing failed; nothing
+    when every test passes or no root holds one."""
+    from concurrent.futures import ThreadPoolExecutor
+    pkg = dyadlib.load_module(wt / "dyad" / "scripts" / "package.py", "dyad_live_runner")
+    out, work = [], []
+    for root in pkg.test_suites():
+        r, kept = pkg.suite_child(["-c", LIVE_LIST_CHILD, str(root), str(wt / "dyad" / "scripts")])
+        rel = Path(root).relative_to(wt) if Path(root).is_relative_to(wt) else root
+        if r.returncode:
+            out.append((True, f"FAIL [suite:live] {rel}: the listing failed ({(r.stderr.strip().splitlines() or ['no output'])[-1][:200]})"))
+            continue
+        groups: dict[str, list[str]] = {}
+        for i in r.stdout.split():
+            groups.setdefault(i.rsplit(".", 1)[0], []).append(i)
+        work += [(rel, root, ids) for ids in groups.values()]
+    with ThreadPoolExecutor(max(1, min(pkg.SUITE_JOBS, len(work)))) as pool:
+        done = list(pool.map(lambda w: (w[0], pkg.suite_child(["-c", pkg.SUITE_UNIT_CHILD, str(w[1]), *w[2]])), work))
+    for rel, (r, kept) in done:
+        if r.returncode:
+            out += [(True, f"FAIL [suite:live] {rel}: {f}") for f in (pkg.suite_failures(r.stderr) or [r.stderr.strip()[-200:]])]
     return out
 
 def sweep_ledger(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
