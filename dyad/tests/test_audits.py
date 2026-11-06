@@ -162,6 +162,42 @@ class RecordTests(Scratch):
         self.assertEqual(rc, 0); self.assertTrue(out.rstrip().endswith("verdict: first exercise"), out)
 
 
+class LevelTests(Scratch):
+    """#619 Decision 3: L1 to L3's coded halves read the stored report, never re-run it."""
+    def report(self, *lines: str) -> str:
+        head = self.git("rev-parse", "HEAD")
+        d = self.d / ".git" / au.SWEEP_STORE; d.mkdir(exist_ok=True)
+        body = "\n".join([*lines, f"sweep of main {head[:12]}: 0 finding(s)", "checks-sha256=c", "report-sha256=r"]) + "\n"
+        (d / "r.txt").write_text(body)
+        return body
+    def levels(self, unit: str, integration: str):
+        self.commit("levels", {"workstation-corpus/self-diagnostic-levels.txt": f"unit {unit}\nintegration {integration}\n",
+                               unit: "", integration: ""})
+    def test_unit_and_integration_class_the_reports_failing_tests_by_the_levels_file(self):
+        self.levels("dyad/tests/test_a.py", "dyad/tests/test_b.py")
+        self.assertEqual(au.level(self.d, "unit")[1], 2)                               # no report at HEAD
+        self.report("reading: suite dyad/tests: Ran 2 tests OK")
+        lines, rc = au.level(self.d, "unit")
+        self.assertEqual((rc, lines[-3]), (0, "L1 unit: 1 modules, 0 failed"))
+        self.assertEqual(lines[-2:], ["checks-sha256=c", "report-sha256=r"])         # the event carries both digests
+        self.report("reading: suite dyad/tests: Ran 2 tests FAILED", "finding: FAIL [rule-12] tests failed (dyad/tests):",
+                    "finding: ERROR: test_x (dyad.tests.test_b.C.test_x) — boom")
+        self.assertEqual(au.level(self.d, "unit")[1], 0)                               # test_b is integration
+        lines, rc = au.level(self.d, "integration")
+        self.assertEqual(rc, 1)
+        self.assertIn("L2 integration: 1 modules, 1 failed: dyad/tests/test_b.py; 1 failing check line(s)", lines)
+        self.report()                                                                 # a report whose check ran no suite
+        self.assertIn("the report ran no suite", au.level(self.d, "unit")[0][-3])
+        self.assertEqual(au.level(self.d, "unit", "nope")[1], 2)
+    def test_invariants_read_the_reports_reading(self):
+        self.report("reading: invariants 40 ok, 0 FAIL")
+        self.assertEqual(au.level(self.d, "invariants")[1], 0)
+        self.report("reading: invariants 39 ok, 1 FAIL")
+        self.assertEqual(au.level(self.d, "invariants")[1], 1)
+        self.report()
+        self.assertEqual(au.level(self.d, "invariants")[0][1], "L3 invariants: the report holds no invariant reading")
+
+
 class AuditTests(Scratch):
     def test_readings_and_a_check_that_raises_is_one_finding(self):
         self.commit("p", {"agent-corpus/d-work/sessions/a.md": "session: a\nseen: 2020-01-01T00:00:00+00:00\n"})

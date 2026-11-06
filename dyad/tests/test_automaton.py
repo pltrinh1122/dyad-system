@@ -1082,14 +1082,21 @@ class AutomatonTests(unittest.TestCase):
         seen = []
         def fake(argv, **kw):
             seen.append((argv, kw.get("env", {}).get("DYAD_NO_NESTED_TESTS")))
-            return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "")
+            return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "ERROR: test_e (m.C.test_e) — e\n")
         with unittest.mock.patch.object(am.subprocess, "run", fake), \
              unittest.mock.patch.object(am, "sweep_live", lambda wt: [(True, "FAIL [suite:live] r: one")]):   # #618 H4
             got = am.sweep_check(PKG.parent, stores=True)
             am.sweep_check(PKG.parent)
-        self.assertEqual(got, [(False, "warn [guards] y z"), (True, "FAIL [suite:live] r: one")])   # suite:live after the guards
+        self.assertEqual(got, [(False, "warn [guards] y z"), (True, "ERROR: test_e (m.C.test_e) — e"),
+                               (True, "FAIL [suite:live] r: one")])                     # suite:live after the guards
         self.assertEqual([a[2:] for a, _ in seen], [["check", "--guards"], ["check"]])
         self.assertEqual(seen[0][1], "1")                                         # the suite never runs under --stores
+
+    def test_check_readings_carry_the_suite_and_the_invariant_pass(self):
+        """#619: the self-diagnostic reads both in the report; none printed when the check printed neither."""
+        lines = ["ok   [invariant] a (3)", "FAIL [invariant] b: x", "     [Rule-12] dyad/tests: Ran 9 tests OK", "ok   [g] y"]
+        self.assertEqual(am.check_readings(lines), ["reading: suite dyad/tests: Ran 9 tests OK", "reading: invariants 1 ok, 1 FAIL"])
+        self.assertEqual(am.check_readings(["ok   [g] y"]), [])
 
     def test_the_live_listing_keeps_only_livecase_tests(self):
         """#618 H4: `suite:live` is every `livetest.LiveCase` test of a root, listed by the runner's child."""

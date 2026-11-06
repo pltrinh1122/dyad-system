@@ -796,7 +796,8 @@ def sweep_check(wt: Path, stores: bool = False) -> list[tuple[bool, str]]:
     r = subprocess.run([sys.executable, str(wt / "dyad" / "scripts" / "package.py"), *argv], cwd=wt,
                        capture_output=True, text=True, env=env)
     CHECK_LINES[:] = r.stdout.splitlines()           # #619: the report's checks-sha256 reads them, in check's order
-    out = [(l.startswith("FAIL"), l) for l in (r.stdout + r.stderr).splitlines() if l.startswith(("FAIL", "warn"))]
+    out = [(l.startswith(("FAIL", "ERROR: ")), l) for l in (r.stdout + r.stderr).splitlines()
+           if l.startswith(("FAIL", "warn", "ERROR: "))]          # #619: a test's ERROR line names it, as FAIL: does
     if r.returncode and not any(f for f, _ in out):
         out.append((True, f"FAIL [sweep] check exited {r.returncode} with no FAIL line"))
     return out + (sweep_live(wt) if stores else [])
@@ -1151,6 +1152,14 @@ def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabi
 SWEEP_STORE = "dyad-sweep"   # `<git common dir>/dyad-sweep/<report-sha256>.txt`: every no-`--row` report, never tracked (#619)
 CHECK_LINES: list[str] = []   # the swept tree's own `check` stdout, in order, as `sweep_check` read it: `checks-sha256`
 
+def check_readings(lines: list[str]) -> list[str]:
+    """The suite's summary per root and the invariant pass's count, read off the tree's own `check` lines (#619): the
+    self-diagnostic's L1 to L3 read them in the report, so a report whose check ran no suite, or no invariant pass,
+    says so by lacking the line."""
+    out = [f"reading: suite {l.split('[Rule-12] ', 1)[1]}" for l in lines if "[Rule-12] " in l and ": Ran " in l]
+    ok, bad = (sum(1 for l in lines if l.startswith(p)) for p in ("ok   [invariant]", "FAIL [invariant]"))
+    return out + ([f"reading: invariants {ok} ok, {bad} FAIL"] if ok or bad else [])
+
 def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str], int]:
     """(lines, rc). Read-only but for one write: the event its own health run recorded, landed events-only on `row`
     (#593, `land_events`). The full sweep's readings print first (#619: the audit's, never posted or counted), then the
@@ -1176,7 +1185,7 @@ def sweep(repo: Path, row: int | None, stores: bool = False) -> tuple[list[str],
                 audit = sweep_audit(wt)
             except Exception as e:                           # the audit never fails the sweep's other findings
                 audit = [f"finding: audit not read ({type(e).__name__})"]
-            readings = [l for l in audit if l.startswith("reading: ")]
+            readings = check_readings(CHECK_LINES) + [l for l in audit if l.startswith("reading: ")]
             found += [(False, l) for l in audit if not l.startswith("reading: ")]
         events_at, fresh, event_notes = None, {}, []
         if not stores:

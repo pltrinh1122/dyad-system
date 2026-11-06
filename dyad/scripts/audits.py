@@ -12,6 +12,10 @@ The automaton sweep's part `sweep_audit` runs them all after each landed merge (
 Read-only: it writes nothing. The two run-book entries:
   audits.py hardening [<ledger>]   the hardening survey (play-book phase 0): readings, findings, `verdict: <outcome>`
   audits.py record [<record>]      the newest audit record's two lines (or <record>'s); exit 1 when one is missing
+  audits.py level unit|integration|invariants [<report-sha256>]
+                                   the self-diagnostic's L1, L2 and L3 coded halves read from a stored sweep report
+                                   (the one at HEAD by default), its failing tests classed by the levels file; exit 1
+                                   on a failure, 2 when no report or no levels file
 """
 import sys
 if sys.version_info < (3, 12):
@@ -23,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import dyadlib
 
-USAGE = "usage: audits.py hardening [<ledger>] | record [<record>]"
+USAGE = "usage: audits.py hardening [<ledger>] | record [<record>] | level unit|integration|invariants [<report-sha256>]"
 AUDITED = re.compile(r"^\*\*Audited:\*\*\s*(.*)$", re.M)           # the watermark line of an audit record (P1)
 FENCES = re.compile(r"^\*\*Fences:\*\*\s*(.*)$", re.M)              # its registry line (P2)
 DATED = re.compile(r"^20\d\d-\d\d-\d\d-.*\.md$")                    # a dated record of <instance>/audits/, pruned from P1
@@ -35,12 +39,17 @@ REGISTRY = re.compile(r"registry (\d+) lines, sha256 ([0-9a-f]{16})")
 LOG_ROW = re.compile(r"^\| (20[0-9-]*)", re.M)                      # a dated row of the incident log, as `survey` counted
 FENCE_ROW = re.compile(r"#(\d+)")
 TOKEN = re.compile(r"`([^`]+)`")
+FAILING_TEST = re.compile(r"^finding: (?:FAIL|ERROR): \w+ \(([\w.]+)\)")    # a test the report's suite failed
+INVARIANT_READING = re.compile(r"^reading: invariants (\d+) ok, (\d+) FAIL$", re.M)
+SWEEP_STORE = "dyad-sweep"     # automaton.SWEEP_STORE: where `dyad automaton sweep` with no --row stores its report
+LEVEL_NAMES = ("unit", "integration", "invariants")
 LABEL = re.compile(r"[a-z0-9_-]+/[a-z0-9_]+")
 CORE_TAG = "dyad-operator-v*"
 NONE_CELLS = ("", "—", "-", "–")
 BRANCHES_SHOWN = 20            # unmerged branches named in the reading; the rest counted
 OUTCOMES = ("first exercise", "no-op", "delta")                     # dyad/dmc/hardening-survey.jsonld's names
-PATTERNS = (AUDITED, FENCES, DATED, AUDIT_RECORD, RULE_SWEEP, INDEX, WATERMARK, REGISTRY, LOG_ROW, FENCE_ROW, TOKEN, LABEL)
+PATTERNS = (AUDITED, FENCES, DATED, AUDIT_RECORD, RULE_SWEEP, INDEX, WATERMARK, REGISTRY, LOG_ROW, FENCE_ROW, TOKEN, LABEL,
+            FAILING_TEST, INVARIANT_READING)
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("seam-patterns-distinct", lambda: len({p.pattern for p in PATTERNS}) == len(PATTERNS)),
     ("records-are-dated-records", lambda: all(DATED.match(n) for n in ("2026-11-06-audit.md", "2026-11-06-rule-sweep.md",
@@ -48,6 +57,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("watermark-reads-the-index-line", lambda: WATERMARK.search("**covered through:** 252 rows, latest 2026-11-03") is not None),
     ("registry-reads-the-fences-line", lambda: REGISTRY.search("registry 24 lines, sha256 7a01f16b0d0692ae") is not None),
     ("outcomes-distinct", lambda: len(set(OUTCOMES)) == 3),
+    ("failing-test-reads-the-report", lambda: FAILING_TEST.match("finding: FAIL: test_a (dyad.tests.test_x.C.test_a) — e") is not None),
 ]
 
 
@@ -352,6 +362,67 @@ def audit(root: Path) -> list[str]:
     return out
 
 
+# ---- the self-diagnostic's coded levels, read from the report (#619 Decision 3)
+def report_for(root: Path, sha: str | None = None) -> Path | None:
+    """The stored report named by `sha`, else the newest whose summary line names HEAD: `sweep of main <sha12>:`."""
+    common = _git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    d = Path(common) / SWEEP_STORE if common else None
+    if d is None or not d.is_dir():
+        return None
+    if sha:
+        p = d / f"{sha}.txt"
+        return p if p.is_file() else None
+    head = (_git(root, "rev-parse", "HEAD") or "")[:12]
+    at = [p for p in d.glob("*.txt") if head and f"sweep of main {head}:" in p.read_text(errors="ignore")]
+    return max(at, key=lambda p: p.stat().st_mtime) if at else None
+
+
+def module_of_test(root: Path, test_id: str, roots: list[Path]) -> str | None:
+    """The tree path of the module a dotted test id names: from the repo root, or from a test root (a craft's)."""
+    parts = test_id.split(".")
+    for k in range(len(parts) - 1, 0, -1):
+        rel = "/".join(parts[:k]) + ".py"
+        for base in [root, *roots]:
+            if (base / rel).is_file():
+                return (base / rel).relative_to(root).as_posix()
+    return None
+
+
+def level(root: Path, name: str, sha: str | None = None) -> tuple[list[str], int]:
+    """(lines, exit) of one coded level read from the report: `unit` and `integration` the failing tests of the modules
+    the levels file classes there (`integration` also every failing check line), `invariants` the report's invariant
+    reading. A report with no suite reading fails `unit`; one with no invariant reading fails `invariants`."""
+    rep = report_for(root, sha)
+    if rep is None:
+        return [f"no stored report {'named ' + sha if sha else 'at HEAD'}: run `dyad automaton sweep` with no --row"], 2
+    text = rep.read_text(errors="ignore")
+    lines = [f"report: {rep}"]
+    digests = [l for l in text.splitlines() if l.startswith(("checks-sha256=", "report-sha256="))]
+    if name == "invariants":
+        m = INVARIANT_READING.search(text)
+        lines.append(f"L3 invariants: {m.group(1)} ok, {m.group(2)} FAIL" if m else "L3 invariants: the report holds no invariant reading")
+        return lines + digests, 0 if m and int(m.group(1)) > 0 and m.group(2) == "0" else 1
+    lv = dyadlib.load_module(HERE / "levels.py", "levels")
+    if not lv.levels_path(root).is_file():
+        return lines + [f"skip [levels] no {lv.levels_path(root).relative_to(root)}"], 2
+    bad = [m for m in lv.check_instance(root) if not m.startswith("warning:")]
+    if bad:
+        return lines + [f"FAIL [levels] {m}" for m in bad], 1
+    mods, roots = set(lv.listing(root, name)), lv.test_roots(root)
+    failing: dict[str, list[str]] = {}
+    for l in text.splitlines():
+        if (m := FAILING_TEST.match(l)) and (mod := module_of_test(root, m.group(1), roots)) in mods:
+            failing.setdefault(mod, []).append(l.removeprefix("finding: "))
+    checks = [l.removeprefix("finding: ") for l in text.splitlines() if l.startswith("finding: FAIL [")] if name == "integration" else []
+    lines += [t for v in failing.values() for t in v] + checks
+    suites = [l for l in text.splitlines() if l.startswith("reading: suite ")]
+    tag = "L1 unit" if name == "unit" else "L2 integration"
+    lines.append(f"{tag}: {len(mods)} modules, {len(failing)} failed{': ' + ' '.join(sorted(failing)) if failing else ''}"
+                 + (f"; {len(checks)} failing check line(s)" if name == "integration" else "")
+                 + ("" if suites else "; the report ran no suite"))
+    return lines + digests, 1 if failing or checks or not suites else 0
+
+
 def main(argv=None, root: Path | None = None) -> int:
     a = list(sys.argv[1:] if argv is None else argv)
     root = Path(root or dyadlib.repo_root())
@@ -369,6 +440,10 @@ def main(argv=None, root: Path | None = None) -> int:
         for line in bad:
             print(line)
         return 1 if bad else 0
+    if a[:1] == ["level"] and len(a) in (2, 3) and a[1] in LEVEL_NAMES:
+        lines, rc = level(root, a[1], a[2] if len(a) == 3 else None)
+        print("\n".join(lines))
+        return rc
     print(USAGE, file=sys.stderr)
     return 2
 
