@@ -1,0 +1,66 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-timing",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-timing",
+  "name": "Release timing",
+  "description": "Decides when a change set holding a critical fix is released: at once, after the fix of a broken release path, with the next minor, or held and decided again at a named event.",
+  "dyad:decides": "A change set since a craft's last tag holds a critical fix: release now, or hold?",
+  "dyad:inputs": [
+    "release path: whether the defect refuses a cut, a publish or an install",
+    "exposure: whether an installing system runs a released version that gives it the wrong result, read from a report, an incident or a known install; unknown counts as exposed",
+    "workaround: whether a stated step lets an exposed system wait for the release",
+    "fix landed: whether the fix is on main, or still a row",
+    "minor in reach: whether a capability or enhancement is already on main and unreleased, or a planned row expected to land with it"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fix-first",
+      "name": "fix first",
+      "dyad:when": "the defect breaks the release path itself: it refuses a cut, a publish or an install",
+      "dyad:then": "no release is cut until the fix is on main; the next cut, whatever its number, carries it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cut-now",
+      "name": "cut now",
+      "dyad:when": "an installing system is exposed with no workaround, or data is lost or leaked; or the inputs cannot decide",
+      "dyad:then": "the home proposes the release as soon as the fix lands; the number follows the change set, a patch or the minor main already holds"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fold",
+      "name": "fold",
+      "dyad:when": "no installing system is exposed, or a workaround is stated, and a minor is in reach",
+      "dyad:then": "the fix waits for that minor, and when the minor lands the critical fix is why it is proposed at once"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hold",
+      "name": "hold",
+      "dyad:when": "no installing system is exposed, or a workaround is stated, and no minor is in reach",
+      "dyad:then": "the change set waits and is decided again when a done-Y lands a change under the craft's root, when a report or incident shows an installing system exposed, or when the operator asks; no time cap applies, since elapsed time changes no system's exposure"
+    }
+  ],
+  "dyad:precedence": "fix first, then cut now, then fold, then hold; a held change set is decided again at each of hold's events.",
+  "dyad:default": "cut now: when exposure cannot be read, the earlier rule stands and the fix is released as soon as it lands.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/release.md",
+  "dyad:alsoIn": [
+    "dmc/release-class.jsonld"
+  ],
+  "dyad:owner": "Rule-11"
+}
