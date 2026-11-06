@@ -1004,12 +1004,21 @@ class AutomatonTests(unittest.TestCase):
         def fake(argv, **kw):
             seen.append((argv, kw.get("env", {}).get("DYAD_NO_NESTED_TESTS")))
             return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "")
-        with unittest.mock.patch.object(am.subprocess, "run", fake):
+        with unittest.mock.patch.object(am.subprocess, "run", fake), \
+             unittest.mock.patch.object(am, "sweep_live", lambda wt: [(True, "FAIL [suite:live] r: one")]):   # #618 H4
             got = am.sweep_check(PKG.parent, stores=True)
             am.sweep_check(PKG.parent)
-        self.assertEqual(got, [(False, "warn [guards] y z")])
+        self.assertEqual(got, [(False, "warn [guards] y z"), (True, "FAIL [suite:live] r: one")])   # suite:live after the guards
         self.assertEqual([a[2:] for a, _ in seen], [["check", "--guards"], ["check"]])
         self.assertEqual(seen[0][1], "1")                                         # the suite never runs under --stores
+
+    def test_the_live_listing_keeps_only_livecase_tests(self):
+        """#618 H4: `suite:live` is every `livetest.LiveCase` test of a root, listed by the runner's child."""
+        with tempfile.TemporaryDirectory() as t:
+            Path(t, "test_m.py").write_text("import unittest, livetest\nclass A(livetest.LiveCase):\n    def test_a(self): pass\n"
+                                            "class B(unittest.TestCase):\n    def test_b(self): pass\n")
+            r = subprocess.run([sys.executable, "-c", am.LIVE_LIST_CHILD, t, str(PKG / "scripts")], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout.split()), (0, ["test_m.A.test_a"]), r.stderr)
 
     def test_the_sweep_no_longer_posts_stalls_and_stall_lines_reads_them(self):
         """#617: hygiene, candidates and in-flight lines are `stall_lines`', which `board resume` prints; the sweep

@@ -751,6 +751,39 @@ def orch_invariants(events, phases=ORCH_PHASES) -> list:
                                       and ("held", "release") in events),
     ]
 
+# d-work #618: what each check reads, and what starts it (the decision criterion `dyad/dmc/check-trigger.jsonld`, home
+# Rule-14 property 3). A check reads one or more INPUTS; its triggers are the union of its inputs' (plan #618 H1). The
+# keys of CHECK_INPUTS are every registry label (`dyad check --list`, `<group>/<entity>`), every part of the sweep and
+# the suite in its two halves; a label whose craft is not installed is ignored, a registered label with no row fails
+# (dyad/tests/test_check_trigger.py, plan Q3). Data, read by that test; nothing refuses a run on it.
+CHECK_INPUT_NAMES = ("code tree", "ledger stores", "event store", "absence", "outside world")
+CODE, LEDGER, EVENTS, ABSENCE, WORLD = CHECK_INPUT_NAMES
+INPUT_TRIGGERS: dict[str, tuple[str, str]] = {   # input -> (its trigger, the delay it accepts)
+    CODE:    ("each landed merge: the full sweep (dyad-sweep.yml, dispatched by dyad-automaton.yml or started by a code push)", "none"),
+    LEDGER:  ("each ledger push: `dyad automaton sweep --stores` (dyad-automaton.yml)", "until the next ledger push"),
+    EVENTS:  ("each events-only push: `dyad automaton sweep --stores` (dyad-automaton.yml)", "until the next events push"),
+    ABSENCE: ("the home's read at each operator prompt: `dyad board resume`, its stall lines", "until the operator's next prompt"),
+    WORLD:   ("the next landed merge's full sweep (dyad-sweep.yml)", "until the next merge"),
+}
+CHECK_INPUTS: dict[str, tuple[str, ...]] = {
+    # core guards
+    "agent/board": (LEDGER,), "agent/dmc": (CODE,), "agent/frame": (CODE,), "agent/inbox": (LEDGER,),
+    "agent/merges": (CODE, LEDGER), "agent/plans": (CODE, LEDGER), "agent/provenance": (LEDGER,), "agent/prs": (CODE,),
+    "agent/records": (CODE,), "agent/references": (CODE, LEDGER), "agent/rows": (LEDGER,), "agent/rules": (CODE,),
+    "agent/sessions": (LEDGER,), "agent/traces": (LEDGER,), "agent/vocabulary": (CODE,), "craft/crafts": (CODE,),
+    "infra/bundle": (CODE,), "infra/containment": (CODE,), "infra/manifest": (CODE,), "preferences/preferences": (CODE,),
+    # craft guards (ignored while their craft is absent, Q3)
+    "cabinet/seats": (CODE, LEDGER), "chronicle/episodes": (CODE, LEDGER), "sysadmin/changelog": (CODE,),
+    "sysadmin/events": (EVENTS,), "sysadmin/ops_scripts": (CODE,), "sysadmin/runbooks": (CODE,), "sysarch/registry": (CODE,),
+    "syseng/invariants": (CODE,), "syseng/naming": (CODE,), "syseng/tests": (CODE,),
+    # the sweep's parts (scripts/automaton.py, scripts/hygiene.py)
+    "sweep_check": (CODE, LEDGER, EVENTS), "sweep_drift": (WORLD,), "sweep_ledger": (ABSENCE,), "sweep_ci": (ABSENCE, WORLD),
+    "hygiene": (ABSENCE,), "inflight": (ABSENCE,),
+    # the suite: every test that is not a livetest.LiveCase reads the tree; the LiveCase tests read the stores (H4)
+    "suite": (CODE,), "suite:live": (LEDGER, EVENTS),
+}
+SWEEP_PARTS = ("sweep_check", "sweep_drift", "sweep_ledger", "sweep_ci", "hygiene", "inflight")
+
 # Rule-15 phase 1: the parts a plan file carries. The file is prose (no parser); this names the
 # parts so a projector (crafts/sysarch/rules/projection.md) can report which a plan mentions, never how it says them.
 PLAN_PARTS = ("intent as read", "mutation", "files touched", "base commit", "falsification", "definition of done")
@@ -1185,6 +1218,10 @@ INVARIANTS: list[Invariant] = [
     ("host-default-zone-allowed", lambda: DEFAULT_HOST_ZONE in HOST_ZONES and len(set(HOST_ZONES)) == len(HOST_ZONES)),
     ("host-corpus-is-default-zone", lambda: HOST_CORPUS == DEFAULT_HOST_ZONE),
     ("host-default-path-relative", lambda: bool(DEFAULT_HOST) and not DEFAULT_HOST.startswith("/") and not DEFAULT_HOST.endswith("/")),
+    ("check-inputs-known", lambda: all(v and set(v) <= set(CHECK_INPUT_NAMES) for v in CHECK_INPUTS.values())
+                                   and set(INPUT_TRIGGERS) == set(CHECK_INPUT_NAMES)
+                                   and all(t and d for t, d in INPUT_TRIGGERS.values())
+                                   and set(SWEEP_PARTS) | {"suite", "suite:live"} <= set(CHECK_INPUTS)),   # #618
     ("tunable-value-reads-allowed", lambda: tunable_value("7 days", 1, "a positive integer (days)") == 7
         and tunable_value("-2", 1, "a positive integer") is None and tunable_value("none", 1, "a positive integer") is None
         and tunable_value("0.5", 0.35, "a number between 0 and 1") == 0.5 and tunable_value("1", 0.35, "a number between 0 and 1") is None),   # #590

@@ -60,6 +60,8 @@ class DworkLinkTests(unittest.TestCase):
         self.assertEqual(d.check_transaction(root, base, head), [])
         (root / "g").write_text("g"); sh("git", "add", "-A"); sh("git", "commit", "-qm", "more (d-work #3)")
         self.assertIn("#3 not in ledger", d.check_transaction(root, base, sh("git", "rev-parse", "HEAD").stdout.strip())[0])
+        sh("git", "checkout", "-q", "--detach", base)                       # #617: a detached HEAD at the base, as
+        self.assertEqual(d.check_transaction(root, base, base), [])          # `automaton sweep --stores` runs: empty, nothing claimed
 
     def test_ledger_only_range_is_clerical_and_skipped(self):
         """d-work #191: a range touching only <instance>/d-work/ records a prompt or a disposition and
