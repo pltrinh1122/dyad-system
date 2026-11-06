@@ -9,15 +9,19 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
-version: 0.22.0
+## Known limitations (1.0.0)
+
+The twice-daily health sweep (`.github/workflows/dyad-sweep.yml`) depends on GitHub Actions' `schedule` event, which this release has not fully verified. Observed runs arrived about 5 to 7 hours after their slots, and missed slots were not made up. Push-triggered corroboration and the evidence gate do not depend on the schedule. A fix is planned for 1.x.
+
+version: 1.0.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 0.18.0 |
+| dyad-operator | 1.0.0 |
 | sysarch | 0.4.0 |
 | syseng | 0.7.0 |
-| sysadmin | 0.3.1 |
-| cabinet | 0.5.0 |
+| sysadmin | 0.3.2 |
+| cabinet | 0.5.1 |
 | chronicle | 0.3.0 |
 
 `disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
