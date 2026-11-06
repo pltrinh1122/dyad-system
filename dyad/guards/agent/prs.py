@@ -80,6 +80,8 @@ def check_transaction(root: Path, base: str, head: str) -> list[str]:
         return []
     if ledger_only(root, base, head) or events_only(root, base, head):
         return []
+    if not subprocess.check_output(["git", "rev-list", f"{base}..{head}"], cwd=root, text=True).strip():
+        return []   # an empty range claims nothing: a detached HEAD at the base, as `automaton sweep --stores` runs (#617)
     body = subprocess.check_output(["git", "log", "--format=%B", f"{base}..{head}"], cwd=root, text=True)
     return check(body, rows=dyadlib.read_rows(root, at=base))
 
