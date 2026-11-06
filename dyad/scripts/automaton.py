@@ -1027,8 +1027,8 @@ STALL_CEILING_S = 5.0   # #617 P5: `dyad board resume` prints the stall lines wi
 
 def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabinet: str | None = None) -> list[str]:
     """The stall findings the home reads at each prompt (`dyad board resume`, #617), read from the ledger at `base`:
-    heads not landed and stale board entries (`sweep_ledger`), code pushes with no corroboration (`sweep_ci`, which
-    needs the hosting and otherwise says it was not read), the work in flight (W-lines, the hosting's PRs read only with
+    Y dones whose heads never landed and stale board entries (`sweep_ledger`), code pushes to main with no completed
+    corroboration (`sweep_ci`, which needs the hosting and otherwise says it was not read), the work in flight (W-lines, the hosting's PRs read only with
     a token) and the backlog's hygiene (I-lines and `candidate:` pairs). With `cabinet` (#594), only the in-flight lines
     whose home is that cabinet's — a cabinet with no home of its own falls back to `program`'s, as the sweep once routed
     them. Read-only: it posts nothing."""
