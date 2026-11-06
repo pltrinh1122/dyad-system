@@ -906,6 +906,26 @@ def land_events(repo: Path, rel: str | None, fresh: dict[str, str], row: int | N
     m = re.search(r"landed ([0-9a-f]{40}) on main", buf.getvalue())
     return f"events: {names} landed on main{f' as {m.group(1)[:12]}' if m else ''} (events-only)"
 
+def corroborated(repo: Path, c: str, own: list[dict], listed: list[dict], firstparent: set[str], recent: list[dict]) -> bool:
+    """Whether code push `c` on main is corroborated (#564, #614): a successful `CI_WORKFLOWS` run on `c` itself (`own`);
+    or one on a later first-parent commit of main whose tree contains `c` (`listed`, `firstparent`), whatever executed
+    that merge, since corroboration runs once per landed tree and a newer push cancels the run on the older one (Rule-14
+    property 3); or, for a merge `dyad merge` executed, a successful automaton run created after it (`recent`), which
+    corroborates in the run that merged. A run cancelled with no later success covering `c` corroborates nothing."""
+    ok = lambda w: w.get("name") in CI_WORKFLOWS and w.get("conclusion") == "success"
+    if any(ok(w) for w in own):
+        return True
+    for w in listed:
+        h = w.get("head_sha") or ""
+        if ok(w) and h != c and h in firstparent and \
+                land.git(repo, "merge-base", "--is-ancestor", c, h, check=False).returncode == 0:
+            return True
+    if "Executed by `dyad merge`" in land.out(repo, "log", "-1", "--format=%B", c):
+        t = land.out(repo, "log", "-1", "--format=%cI", c)
+        return any(w.get("created_at", "") >= t for w in recent)
+    return False
+
+
 def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
     """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), read from the
     hosting with `GITHUB_TOKEN` and `GITHUB_REPOSITORY`; one skip finding when either is absent."""
@@ -923,20 +943,18 @@ def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tupl
     if not (token and slug):
         return [(False, f"finding: corroboration of {len(code)} code push(es) to main not read (no GITHUB_TOKEN/GITHUB_REPOSITORY)")]
     def runs(sha=None, name=None):
-        q = f"head_sha={sha}" if sha else "per_page=50"
+        q = f"head_sha={sha}" if sha else "branch=main&status=success&per_page=100"   # the successes on main a later tree may cover with (#614)
         req = urllib.request.Request(f"https://api.github.com/repos/{slug}/actions/runs?{q}",
                                      headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             return json.load(resp).get("workflow_runs", [])
     out = []
     try:
-        recent = [w for w in runs() if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
+        listed = runs()
+        recent = [w for w in listed if w.get("name") == "d-work automaton" and w.get("conclusion") == "success"]
+        firstparent = set(log)
         for c in code:
-            ok = any(w.get("name") in CI_WORKFLOWS and w.get("conclusion") == "success" for w in runs(sha=c))
-            if not ok and "Executed by `dyad merge`" in land.out(repo, "log", "-1", "--format=%B", c):
-                t = land.out(repo, "log", "-1", "--format=%cI", c)
-                ok = any(w.get("created_at", "") >= t for w in recent)    # the automaton corroborates in the run that merged
-            if not ok:
+            if not corroborated(repo, c, runs(sha=c), listed, firstparent, recent):
                 out.append((True, f"finding: code push {c[:12]} to main has no successful corroboration ({', '.join(CI_WORKFLOWS)})"))
     except Exception as e:                               # the hosting is The World: unreadable is a finding, never a crash
         out.append((False, f"finding: corroboration not read from the hosting ({type(e).__name__})"))
