@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-06T15:03:30+00:00
+seen: 2026-11-06T15:16:53+00:00
 root: /home/user/wt/inbox
 rows: 
 files: 
