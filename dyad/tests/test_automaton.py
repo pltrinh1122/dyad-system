@@ -64,6 +64,57 @@ def run(argv, repo, corroborate=passing, evidence=evidence_ok, **envs):
     return rc, out.getvalue(), err.getvalue()
 
 
+class SweepCiTests(unittest.TestCase):
+    """#617: `sweep_ci` reads the public run list with or without a token, one listing per workflow; only a failed
+    request is "not read"."""
+    def setUp(self):
+        import tempfile, shutil, datetime
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
+        g = lambda *a: subprocess.run(["git", "-C", str(self.d), *a], check=True, capture_output=True, text=True).stdout.strip()
+        g("init", "-q", "-b", "main"); g("config", "user.email", "t@t"); g("config", "user.name", "t")
+        (self.d / "x.py").write_text("x"); g("add", "-A"); g("commit", "-qm", "code")
+        self.c = g("rev-parse", "HEAD"); self.g = g
+        self.now = datetime.datetime.now(datetime.timezone.utc)
+    def ci(self, runs=None, token="", slug="o/r", fail=None):
+        import io as _io, json as _json
+        seen = []
+        def urlopen(req, timeout=None):
+            seen.append((req.full_url, req.headers.get("Authorization")))
+            if fail:
+                raise fail
+            name = "rule-11 package" if "dyad-package.yml" in req.full_url else "d-work automaton"
+            body = [w for w in (runs or []) if w["name"] == name]
+            return contextlib.closing(_io.BytesIO(_json.dumps({"workflow_runs": body}).encode()))
+        with unittest.mock.patch.dict(os.environ, {"GITHUB_TOKEN": token, "GITHUB_REPOSITORY": slug}), \
+             unittest.mock.patch("urllib.request.urlopen", urlopen):
+            return am.sweep_ci(self.d, "HEAD", self.now), seen
+    def test_a_corroborated_push_without_a_token_is_no_finding(self):
+        got, seen = self.ci([{"name": "rule-11 package", "head_sha": self.c, "conclusion": "success"}])
+        self.assertEqual(got, [])
+        self.assertEqual(sorted(u.split("/workflows/")[1].split("/")[0] for u, _ in seen), ["dyad-automaton.yml", "dyad-package.yml"])
+        self.assertTrue(all(a is None for _, a in seen))                                 # no token: no header
+        self.assertTrue(all(f"per_page={am.CI_PAGE}" in u for u, _ in seen))
+    def test_an_uncorroborated_push_is_a_failing_finding_and_a_token_is_sent(self):
+        got, seen = self.ci([], token="t0k")
+        self.assertEqual(got, [(True, f"finding: code push {self.c[:12]} to main has no successful corroboration (rule-11 package, d-work automaton)")])
+        self.assertTrue(all(a == "Bearer t0k" for _, a in seen))
+    def test_only_a_failed_request_is_not_read(self):
+        got, _ = self.ci(fail=OSError("down"))
+        self.assertEqual(got, [(False, "finding: corroboration not read from the hosting (OSError)")])
+        got, seen = self.ci(slug="")                                                      # no hosting named at all
+        self.assertEqual((got[0][1].split(" not read")[0], seen), ("finding: corroboration of 1 code push(es) to main", []))
+    def test_the_slug_is_read_off_origin(self):
+        with unittest.mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": ""}):
+            self.assertIsNone(am.repo_slug(self.d))
+            for url, want in (("https://github.com/o/r.git", "o/r"), ("git@github.com:o/r", "o/r"),
+                              ("http://local_proxy@127.0.0.1:1/git/o/r", "o/r"), ("/srv/o/r.git", None)):
+                self.g("remote", "remove", "origin") if "origin" in self.g("remote") else None
+                self.g("remote", "add", "origin", url)
+                self.assertEqual(am.repo_slug(self.d), want, url)
+        with unittest.mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "a/b"}):
+            self.assertEqual(am.repo_slug(self.d), "a/b")
+
+
 class CorroboratedTests(unittest.TestCase):
     """#614: `sweep_ci`'s decision on one code push, over a real first-parent history and the runs the hosting reports."""
     def setUp(self):
