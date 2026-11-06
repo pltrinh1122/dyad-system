@@ -10,10 +10,14 @@ name: d-work sweep
 # sweep's event, which this job commits events-only (clerical, Rule-3; no row, no PR) through the pre-push gate.
 # That commit is the heartbeat the run-book's health reads (last sweep under 13 h), and it is the repository activity
 # that keeps GitHub from disabling the schedule. A red sweep notifies; it holds nothing (plan #564, decision 2).
-# Schedule (d-work #575): the cron is UTC. GitHub ignored the `timezone` key: schedule run 41802948988 started at 08:53
-# UTC, the 06:00 UTC slot plus GitHub's delay, and no run came at 06:00 Pacific. 14:17 and 02:17 UTC are 06:17 and
-# 18:17 Pacific under standard time, and an hour later under daylight time, inside health's 13 h window either way.
-# Minute 17, off the hour, because top-of-the-hour schedule runs are the ones GitHub delays most.
+# Schedule (d-work #575, #609): the cron is UTC, with no `timezone` key. Why the first run came at 08:53 UTC
+# (41802948988) has two readings: GitHub ignored the key, and it was the 06:00 UTC slot 2 h 53 m late; or GitHub
+# honoured it, and it was the 18:00 Pacific (02:00 UTC) slot 6 h 53 m late. #575 took the first as fact; the lags
+# measured since fit the second better without proving it: the 2026-11-05 slots ran 7 h 09 m (02:17 UTC) and
+# 6 h 47 m (14:17 UTC) late, and #609's probes' first slots about 5 h late (4 h 57 m to 5 h 29 m), the same for a
+# user's and the app's registration. GitHub's schedule delivery is best-effort, so the run-book's health, not the
+# slot, is the bound. 14:17 and 02:17 UTC are 06:17 and 18:17 Pacific under standard time. Minute 17, off the hour,
+# because top-of-the-hour runs are the ones GitHub delays most.
 on:
   schedule:
     - cron: '17 14,2 * * *'
