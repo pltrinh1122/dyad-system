@@ -74,7 +74,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad inbox post … --cc <unit>` | — | frozen |
 | `dyad automaton scan` / `run` | — | frozen |
 | `dyad automaton run --evidence-from <file>` / `evidence --out <file>` | — | frozen |
-| `dyad automaton sweep` | `--row <id>` | frozen |
+| `dyad automaton sweep` | `--row <id>`, `--stores` (the whole-store guards only, after each ledger push, #617) | frozen |
 | `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | frozen |
 | `dyad bootstrap` | `--check` | frozen |
 

@@ -137,7 +137,8 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(sv.attendance_window(self.d), datetime.timedelta(days=dyadlib.tunable_default("attendance-window")))
 
     def test_sweep_reads_tunables_at_base_not_the_working_tree(self):
-        """`sweep()` reads rows at `base`; its thresholds come from the same commit, the worktree it prepares there."""
+        """`stall_lines` (#617: the stalls `sweep()` read until then) reads rows at `base`; its thresholds come from
+        `prefs` when given — the same commit's tree — never the uncommitted working tree."""
         git = lambda *a: subprocess.run(["git", "-C", str(self.d), *a], check=True, capture_output=True, text=True).stdout
         git("init", "-q", "-b", "main"); git("config", "user.email", "t@t"); git("config", "user.name", "t")
         p = self.d / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True)
@@ -150,16 +151,17 @@ class ReaderTests(unittest.TestCase):
         def record(key, root=None, *a, **k):
             v = real(key, root, *a, **k); seen.setdefault(key, set()).add(v); return v
         self.calls.side_effect = record
-        with unittest.mock.patch.object(am.land, "fetch", lambda repo: base), \
-             unittest.mock.patch.object(am, "sweep_check", lambda wt: []), \
-             unittest.mock.patch.object(am, "sweep_drift", lambda *a: []), \
-             unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
+        at = self.d.parent / (self.d.name + "-at-base")             # the tree at `base`, as a caller prepares it
+        (at / dyadlib.PREFERENCES_REL).parent.mkdir(parents=True, exist_ok=True)
+        (at / dyadlib.PREFERENCES_REL).write_text(git("show", f"{base}:{dyadlib.PREFERENCES_REL}"))
+        self.addCleanup(lambda: __import__("shutil").rmtree(at, ignore_errors=True))
+        with unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "home", lambda *a: None), \
              unittest.mock.patch.object(hy, "_board_files", lambda *a: {}), \
              unittest.mock.patch.object(hy, "_messages", lambda *a: []), \
              unittest.mock.patch.object(dyadlib, "read_rows", lambda *a, **k: []), \
              unittest.mock.patch.dict("os.environ", {"GITHUB_TOKEN": "", "GITHUB_REPOSITORY": ""}):
-            am.sweep(self.d, None)
+            am.stall_lines(self.d, base, prefs=at)
         self.assertEqual(seen.get("hygiene-top"), {3}, seen)
         self.assertEqual(seen.get("sweep-ci-hours"), {7}, seen)
         self.assertEqual(seen.get("inflight-unread-hours"), {4}, seen)

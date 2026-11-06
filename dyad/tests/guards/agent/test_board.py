@@ -503,11 +503,41 @@ class CabinetFormTests(unittest.TestCase):
         flat = self.views("program-59cec502")[:2]
         prefs(self.root)
         m4 = self.views("program-59cec502")[:2]
+        flat, m4 = ((without_stalls(flat[0]), flat[1]), (without_stalls(m4[0]), m4[1]))   # #617's block, its own test
         self.assertEqual(flat, (PRE_594_RESUME, PRE_594_BOARD))                        # before #594 and after it
         self.assertEqual(m4, (PRE_594_RESUME, PRE_594_BOARD))
         self.assertEqual(sum(l.startswith("warn: board/") for l in m4[1]), 3)          # the writer warnings (h1, not h9)
         text = "\n".join(m4[0] + m4[1])
         self.assertNotIn("cabinet", text); self.assertIn("_cos:", m4[0]); self.assertIn("_cos seats: " + A_UNIT + " s1", m4[1])
+
+
+def without_stalls(lines: list[str]) -> list[str]:
+    """`resume_lines` without #617's stall block (its title line `stalls…` and the indented lines under it)."""
+    out, inside = [], False
+    for l in lines:
+        if l.startswith("stalls"):
+            inside = True; continue
+        if inside and l.startswith("  "):
+            continue
+        inside = False; out.append(l)
+    return out
+
+
+class StallTests(unittest.TestCase):
+    """#617: `board resume` ends with the stall findings, read from the ledger, within `STALL_CEILING_S` on this
+    instance's own ledger; a reading that fails is one line."""
+    def test_resume_prints_the_stalls_within_the_ceiling(self):
+        import time
+        am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502", "GITHUB_TOKEN": ""}):
+            t = time.monotonic(); lines = bd.resume_lines(PKG.parent); took = time.monotonic() - t
+        self.assertLess(took, am.STALL_CEILING_S, f"board resume took {took:.2f} s")
+        head = [l for l in lines if l.startswith("stalls")]
+        self.assertEqual(len(head), 1, lines); self.assertRegex(head[0], r"^stalls \(\d+, read from the ledger at [0-9a-f]{12}")
+        self.assertTrue(lines[-1].startswith("then: "))
+    def test_an_unreadable_ledger_is_one_line(self):
+        with tempfile.TemporaryDirectory() as t:
+            self.assertEqual(bd.stall_block(Path(t), None), ["stalls: not read (CalledProcessError)"])
 
 
 class CabinetWorld:

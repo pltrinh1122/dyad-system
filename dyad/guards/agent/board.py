@@ -777,8 +777,21 @@ def resume_lines(root: Path) -> list[str]:
         now = datetime.datetime.now(datetime.timezone.utc)
         out.append("last ledger act (presence `seen`, information only, #567): " + ", ".join(
             f"{s} {age(v['last_act'][s], now) if v['last_act'].get(s) else 'none'}" for s in v["seats"]))
+    out += stall_block(root, v["cabinet"])
     out.append("then: `dyad board set _cos holder=<this seat>` before any other act (write-ahead)")
     return out
+
+
+def stall_block(root: Path, cabinet: str | None) -> list[str]:
+    """#617: the stall findings the sweep no longer posts, read from the ledger at this checkout's HEAD
+    (`automaton.stall_lines`): heads not landed, corroboration, a stale board, the work in flight of the resumer's
+    cabinet, and the backlog's hygiene. Information only; a reading that fails says so in one line, never a crash."""
+    try:
+        base = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+        lines = automaton().stall_lines(root, base, cabinet=cabinet)
+    except Exception as e:                               # a read for the home: unreadable is a line, never a crash
+        return [f"stalls: not read ({type(e).__name__})"]
+    return [f"stalls ({len(lines)}, read from the ledger at {base[:12]}; information, the home judges):"] + [f"  {l}" for l in lines]
 
 
 # ---- the orchestration machine (d-work #587: X1 derived fields, X2 relays, X3 questions, X4 the answer, X9 --expect)

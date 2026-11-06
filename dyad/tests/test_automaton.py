@@ -31,7 +31,7 @@ The cases:
   holding a write token; `run --evidence-from` fires each line only once it passes every check (its shape, a verdict
   of the machine's table, the row in verifying, its heads the board's recorded and the live ones), never computing.
 - Misuse is exit 2."""
-import contextlib, io, json, os, subprocess, sys, unittest, unittest.mock
+import contextlib, io, json, os, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -892,15 +892,29 @@ class AutomatonTests(unittest.TestCase):
         (msg,) = self.inbox(HOME)
         self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
 
-    def sweep(self, check=(), hygiene=((), ()), inflight=(), **kw):
-        with unittest.mock.patch.object(am, "sweep_check", lambda wt: list(check)), \
+    def sweep(self, check=(), hygiene=((), ()), inflight=(), argv=("sweep", "--row", "9"), **kw):
+        seen = self.swept = []
+        def fake_check(wt, stores=False):
+            seen.append(stores); return list(check)
+        with unittest.mock.patch.object(am, "sweep_check", fake_check), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
              unittest.mock.patch.object(am.hygiene_mod, "inflight_cabinets", lambda repo, base, now, pulls, prefs=None:
                                         [l if isinstance(l, tuple) else ("program", l) for l in inflight]), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
-             unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: []), \
+             unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: [(False, "finding: drift seen")]), \
              unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
-            return run(["sweep", "--row", "9"], self.w.seat, **kw)
+            return run(list(argv), self.w.seat, **kw)
+
+    def stalls(self, hygiene=((), ()), inflight=(), cabinet=None):
+        """`stall_lines` on origin/main with hygiene and in-flight stubbed, the ledger read for real (#617)."""
+        git(self.w.seat, "fetch", "-q", "origin")
+        base = git(self.w.origin, "rev-parse", "main")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "AUTOMATON_HOME": "", "GITHUB_TOKEN": ""}), \
+             unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
+             unittest.mock.patch.object(am.hygiene_mod, "inflight_cabinets", lambda repo, base, now, pulls, prefs=None:
+                                        [l if isinstance(l, tuple) else ("program", l) for l in inflight]), \
+             unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
+            return am.stall_lines(self.w.seat, base, cabinet=cabinet)
 
     def test_the_sweep_tells_only_what_is_new(self):
         files = dict(self.files)
@@ -909,47 +923,62 @@ class AutomatonTests(unittest.TestCase):
         self.w.write_main(files)
         rc, out, err = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])
         self.assertEqual(rc, 0, out + err)
-        self.assertIn(f"finding: row #9's done answer of 2026-11-01 names heads not on main: PR #7 at {self.sha[:12]}", out)
-        self.assertIn("finding: warn [agent/plans] 43.md: an old warning", out)
+        self.assertNotIn("names heads not on main", out)                          # #617: a stall, the home's read now
+        self.assertIn("finding: warn [agent/plans] 43.md: an old warning", out); self.assertIn("finding: drift seen", out)
         (msg,) = self.inbox(HOME)
-        self.assertIn("automaton sweep at", msg); self.assertIn(", findings: ", msg); self.assertIn("PR #7 at <sha>", msg)
+        self.assertIn("automaton sweep at", msg); self.assertIn(", findings: ", msg)
         self.assertIn("43.md: an old warning", msg)
         rc, out, _ = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])
         self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)            # told once
         rc, out, _ = self.sweep(check=[(True, "FAIL [agent/rows] broken")])
         self.assertEqual(rc, 1, out); self.assertEqual(len(self.inbox(HOME)), 2)           # a new failure is told
         self.assertEqual(run(["sweep", "--row"], self.w.seat)[0], 2)
+        self.assertEqual(self.swept, [False])                                             # the full check
 
-    def test_the_sweep_tells_new_hygiene_once_grouped_by_kind(self):
-        """#565: hygiene findings and similarity candidates ride the sweep's new-only notice."""
+    def test_the_stores_sweep_runs_the_guards_alone_and_tells_only_what_is_new(self):
+        """#617: `sweep --stores` runs `check --guards` (stores=True), no drift and no events, told new-only."""
         self.w.write_main(self.files)
-        hyg = (["hygiene I1 untouched: backlog row #10 (ten), no commit in 40 days"],
-               ["candidate: #9 and #10 similar (0.50): nine / ten"])
-        rc, out, err = self.sweep(hygiene=hyg)
-        self.assertEqual(rc, 0, out + err)                                        # hygiene never fails the sweep
-        self.assertIn("finding: hygiene I1 untouched: backlog row #10", out); self.assertIn("candidate: #9 and #10", out)
-        msgs = self.inbox(HOME)
-        self.assertEqual(sum(", backlog hygiene: " in m for m in msgs), 1)       # one notice per kind
-        self.assertEqual(sum(", similarity candidates: " in m for m in msgs), 1)
-        self.assertTrue(any(", backlog hygiene: hygiene I1 untouched: backlog row #10" in m for m in msgs), msgs)
-        self.assertTrue(any(", similarity candidates: candidate: #9 and #10" in m for m in msgs), msgs)
-        rc, out, _ = self.sweep(hygiene=hyg)
-        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
+        rc, out, err = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")], argv=("sweep", "--stores", "--row", "9"))
+        self.assertEqual(rc, 0, out + err); self.assertEqual(self.swept, [True])
+        self.assertNotIn("drift seen", out); self.assertNotIn("events:", out); self.assertIn("stores sweep of main", out)
+        (msg,) = self.inbox(HOME); self.assertIn("automaton stores sweep at", msg); self.assertIn("43.md: an old warning", msg)
+        rc, out, _ = self.sweep(check=[(False, "warn [agent/plans] 43.md: an old warning")])   # the full sweep: told already
+        self.assertEqual(len(self.inbox(HOME)), 2)                                 # only the drift line is new to it
+        self.assertNotIn("43.md", self.inbox(HOME)[-1])
+        for bad in (("sweep", "--stores", "--stores"), ("sweep", "--stores", "--row"), ("sweep", "--bogus")):
+            self.assertEqual(run(list(bad), self.w.seat)[0], 2, bad)
 
-    def test_work_in_flight_is_told_one_notice_per_kind(self):
-        """#569: each W kind its own notice to home, new-only like every finding; never failing the sweep."""
-        self.w.write_main(self.files)
-        flight = ["inflight W1 relay unread: row #9's relay to eng-1 sent 2026-11-01T00:00:00Z has no read marker (over 4h)",
-                  "inflight W9 operator wait: row #9 waits on the operator with no question recorded",
-                  "inflight W9 operator wait: row #10 waits on the operator with no question recorded"]
-        rc, out, err = self.sweep(inflight=flight)
+    def test_sweep_check_stores_runs_the_guards_with_no_suite(self):
+        seen = []
+        def fake(argv, **kw):
+            seen.append((argv, kw.get("env", {}).get("DYAD_NO_NESTED_TESTS")))
+            return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "")
+        with unittest.mock.patch.object(am.subprocess, "run", fake):
+            got = am.sweep_check(PKG.parent, stores=True)
+            am.sweep_check(PKG.parent)
+        self.assertEqual(got, [(False, "warn [guards] y z")])
+        self.assertEqual([a[2:] for a, _ in seen], [["check", "--guards"], ["check"]])
+        self.assertEqual(seen[0][1], "1")                                         # the suite never runs under --stores
+
+    def test_the_sweep_no_longer_posts_stalls_and_stall_lines_reads_them(self):
+        """#617: hygiene, candidates and in-flight lines are `stall_lines`', which `board resume` prints; the sweep
+        posts none of them."""
+        files = dict(self.files)
+        files[f"{INST}/d-work/rows/9.md"] = ROW.format(id=9, state="planned",
+            disposed=f"2026-11-02 Y plan; 2026-11-01 Y done (accreted #10, merges PR #7 at {self.sha})")
+        self.w.write_main(files)
+        hyg = (["hygiene I1 untouched: backlog row #10 (ten), no commit in 40 days"], ["candidate: #9 and #10 similar (0.50): nine / ten"])
+        flight = ["inflight W9 operator wait: row #9 waits on the operator with no question recorded"]
+        rc, out, err = self.sweep(hygiene=hyg, inflight=flight)
         self.assertEqual(rc, 0, out + err)
-        msgs = self.inbox(HOME)
-        self.assertEqual(sorted(m.split(", ")[1].split(":")[0] for m in msgs if "work in flight" in m),
-                         ["work in flight W1", "work in flight W9"])
-        self.assertTrue(any("work in flight W9: inflight W9 operator wait: row #9" in m and "row #10" in m for m in msgs), msgs)
-        rc, out, _ = self.sweep(inflight=flight)
-        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), len(msgs))
+        self.assertFalse(any(k in out for k in ("hygiene I1", "candidate:", "inflight W9", "names heads not on main")), out)
+        self.assertFalse(any("hygiene" in m or "work in flight" in m for m in self.inbox(HOME)))
+        got = self.stalls(hyg, flight)
+        self.assertIn(f"finding: row #9's done answer of 2026-11-01 names heads not on main: PR #7 at {self.sha[:12]}", got)
+        self.assertIn("finding: hygiene I1 untouched: backlog row #10 (ten), no commit in 40 days", got)
+        self.assertIn("finding: inflight W9 operator wait: row #9 waits on the operator with no question recorded", got)
+        self.assertEqual(got[-1], "candidate: #9 and #10 similar (0.50): nine / ten")
+        self.assertEqual(self.inbox(HOME)[-1:], self.inbox(HOME)[-1:])            # read-only: nothing posted by it
 
     def two_cabinets(self):
         """#594: B's cabinet beside A's — `_cos-bob.md` held by B's leader, row 12 filed under `program-bob`."""
@@ -998,24 +1027,28 @@ class AutomatonTests(unittest.TestCase):
         self.assertIn(f"posted a notice to {HOME} (row #12)", got)
         (msg,) = self.inbox(HOME)
         self.assertIn("automaton: a test act refused for row #12: because", msg)
-        flight = [("program-eve", "inflight W9 operator wait: row #12 waits on the operator with no question recorded")]
-        rc, out, err = self.sweep(inflight=flight)
-        self.assertEqual(rc, 0, out + err); self.assertNotIn("not told", out)
-        self.assertTrue(any("work in flight W9: inflight W9 operator wait: row #12 waits" in m for m in self.inbox(HOME)))
+        line = "inflight W9 operator wait: row #12 waits on the operator with no question recorded"
+        self.assertIn(f"finding: {line}", self.stalls(inflight=[("program-eve", line)], cabinet="program"))   # program's read
 
-    def test_the_sweep_tells_each_cabinets_home_its_own_lines(self):
+    def test_stall_lines_show_each_cabinets_home_its_own_lines(self):
         self.two_cabinets()
         flight = [("program-bob", "inflight W9 operator wait: row #12 waits on the operator with no question recorded"),
                   ("program", "inflight W9 operator wait: row #9 waits on the operator with no question recorded")]
-        rc, out, err = self.sweep(inflight=flight)
-        self.assertEqual(rc, 0, out + err)
-        (b,) = self.inbox(BOB)                                                    # B's home: its own line only
-        self.assertIn("work in flight W9: inflight W9 operator wait: row #12 waits", b); self.assertNotIn("row #9 waits", b)
-        told_a = len(self.inbox(HOME))
-        (a,) = [m for m in self.inbox(HOME) if "work in flight W9" in m]          # A's home: A's line, and every other finding
-        self.assertIn("row #9 waits", a); self.assertNotIn("row #12 waits", a)
-        rc, out, _ = self.sweep(inflight=flight)
-        self.assertIn("0 new", out); self.assertEqual((len(self.inbox(BOB)), len(self.inbox(HOME))), (1, told_a))   # told once each
+        b, a = self.stalls(inflight=flight, cabinet="program-bob"), self.stalls(inflight=flight, cabinet="program")
+        self.assertTrue(any("row #12 waits" in l for l in b)); self.assertFalse(any("row #9 waits" in l for l in b))
+        self.assertTrue(any("row #9 waits" in l for l in a)); self.assertFalse(any("row #12 waits" in l for l in a))
+        self.assertEqual(len([l for l in self.stalls(inflight=flight) if "W9" in l]), 2)   # no cabinet: every line
+
+    def test_run_reports_a_landed_merge_for_its_job(self):
+        """#617: `landed_report` writes the job's outputs, and the line names the last merge."""
+        with tempfile.TemporaryDirectory() as t:
+            out = Path(t) / "o"
+            with unittest.mock.patch.dict(os.environ, {"GITHUB_OUTPUT": str(out)}):
+                self.assertEqual(am.landed_report([]), "landed: 0 merge(s)")
+                self.assertEqual(am.landed_report(["a" * 40, "b" * 40]), "landed: 2 merge(s), the last at bbbbbbbbbbbb")
+            self.assertEqual(out.read_text(), "landed=false\nlanded-at=\nlanded=true\nlanded-at=" + "b" * 40 + "\n")
+        with unittest.mock.patch.dict(os.environ, {"GITHUB_OUTPUT": ""}):
+            self.assertEqual(am.landed_report([]), "landed: 0 merge(s)")         # no job: the line alone
 
     def test_a_long_group_is_split_never_cut(self):
         lines = [f"finding: warn [x/y] line {i} " + "z" * 200 for i in range(40)]
@@ -1040,7 +1073,7 @@ class AutomatonTests(unittest.TestCase):
         """The sweep with its real `released` health run in the swept worktree; every other kind of finding stubbed."""
         env = {k: v for k, v in os.environ.items() if k not in ("DYAD_RUNBOOKS", "DYAD_HOST", "MIRROR")}
         with unittest.mock.patch.dict(os.environ, env, clear=True), \
-             unittest.mock.patch.object(am, "sweep_check", lambda wt: []), \
+             unittest.mock.patch.object(am, "sweep_check", lambda wt, stores=False: []), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: ([], [])), \
              unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: []), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \

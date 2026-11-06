@@ -108,6 +108,45 @@ def stamp(t: float) -> str:
     return datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+class FastReadTests(unittest.TestCase):
+    """#617: the readers `board resume` calls at each prompt read in one process each, and say what the old one did."""
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
+        git(self.d, "init", "-q", "-b", "main")
+        for k, v in (("user.email", "t@t"), ("user.name", "t")):
+            git(self.d, "config", k, v)
+
+    def commit(self, rel, text, msg="c", at=None):
+        f = self.d / rel; f.parent.mkdir(parents=True, exist_ok=True); f.write_text(text)
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", msg, **({"date": at} if at else {}))
+
+    def test_show_many_reads_every_path_and_leaves_out_the_absent(self):
+        self.commit("a.md", "one\n"); self.commit("b/c.md", "two\nlines\n"); self.commit("e.md", "")
+        got = dyadlib.show_many(self.d, "HEAD", ["a.md", "missing.md", "b/c.md", "e.md"])
+        self.assertEqual(got, {"a.md": "one\n", "b/c.md": "two\nlines\n", "e.md": ""})
+        self.assertEqual(dyadlib.show_many(self.d, "HEAD", []), {})
+
+    def test_promise_since_agrees_with_the_pickaxe(self):
+        rel = "board/_cos.md"
+        self.commit(rel, "holder: h\npromised: alpha\n", at=stamp(NOW - 9 * DAY))
+        self.commit(rel, "holder: h\npromised: alpha; beta\n", at=stamp(NOW - 5 * DAY))
+        self.commit(rel, "holder: x\npromised: alpha; beta\n", at=stamp(NOW - 2 * DAY))     # a change touching neither
+        log = {}
+        for text in ("alpha", "beta", "gamma"):
+            ts = git(self.d, "log", "--format=%ct", "-S", text, "HEAD", "--", rel).split()
+            self.assertEqual(hy._promise_since(self.d, "HEAD", rel, text, log), int(ts[0]) if ts else None, text)
+        self.assertEqual(list(log), [rel])                                        # one log per file, cached
+
+    def test_cited_on_branches_reads_every_branch_in_one_log(self):
+        self.commit("x", "x\n"); git(self.d, "update-ref", "refs/remotes/origin/main", "HEAD")
+        git(self.d, "update-ref", "refs/remotes/origin/HEAD", "HEAD")
+        for b, n in (("one", 3), ("two", 4)):
+            git(self.d, "switch", "-qc", b, "main"); self.commit(f"{b}.txt", b, msg=f"work (d-work #{n})")
+            git(self.d, "update-ref", f"refs/remotes/origin/{b}", "HEAD")
+        git(self.d, "switch", "-q", "main"); self.commit("y", "y\n", msg="on main (d-work #5)")
+        got = hy.cited_on_branches(self.d)
+        self.assertEqual({k: v[1] for k, v in got.items()}, {3: "origin/one", 4: "origin/two"})   # main's never
+
 class InflightTests(unittest.TestCase):
     """Each W kind on a scratch repo whose records are written at fixed times against NOW."""
     def setUp(self):
