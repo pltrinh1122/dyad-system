@@ -2038,6 +2038,7 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_guards": "rev-parse of base and HEAD in the repo being pushed; no write",
         "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
         "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",
+        "code_digest": "ls-tree of another repository's tree, when a caller names one (#619 P1, the audit watermark); no write",
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
         "landing_refusal": "cat-file, rev-parse and merge-base of the head a `Y done` names in the operator's own "
                            "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
