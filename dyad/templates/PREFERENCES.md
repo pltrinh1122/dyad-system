@@ -25,6 +25,7 @@ defines what each value means.
 | paired-units | none | `none` \| seat names, or seat names without `-<hp>` | Rule-16 (Presence: attendance, declared) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
+| intent-reading | off | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines: `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |

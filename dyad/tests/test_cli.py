@@ -45,6 +45,7 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("dwork", "list"): ["dwork", "list", "--state", "open", "--craft", "sysadmin"],
     ("dwork", "land"): ["dwork", "land", "a.md", "b.md", "-m", "ledger: x", "--mirror", "m"],
     ("dwork", "batch"): ["dwork", "batch", "-", "--land"],
+    ("dwork", "intent"): ["dwork", "intent", "615"],
     ("dwork", "trace"): ["dwork", "trace", "592", "--transcript", "t.jsonl", "--out", "--said-file", "f"],
     ("plan", "check"): ["plan", "check", "589"],
     ("session", None): ["session"],
@@ -313,7 +314,7 @@ class ModuleFlagTests(unittest.TestCase):
             x = dyadlib.CLI[("dwork", verb)]
             self.assertEqual(vals | bare | (land & set(x.flags)), set(x.flags), verb)
             self.assertEqual(most, None if x.most is None else x.most + 1, verb)
-        self.assertEqual(set(pkg.DWORK_VERB_FLAGS) | {"land", "batch", "trace"}, {v for n, v in dyadlib.CLI if n == "dwork"})
+        self.assertEqual(set(pkg.DWORK_VERB_FLAGS) | {"land", "batch", "trace", "intent"}, {v for n, v in dyadlib.CLI if n == "dwork"})
         self.assertEqual(set(pkg.DWORK_VALUE_FLAGS),
                          {"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via",
                           "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m"})   # as before the table

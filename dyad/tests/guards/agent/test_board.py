@@ -669,9 +669,31 @@ class MachineTests(unittest.TestCase):
         self.assertEqual(bd.prs_text(sub), f"PR #650 at {H1}, PR #651 at {H2}")
         self.assertEqual(bd.merge_text(sub), "external merge PR #650, PR #651")
 
+    def test_intent_question_and_its_ledger_lines(self):
+        """#615: the intent form, read back; Y and an amend keep the state, the bare N archives."""
+        rows = {5: Row(5, "five", "open"), 6: Row(6, "six too", "open")}
+        q1 = bd.question("intent", [5], {}, rows, None)
+        self.assertEqual(q1, "Y/N: intent aligned for #5 five?")
+        q2 = bd.question("intent", [5, 6], {}, rows, None)
+        self.assertEqual(bd.ids_of(q2), [5, 6]); self.assertEqual(bd.question_kind(q2), "intent")
+        ents = {i: {"phase": bd.phase_render("intent-asked", {"unit": [ENG]}), "question": q2} for i in (5, 6)}
+        with tempfile.TemporaryDirectory() as t:
+            f = Path(t) / "said"
+            for words, state, d in (("Y", "open", "Y intent (batch #5,#6)"), ("N, narrower", "open", "N intent (batch #5,#6)"),
+                                    ("n", "archived", "N intent (batch #5,#6)")):
+                f.write_text(words + "\n")
+                ev = "answered-Y" if words == "Y" else "answered-N"
+                got = bd.ledger_lines([5, 6], ents, rows, ev, str(f))
+                self.assertEqual(got, [f"state {i} {state} -d '{d}' --said-file {f}" for i in (5, 6)], words)
+        self.assertTrue(all(bd.bare_n(w) for w in ("N", "n", " no ", "No.")))
+        self.assertFalse(any(bd.bare_n(w) for w in ("N, but", "", "Y", "not now")))
+        entry = {"holder": HOME, "owner": ENG, "phase": bd.phase_render("intent-asked", {"unit": [ENG]}), "question": q1}
+        self.assertEqual(bd.transition(5, entry, rows[5], "answered-N", {}, HOME, "2026-11-06T10:00Z", bare=True)[0], dyadlib.ORCH_DROP)
+        self.assertEqual(bd.transition(5, entry, rows[5], "answered-N", {}, HOME, "2026-11-06T10:00Z")[0], "planning")
+
     def test_derive_golden_for_every_phase(self):
         sub = {"unit": [ENG], "pr": [f"650 at {H1}"], "evidence": [EV], "from": ["building"], "on": ["external run 1"]}
-        want = {"planning": f"unit {ENG}", "plan-ready": f"unit {HOME}", "plan-asked": "operator", "building": f"unit {ENG}",
+        want = {"planning": f"unit {ENG}", "intent-asked": "operator", "plan-ready": f"unit {HOME}", "plan-asked": "operator", "building": f"unit {ENG}",
                 "verifying": f"unit {HOME}", "done-ready": f"unit {HOME}", "done-asked": "operator",
                 "landing": "external merge PR #650", "held": "external run 1"}
         for p in dyadlib.ORCH_PHASES:
@@ -730,7 +752,9 @@ class MachineTests(unittest.TestCase):
                 ("answered-Y", dyadlib.ORCH_DROP): (ENG, "notice", ["--cc", COU]), ("answered-N", "building"): (ENG, "relay", []),
                 ("hold", "held"): (ENG, "notice", ["--cc", COU]), ("release", dyadlib.ORCH_FROM): (ENG, "notice", ["--cc", COU]),
                 ("head-moved", "verifying"): (HOME, "report", ["--cc", ENG, "--cc", COU]),   # #587 X6: the owners relayed
-                ("withdrawn", "done-ready"): (HOME, "report", [])}                     # X6 for a batch's other rows
+                ("withdrawn", "done-ready"): (HOME, "report", []),                     # X6 for a batch's other rows
+                ("answered-Y", "planning"): (ENG, "relay", []),                        # #615: the intent-Y
+                ("answered-N", dyadlib.ORCH_DROP): (ENG, "notice", ["--cc", COU])}     # #615: the bare intent-N archives
         self.assertEqual(set(want), set(bd.RELAYS))
         ib = dyadlib.load_guard("agent", "inbox")
         for (event, target), (to, kind, cc) in want.items():
@@ -1184,6 +1208,65 @@ class AdvanceTests(unittest.TestCase):
     def done_asked(self, rid, prs, question, owner=f"{ENG}; {COU}"):
         return phased(rid, "done-asked", {"unit": [ENG], "pr": prs, "evidence": [EV]} if prs else {"unit": [ENG], "evidence": [EV]},
                       owner=owner, question=question)
+
+    # ---- the intent question (#615)
+    def intent_on(self, value="on"):
+        """The racer sets `intent-reading` on origin/main: the template row, its value replaced (setup, not an advance)."""
+        git(self.racer, "fetch", "-q", "origin"); git(self.racer, "checkout", "-q", "--detach", "origin/main")
+        prefs = self.racer / dyadlib.PREFERENCES_REL
+        text = prefs.read_text()
+        self.assertIn("| intent-reading | off |", text)                             # the template's default (#615 rev 5)
+        prefs.write_text(text.replace("| intent-reading | off |", f"| intent-reading | {value} |"))
+        git(self.racer, "add", "-A"); git(self.racer, *livetest.IDENTITY, "commit", "-qm", "preferences: intent-reading")
+        git(self.racer, "push", "-q", "--no-verify", "origin", "HEAD:main")
+        git(self.seat, "pull", "-q", "--ff-only", "origin", "main")
+
+    def test_intent_question_is_asked_only_under_on(self):
+        self.seed_board({"board/5.md": phased(5, "planning", {"unit": [ENG]}, owner=ENG)})
+        before = self.main()
+        rc, out, err = self.adv("5", "asked", "--expect", "planning")
+        self.assertEqual(rc, 1); self.assertIn("intent-reading is off", err); self.assertEqual(self.main(), before)
+        self.intent_on()
+        rc, out, err = self.adv("5", "asked", "--expect", "planning")
+        self.assertEqual(rc, 0, out + err)
+        f = self.entry(5)
+        self.assertEqual((bd.phase_name(f), f["waiting-on"], f["question"]),
+                         ("intent-asked", "operator", "Y/N: intent aligned for #5 five?"))
+        self.assertEqual(bd.question_kind(f["question"]), "intent"); self.assertEqual(bd.ids_of(f["question"]), [5])
+
+    def test_intent_y_returns_to_planning_and_an_amend_too(self):
+        self.intent_on()
+        q = "Y/N: intent aligned for #5 five?"
+        self.seed_board({"board/5.md": phased(5, "intent-asked", {"unit": [ENG]}, owner=ENG, question=q)})
+        before = self.main()
+        self.said.write_text("N, read it as the guard alone\n")
+        rc, out, err = self.adv("5", "answered-N", "--expect", "intent-asked", "--said-file", str(self.said))
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("state: open", self.show("rows/5.md")); self.assertRegex(self.show("rows/5.md"), r"disposed: \d{4}-\d{2}-\d{2} N intent\n")
+        self.assertEqual(bd.phase_name(self.entry(5)), "planning"); self.assertNotIn("question", self.entry(5))
+        self.seed_board({"board/5.md": phased(5, "intent-asked", {"unit": [ENG]}, owner=ENG, question=q)})
+        self.said.write_text("Y\n")
+        rc, out, err = self.adv("5", "answered-Y", "--expect", "intent-asked", "--said-file", str(self.said))
+        self.assertEqual(rc, 0, out + err)
+        self.assertRegex(self.show("rows/5.md"), r"N intent; \d{4}-\d{2}-\d{2} Y intent\n")
+        self.assertIn("state: open", self.show("rows/5.md"))
+        self.assertEqual(bd.phase_name(self.entry(5)), "planning")
+        (m1, m2) = sorted(self.box(ENG), key=lambda m: m["sent"] + m["body"])
+        self.assertTrue(any("intent reading is aligned" in m["body"] for m in (m1, m2)))
+        self.guards_pass(before, self.main())
+
+    def test_a_bare_intent_n_archives_the_row_and_drops_the_entry(self):
+        self.intent_on()
+        self.seed_board({"board/6.md": phased(6, "intent-asked", {"unit": [ENG]}, owner=f"{ENG}; {COU}",
+                                              question="Y/N: intent aligned for #6 six?")})
+        before = self.main()
+        self.said.write_text("N\n")
+        rc, out, err = self.adv("6", "answered-N", "--expect", "intent-asked", "--said-file", str(self.said))
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("state: archived", self.show("rows/6.md")); self.assertRegex(self.show("rows/6.md"), r"disposed: \d{4}-\d{2}-\d{2} N intent\n")
+        self.assertIsNone(self.entry(6))
+        self.assertTrue(any("archived" in m["body"] for m in self.box(ENG)))
+        self.guards_pass(before, self.main())
 
     # ---- cabinets (#594)
     def test_advance_files_a_birth_under_the_leaders_cabinet_and_fences_the_other(self):

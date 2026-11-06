@@ -52,7 +52,8 @@ class RowFileTests(unittest.TestCase):
         self.assertTrue(dyadlib.allowed("backlog", "archived"))
         self.assertIsNone(dyadlib.require_transition("backlog", "archived"))
         self.assertIsNone(dyadlib.require_transition("done", "archived"))
-        for a, b in (("backlog", "done"), ("archived", "open"), ("archived", "backlog"), ("open", "archived")):
+        self.assertIsNone(dyadlib.require_transition("open", "archived"))   # #615: the bare intent-N (rows.py fences its input)
+        for a, b in (("backlog", "done"), ("archived", "open"), ("archived", "backlog"), ("planned", "archived")):
             with self.subTest(a=a, b=b), self.assertRaises(dyadlib.TransitionError):
                 dyadlib.require_transition(a, b)
 

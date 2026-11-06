@@ -219,5 +219,40 @@ class LivePlanCheckTests(unittest.TestCase):
         live_plan(self, 589)
         self.assertEqual([m for m in pl.check_dwork(589) if not m.startswith("warning: ")], [])
 
+
+class IntentWarningTests(unittest.TestCase):
+    """#615: under `intent-reading: on` the plan check warns on a prompt-opened row with no `Y intent`; `off`, or the key
+    absent (it reads `off`, plan revision 5), warns on nothing."""
+    def setUp(self): os.environ.pop("DYAD_INSTANCE", None)
+    def root(self, value, record="## 1 prompt 2026-11-06\n```\ndo the thing\n```\n"):
+        root = fixture({"1.md": GOOD.replace("#7", "#1")})
+        if value is not None:
+            prefs = root / "preferences-corpus"; prefs.mkdir()
+            prefs.joinpath("PREFERENCES.md").write_text(f"| key | value | allowed | read by |\n|---|---|---|---|\n"
+                                                        f"| intent-reading | {value} | `on` \\| `off` | Rule-3 |\n")
+        if record is not None:
+            pv = root / "agent-corpus" / "d-work" / "provenance"; pv.mkdir(parents=True)
+            pv.joinpath("1.md").write_text("# Provenance #1\n\n" + record)
+        return root
+    def R(self, state="open", disposed=""): return dyadlib.Row(1, "one", "2026-11-06", state, disposed, "", "explicit")
+    def test_on_warns_on_a_prompt_opened_row_without_the_intent_y(self):
+        got = pl.intent_warnings("1.md", self.R(), self.root("on"))
+        self.assertEqual(len(got), 1); self.assertTrue(got[0].startswith("warning: 1.md: row #1")); self.assertIn("Y intent", got[0])
+        self.assertEqual(len(pl.intent_warnings("1.md", self.R("planned", "2026-11-06 Y plan"), self.root("on"))), 1)
+    def test_on_is_quiet_with_the_intent_y_or_without_a_prompt(self):
+        self.assertEqual(pl.intent_warnings("1.md", self.R(disposed="2026-11-06 Y intent"), self.root("on")), [])
+        self.assertEqual(pl.intent_warnings("1.md", self.R(disposed="2026-11-06 Y intent (batch #1,#2)"), self.root("on")), [])
+        self.assertEqual(pl.intent_warnings("1.md", self.R(), self.root("on", "## 1 disposition 2026-11-06 mandate #9, 2026-11-05\n```\nY\n```\n")), [])
+        self.assertEqual(pl.intent_warnings("1.md", self.R("done"), self.root("on")), [])
+    def test_off_and_absent_warn_on_nothing(self):
+        for value in ("off", None):
+            with self.subTest(value=value):
+                self.assertEqual(pl.intent_warnings("1.md", self.R(), self.root(value)), [])
+    def test_check_dwork_carries_it(self):
+        root = self.root("on")
+        rows = root / "agent-corpus" / "d-work" / "rows"; rows.mkdir(parents=True)
+        rows.joinpath("1.md").write_text(dyadlib.format_row_file(self.R()))
+        self.assertTrue(any("Y intent" in m for m in pl.check_dwork(1, root)))
+
 if __name__ == "__main__":
     unittest.main()

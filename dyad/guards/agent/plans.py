@@ -322,6 +322,24 @@ def order_warnings(name: str, text: str) -> list[str]:
         return [f"warning: {name}: says `order: required` but names no `step:` line (Rule-15 phase 1, mode 17)"]
     return []
 
+INTENT_KEY = "intent-reading"                                   # #615: the preference; an absent key reads `off`
+INTENT_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y intent(?:$| \()")
+
+def intent_warnings(name: str, row, root: Path) -> list[str]:
+    """#615: under `intent-reading: on`, a row a prompt opened or reopened (its record holds a `prompt` entry; an
+    accreted row's never does) that is open or planned with no `Y intent` in `disposed` — a warning for the plan's
+    reader, never a refusal (F6: a refusal would break 1.x). `off`, or the key absent, warns on nothing."""
+    if row is None or row.state not in ("open", "planned") or dyadlib.preference(INTENT_KEY, root) != "on":
+        return []
+    if any(INTENT_Y.match(e) for e in dyadlib.load_guard("agent", "rows").entries(row.disposed)):
+        return []
+    pv = dyadlib.load_guard("agent", "provenance")
+    rec = pv.store(root) / f"{row.id}.md"
+    if not rec.is_file() or not any(e["kind"] == "prompt" for e in pv.parse(rec.read_text(encoding="utf-8"))):
+        return []
+    return [f"warning: {name}: row #{row.id} was opened by a prompt and holds no `Y intent`; under intent-reading: on "
+            f"the intent question comes before the plan (Rule-3 Plan, #615)"]
+
 def check_dwork(rid: int | str, root: Path | None = None) -> list[str]:
     """Every message of `dyad plan check <rid>`: the plan file's own check (`check_plan`) and the warnings above. A
     missing plan file is the one non-warning message."""
@@ -339,7 +357,7 @@ def check_dwork(rid: int | str, root: Path | None = None) -> list[str]:
     paths, name = files_touched(text), path.name
     return (check_plan(path, text, opened=row.opened if row else None) + zone_warnings(name, paths, root)
             + test_warnings(name, paths, root) + version_warnings(name, paths, root) + caller_warnings(name, text, root)
-            + refs_warnings(name, row, rows) + order_warnings(name, text))
+            + refs_warnings(name, row, rows) + order_warnings(name, text) + intent_warnings(name, row, root))
 
 def print_messages(msgs: list[str], label: str = "plan") -> int:
     """Print as the runner does — `warn [<label>]` on stdout, `FAIL [<label>]` on stderr; the count of failures."""
