@@ -73,7 +73,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad inbox post … --cc <unit>` | — | frozen |
 | `dyad automaton scan` / `run` | — | frozen |
 | `dyad automaton run --evidence-from <file>` / `evidence --out <file>` | — | frozen |
-| `dyad automaton sweep` | `--row <id>` | moving (#609): its fix may add a flag |
+| `dyad automaton sweep` | `--row <id>` | frozen |
 | `dyad steps verify-prs` / `done-record` / `close-landed` / `sync-mirror` | `--land` | frozen |
 | `dyad bootstrap` | `--check` | frozen |
 
@@ -311,8 +311,6 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | `.github/workflows/dyad-automaton.yml` | frozen |
 | `.github/workflows/dyad-release.yml` | frozen |
 | `.github/workflows/dyad-sweep.yml` | frozen |
-| `.github/workflows/dyad-probe-app.yml` | moving (#609): a temporary read-only timer that prints `github.event.schedule`, removed at #609 step 4 |
-| `.github/workflows/dyad-probe-user.yml` | moving (#609): a temporary read-only timer that prints `github.event.schedule`, removed at #609 step 4 |
 | the host frame's import line `@dyad/CLAUDE.md` | frozen |
 
 ## S8 Tag forms
