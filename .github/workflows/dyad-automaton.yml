@@ -81,9 +81,9 @@ jobs:
         env:
           DYAD_SESSION: automaton
         run: |
-          start=$(date +%s)
+          SECONDS=0
           python3 dyad/scripts/package.py automaton sweep --stores --row 564
-          echo "stores step: $(( $(date +%s) - start )) s"
+          echo "stores step: ${SECONDS} s"
       - name: dispatch the full sweep once for a landed cut (#617 P1)
         if: ${{ !cancelled() && steps.run.outputs.landed == 'true' }}
         env:
