@@ -582,7 +582,7 @@ DEFAULT_MODE = Row.mode                       # the dataclass's own default: one
 STATES = frozenset({"open", "planned", "blocked", "backlog", "done", "archived"})   # archived: retired from the board, terminal (d-work #37)
 NEW_STATES = frozenset({"open", "backlog"})          # states a row may be created in
 TRANSITIONS: dict[str, frozenset[str]] = {
-    "open": frozenset({"planned", "blocked", "done"}),
+    "open": frozenset({"planned", "blocked", "done", "archived"}),   # #615: archived on the bare intent-N, before any plan
     "planned": frozenset({"open", "blocked", "done"}),
     "blocked": frozenset({"open"}),
     "backlog": frozenset({"open", "archived"}),   # #290: the board had no exit from where 75 of its 280 rows sit (`archived`, 0 uses)
@@ -605,6 +605,7 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
     (None, "backlog"):       ("an Operator disposition opening it (Y backlog)", frozenset({"disposition"})),
     ("open", "planned"):     ("the plan-Y", frozenset({"disposition"})),
     ("open", "blocked"):     ("a deferral naming the blocking d-work", frozenset({"disposition"})),
+    ("open", "archived"):    ("the bare N to the intent question (N intent) on a row holding no Y plan (#615)", frozenset({"disposition"})),
     ("open", "done"):        ("the Done-Y, recorded when it is given; the state follows once the merges it named have landed (#202)", frozenset({"disposition"})),
     ("planned", "open"):     ("re-planning: main moved past a touched file (Rule-15 phase 2), or the Operator's amend of the plan", frozenset({"clerical", "disposition"})),
     ("planned", "blocked"):  ("a deferral naming the blocking d-work", frozenset({"disposition"})),
@@ -620,13 +621,13 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
 # An event moves an entry from a phase (None: the entry is absent or unphased, an adoption) to its target, fired by
 # one actor, with the fields the event must carry. `said-file` is the Operator's words (Rule-7), carried only by an
 # answer. Data, read by `board advance` (guards/agent/board.py), which is the derived fields' only writer.
-ORCH_PHASES = ("planning", "plan-ready", "plan-asked", "building", "verifying",
+ORCH_PHASES = ("planning", "intent-asked", "plan-ready", "plan-asked", "building", "verifying",
                "done-ready", "done-asked", "landing", "held")      # stored phases, in lifecycle order
-ORCH_ASKED = frozenset({"plan-asked", "done-asked"})
+ORCH_ASKED = frozenset({"intent-asked", "plan-asked", "done-asked"})
 ORCH_DROP = "(closed)"     # target sentinel: the entry file is deleted (never stored)
 ORCH_FROM = "@from"        # target sentinel: release returns to phase.from (an asked phase steps back to its *-ready)
 ORCH_ACTORS = frozenset({"home", "unit", "automaton"})
-ORCH_HOLDABLE = ("planning", "plan-ready", "plan-asked", "building", "verifying", "done-ready", "done-asked")
+ORCH_HOLDABLE = ("planning", "intent-asked", "plan-ready", "plan-asked", "building", "verifying", "done-ready", "done-asked")
 ORCH_WATCHED = ("verifying", "done-ready", "done-asked")   # #587 X6: the phases whose recorded PR heads the automaton
                                                            # compares with the live heads; a move fires `head-moved`
 ORCH_OR = " or "           # an actor cell naming several actors: `home or automaton` (#587 X5), any one may fire it
@@ -641,6 +642,11 @@ ORCH_EVENTS: dict[tuple[str | None, str], tuple[tuple[str, ...], str, tuple[str,
     (None, "plan-landed"):              (("plan-ready",), "unit", ()),             # adoption of an unphased entry
     (None, "pr-up"):                    (("verifying",), "unit", ("pr", "head")),  # adoption
     ("planning", "plan-landed"):        (("plan-ready",), "unit", ()),
+    # #615: under `intent-reading: on` the intent question is asked from planning, before the plan is drafted; its Y
+    # returns the entry to planning, an N with text (amend) likewise, and the bare N archives the row (ORCH_DROP)
+    ("planning", "asked"):              (("intent-asked",), "home", ()),
+    ("intent-asked", "answered-Y"):     (("planning",), "home", ("said-file",)),
+    ("intent-asked", "answered-N"):     (("planning", ORCH_DROP), "home", ("said-file",)),   # ORCH_DROP on a bare N
     ("plan-ready", "asked"):            (("plan-asked",), "home", ()),
     ("plan-asked", "answered-Y"):       (("building",), "home", ("said-file",)),
     ("plan-asked", "answered-N"):       (("planning",), "home", ("said-file",)),
@@ -678,7 +684,7 @@ ORCH_CLI_EVENTS = frozenset(e for _, e in ORCH_EVENTS
 def orch_release_to(frm: str) -> str:
     """Where `release` returns an entry held at `frm`: an asked phase steps back to its `*-ready`, since `hold` took its
     question down; any other phase is restored as it was."""
-    return {"plan-asked": "plan-ready", "done-asked": "done-ready"}.get(frm, frm)
+    return {"intent-asked": "planning", "plan-asked": "plan-ready", "done-asked": "done-ready"}.get(frm, frm)
 
 def orch_successors(events, phase) -> set[str]:
     """Every target an event from `phase` may reach, `ORCH_FROM` expanded to the phases `release` may restore."""
@@ -990,6 +996,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("dwork", "list"):          CliForm("", (("--state", "<state>"), ("--craft", "<craft>"))),
     ("dwork", "land"):          CliForm("<path>...", (("-m", "<message>"),) + LAND_FLAGS),
     ("dwork", "batch"):         CliForm("<file>|-", LAND_FLAGS, (LAND_FLAG,)),
+    ("dwork", "intent"):        CliForm("<id>"),   # #615: the intent reading's candidates, ranked, no threshold
     ("dwork", "trace"):         CliForm("<id>", (("--transcript", "<path>"), ("--said-file", "<file>")), ("--out",), ("--transcript",)),
     ("plan", "check"):          CliForm("<id>"),
     ("session", None):          CliForm("[<root>]"),

@@ -800,5 +800,32 @@ class NamedHeadsTests(unittest.TestCase):
         self.assertEqual(m.named_heads(self.rows("done", d)), [])
         self.assertEqual([(i, pr, h) for i, pr, h, _ in m.named_heads(self.rows("done", d), terminal=True)], [(7, "1", self.A)])
 
+
+class IntentCloseTests(unittest.TestCase):
+    """#615: Rule-16's `open → archived`, admitted only on the bare intent-N of a row no plan-`Y` authorized."""
+    R = Path("agent-corpus/d-work/rows/1.md").as_posix()
+    def R_(self, state, disposed): return dyadlib.Row(1, "one", "d", state, disposed, "", "explicit")
+    def test_the_bare_intent_n_on_an_unplanned_row_passes(self):
+        self.assertEqual(m.intent_close_problems(self.R, self.R_("open", ""), self.R_("archived", "2026-11-06 N intent"), "c"), [])
+        self.assertEqual(m.intent_close_problems(self.R, self.R_("open", "2026-11-05 N intent"),
+                                                 self.R_("archived", "2026-11-05 N intent; 2026-11-06 N intent (batch #1,#2)"), "c"), [])
+    def test_every_other_route_from_open_to_archived_fails(self):
+        for disposed in ("", "2026-11-06 Y archive", "2026-11-06 N intent; 2026-11-06 Y intent",
+                         "2026-11-05 Y plan; 2026-11-06 N intent", "2026-11-06 N plan"):
+            with self.subTest(disposed=disposed):
+                got = m.intent_close_problems(self.R, self.R_("open", ""), self.R_("archived", disposed), "c")
+                self.assertEqual(len(got), 1); self.assertIn("N intent", got[0])
+        got = m.intent_close_problems(self.R, self.R_("open", "2026-11-05 N intent"), self.R_("archived", "2026-11-05 N intent"), "c")
+        self.assertEqual(len(got), 1)                                       # the N must be new in this edit
+    def test_other_edges_are_not_judged(self):
+        self.assertEqual(m.intent_close_problems(self.R, self.R_("backlog", ""), self.R_("archived", "2026-11-06 Y archive"), "c"), [])
+        self.assertEqual(m.intent_close_problems(self.R, self.R_("open", ""), self.R_("open", "2026-11-06 Y intent"), "c"), [])
+    def test_the_fence_runs_it_on_a_direct_commit(self):
+        r = Repo(); r.write(self.R, row(1, "one")); base = r.commit("root")
+        r.write(self.R, row(1, "one", "archived", "2026-11-06 Y archive")); h = r.commit()
+        self.assertTrue(any("N intent" in f for f in m.check_range(base, h, cwd=r.d)))
+        r.write(self.R, row(1, "one", "archived", "2026-11-06 Y archive; 2026-11-06 N intent")); h2 = r.commit()
+        self.assertEqual([f for f in m.check_range(h, h2, cwd=r.d) if "N intent" in f], [])   # archived → archived: no edge
+
 if __name__ == "__main__":
     unittest.main()

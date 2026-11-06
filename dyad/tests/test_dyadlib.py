@@ -254,6 +254,30 @@ class UtcDateTests(unittest.TestCase):
             self.assertNotEqual(local, utc)
             self.assertEqual(dyadlib.utc_date(), utc)
 
+
+class IntentMachineTests(unittest.TestCase):
+    """#615: the row machine gains `open → archived` on the bare intent-N, a disposition, so only the operator closes;
+    the board's machine gains the `intent-asked` phase, asked from planning and answered back to it or dropped."""
+    def test_the_edge_and_its_input(self):
+        self.assertIn("archived", dyadlib.TRANSITIONS["open"])
+        self.assertEqual(dyadlib.INPUTS[("open", "archived")][1], {"disposition"})
+        self.assertIn("N intent", dyadlib.INPUTS[("open", "archived")][0])
+        self.assertEqual(dyadlib.false_invariants(dyadlib.INVARIANTS), [])
+    def test_a_clerical_close_would_break_only_the_operator_closes(self):
+        inv = dict(dyadlib.INVARIANTS)["only-the-operator-closes"]
+        with unittest.mock.patch.dict(dyadlib.INPUTS, {("open", "archived"): ("x", frozenset({"clerical"}))}):
+            self.assertFalse(inv())
+        self.assertTrue(inv())
+    def test_the_intent_phase(self):
+        E = dyadlib.ORCH_EVENTS
+        self.assertIn("intent-asked", dyadlib.ORCH_ASKED)
+        self.assertEqual(E[("planning", "asked")], (("intent-asked",), "home", ()))
+        self.assertEqual(E[("intent-asked", "answered-Y")], (("planning",), "home", ("said-file",)))
+        self.assertEqual(E[("intent-asked", "answered-N")], (("planning", dyadlib.ORCH_DROP), "home", ("said-file",)))
+        self.assertIn(("intent-asked", "hold"), E)
+        self.assertEqual(dyadlib.orch_release_to("intent-asked"), "planning")
+        self.assertEqual(dyadlib.CLI[("dwork", "intent")].pos, "<id>")
+
 if __name__ == "__main__":
     unittest.main()
 

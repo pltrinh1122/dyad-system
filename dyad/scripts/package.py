@@ -172,6 +172,10 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 same words (Rule-3 Batch disposition). Every refusal — an unknown id,
                                 a state the table cannot archive from, a repeated id — precedes the
                                 first write
+  dyad dwork intent <id>        the intent reading's candidates (#615): the rows of any state, with state and
+                                age, and the surface items (dyad/surface.md) nearest the row's prompts by
+                                TF-IDF (scripts/intent.py), ten of each, best first, no threshold; read-only,
+                                never a verdict (dyad/dmc/intent-reading.jsonld judges, by inference)
   dyad dwork list [--state <s>] [--craft <c>]
                                 rows from the row store (Rule-16), one `#<id> [<state>] <title>`
                                 line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
@@ -2124,6 +2128,8 @@ def trace_refusal(rg, rid, d):
 
 def cmd_dwork(a):
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    if a and a[0] == "intent":  # #615: read-only, the intent reading's candidates (scripts/intent.py)
+        return dyadlib.load_module(PKG / "scripts" / "intent.py", "dyad_intent").main(a[1:], REPO)
     if a and a[0] == "trace":   # #213: read-only, its own flags; loaded by path (`trace` is also a stdlib module's name)
         return dyadlib.load_module(PKG / "scripts" / "trace.py", "dyad_trace").main(a[1:])
     pos, _, bare = dwork_args(a)
@@ -2330,6 +2336,13 @@ def cmd_dwork(a):
             refusal = landing_refusal(rg, done_entries)
             if refusal:
                 sys.exit(refusal)
+        if r.state == "open" and state == "archived":
+            # #615: open is archived only by the bare N to the intent question, on a row no plan-`Y` authorized — the
+            # fence's own clause (`rows.intent_close_problems`), said where it costs a line
+            if d is None or not rg.INTENT_N.match(f"{today} {d}") or said is None \
+                    or any(rg.PLAN_Y.match(e) for e in rg.entries(disposed)):
+                sys.exit(f"refused: #{rid} is open; it is archived only by the bare N to the intent question, on a row "
+                         f"holding no `Y plan` — -d 'N intent' with its words (--said[-file]) (Rule-3 Ledger, #615)")
         if state == "planned" and r.state != "planned":
             # #592 R-c: the plan check runs at the transition, before the first write (not on a Done record of a planned row) — warnings, never a refusal (counsel's, hand-off)
             for m in dyadlib.load_guard("agent", "plans").check_dwork(rid, REPO):
@@ -2372,12 +2385,12 @@ def cmd_dwork(a):
             if rid not in rows:
                 sys.exit(f"refused: no row {rid}")
             src = rows[rid].state
-            if "archived" not in dyadlib.TRANSITIONS.get(src, frozenset()):
+            if "archived" not in dyadlib.TRANSITIONS.get(src, frozenset()) or src == "open":   # #615: open → archived is the intent-N's alone
                 # the table decides what may be archived (Rule-16), read as data so adding a source state needs
                 # no edit here. Membership, not `require_transition`: that allows a same-state edit, and an
                 # already-`archived` row must not collect a second retirement entry.
                 sys.exit(f"refused: #{rid} is {src}; dwork retire archives a row from "
-                         f"{' or '.join(sorted(s for s, t in dyadlib.TRANSITIONS.items() if 'archived' in t))} (Rule-16)")
+                         f"{' or '.join(sorted(s for s, t in dyadlib.TRANSITIONS.items() if 'archived' in t and s != 'open'))} (Rule-16)")
             targets.append(rows[rid])
         note = d if len(targets) == 1 else f"{d} (batch {','.join(f'#{t.id}' for t in targets)})"
         fence_for("disposition", said)

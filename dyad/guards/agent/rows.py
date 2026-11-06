@@ -150,6 +150,20 @@ def disposed_problems(path: str, before: str, after: str, label: str) -> list[st
             f"parentheses — a `;` inside disposition text splits one entry in two (Rule-3 Ledger)"
             for e in added_entries(before, after) if not (ENTRY.match(e) or is_ready(e)) or e.count("(") != e.count(")")]
 
+# ---- the intent-N archives (d-work #615)
+INTENT_N = re.compile(r"\d{4}-\d{2}-\d{2} N intent(?:$| \()")   # the bare N to the intent question, one parsed entry
+
+def intent_close_problems(path: str, before, after, label: str) -> list[str]:
+    """Rule-16's `open → archived` (#615): admitted only on a row whose last entry is the `N intent` that archives it
+    and that holds no `Y plan` — nothing was authorized, so nothing is abandoned (F8: only the operator closes)."""
+    if before.state != "open" or after.state != "archived":
+        return []
+    es = entries(after.disposed)
+    if es and INTENT_N.match(es[-1]) and es[-1] not in entries(before.disposed) and not any(PLAN_Y.match(e) for e in es):
+        return []
+    return [f"FAIL [main-fence]: {label} row file {path} goes open→archived without a new last entry `N intent` on a row "
+            f"holding no `Y plan` (Rule-3 Ledger: open is archived only by the bare intent-N, #615)"]
+
 # ---- the Done state follows the merge (d-work #202)
 def done_order_problems(path: str, before, after, label: str) -> list[str]:
     """Rule-3 Completion: a Done-`Y` that ratifies a merge is recorded with the state left as it is, the
@@ -486,6 +500,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
                 how = "leaves the table" if after.state not in dyadlib.STATES else "regresses"
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
             fails += mode_changed(path, before, after, label)
+            fails += intent_close_problems(path, before, after, label)
             fails += refs_shape_problems(path, before, after, label)
             fails += disposed_problems(path, before.disposed, after.disposed, label)
             fails += done_order_problems(path, before, after, label)
@@ -575,6 +590,7 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: merge {label} changes mode of row file {path} {before.mode}\u2192{after.mode} against parent {par[:9]}")
             # #202: the Done order is a property of the row edit, not of which commit carries it — a merge
             # resolution is where the per-commit walk never looks (the hole #191 closed for state).
+            fails += intent_close_problems(path, before, after, f"merge {label}")
             fails += done_order_problems(path, before, after, f"merge {label}")
             fails += landing_problems(path, before, after, f"merge {label}", sha, cwd, par)
             fails += refs_shape_problems(path, before, after, f"merge {label}")   # #439: a refs rewritten while resolving

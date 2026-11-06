@@ -1055,6 +1055,27 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(r.returncode, 0, r.stderr); self.assertNotIn("warn [plan]", r.stderr)
         r = self.dwork_state(d, "1", "open")                                                  # no other transition runs it
         self.assertNotIn("warn [plan]", r.stderr)
+    def test_open_is_archived_only_by_the_bare_intent_n(self):
+        """#615: `dwork state <id> archived` from open needs `-d 'N intent'` with its words, on a row holding no `Y plan`;
+        `Y intent` and an amend `N intent` keep the state."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        pv = dyadlib.load_guard("agent", "provenance")
+        d, rows = self.dwork_repo(); rec = rows.parent / "provenance"
+        r = self.dwork_state(d, "1", "archived", "-d", "N intent"); self.assertNotEqual(r.returncode, 0)   # no words
+        for args in ((), ("-d", "Y archive", "--said", "Y"), ("-d", "N plan", "--said", "N")):
+            r = self.dwork_state(d, "1", "archived", *args)
+            self.assertNotEqual(r.returncode, 0, args); self.assertIn("bare N to the intent question", r.stderr + r.stdout, args)
+        r = self.dwork_state(d, "1", "open", "-d", "N intent", "--said", "N, read it as the guard alone")   # amend: stays open
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "1", "open", "-d", "Y intent", "--said", "Y"); self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "1", "archived", "-d", "N intent", "--said", "N"); self.assertEqual(r.returncode, 0, r.stderr)
+        row = dyadlib.parse_row_file(rows.joinpath("1.md").read_text())
+        self.assertEqual(row.state, "archived"); self.assertRegex(row.disposed, r"\d{4}-\d{2}-\d{2} N intent$")
+        self.assertEqual(pv.parse(rec.joinpath("1.md").read_text())[-1]["text"], "N")
+        self.assertEqual(pv.check_record(rec / "1.md", row=row), [])                           # Rule-7 property 5
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: open\ndisposed: 2026-11-05 Y plan\nrefs: \n")
+        r = self.dwork_state(d, "3", "archived", "-d", "N intent", "--said", "N")              # a plan-Y stands: no edge
+        self.assertNotEqual(r.returncode, 0); self.assertIn("holding no `Y plan`", r.stderr)
     def test_plan_check_cli(self):
         """#592 R-c: `dyad plan check <id>` is a noun of the dispatch; 589 exits 0 on the live store, which a fresh install
         does not have (#608: the test skips there)."""

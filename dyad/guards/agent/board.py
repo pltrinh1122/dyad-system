@@ -793,7 +793,9 @@ PHASE_REQUIRES = {                                       # phase -> the sub-keys
 ADVANCE_USAGE = ("usage: dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] "
                  "[--said-file <path>] [--mirror <branch>]")
 MULTI_ID_EVENTS = ("asked", "answered-Y", "answered-N")
-ASKED_KIND = {"plan-asked": "plan", "done-asked": "done"}
+ASKED_KIND = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
+INTENT_KEY = "intent-reading"                           # #615: the preference that asks the intent question (absent: off)
+BARE_N = frozenset({"n", "no"})                         # #615: a bare N's words (Rule-3 Answer grammar: one N, any case)
 CATCH_UP_PLAN = ("plan-ready", "plan-asked")            # a hand-recorded Y plan is caught up from either (#587)
 CATCH_UP_DONE = ("done-ready", "done-asked")            # a hand-recorded Y done likewise
 ASKED_OF = {"plan-ready": "plan-asked", "done-ready": "done-asked"}   # the catch-up reads a *-ready entry as asked
@@ -865,6 +867,7 @@ def merge_text(sub: dict[str, list[str]]) -> str:
 
 DERIVE: dict[str, tuple[str, str]] = {   # phase -> (waiting-on template, next template)
     "planning":   ("unit {unit}",   "write plans/{id}.md; then: dyad board advance {id} plan-landed --expect planning"),
+    "intent-asked": ("operator",    "record the Operator's answer: dyad board advance <the question's ids> answered-Y|answered-N --expect intent-asked --said-file <F> (a bare N archives)"),
     "plan-ready": ("unit {holder}", "ask the plan question: dyad board advance {id} asked --expect plan-ready"),
     "plan-asked": ("operator",      "record the Operator's answer: dyad board advance <the question's ids> answered-Y|answered-N --expect plan-asked --said-file <F>"),
     "building":   ("unit {unit}",   "execute plans/{id}.md; then: dyad board advance {id} pr-up --expect building pr=<n> head=<sha>"),
@@ -933,6 +936,8 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str
                           f"immutable (Rule-16), so the remedy is a new row (counsel's ruling 3, #587)")
     if kind == "plan":
         return f"Y/N: proceed with {', '.join(f'#{i}' for i in ids)} as planned?"
+    if kind == "intent":                                  # #615: the intent question, asked before any plan is drafted
+        return "Y/N: intent aligned for " + ", ".join(f"#{a} {rows[a].title}" for a in ids) + "?"
     prs = union_prs(ids, entries)
     if prs and pref != "with-done":
         raise Refused(f"merge-disposition is {pref or 'unset'}, not with-done: a Done question naming PRs is not composed "
@@ -949,12 +954,17 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str
     return "Y/N: Done with " + ", ".join(parts) + (f" ({merges})" if merges else "") + "?"
 
 
-QUESTION_LINE = re.compile(r"Y/N: (?:proceed with (?P<plan>.*) as planned|Done with (?P<done>.*))\?")
+QUESTION_LINE = re.compile(r"Y/N: (?:proceed with (?P<plan>.*) as planned|Done with (?P<done>.*)|intent aligned for (?P<intent>.*))\?")
 
 
 def question_kind(q: str) -> str | None:
     m = QUESTION_LINE.fullmatch(((q or "").strip().splitlines() or [""])[-1])
-    return None if m is None else "plan" if m["plan"] is not None else "done"
+    return None if m is None else "plan" if m["plan"] is not None else "intent" if m["intent"] is not None else "done"
+
+
+def bare_n(text: str | None) -> bool:
+    """Whether an answer's words are a bare `N` (#615, Rule-3 Answer grammar): `N`, `n` or `no`, alone."""
+    return (text or "").strip().lower().rstrip(".") in BARE_N
 
 
 def ids_of(q: str) -> list[int]:
@@ -966,7 +976,7 @@ def ids_of(q: str) -> list[int]:
         return []
     if m["plan"] is not None:
         return [int(x) for x in re.findall(r"#(\d+)", m["plan"])]
-    span, out, depth = m["done"], [], 0
+    span, out, depth = m["done"] if m["done"] is not None else m["intent"], [], 0
     for i, c in enumerate(span):
         if c == "(":
             depth += 1
@@ -994,7 +1004,9 @@ RELAYS: dict[tuple[str, str], tuple[str, str, str | None]] = {   # (event, targe
     ("opened", "planning"):            ("unit", "relay", "row #{id} planning: write plans/{id}.md; advance plan-landed when it is on main"),
     ("plan-landed", "plan-ready"):     ("holder", "report", "row #{id} plan-ready: plans/{id}.md is on main; the plan question is owed"),
     ("answered-Y", "building"):        ("owners", "notice", NOTICE_BODY),   # K2's shape: one per owner, its own part
-    ("answered-N", "planning"):        ("unit", "relay", "row #{id} planning: the plan was refused; read provenance/{id}.md and revise plans/{id}.md"),
+    ("answered-N", "planning"):        ("unit", "relay", "row #{id} planning: the operator answered N with words; read provenance/{id}.md and revise plans/{id}.md"),
+    ("answered-Y", "planning"):        ("unit", "relay", "row #{id} planning: the intent reading is aligned; draft the plan in plans/{id}.md, then advance plan-landed"),
+    ("answered-N", dyadlib.ORCH_DROP): ("owners", "notice", "row #{id} archived: the intent question's answer was a bare N; nothing is planned"),
     ("pr-up", "verifying"):            ("holder", "report", "row #{id} verifying: PR #{pr} at {head} is up from {sender}; verify {prs}"),
     ("evidence-verified", "done-ready"): ("holder", "report", "row #{id} done-ready: evidence {ev12} on {prs}; the Done question is owed"),
     ("evidence-failed", "building"):   ("unit", "relay", "row #{id} building: the evidence failed; the failing line is the board's note"),
@@ -1109,10 +1121,11 @@ def actor_ok(actor: str, entry: dict[str, str], sender: str, automaton: bool = F
 
 def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str, str], sender: str, now: str,
                recorded: bool = False, question_text: str | None = None,
-               automaton: bool = False) -> tuple[str, dict[str, str] | None]:
+               automaton: bool = False, bare: bool = False) -> tuple[str, dict[str, str] | None]:
     """(target, the new entry or None when it is dropped) of one event on one entry; Refused when the table does not
     allow it. `entry` is {} when absent; `pairs` the event's own fields; the new entry's `writer` is left to the
-    caller. Pure: no file, no git."""
+    caller. `bare`: the answer's words are a bare `N`, which archives the row at intent-asked (#615). Pure: no file, no
+    git."""
     cur = phase_name(entry)
     key = (cur, event)
     if key not in dyadlib.ORCH_EVENTS:
@@ -1141,6 +1154,8 @@ def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str
         sub = {"unit": [pairs.get("unit") or sender]}
     target = targets[0]
     if event == "answered-Y" and cur == "done-asked" and not pr_list(sub):
+        target = dyadlib.ORCH_DROP
+    if event == "answered-N" and cur == "intent-asked" and bare:   # #615: the bare intent-N archives the row
         target = dyadlib.ORCH_DROP
     if event == "opened":
         sub["unit"] = [pairs["unit"]]
@@ -1192,6 +1207,12 @@ def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref
         d = f"Y plan ({batch})" if len(ids) > 1 and yn == "Y" else f"{yn} plan"
         for i in ids:
             out.append(shlex.join(["state", str(i), "planned" if yn == "Y" else rows[i].state, "-d", d, "--said-file", said_abs]))
+        return out
+    if kind == "intent":                                  # #615: Y and N amend keep the state; the bare N archives
+        bare = yn == "N" and bare_n(Path(said_abs).read_text() if said_abs and Path(said_abs).is_file() else "")
+        d = f"{yn} intent ({batch})" if len(ids) > 1 else f"{yn} intent"
+        for i in ids:
+            out.append(shlex.join(["state", str(i), "archived" if bare else rows[i].state, "-d", d, "--said-file", said_abs]))
         return out
     prs = []
     for i in ids:
@@ -1439,8 +1460,16 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 if not (wt / inst / "d-work" / "plans" / f"{rid}.md").is_file():
                     raise Refused(f"#{rid} plan-landed: plans/{rid}.md is not on origin/main; land it first (`dyad dwork land`)")
         qtext = None
+        if event == "asked" and exp == "planning":       # #615: the intent question is the preference's, never the agent's
+            if dyadlib.preference(INTENT_KEY, wt) != "on":
+                raise Refused(f"intent-reading is {dyadlib.preference(INTENT_KEY, wt) or 'absent (off)'}, not on: the intent "
+                              f"question is not asked (Rule-3 Plan, #615)")
+            for rid in ids:
+                if not (wt / inst / "d-work" / "plans" / f"{rid}.md").is_file():
+                    raise Refused(f"#{rid} asked: the intent reading is plans/{rid}.md's first section, and it is not on "
+                                  f"origin/main; land it first (`dyad dwork land`)")
         if event == "asked":
-            kind = "plan" if exp == "plan-ready" else "done"
+            kind = {"planning": "intent", "plan-ready": "plan"}.get(exp, "done")
             qtext = question(kind, ids, entries, rows, dyadlib.preference("merge-disposition", wt))
         if event in MULTI_ID_EVENTS[1:]:
             qs = {entries[rid].get("question", "") for rid in ids}
@@ -1465,7 +1494,8 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
         if event == "answered-Y" and aexp == "done-asked" and not recorded and len(ids) > 1:
             entries.update(batch_union(ids, entries))     # a Done batch with PRs: every row waits on the whole union
         now = now_iso()
-        results = {rid: transition(rid, entries[rid], rows[rid], event, pairs, sender, now, recorded, qtext, automaton)
+        bare = event == "answered-N" and exp == "intent-asked" and bare_n(words({"--said-file": said_abs}, "said") if said_abs else "")
+        results = {rid: transition(rid, entries[rid], rows[rid], event, pairs, sender, now, recorded, qtext, automaton, bare)
                    for rid in ids}
         lines = []
         if not recorded:

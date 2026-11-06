@@ -71,6 +71,7 @@ own, Rule-2). δ(state, input) → state:
 | — | backlog | an operator disposition opening it (`Y backlog`) | disposition | the row, record entry 1 (`disposition`) | countersignature `yes`, basis `per-act` |
 | open | planned | the plan-`Y` | disposition | a `disposed` entry, a record entry, the presence touch; the plan file already exists and is now bound (Rule-15) | countersignature `yes`, basis `per-act`; the countersign proposal is the plan file |
 | open | blocked | a deferral naming the blocking d-work | disposition | a `disposed` entry, a record entry, `refs` | countersignature |
+| open | archived | the bare `N` to the intent question (`N intent`), on a row holding no `Y plan` (#615) | disposition | a `disposed` entry `N intent`, a record entry, the state line, in one commit; the fence admits the edge on nothing else (`rows.intent_close_problems`) | countersignature `no`, basis `per-act`; the countersign proposal is the intent reading |
 | open | done | the done-`Y` | disposition | a `disposed` entry naming each PR and the head its `Y` was given on, a record entry, the trace — all in the record commit, the state unchanged; then the merges; then the state, in a second dispositionless commit (#202) | countersignature `yes`; the countersign report (the completion evidence) precedes it |
 | planned | open | re-planning: `main` moved past a touched file (Rule-15 phase 2), or the operator's amend of the plan | clerical · disposition | a plan revision in place; an `N` entry when the operator gave one | none, or `amend` |
 | planned | blocked | a deferral naming the blocking d-work | disposition | as open → blocked | countersignature |
@@ -300,7 +301,8 @@ phase** (Rule-16 Store), a second machine beside the row's that never moves the 
 
 | phase | waiting on | the act that moves it (event, actor) |
 |---|---|---|
-| `planning` | the unit | `plan-landed` (unit) → `plan-ready` |
+| `planning` | the unit | `plan-landed` (unit) → `plan-ready`; under `intent-reading: on`, `asked` (home) → `intent-asked` once the intent reading, the plan file's first section, is on `main` (#615) |
+| `intent-asked` | the operator | `answered-Y` → `planning`; `answered-N` → `planning` with words (amend), or the entry dropped and the row archived on a bare `N` (home, with `--said-file`; #615) |
 | `plan-ready` | the home | `asked` (home) → `plan-asked` |
 | `plan-asked` | the operator | `answered-Y` → `building`; `answered-N` → `planning` (home, with `--said-file`) |
 | `building` | the unit | `pr-up` (unit, `pr`, `head`) → `verifying`; `evidence-verified` (home, no PR) → `done-ready` |

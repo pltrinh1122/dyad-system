@@ -90,6 +90,14 @@ class HygieneTests(unittest.TestCase):
     def test_invariants(self):
         self.assertEqual(dyadlib.check_invariants(hy), len(hy.INVARIANTS) + len(hy.TREE_INVARIANTS))
 
+    def test_tfidf_is_the_one_weighting(self):
+        """#615: `ranking` reads `tfidf` and `cosine`, which `intent.candidates` reads too; boilerplate is dropped."""
+        docs = {1: "zebra stripes", 2: "zebra horse", **{10 + k: f"common pad{k}" for k in range(8)}}
+        vec, norm = hy.tfidf(docs)
+        self.assertNotIn("common", vec[10])                                    # in 8 of 10 documents: boilerplate
+        self.assertGreater(hy.cosine(vec, norm, 1, 2), 0); self.assertEqual(hy.cosine(vec, norm, 1, 10), 0.0)
+        self.assertAlmostEqual(hy.cosine(vec, norm, 1, 1), 1.0)
+
 
 NOW = 1_762_300_800.0          # 2025-11-05T00:00:00Z, the clock every in-flight case reads
 DAY = 86400

@@ -85,7 +85,7 @@ CITE = re.compile(r"\bd-work #(\d+)\b")
 ROW_REF = re.compile(r"\brow #(\d+)")          # the row an `inflight` line is about (#594: its cabinet's home is told)
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
-    "planning": 72, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
+    "planning": 72, "intent-asked": 24, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
     "done-asked": 24, "landing": 72, "held": 72}
 INFLIGHT_W11_TUNED = {"done-ready": "W11"}   # #587 S9: the phases whose threshold is a tunable (a TUNABLES key), never a constant
 INFLIGHT_KINDS = ("W1", "W2", "W3", "W4", "W5", "W6", "W7a", "W7b", "W7c", "W8", "W9", "W10'", "W11")
@@ -147,16 +147,26 @@ def tokens(text: str) -> list[str]:
     return TOKEN.findall(text.lower())
 
 
+def tfidf(docs: dict) -> tuple[dict, dict]:
+    """({key: {token: weight}}, {key: norm}) of `docs` ({key: text}): TF-IDF with every token in more than
+    HYGIENE_MAX_DF of the documents dropped as boilerplate — the one weighting `ranking` and `intent.candidates` (#615) read."""
+    counts = {k: Counter(tokens(t)) for k, t in docs.items()}
+    n = max(len(counts), 1)
+    df = Counter(t for d in counts.values() for t in d)
+    idf = {t: math.log(n / c) for t, c in df.items() if c / n <= HYGIENE_MAX_DF}
+    vec = {k: {t: c * idf[t] for t, c in d.items() if t in idf} for k, d in counts.items()}
+    return vec, {k: math.sqrt(sum(v * v for v in w.values())) for k, w in vec.items()}
+
+
+def cosine(vec: dict, norm: dict, a, b) -> float:
+    return (sum(v * vec[b].get(t, 0.0) for t, v in vec[a].items()) / (norm[a] * norm[b])) if norm[a] and norm[b] else 0.0
+
+
 def ranking(rows, texts: dict[int, str], backlog: list, root: Path | None = None) -> list[tuple[float, int, int]]:
     """[(cosine, a, b)], best first: each backlog row against every row, by TF-IDF over `texts`, siblings skipped; at
     most `hygiene-top` pairs at or above `hygiene-similar`, both read from `root`'s preferences."""
     similar, top = dyadlib.tunable(TUNABLES["similar"], root), dyadlib.tunable(TUNABLES["top"], root)
-    docs = {r.id: Counter(tokens(texts.get(r.id, r.title))) for r in rows}
-    n = max(len(docs), 1)
-    df = Counter(t for d in docs.values() for t in d)
-    idf = {t: math.log(n / c) for t, c in df.items() if c / n <= HYGIENE_MAX_DF}
-    vec = {i: {t: c * idf[t] for t, c in d.items() if t in idf} for i, d in docs.items()}
-    norm = {i: math.sqrt(sum(v * v for v in w.values())) for i, w in vec.items()}
+    vec, norm = tfidf({r.id: texts.get(r.id, r.title) for r in rows})
     parent = {r.id: (PARENT.search(r.refs or "") or [None, None])[1] for r in rows}
     seen, out = set(), []
     for r in backlog:
@@ -166,7 +176,7 @@ def ranking(rows, texts: dict[int, str], backlog: list, root: Path | None = None
             if parent[r.id] and parent[r.id] == parent[o.id]:
                 continue                                    # siblings share their parent's boilerplate (A5)
             seen.add((min(o.id, r.id), max(o.id, r.id)))
-            cos = sum(v * vec[o.id].get(t, 0.0) for t, v in vec[r.id].items()) / (norm[r.id] * norm[o.id])
+            cos = cosine(vec, norm, r.id, o.id)
             if cos >= similar:
                 out.append((cos, min(o.id, r.id), max(o.id, r.id)))
     return sorted(out, key=lambda x: (-x[0], x[1], x[2]))[:top]
