@@ -178,6 +178,24 @@ defines what each value means.
   (Rule-2, Binding). Either way the form authorizes nothing: it shapes what the Operator reads, never what a `Y`
   binds to. Seeded `verbatim`: the conservative default for a fresh install — the seat's own words pass through
   until the Operator has chosen the cos's brief.
+- `intent-reading` — whether a prompt that opens a row, or reopens one from `backlog`, is first answered by an
+  intent reading and its own question, before any plan is drafted (Rule-3 Plan and Answer grammar, Rule-15 phase 1;
+  the criterion `dyad/dmc/intent-reading.jsonld`; d-work #615). A form preference: it changes how many questions a
+  row takes and authorizes nothing.
+  - `off` — two `Y` per row, plan and done: the plan-`Y` accepts the definition of done, and no intent question is
+    asked. The value this template ships, and the reading of an absent key.
+  - `on` — three `Y`: the intent question `Y/N: intent aligned for #<id> <title>?` comes first, its `Y` accepting
+    the reading and the definition of done; `N` with text amends the reading; a bare `N` archives the row, since
+    nothing was built. The plan follows the intent-`Y`, and `dyad plan check` warns on a prompt-opened row planned
+    without one.
+  - When to opt in: in the authoring system's ledger (602 rows, audited for d-work #615), 27 of 60 refusals restated
+    intent or scope after a full plan had been written, and six of them refused a whole delivery. An operator who
+    refuses plans for what they misread is the one the third `Y` saves.
+  - Why `off` ships, in the authoring operator's words. First: "We’ve managed, albeit less efficiently, without
+    intent-Y, so it should be an optional preference with a default being engaged. This means that most operators
+    would benefit from three Y, while only the most masterful would benefit from the two Y". Then, reversing the
+    default: "actually, i think most operators wouldn't appreciate the third 'Y' until they see it as an
+    optimization. so default should be 'off'."
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that

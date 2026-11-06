@@ -20,6 +20,7 @@
 
 ## Conditions (triggers)
 - The operator sends a prompt, or answers a counter-prompt.
+- A prompt opens a row, or reopens one from `backlog`, under `intent-reading: on` (the intent question, Plan below).
 - The agent is about to mutate the repo for a d-work (the plan gate), or believes a d-work is done (the Done question).
 - The agent opens a row while executing another, under the plan-`Y` that carries it (Scope, below).
 - A message from another agent proposes work (Intake, below).
@@ -71,7 +72,8 @@ row's `actor: automaton` (Rule-8) (#593).
 Three answers to a counter-prompt, the countersign model's **answer grammar** (`dyad/playbooks/countersign-model.md`
 Part II §2):
 - `Y` — the disposition asked for is given, binding the acts the question names (What a `Y` binds, below).
-- `N`, bare — nothing is authorized; the agent revises.
+- `N`, bare — nothing is authorized; the agent revises. To the **intent question** (Plan, below) a bare `N` archives the
+  row instead: nothing was built, so there is nothing to revise from, and the row leaves the board (#615).
 - `N` with text — **amend**: the proposal refused and its revision asked for in the same words, entered verbatim as a
   `prompt` entry of the refused d-work's record (Rule-7). When it asks for the same proposal revised it opens no second
   row, and the plan file is revised in place, the refused revision kept (Rule-15); text that asks for something else
@@ -85,7 +87,10 @@ blocking question (Rule-8's form); the listed variants of one answer lead to one
 
 ## What a `Y` binds
 A `Y` binds exactly the acts its question names (Rule-2, Binding of approval): what the question states and what it
-cites directly. A row of work takes two questions:
+cites directly. A row of work takes two questions, or three under the preference `intent-reading: on`
+(`preferences-corpus/PREFERENCES.md`; absent, `off`), the intent question first:
+- the **intent question** cites the intent reading, the plan file's first section, so its **intent-Y** binds the reading
+  and the definition of done it proposes, and nothing else: no mutation, no row, no PR (Plan, below);
 - the **plan question** cites the plan file, which states each carried class in words and with its number — its
   mandate scope, or a play-book step's class, the step id only a pointer — so its plan-`Y` binds the mutation the plan describes, every PR of the d-work, and every row the plan carries
   (Plan, below);
@@ -103,10 +108,19 @@ release under the release gate is named in its own d-work's Done question (Rule-
 named act.
 
 ## Plan (mutation authorization)
-- The agent's first substantive reply to a prompt that opens a d-work is a plan, stored first as a plan file (Rule-15):
-  its definition of done, the intent as read, the mutation proposed (falsified first, Rule-9; framed per Rule-10), and
-  the last line `Y/N: proceed with #<id> as planned?`, or the batch form. The definition of done is the operator's
-  words, quoted from the provenance record, or one marked *proposed* that the plan-`Y` accepts and an amend corrects:
+- Under `intent-reading: on`, the agent's first substantive reply to a prompt that opens a row, or reopens one from
+  `backlog`, is the **intent reading**, stored first as the plan file's first section (Rule-15): each portion of the
+  prompt classed by `dyad/dmc/intent-reading.jsonld` — new, overlap (duplicate when complete), supersede, adjacent,
+  ambiguous or false premise — against the candidates `dyad dwork intent <id>` prints, the capabilities and the board;
+  the definition of done it proposes; and the last line `Y/N: intent aligned for #<id> <title>?`, or the batch form. The
+  intent-`Y` accepts the reading and its definition of done; an amend corrects it in place; a bare `N` archives the row
+  (Answer grammar). The plan follows the intent-`Y`, and `dyad plan check` warns on a prompt-opened row planned with no
+  `Y intent` (#615). Under `intent-reading: off` no intent question is asked, and the plan below is the first reply.
+- The agent's first substantive reply to a prompt that opens a d-work, after its intent-`Y` where one is asked, is a
+  plan, stored first as a plan file (Rule-15): its definition of done, the intent as read, the mutation proposed
+  (falsified first, Rule-9; framed per Rule-10), and the last line `Y/N: proceed with #<id> as planned?`, or the batch form. The definition of done is the operator's
+  words, quoted from the provenance record, or one marked *proposed* that the intent-`Y` accepts under
+  `intent-reading: on` and the plan-`Y` under `off`, and an amend corrects:
   one row per definition of done the operator can evaluate, over the largest scope it lets the operator judge (#574).
 - A row moved to `planned` (`dwork state <id> planned`) has had its plan read by `dyad plan check <id>` — a second
   zone among the files touched, a touched module whose test is not listed, a released craft touched without a
@@ -191,13 +205,14 @@ named act.
   own question as its last line; the `Y` binds to what the unit asked.
 
 ## Batch disposition
-- Preference `batch-disposition-mode`: `off` — every plan and Done question asked singly; `on-ignore` — singly, until
+- Preference `batch-disposition-mode`: `off` — every intent, plan and Done question asked singly; `on-ignore` — singly, until
   the operator leaves one outstanding, the engagement signal itself; `always` — never singly. Once engaged the agent
-  holds a **pending queue** of plan-ready and, separately, done-ready d-works, reports both counts at the end of every
-  reply while either is non-empty, and drains it by naming items in batch questions; under `on-ignore` engagement lapses
+  holds a **pending queue** of intent-ready, plan-ready and, separately, done-ready d-works, reports their counts at the
+  end of every reply while any is non-empty, and drains it by naming items in batch questions; under `on-ignore` engagement lapses
   once both are empty.
-- The batch forms replace the single forms, one kind per question: `Y/N: proceed with #a, #b, #c as planned?`, each with
-  its own stored plan file, and `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x)?`, full evidence for each
+- The batch forms replace the single forms, one kind per question: `Y/N: intent aligned for #a, #b, #c?`, each with its
+  own stored intent reading; `Y/N: proceed with #a, #b, #c as planned?`, each with
+  its own stored plan file; and `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x)?`, full evidence for each
   before it and each d-work's accreted and retired rows in its own clause. A `Y` binds exactly the named set; every
   answer short of `Y` binds none of it. Each row's entry names the whole set — `<date> Y plan (batch #a,#b,#c)`,
   `<date> Y done (batch #a,#b, merges PR #w at <head-w>)` — and the one `Y` is the same provenance entry in every named
@@ -232,7 +247,8 @@ named act.
     started; `open` when the operator prompts for it, `archived` when retired.
   - `done` — the operator answered `Y` to the Done question *and* every merge it named has landed; between the two the
     row keeps its state, `disposed` carries the `Y`, and the state guard warns once per row (Mechanisms).
-  - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`; terminal, nothing moves, and a new
+  - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`, or reached from `open` by the
+    operator's bare `N` to the row's intent question while it holds no `Y plan` (#615); terminal, nothing moves, and a new
     row refs it, never reopens it. The question is the Done question of a delivered row whose report retires it, or, for
     rows no Done covers, the **retirement form** `Y/N: archive #a, #b, … #k?`, each row listed before it with what it
     holds and why; a `Y` archives exactly the named rows, and every answer short of `Y` archives none. The agent
@@ -330,10 +346,11 @@ a row as every prompt does (Scope).
   its one act is re-testing the fences already closed.
 
 ## Ratification events
+- Answering `Y` to an intent question (the reading and its definition of done accepted, under `intent-reading: on`).
 - Answering `Y` to a plan counter-prompt (mutation authorization, with every row the plan carries).
 - Answering `Y` to a d-work completion counter-prompt (intent verification, with the rows it names as accreted or
   retired and, under `merge-disposition: with-done`, the named merges).
-- Answering `Y` to the retirement form. Rule-2 applies by reference to all three.
+- Answering `Y` to the retirement form. Rule-2 applies by reference to all four.
 
 ## Provenance
 Operator rule, 2026-09-12. Refactored by d-work #585 (2026-11-04) around what opens a row, what a `Y` binds and the two
@@ -345,5 +362,9 @@ dates had landed as code with no sentence; see the same record, amendment #606. 
 phase and `board draft` 2026-11-05 (d-work #587); see `../falsification/rules/rule-16-concurrent-sessions.md`, amendment
 #587. Scope names the automaton as the third party 2026-11-05 (d-work #593, P6): Rules 8, 14 and 19 had made it a
 party in their records, and this Rule still knew two; see `../falsification/rules/rule-3-d-work.md`, amendment #593.
+Conditions, Answer grammar, What a `Y` binds, Plan, Batch disposition, Ledger and Ratification events gain the intent
+question 2026-11-06 (d-work #615), under the preference `intent-reading` (`off` ships): 27 of 60 refusals in the
+ledger had restated intent or scope after a full plan, six of them after a delivery, and nothing asked the reading
+before the plan; see `../falsification/rules/rule-3-d-work.md`, amendment #615.
 
 Set: System Requirements.

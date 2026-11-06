@@ -11,7 +11,8 @@ that can start in any later session.
 - What a plan proposes — Rules 9, 10, 12, 13 as today.
 
 ## Conditions (triggers)
-- The agent is about to ask a plan counter-prompt: the plan file exists first.
+- The agent is about to ask an intent question (under `intent-reading: on`) or a plan counter-prompt: the plan file
+  exists first.
 - The operator answers `Y` to a plan: state becomes `planned`.
 - A session, any session, begins executing a `planned` d-work.
 - `main` has moved past a file the plan touches before execution starts.
@@ -19,8 +20,11 @@ that can start in any later session.
 ## Phases
 1. **Planning.** The plan is written to `agent-corpus/d-work/plans/<id>.md` before the
    counter-prompt: its definition of done (the operator's words, quoted from the provenance record,
-   or one marked proposed that the plan-`Y` accepts; the d-work play-book), intent as read, mutation,
-   files touched, base commit of `main`, falsification pointer. The reply reproduces it. The plan-`Y` binds to the file. A plan that
+   or one marked proposed that the intent-`Y` accepts under the preference `intent-reading: on` and the plan-`Y`
+   under `off`; the d-work play-book), intent as read, mutation,
+   files touched, base commit of `main`, falsification pointer. The reply reproduces it. Under `intent-reading: on`
+   the file opens with the intent reading (Rule-3 Plan), written and asked before the plan, so the plan is drafted
+   only on an accepted reading (#615). The plan-`Y` binds to the file. A plan that
    needs an order of its steps or a split of its PRs says so as a requirement (`order: required`);
    otherwise order and split are execution detail (Rule-3 Plan, #555).
 2. **Execution.** Begins by reading the plan file, in the same or any later session. If
@@ -52,6 +56,8 @@ told from one it needed; see the same record, amendment #555. Operator and agent
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Phase 1 gains the definition
 of done 2026-11-04 (d-work #574): a row's scope follows what the operator can evaluate, and the plan is where that is
 stated and accepted; see the same record, amendment #574. The accreted-row bullet points to Rule-3's What a `Y` binds 2026-11-04 (d-work #585, the
-Rule-3 refactor); see `../falsification/rules/rule-3-d-work.md`, amendment #585.
+Rule-3 refactor); see `../falsification/rules/rule-3-d-work.md`, amendment #585. Phase 1's definition of done is accepted by the
+intent-`Y` under `intent-reading: on`, and the file opens with the intent reading, 2026-11-06 (d-work #615); see
+`../falsification/rules/rule-15-d-work-phases.md`, amendment #615.
 
 Set: System Requirements.

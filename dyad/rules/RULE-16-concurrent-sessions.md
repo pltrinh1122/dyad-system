@@ -33,9 +33,11 @@ files and almost never merge.
   `dyadlib.NEW_STATES`). The fence refuses any other transition on `main`,
   `package.py dwork state` locally; a done d-work is never reopened — a new row refs it;
   `archived` (Rule-3) is its one further step, itself terminal (#37). `backlog → archived` is the
-  board's only other exit: a row the operator never asked for is retired by the disposition that
+  board's other exit: a row the operator never asked for is retired by the disposition that
   names it — the retirement form, or the done-`Y` of a delivered row whose Done question names it under `retires`
-  (Rule-3, #585) — instead of being worked to `done` first (#290).
+  (Rule-3, #585) — instead of being worked to `done` first (#290). `open → archived` is the intent question's: the fence
+  admits it only on a row whose last `disposed` entry is a bare `N intent` and that holds no `Y plan`, so a row the
+  operator declined before any plan leaves the board, and no other `open` row can (Rule-3 Answer grammar, #615).
 - A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
   Scope). Optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it.
@@ -58,7 +60,8 @@ files and almost never merge.
   terminal and carries `holder`; the warning that the last `writer` is not this session is the verbs', since a guard
   runs where "this session" means nothing. It is written write-ahead (Rule-3, Batch disposition) (#535). An entry
   may carry a `phase` — an **orchestration phase**, the entry's own machine beside the row's and never moving the row:
-  `planning`, `plan-ready`, `plan-asked`, `building`, `verifying`, `done-ready`, `done-asked`, `landing`, or `held` —
+  `intent-asked` (under `intent-reading: on`, #615), `planning`, `plan-ready`, `plan-asked`, `building`, `verifying`,
+  `done-ready`, `done-asked`, `landing`, or `held` —
   and a free-text `note`; the phases, the events that move between them, who fires each and the fields it must carry
   are data, `dyadlib.ORCH_EVENTS`, printed by `dyad board phases`. On a phased entry `phase`, `waiting-on`, `next`,
   `since` and `question` are derived from that table, and `dyad board advance <id>… <event> --expect <phase>` is their
@@ -236,6 +239,8 @@ new forms, after the 0.18.0 cut shipped their deprecation warnings; see the same
 bullet gains the orchestration phase 2026-11-05 (d-work #587): owner, wait and next act were free text that drifted
 from the work, and ten slips of one day (S1–S10) were each an unrecorded transition; see the same record, amendment #587. Store's board
 bullet gains the cabinet 2026-11-05 (d-work #594, #548 S13): with two operators' homes on one instance, one shared
-`_cos.md` let one home's queue and question overwrite the other's; see the same record, amendment #594.
+`_cos.md` let one home's queue and question overwrite the other's; see the same record, amendment #594. Store gains
+`open → archived` and the board the `intent-asked` phase 2026-11-06 (d-work #615): a row the operator declines at its
+intent question had no exit but a Done; see the same record, amendment #615.
 
 Set: System Requirements.
