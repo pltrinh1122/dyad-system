@@ -494,7 +494,7 @@ class LandTests(unittest.TestCase):
         add_row(self.racer, 2, "racer", "open racer")
         git(self.racer, "add", "-A"); git(self.racer, *livetest.IDENTITY, "commit", "-qm", "ledger: #2 open")
         self.race.write_text("")
-        rc, out, err = self.batch("new mine --prompt 'open mine'\nstate 1 planned -d 'Y plan' --said Y\n")
+        rc, out, err = self.batch("new mine --prompt 'open mine' --slug mine-row\nstate 1 planned -d 'Y plan' --said Y\n")
         self.assertEqual(rc, 0, err)
         self.assertIn("main moved", err)
         self.assertEqual(len(self.hook_runs()), 2, "the first push raced, the rebuild pushed")
