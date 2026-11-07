@@ -132,6 +132,7 @@ the operator's. The key names and allowed values are the surface.
 | attendance-window | frozen |
 | relay-form | frozen |
 | intent-reading | frozen |
+| dwork-slug | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
