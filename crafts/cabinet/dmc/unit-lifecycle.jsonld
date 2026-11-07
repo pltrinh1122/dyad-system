@@ -1,0 +1,89 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/unit-lifecycle",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "unit-lifecycle",
+  "name": "Unit lifecycle: which unit, and when one ends",
+  "description": "After scale-out says a solo is needed, which unit takes the work; when a unit's work ends or its holder goes, what becomes of the unit.",
+  "dyad:decides": "Use an idle unit, re-seat a function, open a desk, open a new function, re-home a unit's rows, retire the unit, or keep it?",
+  "dyad:inputs": [
+    "scale-out's answer: a solo is needed, and for which work",
+    "the mandates table: which charter's domain and fence cover the work, and its ceiling",
+    "the units of that function: live and idle, live and busy, or gone (no live presence, and its harness session ended or archived)",
+    "the rows each unit owns that are not terminal: the board's owner field and the unit's presence rows",
+    "the work's lifetime: a recurring stream, one topic, or one act",
+    "the host's capacity: for cloud sessions, how many run at once under the account and its rate-limit state; on a workstation, its CPU and memory",
+    "the dyad span: the dyad units, at most seven, read only when a unit is to be paired"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "idle-unit",
+      "name": "Use an idle unit",
+      "dyad:when": "a live unit of the function whose charter covers the work owns no row that is not terminal",
+      "dyad:then": "route the work to it by inbox relay; nothing opens; the mandates table is unchanged"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "re-seat",
+      "name": "Re-seat a function",
+      "dyad:when": "the function's charter row exists and its unit has gone",
+      "dyad:then": "a new session takes <function>-<hp>, with its registration row; the operator's preferences PR changes the mandates row's seat name; the board's unit table gains the new name; paired-units changes only if it names the old full name; the old presence file stays as history; the old harness session is archived once the operator has acknowledged it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "desk",
+      "name": "Open a desk",
+      "dyad:when": "the work is inside an existing charter, the function's unit is busy, and the work is a topic or a host of its own",
+      "dyad:then": "a desk <function>-<topic>-<hp> on that secretary's board, under its charter and ceiling; standing while the topic has a stream of work, opened per act otherwise (Guide §9); the mandates table is unchanged"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "new-function",
+      "name": "Open a new function",
+      "dyad:when": "no charter's domain covers the work, or covering it would widen a charter (Guide §4)",
+      "dyad:then": "the operator's mandates row first, by a preferences PR; then the unit opens as a solo (Guide §3); pairing it is the operator's separate act, which reads the dyad span"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "re-home",
+      "name": "Re-home its rows",
+      "dyad:when": "a unit is to end and still owns rows that are not terminal",
+      "dyad:then": "each row moves to another unit by its own row, the operator's words relayed verbatim, before the unit retires"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "retire",
+      "name": "Retire a unit",
+      "dyad:when": "the unit owns no row that is not terminal, and its work has ended: a desk's act or topic done, its function dropped by the operator, or the host's capacity needed by other work while it is idle",
+      "dyad:then": "the unit's own row, which the operator disposes; its mandates row, by the operator's preferences PR, its seat back to the <function>-<hp> form or the row removed when the operator drops the function; paired-units, if it names the unit; the board's unit table, the seats line of _cos.md, by dyad board set; its harness session, archived once the operator has acknowledged it; its presence file, kept as history"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "keep",
+      "name": "Keep it",
+      "dyad:when": "otherwise: a unit of a standing function, idle or not, or a unit with rows in flight",
+      "dyad:then": "nothing changes; an idle unit is the next work's first choice; a stale presence file is its writer's to touch"
+    }
+  ],
+  "dyad:precedence": "Opening, after scale-out: read the host's capacity before any outcome that adds a session; at capacity, use an idle unit or subagents, or retire an idle unit first. Then use an idle unit, re-seat a function, open a desk, open a new function: the first that applies. Ending: re-home before retiring. The dyad span is read only for pairing, and a long board is never a ground to retire a unit.",
+  "dyad:default": "Keep it",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "docs/operating-guide.md",
+  "dyad:alsoIn": [
+    "rules/organization.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

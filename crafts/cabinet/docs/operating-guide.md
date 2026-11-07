@@ -21,11 +21,14 @@ cannot check.
 
 ## 2. Reading a board
 - **Your board is the home's roll-up**: one line per member unit — children held, open questions, the oldest,
-  the stale. At most seven lines. If it is longer, that is the signal: a function to split, or a unit to
-  retire or re-home, each by its own row that you dispose.
+  the stale — folded to at most seven lines: quiet units share a line, and a unit that is stale or owes you a
+  question keeps its own. A longer board is a channel matter (§12 item 5, `dmc/attention-problem.jsonld`), never a
+  reason to retire, merge or split a unit. Your span is the dyad units, at most seven (§8); solos are never counted,
+  and how many run is bounded by the host's capacity (§11).
 - **Desks are not on your board.** A secretary opens desks as its concurrent work needs; a desk is solo
-  unless `paired-units` names it; the home reads secretaries, never desks. There is no count of desks to keep
-  under seven: what bounds them is the secretary's charter, its ceiling read per plan (#416).
+  unless `paired-units` names it; the home reads secretaries, never desks. Desks, like every solo, count
+  against no span: what bounds them is the secretary's charter, its ceiling read per plan (#416), and the host's
+  capacity (§11).
 - **A unit's state is on `main`**: `dyad dwork list` (every row by state), the row file (`disposed` is the chain
   of your answers), `dyad session list` (every presence file: who holds what, how fresh). A PR number in a row's
   `disposed` entry names the head you said `Y` on.
@@ -207,9 +210,9 @@ attend and checked against what you did (#388, #412; the rule's own sentence: `.
 - **hybrid** — the program unit and some of the others are paired: the paired ones ask you directly, the
   rest through the home.
 
-**Two spans, two numbers.** Your span is how many units you attend — sit at, read, answer in their own chat.
-The home's span is how many member units it reads directly: at most seven lines (§2). They are different
-numbers over different sets, and neither is how many units run. A hundred units are one span for you while you
+**One span, and a channel.** Your span is the units you attend — sit at, read, answer in their own chat: the dyad
+units, at most seven, the home among them. The home's roll-up is not a span: it is the channel you read, folded to
+seven lines (§2). Neither is how many units run: solos scale with the host's capacity (§11, dyad-system #620). A hundred units are one span for you while you
 attend only the program unit and it orchestrates the rest through its members; what you would feel is a second
 or a third unit you have to watch, never the hundredth you do not (#412).
 
@@ -376,12 +379,43 @@ Concurrency only helps with the last of these four:
 | Context | a clean, separately held view (separate charter, separate state) | needs the solo's own context (cheap to hand down), or wants an independent second read |
 | Isolation | its own container: heavy test runs, its own checkout | a worktree inside the solo is enough |
 
-**Tie-breaks.** Use an idle solo before opening a new one. A new solo also has to be chartered, needs a seat name and
-adds to the board. One writer per file.
+**Tie-breaks.** Use an idle solo before opening a new one. Which unit, and what opening one changes, is the next
+part. One writer per file.
 
 In the one-pair case (§6, `organization: flat`) there is no solo to add: Step 1 reduces to "subagent". The criterion
 decides only which to propose — opening a unit stays §3's and a charter §4's — and Posture (§3) still decides, inside
 a unit, which acts its main chat keeps.
+
+**After Step 1: which unit, and when one ends** (`dmc/unit-lifecycle.jsonld`, dyad-system #620). Once Step 1 says a
+solo is needed, or when a unit's work ends or its holder goes, the record decides among seven outcomes. It informs;
+you dispose every unit opened, re-seated, re-homed or retired (§5), each by its own row.
+
+| outcome | when | what changes |
+|---|---|---|
+| Use an idle unit | a live unit of the function whose charter covers the work owns no row that is not terminal | the work is relayed to it; nothing opens |
+| Re-seat a function | the function's charter row exists and its unit has gone | a new session takes `<function>-<hp>`; your preferences PR changes the mandates row's seat name; the board's unit table gains the new name; the old presence file stays as history |
+| Open a desk | the work is inside an existing charter, the function's unit is busy, and the work is a topic or a host of its own | a desk under that secretary's charter and ceiling (§9) |
+| Open a new function | no charter's domain covers the work, or covering it would widen a charter (§4) | your mandates row first, then the unit opens as a solo (§3); pairing it is your separate act |
+| Re-home its rows | a unit is to end and still owns rows that are not terminal | each row moves to another unit by its own row, your words relayed verbatim |
+| Retire a unit | it owns no row that is not terminal, and its work has ended, or the host's capacity is needed while it is idle | the six changes below |
+| Keep it | otherwise | nothing; an idle unit is the next work's first choice |
+
+**Opening reads the host, never the span.** Before any outcome that adds a session, read the host's capacity: for
+cloud sessions, how many run at once under the account and its rate-limit state; on a workstation, its CPU and
+memory. No number is fixed. At capacity, use an idle unit or subagents, or retire an idle unit first. Then the first
+that applies: an idle unit, a re-seat, a desk, a new function. Ending, re-home before retiring. The dyad span, at
+most seven, is read only when a unit is to be paired, and a long board is never a ground to retire a unit (§2).
+
+**What retiring a unit changes:**
+- the unit's own row, which you dispose;
+- its mandates row, by your preferences PR: the seat back to the `<function>-<hp>` form, or the row removed when you
+  drop the function;
+- `paired-units`, if it names the unit (a bare function name covers the next holder);
+- the board's unit table, the `seats:` line of `_cos.md`, by `dyad board set`;
+- its harness session, archived once you have acknowledged it;
+- its presence file, kept as history: only its own session writes it.
+
+A re-seat changes the same mandates cell to the new name, and keeps the old holder's presence file.
 
 ## 12. Attention and organization (dyad-system #560)
 What this organization does for your attention, and what it does not, as falsified in plan #560 (C1–C7) with the

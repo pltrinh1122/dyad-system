@@ -300,3 +300,31 @@ replaces "the cos as a mode"; the auto unit's form is deferred.
 
 **Survivor:** the README line, §1's sentence, §10's title and wording, `CRAFT.md`'s two rows, §12 and
 `dmc/attention-problem.jsonld`, as amended. VERSION stays 0.4.1 (untagged). Disposition: see ledger #560.
+
+## Amendment — dyad-system #620 (2026-11-07: the unit lifecycle; the span counts dyad units)
+**Claim (plan #620, the operator's intent-`Y` on revision 2 and plan-`Y`, batch #620,#622):** one inference record,
+`dmc/unit-lifecycle.jsonld`, home the Guide's §11, decides after `scale-out` which unit takes the work and, when a unit's
+work ends or its holder goes, what becomes of it: use an idle unit, re-seat a function, open a desk, open a new function,
+re-home its rows, retire it, or keep it, the host's capacity read before any outcome that adds a session; and retiring
+states its six changes. The span is corrected where the cabinet states it: seven bounds the dyad units the operator
+attends (Rule-16 Presence, #412), a solo is never counted, and a long home board is a channel matter, never a ground to
+retire, merge or split a unit. The operator's correction (provenance #620, entry 3): "the limit of seven is for dyad
+units", and solos scale with the host's capacity.
+
+| # | attack | result |
+|---|---|---|
+| 71 | (F1) Opening and retiring units is the core's: it owns presence, pairing and `session-reconcile`. | **Survives**: function, desk, charter and the mandates table exist only in a multi-unit organization (`term-home`, D1); `organization: flat` never opens a second unit. |
+| 72 | (F2) The record overlaps `scale-out`, whose `idle-first` already says "use an idle solo". | **Survives, scoped**: `scale-out` decides solo, subagent or neither; this record decides which unit, after. `idle-first`'s `then` now points here, so one record decides it. |
+| 73 | (F3) The record overlaps `span-of-control`: both read the span. | **Survives**: the span is read only when a unit is paired, and this record reads it only then. |
+| 74 | (F6) An idle secretary should be retired for being idle: it holds a session the host could use. | **Survives as stated**: idle is the pool `idle-unit` draws from; `retire` applies to an idle unit only when the host's capacity is needed or its work has ended. |
+| 75 | (F7) The mandates table names today's holders, as When asks. | **Refuted, as a finding**: four seat cells name gone holders or the bare form; no check needs the cell (`plans.charter_ceiling` matches by function); the fix is the operator's preferences PR, a re-seat, named in the completion evidence and not done by this row. |
+| 76 | (F8) Retiring a paired unit leaves `paired-units` stale. | **Survives**: the list names it; a full-name entry changes, a bare function entry covers the next holder. |
+| 77 | (F12) The span correction is breaking. | **Survives**: "pairing past seven" is a signal proposed to the operator; nothing the old text allowed is refused; below 1.0.0 a minor either way. |
+| 78 | (F15) Item 6's three places are all of them. | **Refuted**: four more texts counted secretaries or called the board a span (§Intent and §6 here, `CRAFT.md`'s `roll-up` and `secretary`), and change; four only bound the board's lines (§1 Workstations, `seat-topology` K8, the Guide's §10 S6 and §12 item 5), and stay, since the line limit is now a channel form. |
+| 79 | (F16) Folding the board's lines hides a stale unit. | **Survives, scoped**: a unit that is stale or owes the operator a question keeps its own line; a folded line names every unit in it. |
+| 80 | (F17) The new sentences carry agent-process tokens into a Tended rule. | **Survives**: the sentences added to this rule use none of the tokens `dyad/guards/craft/crafts_rules.txt` lists. |
+
+**Survivor:** `dmc/unit-lifecycle.jsonld` (new), `dmc/span-of-control.jsonld` (four outcomes over dyad units),
+`dmc/scale-out.jsonld`'s `idle-first`, this rule's Intent, §1, §6 and When, the Guide's §2, §8 and §11, and
+`CRAFT.md`'s `roll-up` and `secretary`, as amended. `VERSION` 0.5.1 → 0.6.0, its bundle row and tag at the next
+release. No Agent Rule is touched. Disposition: see ledger #620.
