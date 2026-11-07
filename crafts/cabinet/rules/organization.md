@@ -15,9 +15,9 @@ those rows' provenance records.
 ## Intent
 State one organization every dyad system runs under unless its operator says otherwise — **M4**: a tree of
 operator–unit pairs in which the cos and every secretary keep a board, authority is granted by content-scoped charters and
-never by identity, and every pair reads and writes the same ledgers — so that one operator's attention scales to
-five to seven secretaries, and a secretary's to as many desks as its concurrent work needs, without a second
-disposer anywhere.
+never by identity, and every pair reads and writes the same ledgers — so that one operator attends at most seven
+dyad units, while the solos beside them, secretaries and as many desks as their work needs, scale with the host's
+capacity, without a second disposer anywhere.
 
 ## 1. The tree
 - **One pair is the whole organization until it is not.** A dyad system with one unit beside its operator runs M4
@@ -30,18 +30,22 @@ disposer anywhere.
   executes its own merge (§5), and the cos executes one only as the reported fallback for a merge a unit's harness
   refused (#540) — it holds attention, not authority (#253 R28), and does itself only the five acts the Guide names — receive, route, present, relay back,
   board — handing every other on (`../docs/operating-guide.md` §2, #432). What it reads: one roll-up line per
-  member unit, at most seven.
+  member unit, folded to at most seven lines (Span of control).
 - **A secretary** holds one function — what the operator watches on its board — under a charter of the mandates
   table. It keeps its own cos-board of the rows it holds and the desks on it, reports by state on `main` and in
   its presence file, announces and never orders, and asks nothing of the home: every question is the operator's.
 - **A desk** holds one topic of a member's function under that member's charter (a narrower fence, never
   a wider one); it sits on the member's board. The tree is as deep as the fences nest and never deeper.
-- **Span of control.** A reader keeps five to seven lines: the operator reads the home's board, and the home
-  reads one line per secretary — never a desk. A leader's board longer than seven is the signal to consolidate (a
-  secretary's unit retired or re-homed by its own row) or to split a function — proposed to the operator, never
-  done by a unit. Desks are unbounded: a secretary opens as many as its concurrent work needs, one session each,
-  bounded only by its own charter's ceiling (#416 prompt 4); a desk is solo unless `paired-units` names it,
-  so desks never count against the operator's span (§6).
+- **Span of control.** The operator's span is the dyad units, the home and every unit `paired-units` names: **at
+  most seven dyad units**, the units the operator attends (Rule-16 Presence, #412; dyad-system #620). A solo,
+  secretary or desk, is **never counted**: how many run is bounded by the host's capacity and each charter's
+  ceiling, read when a unit is opened (`../dmc/unit-lifecycle.jsonld`). **Pairing past seven** is the signal to
+  unpair a unit, proposed to the operator and never done by a unit. No solo is retired, merged or split to keep a
+  span or a board short. The home reads one roll-up line per secretary, never a desk, folded to seven lines for
+  its one reader. A longer board is **a channel matter** (`../dmc/attention-problem.jsonld`, the Guide §12),
+  never the span's. Desks are unbounded: a secretary opens as many as its concurrent work needs, one session
+  each, bounded only by its own charter's ceiling (#416 prompt 4); a desk is solo unless `paired-units` names it
+  (§6).
 - **Workstations: a cos per operator, a desk per workstation** (dyad-system #531). A cos belongs to an operator's
   attention, never to a machine; a workstation is a place where acts run, so it gets a desk. One cos per operator,
   bound to no machine. A workstation is a **topic**, never a function: a function whose acts are machine-bound on a
@@ -148,8 +152,9 @@ who disposes — stays the core's):
 ## 6. Attendance, declared — checked against the records
 Which units an operator attends is declared by the operator and checked against the record, never claimed by a
 unit: a unit is **paired** when it is the home or the preference `paired-units` (the operator's, default
-`none`) names it. The constraint it states is the operator's span — how many units the operator sits at — which is
-not the home's span of at most seven direct lines (the Guide, §2) and not how many units run (#412). Over the
+`none`) names it. The constraint it states is the operator's span — how many units the operator sits at — at most
+seven dyad units (§1, Span of control); the home's roll-up of at most seven lines is a channel, not a span (the
+Guide, §2), and neither is how many units run (#412). Over the
 live units this yields the organization's **mode** — pure M3 (only the home paired, the default), pure M4
 (every unit), hybrid — and from the declared set the **route** of every question a unit owes the operator: asked in
 the unit's own chat when paired, relayed through the home verbatim and answered verbatim otherwise (#253 R17,
@@ -164,7 +169,10 @@ with it.
 
 ## When
 - A unit is opened, renamed, re-homed or retired: a row of its own, under the operator's disposition; the mandates
-  table changes by the operator's preferences-zone PR, before the unit acts under the new row.
+  table changes by the operator's preferences-zone PR, before the unit acts under the new row. Which of these a
+  moment calls for, an idle unit, a re-seat (a rename under a new holder), a desk, a new function, a re-home, a
+  retirement or nothing, is `../dmc/unit-lifecycle.jsonld`, read after `scale-out` or when a unit's work ends or its
+  holder goes; what a retirement changes is its `retire` outcome (the Guide §11).
 - A function is added or a charter widened: the operator's table change first; a unit never acts on a charter that
   is not yet on `main`.
 - The tree gains a second operator: each member pair's leader is named `program-<operator>-<hp>` (`naming.md`),

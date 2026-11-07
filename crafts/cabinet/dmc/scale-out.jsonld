@@ -107,7 +107,7 @@
       "termCode": "idle-first",
       "name": "Use an idle solo before opening a new one",
       "dyad:when": "tie-break: an idle solo exists",
-      "dyad:then": "use it; a new solo also has to be chartered, needs a seat name and adds to the board"
+      "dyad:then": "use it; which unit, and whether a new one is a re-seat, a desk or a new function, is unit-lifecycle's"
     },
     {
       "@type": "DefinedTerm",
