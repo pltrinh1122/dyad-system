@@ -25,7 +25,8 @@
     "the failure-mode derivation of the incident log, for a candidate's incident mode",
     "a candidate need not be a row: a promise or a finding, named by its source (promise on #N, I12 on #N, finding) and a one-line title",
     "absorbed: another row's plan names the candidate as carried by it; dependency: the candidate's fix is assumed by another's, or another's refs or plan name it as a prerequisite; impact, within P1: blocks or corrupts work, then misleads a reading, then cosmetic; dependency and impact are inferred and carry their reason",
-    "adjacency, of a candidate to an anchor: S1 (the anchor's plan or completion evidence deferred it or named it as not built or a follow-up) or S2 (it was promised while working the anchor) alone, or a score of at least 3 from S3 shared files 2 (only files under a fifth of the stored plans touch), S4 shared mechanism (a verb, a guard or a store) 2, S5 refs edge 1, S6 same owning unit 1 (counted only when the anchor's board owner names exactly one unit), S7 same incident mode 1; S1 and S5 are read from records, S2, S3, S4, S6 and S7 are inferred and carry their reason"
+    "adjacency, of a candidate to an anchor: S1 (the anchor's plan or completion evidence deferred it or named it as not built or a follow-up) or S2 (it was promised while working the anchor) alone, or a score of at least 3 from S3 shared files 2 (only files under a fifth of the stored plans touch), S4 shared mechanism (a verb, a guard or a store) 2, S5 refs edge 1, S6 same owning unit 1 (counted only when the anchor's board owner names exactly one unit), S7 same incident mode 1; S1 and S5 are read from records, S2, S3, S4, S6 and S7 are inferred and carry their reason",
+    "the release plan, from the release-plan line of the home's cross-row board file (dmc/release-plan.jsonld): which candidates fall into the next release"
   ],
   "hasDefinedTerm": [
     {
@@ -85,7 +86,7 @@
       "dyad:then": "nothing is proposed and nothing reaches the operator (the message-overhead criterion)"
     }
   ],
-  "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; within a class a candidate another depends on comes first, and within P1 the higher impact; then ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry) and one new row, born open, for each named promise or finding; under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",
+  "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; within a class a candidate the release plan places in the next release comes first, then a candidate another depends on, and within P1 the higher impact; then ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry) and one new row, born open, for each named promise or finding; under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",
   "dyad:default": "no proposal",
   "dyad:tunables": [
     {
@@ -109,7 +110,8 @@
   "dyad:home": "playbooks/d-work.md",
   "dyad:alsoIn": [
     "dmc/message-overhead.jsonld",
-    "dmc/retirement-candidate.jsonld"
+    "dmc/retirement-candidate.jsonld",
+    "dmc/release-plan.jsonld"
   ],
   "dyad:owner": "Rule-3"
 }

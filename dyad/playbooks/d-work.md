@@ -318,8 +318,10 @@ files (2), counting only files that under a fifth of the stored plans touch, so 
 S4 a shared mechanism — a verb, a guard or a store (2); S5 a `refs` edge (1); S6 the same owning unit, read from the
 charter that covers the candidate's files, and counted only when the anchor's board `owner` names exactly one unit (1); S7 the same incident mode, read from the failure-mode derivation (1).
 S1 and S5 are read from records; S2, S3, S4, S6 and S7 are inferred, and the reason is written beside the candidate.
-Within a class, a candidate another depends on — whose fix the other's assumes, or which the other's refs or plan
-name as a prerequisite — comes first; within P1, impact comes next: a defect that blocks or corrupts work, before one
+Within a class, a candidate the **release plan** places in the next release comes first — the `release-plan` line of
+`_cos`, written by the backlog-grooming play-book (`dyad/playbooks/backlog-groom.md`, `dyad/dmc/release-plan.jsonld`,
+#625); then a candidate another depends on — whose fix the other's assumes, or which the other's refs or plan
+name as a prerequisite; within P1, impact comes next: a defect that blocks or corrupts work, before one
 that misleads a reading, before a cosmetic one; dependency and impact are inferred and carry their reason (#568).
 Ties then go to an idle unit before a new one (#559), then one writer per file, then the smaller plan. The ceiling is the
 smaller of `promotion-ceiling` (default 2) and the number of idle units, each candidate with a different owner: a promoted row costs the operator

@@ -224,6 +224,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | escalate-edge-test | frozen |
 | evidence-fold | frozen |
 | failure-mode-primary | frozen |
+| groom-trigger | frozen |
 | hardening-survey | frozen |
 | held-pr | frozen |
 | hook-failure | frozen |
@@ -265,6 +266,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | release-batch | frozen |
 | release-class | frozen |
 | release-number | frozen |
+| release-plan | frozen |
 | release-timing | frozen |
 | replan | frozen |
 | report-level | frozen |

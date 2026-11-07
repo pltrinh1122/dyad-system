@@ -1,0 +1,76 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-plan",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-plan",
+  "name": "Release plan",
+  "description": "Where a groomed backlog row falls among the coming releases of the craft its work is under, and the number that craft's next release projects. It looks forward over the backlog; the release play-book looks back over what landed and keeps every release decision. The plan publishes nothing and ratifies nothing.",
+  "dyad:decides": "For each groomed backlog row, which coming release of which craft does it fall into?",
+  "dyad:inputs": [
+    "the craft whose root the row's work is under, read from its plan file's files touched, else inferred from its title and refs",
+    "the row's projected release class, by the release-class criterion",
+    "the highest release class among that craft's backlog rows, which sets the next release's theme",
+    "the states of the row's refs",
+    "the altitude criterion's reading of the row: one definition of done, or split"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "next",
+      "name": "next release",
+      "dyad:when": "the row's projected class releases and is the highest among its craft's backlog rows, or it is a critical fix; no ref is unresolved; altitude sizes it as one definition of done",
+      "dyad:then": "planned into that craft's next release; within its promotion class it ranks first"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "later",
+      "name": "a later release",
+      "dyad:when": "the row's class releases, below the class that sets the next release's theme, or a ref is not yet terminal",
+      "dyad:then": "planned into a release after the next"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "any",
+      "name": "rides any release",
+      "dyad:when": "the row's projected class is maintenance",
+      "dyad:then": "needs no release of its own; it rides whichever release lands after it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "major",
+      "name": "held for a major",
+      "dyad:when": "the row's projected class is breaking",
+      "dyad:then": "planned only on the operator's prompt for a major release"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unplannable",
+      "name": "not plannable",
+      "dyad:when": "no craft root can be read from the row's plan, title or refs, or altitude says split",
+      "dyad:then": "not planned; the report names what is missing"
+    }
+  ],
+  "dyad:precedence": "not plannable first, when its condition holds; then held for a major; then rides any release; then next release; then a later release. The projected number per craft is the release-number criterion applied to the highest class among that craft's next-release rows.",
+  "dyad:default": "not plannable",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/backlog-groom.md",
+  "dyad:alsoIn": [
+    "playbooks/release.md",
+    "dmc/release-class.jsonld",
+    "dmc/release-number.jsonld",
+    "dmc/promotion.jsonld"
+  ],
+  "dyad:owner": "Rule-11"
+}

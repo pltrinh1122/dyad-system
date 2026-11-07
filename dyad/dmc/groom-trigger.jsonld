@@ -1,0 +1,74 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/groom-trigger",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "groom-trigger",
+  "name": "Groom trigger",
+  "description": "Whether a run of the backlog-grooming play-book is due now. A run is read-only and asks at most the retirement form, so it is due only on a moment that can have changed what grooming reads.",
+  "dyad:decides": "Is a backlog-grooming run due now?",
+  "dyad:inputs": [
+    "an operator prompt asking for a grooming",
+    "the release tags published since the last grooming event (the newest event of the run-book backlog-groom)",
+    "whether the promotion criterion reached no proposal while a unit is idle and the backlog is not empty",
+    "the count of hygiene lines dyad board resume prints, against the fixed count of five",
+    "whether the backlog's rows and the board are unchanged since the last grooming event"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G1",
+      "name": "operator prompt",
+      "dyad:when": "the operator asks for a grooming",
+      "dyad:then": "due, whatever the floor says"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G2",
+      "name": "release landed",
+      "dyad:when": "a release tag was published since the last grooming event",
+      "dyad:then": "due: the release plan the last run projected is spent"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G3",
+      "name": "promotion found nothing",
+      "dyad:when": "the promotion criterion reached no proposal while a unit is idle and the backlog is not empty",
+      "dyad:then": "due, once per backlog state"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "G4",
+      "name": "hygiene over the count",
+      "dyad:when": "dyad board resume prints five or more hygiene lines",
+      "dyad:then": "due; five is this record's fixed count, not a preference"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-due",
+      "name": "not due",
+      "dyad:when": "none of the above holds, or the floor holds and the moment is not an operator prompt",
+      "dyad:then": "no run"
+    }
+  ],
+  "dyad:precedence": "G1 first, and only G1 passes the floor; then the floor: no run while the backlog's rows and the board are unchanged since the last grooming event, which stops G3 firing again on a run that promoted nothing; then G2, G3 and G4, any one making a run due; otherwise not due.",
+  "dyad:default": "not due",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/backlog-groom.md",
+  "dyad:alsoIn": [
+    "dmc/promotion.jsonld",
+    "dmc/backlog-hygiene.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}
