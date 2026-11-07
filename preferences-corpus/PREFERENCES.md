@@ -27,6 +27,7 @@ defines what each value means.
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 | intent-reading | on | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
+| dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -206,6 +207,13 @@ defines what each value means.
   archiving the row. The template ships `off`. A form preference: it authorizes nothing.
   dyad-system: `on`, the Operator's prompt of 2026-11-06: "even though default is 'off' for shipping, i want it 'on'
   for current use."
+- `dwork-slug` — whether a row id is presented to the Operator with its row slug after the number, `#<id>-<slug>`
+  (Rule-3 What a `Y` binds and Ledger; Rule-16 Store; d-work #622). `on`: replies, counter-prompt lines, relays and the
+  human-readable listings show `#<id>-<slug>`; `off`: the bare `#<id>`. Stored references stay the bare number either way.
+  The template ships `on`; an absent key reads `off`. A form preference: it authorizes nothing.
+  dyad-system: `on`, the Operator's prompt of 2026-11-07: "to assist operator with identifying d-work by its identifier,
+  as a preference ("on" by default), d-work id should be presented along with 2-3 tag slugs after then number, e.g.
+  "#621-release-intent-Y""
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
