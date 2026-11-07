@@ -33,11 +33,14 @@ None. The run reads the live backlog, the board and the release tags; it reaches
 
 ## Steps
 In order, each citing its criterion:
-1. **`report`** — the run-book's one step, `dyad board groom`: one block per `backlog` row, oldest first — its
-   `#<id>-<slug>`, its age, its refs' states, its adjacency score against the board's anchors, whether a `promised`
-   entry of the board names it, the craft roots its plan file touches, and its hygiene lines, imported from the hygiene
-   code and never recomputed (`dyad/dmc/backlog-hygiene.jsonld`) — then the last release tag per craft and the last
-   grooming event. It prints facts, never a judgement: the class each step below assigns is the home's.
+1. **`report`** — the run-book's one step, `dyad board groom`. A head line, `groom report: N backlog row(s) on <sha12>;
+   K board anchor(s)`; then one block per `backlog` row, by id — `#<id>[-<slug>] [backlog, <age>d] <title>`, then
+   `refs:` each ref with its state, `adjacency:` the nearest board anchor (a row with a board entry, not terminal) with
+   its cosine by the hygiene code's weighting, `promised:` the `_cos` files whose `promised` names the row, `roots:` the
+   crafts the row's plan file names by path, and the hygiene lines naming the row, verbatim from the hygiene code and
+   never recomputed (`dyad/dmc/backlog-hygiene.jsonld`); then `releases:`, per craft its last tag and live `VERSION`,
+   and the bundle's; and last `last grooming:`, the newest event of this run-book's step. It prints facts, never a
+   judgement: the class each step below assigns is the home's.
 2. **retire** — `dyad/dmc/retirement-candidate.jsonld` per row, then `dyad/dmc/retirement-sweep.jsonld` over the set.
    A row with a retirement ground is listed in the retirement form, the one question a run may ask.
 3. **size** — `dyad/dmc/altitude.jsonld` per remaining row: one definition of done, or split. A row altitude splits is

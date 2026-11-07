@@ -16,10 +16,11 @@ dyad runbook run backlog-groom report
 ```
 
 ## Report
-`dyad board groom`: one block per `backlog` row, oldest first — `#<id>-<slug>`, its age, its refs' states, its
-adjacency score against the board's anchors, whether a `promised` entry of the board names it, the craft roots its
-plan file touches — each row's hygiene lines beneath it, imported from the hygiene code and never recomputed; then the
-last release tag per craft and the last grooming event. It writes nothing:
+`dyad board groom`: a head line (`groom report: N backlog row(s) on <sha12>; K board anchor(s)`), then one block per
+`backlog` row, by id — `#<id>[-<slug>] [backlog, <age>d] <title>` and its `refs:`, `adjacency:` (`#<anchor> <cosine>`,
+or `none` when no anchor reaches 0.005), `promised:` and `roots:` lines, each row's hygiene lines beneath, imported
+from the hygiene code and never recomputed — then `releases:` (each craft's last tag and live `VERSION`, and the
+bundle's) and `last grooming:`. It writes nothing; it refuses any argument with exit 1 and otherwise exits 0:
 ```dyad-cmd
 name: report
 class: read-only
