@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-07T20:30:43+00:00
+seen: 2026-11-07T20:30:48+00:00
 root: /home/user/wt/c622
 rows: 620
 files: crafts/cabinet/VERSION crafts/cabinet/dmc/scale-out.jsonld crafts/cabinet/dmc/span-of-control.jsonld crafts/cabinet/dmc/unit-lifecycle.jsonld crafts/cabinet/docs/operating-guide.md crafts/cabinet/falsification/rules/organization.md crafts/cabinet/rules/organization.md crafts/cabinet/vocabulary/CRAFT.md
