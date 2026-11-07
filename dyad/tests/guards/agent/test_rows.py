@@ -9,8 +9,8 @@ import dyadlib
 m = dyadlib.load_guard("agent", "rows")
 
 def sh(*a, cwd): return subprocess.run(a, cwd=cwd, check=True, capture_output=True, text=True).stdout
-def row(id, title, state="open", disposed="", refs="", mode="explicit"):
-    return dyadlib.format_row_file(dyadlib.Row(id, title, "d", state, disposed, refs, mode))
+def row(id, title, state="open", disposed="", refs="", mode="explicit", slug=""):
+    return dyadlib.format_row_file(dyadlib.Row(id, title, "d", state, disposed, refs, mode, slug))
 
 class Repo:
     def __init__(self):
@@ -143,6 +143,51 @@ class ModeFenceTests(unittest.TestCase):
         p = self.r.d / "agent-corpus" / "d-work" / "rows" / "2.md"
         p.write_text(row(2, "two") + "mode: automatic\n")
         self.assertTrue(any("not one of explicit implicit" in x for x in m.check_package(self.r.d)))
+
+class SlugFenceTests(unittest.TestCase):
+    """d-work #622 Decision 2: a row slug is written when the row is born, or once on a row that holds none, and is
+    never changed or removed after; whenever written it has `dyadlib.SLUG`'s form."""
+    R = "agent-corpus/d-work/rows/1.md"
+    def setUp(self):
+        self.r = Repo(); os.environ.pop("DYAD_INSTANCE", None)
+        self.r.write(self.R, row(1, "one")); self.base = self.r.commit("root")
+    def fails(self, before, after): return m.check_range(before, after, cwd=self.r.d)
+    def step(self, slug, base=None):
+        self.r.write(self.R, row(1, "one", slug=slug)); h = self.r.commit(f"slug {slug or 'none'}")
+        return self.fails(base or self.base, h), h
+    def test_a_row_born_with_a_slug_passes_and_a_bad_form_fails(self):
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two", slug="row-slugs"))
+        self.assertEqual(self.fails(self.base, self.r.commit("born")), [])
+        self.r.write("agent-corpus/d-work/rows/3.md", row(3, "three", slug="release")); h = self.r.commit("bad")
+        out = self.fails(self.base, h)
+        self.assertEqual(len(out), 1, out); self.assertIn("rows/3.md row slug 'release' is not 2 to 4 pieces", out[0])
+    def test_a_slug_is_gained_once_and_never_changed_or_dropped(self):
+        out, gained = self.step("row-slugs")
+        self.assertEqual(out, [])                                             # gained once
+        self.r.write(self.R, row(1, "one", "planned", slug="row-slugs")); h = self.r.commit("kept")
+        self.assertEqual(self.fails(gained, h), [])                           # kept across a transition
+        sh("git", "reset", "-q", "--hard", gained, cwd=self.r.d)
+        out, _ = self.step("other-slug", gained)
+        self.assertEqual(len(out), 1, out); self.assertIn("changes the row slug of row file", out[0]); self.assertIn("row-slugs→other-slug", out[0])
+        sh("git", "reset", "-q", "--hard", gained, cwd=self.r.d)
+        out, _ = self.step("", gained)
+        self.assertEqual(len(out), 1, out); self.assertIn("removes the row slug", out[0])
+    def test_a_bad_form_fails_at_gain_and_in_the_package_check(self):
+        out, _ = self.step("Bad_Slug")
+        self.assertEqual(len(out), 1, out); self.assertIn("row slug 'Bad_Slug'", out[0])
+        self.assertTrue(any("row slug 'Bad_Slug'" in x for x in m.check_package(self.r.d)))
+    def test_a_slug_rewritten_resolving_a_merge_fails(self):
+        self.r.write(self.R, row(1, "one", slug="row-slugs")); self.r.commit("gain")
+        sh("git", "checkout", "-q", "-b", "ledger", cwd=self.r.d)
+        self.r.write("agent-corpus/d-work/rows/2.md", row(2, "two")); self.r.commit("branch row")
+        sh("git", "checkout", "-q", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", slug="row-slugs")); main_h = self.r.commit("planned on main")
+        sh("git", "checkout", "-q", "ledger", cwd=self.r.d)
+        sh("git", "merge", "-q", "--no-commit", "-s", "ours", "main", cwd=self.r.d)
+        self.r.write(self.R, row(1, "one", "planned", slug="other-slug"))
+        sh("git", "commit", "-qm", "merge main", cwd=self.r.d); h = sh("git", "rev-parse", "HEAD", cwd=self.r.d).strip()
+        out = m.check_transaction(self.r.d, main_h, h)
+        self.assertTrue(any("merge" in o and "changes the row slug" in o for o in out), out)
 
 class ContractTests(unittest.TestCase):
     def test_package_check_over_a_store(self):

@@ -38,9 +38,12 @@ files and almost never merge.
   (Rule-3, #585) — instead of being worked to `done` first (#290). `open → archived` is the intent question's: the fence
   admits it only on a row whose last `disposed` entry is a bare `N intent` and that holds no `Y plan`, so a row the
   operator declined before any plan leaves the board, and no other `open` row can (Rule-3 Answer grammar, #615).
-- A row may carry one optional field beside those six: `mode`, `explicit` or `implicit` (Rule-3,
-  Scope). Optional means absent is `explicit`, so every row written before the field existed reads
-  correctly and nothing is migrated; a row that carries it never loses it.
+- A row may carry two optional fields beside those six. `mode`, `explicit` or `implicit` (Rule-3,
+  Scope): optional means absent is `explicit`, so every row written before the field existed reads
+  correctly and nothing is migrated; a row that carries it never loses it. `slug`, the row slug (Rule-3): 2 to 4
+  pieces joined by `-`, each of letters, digits or dots, the first opening with a letter, at most 32 characters
+  (`dyadlib.SLUG`); written when the row is born, or once on a row that holds none, and never changed or removed
+  after (`rows.slug_problems`); absent, the row has none.
 - Beside the rows, the **board store**: `<instance>/d-work/board/<id>.md`, one file per row not terminal that has
   orchestration in flight, and one cross-row file per **cabinet** — `board/_cos.md` for `program`,
   `board/_cos-<operator>.md` for `program-<operator>` — for what crosses its rows (the pending queue's counts, the unit
@@ -180,7 +183,7 @@ files and almost never merge.
 The row guard (`dyad/guards/agent/rows.py`, the fence) for row files: append-only, ids and titles
 immutable, transitions in the table, and new ids contiguous — on `main` and on a branch alike, the row ids a range
 adds run from the base's highest id + 1 with none skipped, as the allocator writes them, so a skipped or hand-typed
-id fails (`rows.contiguity_problems`, #560); the PR guard (`prs.py`) reads rows at the base commit; the
+id fails (`rows.contiguity_problems`, #560), and a row slug written at most once (`rows.slug_problems`, #622); the PR guard (`prs.py`) reads rows at the base commit; the
 presence guard (`dyad/guards/agent/sessions.py`) checks only that a presence file is well-formed
 (every field present, `seen` parses) — never overlap, never staleness (Presence, above); inference
 for phase ownership and for whether an overlap the agent found actually matters.
@@ -241,6 +244,8 @@ from the work, and ten slips of one day (S1–S10) were each an unrecorded trans
 bullet gains the cabinet 2026-11-05 (d-work #594, #548 S13): with two operators' homes on one instance, one shared
 `_cos.md` let one home's queue and question overwrite the other's; see the same record, amendment #594. Store gains
 `open → archived` and the board the `intent-asked` phase 2026-11-06 (d-work #615): a row the operator declines at its
-intent question had no exit but a Done; see the same record, amendment #615.
+intent question had no exit but a Done; see the same record, amendment #615. Store gains the optional `slug` field and
+Enforcement its write-once fence 2026-11-07 (d-work #622): the row slug Rule-3 presents needs a home on the row; see
+`../falsification/rules/rule-3-d-work.md`, amendment #622.
 
 Set: System Requirements.

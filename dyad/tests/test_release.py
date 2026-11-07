@@ -363,6 +363,14 @@ class ReadyTests(World):
         self.assertEqual(rc, 0); self.assertTrue(out.startswith("already:"), out)
         self.assertEqual(self.row().count("release-ready"), 1)
 
+    def test_the_line_keeps_the_rows_slug(self):
+        """#622: `ready` rebuilds the row with every field, so a row slug survives the release-ready line."""
+        p = self.work / INST / "d-work" / "rows" / "1.md"; p.write_text(p.read_text() + "slug: release-1.1.0\n")
+        git(self.work, "commit", "-qam", "slug")
+        rc, _, err = self.run_ready("1", "dyad-operator-v0.1.0", "--at", self.cut_sha, "--archive", DIGEST)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(dyadlib.parse_row_file(self.row()).slug, "release-1.1.0"); self.assertIn("release-ready", self.row())
+
     def test_the_line_carries_the_utc_date(self):
         # #592 R-b: the release-ready entry is dated UTC's day, whatever the host's local one
         with livetest.off_utc() as (utc, local):

@@ -39,8 +39,8 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("craft", "install"): ["craft", "install", "src", "--force", "--dwork", "5", "--craft", "c", "--source", "s"],
     ("craft", "diff"): ["craft", "diff", "sysadmin", "--against", "src", "--patch"],
     ("ledger", None): ["ledger"],
-    ("dwork", "new"): ["dwork", "new", "a title", "#1", "-d", "Y backlog", "--said", "Y", "--backlog", "--mandate", "570"],
-    ("dwork", "state"): ["dwork", "state", "1", "open", "--said", "-x"],
+    ("dwork", "new"): ["dwork", "new", "a title", "#1", "-d", "Y backlog", "--said", "Y", "--backlog", "--mandate", "570", "--slug", "a-title"],
+    ("dwork", "state"): ["dwork", "state", "1", "open", "--said", "-x", "--slug", "one-row"],
     ("dwork", "retire"): ["dwork", "retire", "1", "2", "-d", "Y archive", "--said-file", "f"],
     ("dwork", "list"): ["dwork", "list", "--state", "open", "--craft", "sysadmin"],
     ("dwork", "land"): ["dwork", "land", "a.md", "b.md", "-m", "ledger: x", "--mirror", "m"],
@@ -317,7 +317,7 @@ class ModuleFlagTests(unittest.TestCase):
         self.assertEqual(set(pkg.DWORK_VERB_FLAGS) | {"land", "batch", "trace", "intent"}, {v for n, v in dyadlib.CLI if n == "dwork"})
         self.assertEqual(set(pkg.DWORK_VALUE_FLAGS),
                          {"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via",
-                          "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m"})   # as before the table
+                          "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m", "--slug"})   # as before the table, + #622
 
     def test_package_main_reads_only_the_tables_check_and_install_flags(self):
         src = PACKAGE.read_text()

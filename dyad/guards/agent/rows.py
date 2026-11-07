@@ -122,6 +122,8 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             fails.append(f"{rel}: state '{r.state}' not one of {' '.join(sorted(dyadlib.STATES))}")
         if r.id in seen:
             fails.append(f"{rel}: duplicate id {r.id}")
+        if r.slug and (why := dyadlib.slug_problem(r.slug)):              # #622: the fence judged it when written
+            fails.append(f"{rel}: {why}")
         if any(c in r.refs for c in REFS_BRACKETS):
             fails.append(f"{rel}: refs {r.refs!r} holds a bracket, the shape of a list written into the row, not "
                          f"space-separated references (#439)")
@@ -380,6 +382,19 @@ def mode_changed(path: str, before, after, label: str) -> list[str]:
     return [f"FAIL [main-fence]: {label} changes mode of row file {path} {before.mode}→{after.mode} "
             f"(Rule-3: {why})"]
 
+# ---- the row slug (d-work #622): presentation only, written at most once
+def slug_problems(path: str, before, after, label: str) -> list[str]:
+    """A row slug is written when the row is born, or once on a row that holds none, and never changed or removed
+    after; whenever one is written it has `dyadlib.SLUG`'s form (`slug_problem`). `before` None is an added row.
+    Unlike `mode` it may be gained, since it carries no authority: no reader decides anything from it."""
+    old, new = (before.slug if before else ""), after.slug
+    if old and new != old:
+        return [f"FAIL [main-fence]: {label} {'removes' if not new else 'changes'} the row slug of row file {path}"
+                f"{f' {old}→{new}' if new else f' ({old})'} (Rule-16: a row slug is written once and never changed)"]
+    if new and new != old and (why := dyadlib.slug_problem(new)):
+        return [f"FAIL [main-fence]: {label} writes to row file {path} {why} (Rule-16)"]
+    return []
+
 def born_implicit_problems(path: str, new, label: str) -> list[str]:
     """What an added `implicit`-mode row must look like: born `open`, since a `backlog` row carries no PR and
     moves only on the Operator's own prompt (Rule-3); and carrying exactly one `disposed` entry
@@ -500,6 +515,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
                 how = "leaves the table" if after.state not in dyadlib.STATES else "regresses"
                 fails.append(f"FAIL [main-fence]: {label} row file {path} state {how} {before.state}→{after.state}")
             fails += mode_changed(path, before, after, label)
+            fails += slug_problems(path, before, after, label)                  # #622
             fails += intent_close_problems(path, before, after, label)
             fails += refs_shape_problems(path, before, after, label)
             fails += disposed_problems(path, before.disposed, after.disposed, label)
@@ -515,6 +531,7 @@ def check_commit(sha: str, cwd, instance: str, base: str | None = None) -> list[
             if new.state not in dyadlib.NEW_STATES:
                 fails.append(f"FAIL [main-fence]: {label} adds row file {path} in state {new.state} (not one of {' '.join(sorted(dyadlib.NEW_STATES))})")
             fails += born_implicit_problems(path, new, label)
+            fails += slug_problems(path, None, new, label)                      # #622
             fails += refs_shape_problems(path, None, new, label)
             fails += disposed_problems(path, "", new.disposed, label)
             fails += trace_problems(path, None, new, label, sha, cwd)
@@ -588,6 +605,7 @@ def check_merge(sha: str, cwd, instance: str) -> list[str]:
                 fails.append(f"FAIL [main-fence]: merge {label} row file {path} state regresses {before.state}\u2192{after.state} against parent {par[:9]}")
             elif before.mode != after.mode:   # #290: a mode rewritten while resolving a merge is the same hole #191 closed for state
                 fails.append(f"FAIL [main-fence]: merge {label} changes mode of row file {path} {before.mode}\u2192{after.mode} against parent {par[:9]}")
+            fails += slug_problems(path, before, after, f"merge {label}")   # #622: a slug rewritten while resolving
             # #202: the Done order is a property of the row edit, not of which commit carries it — a merge
             # resolution is where the per-commit walk never looks (the hole #191 closed for state).
             fails += intent_close_problems(path, before, after, f"merge {label}")
@@ -694,7 +712,8 @@ def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     # craft's tests pin this card to `dyadlib.FIELDS`; giving OPTIONAL_FIELDS a card is that craft's own d-work.
     return {"store": f"{rel}/<id>.md", "parser": "`dyadlib.parse_row_file` / `read_rows`", "observed": len(rows),
             "note": f"append-only; id, title and mode immutable; optional `mode` ({' | '.join(sorted(dyadlib.MODES))}, "
-                    f"written only when not `{dyadlib.DEFAULT_MODE}`); transitions (`dyadlib.TRANSITIONS`): {trans}",
+                    f"written only when not `{dyadlib.DEFAULT_MODE}`); optional `slug`, the row slug, written once and "
+                    f"never changed (#622); transitions (`dyadlib.TRANSITIONS`): {trans}",
             "fields": [(f, types[f], allowed.get(f, ""), True, str(getattr(ex, f)) if ex else "", "dyadlib.FIELDS") for f in FIELDS]}
 
 def main(argv):

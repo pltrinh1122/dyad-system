@@ -226,6 +226,8 @@ def already_landed(wt: Path, inst: str, pos: list[str], vals: dict, bare: set, w
         r = row_at(wt, inst, rid)
         if r is None:
             return None                     # the verb refuses it with its own words
+        if "--slug" in vals and r.slug != vals["--slug"]:
+            return None                     # #622: a slug line is landed only once the row holds that slug
         es = record_at(wt, inst, rid)
         if "--mandate" in vals:
             return f"#{rid} is already {state}" if r.state == state else None
@@ -256,6 +258,8 @@ def subject(verb: str, pos: list[str], vals: dict, bare: set, stdout: str) -> st
         s = f"ledger: #{pos[1]} {pos[2]} (mandate #{vals['--mandate']})"
     else:
         s = f"ledger: #{pos[1]} {pos[2]}" + (f" ({d})" if d else " (prompt received)" if "--prompt" in vals or "--prompt-file" in vals else "")
+        if "--slug" in vals:
+            s += f" (slug {vals['--slug']})"             # #622: a state call that writes the row slug says so
     return dyadlib.load_guard("agent", "prs").CITE.sub(r"#\1", s)
 
 

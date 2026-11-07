@@ -63,7 +63,7 @@ class RowModeTests(unittest.TestCase):
     SIX = "id: 1\ntitle: one\nopened: 2026-10-14\nstate: open\ndisposed: \nrefs: \n"
     def test_mode_is_optional_and_last(self):
         self.assertNotIn("mode", dyadlib.FIELDS)
-        self.assertEqual(dyadlib.OPTIONAL_FIELDS, ("mode",))
+        self.assertEqual(dyadlib.OPTIONAL_FIELDS, ("mode", "slug"))   # #622: `slug` after `mode`
         self.assertEqual(dyadlib.FIELDS + dyadlib.OPTIONAL_FIELDS, tuple(f.name for f in fields(dyadlib.Row)))
         self.assertEqual(dyadlib.DEFAULT_MODE, "explicit"); self.assertIn(dyadlib.DEFAULT_MODE, dyadlib.MODES)
     def test_six_positionals_still_build_a_row(self):
@@ -85,6 +85,26 @@ class RowModeTests(unittest.TestCase):
     def test_a_missing_fields_key_still_raises(self):
         with self.assertRaises(ValueError):
             dyadlib.parse_row_file("id: 1\ntitle: t\nopened: d\nstate: open\nrefs: \nmode: implicit\n")
+
+class RowSlugTests(unittest.TestCase):
+    """d-work #622: the optional `slug` after `mode`, written only when set; `row_label` presents it under `on`."""
+    SIX = RowModeTests.SIX
+    def test_a_slug_round_trips_and_a_row_without_one_writes_back_byte_for_byte(self):
+        r = dyadlib.Row(1, "one", "2026-11-07", "open", "", "", "explicit", "row-slugs")
+        text = dyadlib.format_row_file(r)
+        self.assertTrue(text.endswith("slug: row-slugs\n")); self.assertNotIn("mode:", text)
+        self.assertEqual(dyadlib.parse_row_file(text), r)
+        r2 = dyadlib.Row(2, "two", "2026-11-07", "open", "2026-11-07 Y plan (mandate #1)", "parent #1", "implicit", "a-b")
+        self.assertEqual(dyadlib.format_row_file(r2).splitlines()[-2:], ["mode: implicit", "slug: a-b"])
+        self.assertEqual(dyadlib.parse_row_file(dyadlib.format_row_file(r2)), r2)
+        self.assertEqual(dyadlib.format_row_file(dyadlib.parse_row_file(self.SIX)), self.SIX)
+        self.assertEqual(dyadlib.parse_row_file(self.SIX + "slug: Bad_Slug\n").slug, "Bad_Slug")   # the parser stays lenient
+    def test_row_label_under_on_and_off(self):
+        rows = {1: dyadlib.Row(1, "one", "d", "open", "", "", slug="row-slugs"), 2: dyadlib.Row(2, "two", "d", "open", "", "")}
+        self.assertEqual([dyadlib.row_label(i, rows, True) for i in (1, 2, 3)], ["#1-row-slugs", "#2", "#3"])
+        self.assertEqual([dyadlib.row_label(i, rows, False) for i in (1, 2)], ["#1", "#2"])
+        class Stub: title = "t"                                       # a reader's stub row with no slug field
+        self.assertEqual(dyadlib.row_label(5, {5: Stub()}, True), "#5")
 
 class LiveTests(livetest.LiveCase):
     """The row store of the instance this install runs in parses (Rule-16). Empty instance: `read_rows`

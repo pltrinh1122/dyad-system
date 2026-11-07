@@ -43,7 +43,7 @@ prose parts are `dyadlib.PLAN_PARTS` (intent as read, mutation, files touched, b
 
 | entity | store | guard | fields | written by | when | register kinds (Rule-20) |
 |---|---|---|---|---|---|---|
-| row | `rows/<id>.md` | `rows` | `id` `title` `opened` `state` `disposed` `refs` + optional `mode` | `dyad dwork new`, `dyad dwork state`, `dyad dwork retire` | at birth; at every disposition; at every transition | `row.refs->row`, `row.refs->rule`, `row.refs->craft`, `row.disposed->pr` |
+| row | `rows/<id>.md` | `rows` | `id` `title` `opened` `state` `disposed` `refs` + optional `mode` `slug` | `dyad dwork new`, `dyad dwork state`, `dyad dwork retire` | at birth; at every disposition; at every transition | `row.refs->row`, `row.refs->rule`, `row.refs->craft`, `row.disposed->pr` |
 | plan | `plans/<id>.md` | `plans` | `id` `title` `base commit` `intent` | the agent, before the plan counter-prompt (Rule-15 phase 1) | once; revised in place on an amend; absent for an accreted row | `plan.id->row`, `plan.base->commit` |
 | provenance | `provenance/<id>.md` | `provenance` | `n` `kind` `date` `note` `text` | `dyad dwork new`, `dyad dwork state`, `dyad dwork retire`, with the row, in the same clerical commit | at every prompt received and every disposition given (Rule-7 property 3) | `provenance.id->row`, `provenance.legacy->row` |
 | presence | `sessions/<unit>.md` | `sessions` | `session` `seen` `root` `rows` `files` | `dyad session touch`, by the unit alone | at session start and at every plan-Y (Rule-16) | a leaf (`crafts/sysarch/rules/references.md`) |

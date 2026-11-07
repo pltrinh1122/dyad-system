@@ -487,7 +487,7 @@ class PackageTests(livetest.LiveCase):
             git("add", "-A"); git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", msg)
             return git("rev-parse", "HEAD").strip()
         git("checkout", "-q", "-B", "main")
-        rid = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y"], capture_output=True, text=True, env=env(), cwd=d).stdout.strip()
+        rid = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y", "--slug", "t-row"], capture_output=True, text=True, env=env(), cwd=d).stdout.strip()
         base = commit(f"ledger: open #{rid}")
         git("remote", "add", "origin", str(d)); git("fetch", "-q", "origin")   # so `check --guards` has an origin/main base
         git("checkout", "-q", "-b", "zone-span")
@@ -599,7 +599,7 @@ class PackageTests(livetest.LiveCase):
         self.addCleanup(shutil.rmtree, d, ignore_errors=True)
         py = [sys.executable, str(d / "dyad" / "scripts" / "package.py")]
         git = lambda *a: subprocess.run(["git", "-C", str(d), *a], check=True, capture_output=True, text=True).stdout
-        r = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y"], capture_output=True, text=True, env=env(), cwd=d)
+        r = subprocess.run(py + ["dwork", "new", "t", "-d", "Y plan", "--said", "Y", "--slug", "t-row"], capture_output=True, text=True, env=env(), cwd=d)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         rid = r.stdout.strip()
         self.assertTrue((d / "agent-corpus" / "d-work" / "rows" / f"{rid}.md").exists())
@@ -693,8 +693,13 @@ class PackageTests(livetest.LiveCase):
         env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))  # absolute: package.py resolves REPO from its own location
         return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "dwork", "state", *a],
                               cwd=d, env=env, capture_output=True, text=True)
-    def dwork_new(self, d, *a):
+    _slugs = iter(range(1, 10**6))
+    def dwork_new(self, d, *a, slug=True):
+        """#622: every call carries a row slug of its own unless it names one (or `slug=False`), so a case reads the
+        same under `dwork-slug: on` (this instance's value, read by the runner from this tree) and `off`."""
         import os
+        if slug and "--slug" not in a:
+            a = (*a, "--slug", f"t-{next(PackageTests._slugs)}")
         env = dict(os.environ, DYAD_INSTANCE=str(d / "inst"))
         return subprocess.run([sys.executable, str(PKG / "scripts" / "package.py"), "dwork", "new", *a],
                               cwd=d, env=env, capture_output=True, text=True)
@@ -993,7 +998,7 @@ class PackageTests(livetest.LiveCase):
         with mock.patch.dict(os.environ, env), mock.patch.object(dyadlib, "read_rows", side_effect=fake):
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
-                rc = pkg.cmd_dwork(["new", "three", "#1", "--prompt", "open three"])
+                rc = pkg.cmd_dwork(["new", "three", "#1", "--prompt", "open three", "--slug", "three-row"])
         self.assertEqual(rc, 0)
         self.assertIn("warning: could not read origin/main's rows", stderr.getvalue())
         self.assertIn("local ids only", stderr.getvalue())
@@ -1012,7 +1017,7 @@ class PackageTests(livetest.LiveCase):
         born = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
         self.assertEqual((born.state, born.mode, born.refs), ("open", "implicit", "parent #1"))
         self.assertRegex(born.disposed, r"^\d{4}-\d{2}-\d{2} Y plan \(mandate #1\)$")         # one entry, no disposition of its own
-        self.assertTrue(rows.joinpath("3.md").read_text().endswith("mode: implicit\n"))
+        self.assertEqual(rows.joinpath("3.md").read_text().splitlines()[-2:][0], "mode: implicit")   # #622: then the slug line
         e = pv.parse(rec.joinpath("3.md").read_text())
         self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, go ahead")])   # the mandate's own words, copied verbatim
         self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")                    # the date they were given, which predates the row
@@ -1918,6 +1923,68 @@ class ReleaseWindowTests(unittest.TestCase):
         self.git("tag", "dyad-operator-v0.2.0", "origin/main")                  # the tag ends the window
         rc, out, reached = self.judge()
         self.assertTrue(reached, out); self.assertNotIn("[pre-push]", out)
+
+class SlugVerbTests(unittest.TestCase):
+    """d-work #622 Decision 2: `dwork new --slug` and `dwork state --slug`, in process over a scratch instance, with the
+    preference `dwork-slug` read through `dyadlib.slugs_on` (patched to `on` or `off`)."""
+    def setUp(self):
+        self.pkg = load_package()
+        self.d = scratch_repo(["README.md"])
+        self.rows = self.d / "inst" / "d-work" / "rows"; self.rows.mkdir(parents=True)
+        self.rows.joinpath("1.md").write_text("id: 1\ntitle: one\nopened: d\nstate: open\ndisposed: \nrefs: \n")
+        self.rows.joinpath("2.md").write_text("id: 2\ntitle: two\nopened: d\nstate: done\ndisposed: Y done\nrefs: \n")
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": str(self.d / "inst")}); e.start(); self.addCleanup(e.stop)
+    def run_(self, *a, on=False):
+        err = io.StringIO()
+        with unittest.mock.patch.object(dyadlib, "slugs_on", lambda root=None: on), contextlib.redirect_stderr(err), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            try:
+                rc = self.pkg.cmd_dwork(list(a))
+            except SystemExit as x:
+                return 1, out.getvalue(), str(x.code)
+        return rc, out.getvalue(), err.getvalue()
+    def row(self, rid):
+        return dyadlib.parse_row_file(self.rows.joinpath(f"{rid}.md").read_text())
+    def test_new_takes_a_slug_and_refuses_a_bad_or_held_one(self):
+        self.assertEqual(self.run_("new", "three", "--prompt", "p", "--slug", "row-slugs")[0], 0)
+        self.assertEqual(self.row(3).slug, "row-slugs")
+        rc, _, err = self.run_("new", "four", "--prompt", "p", "--slug", "release")
+        self.assertEqual(rc, 1); self.assertIn("not 2 to 4 pieces", err)
+        rc, _, err = self.run_("new", "four", "--prompt", "p", "--slug", "row-slugs")
+        self.assertEqual(rc, 1); self.assertIn("held by #3", err)
+        self.assertFalse(self.rows.joinpath("4.md").exists())
+    def test_under_on_a_row_opens_only_with_its_slug(self):
+        for args in (("new", "x", "--prompt", "p"), ("new", "x", "--backlog", "-d", "Y backlog", "--said", "Y"),
+                     ("new", "x", "--mandate", "1")):
+            with self.subTest(args=args):
+                rc, _, err = self.run_(*args, on=True)
+                self.assertEqual(rc, 1, err); self.assertIn("needs --slug <slug> under the preference dwork-slug: on", err)
+        self.assertFalse(self.rows.joinpath("3.md").exists())
+        self.assertEqual(self.run_("new", "x", "--prompt", "p")[0], 0)                  # off: as before
+        self.assertEqual(self.row(3).slug, "")
+    def test_state_writes_a_slug_once_never_on_a_terminal_row(self):
+        self.assertEqual(self.run_("state", "1", "open", "--slug", "one-row")[0], 0)
+        self.assertEqual(self.row(1).slug, "one-row")
+        self.assertEqual(self.run_("state", "1", "open", "--slug", "one-row")[0], 0)      # the same slug: no change
+        rc, _, err = self.run_("state", "1", "open", "--slug", "other-row")
+        self.assertEqual(rc, 1); self.assertIn("never changed", err)
+        rc, _, err = self.run_("state", "2", "done", "--slug", "two-row")
+        self.assertEqual(rc, 1); self.assertIn("a terminal row never gains a row slug", err)
+        self.run_("new", "three", "--prompt", "p")
+        rc, _, err = self.run_("state", "3", "open", "--slug", "one-row")
+        self.assertEqual(rc, 1); self.assertIn("held by #1", err)
+    def test_state_and_retire_keep_the_slug(self):
+        self.run_("state", "1", "open", "--slug", "one-row")
+        self.assertEqual(self.run_("state", "1", "planned", "-d", "Y plan", "--said", "Y")[0], 0)
+        self.assertEqual((self.row(1).state, self.row(1).slug), ("planned", "one-row"))
+        self.run_("new", "four", "--backlog", "-d", "Y backlog", "--said", "Y", "--slug", "four-row")
+        self.assertEqual(self.run_("retire", "3", "-d", "Y archive", "--said", "Y")[0], 0)
+        self.assertEqual((self.row(3).state, self.row(3).slug), ("archived", "four-row"))
+    def test_list_prints_labels_under_on(self):
+        self.run_("state", "1", "open", "--slug", "one-row")
+        self.assertIn("#1-one-row [open] one", self.run_("list", on=True)[1])
+        out = self.run_("list")[1]
+        self.assertIn("#1 [open] one", out); self.assertIn("#2 [done] two", out)
 
 class DoneHeadPrePushTests(unittest.TestCase):
     """d-work #495 (F1 of #487): the pre-push gate refuses a push that moves a head the operative `Y done` of a row

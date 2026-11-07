@@ -645,6 +645,8 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
     now = now or datetime.datetime.now(datetime.timezone.utc)
     me = sessions().writer()
     rows = {r.id: r for r in dyadlib.read_rows(root)}
+    on = dyadlib.slugs_on(root)                                    # #622: read once
+    L = lambda n: dyadlib.row_label(int(n), rows, on)
     got = load(root)
     cab = viewer_cabinet(root)
     cos, items, others = split_cabinets(got, cab)
@@ -655,7 +657,7 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
         r = rows.get(int(n))
         state, title = (r.state, r.title) if r else ("?", "")
         ph = f"phase {phase_name(f)} " if f.get("phase") else ""
-        out.append(f"#{n} {state:<8} {ph}waiting-on {f.get('waiting-on', '-')} for {age(f.get('since', ''), now)} | "
+        out.append(f"{L(n)} {state:<8} {ph}waiting-on {f.get('waiting-on', '-')} for {age(f.get('since', ''), now)} | "
                    f"owner {f.get('owner', '-')} | next: {(f.get('next') or '-').splitlines()[0]} | {title[:60]}")
         if f.get("question"):
             out.append(f"    question: {f['question'].splitlines()[-1]}")
@@ -664,7 +666,7 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
         for n, f in others:
             by.setdefault(entry_cabinet(f), []).append(n)
         out.append(f"{len(others)} entr{'y' if len(others) == 1 else 'ies'} on other cabinets' boards ("
-                   + "; ".join(f"{c}: {' '.join(f'#{n}' for n in sorted(ns, key=int))}" for c, ns in sorted(by.items())) + ")")
+                   + "; ".join(f"{c}: {' '.join(L(n) for n in sorted(ns, key=int))}" for c, ns in sorted(by.items())) + ")")
     out.append(queue_line(derived_queue(root, got, cab)))
     if cos:
         for k in ("queue", "seats", "question"):
@@ -719,7 +721,11 @@ def resume_view(root: Path) -> dict:
       entry waits on or names as an owner, co-owners included, #551);
     - `unread`: this seat's unread inbox messages (#536)."""
     got = load(root)
-    states = row_states(root)
+    try:                                                   # #622: the rows read once, for the states and the labels
+        rows = {r.id: r for r in dyadlib.read_rows(root)}
+    except (OSError, ValueError, KeyError):
+        rows = {}
+    states = {i: r.state for i, r in rows.items()}
     cab = viewer_cabinet(root)
     cos, items, _ = split_cabinets(got, cab)               # #594: the resumer's cabinet only (S13)
     stale = [(n, f) for n, f in items if states.get(int(n)) in dyadlib.TERMINAL_STATES or int(n) not in states]
@@ -727,7 +733,8 @@ def resume_view(root: Path) -> dict:
     seats = sorted({f["waiting-on"].split()[1] for _, f in live if f.get("waiting-on", "").startswith("unit ")}
                    | {o for _, f in live for o in owners(f)})
     seat = os.environ.get("DYAD_SESSION") or None
-    return {"cabinet": cab, "cos": cos, "live": live, "stale": stale, "states": states,
+    return {"cabinet": cab, "cos": cos, "live": live, "stale": stale, "states": states, "rows": rows,
+            "slugs": dyadlib.slugs_on(root),
             "owed": [(n, f) for n, f in live if f.get("waiting-on") == "operator"],
             "gates": [(n, f["waiting-on"]) for n, f in live if f.get("waiting-on", "").startswith("external ")],
             "seats": seats, "unread": dyadlib.load_guard("agent", "inbox").unread(root, seat) if seat else 0,
@@ -749,6 +756,7 @@ def last_acts(root: Path, seats: list[str]) -> dict[str, str]:
 def resume_lines(root: Path) -> list[str]:
     v = resume_view(root)
     cos = v["cos"]
+    L = lambda n: dyadlib.row_label(int(n), v["rows"], v["slugs"])   # #622; the stall block below stays bare (Q4)
     me, seat = sessions().writer(), os.environ.get("DYAD_SESSION") or "?"
     out = [f"resume: this session {seat} (writer {me}); the board's holder {cos.get('holder') or '?'}, "
            f"last written by {cos.get('writer') or '?'}",
@@ -763,15 +771,15 @@ def resume_lines(root: Path) -> list[str]:
     if cos:
         block(f"{cos_name(v['cabinet'])}:", cos, COS_FIELDS)
     for n, f in v["live"]:
-        block(f"#{n}:" + (f" phase {phase_name(f)}" if f.get("phase") else ""), f, FIELDS)
+        block(f"{L(n)}:" + (f" phase {phase_name(f)}" if f.get("phase") else ""), f, FIELDS)
     for n, f in v["stale"]:
-        out.append(f"#{n}: stale — row #{n} is {v['states'].get(int(n), 'not a row')}; nothing here is owed "
+        out.append(f"{L(n)}: stale — row #{n} is {v['states'].get(int(n), 'not a row')}; nothing here is owed "
                    f"(`dyad board set {n} --drop`, #547)")
     out.append(f"owed to the Operator ({len(v['owed'])}): re-present each question verbatim, or report it pending")
     for n, f in v["owed"]:
-        out.append(f"  #{n} since {f.get('since', '?')}:")
+        out.append(f"  {L(n)} since {f.get('since', '?')}:")
         out += [f"    {line}" for line in (f.get("question") or "(no question recorded)").split("\n")]
-    out.append(f"external gates ({len(v['gates'])}): " + ("; ".join(f"#{n} {w}" for n, w in v["gates"]) or "none"))
+    out.append(f"external gates ({len(v['gates'])}): " + ("; ".join(f"{L(n)} {w}" for n, w in v["gates"]) or "none"))
     out.append(f"announce to ({len(v['seats'])}): {', '.join(v['seats']) or 'none'}" + (f"; seat table: {' / '.join(cos['seats'].splitlines())}" if cos.get("seats") else ""))
     if v["seats"]:
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -935,22 +943,24 @@ def union_prs(ids, entries: dict) -> list[int]:
     return out
 
 
-def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str:
+def question(kind: str, ids, entries: dict, rows: dict, pref: str | None, slugs: bool = False) -> str:
     """The counter-prompt `asked` stores verbatim on every named entry (Rule-3's forms): `plan` — `Y/N: proceed with #a[,
     #b] as planned?`; `done` — `Y/N: Done with #a <title> (accreted #c, merges PR #w, #x)?`, each clause only when
     non-empty, or the batch `Y/N: Done with #a <ta> (accreted #c), #b <tb> (merges PR #w, #x)?` whose merges clause is
     the union in id order. PRs without heads (Rule-3 form). Refused with PRs unless `merge-disposition` is
-    `with-done`: under `separate` the merge is its own question, asked by hand (#587 risk 6)."""
+    `with-done`: under `separate` the merge is its own question, asked by hand (#587 risk 6). With `slugs` (#622,
+    `dwork-slug: on`) every row id it writes is a label, `#<id>-<slug>`; PR numbers never are."""
     ids = list(ids)
+    L = lambda i: dyadlib.row_label(i, rows, slugs)
     for i in ids:
         r = rows.get(i)
         if r is not None and any(unicodedata.category(c) == "Cc" for c in r.title):
             raise Refused(f"row #{i}'s title holds a control character: a Y binds the question as asked, and a title is "
                           f"immutable (Rule-16), so the remedy is a new row (counsel's ruling 3, #587)")
     if kind == "plan":
-        return f"Y/N: proceed with {', '.join(f'#{i}' for i in ids)} as planned?"
+        return f"Y/N: proceed with {', '.join(L(i) for i in ids)} as planned?"
     if kind == "intent":                                  # #615: the intent question, asked before any plan is drafted
-        return "Y/N: intent aligned for " + ", ".join(f"#{a} {rows[a].title}" for a in ids) + "?"
+        return "Y/N: intent aligned for " + ", ".join(f"{L(a)} {rows[a].title}" for a in ids) + "?"
     prs = union_prs(ids, entries)
     if prs and pref != "with-done":
         raise Refused(f"merge-disposition is {pref or 'unset'}, not with-done: a Done question naming PRs is not composed "
@@ -958,12 +968,12 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None) -> str
     merges = f"merges PR {', '.join(f'#{n}' for n in prs)}" if prs else ""
     def acc(a):
         got = accreted_of(a, rows)
-        return f"accreted {', '.join(f'#{c}' for c in got)}" if got else ""
+        return f"accreted {', '.join(L(c) for c in got)}" if got else ""
     if len(ids) == 1:
         a = ids[0]
         clauses = [c for c in (acc(a), merges) if c]
-        return f"Y/N: Done with #{a} {rows[a].title}" + (f" ({', '.join(clauses)})" if clauses else "") + "?"
-    parts = [f"#{a} {rows[a].title}" + (f" ({acc(a)})" if acc(a) else "") for a in ids]
+        return f"Y/N: Done with {L(a)} {rows[a].title}" + (f" ({', '.join(clauses)})" if clauses else "") + "?"
+    parts = [f"{L(a)} {rows[a].title}" + (f" ({acc(a)})" if acc(a) else "") for a in ids]
     return "Y/N: Done with " + ", ".join(parts) + (f" ({merges})" if merges else "") + "?"
 
 
@@ -1006,9 +1016,11 @@ def merges_of(q: str) -> list[int]:
     return [int(x) for x in re.findall(r"\d+", got[-1])] if got else []
 
 
+ACCRETED_LABEL = r"#\d+(?:-[A-Za-z0-9][A-Za-z0-9.]*)*"   # #622: an id, or a label `#<id>-<slug>`
+
 def accreted_in(q: str) -> list[int]:
-    got = re.findall(r"accreted (#\d+(?:, #\d+)*)", ((q or "").strip().splitlines() or [""])[-1])
-    return [int(x) for x in re.findall(r"\d+", got[-1])] if got else []
+    got = re.findall(rf"accreted ({ACCRETED_LABEL}(?:, {ACCRETED_LABEL})*)", ((q or "").strip().splitlines() or [""])[-1])
+    return [int(x) for x in re.findall(r"#(\d+)", got[-1])] if got else []
 
 
 # ---- relays (X2): templates of the event's own fields; free text travels on the board (`note`), never in a body
@@ -1204,7 +1216,8 @@ def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str
     return target, new
 
 
-def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref: str | None = None) -> list[str]:
+def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref: str | None = None,
+                 slugs: bool = False) -> list[str]:
     """The `dwork state` lines of an answer (X4), composed from the phase and the question the machine stored at
     `asked`, never typed: one per named row, each carrying the same `--said-file`, so the one `Y` is written into each
     record (Rule-3 Batch, Rule-7). [] for any other event."""
@@ -1240,7 +1253,7 @@ def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref
     # the accreted sets come from the rows the question was composed from, never re-parsed from its text (a title may
     # hold `accreted #n`); a stored question that no longer matches them is refused, as the merges drift is
     acc = {i: accreted_of(i, rows) for i in ids}
-    if q != question("done", ids, entries, rows, pref):
+    if q != question("done", ids, entries, rows, pref, slugs):    # #622: a Done asked bare and answered labelled is asked again
         raise Refused(f"the stored question no longer matches the rows ("
                       + "; ".join(f"#{i} accreted {' '.join(f'#{c}' for c in acc[i]) or 'none'}" for i in ids)
                       + "): ask again (Rule-2, Binding)")
@@ -1483,7 +1496,7 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                                   f"origin/main; land it first (`dyad dwork land`)")
         if event == "asked":
             kind = {"planning": "intent", "plan-ready": "plan"}.get(exp, "done")
-            qtext = question(kind, ids, entries, rows, dyadlib.preference("merge-disposition", wt))
+            qtext = question(kind, ids, entries, rows, dyadlib.preference("merge-disposition", wt), dyadlib.slugs_on(wt))
         if event in MULTI_ID_EVENTS[1:]:
             qs = {entries[rid].get("question", "") for rid in ids}
             q = next(iter(qs))
@@ -1516,7 +1529,8 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 tl, rels = trace_lines(ids, wt, inst, repo)
                 lines += tl
                 landed[:] = rels
-            lines += ledger_lines(ids, entries, rows, event, said_abs or "", dyadlib.preference("merge-disposition", wt))
+            lines += ledger_lines(ids, entries, rows, event, said_abs or "", dyadlib.preference("merge-disposition", wt),
+                                  slugs=dyadlib.slugs_on(wt))
         changed, paths = [], []
         for rid in ids:
             target, new = results[rid]
@@ -1773,9 +1787,11 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
     sub = phase_of(entry["phase"])[1]
     prs = pr_list(sub)
     inst = dyadlib.instance(repo)
+    on = dyadlib.slugs_on(repo)                                    # #622: read once
+    L = lambda i: dyadlib.row_label(i, rows, on)
     rel = lambda q: q.relative_to(repo).as_posix() if q.is_relative_to(repo) else str(q)
     at = (_git(repo, "rev-parse", "--short=12", "HEAD") or "?")
-    out = [f"# Done #{rid} {clean(row.title)}: skeleton", "",
+    out = [f"# Done {L(rid)} {clean(row.title)}: skeleton", "",
            f"Drafted by `dyad board draft {rid}` from the working tree at {at} (`git pull` first for main's). The machine's "
            f"sections are data; the sections marked for orchestrate are not the machine's. Nothing here was posted.", ""]
     plan = inst / "d-work" / "plans" / f"{rid}.md"
@@ -1800,7 +1816,7 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
     if acc:
         ents = rows_guard().entries
         out += ["| row | state | mode | dispositions | title |", "|---|---|---|---|---|"]
-        out += [f"| #{i}{'' if i in named else ' (terminal: not in the question)'} | {cell(rows[i].state)} | {cell(rows[i].mode)} | "
+        out += [f"| {L(i)}{'' if i in named else ' (terminal: not in the question)'} | {cell(rows[i].state)} | {cell(rows[i].mode)} | "
                 f"{len(ents(rows[i].disposed))} | {cell(rows[i].title)} |" for i in acc] + [""]
     else:
         out += ["none", ""]
@@ -1811,7 +1827,7 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
     for head, what in ORCHESTRATE_SECTIONS:
         out += [f"## {head} (orchestrate)", "", ORCHESTRATE, f"<!-- {what} -->", ""]
     try:
-        q = clean(question("done", [rid], {rid: entry}, rows, dyadlib.preference("merge-disposition", repo)))
+        q = clean(question("done", [rid], {rid: entry}, rows, dyadlib.preference("merge-disposition", repo), on))
     except Refused as e:
         q = f"(question not composed: {clean(str(e))})"
     out += ["## Question (as `asked` would store it)", "", q]
