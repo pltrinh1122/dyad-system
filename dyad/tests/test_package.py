@@ -1017,7 +1017,7 @@ class PackageTests(livetest.LiveCase):
         born = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
         self.assertEqual((born.state, born.mode, born.refs), ("open", "implicit", "parent #1"))
         self.assertRegex(born.disposed, r"^\d{4}-\d{2}-\d{2} Y plan \(mandate #1\)$")         # one entry, no disposition of its own
-        self.assertTrue(rows.joinpath("3.md").read_text().endswith("mode: implicit\n"))
+        self.assertEqual(rows.joinpath("3.md").read_text().splitlines()[-2:][0], "mode: implicit")   # #622: then the slug line
         e = pv.parse(rec.joinpath("3.md").read_text())
         self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, go ahead")])   # the mandate's own words, copied verbatim
         self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")                    # the date they were given, which predates the row
