@@ -107,6 +107,12 @@ change to a preference value, a mutation the plan did not describe — and each 
 release under the release gate is named in its own d-work's Done question (Rule-11), so that done-`Y` binds it as a
 named act.
 
+Under the preference `dwork-slug: on` (`preferences-corpus/PREFERENCES.md`; absent, `off`), every row id presented to
+the operator — in a reply, a counter-prompt line, a relay and the CLI's listings — reads `#<id>-<slug>`, the row's row
+slug (Rule-16 Store) after its number; a row without one reads `#<id>`, and the forms in this Rule are written bare. The
+slug is presentation: a question binds the rows it names by their numbers, and every stored reference — `refs`, a
+`disposed` entry, a provenance record, an inbox message, a PR body's `d-work #<id>` — stays the bare number (#622).
+
 ## Plan (mutation authorization)
 - Under `intent-reading: on`, the agent's first substantive reply to a prompt that opens a row, or reopens one from
   `backlog`, is the **intent reading**, stored first as the plan file's first section (Rule-15): each portion of the
@@ -265,7 +271,10 @@ named act.
   retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
   or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names how a row was opened (Rule-16 Store):
   `implicit` on an accreted row, born `open` under another row's plan-`Y`; `explicit`, or the field absent, on every
-  other row, a carried `backlog` row included. It says nothing of which Done closes the row.
+  other row, a carried `backlog` row included. It says nothing of which Done closes the row. The agent chooses a
+  row's row slug from its title when the row opens (`dwork new --slug`, which refuses a row without one under
+  `dwork-slug: on`): 2–3 tags, a defined term in its own case (`intent-Y`); it is never changed, and a terminal row
+  never gains one.
 - **Ledger-only commits** (nothing outside `agent-corpus/d-work/`) and **events-only commits** (nothing outside
   `<runbooks>/events/`, `DYAD_RUNBOOKS`, Rule-19 property 1, holding events of read-only run-book commands) are clerical
   and go directly to `main` without a PR. One commit stays one zone (Rule-1), so a commit touching both is **neither**
@@ -372,6 +381,9 @@ before the plan; see `../falsification/rules/rule-3-d-work.md`, amendment #615. 
 the home's read of `dyad board resume` at session start and at each operator prompt 2026-11-06 (d-work #617): the
 stall findings left the twice-daily sweep for the home's read; see
 `../falsification/rules/rule-14-system-infrastructure.md`, amendment #617. Ledger's list of what the home reads gains
-a sweep not delivered 2026-11-06 (d-work #619); see the same record, amendment #619.
+a sweep not delivered 2026-11-06 (d-work #619); see the same record, amendment #619. What a `Y` binds and Ledger gain
+the row slug 2026-11-07 (d-work #622), under the preference `dwork-slug`: the operator asked that a row id be presented
+with two or three tags after its number, so a row is known by more than a number; the question still binds by the
+number; see `../falsification/rules/rule-3-d-work.md`, amendment #622.
 
 Set: System Requirements.

@@ -84,12 +84,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 export one as <craft>-<version>.tar.gz, install one from an archive or
                                 a tree (writes crafts/<craft>/ and its crafts/REGISTRY.md row only)
   dyad ledger             render <instance>/d-work/LEDGER.md from rows/ (Rule-16)
-  dyad dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] <p> | --said[-file] <s>)
+  dyad dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] <p> | --said[-file] <s>) [--slug <slug>]
                                 allocate the next id, write its row file (state open, or
                                 backlog with --backlog; -d records the creating disposition) and
                                 its provenance record: the Operator's words verbatim, a `prompt`
                                 entry from --prompt, a `disposition` entry from --said (Rule-7).
-                                -d needs --said; --backlog needs -d (Rule-3: a disposition opens it)
+                                -d needs --said; --backlog needs -d (Rule-3: a disposition opens it).
+                                --slug <slug> is the row slug (2 to 4 pieces, dyadlib.SLUG; unique), refused
+                                without it under the preference `dwork-slug: on`, --mandate and --backlog too (#622)
   dyad dwork new <title> [refs] --mandate <id>
                                 the accreted row an authorized plan already describes (implicit mode,
                                 d-work #290): state open, `mode: implicit`, the one entry
@@ -105,8 +107,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 It refuses when <id> already has as many `parent #<id>` children as its
                                 plan's mandate scope states as its ceiling, and warns past the seat's
                                 charter ceiling in MANDATES.md (#592 R-c, mode 31)
-  dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--check]
-                                change state. A Done-`Y` that ratifies a merge is recorded with the
+  dyad dwork state <id> <state> [-d text (--said[-file] <s> | --said-ref <ref>)] [--prompt[-file] <p>] [--relayed-via <seat>] [-r refs] [--slug <slug>] [--check]
+                                change state. --slug writes the row slug once, on a row that holds none
+                                and is not done or archived, unique among the rows (#622). A Done-`Y` that ratifies a merge is recorded with the
                                 state unchanged and the head it was given on (`-d 'Y done (merges PR
                                 #n at <head>)'`); the row reaches `done` by a second, dispositionless
                                 call once that head is on `main` (Rule-3 Completion, #202). Under `dwork-trace:
@@ -178,7 +181,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 never a verdict (dyad/dmc/intent-reading.jsonld judges, by inference)
   dyad dwork list [--state <s>] [--craft <c>]
                                 rows from the row store (Rule-16), one `#<id> [<state>] <title>`
-                                line each, sorted by id; `--craft <c>` keeps only rows whose `refs`
+                                line each (`#<id>-<slug>` under `dwork-slug: on`, #622), sorted by id; `--craft <c>` keeps only rows whose `refs`
                                 carries the bare token `<c>` (row.refs->craft, Rule-20; d-work #22)
                                 — a routing tag, not a re-check of the guard's own resolution
   dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]
@@ -285,7 +288,7 @@ if __name__ == "__main__":
         else:
             _previous(kind, exc, tb)
     sys.excepthook = _invariant_error_one_line
-import collections.abc, os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil, threading
+import collections.abc, dataclasses, os, re, subprocess, functools, fnmatch, hashlib, json, datetime, tempfile, shutil, threading
 from concurrent.futures import ThreadPoolExecutor
 print = functools.partial(print, flush=True)  # CI pipes are block-buffered; a stuck check must be visible
 from pathlib import Path
@@ -2225,6 +2228,11 @@ def cmd_dwork(a):
             # d-work #133: the title is the first argument after `new`; a flag there became rows #129-#134's title
             sys.exit(f"refused: usage: dwork new <title> [refs] [--backlog] [-d text] (--prompt[-file] … | --said[-file] …), the verb first")
         backlog = "--backlog" in bare
+        slug = vals.get("--slug")
+        if slug is None and dyadlib.slugs_on(REPO):        # #622: every row opens with its slug under `on`
+            sys.exit(f"refused: dwork new needs --slug <slug> under the preference {dyadlib.SLUG_KEY}: on (#622)")
+        if slug is not None and (why := dyadlib.slug_problem(slug)):
+            sys.exit(f"refused: {why} (#622)")
         mandate, mode = vals.get("--mandate"), dyadlib.DEFAULT_MODE
         if mandate is not None:
             # #290: implicit mode. The row takes no disposition of its own — its one entry is the mandate's,
@@ -2251,11 +2259,14 @@ def cmd_dwork(a):
             sys.exit("refused: a row is opened by the Operator's words; give --prompt[-file] or -d with --said[-file] (Rule-7, #191)")
         try:
             subprocess.run(["git", "fetch", "-q", "origin", "main"], cwd=REPO, check=False, timeout=30)
-            remote = {r.id for r in dyadlib.read_rows(REPO, at="origin/main")}
+            remote_rows = dyadlib.read_rows(REPO, at="origin/main")
+            remote = {r.id for r in remote_rows}
         except Exception as e:
             print(f"warning: could not read origin/main's rows ({e}); allocating from local ids "
                   f"only — a concurrent session's unpushed id may collide (d-work #32 F3)", file=sys.stderr)
-            remote = set()
+            remote, remote_rows = set(), []
+        if slug is not None and (held := sorted({r.id for r in [*rows.values(), *remote_rows] if r.slug == slug})):
+            sys.exit(f"refused: row slug {slug!r} is held by #{held[0]}; a row slug is unique (#622)")
         rid = max(set(rows) | remote, default=0) + 1
         state = "backlog" if backlog else "open"          # d-work #140: dyadlib.NEW_STATES
         disposed = f"{today} {d}" if d is not None else ""
@@ -2268,7 +2279,7 @@ def cmd_dwork(a):
         refusal = trace_refusal(dyadlib.load_guard("agent", "rows"), rid, d) if mandate is None else None
         if refusal:   # #465: a row born with a `Y done` carries its trace as any other record does
             sys.exit(refusal)
-        r = dyadlib.Row(rid, title, today, state, disposed, refs, mode)
+        r = dyadlib.Row(rid, title, today, state, disposed, refs, mode, slug or "")
         try:   # the transition check (dyadlib.require_transition, #203) runs before either write
             dyadlib.write_row(REPO, r, None, first=lambda: append_provenance(rid, entries, today, fresh=True))
         except dyadlib.TransitionError as e:
@@ -2283,6 +2294,16 @@ def cmd_dwork(a):
         check = "--check" in bare
         if rid not in rows: sys.exit(f"no row {rid}")
         r = rows[rid]; disposed, refs = r.disposed, r.refs
+        slug = vals.get("--slug")
+        if slug is not None:   # #622: written once, on a row that holds none and is not terminal; the same slug changes nothing
+            if r.slug and r.slug != slug:
+                sys.exit(f"refused: #{rid} holds the row slug {r.slug!r}; a row slug is never changed (#622)")
+            if not r.slug and r.state in dyadlib.TERMINAL_STATES:
+                sys.exit(f"refused: #{rid} is {r.state}; a terminal row never gains a row slug (#622)")
+            if (why := dyadlib.slug_problem(slug)):
+                sys.exit(f"refused: {why} (#622)")
+            if (held := sorted(x.id for x in rows.values() if x.slug == slug and x.id != rid)):
+                sys.exit(f"refused: row slug {slug!r} is held by #{held[0]}; a row slug is unique (#622)")
         if "--mandate" in vals:
             # #422: the close form of an accreted row (Rule-3 Scope: its Done rides the mandate's Done-`Y`). The row's
             # entry and its record's entry are both composed here, as `dwork new --mandate` composes entry 1: the
@@ -2371,7 +2392,7 @@ def cmd_dwork(a):
                 print(f"warn [plan] {m.removeprefix('warning: ')}", file=sys.stderr)
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
-        new = dyadlib.Row(r.id, r.title, r.opened, state, disposed, refs, r.mode)   # #290: `mode` is carried, never rewritten
+        new = dataclasses.replace(r, state=state, disposed=disposed, refs=refs, slug=slug or r.slug)   # #290, #622: every other field is carried
         try:   # an unknown state or a transition outside Rule-16's table is refused here, before either write (#203)
             dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None,
                               dry_run=check)
@@ -2417,8 +2438,8 @@ def cmd_dwork(a):
         note = d if len(targets) == 1 else f"{d} (batch {','.join(f'#{t.id}' for t in targets)})"
         fence_for("disposition", said)
         for t in targets:
-            new = dyadlib.Row(t.id, t.title, t.opened, "archived",
-                              (t.disposed + "; " if t.disposed else "") + f"{today} {note}", t.refs, t.mode)
+            new = dataclasses.replace(t, state="archived",
+                                      disposed=(t.disposed + "; " if t.disposed else "") + f"{today} {note}")   # #622: every field carried
             dyadlib.write_row(REPO, new, t.state,
                               first=lambda rid=t.id: append_provenance(rid, [("disposition", said, note)], today))
         print(f"archived {' '.join(f'#{t.id}' for t in targets)}"); return 0
@@ -2428,8 +2449,9 @@ def cmd_dwork(a):
             sys.exit(f"no such state {state!r}; states: {' '.join(sorted(dyadlib.STATES))}")
         out = [r for r in sorted(rows.values(), key=lambda r: r.id)
                if (state is None or r.state == state) and (craft is None or craft in r.refs.split())]
+        on = dyadlib.slugs_on(REPO)                         # #622: read once per listing
         for r in out:
-            print(f"#{r.id} [{r.state}] {r.title}")
+            print(f"{dyadlib.row_label(r.id, rows, on)} [{r.state}] {r.title}")
         return 0
     sys.exit(__doc__)
 

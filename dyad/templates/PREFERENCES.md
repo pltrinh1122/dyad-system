@@ -26,6 +26,7 @@ defines what each value means.
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 | intent-reading | off | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
+| dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -196,6 +197,17 @@ defines what each value means.
     would benefit from three Y, while only the most masterful would benefit from the two Y". Then, reversing the
     default: "actually, i think most operators wouldn't appreciate the third 'Y' until they see it as an
     optimization. so default should be 'off'."
+- `dwork-slug` — whether a row id is presented to the operator with its row slug after the number, `#<id>-<slug>`
+  (Rule-3 What a `Y` binds and Ledger, Rule-16 Store; d-work #622). A form preference: it authorizes nothing, and a
+  question still binds the rows it names by their numbers.
+  - `on` — `dyad dwork new` refuses a row without `--slug`; replies, counter-prompt lines, relays and the CLI's
+    listings read `#<id>-<slug>`, a row without a slug `#<id>`. The value this template ships.
+  - `off` — row ids read bare; `--slug` is still accepted and stored, so turning the preference on later finds the
+    slugs there. The reading of an absent key, so a system that has not added the key keeps today's behaviour and its
+    run-books are not refused at `dwork new`.
+  - Why: the authoring operator's prompt, "to assist operator with identifying d-work by its identifier, as a
+    preference ("on" by default), d-work id should be presented along with 2-3 tag slugs after then number, e.g.
+    "#621-release-intent-Y"".
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that

@@ -88,7 +88,7 @@ undo: I="${DYAD_INSTANCE:-agent-corpus}"; N="$(basename "$(ls -t "$I"/d-work/row
 postcondition: grep -l "(mandate #${MANDATE:?mandate id})" "${DYAD_INSTANCE:-agent-corpus}"/d-work/rows/*.md 2>/dev/null | xargs -r grep -lxF "title: ${TITLE:?row title}" | grep -q .
 scope: <instance>/d-work/rows/<new id>.md and <instance>/d-work/provenance/<new id>.md (two new files)
 
-dyad/bin/dyad dwork new "${TITLE:?row title}" "parent #${MANDATE:?mandate id}" --mandate "${MANDATE:?mandate id}"
+dyad/bin/dyad dwork new "${TITLE:?row title}" "parent #${MANDATE:?mandate id}" --mandate "${MANDATE:?mandate id}" ${SLUG:+--slug "$SLUG"}
 ```
 
 ## Held
