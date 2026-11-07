@@ -380,3 +380,37 @@ run; the audit play-book reads them. **14–7**: Rule-7's alarm reads the stores
 is one runner of read-only health commands; Rule-19 keeps the event's `role`. Others unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #619.
+
+## Amendment — d-work #621 (2026-11-07: the missing-tag refusal spares a clerical push)
+Claim (plan #621, Decision 1): on a ledger-only or events-only push, a clone missing the core's release tag prints one
+`skip [pre-push]` line instead of failing before any guard runs; every other push keeps the refusal, and `check
+--evidence` keeps it everywhere. The trigger is the core row of the working tree's `BUNDLE.md`, which
+`expected_core_release` reads. After the v1.0 cut (`a35ab79c`, 2026-11-06) the refusal held every clerical push until
+the publishing run made `dyad-operator-v1.0.0`: the release-ready lines that start that run, and the automaton's close
+of the row, which comes first. The release-ready lines landed through the hosting's file API on the operator's `Y`, and
+#570 was closed by hand after the tag.
+
+| # | attack | result |
+|---|---|---|
+| F1 | A ledger-only or events-only push runs something that reads tags, so the skip is a false pass. | Refuted: only `infra/bundle` and `craft/crafts` read tags; both declare `CLERICAL_READS`, so `swept()` skips them on such a push (`crafts`, if the push touches a `d-work/VERSION`, only skips its tag read); the suite skips such a range (`suite_gate`); no transaction guard reads a tag. Survivor: the skip, kept true by a test that fails a guard which reads tags and runs on a clerical push. |
+| F2 | Admitting a push that records a release-ready entry is enough. | Refuted: replaying 2026-11-06, the automaton's close and its notice come before any entry, and since #617 so do the stores step's notice and the dispatched sweep's events commit; each would still be refused. Survivor: the clerical skip. |
+| F3 | Admitting both the clerical push and a code push after the entry adds something. | Refuted as unneeded: `check --evidence` still refuses in the window, so no Done can be asked on that code, and a line an agent wrote, which no fence checks against the hosting, would widen the gate for code. |
+| F4 | `check --evidence` may pass in the window too. | Refuted: `check_drift` prints a skip line without the tag and nothing with it, so a block taken in the window would not match the operator's re-run after the tag (Rule-2, Binding). Survivor: the evidence keeps refusing, and the automaton reads that refusal as no verdict and tells the home once. |
+| F5 | Admitting a stale clone's clerical push is safe. | Survives: a clone whose tag is upstream but not fetched now passes a ledger push, and nothing on such a push reads tags; #505's refusal stays for code pushes and the evidence, the only places a missing tag gives a false `FAIL`. |
+| F6 | The automaton's hosted job is covered. | Survives: `fetch-tags: true` fetches nothing new before the publishing run, and the job's close, notices and stores step push through land's worktree at the fetched tip, so they run the post-cut code, which holds the fix; all are ledger-only. |
+| F7 | The fix may land in the cut itself. | Survives: the hook runs the pushed tree's own `package.py` (`--show-toplevel`, and only HEAD may be pushed), and the cut push passes as a proposed release (#526), under the old code or the new. |
+| F8 | Code pushes in the window are acceptable. | Survives, conceded: a unit with a branch on post-cut `main` cannot push code until the operator approves the publishing run; stated in 1.1.0's known limitations, and the home holds code pushes from the cut to the tag. |
+
+A range git cannot read is not clerical (`range_paths` returns none), so it keeps the refusal, the strict side; a
+shallow clone still warns.
+
+**Rule-6.** No term is added. `ledger-only` and `events-only` are Rule-3's classes, used as Rule-3 defines them.
+**Pairwise (Rule-5).** **14–1**: the hook stays blocking, and containment still judges every commit of the push; only
+the clone check's line on a clerical push changes. **14–2**: the evidence block still refuses a clone missing the tag,
+so a merge's evidence is unchanged (Binding). **14–3**: ledger-only and events-only are Rule-3's classes, and the
+skip reads them, owning none of their definition. **14–11**: the release-ready line lands by the usual ledger commit,
+as the release gate assumes; the tag and the publishing run stay Rule-11's. **14–12**: the suite already skips such a
+range (Rule-12 property 2); nothing it runs changes. **14–19**: an events-only push holds run-book events (Rule-19),
+which no tag read concerns. Others unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #621.

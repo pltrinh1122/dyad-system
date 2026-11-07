@@ -47,7 +47,8 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    ref already on `origin/main`, carries no new commit and passes (d-work #194). It judges only what git sends: a
    terminal on stdin is refused before any read, a hand run with no ref line fails, and git's own call with no ref
    line — an up-to-date push, or one git rejected locally — passes with one line; a clone missing the core's release
-   tag fails before any guard runs, and a shallow clone warns (#592). CI, hosting
+   tag fails before any guard runs, except on a ledger-only or events-only push, which runs no check that reads tags
+   and prints one skip line instead (#621), and a shallow clone warns (#592). CI, hosting
    and any runner are library adapters; the package must not depend on them to enforce a Rule.
    The kernel-only path is the merge evidence for every merge: `package.py check --evidence`,
    run by the main agent on the exact head being merged, prints the evidence block (head sha,
@@ -137,6 +138,8 @@ and the event store, which only events-only pushes change, had none but the next
 #618. Property 3 gives the full sweep the audit's coded checks and the no-`--row` report, names a sweep not delivered
 among the absences, and makes the test fail on a part its inputs' triggers never call 2026-11-06 (d-work #619): the
 audit's steps ran checks the automaton could run after every merge, and `sweep_ci` was classed with an input whose
-sweep never called it; see the same record, amendment #619.
+sweep never called it; see the same record, amendment #619. Property 3's missing-tag refusal spares a ledger-only or events-only
+push 2026-11-07 (d-work #621): after the v1.0 cut the refusal held every clerical push, the release-ready lines and the
+automaton's close included, until a tag that needed those lines existed; see the same record, amendment #621.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
