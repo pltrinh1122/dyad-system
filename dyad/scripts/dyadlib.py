@@ -1100,6 +1100,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
                                                                        ("--mirror", "<branch>"))),
     ("board", "phases"):        CliForm(),
     ("board", "draft"):         CliForm("<id>", (("--out", "<file>"),)),   # #587 X7: the Done skeleton, read-only
+    ("board", "groom"):         CliForm(),                                 # #625: the grooming report, read-only
     ("inbox", "post"):          CliForm("<unit> [<body>...]", (("--row", "<id>"), ("--kind", "report|relay|ack|notice"),
                                                                ("--body-file", "<path>"), ("--cc", "<unit>")), (), ("--cc",), 1),
     ("inbox", "read"):          CliForm("[<message>...]"),   # #587 S10: no names prints, names mark; `--all` removed

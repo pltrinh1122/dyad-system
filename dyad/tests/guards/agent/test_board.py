@@ -120,6 +120,21 @@ class GuardTests(unittest.TestCase):
             msgs = bd.check_package(self.root)
             self.assertTrue(any(says in m and not m.startswith("warning:") for m in msgs), (label, msgs))
 
+    def test_release_plan_is_a_key_of_a_cos_file_only(self):
+        """#625 step 6: the backlog grooming play-book's release plan is one key of a cabinet's cross-row file, written
+        by `board set` and read by `promotion`; a row's entry does not take it."""
+        plan = "release-plan: dyad-operator minor (#601, #620); cabinet rides any\n  pottery not plannable (#99)\n"
+        self.put("_cos", "holder: program-aaaaaaaa\n" + plan)
+        self.assertEqual(bd.check_package(self.root), [])
+        shutil.rmtree(self.board, True); self.put("5", ENTRY + plan)
+        self.assertTrue(any("unknown key 'release-plan'" in m for m in bd.check_package(self.root)))
+        self.assertEqual(bd.parse_set(["_cos", "release-plan=dyad-operator minor (#601)"]),
+                         ("_cos", {"release-plan": "dyad-operator minor (#601)"}, False))
+        with self.assertRaises(bd.Refused) as e:
+            bd.parse_set(["5", "release-plan=x"])
+        self.assertIn("unknown key 'release-plan'", str(e.exception))
+        self.assertIn("release-plan", bd.render({"holder": "p", "release-plan": "x"}, bd.COS_FIELDS))
+
     def test_a_terminal_row_is_a_stale_warning(self):
         self.put("6", ENTRY)
         msgs = bd.check_package(self.root)

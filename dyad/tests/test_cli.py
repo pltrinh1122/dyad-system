@@ -67,6 +67,7 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("board", "advance"): ["board", "advance", "1", "2", "pr-up", "--expect", "building", "pr=7", "head=abc1234"],
     ("board", "phases"): ["board", "phases"],
     ("board", "draft"): ["board", "draft", "587", "--out", "/tmp/x/587-done.md"],
+    ("board", "groom"): ["board", "groom"],
     ("inbox", "post"): ["inbox", "post", "engineer-1", "--row", "1", "--kind", "report", "--cc", "counsel-2", "a body"],
     ("inbox", "read"): ["inbox", "read", "20261102T174400Z-engineer-1537d8fb-1", "20261102T174400Z-counsel-0032b4c0-1"],
     ("inbox", "list"): ["inbox", "list", "engineer-1"],

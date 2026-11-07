@@ -31,7 +31,8 @@ that holds the mode), `owner` (the seat doing the work, and its session id), `wa
 | `external <ref>`), `next` (the next act), `since`, `question` (verbatim, when the Operator owes one), `promised`
 (follow-ups named to the Operator), and `writer`, which `board set` writes and nobody types — the harness session
 that wrote the file last (`sessions.writer`, Rule-16's writer pattern, #350). `_cos.md` takes `queue` and `seats` in
-place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely; its history is git's.
+place of `owner` and `waiting-on`, and `release-plan` (#625: the backlog grooming play-book's release plan, which
+the `promotion` criterion reads). Unlike a row the store is overwritten freely; its history is git's.
 
   dyad board                         render the board from the working tree: one line per entry, oldest wait first
   dyad board set <id>|_cos[-<operator>] key=value… [--drop]
@@ -57,6 +58,9 @@ place of `owner` and `waiting-on`. Unlike a row the store is overwritten freely;
                                      brief when stored here, the accreted rows, the trace, orchestrate's sections
                                      marked, and the question `asked` would store; printed, or written to a file outside
                                      the work tree; never posted (the inbox refuses a disposition-shaped body)
+  dyad board groom                   read-only: the backlog grooming report (#625, scripts/groom.py, dispatched by
+                                     package.py): each backlog row's facts — refs, nearest board anchor, promises,
+                                     plan roots, its hygiene lines — then each craft's last tag; never a judgement
 
 **The machine (#587).** An entry may carry `phase` (one of `dyadlib.ORCH_PHASES`; its continuation lines the sub-keys
 `unit`, `pr` (`<n> at <hex>`, repeating), `evidence`, `from`, `on`) and `note` (free text: the one field no table
@@ -89,7 +93,7 @@ NAME, OWNER = "board entry", "Rule-3"
 BOARD_REL = "d-work/board"
 COS = "_cos"
 FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
-COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "writer")
+COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "writer")   # #625: release-plan
 REQUIRED = ("holder",)
 CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
                                                      # so an operator segment of eight hex is no cabinet (sessions.name_problems)
@@ -104,7 +108,7 @@ DROP, = CLI_FLAGS["set"].bare
 OUT, = CLI_FLAGS["draft"].value_flags   # #587 X7: the skeleton's file, never under the work tree
 USAGE = ("usage: dyad board | dyad board set <id>|_cos[-<operator>] key=value… [--drop] | dyad board resume | dyad board phases | "
          "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>] | "
-         "dyad board draft <id> [--out <file>]")
+         "dyad board draft <id> [--out <file>] | dyad board groom")
 
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("holder-is-required-everywhere", lambda: all(k in FIELDS and k in COS_FIELDS for k in REQUIRED)),

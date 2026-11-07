@@ -249,7 +249,7 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
-  dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none …]
+  dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none … | groom]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
                                 fresh origin/main and lands it ledger-only; `resume` prints what a new holder needs;
@@ -2520,6 +2520,8 @@ def cmd_board(a):
     """The board store's CLI lives at guards/agent/board.py (it is also the guard); this is dispatch only (S4, d-work
     #535)."""
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+    if a and a[0] == "groom":     # #625: read-only, the backlog grooming report (scripts/groom.py)
+        return dyadlib.load_module(PKG / "scripts" / "groom.py", "dyad_groom").main(a[1:], REPO)
     if a and a[0] == "advance":   # #587: the composed `state` lines are read by this runner's own readers
         return dyadlib.load_guard("agent", "board").cmd_advance(a[1:], REPO, DWORK_VALUE_FLAGS, dwork_args, words)
     return dyadlib.load_guard("agent", "board").cli(a, REPO)
