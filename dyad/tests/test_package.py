@@ -1814,7 +1814,7 @@ class PrePushStdinTests(unittest.TestCase):
     def test_a_deletion_only_push_still_passes(self):
         called = []
         line = f"(delete) {'0' * 40} refs/heads/gone {'a' * 40}\n"
-        rc, out, reached = self.run_guards(io.StringIO(line), clone_lines=lambda repo: called.append(repo) or ["FAIL [pre-push] x"])
+        rc, out, reached = self.run_guards(io.StringIO(line), clone_lines=lambda repo, clerical=None: called.append(repo) or ["FAIL [pre-push] x"])
         self.assertEqual((rc, reached, called), (0, False, []), out)
         self.assertIn("ok   [pre-push] nothing new to judge", out)
         self.assertNotIn(self.pkg.PRE_PUSH_EMPTY, out)
@@ -1829,7 +1829,7 @@ class PrePushStdinTests(unittest.TestCase):
         self.assertTrue(reached, out); self.assertNotIn("[pre-push]", out)
     def test_a_shallow_clone_only_warns(self):
         rc, out, reached = self.run_guards(io.StringIO(self.head_line()),
-                                           clone_lines=lambda repo: ["warn [pre-push] shallow clone: fetch it"])
+                                           clone_lines=lambda repo, clerical=None: ["warn [pre-push] shallow clone: fetch it"])
         self.assertTrue(reached, out); self.assertIn("warn [pre-push] shallow clone: fetch it\n", out)
     def test_clone_lines_classes_bootstrap_s_problems(self):
         bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
@@ -1841,6 +1841,83 @@ class PrePushStdinTests(unittest.TestCase):
         with unittest.mock.patch.object(bs, "is_shallow", lambda repo: True):   # the prefix is bootstrap's own shallow line
             (line,) = self.pkg.clone_lines(self.d)
         self.assertTrue(line.startswith("warn [pre-push] " + self.pkg.SHALLOW_PREFIX), line)
+
+    def test_no_guard_that_reads_tags_runs_on_a_clerical_push(self):
+        """#621 Decision 1: the clerical skip of a missing core tag is true only while every guard that reads tags is
+        left to the sweep on a ledger-only or an events-only push; a new tag-reading guard that runs there fails here."""
+        import re
+        reads_tags = re.compile(r"""["']tag["']|refs/tags""")
+        self.pkg.REPO = PKG.parent                                              # the registry of this tree
+        rel = dyadlib.instance_rel(self.pkg.REPO) or "agent-corpus"
+        ledger, events = [f"{rel}/d-work/rows/1.md"], [f"{dyadlib.events_rel(self.pkg.REPO) or 'x'}/x.jsonl"]
+        found = []
+        for corpus, entity, path, tx, mod, problem in self.pkg.registry():
+            if mod is None or not reads_tags.search(Path(mod.__file__).read_text()):
+                continue
+            found.append(f"{corpus}/{entity}")
+            for clerical in (ledger, events):
+                self.assertTrue(self.pkg.swept(mod, clerical), (f"{corpus}/{entity}", clerical))
+        self.assertTrue({"infra/bundle", "craft/crafts"} <= set(found), found)
+
+class ReleaseWindowTests(unittest.TestCase):
+    """#621 Decision 1: after a cut lands on `main` and before its tag exists, a ledger-only or events-only push passes
+    the pre-push gate with one skip line, a code push and `check --evidence` still refuse, and the tag ends the window.
+    A scratch origin, the cut and each push replayed in order, `cmd_guards` judging each in process."""
+    Reached, git, run_guards = PrePushStdinTests.Reached, PrePushStdinTests.git, PrePushStdinTests.run_guards
+    def setUp(self):
+        self.pkg = load_package()
+        self.addCleanup(setattr, self.pkg, "REPO", self.pkg.REPO)
+        self.d = scratch_repo(["a.txt"])
+        self.pkg.REPO = self.d
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "agent-corpus"}); e.start(); self.addCleanup(e.stop)
+        for k in ("DYAD_RUNBOOKS", "DYAD_HOST"):
+            os.environ.pop(k, None)
+        for k, v in (("user.email", "t@t"), ("user.name", "t"), ("commit.gpgsign", "false")):
+            self.git("config", k, v)
+        self.git("branch", "-M", "main")
+        self.origin = SCRATCH.mkdtemp() / "o.git"
+        subprocess.run(["git", "init", "-q", "--bare", str(self.origin)], check=True, env=dyadlib.git_env())
+        self.git("remote", "add", "origin", str(self.origin))
+        self.release("0.1.0", "base"); self.git("tag", "dyad-operator-v0.1.0"); self.land()
+    BUNDLE = "# Bundle\n\nversion: {v}\n\n| component | version |\n|-----------|---------|\n| dyad-operator | {v} |\n"
+    def commit(self, files, msg):
+        for rel, text in files.items():
+            (self.d / rel).parent.mkdir(parents=True, exist_ok=True); (self.d / rel).write_text(text)
+        self.git("add", "-A"); self.git("commit", "-qm", msg)
+    def release(self, v, msg):
+        self.commit({"dyad/VERSION": f"{v}\n", "BUNDLE.md": self.BUNDLE.format(v=v)}, msg)
+    def land(self):
+        self.git("push", "-q", "origin", "HEAD:main"); self.git("fetch", "-q", "origin")
+    def judge(self):
+        return self.run_guards(io.StringIO(f"refs/heads/main {self.git('rev-parse', 'HEAD')} refs/heads/main "
+                                           f"{self.git('rev-parse', 'origin/main')}\n"))
+    def test_after_a_cut_clerical_pushes_pass_before_the_tag(self):
+        self.release("0.2.0", "the cut"); self.land()                            # on main, no dyad-operator-v0.2.0
+        skip = ("skip [pre-push] no dyad-operator-v0.2.0 tag while BUNDLE.md names dyad-operator 0.2.0: "
+                "a ledger-only or events-only push runs no check that reads tags (d-work #621)")
+        for step, files in (("the close", {"agent-corpus/d-work/rows/9.md": "id: 9\nstate: done\n"}),
+                            ("an inbox post", {"agent-corpus/d-work/inbox/program/m.md": "from: automaton\n"}),
+                            ("an events-only commit", {"workstation-corpus/runbooks/events/released.jsonl": "{}\n"}),
+                            ("the release-ready line", {"agent-corpus/d-work/rows/9.md": "id: 9\nstate: done\nready\n"})):
+            with self.subTest(step):
+                self.commit(files, step)
+                rc, out, reached = self.judge()
+                self.assertTrue(reached, out); self.assertIn(skip, out); self.assertNotIn("FAIL", out)
+                self.land()
+        self.commit({"code.py": "x = 1\n"}, "a code commit")
+        rc, out, reached = self.judge()
+        self.assertEqual((rc, reached), (1, False), out)
+        self.assertIn("FAIL [pre-push] no dyad-operator-v0.2.0 tag while BUNDLE.md names dyad-operator 0.2.0", out)
+        code = self.git("rev-parse", "HEAD")
+        self.git("checkout", "-q", "HEAD~1")                                  # the ledger head: the evidence still refuses
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(self.pkg.cmd_evidence(), 2)
+        self.assertIn("FAIL [evidence] no dyad-operator-v0.2.0 tag", buf.getvalue())
+        self.git("checkout", "-q", "main"); self.assertEqual(self.git("rev-parse", "HEAD"), code)
+        self.git("tag", "dyad-operator-v0.2.0", "origin/main")                  # the tag ends the window
+        rc, out, reached = self.judge()
+        self.assertTrue(reached, out); self.assertNotIn("[pre-push]", out)
 
 class DoneHeadPrePushTests(unittest.TestCase):
     """d-work #495 (F1 of #487): the pre-push gate refuses a push that moves a head the operative `Y done` of a row

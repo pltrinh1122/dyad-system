@@ -38,7 +38,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 |---|---|---|
 | `dyad check` | — | frozen |
 | `dyad check --list` | — | frozen |
-| `dyad check --guards` | `--pre-push [<remote> <url>]` (empty stdin fails with its line on a hand run, passes when git sends `<remote> <url>`; a tty is refused; a missing core tag fails) | frozen |
+| `dyad check --guards` | `--pre-push [<remote> <url>]` (empty stdin fails with its line on a hand run, passes when git sends `<remote> <url>`; a tty is refused; a missing core tag fails, except on a ledger-only or events-only push, which prints one skip line, #621) | frozen |
 | `dyad check --corroborate [<before> [<after>]]` | — | frozen |
 | `dyad check --pr <base> [<head>]` | — | frozen |
 | `dyad check --tests [<target>]` | — (a dotted target whose first part names nothing at the repo root is refused, with the qualified name of every test-root module of that path, at any depth, #592) | frozen |
