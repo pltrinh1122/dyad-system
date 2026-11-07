@@ -1240,13 +1240,25 @@ PRE_PUSH_EMPTY = "warn [pre-push] no ref line on stdin: nothing judged"
 PRE_PUSH_NOTHING = "ok   [pre-push] git sent no ref line: every ref is up to date or rejected by git; nothing to judge"
 PRE_PUSH_TTY = "refused: --pre-push reads git's ref lines on stdin; run it from the hook"
 SHALLOW_PREFIX = "shallow clone:"
+MISSING_TAG_PREFIX = f"no {dyadlib.CORE_CRAFT}-v"   # bootstrap.clone_problems' missing-core-tag line (#505)
+CLERICAL_TAG_SKIP = "a ledger-only or events-only push runs no check that reads tags (d-work #621)"
 
-def clone_lines(repo):
+def clone_lines(repo, clerical=None):
     """#592 (F13, Rule-14 p3): `bootstrap.clone_problems` as the pre-push gate reads it — a missing core tag is a
     `FAIL [pre-push]` line, as at `check --evidence`; a shallow clone only a `warn` line, since a cloud session clones
-    50 deep and pushes ledger commits (it still refuses at evidence)."""
+    50 deep and pushes ledger commits (it still refuses at evidence). On a ledger-only or events-only push (`clerical`,
+    `clerical_paths`' list) a missing core tag is one `skip [pre-push]` line instead (#621): such a push runs no check
+    that reads tags, and the clerical pushes after a cut come before its tag exists. `check --evidence` keeps refusing."""
     bs = dyadlib.load_module(PKG / "scripts" / "bootstrap.py", "bootstrap")
-    return [f"{'warn' if m.startswith(SHALLOW_PREFIX) else 'FAIL'} [pre-push] {m}" for m in bs.clone_problems(repo)]
+    out = []
+    for m in bs.clone_problems(repo):
+        if m.startswith(SHALLOW_PREFIX):
+            out.append(f"warn [pre-push] {m}")
+        elif clerical and m.startswith(MISSING_TAG_PREFIX):
+            out.append(f"skip [pre-push] {m.split(': ', 1)[0]}: {CLERICAL_TAG_SKIP}")
+        else:
+            out.append(f"FAIL [pre-push] {m}")
+    return out
 
 def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
     """I2: run every guard locally, the way a push would be judged — each guard's package check,
@@ -1285,16 +1297,16 @@ def cmd_guards(base="origin/main", pre_push=False, remote=None, url=None):
         if pushed is None:
             print(f"ok   [pre-push] nothing new to judge: every ref is a deletion or already on {base}")
             return 0
-        unfit = clone_lines(REPO)   # #592 (F13): a clone missing the core tag yields false FAILs; a shallow one only warns here
+        clerical = clerical_paths(base, pushed)          # #621: read before the clone check, which it relaxes
+        unfit = clone_lines(REPO, clerical)   # #592 (F13): a clone missing the core tag yields false FAILs; a shallow one only warns here
         for m in unfit:
             print(m)
         if any(m.startswith("FAIL") for m in unfit):
             return 1
     else:
-        pushed = None
+        pushed, clerical = None, None
     rc = cmd_invariants()
     entries = registry()
-    clerical = clerical_paths(base, pushed) if pre_push else None
     for corpus, entity, rel, tx, mod, problem in entries:
         label = f"{corpus}/{entity}"
         if mod is None:
