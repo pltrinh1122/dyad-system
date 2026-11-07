@@ -1136,12 +1136,13 @@ def stall_lines(repo: Path, base: str, prefs: Path | None = None, now=None, cabi
     import datetime
     from concurrent.futures import ThreadPoolExecutor
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    with ThreadPoolExecutor(2) as pool:                 # the hosting's round trip beside the ledger reads (the ceiling)
+    with ThreadPoolExecutor(4) as pool:                 # the hosting's round trip and the ledger reads at once (the ceiling)
         ci = pool.submit(sweep_ci, repo, base, now, prefs)
+        hy = pool.submit(lambda: hygiene_mod.hygiene(repo, base, now.timestamp(), prefs))
+        fl = pool.submit(lambda: hygiene_mod.inflight_cabinets(repo, base, now.timestamp(),
+                                                               sweep_pulls() if os.environ.get("GITHUB_TOKEN") else None, prefs=prefs))
         found = sweep_ledger(repo, base, now, prefs)
-        hyg, candidates = hygiene_mod.hygiene(repo, base, now.timestamp(), prefs)
-        pulls = sweep_pulls() if os.environ.get("GITHUB_TOKEN") else None
-        flight = hygiene_mod.inflight_cabinets(repo, base, now.timestamp(), pulls, prefs=prefs)
+        (hyg, candidates), flight = hy.result(), fl.result()
         found += ci.result()
     if cabinet is not None:                              # the lines whose home is this cabinet's (`home` falls back)
         mine = home(repo, base, cabinet)
