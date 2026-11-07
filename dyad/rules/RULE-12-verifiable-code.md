@@ -20,7 +20,9 @@ behind reusable code carrying a mechanical check.
   (`dyad/playbooks/audit.md`), whose self-diagnostic runs two kinds of check at two scopes: a **coded
   check** (a test, a guard or an invariant — what property 1 requires every module to carry) and a
   **prose claim**, read against a written attack — the inference this Rule says is stated where code
-  cannot run. Rule-12 keeps the two names; the play-book keeps the levels, the gate and the budget (#381).
+  cannot run. Rule-12 keeps the two names; the play-book keeps the levels, the gate and the budget (#381). The
+  self-diagnostic reads its coded checks from the automaton sweep's report (Rule-14 property 3) and runs only the
+  prose claims; no step runs a coded check a second time (#619).
 
 ## Conditions (triggers)
 - A plan admits more than one realization.
@@ -111,6 +113,9 @@ PR head's; see the same record, amendment #562. Property 2 moves the whole-store
 `--tests` refuses a target that resolves to no test 2026-11-05 (d-work #606, stating #592); see
 `../falsification/rules/rule-3-d-work.md`, amendment #606. Property 2's whole-store guards run in the automaton sweep
 after each ledger push and the hosting's suite after each landed merge, in place of the twice-daily scheduled sweep,
-2026-11-06 (d-work #617); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
+2026-11-06 (d-work #617); see `../falsification/rules/rule-14-system-infrastructure.md`, amendment #617. Boundaries' audit
+play-book bullet says the self-diagnostic reads its coded checks from the automaton sweep's report 2026-11-06 (d-work
+#619): its L1 and L2 ran the suite's modules again, one by one; see
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #619.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/guards.md, crafts/syseng/rules/verifiable-code.md, crafts/syseng/rules/invariants.md).

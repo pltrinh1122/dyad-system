@@ -278,8 +278,8 @@ named act.
   organization craft's `crafts/cabinet/docs/operating-guide.md`, never a Rule; #369 C7). It touches its own presence
   file and reads every other session's (Rule-16), reporting an overlap that bears on the prompt at hand. The home
   reads `dyad board resume` at session start and at each operator prompt: it prints, from the ledger alone, what waits
-  on time rather than on activity — heads not landed, a code push not corroborated, a stale board, work in flight and
-  backlog hygiene — which no sweep posts (Rule-14 property 3, #617).
+  on time rather than on activity — heads not landed, a code push not corroborated, a sweep not delivered (#619), a
+  stale board, work in flight and backlog hygiene — which no sweep posts (Rule-14 property 3, #617).
 - PR bodies — and on a branch the commit messages `dyad/guards/agent/prs.py` reads as the body — cite `d-work #<id>` as
   a claim of work, cross-referencing other rows as plain `#<id>` (#23). The plan gate requires each cited row, on the
   base branch, to be `open`, `planned` or `blocked` with a `Y plan` disposition (E3), and refuses every commit citing a
@@ -371,6 +371,7 @@ ledger had restated intent or scope after a full plan, six of them after a deliv
 before the plan; see `../falsification/rules/rule-3-d-work.md`, amendment #615. Ledger names the automaton sweep and
 the home's read of `dyad board resume` at session start and at each operator prompt 2026-11-06 (d-work #617): the
 stall findings left the twice-daily sweep for the home's read; see
-`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617. Ledger's list of what the home reads gains
+a sweep not delivered 2026-11-06 (d-work #619); see the same record, amendment #619.
 
 Set: System Requirements.
