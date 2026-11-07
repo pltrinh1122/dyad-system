@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-07T20:31:26+00:00
+seen: 2026-11-07T20:31:32+00:00
 root: /home/user/dyad-system
 rows: 620 623
 files: agent-corpus/d-work/plans/623.md crafts/cabinet/VERSION crafts/cabinet/dmc/scale-out.jsonld crafts/cabinet/dmc/span-of-control.jsonld crafts/cabinet/dmc/unit-lifecycle.jsonld crafts/cabinet/docs/operating-guide.md crafts/cabinet/falsification/rules/organization.md crafts/cabinet/rules/organization.md crafts/cabinet/vocabulary/CRAFT.md dyad/dmc/blocker-home.jsonld dyad/falsification/rules/rule-3-d-work.md dyad/playbooks/d-work.md dyad/rules/RULE-3-d-work.md dyad/surface.md
