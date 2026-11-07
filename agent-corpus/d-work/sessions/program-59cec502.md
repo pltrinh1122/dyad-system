@@ -1,8 +1,8 @@
 session: program-59cec502
-seen: 2026-11-07T22:08:12+00:00
+seen: 2026-11-07T22:22:41+00:00
 root: /home/user/dyad-system
-rows: 624
-files: agent-corpus/d-work/
+rows: 
+files: 
 writer: 59cec502-8c78-5e74-ae6a-66a4f0271c17
 host: cloud linux x86_64
 holder: 59cec502-8c78-5e74-ae6a-66a4f0271c17
