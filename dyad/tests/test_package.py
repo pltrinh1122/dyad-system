@@ -2038,6 +2038,7 @@ class SpawnSiteTests(unittest.TestCase):
         "cmd_guards": "rev-parse of base and HEAD in the repo being pushed; no write",
         "cmd_pr": "rev-parse of the PR's refs in the repo judged; no write",
         "cmd_evidence": "head sha, tree hash and status of the head being evidenced; no write",
+        "code_digest": "ls-tree of another repository's tree, when a caller names one (#619 P1, the audit watermark); no write",
         "cmd_dwork": "fetches origin/main into the operator's own repo before allocating an id (Rule-16)",
         "landing_refusal": "cat-file, rev-parse and merge-base of the head a `Y done` names in the operator's own "
                            "repo: the close's landing test (#202), moved out of cmd_dwork by #439; no write",
@@ -2640,6 +2641,17 @@ class CodeKeyedSkipTests(unittest.TestCase):
         self.assertEqual(self.pkg.code_digest(), before)
         (d / "code.txt").write_text("other\n"); git("commit", "-qam", "code")
         self.assertNotEqual(self.pkg.code_digest(), before)
+
+    def test_code_digest_prunes_more_and_reads_another_repo_when_asked(self):
+        """#619 P1: an optional predicate prunes more paths, and `repo` names the repository read; callers pass neither."""
+        d, seed, git = self.repo()
+        before, pruned = self.pkg.code_digest(), self.pkg.code_digest(prune=lambda p: p.startswith("dated/"))
+        self.assertEqual(before, pruned)                                             # nothing under dated/ yet
+        (d / "dated").mkdir(); (d / "dated" / "r.md").write_text("x\n"); git("add", "-A"); git("commit", "-qm", "dated")
+        self.assertNotEqual(self.pkg.code_digest(), before)
+        self.assertEqual(self.pkg.code_digest(prune=lambda p: p.startswith("dated/")), before)
+        self.assertEqual(self.pkg.code_digest(repo=d), self.pkg.code_digest())
+        self.assertIsNone(self.pkg.code_digest("no-such-rev", repo=d))
 
     def test_b1_a_ledger_drift_after_a_pass_skips_and_a_code_drift_runs(self):
         d, seed, git = self.repo()

@@ -45,7 +45,7 @@
       "@type": "DefinedTerm",
       "termCode": "absence",
       "name": "absence",
-      "dyad:when": "a check reads the time since an event, which nothing changes: a head not landed, a corroboration not run, a stale board, work in flight, backlog hygiene",
+      "dyad:when": "a check reads the time since an event, which nothing changes: a head not landed, a corroboration not run, a stale board, work in flight, backlog hygiene, a sweep not delivered",
       "dyad:then": "the home reads it at each operator prompt in dyad board resume's stall lines; it waits at most until the operator's next prompt"
     },
     {

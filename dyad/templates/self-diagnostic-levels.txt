@@ -66,6 +66,7 @@ integration dyad/tests/test_hygiene.py                     # scratch repos and g
 unit dyad/tests/test_intent.py                          # a temp instance and the live surface, in process (#615)
 integration dyad/tests/test_cli.py                         # the runner as a child per form, git status of the live repo (#592)
 unit dyad/tests/test_check_trigger.py                   # reads the workflows as text and the tables, in process (#618)
+integration dyad/tests/test_audits.py                   # scratch git repos: tags, history, the stored report (#619)
 unit dyad/tests/test_surface.py                         # reads dyad/surface.md and the tree, in process (#573)
 integration dyad/tests/test_package.py                     # scratch repos, the runner, installs
 integration dyad/tests/test_privatecite.py                 # scratch repos, a bare remote, git diffs read by the fence (#518)

@@ -44,7 +44,7 @@
   "dyad:default": "A full re-derivation on the Operator's word, or when a new row's mechanism is named by no existing mode.",
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
-    "dyad:implementation": null
+    "dyad:implementation": "scripts/audits.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/incident-hardening.md",

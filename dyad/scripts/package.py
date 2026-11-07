@@ -499,20 +499,30 @@ def _git(*a):
 def utc_date() -> str:
     return dyadlib.utc_date()   # #592 R-b: the one home, dyadlib; kept here as the suite memo's own name
 
-def code_digest(rev="HEAD"):
+def code_digest(rev="HEAD", prune=None, repo=None):
     """The sha256 of `rev`'s tree listing (`git ls-tree -r`) with the ledger (`<instance>/d-work/`) and the run-book
     events store pruned: one value per state of the code, whatever ledger it sits beside (d-work #562 (b)). Those two
     prefixes are exactly the ones Rule-12 property 2 says cannot change a suite's outcome; any other path changes the
-    digest. None when git cannot say."""
-    listing = _git("ls-tree", "-r", "--full-tree", rev)
+    digest. `prune`, a predicate on a path, prunes more (the audit watermark's dated records, d-work #619 P1), and
+    `repo` reads another repository than this one; every caller here passes neither. None when git cannot say."""
+    root = Path(repo) if repo else REPO
+    if repo:
+        try:
+            listing = subprocess.run(["git", "ls-tree", "-r", "--full-tree", rev], cwd=root, capture_output=True,
+                                     text=True, env=dyadlib.git_env(), timeout=120)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        listing = listing.stdout.strip() if listing.returncode == 0 else None
+    else:
+        listing = _git("ls-tree", "-r", "--full-tree", rev)
     if listing is None:
         return None
-    rel, events = dyadlib.instance_rel(REPO), dyadlib.events_rel(REPO)
+    rel, events = dyadlib.instance_rel(root), dyadlib.events_rel(root)
     skip = tuple(p for p in (f"{rel}/d-work/" if rel else None, f"{events}/" if events else None) if p)
     h = hashlib.sha256()
     for line in listing.splitlines():
         path = line.split("\t", 1)[-1]
-        if not path.startswith(skip):
+        if not path.startswith(skip) and not (prune and prune(path)):
             h.update(line.encode() + b"\n")
     return h.hexdigest()
 

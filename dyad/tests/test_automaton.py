@@ -82,7 +82,7 @@ class SweepCiTests(unittest.TestCase):
             seen.append((req.full_url, req.headers.get("Authorization")))
             if fail:
                 raise fail
-            name = "rule-11 package" if "dyad-package.yml" in req.full_url else "d-work automaton"
+            name = next(n for n, f in am.CI_FILES.items() if f"/{f}/" in req.full_url)
             body = [w for w in (runs or []) if w["name"] == name]
             return contextlib.closing(_io.BytesIO(_json.dumps({"workflow_runs": body}).encode()))
         with unittest.mock.patch.dict(os.environ, {"GITHUB_TOKEN": token, "GITHUB_REPOSITORY": slug}), \
@@ -91,7 +91,9 @@ class SweepCiTests(unittest.TestCase):
     def test_a_corroborated_push_without_a_token_is_no_finding(self):
         got, seen = self.ci([{"name": "rule-11 package", "head_sha": self.c, "conclusion": "success"}])
         self.assertEqual(got, [])
-        self.assertEqual(sorted(u.split("/workflows/")[1].split("/")[0] for u, _ in seen), ["dyad-automaton.yml", "dyad-package.yml"])
+        self.assertEqual(sorted(u.split("/workflows/")[1].split("/")[0] for u, _ in seen),
+                         ["dyad-automaton.yml", "dyad-package.yml", "dyad-sweep.yml"])           # #619: the full sweep too
+        self.assertEqual(sorted("status=success" in u for u, _ in seen), [False, False, True])   # delivery reads every status
         self.assertTrue(all(a is None for _, a in seen))                                 # no token: no header
         self.assertTrue(all(f"per_page={am.CI_PAGE}" in u for u, _ in seen))
     def test_an_uncorroborated_push_is_a_failing_finding_and_a_token_is_sent(self):
@@ -103,6 +105,42 @@ class SweepCiTests(unittest.TestCase):
         self.assertEqual(got, [(False, "finding: corroboration not read from the hosting (OSError)")])
         got, seen = self.ci(slug="")                                                      # no hosting named at all
         self.assertEqual((got[0][1].split(" not read")[0], seen), ("finding: corroboration of 1 code push(es) to main", []))
+    def aged(self, files: dict[str, str], hours: float = 1, email: str = "t@t") -> str:
+        """One commit of `files`, committed `hours` ago by `email`: past the delivery grace."""
+        import datetime as _dt
+        when = (self.now - _dt.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+        for rel, text in files.items():
+            (self.d / rel).parent.mkdir(parents=True, exist_ok=True); (self.d / rel).write_text(text)
+        self.g("add", "-A")
+        subprocess.run(["git", "-C", str(self.d), "-c", f"user.email={email}", "commit", "-qm", "c"], check=True,
+                       env={**os.environ, "GIT_COMMITTER_DATE": when, "GIT_AUTHOR_DATE": when, "GIT_COMMITTER_EMAIL": email})
+        return self.g("rev-parse", "HEAD")
+    def test_a_sweep_not_delivered_is_a_finding_and_a_run_at_or_after_delivers(self):
+        """#619 Decision 4: the newest code push needs a `d-work sweep` run at it or later, the newest ledger push a
+        `d-work automaton` run; queued, in progress, success or failure count, cancelled and skipped do not."""
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "agent-corpus"}):
+            code = self.aged({"y.py": "y"}, hours=2)
+            ledger = self.aged({"agent-corpus/d-work/rows/1.md": "id: 1\n"}, hours=1)
+            ok = {"name": "rule-11 package", "head_sha": code, "conclusion": "success", "status": "completed"}
+            got, _ = self.ci([ok])
+            self.assertEqual([l for _, l in got], [
+                f"finding: delivery: no full sweep started on main at or after the landed merge {code[:12]}",
+                f"finding: delivery: no stores sweep started on main at or after the push {ledger[:12]}"])
+            for status, conclusion, counts in (("queued", None, True), ("in_progress", None, True), ("completed", "failure", True),
+                                               ("completed", "success", True), ("completed", "cancelled", False),
+                                               ("completed", "skipped", False)):
+                runs = [ok, {"name": "d-work sweep", "head_sha": ledger, "status": status, "conclusion": conclusion},
+                        {"name": "d-work automaton", "head_sha": ledger, "status": status, "conclusion": conclusion}]
+                got, _ = self.ci(runs)
+                self.assertEqual(got == [], counts, (status, conclusion, got))
+            got, _ = self.ci([ok, {"name": "d-work sweep", "head_sha": self.c, "status": "completed", "conclusion": "success"}])
+            self.assertIn("no full sweep", got[0][1])                                 # a run before the push delivers nothing
+    def test_the_workflows_own_pushes_and_a_young_push_are_not_judged(self):
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "agent-corpus"}):
+            self.aged({"agent-corpus/d-work/rows/1.md": "id: 1\n"}, hours=1, email=am.WORKFLOW_IDENTITY)
+            (self.d / "agent-corpus/d-work/rows/2.md").write_text("id: 2\n"); self.g("add", "-A")
+            self.g("commit", "-qm", "young")                                          # within the grace: waits
+            self.assertEqual(self.ci([{"name": "rule-11 package", "head_sha": self.c, "conclusion": "success"}])[0], [])
     def test_the_slug_is_read_off_origin(self):
         with unittest.mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": ""}):
             self.assertIsNone(am.repo_slug(self.d))
@@ -943,16 +981,17 @@ class AutomatonTests(unittest.TestCase):
         (msg,) = self.inbox(HOME)
         self.assertIn("corroboration of the landed cut refused for row #9: FAIL [corroborate] build: boom", msg)
 
-    def sweep(self, check=(), hygiene=((), ()), inflight=(), argv=("sweep", "--row", "9"), **kw):
+    def sweep(self, check=(), hygiene=((), ()), inflight=(), argv=("sweep", "--row", "9"), audit=(), check_lines=(), **kw):
         seen = self.swept = []
         def fake_check(wt, stores=False):
-            seen.append(stores); return list(check)
+            seen.append(stores); am.CHECK_LINES[:] = list(check_lines); return list(check)
         with unittest.mock.patch.object(am, "sweep_check", fake_check), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: (list(hygiene[0]), list(hygiene[1]))), \
              unittest.mock.patch.object(am.hygiene_mod, "inflight_cabinets", lambda repo, base, now, pulls, prefs=None:
                                         [l if isinstance(l, tuple) else ("program", l) for l in inflight]), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
              unittest.mock.patch.object(am, "sweep_drift", lambda repo, wt, base: [(False, "finding: drift seen")]), \
+             unittest.mock.patch.object(am, "sweep_audit", lambda wt: list(audit)), \
              unittest.mock.patch.object(am, "sweep_ci", lambda repo, base, now, prefs=None: []):
             return run(list(argv), self.w.seat, **kw)
 
@@ -986,6 +1025,46 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(run(["sweep", "--row"], self.w.seat)[0], 2)
         self.assertEqual(self.swept, [False])                                             # the full check
 
+    def test_readings_print_first_and_findings_in_two_groups(self):
+        """#619 Decision 1: readings first, never posted or counted; then `standing` and `new`."""
+        self.w.write_main(self.files)
+        audit = ["reading: audit watermark: tree t; none: first exercise", "finding: audit fences: guard a/b is in v1 and not in the registry"]
+        rc, out, err = self.sweep(check=[(False, "warn [agent/plans] 43.md: old")], audit=audit)
+        lines = out.splitlines()                         # the inbox verb's own lines print as the notice lands
+        self.assertEqual(rc, 0, out + err)
+        i = lines.index(audit[0])
+        self.assertEqual(lines[i + 1:i + 5], ["standing: 0 finding(s) already told to the home", "new: 3 finding(s) not yet told",
+                                      "finding: warn [agent/plans] 43.md: old", "finding: drift seen"])
+        self.assertIn(audit[1], lines)
+        (msg,) = self.inbox(HOME); self.assertNotIn("first exercise", msg); self.assertIn("guard a/b", msg)
+        rc, out, _ = self.sweep(check=[(False, "warn [agent/plans] 43.md: old")], audit=audit)
+        self.assertIn("standing: 3 finding(s) already told to the home", out); self.assertIn("new: 0 finding(s) not yet told", out)
+        self.assertEqual(len(self.inbox(HOME)), 1)
+
+    def test_with_no_row_the_sweep_is_the_report_and_lands_nothing(self):
+        """#619 Decision 1: the stall block, checks-sha256 over the tree's own check lines, report-sha256 over the
+        text, the text stored; nothing posted, nothing landed."""
+        self.w.write_main(self.files)
+        before = git(self.w.origin, "rev-parse", "main")
+        kw = dict(check=[(False, "warn [y] two")], check_lines=["ok   [x] one", "warn [y] two"], argv=("sweep",))
+        rc, out, err = self.sweep(hygiene=(["hygiene I1 untouched: backlog row #10 (t), no commit in 40 days"], []), **kw)
+        rc2, out2, _ = self.sweep(**kw)
+        lines = out.splitlines()
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("finding: hygiene I1 untouched: backlog row #10 (t), no commit in 40 days", lines)   # the stall block
+        self.assertTrue(any(l.startswith("stalls: ") for l in lines))
+        import hashlib
+        self.assertIn(f"checks-sha256={hashlib.sha256(b'ok   [x] one' + chr(10).encode() + b'warn [y] two').hexdigest()}", lines)
+        rep = next(l for l in lines if l.startswith("report-sha256="))
+        body = lines[:lines.index(rep)]
+        self.assertEqual(rep, f"report-sha256={hashlib.sha256(chr(10).join(body).encode()).hexdigest()}")
+        stored = Path(lines[-1].removeprefix("stored: "))
+        self.assertEqual(stored.read_text(), "\n".join(lines[:-1]) + "\n")
+        self.assertEqual(next(l for l in out2.splitlines() if l.startswith("checks-sha256=")),
+                         next(l for l in lines if l.startswith("checks-sha256=")))     # same head, same checks
+        self.assertEqual(self.inbox(HOME), []); self.assertEqual(git(self.w.origin, "rev-parse", "main"), before)
+        self.assertIn("not told (no --row or no home)", out)
+
     def test_the_stores_sweep_runs_the_guards_alone_and_tells_only_what_is_new(self):
         """#617: `sweep --stores` runs `check --guards` (stores=True), no drift and no events, told new-only."""
         self.w.write_main(self.files)
@@ -1003,14 +1082,21 @@ class AutomatonTests(unittest.TestCase):
         seen = []
         def fake(argv, **kw):
             seen.append((argv, kw.get("env", {}).get("DYAD_NO_NESTED_TESTS")))
-            return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "")
+            return subprocess.CompletedProcess(argv, 0, "ok   [guards] x\nwarn [guards] y z\n", "ERROR: test_e (m.C.test_e) — e\n")
         with unittest.mock.patch.object(am.subprocess, "run", fake), \
              unittest.mock.patch.object(am, "sweep_live", lambda wt: [(True, "FAIL [suite:live] r: one")]):   # #618 H4
             got = am.sweep_check(PKG.parent, stores=True)
             am.sweep_check(PKG.parent)
-        self.assertEqual(got, [(False, "warn [guards] y z"), (True, "FAIL [suite:live] r: one")])   # suite:live after the guards
+        self.assertEqual(got, [(False, "warn [guards] y z"), (True, "ERROR: test_e (m.C.test_e) — e"),
+                               (True, "FAIL [suite:live] r: one")])                     # suite:live after the guards
         self.assertEqual([a[2:] for a, _ in seen], [["check", "--guards"], ["check"]])
         self.assertEqual(seen[0][1], "1")                                         # the suite never runs under --stores
+
+    def test_check_readings_carry_the_suite_and_the_invariant_pass(self):
+        """#619: the self-diagnostic reads both in the report; none printed when the check printed neither."""
+        lines = ["ok   [invariant] a (3)", "FAIL [invariant] b: x", "     [Rule-12] dyad/tests: Ran 9 tests OK", "ok   [g] y"]
+        self.assertEqual(am.check_readings(lines), ["reading: suite dyad/tests: Ran 9 tests OK", "reading: invariants 1 ok, 1 FAIL"])
+        self.assertEqual(am.check_readings(["ok   [g] y"]), [])
 
     def test_the_live_listing_keeps_only_livecase_tests(self):
         """#618 H4: `suite:live` is every `livetest.LiveCase` test of a root, listed by the runner's child."""
@@ -1134,6 +1220,7 @@ class AutomatonTests(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if k not in ("DYAD_RUNBOOKS", "DYAD_HOST", "MIRROR")}
         with unittest.mock.patch.dict(os.environ, env, clear=True), \
              unittest.mock.patch.object(am, "sweep_check", lambda wt, stores=False: []), \
+             unittest.mock.patch.object(am, "sweep_audit", lambda wt: []), \
              unittest.mock.patch.object(am.hygiene_mod, "hygiene", lambda repo, base, now, prefs=None: ([], [])), \
              unittest.mock.patch.object(am.hygiene_mod, "inflight", lambda repo, base, now, pulls, prefs=None: []), \
              unittest.mock.patch.object(am, "sweep_pulls", lambda: None), \
