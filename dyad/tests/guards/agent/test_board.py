@@ -539,9 +539,10 @@ def without_stalls(lines: list[str]) -> list[str]:
     return out
 
 
-class StallTests(unittest.TestCase):
+class StallLiveTests(livetest.LiveCase):
     """#617: `board resume` ends with the stall findings, read from the ledger, within `STALL_CEILING_S` on this
-    instance's own ledger; a reading that fails is one line."""
+    instance's own ledger. It reads the live instance (PKG.parent) and the hosting, so it is a live test (#622
+    revision 2): it runs in `suite:live`, after each ledger push, not under the full suite's load."""
     def test_resume_prints_the_stalls_within_the_ceiling(self):
         import time
         am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton")
@@ -551,6 +552,10 @@ class StallTests(unittest.TestCase):
         head = [l for l in lines if l.startswith("stalls")]
         self.assertEqual(len(head), 1, lines); self.assertRegex(head[0], r"^stalls \(\d+, read from the ledger at [0-9a-f]{12}")
         self.assertTrue(lines[-1].startswith("then: "))
+
+
+class StallTests(unittest.TestCase):
+    """#617: a stall reading that fails is one line."""
     def test_an_unreadable_ledger_is_one_line(self):
         with tempfile.TemporaryDirectory() as t:
             self.assertEqual(bd.stall_block(Path(t), None), ["stalls: not read (CalledProcessError)"])
