@@ -305,3 +305,53 @@ class ReleasePlaybookTests(unittest.TestCase):
         if guard is None or not hasattr(guard, "declared_sections"):
             self.skipTest("no craft provides a run-book check that reads `# sections:`")
         self.assertEqual([m for m in guard.check_runbook(RELEASE_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
+
+GROOM_PLAYBOOK = PKG / "playbooks" / "backlog-groom.md"
+GROOM_RUNBOOK = PKG / "runbooks" / "backlog-groom.md"
+GROOM_CRITERIA = ("groom-trigger", "backlog-hygiene", "retirement-candidate", "retirement-sweep", "altitude", "promotion",
+                  "release-plan", "release-class", "release-number")
+
+class BacklogGroomPlaybookTests(unittest.TestCase):
+    """The backlog-grooming play-book and its run-book (#625): headings, every criterion it cites exists and is named, none
+    redefined (no outcome table of its own), the record homes it holds, and the run-book's one read-only step."""
+    def test_playbook_sections_and_criteria(self):
+        text = GROOM_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence", "Conduct"])
+        cited = set(re.findall(r"dyad/dmc/([a-z0-9-]+)\.jsonld", text))
+        self.assertEqual(cited, set(GROOM_CRITERIA))
+        for c in cited:
+            self.assertTrue((PKG / "dmc" / f"{c}.jsonld").is_file(), c)
+        self.assertEqual(dyadlib.tables(text), [])                     # redefines none: the outcomes are the records'
+        self.assertIn("dyad/runbooks/backlog-groom.md", text)
+        self.assertIn("`report`", text)
+        self.assertIn("`Y/N: archive #a, #b, … #k?`", text)          # the one question a run may ask
+    def test_records_homed_here_name_their_outcomes_here(self):
+        import json
+        text = GROOM_PLAYBOOK.read_text()
+        for c in ("groom-trigger", "release-plan"):
+            rec = json.loads((PKG / "dmc" / f"{c}.jsonld").read_text())
+            self.assertEqual(rec["dyad:home"], "playbooks/backlog-groom.md", c)
+            for t in rec["hasDefinedTerm"]:
+                self.assertIn(t["name"], text, (c, t["name"]))
+    def test_promotion_reads_the_release_plan(self):
+        import json
+        rec = json.loads((PKG / "dmc" / "promotion.jsonld").read_text())
+        self.assertIn("dmc/release-plan.jsonld", rec["dyad:alsoIn"])
+        self.assertIn("release plan places in the next release comes first", rec["dyad:precedence"])
+        self.assertIn("release plan", DWORK_PLAYBOOK.read_text())
+    def test_runbook_parses_into_one_read_only_step(self):
+        text = GROOM_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], ["report"])
+        self.assertEqual(rb.declared_sections(text), ["Report"])
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual((cmds[0].cls, cmds[0].role), ("read-only", "any"))
+        self.assertEqual(cmds[0].cmd.strip(), "dyad/bin/dyad board groom")
+        self.assertIn("backlog-groom", rb.core_runbooks(PKG.parent))
+    def test_runbook_passes_the_craft_check_when_present(self):
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        guard = dyadlib.find_guard("workstation", "runbooks")
+        if guard is None or not hasattr(guard, "declared_sections"):
+            self.skipTest("no craft provides a run-book check that reads `# sections:`")
+        self.assertEqual([m for m in guard.check_runbook(GROOM_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])

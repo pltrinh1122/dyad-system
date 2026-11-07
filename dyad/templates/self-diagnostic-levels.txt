@@ -63,6 +63,7 @@ integration dyad/tests/test_steps.py                       # scratch repos and a
 integration dyad/tests/test_replays.py                     # a scratch install, a bare origin, board advance, automaton run (#587)
 integration dyad/tests/test_merge.py                       # scratch repos, a bare origin with refs/pull, merge and push (#532)
 integration dyad/tests/test_hygiene.py                     # scratch repos and git, the backlog hygiene of the sweep (#565)
+integration dyad/tests/test_groom.py                       # scratch repos and git, the backlog grooming report (#625)
 unit dyad/tests/test_intent.py                          # a temp instance and the live surface, in process (#615)
 integration dyad/tests/test_cli.py                         # the runner as a child per form, git status of the live repo (#592)
 unit dyad/tests/test_check_trigger.py                   # reads the workflows as text and the tables, in process (#618)

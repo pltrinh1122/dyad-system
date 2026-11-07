@@ -278,6 +278,13 @@ class IntentMachineTests(unittest.TestCase):
         self.assertEqual(dyadlib.orch_release_to("intent-asked"), "planning")
         self.assertEqual(dyadlib.CLI[("dwork", "intent")].pos, "<id>")
 
+class GroomFormTests(unittest.TestCase):
+    """#625 step 5: `dyad board groom` is one row of the CLI table, read-only and taking no word or flag."""
+    def test_the_groom_form(self):
+        form = dyadlib.CLI[("board", "groom")]
+        self.assertEqual((form.pos, tuple(form.flags)), ("", ()))
+        self.assertIn("groom", dyadlib.cli_forms("board"))
+
 if __name__ == "__main__":
     unittest.main()
 
