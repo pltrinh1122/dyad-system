@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-07T21:35:04+00:00
+seen: 2026-11-07T21:58:02+00:00
 root: /home/user/wt/inbox
 rows: 623
 files: agent-corpus/d-work/plans/623.md dyad/dmc/blocker-home.jsonld dyad/falsification/rules/rule-3-d-work.md dyad/playbooks/d-work.md dyad/rules/RULE-3-d-work.md dyad/surface.md
