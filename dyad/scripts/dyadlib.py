@@ -548,6 +548,7 @@ class Row:
     disposed: str
     refs: str
     mode: str = "explicit"   # mode: the countersign model's countersign mode, adopted (Rule-3 Scope; dyad/playbooks/countersign-model.md); optional and last, d-work #290
+    slug: str = ""           # the row slug (Rule-3, Rule-16 Store): presentation only, written at most once; optional, d-work #622
 
 _ROW = re.compile(r"^\|\s*(\d+)\s*\|")
 
@@ -574,9 +575,34 @@ FIELDS = ("id", "title", "opened", "state", "disposed", "refs")
 # historical commits (`guards/agent/prs.py`, `read_rows(root, at=base)`), none of which carry the line — a
 # required `mode` would make every past commit unparseable and the gate unrunnable. The fence reads `mode`
 # off the parsed Row, never off FIELDS, so `rows.FIELDS is dyadlib.FIELDS` stays true.
-OPTIONAL_FIELDS = ("mode",)
+OPTIONAL_FIELDS = ("mode", "slug")   # #622: `slug` read when present, never judged by the parser (the fence does)
 MODES = frozenset({"explicit", "implicit"})   # the mode of a row (the countersign model's term); a disposition's coverage is `basis`, not this
 DEFAULT_MODE = Row.mode                       # the dataclass's own default: one source of truth for an absent line
+# d-work #622: the row slug — 2 to 4 pieces joined by `-`, each of letters, digits or dots, the first opening with a
+# letter, at most SLUG_MAX characters, case kept. Presentation only: a question binds the rows it names by number, and
+# every stored reference stays the bare `#<id>`; `dwork-slug: on` presents a row id as `#<id>-<slug>`.
+SLUG = re.compile(r"[A-Za-z][A-Za-z0-9.]*(?:-[A-Za-z0-9][A-Za-z0-9.]*){1,3}")
+SLUG_MAX = 32
+SLUG_KEY = "dwork-slug"
+
+def slug_problem(s: str) -> str | None:
+    """The refusal text for a row slug that is not of `SLUG`'s form or longer than `SLUG_MAX`, else None: the one
+    judgement the verb, the fence and the package check share (#622)."""
+    if len(s) > SLUG_MAX:
+        return f"row slug {s!r} is {len(s)} characters, over {SLUG_MAX}"
+    if not SLUG.fullmatch(s):
+        return (f"row slug {s!r} is not 2 to 4 pieces joined by '-', each of letters, digits or dots, "
+                f"the first opening with a letter")
+    return None
+
+def slugs_on(root: Path | None = None) -> bool:
+    """Whether the preference `dwork-slug` is `on`; an absent key reads `off`, today's presentation (#622 Decision 5)."""
+    return preference(SLUG_KEY, root) == "on"
+
+def row_label(rid: int, rows, on: bool) -> str:
+    """`#<id>-<slug>` when `on` and `rows` (id -> row) holds a slugged row `rid`; `#<id>` otherwise (#622)."""
+    slug = getattr(rows.get(rid), "slug", "") if on and rows is not None else ""
+    return f"#{rid}-{slug}" if slug else f"#{rid}"
 
 # d-work states and the one transition table (Rule-16 Store cites this; Rule-3 defines the states).
 STATES = frozenset({"open", "planned", "blocked", "backlog", "done", "archived"})   # archived: retired from the board, terminal (d-work #37)
@@ -903,7 +929,7 @@ def parse_row_file(text: str) -> Row:
     mode = d.get("mode", DEFAULT_MODE)
     if mode not in MODES:
         raise ValueError(f"row file mode {mode!r} not one of {' '.join(sorted(MODES))}")
-    return Row(int(d["id"]), d["title"], d["opened"], d["state"], d["disposed"], d["refs"], mode)
+    return Row(int(d["id"]), d["title"], d["opened"], d["state"], d["disposed"], d["refs"], mode, d.get("slug", ""))
 
 def format_row_file(r: Row) -> str:
     """Every FIELDS line, then an OPTIONAL_FIELDS line only where the value differs from the dataclass
@@ -1042,10 +1068,10 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("craft", "diff"):          CliForm("<craft>", (("--against", "<src>"),), ("--patch",)),
     ("ledger", None):           CliForm(),
     ("dwork", "new"):           CliForm("<title> [<refs>]", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
-                                                             *_SAID[1:], ("--relayed-via", "<seat>"), ("--mandate", "<id>")) + LAND_FLAGS, ("--backlog", LAND_FLAG)),
+                                                             *_SAID[1:], ("--relayed-via", "<seat>"), ("--mandate", "<id>"), ("--slug", "<slug>")) + LAND_FLAGS, ("--backlog", LAND_FLAG)),
     ("dwork", "state"):         CliForm("<id> <state>", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
                                                          *_SAID[1:], ("--said-ref", "<ref>"), ("--relayed-via", "<seat>"),
-                                                         ("--mandate", "<id>"), ("--retired-by", "<id>")) + LAND_FLAGS,
+                                                         ("--mandate", "<id>"), ("--retired-by", "<id>"), ("--slug", "<slug>")) + LAND_FLAGS,
                                         ("--check", LAND_FLAG)),
     ("dwork", "retire"):        CliForm("<id>...", _SAID),
     ("dwork", "list"):          CliForm("", (("--state", "<state>"), ("--craft", "<craft>"))),
@@ -1200,6 +1226,9 @@ INVARIANTS: list[Invariant] = [
     ("row-fields-match-dataclass", lambda: FIELDS + OPTIONAL_FIELDS == tuple(f.name for f in fields(Row))),
     ("row-optional-fields-disjoint", lambda: not (set(FIELDS) & set(OPTIONAL_FIELDS))),   # #290: a key in both would be required and optional at once
     ("row-mode-default-is-a-mode", lambda: DEFAULT_MODE in MODES and len(MODES) == 2),    # #290: the value an absent line takes is a legal mode
+    ("row-slug-form", lambda: all(slug_problem(x) is None for x in ("row-slugs", "release-intent-Y", "release-1.1.0", "macOS-host"))
+                              and all(slug_problem(x) for x in ("release", "1-x", "a--b", "a-b-c-d-e", "row_slugs", "a-" + "b" * 31))),   # #622 Decision 1
+    ("row-slug-default-empty", lambda: Row.slug == "" and OPTIONAL_FIELDS[-1] == "slug"),   # #622: absent means none, written only when set
     ("backlog-exits-to-archived", lambda: TRANSITIONS["backlog"] == frozenset({"open", "archived"})),   # #290: the board's drain
     ("table-cell-escape-round-trips", lambda: split_cells(f"| {escape_cell('a | b')} | c |") == ["a | b", "c"]),   # #7, #171: a rendered `|` stays in its cell
     ("inputs-cover-the-machine", lambda: set(INPUTS) == {(a, b) for a, t in TRANSITIONS.items() for b in t} | {(None, s) for s in NEW_STATES}),   # #309: one input per edge and per birth

@@ -43,7 +43,7 @@ GATE (default `ledger`), GITHUB_OUTPUT, GITHUB_STEP_SUMMARY, GITHUB_SERVER_URL, 
 import sys
 if sys.version_info < (3, 12):
     sys.exit("release.py: Python 3.12+ required")
-import hashlib, json, os, re, shutil, subprocess, tempfile
+import dataclasses, hashlib, json, os, re, shutil, subprocess, tempfile
 from dataclasses import dataclass
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
@@ -337,7 +337,7 @@ def ready(root: Path, row_id: str, tag: str, cut: str, sha256: str) -> str:
         raise Refused(f"internal: {entry!r} is not the release-ready shape")
     if entry.split(" ", 1)[1] in [e.split(" ", 1)[1] for e in rg.entries(row.disposed)]:
         return f"already: row #{row_id} holds release-ready {tag} at {full[:12]}; nothing written"
-    new = dyadlib.Row(row.id, row.title, row.opened, row.state, f"{row.disposed}; {entry}" if row.disposed else entry, row.refs, row.mode)
+    new = dataclasses.replace(row, disposed=f"{row.disposed}; {entry}" if row.disposed else entry)   # #622: every field carried
     dyadlib.write_row(root, new, row.state)
     return f"ready: row #{row_id} {entry!r}; land it ledger-only (`dyad dwork land {path.relative_to(root)} -m ...`)"
 

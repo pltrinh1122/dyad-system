@@ -110,7 +110,7 @@ class LandTests(unittest.TestCase):
         add_row(self.racer, 2, "racer", "open racer")
         git(self.racer, "add", "-A"); git(self.racer, *livetest.IDENTITY, "commit", "-qm", "ledger: #2 open")
         self.race.write_text("")
-        rc, out, err = self.dwork("new", "mine", "--prompt", "open mine", "--land")
+        rc, out, err = self.dwork("new", "mine", "--prompt", "open mine", "--slug", "mine-row", "--land")
         self.assertEqual(rc, 0, err)
         self.assertIn("main moved", err)
         self.assertEqual(len(self.hook_runs()), 2, "the first push raced, the rebuild pushed")
@@ -125,11 +125,11 @@ class LandTests(unittest.TestCase):
         """#574: `new --backlog --mandate` lands as `#N backlog, carried under mandate #M`, and a re-run is refused."""
         rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
         self.assertEqual(rc, 0, err)
-        rc, out, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        rc, out, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--slug", "a-fence", "--land")
         self.assertEqual(rc, 0, err)
         self.assertTrue(git(self.origin, "log", "-1", "--format=%s", "main").startswith("ledger: #2 backlog, carried under mandate #1: a fence"))
         head = self.main_at_origin()
-        rc, _, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--land")
+        rc, _, err = self.dwork("new", "a fence", "--backlog", "--mandate", "1", "--slug", "a-fence", "--land")
         self.assertEqual(rc, 1); self.assertIn("already carried under mandate #1", err)
         self.assertEqual(self.main_at_origin(), head)
 
@@ -139,12 +139,24 @@ class LandTests(unittest.TestCase):
         head = self.main_at_origin()
         rc, _, err = self.dwork("state", "1", "planned", "-d", "Y plan", "--said", "Y", "--land")
         self.assertEqual(rc, 1); self.assertIn("already landed", err)
-        rc, _, err = self.dwork("new", "two", "--prompt", "open two", "--land")
+        rc, _, err = self.dwork("new", "two", "--prompt", "open two", "--slug", "two-row", "--land")
         self.assertEqual(rc, 0, err)
         head = self.main_at_origin()
-        rc, _, err = self.dwork("new", "two", "--prompt", "open two", "--land")
+        rc, _, err = self.dwork("new", "two", "--prompt", "open two", "--slug", "two-row", "--land")
         self.assertEqual(rc, 1); self.assertIn("already landed", err)
         self.assertEqual(self.main_at_origin(), head, "nothing pushed")
+
+    def test_a_slug_line_lands_once_the_row_holds_it(self):
+        """#622 Decision 2: `state <id> <same state> --slug <s>` is not already landed until the row holds that slug,
+        and its subject says so; the same line again is."""
+        rc, _, err = self.dwork("state", "1", "open", "--slug", "one-row", "--land")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(git(self.origin, "log", "-1", "--format=%s", "main"), "ledger: #1 open (slug one-row)")
+        self.assertIn("slug: one-row", git(self.origin, "show", f"main:{INST}/d-work/rows/1.md"))
+        head = self.main_at_origin()
+        rc, _, err = self.dwork("state", "1", "open", "--slug", "one-row", "--land")
+        self.assertEqual(rc, 1); self.assertIn("already landed", err)
+        self.assertEqual(self.main_at_origin(), head)
 
     # ---- presence (#567): the acts that hand a unit a row touch that unit's own presence file, in the same land
     def seed_origin(self, files: dict):
@@ -192,7 +204,7 @@ class LandTests(unittest.TestCase):
 
     def test_a_new_row_with_no_owner_is_claimed_and_a_batch_plan_y_touches_once(self):
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "solo-cccccccc"}):
-            rc, out, err = self.dwork("new", "mine", "--prompt", "open mine", "--land")
+            rc, out, err = self.dwork("new", "mine", "--prompt", "open mine", "--slug", "mine-row", "--land")
             self.assertEqual(rc, 0, err)
             self.assertEqual(self.presence("solo-cccccccc")["rows"], "2", "no board entry: the flat case, the actor claims")
             rc, _, err = self.batch("state 1 planned -d 'Y plan' --said Y\n")

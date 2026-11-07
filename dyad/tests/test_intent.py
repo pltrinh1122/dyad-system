@@ -69,6 +69,16 @@ class MainTests(unittest.TestCase):
         self.assertRegex(out, r"\n  \d\.\d\d  #2 \[done, \d+d\] a reading of the operator prompt\n")
         self.assertNotIn("#3 ", out); self.assertNotIn("#1 [", out)
         self.assertIn("surface:", out)                                            # the live surface, read as data
+    def test_labels_under_dwork_slug_on(self):
+        """#622 Decision 4: the head line and each candidate row read `#<id>-<slug>` under `on`."""
+        d = self.root / "agent-corpus" / "d-work" / "rows"
+        for i, slug in ((1, "intent-reading"), (2, "operator-prompt")):
+            (d / f"{i}.md").write_text((d / f"{i}.md").read_text() + f"slug: {slug}\n")
+        with unittest.mock.patch.object(dyadlib, "slugs_on", lambda root=None: True):
+            rc, out, _ = self.run_("1")
+        self.assertEqual(rc, 0)
+        self.assertIn("intent candidates for #1-intent-reading intent reading before the plan", out)
+        self.assertRegex(out, r"\n  \d\.\d\d  #2-operator-prompt \[done, \d+d\] a reading of the operator prompt\n")
     def test_refuses_a_bad_form_or_an_unknown_row(self):
         self.assertEqual(self.run_()[0], 1); self.assertEqual(self.run_("x")[0], 1); self.assertEqual(self.run_("1", "2")[0], 1)
         rc, _, err = self.run_("77"); self.assertEqual(rc, 1); self.assertIn("no row 77", err)

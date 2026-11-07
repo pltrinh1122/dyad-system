@@ -150,6 +150,22 @@ class GuardTests(unittest.TestCase):
         self.assertIn("external gates (1): #5 external run 41331223332", text)
         self.assertIn("announce to (1): engineer-1537d8fb; seat table: counsel=session_015q", text)
 
+    def test_render_and_resume_print_labels_under_on(self):
+        """#622 Decision 4: board and resume label each entry's row id under `dwork-slug: on`; the stall block stays bare."""
+        (self.root / INST / "d-work" / "rows" / "7.md").write_text(ROW.format(id=7, state="open") + "slug: seven-row\n")
+        self.put("7", ENTRY)
+        self.put("_cos", "holder: program-aaaaaaaa\nwriter: h1\n")
+        now = datetime.datetime(2026, 11, 2, 14, tzinfo=datetime.timezone.utc)
+        with unittest.mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "h2", "DYAD_SESSION": "program-bbbbbbbb"}), \
+                unittest.mock.patch.object(dyadlib, "slugs_on", lambda root=None: True), \
+                unittest.mock.patch.object(bd, "stall_block", lambda root, cabinet: ["stalls (0, bare)"]):
+            lines = bd.board_lines(self.root, now)
+            res = "\n".join(bd.resume_lines(self.root))
+        self.assertTrue(lines[1].startswith("#7-seven-row open     waiting-on operator"), lines)
+        self.assertIn("\n#7-seven-row:\n", res); self.assertIn("  #7-seven-row since 2026-11-02T10:00Z:", res)
+        with unittest.mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "h2", "DYAD_SESSION": "program-bbbbbbbb"}):
+            self.assertTrue(bd.board_lines(self.root, now)[1].startswith("#7 open"))   # off: as before
+
     def test_resume_marks_a_terminal_rows_entry_stale_and_announces_every_owner(self):
         """#547: an entry whose row is done owes nothing; #551: every co-owner is announced to."""
         self.put("6", ENTRY)                                                   # row 6 is done: stale
@@ -769,6 +785,35 @@ class MachineTests(unittest.TestCase):
         with self.assertRaises(bd.Refused) as c:
             bd.question("done", [5], ents, rows, "separate")
         self.assertIn("not with-done", str(c.exception))
+
+    def test_a_labelled_question_reads_and_binds_by_number(self):
+        """#622 Decision 4: under `dwork-slug: on` every row id the question writes is `#<id>-<slug>` and no PR number
+        is; the readers of a stored question read the labels as numbers; the answer's entries stay bare."""
+        class SRow(Row):
+            def __init__(self, *a, slug="", **k):
+                super().__init__(*a, **k); self.slug = slug
+        rows = {5: SRow(5, "five", slug="row-slugs"), 6: SRow(6, "six"),
+                7: SRow(7, "seven", "open", "2026-11-04 Y plan (mandate #5)", "parent #5", slug="release-1.1.0"),
+                8: SRow(8, "eight", "open", "2026-11-04 Y plan (mandate #5)", "parent #5", slug="a-b")}
+        e = lambda prs: {"phase": bd.phase_render("done-asked", {"unit": ["u"], "pr": prs, "evidence": [EV]})}
+        ents = {5: e([f"650 at {H1}"]), 6: e([f"651 at {H2}"]), 7: e([]), 8: e([])}
+        self.assertEqual(bd.question("plan", [5, 6], ents, rows, "with-done", slugs=True), "Y/N: proceed with #5-row-slugs, #6 as planned?")
+        self.assertEqual(bd.question("intent", [5], ents, rows, None, True), "Y/N: intent aligned for #5-row-slugs five?")
+        one = bd.question("done", [5], ents, rows, "with-done", True)
+        self.assertEqual(one, "Y/N: Done with #5-row-slugs five (accreted #7-release-1.1.0, #8-a-b, merges PR #650)?")
+        both = bd.question("done", [5, 6], ents, rows, "with-done", True)
+        self.assertEqual(both, "Y/N: Done with #5-row-slugs five (accreted #7-release-1.1.0, #8-a-b), #6 six (merges PR #650, #651)?")
+        self.assertEqual(bd.question("done", [5], ents, rows, "with-done"), "Y/N: Done with #5 five (accreted #7, #8, merges PR #650)?")
+        for q, ids, acc in ((one, [5], [7, 8]), (both, [5, 6], [7, 8]),
+                            (bd.question("plan", [5, 6], ents, rows, "with-done", True), [5, 6], [])):
+            self.assertEqual((bd.ids_of(q), bd.accreted_in(q)), (ids, acc), q)
+        self.assertEqual(bd.merges_of(both), [650, 651])
+        got = bd.ledger_lines([5], {5: {**ents[5], "question": one}}, rows, "answered-Y", "/w", "with-done", slugs=True)
+        self.assertEqual(got[0], f"state 5 planned -d 'Y done (accreted #7, #8, merges PR #650 at {H1})' --said-file /w")
+        bare = bd.question("done", [5], ents, rows, "with-done")
+        with self.assertRaises(bd.Refused) as c:                                 # asked bare, answered under on: asked again
+            bd.ledger_lines([5], {5: {**ents[5], "question": bare}}, rows, "answered-Y", "/w", "with-done", slugs=True)
+        self.assertIn("ask again", str(c.exception))
 
     def test_relay_lines_for_every_row_of_the_table(self):
         import shlex
@@ -1740,6 +1785,18 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(bd.dod_sections("# P\n## Intent\na\n"), [])
         f = bd.fenced("a\n```\nb")
         self.assertEqual((f[0], f[-1], f[1:-1]), ("````", "````", [bd.QUOTE + "a", bd.QUOTE + "```", bd.QUOTE + "b"]))
+
+    def test_the_skeleton_labels_rows_under_on(self):
+        """#622 Decision 4: the draft's title line, its accreted table and its question carry the labels."""
+        for rid, slug in ((700, "the-machine"), (701, "child-one")):
+            p = self.repo / INST / "d-work" / "rows" / f"{rid}.md"; p.write_text(p.read_text() + f"slug: {slug}\n")
+        git(self.repo, *livetest.IDENTITY, "commit", "-qam", "ledger: slugs")
+        with unittest.mock.patch.object(dyadlib, "slugs_on", lambda root=None: True):
+            rc, out, err = self.draft("700")
+        self.assertEqual((rc, err), (0, ""), err)
+        self.assertTrue(out.startswith("# Done #700-the-machine the machine: skeleton\n"), out)
+        self.assertIn("| #701-child-one | open |", out)
+        self.assertTrue(out.rstrip().splitlines()[-1].startswith("Y/N: Done with #700-the-machine the machine (accreted #701-child-one, merges PR #651, #652)?"), out)
 
     def test_the_skeleton_of_a_done_ready_row(self):
         sha = self.store_block()

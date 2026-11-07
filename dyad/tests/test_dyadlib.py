@@ -465,6 +465,25 @@ class CheckInputsTests(unittest.TestCase):
         self.assertEqual(dyadlib.CHECK_INPUTS["sweep_ci"], (dyadlib.ABSENCE,))
         self.assertIn("a sweep not delivered", dyadlib.INPUT_TRIGGERS[dyadlib.ABSENCE][0])
 
+class SlugTests(unittest.TestCase):
+    """d-work #622 Decision 1 and 5: the row slug's form, and the preference that presents it."""
+    def test_slug_problem_accepts_and_refuses(self):
+        for ok in ("row-slugs", "release-intent-Y", "release-1.1.0", "macOS-host", "a-b-c-d"):
+            self.assertIsNone(dyadlib.slug_problem(ok), ok)
+        for bad in ("release", "1-x", "a--b", "a-b-c-d-e", "row_slugs", "-a-b", "a-b-", "a-" + "b" * 31):
+            self.assertTrue(dyadlib.slug_problem(bad), bad)
+        self.assertIn("over 32", dyadlib.slug_problem("a-" + "b" * 31))
+    def test_slugs_on_reads_the_preference_absent_off(self):
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, ignore_errors=True)
+        self.assertFalse(dyadlib.slugs_on(d))                             # no file: off
+        p = d / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True)
+        head = "| key | value | allowed | read by |\n|---|---|---|---|\n"
+        p.write_text(head + "| intent-reading | on | x | Rule-3 |\n")
+        self.assertFalse(dyadlib.slugs_on(d))                             # key absent: off
+        for v, want in (("on", True), ("off", False)):
+            p.write_text(head + f"| dwork-slug | {v} | `on` \\| `off` | Rule-3 |\n")
+            self.assertEqual(dyadlib.slugs_on(d), want, v)
+
 class InvariantTests(livetest.LiveCase):
     """crafts/syseng/rules/invariants.md: the protocol — INVARIANTS and TREE_INVARIANTS are data, check_invariants runs
     both sorted, an InvariantError names every false one; `enforce` runs the pure list at import (Rule-12 p1, #203)

@@ -99,11 +99,13 @@ def main(argv=None, root: Path | None = None) -> int:
     near_rows, near_items = candidates(query, rows.values(), texts,
                                        surface_items(surface.read_text()) if surface.is_file() else {}, rid)
     today = datetime.date.fromisoformat(dyadlib.utc_date())
-    print(f"intent candidates for #{rid} {rows[rid].title} (against its {'prompts' if prompts else 'title'}; "
+    on = dyadlib.slugs_on(root)                                        # #622: read once
+    lab = lambda i: dyadlib.row_label(i, rows, on)
+    print(f"intent candidates for {lab(rid)} {rows[rid].title} (against its {'prompts' if prompts else 'title'}; "
           f"top {INTENT_TOP}, no threshold: candidates to read, never a verdict)")
     print("rows:" if near_rows else "rows: none shares a token")
     for c, i in near_rows:
-        print(f"  {c:.2f}  #{i} [{rows[i].state}, {age(rows[i].opened, today)}] {rows[i].title}")
+        print(f"  {c:.2f}  {lab(i)} [{rows[i].state}, {age(rows[i].opened, today)}] {rows[i].title}")
     print("surface:" if near_items else "surface: none shares a token")
     for c, k in near_items:
         print(f"  {c:.2f}  {k}")

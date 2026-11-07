@@ -21,7 +21,7 @@ DWORK=<id> SAID=<file> dyad runbook run d-work authorize
 
 ## Open
 A row born `open` on the Operator's prompt (the machine's first birth): the row file and its provenance
-record, entry 1 the prompt verbatim. The postcondition is the birth's own idempotence — a row of this title
+record, entry 1 the prompt verbatim, and its row slug from `SLUG` (refused without one under `dwork-slug: on`, #622). The postcondition is the birth's own idempotence — a row of this title
 exists — so a repeat opens no duplicate; the undo removes the newest row and its record, the two files the
 command wrote:
 ```dyad-cmd
@@ -32,7 +32,7 @@ undo: I="${DYAD_INSTANCE:-agent-corpus}"; N="$(basename "$(ls -t "$I"/d-work/row
 postcondition: grep -lxF "title: ${TITLE:?row title}" "${DYAD_INSTANCE:-agent-corpus}"/d-work/rows/*.md | grep -q .
 scope: <instance>/d-work/rows/<new id>.md and <instance>/d-work/provenance/<new id>.md (two new files)
 
-dyad/bin/dyad dwork new "${TITLE:?row title}" "${REFS:-}" --prompt-file "${PROMPT:?prompt file}"
+dyad/bin/dyad dwork new "${TITLE:?row title}" "${REFS:-}" --prompt-file "${PROMPT:?prompt file}" ${SLUG:+--slug "$SLUG"}
 ```
 
 ## Plan
