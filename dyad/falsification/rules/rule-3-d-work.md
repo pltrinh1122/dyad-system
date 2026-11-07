@@ -1325,3 +1325,9 @@ This Rule's sentence changes with Rule-14's (Ledger names the automaton sweep an
 in `rule-14-system-infrastructure.md`, amendment #617.
 
 Disposition: see ledger #617.
+
+## Amendment — d-work #619 (2026-11-06: a sweep not delivered)
+This Rule's sentence changes with Rule-14's (Ledger's list of what the home reads gains a sweep not delivered). The claims, attacks and pairwise statements are recorded once,
+in `rule-14-system-infrastructure.md`, amendment #619.
+
+Disposition: see ledger #619.

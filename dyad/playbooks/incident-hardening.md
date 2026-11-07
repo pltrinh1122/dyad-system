@@ -44,7 +44,10 @@ The watermark is one line the index audit of phase 1 carries:
     **Ledger:** `<LEDGER>` · **covered through:** <n> rows, latest <YYYY-MM-DD>
 
 Survey derives the live row count and latest row date of `LEDGER` and compares them to the watermark
-of the most recent index audit naming that same `LEDGER`. Three outcomes, and only the third derives
+of the most recent index audit naming that same `LEDGER`. The decision is code's, not a reading: one function,
+`dyad/scripts/audits.py hardening [<ledger>]`, which the `survey` step calls with `LEDGER` and the automaton sweep's
+`sweep_audit` part calls with the default ledger after each landed merge, so a ledger grown past its watermark is told
+to the home as a `hardening` finding without anyone asking (#619). Three outcomes, and only the third derives
 anything new:
 - **No index audit names this ledger** — the first exercise on it: full derivation, phases 1 to 4.
 - **Live count equals the watermark** — a no-op for phases 1 to 3: the survey step prints both
@@ -76,7 +79,16 @@ secondary in that mode's own record (#116's own answer to this, carried forward 
 re-litigated).
 
 Output: an index audit in the instance's `audits/`, carrying the watermark line above, the population
-it read and the mode table; plus one record per mode holding that mode's definition — bounded against
+it read and the mode table, whose last three columns are stated so code can read them (#619):
+- `exit` — `1`, `2` or `3`, the exit of phase 4 the mode closed by, or `—` while it is open;
+- `fence row` — `#<id>`, the `backlog` row of exit 2, a ledger row, never a label; `—` for any other exit;
+- `fence` — for exit 1, one or more backticked tokens, each a `<path>`, a `<path>:<name>` (a top-level name the
+  file defines) or a guard's registry label; `—` for any other exit.
+
+The automaton sweep's `sweep_audit` part reads them after each landed merge: a `fence row` that names no ledger row,
+and a `fence` token that does not resolve — or an index with no `fence` column, so its closed modes' fences cannot be
+read — is a `hardening` finding, never silence on input it cannot read. It reads existence only; whether a named
+row was archived, and whether a fence still meets its incidents, is phase 4's reading. Plus one record per mode holding that mode's definition — bounded against
 the neighbouring modes it is most easily confused with, as #116's own records are — its incidents by
 date and d-work, the pattern across them, and one remediation candidate under attack (Rule-9). One
 child d-work per mode, `refs: parent #<id>` (Rule-3, Ledger): the parent's completion counter-prompt
@@ -116,10 +128,12 @@ across zones. A survivor the Operator declines stays a candidate, and is written
 record as declined, with the date.
 
 ## Phase 4 — Verify
-Re-group the rows logged since the last exercise (phase 1 over the delta), and test each shipped
-mitigation against the incidents it claimed: name the moment it fires, and state whether a fault of
-that shape presented at that moment would now meet it. Ungated by the survey, for the reason Phase 0
-gives.
+The `verify` step prints the guard registry and runs the automaton sweep on `main` (`dyad check --list; dyad automaton
+sweep`): its report carries every check, and the index's fence rows and fences resolved (phase 1), so no fence the
+code can find is looked for by eye (#619). **Kept, inference:** re-group the rows logged since the last exercise
+(phase 1 over the delta), and test each shipped mitigation against the incidents it claimed: name the moment it
+fires, and state whether a fault of that shape presented at that moment would now meet it. Ungated by the survey,
+for the reason Phase 0 gives.
 
 A mode closes by exactly one of three exits, and by no other means:
 1. **Fenced at a named moment** — a mechanical check that would catch a fault of the mode, named

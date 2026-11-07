@@ -71,17 +71,26 @@ manifest, split into a minimal pinned kernel and a library of replaceable adapte
    `Y done`'s evidence passed; the **automaton sweep** (`dyad automaton sweep`) runs after each landed merge, once
    per landed cut, the suite on `main` in the hosting's environment, every whole-store guard and drift, read-only,
    and its `--stores` mode runs the whole-store guards alone after each ledger push, in the automaton's job; each
-   posts one notice to the home's inbox only for what is new or failing (#564, #617). No clock starts it: each check
+   posts one notice to the home's inbox only for what is new or failing (#564, #617). The full sweep also runs the
+   audit's coded checks, its part `sweep_audit` — the audit watermark and fences, the Rules edited since the newest
+   Rule-5 sweep record, incident sizing and the hardening index, the newest audit record's lines, the levels file —
+   each a warning, never a failure, its counts `reading:` lines that are never posted; and run with no `--row` it
+   lands and posts nothing and prints the **report** — every check line, every finding `standing` or `new`, the
+   readings, the stall block, `checks-sha256` over the tree's own check lines and `report-sha256` over the whole text,
+   stored per checkout and never tracked — which the audit play-book reads in place of running those checks itself
+   (#619). No clock starts it: each check
    follows the activity that can change what it reads. Which activity that is, is the check-trigger criterion
    (`check-trigger`, a decision record of `dyad/dmc/`): a check reads one or more inputs and runs on the union of their triggers — the
    **code tree**, which only a merge changes, after each landed merge; the **ledger stores**, after each ledger push,
    by `--stores`; the **event store**, after each events-only push, by `--stores` too; **absence**, the time since an
-   event — heads not landed, a code push not corroborated, a stale board, work in flight, backlog hygiene — which
+   event — heads not landed, a code push not corroborated, a sweep not delivered, a stale board, work in flight,
+   backlog hygiene — which
    nothing changes, at the home's read in `dyad board resume` at each operator prompt (Rule-3 Ledger); and the
    **outside world** — the runner image, released assets, a mirror — at the next merge's sweep. The suite is split by
    the same reading: `suite`, the tests that read the code tree, after each landed merge, and `suite:live`, the
    tests that read the stores, in `--stores`. A registry label or sweep part the criterion's table does not class,
-   or an input with no delivered trigger, fails a test (#618). The
+   or an input with no delivered trigger, fails a test (#618), and so does a part classed with an input whose
+   trigger never calls it (#619). The
    pre-push hook is the only check run before a merge (local CI first, ledger #168). When the hosting is unreachable a ratified merge executes locally — `git merge
    --no-ff` of the branch into `main`, commit message citing the PR and the done-Y — and is
    pushed when the hosting returns; the plan gate and the fence read the local `main`, and
@@ -125,6 +134,9 @@ scheduled sweep becomes the automaton sweep 2026-11-06 (d-work #617): run after 
 the twice-daily schedule about seven hours late (#609); see the same record, amendment #617. Property 3 names the
 check-trigger criterion and its five inputs 2026-11-06 (d-work #618): #617 gave the code and the ledger their triggers,
 and the event store, which only events-only pushes change, had none but the next merge; see the same record, amendment
-#618.
+#618. Property 3 gives the full sweep the audit's coded checks and the no-`--row` report, names a sweep not delivered
+among the absences, and makes the test fail on a part its inputs' triggers never call 2026-11-06 (d-work #619): the
+audit's steps ran checks the automaton could run after every merge, and `sweep_ci` was classed with an input whose
+sweep never called it; see the same record, amendment #619.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/manifest.md, crafts/syseng/rules/imports.md).
