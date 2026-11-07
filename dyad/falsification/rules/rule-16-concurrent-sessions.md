@@ -464,3 +464,10 @@ Both serve Rule-3's intent question, under `intent-reading: on`.
 Rule's store. Others unchanged; the full statement is in `rule-3-d-work.md`, amendment #615. Coherent, orthogonal.
 
 Disposition: see ledger #615.
+
+## Amendment — d-work #622 (2026-11-07: the row slug field)
+This Rule's sentences change with Rule-3's (Store: the optional `slug` field, its form and its write-once rule;
+Enforcement: `rows.slug_problems`). The claims, attacks and pairwise statements are recorded once, in
+`rule-3-d-work.md`, amendment #622.
+
+Disposition: see ledger #622.

@@ -1331,3 +1331,62 @@ This Rule's sentence changes with Rule-14's (Ledger's list of what the home read
 in `rule-14-system-infrastructure.md`, amendment #619.
 
 Disposition: see ledger #619.
+
+## Amendment — d-work #622 (2026-11-07: the row slug)
+Claim (plan #622, the operator's intent-`Y` and plan-`Y`, batch #620,#622): under the preference `dwork-slug: on`
+(absent, `off`; the template ships `on`), every row id presented to the operator reads `#<id>-<slug>`, the row's row
+slug after its number: 2 to 4 hyphen-joined pieces, 2–3 tags the agent chooses from the row's title when the row
+opens, a defined term keeping its case, at most 32 characters, the first piece opening with a letter. It is an
+optional row field (Rule-16 Store), written at birth or once on a row that holds none, never changed or removed
+(`rows.slug_problems`); a terminal row never gains one. The slug is presentation only: a question binds the rows it
+names by their numbers, and every stored reference — `refs`, `disposed`, provenance, the inbox, a PR body's
+`d-work #<id>` — stays bare. The operator's words (provenance #622, entry 1): "d-work id should be presented along with
+2-3 tag slugs after then number, e.g. "#621-release-intent-Y"".
+
+The plan's attacks, as its falsification table states them:
+
+| # | claim | attack | result | survivor |
+|---|---|---|---|---|
+| F1 | A label after `#<id>` breaks no reader | grep every pattern that reads `#<n>`: `board.ids_of`, `check_phased`, `accreted_in`, `trace.ROW_ID`, `references._RANGE` and `_HASH`, `prs.CITE`, `inbox.PLANNED_NOTICE` | survives, scoped | all read `#(\d+)` with a boundary or a non-digit after it, except `accreted_in` (fixed) and `PLANNED_NOTICE` (the inbox stays bare, F18); the slug's first piece opens with a letter, so no label reads as a range |
+| F2 | A slug may be gained after birth | does any reader decide from it? | survives | no reader of `slug` but the label; authority is `disposed`, and a `Y` binds by number |
+| F3 | The writers keep the slug | read every `Row(…)` that rebuilds a row | refuted as written | three writers pass `r.mode` last and would drop it; `dataclasses.replace`, and a test for each |
+| F4 | The backfill lands as one batch | `land.already_landed` on `state <id> <same state>` | refuted as written | it answers "already open"; it now reads `--slug`, with a test |
+| F5 | A Done asked before the flip binds after it | `ledger_lines` compares the stored question with a fresh one | refuted | the home asks PR 2 when no entry is `done-asked`; otherwise the Done is re-asked (Rule-2 Binding); plan and intent compare ids only |
+| F6 | The term can be `slug` | grep the Agent Rules and the crafts | refuted | Rule-18 and syseng's naming use `<slug>` for a file name; the term is `row slug` |
+| F7 | An absent key reads `on`, the template value, as `intent-reading`'s does | an upgraded system with no key | refuted for `on` | its run-books and scripts would be refused at `dwork new`; absent reads `off`; both keys keep today's behaviour when absent |
+| F8 | The guard checks "2–3 tags" | `intent-Y` is one tag of two pieces | survives, scoped | the guard checks 2–4 pieces and 32 characters; the tag count is the agent's, read by you in the row's first question |
+| F9 | Slugs stay unique | two sessions open rows at once | survives, scoped | under `--land` a moved `main` rebuilds the `new`, and the refusal sees the first; without it a duplicate is possible and harmless to binding |
+| F10 | You can correct a bad slug | the slug never changes (item 2) | conceded | you read every backfill slug here, before the plan-`Y`; a new row's slug is fixed when it opens; a bad one costs only reading |
+| F11 | The stall block can carry labels | `finding_key` folds findings by text | refuted | labels would re-tell every standing finding once; the sweep's lines stay bare (Q4) |
+| F12 | #622 gets its own slug | the automaton closes it in the run that merges PR 1 | refuted | terminal before the backfill; it stays bare (A3) |
+| F13 | PR 2 may be based on `main` | `test_surface` S3 with an instance key the template lacks | refuted | #590's preferences PR failed so; PR 2 stacks on PR 1, as #708 did |
+| F14 | Labels keep `board resume` under its 5 s ceiling | it would read rows a second time | survives | `resume_view` reads the rows once in place of `row_states`; one preference read; the ceiling test stays |
+| F15 | `VERSION` 1.1.1 is right | `check_drift` after the 1.1.0 tag | survives | the first change under `dyad/` since the tag needs the working bump; the release sets 1.2.0 |
+| F16 | No overlap with work in flight | presence files and #620's draft | finding | none live; #620 touches `crafts/cabinet/` only |
+| F17 | The run-books still work under `on` | `dyad/runbooks/d-work.md` and `disposition-digest.md` call `dwork new` with no slug | refuted as written | both take `SLUG`; a missing one is the verb's refusal, naming `--slug` |
+| F18 | Inbox bodies can carry labels | `PLANNED_NOTICE` is `^row #(\d+) planned\b` | refuted | a label breaks it, so `handed_rows` would miss a planned notice; the inbox stays bare |
+| F19 | PR 2 can be pushed at any time | the plan gate refuses a branch commit citing a terminal row | survives, scoped | it is pushed in step 2, while #622 is open; the merge itself is on `main`, which the gate skips; a later rebase is refused, and only another preferences PR can force one |
+| F20 | PR 2's merge is silent | `merges.py` on a merge no `Y done` names | conceded | one warning, as #708 had; the `Y merge` entry's note keeps the `merge-disposition` warning silent |
+
+**Rule-6.** One term is added, `row slug` (owner Rule-3, used by 3 and 16). Rule-3 reads correctly: What a `Y` binds
+(the presentation and the binding by number) and Ledger (who chooses it and when). Rule-16 reads correctly: Store (the
+field and its form) and Enforcement (the write-once fence). The bare word `slug` stays the file-name word of Rule-18
+property 1 (`<d-work>-<hN>-<slug>.sh`) and of the syseng naming table; the term is `row slug` so the two never share a
+sense (F6).
+**Pairwise (Rule-5), Rule-3.** **3–1**: zones are untouched; a slug is a field of a row file in the agent zone.
+**3–2**: a `Y` still binds by number (Binding); the label is in the question's text and in no entry it writes, so the
+heads-unchanged and the batch rules read as before; a Done asked before the flip and answered after it is re-asked, as
+a moved head is (F5). **3–4, 3–5, 3–6**: the block and coherence are kept; one term added, defined once. **3–7**:
+provenance keeps the operator's words verbatim and stores no label. **3–8**: no host action. **3–9, 3–10**: the claim
+was falsified (the table) and framed with its counter in the plan. **3–11**: a new preference row and a new optional
+store field; surface rows S1–S3 name them; no release changes. **3–12**: the code carries its tests and invariants.
+**3–13, 3–14**: no import, no manifest row. **3–15**: the plan file is untouched; its title line stays bare. **3–16**:
+the field is Rule-16's to store and fence, the presentation Rule-3's. **3–18**: the file-name `<slug>` is unchanged (F6).
+**3–19**: no run-book event changes. **3–20**: a slug is no reference kind; `references._RANGE` needs `#` on both
+sides, which a slug never holds (F1).
+**Pairwise (Rule-5), Rule-16.** **16–1**: one zone. **16–2**: the fence's new clause is a guard of the store, binding
+nothing. **16–3**: Store holds the field, Rule-3 its use. **16–7**: the provenance store is unchanged and verbatim.
+**16–15**: the plan file is unchanged. **16–20**: a slug is a field, never a reference the register resolves. Others
+unchanged. Coherent, orthogonal.
+
+Disposition: see ledger #622.
