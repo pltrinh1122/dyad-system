@@ -258,6 +258,29 @@ own steps prescribe — the incident-hardening play-book's `backlog` row naming 
 asked again (Rule-3 Plan, the mandate scope; Ledger, the carried `backlog` row); each is listed in the completion
 evidence like any accreted row.
 
+Blocker home (#623; `dyad/dmc/blocker-home.jsonld`, beside `altitude`). A fault that stops a row's next act from
+outside the row's own diff is fixed in the cheapest home that still shows the operator what its judgment could change.
+The **blocked row** is the row whose next act the fault stops; a fault that only turns `main`'s own checks red has as
+its blocked row the open row whose work found it, and one no row's work found has none and is the home's promotion
+candidate. A fix is a **restore** when, after it, every Rule, record, check and test decides what its stated text
+already says: no stated text changes, and no check leaves the evidence block or the pre-push gate; anything else is a
+**change**, and a fix that cannot be told apart reads as one. In precedence order: an act Rule-2 never lets a `Y`
+carry is **its own question**, under the Rule that owns it; a cause in the blocked row's diff is **the row's own**, and
+`plan-departure` says whether that is a new plan; a fix already on `main` is **port the fix**, an execution detail;
+a fix another open row's plan describes or its PR holds is **ride another open row**, the two Dones asked in one batch
+and the blocked row's PR merged after, never by revising that row; a fix that adds what the system did not have, or
+that no row can carry or revise, is **its own row**, proposed and ordered first; a restore under a plan that states the
+class with its ceiling unspent is **a carried row**, born `open` under that plan-`Y` with its own plan file unasked;
+and every other fix is **a revision** of the blocked row's plan, one question — the default. A carried row's Done rides
+the blocked row's done-`Y` when it stops that row alone or only `main`'s own checks; joins the first Done question its
+landing holds when it stops another row too; and is asked alone and lands first when it stops every code push or
+every evidence run on `main`. Recurrence, zone and the unit that builds it move no outcome: the incident row names the
+recurrence, another zone is another PR, and a unit within its charter is execution detail. This step prescribes one
+class of row (Rule-3 Plan, the mandate scope); a plan carries it only by stating it, in one line, other carried rows
+added to the same line with the total last:
+
+    Mandate scope: the d-work play-book's blocker-fix row (a restore that stops this row from outside its diff); ceiling 1.
+
 What the home writes, and what it leaves to the records (#572). An act whose content a recorded line already decides
 is the automaton's or the code's, never an inferring unit's (the inventory: `agent-corpus/audits/2026-11-04-inference-map.md`).
 A plan that splits its work among units names each unit's part on one line, `parts: <unit>: <part>; <unit>: <part>`,

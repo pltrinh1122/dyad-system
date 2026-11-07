@@ -1390,3 +1390,50 @@ nothing. **16–3**: Store holds the field, Rule-3 its use. **16–7**: the prov
 unchanged. Coherent, orthogonal.
 
 Disposition: see ledger #622.
+
+## Amendment — d-work #623 (2026-11-07: the blocker home)
+Claim (plan #623): a fault that stops a row's next act from outside the row's own diff takes the home the decision
+record `dyad/dmc/blocker-home.jsonld` gives it, stated in the d-work play-book: its own question for an act Rule-2 never
+lets a `Y` carry; the row's own for a cause in the row's diff; port the fix when it is on `main`; ride another open row
+whose plan describes it or whose PR holds it; its own row for a fix that adds what the system did not have, or that no
+row can carry or revise; a carried row for a restore under a plan that states the blocker-fix class with its ceiling
+unspent; and a revision of the blocked row's plan otherwise, the default. A restore changes no stated text and moves no
+check out of the evidence block or the pre-push gate; anything else is a change. Rule-3 Incidents gains one bullet.
+
+| id | attack | result | survivor |
+|---|---|---|---|
+| F1 | Rule-2's never list: "any mutation the plan did not describe" | survives, scoped | a restore's end state is already stated and ratified, and the class names it decidably (escalate-edge T2), as #570 named its children by an unmet criterion; a change's is stated nowhere, so it is asked |
+| F2 | Rule-3 Scope; escalate-edge T5, "not the Agent's" | survives, scoped | Scope's route is a plan-`Y` naming the class; entry 1 is the plan-`Y`'s words; #589 and #603, found on cuts, were born so |
+| F3 | The play-book step alone carries the class | refuted | Rule-3 Plan wants the class in words with a number in the plan: each plan states one line; a plan without it carries none, and its restore costs a revision |
+| F4 | Restore or change is decidable (#622 revision 2: a classing text supported moving a test out of the evidence) | survives, scoped | judged against the stated text plus the coverage clause; undecidable reads as a change |
+| F5 | A fix that stops every push needs its own row | refuted | spread changes when the fix lands, not who judges it: one question to land first against three; none when it joins a Done already owed |
+| F6 | A recurrence needs the operator now | refuted as a gate | the incident-hardening exercise reads the incident row and the Done names the recurrence; conceded, a third occurrence may come first |
+| F7 | Another zone or unit needs a question | refuted | a second zone is a second PR (Rule-1); a unit within its charter is execution detail; a preference value and a host action still ask |
+| F8 | Riding the open row whose files the fix shares is cheapest | refuted | #622 revision 2 cost a question and tied #620's Done to #622's landing; shared files are a PR order |
+| F9 | A carried row whose Done rides leaves its parent askable | survives, scoped | Completion's `accreted` closes it with the parent's Done, as 70 rows closed; the parent sentence's letter is left as it is |
+| F10 | One carried blocker row per plan is enough | survives | none of the five cases met two; a second is asked, where two are a signal |
+| F11 | A carried row may edit a Rule (#589 edited Rule-1 under #570) | refuted for this class | a Rule edit changes stated text, so a revision; #589 was a criterion #570 named |
+| F12 | Rule-2 needs a sentence | refuted | its mandate clause already binds a play-book step's class of row, and the never list is unchanged |
+| F13 | The record saves questions on the week's five cases (#618 r3, #619 F16, #621, #622 r2, #529) | survives | nine under the draft threshold, two as practised, one once plans state the class |
+| F14 | The PR may be based on `main` before #722 lands | refuted, then moot | four shared files and the `VERSION` bump; #722 landed before the PR was built, so it is based on `main` |
+| F15 | Another session works these files | finding | #622's units, whose PR has landed; #620's files are under `crafts/cabinet/` |
+| F16 | The outcome names can be checked | survives | `agent/dmc` finds each name verbatim in the play-book paragraph |
+| F17 | A carried row's PR passes the plan gate | survives | `Y plan (mandate #<id>)` is a `Y plan` entry; #589's and #603's PRs passed |
+| F18 | Fewer questions means the operator sees less before it lands | survives, scoped | nothing lands before a Done names it (`merge-disposition: with-done`); what asks no question restores ratified text only; conceded, a wrong restore call is caught at the Done, after the work |
+
+**Rule-6.** No term is added. "Carried", "accreted row", "mandate scope" and "revision" read as defined or as plain
+words; the bullet uses no new term, and the record's outcome names are its own, never vocabulary terms.
+**Pairwise (Rule-5).** **3–1**: a fix in another zone is its own PR; the zones are unchanged. **3–2**: the class carries
+restores only, whose end state a ratified text already states, so it is a mutation the plan described; the never list
+is unchanged, and the mandate clause already binds a play-book step's class of row, so no Rule-2 sentence (F1, F12).
+**3–4, 3–5, 3–6**: the block keeps its counts; the bullet sits in Incidents, which owns what follows a fault; no term.
+**3–7**: a carried row's entry 1 is the plan-`Y`'s words, copied with the mandate note (property 4). **3–8**: a host
+action still goes to a question — a reversible one to a revision that names it, a destructive one to its own
+counter-prompt. **3–9, 3–10**: falsified above and framed with its counter in plan #623. **3–11**: no release changes,
+and a release stays its own question. **3–12**: the restore test keeps every check in the evidence block and the
+pre-push gate; a fix that moves one is a change. **3–13, 3–14**: no import, no manifest row; the kernel-only path is
+untouched. **3–15**: a carried row has its own plan file, unasked, as #589's did; the parent's base commit governs
+re-planning. **3–16**: `refs: parent #<id>` and the ceiling count are the store's as they stand. **3–18, 3–19**: no ops
+script or run-book changes. **3–20**: the record's paths resolve; no reference kind is added. Coherent, orthogonal.
+
+Disposition: see ledger #623.

@@ -1,0 +1,93 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/blocker-home",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "blocker-home",
+  "name": "Blocker home",
+  "description": "Where the fix of a fault that stops a row's next act from outside the row's own diff is worked: in the blocked row, on main, in another open row, in a row of its own, in a row the blocked row's plan carries, or in a revision of that plan. A fix is a restore when, after it, every Rule, record, check and test decides what its stated text already says, no stated text changes and no check leaves the evidence block or the pre-push gate; anything else, or a fix that cannot be told apart, is a change.",
+  "dyad:decides": "For a fault that stops a row's next act, which row carries its fix, and what does it cost the operator in questions?",
+  "dyad:inputs": [
+    "the blocked row: the row whose next act the fault stops; for a fault that only turns main's own checks red, the open row whose work found it; none for a fault no row's work found, which is the home's promotion candidate",
+    "whether the cause is in the blocked row's own diff",
+    "whether the fix is already on main",
+    "whether another open row's plan describes the fix, or its PR holds it",
+    "whether the fix is a restore or a change, or adds what the system did not have",
+    "whether the fix is an act Rule-2 never lets a Y carry",
+    "whether the blocked row's plan states the blocker-fix class with its ceiling unspent, and whether its done-Y is already recorded"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "never",
+      "name": "its own question",
+      "dyad:when": "the fix is an act Rule-2 never lets a Y carry",
+      "dyad:then": "asked under the Rule that owns it; the rest of the fix follows this record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "own-diff",
+      "name": "the row's own",
+      "dyad:when": "the cause is in the blocked row's own diff",
+      "dyad:then": "not downstream: the row fixes it, and dmc/plan-departure.jsonld says whether that is a new plan"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "port",
+      "name": "port the fix",
+      "dyad:when": "the fix is already on main",
+      "dyad:then": "the blocked row's branch takes main: an execution detail, reported in the completion evidence"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ride",
+      "name": "ride another open row",
+      "dyad:when": "another open row's plan describes the fix, or its PR holds it",
+      "dyad:then": "worked there as planned; the blocked row's Done is asked with that row's in one batch and its PR merged after; never by revising that row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "own-row",
+      "name": "its own row",
+      "dyad:when": "the fix adds what the system did not have (a verb, a store field, a preference, a Rule property), or no row can carry or revise it (the blocked row's done-Y is recorded, or no row's work found it)",
+      "dyad:then": "proposed, ordered first, the blocked row's board entry held on it; or the home names it in the next mandate of follow-ups"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "carried",
+      "name": "a carried row",
+      "dyad:when": "the fix is a restore, and the blocked row's plan states the blocker-fix class with its ceiling unspent",
+      "dyad:then": "born open under that plan-Y, its own plan file unasked; its Done rides the blocked row's done-Y when it stops that row alone or only main's own checks, joins the first Done question its landing holds when it stops another row too, and is asked alone and lands first when it stops every code push or every evidence run on main"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "revision",
+      "name": "a revision",
+      "dyad:when": "every other fix: a change, a reversible host action, or a restore the plan cannot carry (no class stated, ceiling spent)",
+      "dyad:then": "the blocked row's plan is revised to describe it, one question; the revision may carry it as a row, its Done as a carried row's"
+    }
+  ],
+  "dyad:precedence": "its own question first, for the act it names; then the row's own; then port the fix; then ride another open row; then its own row; then a carried row; then a revision. Recurrence, zone and the unit that builds the fix move no outcome.",
+  "dyad:default": "a revision: it shows the operator the fix before it is built, at one question.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
+    "rules/RULE-2-no-self-ratify.md",
+    "dmc/altitude.jsonld",
+    "dmc/plan-departure.jsonld",
+    "dmc/escalate-edge-test.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

@@ -349,6 +349,11 @@ a row as every prompt does (Scope).
   mechanism, and as a row of `agent-corpus/audits/INCIDENTS.md` (date, d-work, what, cause, consequence) when it
   falsifies neither — in the d-work's own PR, or for clerical work in the next agent-zone PR. A changed plan takes a
   fresh plan-`Y` before any further mutation (E9).
+- A fault that stops a row's next act from outside the row's own diff takes the home `dyad/dmc/blocker-home.jsonld`
+  gives it (the d-work play-book): a fix that only restores what a Rule, record, check or test already states is a row
+  the blocked row's plan carries when it states that class (Plan, Mandate scope), asked no plan question; a fix that
+  changes what one of them decides is a revision of the blocked row's plan; and a row of its own is proposed only for a
+  fix that adds what the system did not have, or that no open row can carry or revise (#623).
 - Under `concise-mode: on` the reply where it occurred is the completion reply, and the record is written during the
   turn, before that reply, so an interrupted turn loses narration, never the record.
 - Periodically the log is worked whole by the incident-hardening play-book (`dyad/playbooks/incident-hardening.md`),
@@ -384,6 +389,8 @@ stall findings left the twice-daily sweep for the home's read; see
 a sweep not delivered 2026-11-06 (d-work #619); see the same record, amendment #619. What a `Y` binds and Ledger gain
 the row slug 2026-11-07 (d-work #622), under the preference `dwork-slug`: the operator asked that a row id be presented
 with two or three tags after its number, so a row is known by more than a number; the question still binds by the
-number; see `../falsification/rules/rule-3-d-work.md`, amendment #622.
+number; see `../falsification/rules/rule-3-d-work.md`, amendment #622. Incidents gains the blocker home 2026-11-07 (d-work
+#623): a fault found downstream had been fixed under three homes in one week at up to three questions each, with nothing
+to say which; see the same record, amendment #623.
 
 Set: System Requirements.
