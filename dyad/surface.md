@@ -192,6 +192,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | audit-watermark | frozen |
 | backlog-hygiene | frozen |
 | batch-engagement | frozen |
+| blocker-home | frozen |
 | board-lines | frozen |
 | bundle-row | frozen |
 | bundled-craft | frozen |
