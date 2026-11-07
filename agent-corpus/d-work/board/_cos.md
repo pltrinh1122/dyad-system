@@ -1,5 +1,5 @@
 holder: program-59cec502
-queue: merge question 1 (PR #723, asked), plan-ready 1 (#623, next), done-ready 0 (#620 waits on counsel's merge of main)
+queue: done-ready 1 (#620, asked), merge question 1 (PR #723, asked earlier), plan-ready 1 (#623)
 seats: program-59cec502 (home) session_01UoUfkv1ZaUxNrtSqzmFq8r; engineer-1537d8fb session_018LuBfpYuG9HbEb1FaoRG6F; counsel-0032b4c0 session_015qiPLUWuR62FevvexFfQCY; distribute-a603e150 session_0169uQg7HXf2YJowR5n9HfHa; operate-8cce8b10 session_01FPpGh2n6mVra7qZz5r7s5a; audit-e73be78c session_012QnW5JfMAzhBz58nx1tSW7; orchestrate-d688fecf session_01J9bJr6HzyatSpbCnQpYEGW; communicate-17f24597 session_01J9bJr45vegHU9tt315RQ2V (paired)
 since: 2026-11-02T16:01Z
 question: Y/N: merge PR #723 at e33a0f13a6c78fe1ebb97d545ed78ca9bedddc28?
