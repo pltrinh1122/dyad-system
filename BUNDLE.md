@@ -44,15 +44,15 @@ only some components pins them individually by their own crafts' tags (`dyad-ope
 - The `released` health reads each Release from the hosting without a token, and can report "not read" under the
   hosting's rate limit.
 
-version: 1.1.0
+version: 1.2.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 1.1.0 |
+| dyad-operator | 1.2.0 |
 | sysarch | 0.4.0 |
-| syseng | 0.7.0 |
+| syseng | 0.8.0 |
 | sysadmin | 0.3.2 |
-| cabinet | 0.5.1 |
+| cabinet | 0.6.0 |
 | chronicle | 0.3.0 |
 
 `disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
