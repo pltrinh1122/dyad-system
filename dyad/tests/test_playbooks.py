@@ -104,10 +104,7 @@ class AuditPlaybookTests(unittest.TestCase):
     def test_playbook_sections_and_watermark(self):
         text = AUDIT_PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Trigger", "Phase 0 \u2014 Survey (the idempotence gate)", "Phase 1 \u2014 Regression (in the report)",
-                                 "Phase 2 \u2014 Fences (ungated)", "Phase 3 \u2014 Drift (detect only)", "Phase 3b \u2014 Incidents",
-                                 "Phase 4 \u2014 Record", "Conduct",
-                                 "The self-diagnostic \u2014 four levels, coded checks before prose claims"])   # #381: the countersign craft's self-diagnostic, carried here
+        self.assertEqual(heads, ["Trigger", "Steps", "Question", "Evidence", "The self-diagnostic"])   # #626 C2: the cited form
         self.assertIn("dyad/runbooks/audit.md", text)
         self.assertIn("dyad/runbooks/self-diagnostic.md", text)
         self.assertIn("self-diagnostic", rb.core_runbooks(PKG.parent))   # its steps are a core run-book, checked with its own section set
@@ -116,7 +113,7 @@ class AuditPlaybookTests(unittest.TestCase):
         self.assertIn("dyad automaton sweep", text)
         for s in AUDIT_STEPS:
             self.assertIn(f"`{s}`", text, s)
-        inc = text.split("## Phase 3b", 1)[1].split("## Phase 4", 1)[0]       # one owner per concern: hardening classifies, the audit does not
+        inc = text.split("### Phase 3b", 1)[1].split("### Phase 4", 1)[0]       # one owner per concern: hardening classifies, the audit does not
         self.assertIn("incident-hardening", inc); self.assertIn("Does not classify", inc)
     def test_runbook_parses_into_the_steps_all_read_only(self):
         text = AUDIT_RUNBOOK.read_text()
