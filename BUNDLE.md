@@ -9,26 +9,29 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
-## Release notes (1.1.0)
+## Release notes (1.2.0)
 
-- **Intent reading (#615).** Under the new preference `intent-reading: on`, a prompt that opens a row is first
-  answered by an intent reading. Each portion of the prompt is classed against the candidates `dyad dwork intent`
-  prints. The reading is asked as `Y/N: intent aligned for #<id> <title>?` before any plan, and a bare `N` archives
-  the row. The preference ships `off`.
-- **Release timing (#616).** A decision criterion, `dyad/dmc/release-timing.jsonld`, says when a critical fix is
-  released: fix first, cut now, fold into a minor, or hold.
-- **The automaton sweep (#617).** The twice-daily scheduled sweep is gone, and with it 1.0.0's known limitation. The
-  full sweep runs after each landed merge, and `dyad automaton sweep --stores` runs the whole-store guards after each
-  ledger push. What waits on time, such as heads not landed, is read by the home in `dyad board resume`.
-- **Check triggers (#618).** A decision criterion, `check-trigger`, maps each sweep check to the activity that changes
-  what it reads. A test fails a check that no trigger runs.
-- **The audit report (#619).** `dyad automaton sweep` with no `--row` prints the audit's coded checks as one report,
-  with `checks-sha256` and `report-sha256`. The audit play-books read it instead of running those checks again. The
-  home's read also reports a sweep that was not delivered.
-- **Fix (#621).** After a release's cut, a ledger-only or events-only push no longer waits for the release tag. In
-  1.0.0 the pre-push gate refused them, the release-ready lines included, until the tag existed.
+- **Row slugs (#622).** Under the preference `dwork-slug: on` (shipped `on`), a row id is shown as `#<id>-<slug>`, with
+  two or three tags after the number. Stored references stay the bare number.
+- **Backlog grooming (#625).** A play-book, `dyad/playbooks/backlog-groom.md`, grooms the whole backlog in one pass:
+  hygiene, retirement, sizing, promotion and a forward release plan. Its one command is `dyad board groom`.
+- **Decision criteria in records (#626, #641).** Play-books and run-books cite their criteria as `dmc:<id>`
+  records. 15 core records once judged by inference are now decided by code, and their tests pin every outcome.
+- **Internal realization (#643).** Rule-3's execution detail admits three changes whose effect stays inside a PR:
+  placement, implied means and compatible extension.
+- **Precedent (#642, #644, #645).** A decision kind, `precedent`, is decided by code from past rulings the operator
+  admitted, and abstains when unsure. The decision log (`<instance>/d-work/decisions/`) and the precedent question,
+  `Y/N: admit as precedents …?`, admit them. The play-book `precedent-bootstrap` and `dyad precedent
+  prompt|score|gate|agreement` fill an upgrading instance's store from its own ledger, with the admission check run
+  before the question.
+- **Awaiting you (#646).** Every reply's closing line counts the questions the operator has been asked and not
+  answered, in a d-work group and a merge group, by the record `dmc:disposition-request`. `dyad board` generates it.
+  The preference is `awaiting-you: on|off`, and an absent key reads `on`.
+- **cabinet 0.6.0 (#620, #640).** Session tidy ships as the craft's play-book, run-book and script. The unit-lifecycle
+  criterion counts dyad units.
+- **syseng 0.8.0 (#640).** The naming guard admits a craft's `playbooks/` and `runbooks/`.
 
-## Known limitations (1.1.0)
+## Known limitations (1.2.0)
 
 - Between a release's cut and its tag, a push that changes code, and `dyad check --evidence`, are refused for the
   missing core tag. Both pass once the publishing run, after the operator's approval, has made the tag.
@@ -36,23 +39,26 @@ only some components pins them individually by their own crafts' tags (`dyad-ope
   `dyad board set` after the flip.
 - The stores sweep can tell a standing warning as new when it carries a count that grows with the ledger. It costs
   one extra notice; nothing fails.
-- The sweep's mirror check does not run: `dyad-sweep.yml` sets no `MIRROR`, so a mirror branch behind `main` is not
-  reported.
+- The sweep's mirror check does not run: `dyad-sweep.yml` sets no `MIRROR`.
 - The GitHub Release's text is a fixed one-line template. These notes are in `BUNDLE.md`.
 - Under `intent-reading: on`, the intent reading's plan file needs a `Base commit:` line before it is pushed. The
   plans guard refuses a plan file without one.
 - The `released` health reads each Release from the hosting without a token, and can report "not read" under the
   hosting's rate limit.
+- `dyad precedent prompt` sends no record whose outcomes are an operator's acts, so such records gain no precedents.
+  `agreement` measures sets under 20 cases at max_df 0.5, and no record yet carries a bar, so none converts.
+- An instance whose preference table predates 1.2.0 gets a warning that `awaiting-you` has no row, until its table
+  is next edited. Its absent key reads `on` either way.
 
-version: 1.1.0
+version: 1.2.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 1.1.0 |
+| dyad-operator | 1.2.0 |
 | sysarch | 0.4.0 |
-| syseng | 0.7.0 |
+| syseng | 0.8.0 |
 | sysadmin | 0.3.2 |
-| cabinet | 0.5.1 |
+| cabinet | 0.6.0 |
 | chronicle | 0.3.0 |
 
 `disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
