@@ -43,10 +43,13 @@
   ],
   "dyad:default": "No verdict without a second trace: a bucket that leads across several traces is a claim about the system, falsified before any plan encodes it.",
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/trace.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/dwork-trace.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "scripts/trace.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "playbooks/dwork-trace.md"
+  ]
 }

@@ -35,10 +35,13 @@
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/rows.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-3-d-work.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "guards/agent/rows.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ]
 }

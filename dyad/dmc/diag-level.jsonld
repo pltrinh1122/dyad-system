@@ -50,12 +50,13 @@
   ],
   "dyad:precedence": "coded before prose and unit before system: L1, L2, L3, L4; each level gates the next; the invariant pass sits at the head of L3, as the unit-scope fact its reading rests on",
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/levels.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/audit.md",
+  "dyad:home": "scripts/levels.py",
   "dyad:alsoIn": [
+    "playbooks/audit.md",
     "rules/RULE-12-verifiable-code.md"
   ],
   "dyad:owner": "Rule-12"

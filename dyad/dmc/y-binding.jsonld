@@ -12,7 +12,7 @@
   ],
   "identifier": "y-binding",
   "name": "What a Y binds",
-  "description": "Decides whether a given Y still authorizes the act about to be executed.",
+  "description": "Decides whether a given Y still authorizes the act about to be executed. Code decides it for a PR's merge (merge.py); for any other named action the question's words are read, by inference.",
   "dyad:decides": "Does this Y authorize this act?",
   "dyad:inputs": [
     "the question the Y answered",
@@ -43,12 +43,13 @@
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/merge.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:home": "scripts/merge.py",
   "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md",
     "rules/RULE-3-d-work.md"
   ],
   "dyad:owner": "Rule-2"

@@ -22,28 +22,28 @@
       "@type": "DefinedTerm",
       "termCode": "y",
       "name": "Y",
-      "dyad:when": "the disposition asked for is given",
+      "dyad:when": "the disposition asked for is given: Y, y or yes as the first word (dmc:label-case)",
       "dyad:then": "bound as Rule-2's Binding binds it; a Y with text is also a prompt"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "n-bare",
       "name": "bare",
-      "dyad:when": "N with no text, to any question but the intent question",
+      "dyad:when": "N with no text (N, n or no, dmc:label-case), to any question but the intent question",
       "dyad:then": "nothing is authorized; the Agent revises"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "n-bare-intent",
       "name": "intent question",
-      "dyad:when": "N with no text to the intent question",
+      "dyad:when": "N with no text (N, n or no, dmc:label-case) to the intent question",
       "dyad:then": "the row is archived: nothing was built, so there is nothing to revise from (Rule-3, Answer grammar)"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "amend",
       "name": "amend",
-      "dyad:when": "N with text",
+      "dyad:when": "N with text: N, n or no as the first word (dmc:label-case), more words after it",
       "dyad:then": "the proposal is refused and its revision asked for; the text is a prompt entry"
     },
     {
@@ -55,10 +55,14 @@
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/dyadlib.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-3-d-work.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "scripts/dyadlib.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:default": "a reply whose first word is none of the tokens is unclassed: two readings may lead to different acts, so the agent asks, as a blocking question (Rule-3, Answer grammar)"
 }
