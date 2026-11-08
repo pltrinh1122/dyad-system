@@ -1,7 +1,7 @@
 session: program-59cec502
-seen: 2026-11-08T18:34:51+00:00
+seen: 2026-11-08T18:37:14+00:00
 root: /home/user/dyad-system
-rows: 644
+rows: 644 645
 files: agent-corpus/d-work/ agent-corpus/dmc/precedents/ dyad/dmc/precedent-admission.jsonld dyad/rules/RULE-16-concurrent-sessions.md dyad/rules/RULE-3-d-work.md dyad/tests/guards/agent/test_dmc.py
 writer: 59cec502-8c78-5e74-ae6a-66a4f0271c17
 host: cloud linux x86_64
