@@ -312,6 +312,9 @@ def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None 
             msgs.append(f"{where}: no row #{name} (Rule-20: an unresolved reference)")
         elif state in dyadlib.TERMINAL_STATES:
             msgs.append(f"warning: {where}: row #{name} is {state}; a stale entry — `dyad board set {name} --drop`")
+        elif (q := unclassed_question(fields)):
+            msgs.append(f"warning: {where}: its question {q[:60]!r} is a `Y/N:` of no form dmc:disposition-request lists, "
+                        f"so Awaiting you counts nothing for it (#646)")
     if "phase" in fields and not is_cos(name):
         msgs += check_phased(name, fields, rows)
     return msgs
@@ -715,20 +718,45 @@ def queue_line(q: dict[str, list[int]]) -> str:
 
 # ---- the closing line (d-work #646): the questions the operator owes, read from the questions the board records
 CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "awaiting-you", ("on", "off"), "on"   # plan #646 revision 2
-ASKED_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
-ASKED_FORMS = (("Y/N: admit as precedents", "precedent"), ("Y/N: release ", "release"), ("Y/N: run ", "destructive"))
-AWAITING_KINDS = ("intent", "plan", "done", "precedent", "release", "destructive")
+# dmc:disposition-request (#646 revision 3): what kind of request for the operator's disposition a recorded question is,
+# the phase over the form, `none` the default; the outcome names and groups are the record's
+REQUEST_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
+REQUEST_FORMS = (("Y/N: archive", "retirement"), ("Y/N: admit as precedents", "precedent"), ("Y/N: merge", "merge"),
+                 ("Y/N: release", "release"), ("Y/N: run", "destructive"))
+REQUEST_GROUPS = (("d-work", ("intent", "plan", "done", "retirement", "precedent")),
+                  ("merge", ("merge", "release", "destructive")))
+REQUEST_NONE = "none"
+AWAITING_KINDS = tuple(k for _, ks in REQUEST_GROUPS for k in ks)
+PR_REF = re.compile(r"\bPR #(\d+)")
+
+
+def disposition_request(phase: str | None, question: str | None) -> str:
+    """dmc:disposition-request (#646): the kind of request a board entry records. A phased entry is classed by its phase
+    alone (intent-asked → intent, plan-asked → plan, done-asked → done, any other phase → none); an unphased one by the
+    form its stored question's last line opens (`Y/N: archive` → retirement, `Y/N: admit as precedents` → precedent,
+    `Y/N: merge` → merge, `Y/N: release` → release, `Y/N: run` → destructive); `none` otherwise, which counts nothing.
+    `waiting-on` is never an input: a wait with no question owes no answer (#503)."""
+    if phase:
+        return REQUEST_PHASES.get(phase, REQUEST_NONE)
+    lines = (question or "").strip().splitlines()
+    last = lines[-1].strip() if lines else ""
+    return next((kind for form, kind in REQUEST_FORMS if re.match(rf"{re.escape(form)}(?![\w-])", last)), REQUEST_NONE)
 
 
 def asked_kind(f: dict[str, str]) -> str | None:
-    """The kind of question a live entry records as asked and not answered: its phase's when phased (`intent-asked`,
-    `plan-asked`, `done-asked`), else the open `Y/N:` form of its stored question's last line (a precedent, a release, a
-    destructive host action); None otherwise. `waiting-on` is never read: a wait with no question owes no answer (#503)."""
+    """The disposition request a live entry records (`disposition_request` over its phase and question), None for none."""
+    kind = disposition_request(phase_name(f) if f.get("phase") else None, f.get("question"))
+    return None if kind == REQUEST_NONE else kind
+
+
+def unclassed_question(f: dict[str, str]) -> str | None:
+    """The last line of an unphased entry's question when it is a `Y/N:` question of no listed form: the record's default,
+    which counts nothing and so is a warning (a question the operator owes that `Awaiting you` cannot count)."""
     if f.get("phase"):
-        return ASKED_PHASES.get(phase_name(f))
-    q = (f.get("question") or "").strip().splitlines()
-    last = q[-1].strip() if q else ""
-    return next((kind for form, kind in ASKED_FORMS if last.startswith(form)), None)
+        return None
+    lines = (f.get("question") or "").strip().splitlines()
+    last = lines[-1].strip() if lines else ""
+    return last if last.startswith("Y/N:") and asked_kind(f) is None else None
 
 
 def awaiting(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
@@ -768,18 +796,30 @@ def intent_ready(root: Path, got: list[tuple[str, dict[str, str]]] | None = None
 
 
 def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
-    """`Awaiting you: <n> <kind> (#id…), …` (or `Awaiting you: nothing.`), then `Coming: <n> <kind>, …` from the derived
-    queue, intent-ready included under `intent-reading: on`; each part only when it is non-zero (#646)."""
+    """`Awaiting you: d-work <n> <kind> (#id…), …; merge <n> (PR #…), <n> release (#id…), ….` — the questions asked and
+    not answered by dmc:disposition-request's groups, d-work first, each group and kind only when non-zero, a kind named
+    after its count unless it is the group's own name, a merge counted by the PR numbers its questions name — or
+    `Awaiting you: nothing.`; then ` Coming: <n> <kind>, ….` from the derived queue, intent-ready included under
+    `intent-reading: on` (#646)."""
     got = load(root) if got is None else got
     rows = {r.id: r for r in dyadlib.read_rows(root)}
     on = dyadlib.slugs_on(root)
     L = lambda i: dyadlib.row_label(i, rows, on)
-    by: dict[str, list[list[int]]] = {}
-    for kind, _, ids in awaiting(root, got, cabinet):
-        by.setdefault(kind, []).append(ids)
-    parts = [f"{len(qs)} {kind} ({' '.join(L(i) for i in sorted({i for ids in qs for i in ids}))})"
-             for kind in AWAITING_KINDS if (qs := by.get(kind))]
-    line = "Awaiting you: " + (", ".join(parts) if parts else "nothing") + "."
+    by: dict[str, list[tuple[str, list[int]]]] = {}
+    for kind, q, ids in awaiting(root, got, cabinet):
+        by.setdefault(kind, []).append((q, ids))
+    groups = []
+    for group, kinds in REQUEST_GROUPS:
+        items = []
+        for kind in kinds:
+            if not (qs := by.get(kind)):
+                continue
+            prs = sorted({int(p) for q, _ in qs for p in PR_REF.findall(q)}) if kind == "merge" else []
+            refs = " ".join(f"PR #{p}" for p in prs) if prs else " ".join(L(i) for i in sorted({i for _, ids in qs for i in ids}))
+            items.append(f"{len(qs)}{'' if kind == group else ' ' + kind} ({refs})")
+        if items:
+            groups.append(f"{group} " + ", ".join(items))
+    line = "Awaiting you: " + ("; ".join(groups) if groups else "nothing") + "."
     q = derived_queue(root, got, cabinet)
     if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
         filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
@@ -2019,13 +2059,17 @@ INVARIANTS += [   # #587: the machine's derived fields (crafts/syseng/rules/inva
     ("relays-name-known-events", lambda: all(e in dyadlib.ORCH_EVENT_NAMES and (t in dyadlib.ORCH_PHASES or t in (dyadlib.ORCH_DROP, dyadlib.ORCH_FROM)) for e, t in RELAYS)),
 ]
 INVARIANTS += [   # #646: the closing line reads the questions recorded, never the wait (crafts/syseng/rules/invariants.md)
-    ("asked-kind-reads-the-phase-or-the-form", lambda: asked_kind({"phase": "done-asked"}) == "done"
-                                                   and asked_kind({"question": "x\nY/N: admit as precedents 3 cases?"}) == "precedent"
-                                                   and asked_kind({"question": "Y/N: run rm -rf x?"}) == "destructive"
-                                                   and asked_kind({"waiting-on": "operator"}) is None),
-    ("closing-default-is-a-value", lambda: CLOSING_DEFAULT in CLOSING_VALUES and set(ASKED_PHASES.values()) <= set(AWAITING_KINDS)),
+    ("disposition-request-phase-over-form", lambda: disposition_request("done-asked", "Y/N: merge PR #1?") == "done"
+                                                    and disposition_request("building", "Y/N: merge PR #1?") == "none"
+                                                    and disposition_request(None, "x\nY/N: admit as precedents 3?") == "precedent"
+                                                    and disposition_request(None, "Y/N: runner?") == "none"
+                                                    and disposition_request(None, None) == "none"),
+    ("closing-default-is-a-value", lambda: CLOSING_DEFAULT in CLOSING_VALUES and set(REQUEST_PHASES.values()) <= set(AWAITING_KINDS)
+                                           and {k for _, k in REQUEST_FORMS} <= set(AWAITING_KINDS)),
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)
+    ("kinds-are-dmc-disposition-request", lambda: {o["termCode"] for o in __import__("json").loads(
+        (dyadlib.PKG / "dmc" / "disposition-request.jsonld").read_text())["hasDefinedTerm"]} == set(AWAITING_KINDS) | {REQUEST_NONE}),
     ("hp-tail-is-the-seat-keys", lambda: all((sessions()._seat_key(v) == v) == (not HP_TAIL.search(v))
                                              for v in (SOLO, "program-bob", "program-aaaaaaaa", "program-bob-cccccccc", "program-1234567"))),
     ("relays-are-information", lambda: not any(inbox().DISPOSITION.search(relay_body(587, e, t if t != dyadlib.ORCH_FROM else "plan-ready",

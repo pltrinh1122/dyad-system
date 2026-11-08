@@ -1,0 +1,100 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/disposition-request",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "disposition-request",
+  "name": "Disposition request",
+  "description": "Which kind of request for the operator's disposition a question the board records is.",
+  "dyad:decides": "What kind of request for the operator's disposition is this recorded question?",
+  "dyad:inputs": [
+    "the board entry's orchestration phase",
+    "the last line of its stored question"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "intent",
+      "name": "intent",
+      "dyad:when": "the entry is phased intent-asked",
+      "dyad:then": "counted in the d-work group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "plan",
+      "name": "plan",
+      "dyad:when": "the entry is phased plan-asked",
+      "dyad:then": "counted in the d-work group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "done",
+      "name": "done",
+      "dyad:when": "the entry is phased done-asked",
+      "dyad:then": "counted in the d-work group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "retirement",
+      "name": "retirement",
+      "dyad:when": "an unphased entry's question opens `Y/N: archive`, the retirement form",
+      "dyad:then": "counted in the d-work group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "precedent",
+      "name": "precedent",
+      "dyad:when": "an unphased entry's question opens `Y/N: admit as precedents`",
+      "dyad:then": "counted in the d-work group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "merge",
+      "name": "merge",
+      "dyad:when": "an unphased entry's question opens `Y/N: merge`, a merge asked as its own question",
+      "dyad:then": "counted in the merge group of Awaiting you, by the PR numbers it names"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "release",
+      "name": "release",
+      "dyad:when": "an unphased entry's question opens `Y/N: release`",
+      "dyad:then": "counted in the merge group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "destructive",
+      "name": "destructive",
+      "dyad:when": "an unphased entry's question opens `Y/N: run`, a destructive host action's own question",
+      "dyad:then": "counted in the merge group of Awaiting you"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "none",
+      "name": "none",
+      "dyad:when": "no phase above, and the question opens no listed form, or there is no question",
+      "dyad:then": "counts nothing; a `Y/N:` question of no listed form is a guard warning"
+    }
+  ],
+  "dyad:precedence": "the phase over the form: a phased entry is classed by its phase alone",
+  "dyad:default": "none",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/board.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md",
+    "rules/RULE-8-host-mutation.md",
+    "rules/RULE-11-distribution-structure.md"
+  ]
+}

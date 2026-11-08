@@ -224,6 +224,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | diag-result | frozen |
 | direct-commit-class | frozen |
 | disposition-budget | frozen |
+| disposition-request | frozen |
 | done-order | frozen |
 | dwork-input-kind | frozen |
 | dwork-state | frozen |
