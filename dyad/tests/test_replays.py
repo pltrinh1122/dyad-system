@@ -258,7 +258,8 @@ class Replays(unittest.TestCase):
         self.assertEqual((bd.phase_name(f), f["waiting-on"]), ("done-ready", f"unit {HOME}"))
         self.assertTrue(f["next"].startswith("ask the Done question"))
         rc, out, _ = self.board_cli()
-        self.assertIn("done-ready 1 (#569)", out)
+        self.assertIn("Coming: 1 done-ready.", out)                       # #646: the closing line, awaiting-you on
+        self.assertEqual(bd.derived_queue(self.w.seat)["done-ready"], [569])
         self.assertEqual([l for l in self.sweep(3) if "W11" in l], [])
         self.assertEqual(dyadlib.tunable("inflight-done-ready-hours", self.w.seat), 4)
         self.assertEqual(len([l for l in self.sweep(13) if "W11 phase age: row #569 in done-ready" in l]), 1)

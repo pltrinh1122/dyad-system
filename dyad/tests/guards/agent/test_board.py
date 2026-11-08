@@ -157,7 +157,7 @@ class GuardTests(unittest.TestCase):
         self.assertTrue(lines[3].startswith("#5 planned  waiting-on external run 41331223332 for 2h"), lines)
         self.assertIn("    question: Y/N: approve the release run?", lines)
         self.assertIn("_cos queue: plan 0, done 1", lines)
-        self.assertIn("queue (derived, #572): plan-ready 0, done-ready 0", lines)
+        self.assertIn("Awaiting you: nothing.", lines)                    # #646: the closing line, `awaiting-you: on` by default
         self.assertIn("0 open, planned or blocked row(s) carry no board entry", lines)
         self.assertTrue(any(l.startswith("warn: board/5.md was last written by h1, not this session (h2)") for l in lines), lines)
         text = "\n".join(res)
@@ -328,11 +328,12 @@ def prefs(root: Path, org: str = "m4") -> None:
 
 
 # The exact lines the pre-#594 board.py (origin/587-automaton, 7244db36) printed for the zero-migration fixture,
-# captured once by running that file on it: the DoD's before, which the patched code must still print (#594).
+# captured once by running that file on it: the DoD's before, which the patched code must still print (#594). Its count
+# line is the closing line, `Awaiting you` since #646 revision 2 made `awaiting-you: on` the default (the queue line before).
 PRE_594_RESUME = [
     "resume: this session program-59cec502 (writer h9); the board's holder program-aaaaaaaa, last written by h1",
     'inbox program-59cec502: 0 unread — `dyad inbox read` before any other act',
-    'queue (derived, #572): plan-ready 0, done-ready 0',
+    'Awaiting you: nothing.',
     '_cos:',
     '  holder: program-aaaaaaaa',
     '  seats: counsel-11111111 s1',
@@ -375,7 +376,7 @@ PRE_594_BOARD = [
     '#5 planned  waiting-on operator for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 5',
     '    question: Y/N: approve the release run?',
     '#8 planned  waiting-on external run 41 for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 8',
-    'queue (derived, #572): plan-ready 0, done-ready 0',
+    'Awaiting you: nothing.',
     '_cos seats: counsel-11111111 s1',
     '0 open, planned or blocked row(s) carry no board entry',
     'warn: board/5.md was last written by h1, not this session (h9): two holders may be writing (plan #535 attack 6; the lease, #537, arbitrates)',
@@ -1222,7 +1223,7 @@ class PhasedQueueTests(unittest.TestCase):
 
 class AwaitingTests(unittest.TestCase):
     """#646: `Awaiting you` counts the questions the board records as asked and not answered, by kind and a batch once,
-    and never a wait without a question (#503); `closing-line` picks it or the derived queue's line, absent the latter."""
+    and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line."""
     def setUp(self):
         e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
         self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
@@ -1270,10 +1271,10 @@ class AwaitingTests(unittest.TestCase):
         self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: nothing.")       # #8 waits on the operator, asked nothing
 
     def test_the_preference_picks_the_line(self):
-        self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))   # absent: pending-queue
-        self.prefs(**{"closing-line": "pending-queue"})
+        self.assertTrue(bd.closing_line(self.root).startswith("Awaiting you: 1 intent (#1)"))   # absent: on (revision 2)
+        self.prefs(**{"awaiting-you": "off"})
         self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))
-        self.prefs(**{"closing-line": "awaiting-you"})
+        self.prefs(**{"awaiting-you": "on"})
         self.assertTrue(bd.closing_line(self.root).startswith("Awaiting you: 1 intent (#1)"))
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
             self.assertIn(bd.closing_line(self.root), bd.board_lines(self.root))

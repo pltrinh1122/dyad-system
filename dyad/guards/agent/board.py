@@ -714,7 +714,7 @@ def queue_line(q: dict[str, list[int]]) -> str:
 
 
 # ---- the closing line (d-work #646): the questions the operator owes, read from the questions the board records
-CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "closing-line", ("awaiting-you", "pending-queue"), "pending-queue"
+CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "awaiting-you", ("on", "off"), "on"   # plan #646 revision 2
 ASKED_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
 ASKED_FORMS = (("Y/N: admit as precedents", "precedent"), ("Y/N: release ", "release"), ("Y/N: run ", "destructive"))
 AWAITING_KINDS = ("intent", "plan", "done", "precedent", "release", "destructive")
@@ -789,12 +789,12 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
 
 
 def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
-    """The board's last count line: `awaiting_line` under `closing-line: awaiting-you`, the derived queue's line
-    otherwise; an absent or unknown value reads `pending-queue`."""
+    """The board's last count line: `awaiting_line` under the preference `awaiting-you: on`, which an absent key reads,
+    and the derived queue's line under `off` (plan #646 revision 2)."""
     v = (dyadlib.preference(CLOSING_KEY, root) or CLOSING_DEFAULT).strip()
-    if v == "awaiting-you":
-        return awaiting_line(root, got, cabinet)
-    return queue_line(derived_queue(root, got, cabinet))
+    if v == "off":
+        return queue_line(derived_queue(root, got, cabinet))
+    return awaiting_line(root, got, cabinet)
 
 
 def owners(f: dict[str, str]) -> list[str]:
