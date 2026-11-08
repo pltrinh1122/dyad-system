@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-08T15:40:59+00:00
+seen: 2026-11-08T15:49:31+00:00
 root: /home/user/wt/inbox
 rows: 641 642
 files: agent-corpus/d-work/ agent-corpus/falsification/judgement-complexity.md dyad/dmc/*.jsonld dyad/dmc/judgement-complexity.jsonld dyad/dmc/schema.md dyad/playbooks/dmc.md dyad/playbooks/playbook-optimize.md dyad/scripts/dyadlib.py dyad/scripts/hygiene.py dyad/scripts/similar.py dyad/tests/ dyad/tests/guards/agent/test_dmc.py dyad/tests/test_dyadlib.py dyad/tests/test_hygiene.py dyad/tests/test_playbooks.py dyad/tests/test_profile.py dyad/tests/test_similar.py
