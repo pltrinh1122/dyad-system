@@ -1,8 +1,8 @@
 session: engineer-1537d8fb
-seen: 2026-11-08T15:56:49+00:00
+seen: 2026-11-08T17:39:20+00:00
 root: /home/user/dyad-system
-rows: 642
-files: agent-corpus/d-work/ agent-corpus/falsification/judgement-complexity.md dyad/dmc/judgement-complexity.jsonld dyad/dmc/schema.md dyad/playbooks/dmc.md dyad/playbooks/playbook-optimize.md dyad/scripts/dyadlib.py dyad/scripts/hygiene.py dyad/scripts/similar.py dyad/tests/guards/agent/test_dmc.py dyad/tests/test_dyadlib.py dyad/tests/test_hygiene.py dyad/tests/test_playbooks.py dyad/tests/test_profile.py dyad/tests/test_similar.py
+rows: 644
+files: agent-corpus/d-work/ agent-corpus/dmc/precedents/ dyad/dmc/precedent-admission.jsonld dyad/rules/RULE-16-concurrent-sessions.md dyad/rules/RULE-3-d-work.md dyad/tests/guards/agent/test_dmc.py
 writer: 1537d8fb-d96b-5c89-933a-d3ee36793d70
 host: cloud linux x86_64
 holder: 1537d8fb-d96b-5c89-933a-d3ee36793d70
