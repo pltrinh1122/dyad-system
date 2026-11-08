@@ -49,6 +49,8 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("playbook", "profile"): ["playbook", "profile", "d-work"],
     ("precedent", "prompt"): ["precedent", "prompt", "cases.jsonl", "--out", "p.md"],
     ("precedent", "score"): ["precedent", "score", "cases.jsonl", "a.txt", "b.txt", "--kept", "k.jsonl"],
+    ("precedent", "gate"): ["precedent", "gate", "k.jsonl", "--out", "a.jsonl"],
+    ("precedent", "agreement"): ["precedent", "agreement", "promotion"],
     ("dwork", "trace"): ["dwork", "trace", "592", "--transcript", "t.jsonl", "--out", "--said-file", "f"],
     ("plan", "check"): ["plan", "check", "589"],
     ("session", None): ["session"],

@@ -5,7 +5,10 @@
   names a record not judged by inference, or one operator-side under `dmc:precedent-admission`; nothing is written;
 - `score` reads `<case id>: <outcome>` lines and JSON lines, counts each reader per record, keeps the cases both match,
   and classes each mismatch `model-limit` (one missed) or `context-gap` (both missed); `--kept` writes the kept as
-  `--decisions` input (source two-readers) that the decision log's line check passes."""
+  `--decisions` input (source two-readers) that the decision log's line check passes;
+- `gate` judges each kept line by `dmc:precedent-admission` before the question: admitted, superseded by a logged line
+  naming the case, self-derived, operator-side, or no record; `--out` writes the admitted;
+- `agreement` re-measures a record's admitted cases leave-one-out, and reports n 0 for a record with none."""
 import contextlib, io, json, os, shutil, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
@@ -91,6 +94,56 @@ class PrecedentTests(unittest.TestCase):
     def test_answers_read_both_forms(self):
         self.assertEqual(pr.read_answers("* `a-1` = x\nnoise line\n{\"case\": \"b-1\", \"label\": \"y\"}\n{broken\n"),
                          {"a-1": "x", "b-1": "y"})
+
+
+class GateTests(unittest.TestCase):
+    PY = "2026-11-08 Y precedent (2 cases: promotion×2)"
+
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "inst"}); e.start(); self.addCleanup(e.stop)
+        rows = self.d / "inst" / "d-work" / "rows"; rows.mkdir(parents=True)
+        (rows / "7.md").write_text(f"id: 7\ntitle: t\nopened: 2026-11-01\nstate: planned\ndisposed: 2026-11-01 Y plan; {self.PY}\nrefs: \n")
+        self.dl = dyadlib.load_guard("agent", "decision_log")
+        base = {"record": "promotion", "fields": {}, "row": 7, "status": "precedent", "source": "two-readers",
+                "date": "2026-11-08", "y": self.PY}
+        blocks = [{**base, "case": f"p-{i}", "outcome": o, "inputs": t} for i, (o, t) in enumerate(
+            (("P1", "a live defect blocks work on the board"), ("P1", "a live defect corrupts a store"),
+             ("P2", "a promise made while working the anchor"), ("P2", "a promise in the plan file"),
+             ("P1", "a live defect misleads a reading")), 1)]
+        log = self.d / "inst" / "d-work" / "decisions"; log.mkdir(parents=True)
+        (log / "7.md").write_text("\n".join(self.dl.render(b) for b in blocks))
+
+    def line(self, case, record="promotion", outcome="P1", **kw):
+        return {"record": record, "case": case, "fields": {}, "inputs": "a live defect", "outcome": outcome, "row": 7,
+                "source": "two-readers", **kw}
+
+    def test_gate_judges_each_line_before_the_question(self):
+        lines = [self.line("new-1"), self.line("p-1"), self.line("new-2", precedent="0" * 64),
+                 self.line("rc-1", "release-class", "capability"), self.line("x-1", "no-such")]
+        admitted, refused = pr.gate(self.d, lines)
+        self.assertEqual([l["case"] for l in admitted], ["new-1"])
+        self.assertEqual(refused, [("promotion", "p-1", "superseded"), ("promotion", "new-2", "self-derived"),
+                                   ("release-class", "rc-1", "operator-side"), ("no-such", "x-1", "no-record")])
+        kept = self.d / "kept.jsonl"; kept.write_text("".join(json.dumps(l) + "\n" for l in lines))
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(pr.main(["gate", str(kept), "--out", str(self.d / "adm.jsonl")], self.d), 0, err.getvalue())
+        self.assertIn("refused p-1 (dmc:promotion): superseded", out.getvalue())
+        self.assertIn("admitted: 1; refused: 4", out.getvalue())
+        self.assertEqual([json.loads(l)["case"] for l in (self.d / "adm.jsonl").read_text().splitlines()], ["new-1"])
+
+    def test_agreement_re_measures_the_admitted_set(self):
+        m = pr.agreement(self.d, "promotion")
+        self.assertEqual((m["n"], m["bar"], m["refused"], m["max_df"]), (5, None, [], pr.SMALL_MAX_DF))
+        self.assertEqual(m["agreement"], m["reproduced"] / 5); self.assertGreaterEqual(m["reproduced"], 1)   # tokens kept
+        self.assertEqual(pr.agreement(self.d, "attack-result")["n"], 0)
+        with self.assertRaises(ValueError):
+            pr.agreement(self.d, "no-such")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(pr.main(["agreement", "promotion"], self.d), 0)
+        self.assertRegex(out.getvalue(), r"^agreement dmc:promotion: n 5; reproduced \d; abstained \d; agreement \d\.\d{3}; bar none; max_df 0.5")
 
 
 if __name__ == "__main__":
