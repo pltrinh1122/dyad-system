@@ -1,12 +1,10 @@
 # Run-book: release (when a change set warrants a release, and which number) — play-book `dyad/playbooks/release.md`, #493
 # sections: Changes, Number
 
-A core run-book (package, `dyad/runbooks/`; agent zone): the release play-book's two steps as `dyad-cmd` blocks,
-both read-only, run by either party through the core runner from the git root of the authoring repository, with
-its tags fetched (an unfit clone reads every craft as untagged; `dyad bootstrap` fetches them, #474). `number`
-reads its arguments from the environment: `CRAFT` (`dyad-operator`, a Tended craft's name, or `bundle`) and
-`CLASS` (one of the play-book's five classes, as `critical-fix`, `capability`, `enhancement`, `breaking`,
-`maintenance`).
+A core run-book (agent zone): the release play-book's two read-only steps, run by either party through the core
+runner from the git root of the authoring repository with its tags fetched (`dyad bootstrap`, #474). `number` reads
+`CRAFT` (`dyad-operator`, a Tended craft's name, or `bundle`) and `CLASS` (`critical-fix`, `capability`,
+`enhancement`, `breaking` or `maintenance`) from the environment.
 
 ```text
 dyad runbook run release changes
@@ -14,9 +12,8 @@ CRAFT=dyad-operator CLASS=capability dyad runbook run release number
 ```
 
 ## Changes
-What changed under each craft's root since that craft's last release tag: the commit count and the d-works its
-commit messages cite (Rule-3: a commit claims its d-work as `d-work #<id>`), then the bundle's last tag beside
-`BUNDLE.md`'s version. The seat classifies from this list, one d-work at a time, never from memory (Rule-13).
+Each craft's commit count and cited d-works since its last tag (`d-work #<id>`, Rule-3), then the bundle's last tag
+beside `BUNDLE.md`'s version. The unit classes from this list, never from memory (Rule-13).
 ```dyad-cmd
 name: changes
 class: read-only
@@ -29,9 +26,7 @@ for c in dyad-operator $(ls crafts 2>/dev/null | grep -v '\.md$'); do r=dyad; [ 
 ```
 
 ## Number
-The tag a class implies for one craft or the bundle, from its last release tag (the play-book's mapping:
-critical fix → patch; new capability or significant enhancement → minor; breaking → major, or minor while the
-major is 0; maintenance → no release). Exit 2 on an unknown class.
+The tag `CLASS` implies for `CRAFT` from its last release tag: `dmc:release-number`. Exit 2 on an unknown class.
 ```dyad-cmd
 name: number
 class: read-only

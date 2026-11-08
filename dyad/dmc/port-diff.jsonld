@@ -15,7 +15,7 @@
   "description": "Decides from a craft diff whether a receiving system owes a port.",
   "dyad:decides": "Does the receiving tree differ from its source, so that a port is owed?",
   "dyad:inputs": [
-    "dyad craft diff <CRAFT> --against <SRC>"
+    "dyad craft diff <CRAFT> --against <SRC>: one line per path (added, removed, modified, mode) read from the installed side, then a summary"
   ],
   "hasDefinedTerm": [
     {
@@ -30,7 +30,7 @@
       "termCode": "owed",
       "name": "port owed",
       "dyad:when": "the diff is non-empty (exit 1)",
-      "dyad:then": "either the change goes back or the tree is reinstalled --force: the Operator's call, asked as its own question"
+      "dyad:then": "either the change goes back (dmc:port-direction, back) or the tree is reinstalled with --force and the change given up: the Operator's call, asked as its own question"
     }
   ],
   "dyad:judgedBy": {
@@ -39,5 +39,8 @@
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/port.md",
-  "dyad:owner": "Rule-11"
+  "dyad:owner": "Rule-11",
+  "dyad:alsoIn": [
+    "runbooks/port.md"
+  ]
 }

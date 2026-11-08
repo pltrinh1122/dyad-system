@@ -47,8 +47,9 @@
     "dyad:implementation": "scripts/audits.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:home": "scripts/audits.py",
   "dyad:alsoIn": [
+    "playbooks/incident-hardening.md",
     "runbooks/incident-hardening.md"
   ],
   "dyad:owner": "Rule-3"

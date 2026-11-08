@@ -1,172 +1,45 @@
-# Play-book: d-work trace (core craft, `dyad-operator`; #213, format agreed in plan #212)
+# Play-book: d-work trace (core craft, `dyad-operator`; #213, #626)
 
-A play-book (vocabulary, Rule-3): an executable procedure of the operator craft the Agent follows for a
-recurring decision; its steps are a run-book. This one decides where a d-work's time went, so that the
-Operator and the Agent read a bottleneck by the same measures instead of by impression — the measurement
-done by hand three times before it became code (#204 by workflow, #212 twice; Rule-13 property 1). Read by
-Rule-3's Completion counter-prompt clause: the completion evidence cites the d-work trace. Where the trace is
-stored and when it is written: plan #213, revision 2. Steps: `dyad/runbooks/dwork-trace.md` — `locate`,
-`trace`, `compare` — each one a call of `dyad dwork trace` (`dyad/scripts/trace.py`). The Agent runs that
-command **directly**, not through the core runner (Default, below; d-work #247): the runner appends an event
-to a workstation-zone file that the Done record commit cannot carry. The run-book stays, for a trace run
-through the runner by choice (`DWORK=<id> dyad runbook run dwork-trace <step>`), which then leaves an event.
+Where a d-work's time went, read by the operator and the agent by the same measures. Read by Rule-3's Completion
+counter-prompt: the completion evidence cites the trace. Steps: `dyad/runbooks/dwork-trace.md` — `locate`, `trace`,
+`compare` — each a call of `dyad dwork trace` (`dyad/scripts/trace.py`), which decides the window, the anchors, the
+buckets and the gate kind (`dyad/dmc/trace-window.jsonld`, `trace-anchor`, `trace-bucket`, `trace-gate-kind`). The
+agent runs the command directly, not through the runner, whose event a ledger-only Done commit cannot carry (#247);
+`DWORK=<id> dyad runbook run dwork-trace <step>` stays for a run that wants an event.
 
 ## Parameter
-The id of the d-work to trace, `<id>`:
-
-    dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]
-
-The run-book's steps take the same id from the environment as `DWORK`, exactly as the incident-hardening
-run-book reads `LEDGER` and the craft run-book `CRAFT`:
-
-    DWORK=<id> dyad runbook run dwork-trace trace
-
-Its `trace` step, which writes the stored trace, also reads `SAID`, the file holding the Operator's Done words —
-the one the `state` line then records with `--said-file` — and passes it as `--said-file` (#592 R-b); without it,
-the step refuses unless the provenance record already holds the Done:
-
-    DWORK=<id> SAID=<f> dyad runbook run dwork-trace trace
-
-The transcript is not a parameter of the run-book. `dyad dwork trace` reads the newest one of the working
-tree's harness project directory (`projects/<slug>/` under the harness's home directory, `~/.claude/`; the
-slug is the working tree's path with every non-alphanumeric character a `-`). When that is not the session
-that worked the d-work, the Agent runs `dyad dwork trace <id> --transcript <path> [--transcript <path>]…`
-itself, with `--out` at the Done-`Y`, and names the paths in the reply.
+The d-work's id: `dyad dwork trace <id> [--transcript <path>]... [--out [--said-file <f>]]`; in the run-book, `DWORK`,
+and for `trace` also `SAID`, the file holding the operator's Done words. The transcript defaults to the newest of the
+working tree's harness project directory; another session's is named with `--transcript`, and the reply names it.
 
 ## Trigger
-The preference `dwork-trace` (`preferences-corpus/PREFERENCES.md`; Rule-3, Completion counter-prompt)
-decides which d-works are traced: `always` (the default) — every d-work; `on-demand` — only a d-work whose
-Operator has prompted for a trace, and any d-work the Operator names later. A traced d-work is traced at two
-moments, both inside it:
-1. **Done-ready.** The completion evidence is being gathered and the Done question is about to be asked.
-   `dyad dwork trace <id>`, without `--out`, prints a **preview**: the window runs from the first anchored
-   prompt to the transcript's last record — the Done question being asked. Nothing is written.
-2. **Done-`Y` received.** The reply that receives it writes the Operator's Done words to a file and runs
-   `dyad dwork trace <id> --out --said-file <f>` — the command the run-book's `record` step calls — then records
-   the disposition from the same file (`dyad dwork state <id> <the state it is in> -d 'Y done (merges PR #a at
-   <head-a>)' --said-file <f>`, which writes the row and its provenance entry with the state unchanged, Rule-3
-   Completion); under `--land` the two ride one batch, a `land <instance>/d-work/traces/<id>.md` line before the
-   `state` line, so the clerical Done **record** commit carries the trace with the row and the record. The
-   `--said-file` words are read as the Done entry the record is about to hold, dated UTC today, and the window
-   runs through the Done-`Y` they anchor: it covers the work PR's push, its evidence run and the Operator's wait on
-   the Done question. `--out` with neither those words nor a Done entry in the record refuses and writes nothing:
-   a stored trace is never a preview, and the main fence fails a Done record whose trace is one (#592 R-b). The merges come after that commit (Rule-3: the record of the `Y` precedes every merge it
-   ratifies), and so does the second commit that sets the row `done`; both are the clerical tail, visible in
-   git and never in the trace (plan #213, attack 3; #202).
-
-A d-work traced later, on the Operator's word, is traced the same way: the window is set by the anchors,
-never by when the command runs.
+The preference `dwork-trace`: `always`, every d-work; `on-demand`, one the operator asked to trace. Two moments:
+1. **Done-ready** — `dyad dwork trace <id>` prints a preview, its window to the transcript's last record; nothing is
+   written.
+2. **Done-`Y` received** — write the operator's words to a file, run `dyad dwork trace <id> --out --said-file <f>`,
+   then record the disposition from the same file; under `--land` a `land <instance>/d-work/traces/<id>.md` line before
+   the `state` line, so the Done record commit carries the trace. `--out` with no Done words refuses: a stored trace is
+   never a preview (#592). The merges and the close come after and are not in it (#202).
 
 ## Default
-Under `always`, trace it, at both moments. The completion reply prints the preview's bottleneck line and agent-side seconds
-beside the median of the traced d-works, so the Operator reads them before answering. At the Done-`Y` the
-command `dyad dwork trace <id> --out` writes `<instance>/d-work/traces/<id>.md`, the **trace store**: it lies under
-`<instance>/d-work/`, so the Done record commit stays ledger-only (Rule-3 Ledger: clerical) — no extra PR,
-push or suite run — and the main fence and the plan gate's ledger-only exemption admit it as they admit the
-row. A d-work whose transcript is absent — another kernel, a session whose harness keeps none (Rule-14: Claude
-Code is one kernel row, "another CLI inferencing agent" its replacement) — is still traced: the trace holds
-the git and ledger timeline and says the buckets are absent. That is a stated limit, never a reason to skip
-the step.
-
-**Why the command, not the runner (d-work #247).** Run through the runner, the `trace` step also appends a
-592-byte event to `<runbooks>/events/dwork-trace.jsonl`, a workstation-zone file (Rule-1): it cannot ride the
-agent-zone Done record commit, left in the tree it makes the pre-push gate refuse the push, and banking it
-takes a d-work, a PR and two `Y`s per event — whose own Done-`Y` makes the next event, so the unbanked set
-never reaches zero. Nothing requires the event (no Rule, no guard, not Rule-3 or the preference): the trace
-file is the record, and every field of the event but `duration_ms` is a function of git. The two paths write
-the identical trace file. The run-book and its `trace` step stay — the three events already tracked
-(#226, #229, #233) make Rule-20 resolve `dwork-trace/trace` — and a system that wants events as telemetry
-can route them (the options and the costs: `agent-corpus/falsification/trace-event-landing.md`).
+Trace at both moments. The trace store is `<instance>/d-work/traces/<id>.md`, under `<instance>/d-work/`, so the Done
+record commit stays ledger-only. A d-work with no transcript is still traced from git and the ledger, its buckets
+marked absent.
 
 ## Format
-One file per d-work, `<instance>/d-work/traces/<id>.md`, opening `# Trace #<id> — <title>`, then a header line
-naming its sources (the row, the provenance record, the plan file, git HEAD and every transcript read, with
-counts of each), then five sections in this order:
-
-1. **Timeline.** Every event in UTC order with its actor: each anchored provenance entry (the Operator's
-   prompt, each disposition), each counter-prompt asked, each commit and merge (git, a ledger-only one
-   marked), each suite-kind, GitHub and subagent call with its duration. Events after the Done-`Y` are
-   marked as the clerical tail; events after a preview's window as after the window.
-2. **Buckets of wall time,** over the window — the first anchored prompt to the Done-`Y`; in a preview, to
-   the transcript's last record; to the last d-work event when the record holds a Done the transcript does
-   not, said under Limits. Every second is in exactly one bucket, and the buckets sum to the window:
-   - Operator partition: **operator** — a reply ending in a `Y/N:` line, to the Operator's next message;
-     **idle** — a reply with no `Y/N:` line, to the Operator's next message.
-   - Agent partition: **inference** — a tool result or a message, to the Agent's next tool call or reply;
-     **background** — a finished turn, to a background task's notification; and the mechanical kinds by
-     tool-call duration (call to result): **suite** (a Bash call whose gate ran Rule-12's suite) and **guards**
-     (a `git push` whose gate ran guards only), **github** (a GitHub tool, or Bash `gh api`), **git/local** (any
-     other Bash), **subagent** (Agent, Task or Workflow), **other** (any other tool).
-   - Suite or guards is decided by **what the gate ran, never by duration** (#216): `check --evidence` and
-     `--tests` are suite always; a `git push` is guards when its result carries the gate's own skip line
-     (`skip [guards] Rule-12 suite:` — the suite memo or a ledger-only range), suite when it shows `Ran N
-     tests`, and otherwise by the pushed range read from git — the timeline's commits since the same session's
-     previous push: any outside `<instance>/d-work/` is suite (Rule-12 p2), all ledger-only or none is guards.
-     So a push whose output the Agent filtered is still booked right; a range the timeline did not capture
-     reads as guards, and Limits names every range-booked push. A hand-run `unittest` (a measure-only run) is
-     suite only when its result shows `Ran N tests`, else git/local, said under Limits.
-   - Overlap is counted once: calls made together take the first kind of the order suite, guards, github,
-     git/local, subagent, other; a background launch is counted for its launch only and listed under the
-     table, its run never summed a second time.
-3. **Counts.** Commits (ledger-only among them) and merges, ledger and work (git); PRs created by head
-   branch (`ledger-…` is a ledger PR) and merged, full-suite runs and guards-only push gates, tool calls and output tokens
-   (transcript, the window only). Then three reply lines (#602): **replies per disposition** — the replies of
-   the turns naming this d-work, a turn named by its closing `Y/N:` line's ids, else by what opened it (an Operator
-   message or a harness notice; a compaction inherits the one before it), never by the Agent's prose, PR and merge
-   numbers stripped — over the record's dispositions in the window less those noted `mandate #<id>`; **replies by
-   trigger**, the same replies split by what woke their turn (operator, notify, compact, none); and **replies in the
-   window, all rows**, every reply, the distinct answers and the overlap (the per-row counts summed over that total).
-   Last, the **delegated share** — the `subagent` bucket over the agent
-   partition, beside the output tokens of the same window: a share at 0% on a d-work that drafted heavily is
-   `delegation: plan-and-execute` not firing for work the preference covers (Rule-3 Scope, Rule-10's
-   concise-mode clause), which is what leaves a turn open long enough for a lost segment to cost it (#254).
-4. **Bottleneck.** The top three buckets by share; then `**Agent-side:** <n> s` — inference plus every
-   mechanical kind, the Operator's partition excluded, because only that is what a change to the system can
-   move — beside the median of every other trace in the store; then, under that line and not as a sixth
-   section (#216), the agent partition as a table — each agent bucket's seconds and share of agent-side
-   seconds, `suite + guards` last — and one line of test execution against inference: `suite + guards` and
-   `inference` in seconds and their ratio (`n/a` on zero inference), so the cost of the gates reads beside
-   the model's turns by the same measure, never by a duration rule.
-5. **Limits.** Every provenance entry left unmatched or ambiguous; a preview, said as one; shared turns (a
-   `Y/N:` naming this d-work with others: counted whole, split evenly only in the line that names them);
-   turns asking only about other d-works; agent-side segments of fifteen minutes or more (a restart, a sleep
-   or a lost turn reads as its bucket); more than one harness session in the window; pushes booked from the
-   pushed range and hand-run `unittest` calls (#216); and always: inference is a wall gap and overstates
-   the model's own time, and the trace stops at the Done-`Y`.
-
-**Anchors.** Each provenance entry (Rule-7) is matched to the Operator message that carried it —
-whitespace-normalized, equal, or contained when the entry is twenty characters or longer — in record order,
-each after the previous anchor. A disposition is anchored only to a message answering a `Y/N:` line that
-names `#<id>`; a prompt that matches twice is ambiguous. An entry that is not anchored is reported, never
-guessed.
-
-**What a trace never holds.** Transcript text: only timestamps, durations, tool names and numbers derived
-from it. The transcript is read in place, never copied and never committed (Rule-7 property 2). Git
-subjects and provenance notes are corpus text already, and appear as they are.
-
-**The store's shape.** `dyad/scripts/trace.py` `check_store` holds it well-formed — every file `<id>.md` for
-an existing row, its first line `# Trace #<id> — <title>` naming that same id, its five sections in order —
-and `dyad/tests/test_trace.py` runs it over the live store with Rule-12's suite on every push.
+`# Trace #<id> — <title>`, a sources line, then five sections in order — **Timeline**, **Buckets**, **Counts**,
+**Bottleneck** (the top three buckets and `**Agent-side:** <n> s` beside the store's median, the agent partition as a
+table, and `suite + guards` against `inference`), **Limits** (every unmatched or ambiguous anchor, shared turns, long
+segments, range-booked pushes; inference is a wall gap). A trace holds no transcript text, only timestamps, durations,
+tool names and numbers (Rule-7 property 2). `trace.check_store` holds the store's shape; `dyad/tests/test_trace.py`
+runs it.
 
 ## Reading
-- **The bottleneck line first.** The top bucket names where the window went. A mechanical bucket on top is a
-  system cost a fence, a cache or a skipped step can move; inference on top is the model's turns, which a plan
-  that asks less or delegates moves; operator on top is the Operator's wait, which the system can only shorten
-  by asking fewer or batched questions (`batch-disposition-mode`).
-- **Agent-side against the median.** An agent-side figure well above the median of the traced d-works is
-  worth one sentence in the completion reply naming its top agent bucket; one at or below the median needs
-  none. The comparison is between d-works of different sizes, so it flags, never judges: a large d-work is
-  expected to be slow, and the timeline says whether the time went to the work or around it. A preview's
-  figure lacks the Done wait the stored traces hold; the agent-side figure, which excludes it, is the one to
-  compare.
-- **Limits before conclusions.** A trace with unmatched anchors, shared turns or long agent-side segments
-  is read with them: a lost turn reads as inference, and a shared turn's seconds belong partly elsewhere.
-- **No verdict without a second trace.** One slow d-work is a fact about that d-work; a bucket that leads
-  across several traces is a claim about the system, and it is falsified (Rule-9) before any plan encodes it.
+Read the bottleneck line by `dmc:trace-bottleneck`, and the agent-side figure against the median by
+`dmc:trace-agent-side`. Read Limits before conclusions. One slow d-work is a fact about it; a bucket leading several
+traces is a claim, falsified (Rule-9) before any plan encodes it.
 
 ## Evidence
-For a traced d-work (Trigger: the preference `dwork-trace`), the completion reply (Rule-3) prints the preview's bottleneck line and agent-side seconds with the median,
-every unmatched or ambiguous anchor from its Limits, and the transcript paths when they are not the default.
-The reply that receives the Done-`Y` names the trace file its Done record commit carries. A trace run through
-the runner is stated as such and names its event id (`<runbooks>/events/dwork-trace.jsonl`), which is not part of
-the Done commit; a trace made by the native command needs no such statement, and is the default.
+The completion reply prints the preview's bottleneck line and agent-side seconds with the median, every unmatched or
+ambiguous anchor, and any non-default transcript path. The reply that receives the Done-`Y` names the trace file its
+Done record commit carries; a trace run through the runner names its event id.

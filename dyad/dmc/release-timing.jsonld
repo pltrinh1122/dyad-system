@@ -12,7 +12,7 @@
   ],
   "identifier": "release-timing",
   "name": "Release timing",
-  "description": "Decides when a change set holding a critical fix is released: at once, after the fix of a broken release path, with the next minor, or held and decided again at a named event.",
+  "description": "Decides when a change set holding a critical fix is released: at once, after the fix of a broken release path, with the next minor, or held and decided again at a named event. A release is cut from main and no maintenance branch is kept, so a release carries everything on main since the tag: a patch exists only when nothing above a fix has landed.",
   "dyad:decides": "A change set since a craft's last tag holds a critical fix: release now, or hold?",
   "dyad:inputs": [
     "release path: whether the defect refuses a cut, a publish or an install",

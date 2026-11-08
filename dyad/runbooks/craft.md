@@ -1,11 +1,9 @@
-# Run-book: craft (the operator craft's craft commands) — play-book `dyad/playbooks/craft-instantiation.md`, #165
+# Run-book: craft (the operator craft's craft commands) — play-book `dyad/playbooks/craft-instantiation.md`, #165, #626
 # sections: New, Check, Guards, Tests, Export, Install, Registry, System
 
-A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the craft play-book as `dyad-cmd`
-blocks, run by either party through the core runner, which prints the native line, records an event in
-the instance's `<runbooks>/events/craft.jsonl` and tests the postcondition. Its section set is its own
-(the `# sections:` line above; the sysadmin craft's server sections are a server's). Each command reads
-its argument from the environment, as the native line shows; every command runs from the git root.
+The craft-instantiation play-book's steps, run through the core runner from the git root, each recording an event in
+`<runbooks>/events/craft.jsonl`. `CRAFT` names the craft; `system-new` is the operator's (a remote credential). Every
+step that writes states its undo and postcondition.
 
 ```text
 CRAFT=<name> dyad runbook list craft
@@ -38,7 +36,7 @@ dyad/bin/dyad craft check "${CRAFT:?craft name}"
 ```
 
 ## Guards
-Every guard on the kernel-only path (Rule-14 property 3), pass criterion: exit 0, no `FAIL` line:
+Every guard on the kernel-only path (Rule-14 property 3), pass criterion:
 ```dyad-cmd
 name: guards
 class: read-only
@@ -100,8 +98,7 @@ dyad/bin/dyad craft list
 ```
 
 ## System
-New dyad system (play-book, Steps: new dyad system; Operator-run — the remote credential is the Operator's):
-`SYSTEM` is the fresh clone's path on the remote D1 selects.
+New dyad system (play-book, Steps:
 ```dyad-cmd
 name: system-new
 class: reversible

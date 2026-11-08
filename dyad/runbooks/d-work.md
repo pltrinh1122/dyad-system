@@ -1,18 +1,11 @@
-# Run-book: d-work (one d-work from its prompt to its Done-Y) — play-book `dyad/playbooks/d-work.md`, #309
+# Run-book: d-work (one d-work from its prompt to its done-Y) — play-book `dyad/playbooks/d-work.md`, #309, #626
 # sections: Open, Plan, Authorize, Execute, Evidence, Record, Complete, Defer, Resume, Mirror
 
-A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the d-work play-book as `dyad-cmd`
-blocks, run by either party through the core runner, which prints the native line, records an event in the
-instance's `<runbooks>/events/d-work.jsonl` and tests the postcondition. Its section set is its own (the
-`# sections:` line above). Every step that acts on a row takes its id from the environment — `DWORK`, the
-play-book's parameter, with no default — and the Operator's words as files, verbatim: `SAID`, `PROMPT`
-(Rule-7); a new row takes `TITLE`, `REFS` and `PROMPT`; a deferral takes `BLOCKER` and the full `REFS` the
-row is to carry. Every step reaches the instance through `${DYAD_INSTANCE:-agent-corpus}` (Rule-11 property
-3) and runs from the git root. `plan`, `execute` and `evidence` are **read-only**; the others write the
-ledger's own files and are **reversible** — their undo restores the files from `HEAD`, which is the
-clerical commit's boundary. Retirement (`backlog` or `done` → `archived`) is `dyad/runbooks/disposition-digest.md`'s
-`retire` step and is not repeated here. The native commands are the play-book's default (#247); this
-run-book is for a step run through the runner by choice, which then leaves an event.
+The d-work play-book's steps as `dyad-cmd` blocks, run through the core runner, which records an event in
+`<runbooks>/events/d-work.jsonl` and tests the postcondition. `DWORK` names the row, with no default; the operator's
+words come as files (`SAID`, `PROMPT`, Rule-7); a new row takes `TITLE`, `REFS`, `PROMPT`, `SLUG`; a deferral `BLOCKER`
+and `REFS`. `plan`, `execute` and `evidence` are read-only; the rest are reversible, undone from `HEAD`. Retirement is
+`dyad/runbooks/disposition-digest.md`'s `retire`. The native commands stay the default (#247).
 
 ```text
 DWORK=<id> dyad runbook list d-work
@@ -20,10 +13,7 @@ DWORK=<id> SAID=<file> dyad runbook run d-work authorize
 ```
 
 ## Open
-A row born `open` on the Operator's prompt (the machine's first birth): the row file and its provenance
-record, entry 1 the prompt verbatim, and its row slug from `SLUG` (refused without one under `dwork-slug: on`, #622). The postcondition is the birth's own idempotence — a row of this title
-exists — so a repeat opens no duplicate; the undo removes the newest row and its record, the two files the
-command wrote:
+A row born `open` on the operator's prompt (the machine's first birth):
 ```dyad-cmd
 name: open
 class: reversible
@@ -36,8 +26,7 @@ dyad/bin/dyad dwork new "${TITLE:?row title}" "${REFS:-}" --prompt-file "${PROMP
 ```
 
 ## Plan
-The plan file's parts (Rule-15 phase 1, `dyadlib.PLAN_PARTS`), present or absent, before the counter-prompt
-is asked. The plan itself is the Agent's inference and no command writes it:
+The plan file's parts (Rule-15 phase 1, `dyadlib.PLAN_PARTS`), present or absent, before the counter-prompt is asked:
 ```dyad-cmd
 name: plan
 class: read-only
@@ -50,8 +39,7 @@ I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; f="$I/d-work/plans/
 ```
 
 ## Authorize
-The plan-`Y` (open → planned): the `disposed` entry and the record's `disposition` entry in one write, then
-the presence touch Rule-16 asks for at every plan-`Y`:
+The plan-`Y` (open → planned):
 ```dyad-cmd
 name: authorize
 class: reversible
@@ -64,8 +52,8 @@ D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" planned -d "Y plan" --sa
 ```
 
 ## Execute
-The PR transaction judged before a PR is opened (Rule-1 binds a commit and a PR; `dyad check --pr` is the
-whole-diff `range` mode the Agent runs, since no hosted job judges a PR before it merges, #168):
+The PR transaction judged before a PR is opened (Rule-1 binds a commit and a PR; `dyad check --pr` is the whole-diff
+`range` mode the agent runs, since no hosted job judges a PR before it merges, #168):
 ```dyad-cmd
 name: execute
 class: read-only
@@ -76,10 +64,7 @@ scope: the checked-out branch's diff against origin/main (read)
 
 dyad/bin/dyad check --pr origin/main HEAD
 ```
-The PRs a Done question is about to name, judged together (#556, harvested: a seat wrote this check by hand 69 times in
-one session). `PRS` names them in merge order. For each it prints the live head, its files and zones, and whether it is
-stacked on the one before; then every head is merged in order onto `origin/main` with `git merge-tree`, touching no
-worktree:
+The PRs a Done question is about to name, judged together (#556):
 ```dyad-cmd
 name: verify-prs
 class: read-only
@@ -92,8 +77,8 @@ PRS="${PRS:?PR numbers in merge order}" dyad/bin/dyad steps verify-prs
 ```
 
 ## Evidence
-The evidence block of the exact head the Done question is asked on (Rule-14 property 3), pasted verbatim in
-the completion reply (Rule-3):
+The evidence block of the exact head the Done question is asked on (Rule-14 property 3), cited in the completion
+reply by its sha256 and brief form (Rule-3):
 ```dyad-cmd
 name: evidence
 class: read-only
@@ -106,11 +91,7 @@ dyad/bin/dyad check --evidence
 ```
 
 ## Record
-The Done-`Y` recorded, with the state left as it is (#202): the row and the record first, then the trace, so
-the Done record commit carries all three (`dwork-trace.md`); the merges come after that commit and are not in
-this step, and neither is the state. `DISPOSED` is the entry — `Y done (merges PR #a at <head-a>)`, naming
-every PR the question named and the head its `Y` was given on, or plain `Y done` where the question named no
-merge:
+The done-`Y` recorded, with the state left as it is (#202):
 ```dyad-cmd
 name: record
 class: reversible
@@ -121,9 +102,7 @@ scope: <instance>/d-work/{rows,provenance,traces}/<DWORK>.md
 
 D="${DWORK:?d-work id}"; I="${DYAD_INSTANCE:-agent-corpus}"; S="$(sed -n 's/^state: //p' "$I/d-work/rows/$D.md")"; dyad/bin/dyad dwork state "$D" "$S" -d "${DISPOSED:?the entry, e.g. 'Y done (merges PR #9 at <head>)'}" --said-file "${SAID:?disposition file}" && dyad/bin/dyad dwork trace "$D" --out
 ```
-The same act with the entry composed rather than typed (#556, harvested): `PRS` in merge order, each named at its live
-head, and `ACCRETED` the rows the mandate accreted, read from origin/main's ledger, so the entry names exactly the heads
-the question was asked on. It refuses when the row's operative entry is already that one:
+The same act with the entry composed rather than typed (#556, harvested):
 ```dyad-cmd
 name: done-record
 class: reversible
@@ -136,8 +115,7 @@ DWORK="${DWORK:?d-work id}" SAID="${SAID:?disposition file}" PRS="${PRS:-}" ACCR
 ```
 
 ## Complete
-The state, once every head the recorded entry names is on `main` (#202): a second ledger commit with no
-disposition, which the fence checks against those heads:
+The state, once every head the recorded entry names is on `main` (#202):
 ```dyad-cmd
 name: complete
 class: reversible
@@ -148,9 +126,7 @@ scope: <instance>/d-work/rows/<DWORK>.md
 
 D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" done
 ```
-The close in full once it is due (#556, harvested): only when every head the row's operative `Y done` names is an
-ancestor of `origin/main`. It sets the row `done` and closes every row the entry names as accreted under it
-(`--mandate`); the board entry is dropped by the automaton's landing form (`--land`), since a board write always lands:
+The close in full once it is due (#556, harvested):
 ```dyad-cmd
 name: close-landed
 class: reversible
@@ -163,8 +139,8 @@ DWORK="${DWORK:?d-work id}" dyad/bin/dyad steps close-landed
 ```
 
 ## Defer
-A deferral (open or planned → blocked) naming the blocking d-work, which the row's `refs` then carries —
-`REFS` is the full list the row is to hold, the blocker among it, since `-r` replaces the field:
+A deferral (open or planned → blocked) naming the blocking d-work, which the row's `refs` then carries — `REFS` is the
+full list the row is to hold, the blocker among it, since `-r` replaces the field:
 ```dyad-cmd
 name: defer
 class: reversible
@@ -177,8 +153,7 @@ D="${DWORK:?d-work id}"; dyad/bin/dyad dwork state "$D" blocked -d "Y blocked #$
 ```
 
 ## Resume
-Back to `open`: from `backlog` on an Operator prompt, which the record gains as a `prompt` entry (Rule-7's
-transaction check), or from `blocked` when the blocking d-work is done, which is clerical and brings no words:
+Back to `open`:
 ```dyad-cmd
 name: resume
 class: reversible
@@ -191,9 +166,7 @@ I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; if grep -qx 'state:
 ```
 
 ## Mirror
-A seat's branch kept equal to `origin/main` (#556, harvested: run by hand 391 times in one session), fast-forward only;
-a branch holding work `main` lacks is refused, never forced. Its undo is the step's own output line, which names the
-previous sha as `MIRROR_WAS`:
+A unit's branch kept equal to `origin/main` (#556):
 ```dyad-cmd
 name: sync-mirror
 class: reversible

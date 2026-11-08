@@ -15,7 +15,7 @@
   "description": "Reads a d-work's disposition count against the budget its plan declared.",
   "dyad:decides": "How does a d-work's count of Operator dispositions read against its plan's disposition budget?",
   "dyad:inputs": [
-    "the plan file's disposition budget line",
+    "the plan file's disposition budget line, `disposition budget: <n> — <what each of the n is>`, beside its base commit and files touched lines",
     "the row's disposed column"
   ],
   "hasDefinedTerm": [
