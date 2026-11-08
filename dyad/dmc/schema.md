@@ -29,7 +29,8 @@ The file is `<identifier>.jsonld`. `dyad/dmc/context.jsonld` is the one context 
 | `dyad:precedence` | no | the order or tie-break among outcomes |
 | `dyad:default` | no | the outcome when the inputs cannot decide |
 | `dyad:tunables` | no | a non-empty list of the numbers this criterion lets the operator tune, each `{"dyad:preference": <key>, "dyad:defaultValue", "dyad:allowed", "dyad:readBy": <path>}`, every value a non-empty string: the preference key (lowercase, hyphenated), the value used when the preference is absent, what the `allowed` cell says, and the file that reads it; a key is claimed by one record only; core records only (`dyad/dmc/`), since `dyadlib.tunable` reads no craft or instance record (#590) |
-| `dyad:judgedBy` | yes | `{"dyad:kind": "mechanical" \| "inference" \| "declared", "dyad:implementation": <path> \| null}` |
+| `dyad:judgedBy` | yes | `{"dyad:kind": "mechanical" \| "inference" \| "declared" \| "precedent", "dyad:implementation": <path> \| null}` |
+| `dyad:precedents` | with `precedent` only | `{"dyad:set": <path>, "dyad:sha256": <hex>, "dyad:threshold": <key>, "dyad:margin": <key>, "dyad:agreement": <number>, "dyad:bar": <number>, "dyad:measured": <YYYY-MM-DD>, "dyad:kinds": {<input>: "structured" \| "prose" \| "read"}}`: the frozen precedent set — a header line `{idf, max_df, base}`, `base` the commit it was frozen at, then ratified cases only, each `{label, inputs, fields, row}`: the outcome it set, its prose inputs joined, its structured inputs as `{input: value}` and the row whose plan-`Y` or done-`Y` covered it — its sha256, which pins the header and so the base, the two `dyad:tunables` keys that hold the threshold and the margin, the agreement measured on a held-out sample against its bar and the UTC date it was measured, and each `dyad:inputs` entry declared, verbatim, as a `structured` field compared value by value, a `prose` input matched by cosine, or a `read` input only the agent reads; the guard fails a missing set, a digest that differs, a label that is not an outcome `name`, an agreement below its bar, an outcome whose consequence is a disposition or a destructive act, an input `dyad:kinds` leaves undeclared, a key naming no input and a value outside the three; it re-measures agreement leave-one-out on every run and warns `fallen` below the bar, and warns when the owner Rule moved after the base commit (#642) |
 | `isPartOf` | yes | the container's urn (table above) |
 | `dyad:home` | yes | a path: the file that defines the criterion |
 | `dyad:alsoIn` | no | a list of paths: other files that state part of it |
@@ -53,7 +54,8 @@ Defined here and nowhere else; a craft uses them, never defines one.
 | `dyad:allowed` | a tunable's allowed values, as the preference row's `allowed` cell states them |
 | `dyad:readBy` | the file that reads a tunable |
 | `dyad:judgedBy` | how the decision is made: its kind and its implementation |
-| `dyad:kind` | `mechanical` (code decides), `inference` (the Agent reads and judges), `declared` (a party states it, e.g. a preference) |
+| `dyad:kind` | `mechanical` (code decides), `inference` (the Agent reads and judges), `declared` (a party states it, e.g. a preference), `precedent` (its ratified precedents label it by resemblance over its decisive inputs, abstaining below the threshold, in the margin or with no precedent; `dmc:judgement-complexity`, #642) |
+| `dyad:precedents` | a `precedent` record's frozen set of ratified cases (its base commit in the set's header), its digest, its threshold and margin keys, its measured agreement against its bar with the date measured, and each input's kind |
 | `dyad:implementation` | the code that decides, as a path, or null |
 | `dyad:home` | the defining file |
 | `dyad:alsoIn` | other files stating part of it |

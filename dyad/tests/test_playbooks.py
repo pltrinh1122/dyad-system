@@ -371,3 +371,37 @@ class BacklogGroomPlaybookTests(unittest.TestCase):
         if guard is None or not hasattr(guard, "declared_sections"):
             self.skipTest("no craft provides a run-book check that reads `# sections:`")
         self.assertEqual([m for m in guard.check_runbook(GROOM_RUNBOOK, PKG.parent) if not m.startswith("warning: ")], [])
+
+
+OPTIMIZE_PLAYBOOK = PKG / "playbooks" / "playbook-optimize.md"
+OPTIMIZE_RUNBOOK = PKG / "runbooks" / "playbook-optimize.md"
+
+class PlaybookOptimizePlaybookTests(unittest.TestCase):
+    """The play-book-optimization play-book and its run-book (#642): headings, the one criterion it cites as the master
+    it holds, never restated, and the run-book's one read-only step."""
+    def test_playbook_sections_and_criterion(self):
+        text = OPTIMIZE_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence"])
+        cited = set(re.findall(r"dyad/dmc/([a-z0-9-]+)\.jsonld", text)) | set(re.findall(r"`dmc:([a-z0-9-]+)`", text))
+        self.assertEqual(cited, {"judgement-complexity"})
+        self.assertEqual(dyadlib.tables(text), [])                     # redefines none: the outcomes are the record's
+        self.assertIn("dyad/runbooks/playbook-optimize.md", text)
+        self.assertIn("agent-corpus/falsification/judgement-complexity.md", text)
+        self.assertIn("`Y/N: open #a, #b, … #k as backlog?`", text)   # the one question a run may ask
+    def test_record_homed_here_is_a_cited_master(self):
+        import json
+        text = OPTIMIZE_PLAYBOOK.read_text()
+        rec = json.loads((PKG / "dmc" / "judgement-complexity.jsonld").read_text())
+        self.assertEqual(rec["dyad:home"], "playbooks/playbook-optimize.md")
+        self.assertEqual([t["termCode"] for t in rec["hasDefinedTerm"]], ["mechanical", "precedent", "complex"])
+        self.assertFalse(all(t["name"] in text for t in rec["hasDefinedTerm"]))   # never restated
+    def test_runbook_parses_into_one_read_only_step(self):
+        text = OPTIMIZE_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], ["profile"])
+        self.assertEqual(rb.declared_sections(text), ["Profile"])
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertEqual((cmds[0].cls, cmds[0].role), ("read-only", "any"))
+        self.assertEqual(cmds[0].cmd.strip(), 'dyad/bin/dyad playbook profile "$PLAYBOOK"')
+        self.assertIn("playbook-optimize", rb.core_runbooks(PKG.parent))

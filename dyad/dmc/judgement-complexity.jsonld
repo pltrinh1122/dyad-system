@@ -1,0 +1,60 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/judgement-complexity",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "judgement-complexity",
+  "name": "Judgement complexity",
+  "description": "Classes a recurring judgement a play-book step cites by what can decide it: code, its ratified precedents applied mechanically when the match is confident, or only the agent's inference, so that only judgement neither can derive stays inference.",
+  "dyad:decides": "What can decide this recurring judgement: code, its ratified precedents, or only the agent?",
+  "dyad:inputs": [
+    "the record the step cites: its outcomes, each outcome's condition and consequence, and its inputs",
+    "whether each input is stored, or observed by the code that would decide, and each condition a predicate a test can exercise (#641's test)",
+    "the record's past cases a plan-Y or done-Y covered, each with the record's decisive inputs as stored facts, every input declared structured (a stored field) or prose, the outcome it set and its covering row",
+    "a precedent set frozen from those cases, its sha256 and base commit, the vectorizer (stdlib TF-IDF over the set's frozen vocabulary), and the threshold and margin",
+    "the agreement the set reaches on a held-out sample of those cases, its date, and the latest re-measure after a merge that touched the set, against its stated bar",
+    "whether each outcome settles an agent-side call, or is a disposition or stands in for an operator's Y"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mechanical",
+      "name": "mechanical",
+      "dyad:when": "every input is a stored fact, or one the deciding code observes itself, and every outcome's condition is a predicate a test can exercise (#641's test)",
+      "dyad:then": "proposed as a candidate row: one function beside its inputs decides it, and its record's dyad:kind becomes mechanical, its tests pinning every outcome by the record's own names (#641's procedure)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "precedent",
+      "name": "precedent-derivable",
+      "dyad:when": "it fails the mechanical test and all six hold: (1) its comparison set is ratified precedents, each a case a plan-Y or done-Y covered and labelled with the outcome it set, no outcome a precedent record gave by itself among them; (2) its decisive inputs are each declared structured or prose, the match is over the prose inputs and never a case's whole text, and a structured input is compared field by field; (3) the set is frozen per version, with a digest and a base commit, and rebuilt when the owner Rule or the home is amended or a later done-Y retires or supersedes a case; (4) the threshold and margin are fixed tunables, and agreement on a held-out sample meets the stated bar and is re-measured after each landed merge that touches the set, with an audit sample of its recent applications drawn for the agent to read; (5) the case goes to the agent, with its reason, when the match is below the threshold or no precedent exists, inside the margin, distinguished by a structured input that differs from the precedent's, decided by a prose input marked to be read, or the record has fallen below its bar; (6) the result settles only an agent-side call, never a disposition and never a consequence that stands in for an operator's Y",
+      "dyad:then": "proposed as a candidate row: its record's dyad:kind becomes precedent, carrying its precedents; the code applies it when the match clears the threshold and margin and every structured input equals the precedent's, citing the precedent's row and score, and decides nothing the operator disposes; every abstention goes to the agent with its reason, and an outcome the code gave becomes a precedent only once a later Y covers it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "complex",
+      "name": "complex",
+      "dyad:when": "neither of the above holds",
+      "dyad:then": "stays inference: the agent judges it, and the run names the condition that failed"
+    }
+  ],
+  "dyad:precedence": "mechanical before precedent-derivable before complex: a judgement code can decide is never proposed for precedent, and precedent is tried only where code cannot decide.",
+  "dyad:default": "complex: a judgement with no ratified past cases, or whose agreement was not measured, stays inference.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/playbook-optimize.md",
+  "dyad:alsoIn": [
+    "scripts/similar.py"
+  ],
+  "dyad:owner": "Rule-13"
+}
