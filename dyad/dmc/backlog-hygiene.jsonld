@@ -16,6 +16,7 @@
   "dyad:decides": "Which backlog rows, and which pairs of rows, does the home's read show as hygiene?",
   "dyad:inputs": [
     "each backlog row's last commit to its row, plan or provenance record",
+    "each backlog row's title and refs, and the d-work #N citations on fetched origin branches",
     "the TF-IDF cosine of each pair of backlog rows, siblings of one parent skipped",
     "the preferences hygiene-stale-days, hygiene-similar and hygiene-top"
   ],
@@ -33,6 +34,27 @@
       "name": "a candidate for the review",
       "dyad:when": "a pair's cosine is at or above hygiene-similar, and it is among the hygiene-top highest",
       "dyad:then": "listed as a candidate line for the home's review, never a finding"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "I2",
+      "name": "a malformed title",
+      "dyad:when": "a backlog row's title is empty or starts with a hyphen, shaped like a flag",
+      "dyad:then": "a structural finding; the row is left out of the similarity ranking, having no title to compare"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "I4",
+      "name": "an orphaned child",
+      "dyad:when": "a backlog child's refs: parent #N names a terminal row",
+      "dyad:then": "a structural finding: a reason to read the row; a parent may close over a backlog child it never delivered, so an orphan still owed is a promotion candidate and never thereby obsolete"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "I12",
+      "name": "a row claimed while backlog",
+      "dyad:when": "a commit on a fetched origin branch cites d-work #N for a backlog row",
+      "dyad:then": "a structural finding, reported to the operator as an incident: work was claimed with no plan-Y, which the plan gate refuses at the push, so the commit went around the hook"
     },
     {
       "@type": "DefinedTerm",
@@ -71,5 +93,6 @@
   "dyad:alsoIn": [
     "scripts/automaton.py"
   ],
-  "dyad:owner": "Rule-3"
+  "dyad:owner": "Rule-3",
+  "dyad:precedence": "a malformed title is judged first and its row leaves the ranking; the structural findings are printed beside the ranked pairs, never instead of them; a finding is a reason to read a row, and retirement takes a ground of dmc/retirement-candidate.jsonld"
 }

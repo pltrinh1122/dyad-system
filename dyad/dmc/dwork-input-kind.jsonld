@@ -46,8 +46,9 @@
     "dyad:implementation": "scripts/dyadlib.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/d-work.md",
+  "dyad:home": "scripts/dyadlib.py",
   "dyad:alsoIn": [
+    "playbooks/d-work.md",
     "rules/RULE-16-concurrent-sessions.md"
   ],
   "dyad:owner": "Rule-3"

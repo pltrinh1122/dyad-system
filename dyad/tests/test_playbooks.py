@@ -157,7 +157,7 @@ class DworkPlaybookTests(unittest.TestCase):
     def test_playbook_sections(self):
         text = DWORK_PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Parameter", "Trigger", "Entity records", "The machine", "The lifecycle", "Reading", "Evidence", "Conduct"])
+        self.assertEqual(heads, ["Parameter", "Trigger", "Entity records", "The machine", "Steps", "Question", "Evidence"])   # #626 C1: the cited form
         self.assertIn("dyad/runbooks/d-work.md", text)
         for s in DWORK_STEPS:
             self.assertIn(f"`{s}`", text, s)

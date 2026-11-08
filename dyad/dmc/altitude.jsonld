@@ -15,10 +15,11 @@
   "description": "How large a row is: one definition of done the operator can evaluate per row, its parts carried or split by that definition. Applied in the intent reading under the preference intent-reading: on, where the intent-Y accepts the definition of done; in the plan under off.",
   "dyad:decides": "For this prompt's work, how many rows, and which parts ride one row's plan-Y and done-Y?",
   "dyad:inputs": [
-    "the operator's definition of done, from the provenance record, when the prompt gives one",
+    "the operator's definition of done, when the prompt gives one: from the row's own provenance record, else the record of the row its first disposed entry or its refs name (a row opened by a bare Y holds no words of its own); quoted only where it may be published, a tracked file being public, otherwise cited without quoting",
     "whether the operator would judge the parts through one report or each on its own",
     "whether the domain is one the operator has judged before",
-    "whether a part is an act Rule-2 never lets a Y carry (a preference value, a release, a destructive host action, an Intake)"
+    "whether a part is an act Rule-2 never lets a Y carry (a preference value, a release, a destructive host action, an Intake)",
+    "existing backlog rows a new definition of done covers: they cannot become accreted children (an accreted row is born open), so the new row's Done names them under retires"
   ],
   "hasDefinedTerm": [
     {
