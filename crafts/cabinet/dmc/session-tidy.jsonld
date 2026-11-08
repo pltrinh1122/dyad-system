@@ -26,7 +26,7 @@
       "@type": "DefinedTerm",
       "termCode": "live-seat",
       "name": "live seat",
-      "dyad:when": "a charter row of the mandates table names it, and its presence is within the window",
+      "dyad:when": "a charter row of the mandates table names it, by its full unit name or by its <function>-<hp> form with the hp left open, and its presence is within the window",
       "dyad:then": "kept"
     },
     {
@@ -47,7 +47,7 @@
       "@type": "DefinedTerm",
       "termCode": "done",
       "name": "done",
-      "dyad:when": "every row it holds is done or archived, its presence past the window",
+      "dyad:when": "it holds at least one row, every one done or archived, its presence past the window",
       "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
     },
     {
@@ -61,12 +61,12 @@
       "@type": "DefinedTerm",
       "termCode": "never-registered",
       "name": "never registered",
-      "dyad:when": "no presence file matches it by name or by holder; not read when no harness list was given",
+      "dyad:when": "a harness session no presence file matches, by name or by holder; read only from a transcribed harness list or session reconcile's own harness reading",
       "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
     }
   ],
-  "dyad:precedence": "pass when every session is a live seat or a live desk; otherwise one line per class to the board and one batch proposal to the cos, in order: done, stale and never registered first; then a charter seat with nothing open, alone; then the neglected, after the operator disposes each row they hold. Archiving is the cos's hosting act, Rule-8 reversible with the undo unarchive_session, one change-log row per call; a terminal session the operator closes by hand.",
-  "dyad:default": "never registered, when no presence file and no holder match; a session the census cannot read otherwise is reported, never classed",
+  "dyad:precedence": "never registered is decided first, from the harness side; then each presence file, as live seat, live desk, neglected, done, stale, the first that holds. Pass when every session is a live seat or a live desk; otherwise one line per class to the board and one batch proposal to the cos, in order: done, stale and never registered first; then a charter seat with nothing open, alone; then the neglected, after the operator disposes each row they hold. Archiving is the cos's hosting act, Rule-8 reversible with the undo unarchive_session, one change-log row per call; a terminal session the operator closes by hand.",
+  "dyad:default": "a session no class above describes (within the window, neither a charter seat nor a desk holding an open or planned row) is reported as unclassed and never proposed; it fails the pass, so the cos reads it",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null
