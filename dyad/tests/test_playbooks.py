@@ -314,8 +314,8 @@ class BacklogGroomPlaybookTests(unittest.TestCase):
     def test_playbook_sections_and_criteria(self):
         text = GROOM_PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence", "Conduct"])
-        cited = set(re.findall(r"dyad/dmc/([a-z0-9-]+)\.jsonld", text))
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence"])   # #626 C9
+        cited = set(re.findall(r"dyad/dmc/([a-z0-9-]+)\.jsonld", text)) | set(re.findall(r"`dmc:([a-z0-9-]+)`", text))
         self.assertEqual(cited, set(GROOM_CRITERIA))
         for c in cited:
             self.assertTrue((PKG / "dmc" / f"{c}.jsonld").is_file(), c)
@@ -323,14 +323,14 @@ class BacklogGroomPlaybookTests(unittest.TestCase):
         self.assertIn("dyad/runbooks/backlog-groom.md", text)
         self.assertIn("`report`", text)
         self.assertIn("`Y/N: archive #a, #b, … #k?`", text)          # the one question a run may ask
-    def test_records_homed_here_name_their_outcomes_here(self):
+    def test_records_homed_here_are_cited_masters(self):          # #626 C9: the record is the master, cited by id
         import json
         text = GROOM_PLAYBOOK.read_text()
         for c in ("groom-trigger", "release-plan"):
             rec = json.loads((PKG / "dmc" / f"{c}.jsonld").read_text())
             self.assertEqual(rec["dyad:home"], "playbooks/backlog-groom.md", c)
-            for t in rec["hasDefinedTerm"]:
-                self.assertIn(t["name"], text, (c, t["name"]))
+            self.assertIn(f"dmc:{c}", text, c)
+            self.assertFalse(all(t["name"] in text for t in rec["hasDefinedTerm"]), c)   # never restated
     def test_promotion_reads_the_release_plan(self):
         import json
         rec = json.loads((PKG / "dmc" / "promotion.jsonld").read_text())
