@@ -23,7 +23,9 @@ nothing, its exit code still the command's own. Every other class appends on eve
 
   runbook.py check                       check every run-book (the craft guard's CLI; exit 2 with no craft)
   runbook.py list <instance>             the commands of one run-book with class, role, section
-                                         (<runbooks>/<instance>.md, else the core's dyad/runbooks/<instance>.md; #165)
+                                         (<runbooks>/<instance>.md, else the core's dyad/runbooks/<instance>.md; #165;
+                                         `<craft>:<name>` is crafts/<craft>/runbooks/<name>.md, its events
+                                         <runbooks>/events/<craft>-<name>.jsonl; #640)
   runbook.py run <instance> <name> [--as operator|agent|automaton]   execute one command (role: DYAD_ROLE, default agent;
                                          automaton: a read-only command only)
   runbook.py new <instance>              seed <runbooks>/<instance>.md from the first crafts/*/templates/runbook.md
@@ -49,6 +51,7 @@ NONE = "none"                                                            # an un
 PROSE_FENCES = {"", "bash", "sh", "shell", "console"}                    # refused by the guard: a command is a dyad-cmd block or it is prose
 DEFAULT_RUNBOOKS = f"{dyadlib.DEFAULT_HOST}/runbooks"                    # under the default host path; a system's own is `<host>/runbooks` (#175)
 CORE_RUNBOOKS = "dyad/runbooks"                                          # the core craft's own run-books (package; #165): the play-books' steps
+CRAFT_SEP = ":"                                                          # `<craft>:<name>`, a Tended craft's run-book crafts/<craft>/runbooks/<name>.md (#640)
 SECTIONS_KEY = "sections:"                                               # header line `# sections: A, B, C` — the run-book's own section set (default: the craft rule's)
 _CRED = re.compile(r"\b(" + "|".join(CREDENTIAL_WORDS) + r")\b", re.I)
 _FENCE = re.compile(r"^```\s*(\S*)\s*$")
@@ -98,6 +101,9 @@ class Event:
 INVARIANTS = [
     ("fields-match-command-header", lambda: tuple("class" if f.name == "cls" else f.name for f in fields(Command)[:len(FIELDS)]) == FIELDS),
     ("event-fields-match-dataclass", lambda: tuple("class" if f.name == "cls" else f.name for f in fields(Event)) == EVENT_FIELDS),
+    ("craft-key-reads-craft-and-name", lambda: craft_runbook("cabinet:session-tidy") == ("cabinet", "session-tidy")
+                                               and craft_runbook("sessions") is None and craft_runbook(":x") is None
+                                               and event_instance("cabinet:session-tidy") == "cabinet-session-tidy"),   # #640
     ("classes-are-host-classes", lambda: CLASSES is dyadlib.HOST_CLASSES),
     ("roles-distinct", lambda: len(set(ROLES)) == len(ROLES) and len(set(RUN_ROLES)) == len(RUN_ROLES)),
     ("automaton-is-a-run-role", lambda: AUTOMATON in RUN_ROLES and AUTOMATON not in ROLES),
@@ -117,9 +123,22 @@ def runbooks_rel(root: Path | None = None) -> str:
 def runbooks_dir(root: Path | None = None) -> Path:
     return (root or dyadlib.repo_root()) / runbooks_rel(root)
 
+def craft_runbook(instance: str) -> tuple[str, str] | None:
+    """(craft, name) of a `<craft>:<name>` key, or None for a bare name (#640)."""
+    craft, sep, name = instance.partition(CRAFT_SEP)
+    return (craft, name) if sep and craft and name else None
+
+def event_instance(instance: str) -> str:
+    """The `instance` an event records and its store file's stem: a bare name as it is, a craft run-book's
+    `<craft>:<name>` as `<craft>-<name>` (#640), so the events guard's file-stem test holds."""
+    return instance.replace(CRAFT_SEP, "-")
+
 def runbook_path(root: Path, instance: str) -> Path:
     """`<runbooks>/<instance>.md`; when absent and a core run-book of that name exists, `dyad/runbooks/<instance>.md`
-    (events still go to the instance's `<runbooks>/events/<instance>.jsonl`, #165)."""
+    (events still go to the instance's `<runbooks>/events/<instance>.jsonl`, #165). A `<craft>:<name>` key is the
+    craft's `crafts/<craft>/runbooks/<name>.md` (#640)."""
+    if (cn := craft_runbook(instance)) is not None:
+        return Path(root) / "crafts" / cn[0] / "runbooks" / f"{cn[1]}.md"
     p = runbooks_dir(root) / f"{instance}.md"
     core = Path(root) / CORE_RUNBOOKS / f"{instance}.md"
     return core if not p.exists() and core.exists() else p
@@ -134,15 +153,23 @@ def core_runbooks(root: Path | None = None) -> dict[str, Path]:
     d = (root or dyadlib.repo_root()) / CORE_RUNBOOKS
     return {p.stem: p for p in sorted(d.glob("*.md")) if p.stem.lower() != "readme"} if d.is_dir() else {}
 
+def craft_runbooks(root: Path | None = None) -> dict[str, Path]:
+    """{`<craft>:<name>`: path} for every Tended craft's run-books, `crafts/<craft>/runbooks/*.md` (README excluded; #640)."""
+    d = (root or dyadlib.repo_root()) / "crafts"
+    return {f"{p.parent.parent.name}{CRAFT_SEP}{p.stem}": p for p in sorted(d.glob("*/runbooks/*.md"))
+            if p.stem.lower() != "readme"} if d.is_dir() else {}
+
 def all_runbooks(root: Path | None = None) -> dict[str, Path]:
-    """Core run-books, then the instance's; an instance run-book of the same name wins (never expected)."""
-    return {**core_runbooks(root), **runbooks(root)}
+    """Core run-books, then the crafts' (keyed `<craft>:<name>`, #640), then the instance's; an instance run-book of the
+    same name as a core one wins (never expected), and a craft's key never equals a bare name."""
+    return {**core_runbooks(root), **craft_runbooks(root), **runbooks(root)}
 
 def events_dir(root: Path | None = None) -> Path:
     return runbooks_dir(root) / "events"
 
 def events_path(root: Path, instance: str) -> Path:
-    return events_dir(root) / f"{instance}.jsonl"
+    """`<runbooks>/events/<instance>.jsonl`; a craft run-book's `<runbooks>/events/<craft>-<name>.jsonl` (#640)."""
+    return events_dir(root) / f"{event_instance(instance)}.jsonl"
 
 # ---- parser
 def parse_text(text: str) -> list[Command]:
@@ -318,11 +345,12 @@ def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = Tru
     print(f"{c.cls} {name} [{c.scope}]\n$ {c.cmd}", file=out)
     started = datetime.datetime.now(datetime.UTC).replace(microsecond=0)
     ts = started.strftime("%Y-%m-%dT%H:%M:%SZ")
-    eid = f"{instance}-{started.strftime('%Y%m%dT%H%M%SZ')}-{name}"
+    inst = event_instance(instance)   # #640: a craft run-book's events are `<craft>-<name>`'s
+    eid = f"{inst}-{started.strftime('%Y%m%dT%H%M%SZ')}-{name}"
     t0 = time.monotonic()
     if c.cls != "read-only" and _test(c.postcondition, root):
         print("already satisfied", file=out)
-        ev = Event(eid, ts, role, instance, name, c.cmd, c.cls, c.scope, 0, int((time.monotonic() - t0) * 1000), "already",
+        ev = Event(eid, ts, role, inst, name, c.cmd, c.cls, c.scope, 0, int((time.monotonic() - t0) * 1000), "already",
                    hashlib.sha256(b"").hexdigest(), "", commit, sha)
     else:
         if c.cls == "destructive" and confirm_tty:
@@ -334,7 +362,7 @@ def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = Tru
             print(output.rstrip("\n"), file=out)
         post = "n/a" if c.postcondition == NONE else ("ok" if _test(c.postcondition, root) else "failed")
         print(f"exit {rc}; postcondition {post}; {ms} ms", file=out)
-        ev = Event(eid, ts, role, instance, name, c.cmd, c.cls, c.scope, rc, ms, post,
+        ev = Event(eid, ts, role, inst, name, c.cmd, c.cls, c.scope, rc, ms, post,
                    hashlib.sha256(output.encode()).hexdigest(), tail(output), commit, sha)
     ep = events_path(root, instance)
     if unchanged(ep, ev):   # #438: a heartbeat is not an event
