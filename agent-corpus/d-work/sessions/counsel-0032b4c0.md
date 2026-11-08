@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-08T20:03:22+00:00
+seen: 2026-11-08T20:11:52+00:00
 root: /home/user/wt/646
 rows: 646
 files: agent-corpus/d-work/ dyad/guards/agent/board.py dyad/rules/RULE-3-d-work.md dyad/templates/PREFERENCES.md dyad/tests/guards/agent/test_board.py dyad/vocabulary/VOCABULARY.md
