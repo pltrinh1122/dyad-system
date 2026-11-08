@@ -231,7 +231,7 @@ class PrecedentTests(unittest.TestCase):
         os.environ.pop("DYAD_INSTANCE", None); self.t = Tree()
         sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts")); import similar
         (self.t.pkg / "dmc" / "sets").mkdir()
-        self.sha = similar.freeze([("read-only", "it changes nothing, a status read", 1), ("reversible action", "it can be undone", 2)],
+        self.sha = similar.freeze([("read-only", "it changes nothing, a status read", {}, 1), ("reversible action", "it can be undone", {}, 2)],
                                   self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, "nosuchbase", max_df=1.0)
         (self.t.pkg / "templates").mkdir()
         (self.t.pkg / "templates" / "PREFERENCES.md").write_text(
@@ -241,7 +241,8 @@ class PrecedentTests(unittest.TestCase):
     def rec(self, **comp):
         tun = lambda k, v: {"dyad:preference": k, "dyad:defaultValue": v, "dyad:allowed": "a number", "dyad:readBy": "rules/home.md"}
         c = {"dyad:set": "dmc/sets/action-class.jsonl", "dyad:sha256": self.sha, "dyad:threshold": "sim-threshold",
-             "dyad:margin": "sim-margin", "dyad:agreement": 0.95, "dyad:bar": 0.9} | comp
+             "dyad:margin": "sim-margin", "dyad:agreement": 0.95, "dyad:bar": 0.0, "dyad:measured": "2026-11-08",
+             "dyad:kinds": {"the action": "prose"}} | comp
         r = record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": "precedent", "dyad:implementation": None},
                                     "dyad:tunables": [tun("sim-threshold", "0.2"), tun("sim-margin", "0.05")],
                                     "dyad:precedents": c})
@@ -261,7 +262,11 @@ class PrecedentTests(unittest.TestCase):
                  "digest": ({"dyad:sha256": "0" * 64}, "differs from the set's"),
                  "threshold": ({"dyad:threshold": "nope"}, "names no preference"),
                  "range": ({"dyad:bar": 1.5}, "numbers in [0, 1]"),
-                 "below bar": ({"dyad:agreement": 0.8}, "below its bar")}
+                 "below bar": ({"dyad:agreement": 0.8, "dyad:bar": 0.9}, "below its bar"),
+                 "undeclared input": ({"dyad:kinds": {}}, "does not declare the input 'the action'"),
+                 "stray kind": ({"dyad:kinds": {"the action": "prose", "other": "prose"}}, "which is no input"),
+                 "bad kind": ({"dyad:kinds": {"the action": "fuzzy"}}, "not one of structured, prose, read"),
+                 "measured": ({"dyad:measured": "today"}, "dyad:measured is not")}
         for label, (over, says) in cases.items():
             r = self.rec()
             if "dyad:precedents" in over:
@@ -272,6 +277,19 @@ class PrecedentTests(unittest.TestCase):
                 r["dyad:precedents"].update(over)
             with self.subTest(label):
                 self.assertTrue(any(says in m for m in self.bad(r)), (label, self.t.check()))
+
+    def test_fields_must_be_structured_inputs(self):
+        import similar
+        sha = similar.freeze([("read-only", "it changes nothing, a status read", {"zone": "agent"}, 1),
+                              ("reversible action", "it can be undone", {}, 2)],
+                             self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, "nosuchbase", max_df=1.0)
+        self.assertTrue(any("are not inputs this record declares structured" in m for m in self.bad(self.rec(**{"dyad:sha256": sha}))))
+
+    def test_a_fallen_set_warns(self):
+        self.t.put(self.t.pkg, self.rec(**{"dyad:bar": 0.9}))           # stored 0.95 meets the bar; leave-one-out does not
+        msgs = self.t.check()
+        self.assertFalse([m for m in msgs if not m.startswith("warning:")], msgs)
+        self.assertTrue(any(m.startswith("warning:") and "fallen:" in m for m in msgs), msgs)
 
     def test_labels_must_be_the_outcome_names(self):
         r = self.rec(); r["hasDefinedTerm"][1]["name"] = "undoable"
@@ -293,7 +311,7 @@ class PrecedentTests(unittest.TestCase):
         rule = self.t.pkg / "rules" / "RULE-12-verifiable-code.md"; rule.write_text("# Rule-12\n")
         git("init", "-q"); git("add", "-A"); git("commit", "-qm", "base"); base = git("rev-parse", "HEAD")
         sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts")); import similar
-        sha = similar.freeze([("read-only", "it changes nothing, a status read", 1), ("reversible action", "it can be undone", 2)],
+        sha = similar.freeze([("read-only", "it changes nothing, a status read", {}, 1), ("reversible action", "it can be undone", {}, 2)],
                              self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, base, max_df=1.0)
         r = self.rec(**{"dyad:sha256": sha}); r["dyad:owner"] = "Rule-12"
         self.t.put(self.t.pkg, r)

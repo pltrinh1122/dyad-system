@@ -49,7 +49,9 @@ TYPES = ("DefinedTermSet", "dyad:DecisionCriterion")
 OUTCOME_KEYS = ("termCode", "name", "dyad:when", "dyad:then")
 KINDS = ("mechanical", "inference", "declared", "precedent")   # precedent: derived from ratified cases (#642 revision 2)
 PRECEDENT = "precedent"
-PRECEDENT_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "dyad:agreement", "dyad:bar")   # #642 (schema.md; the base is the set header's)
+PRECEDENT_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "dyad:agreement", "dyad:bar",
+                  "dyad:measured", "dyad:kinds")   # #642 (schema.md; the base is the set header's, pinned by the sha256)
+INPUT_KINDS = ("structured", "prose", "read")      # revision 3: how each decisive input is compared, declared per input
 SHA256 = re.compile(r"[0-9a-f]{64}")
 RATIFYING = re.compile(r"\b(ratif\w*|dispos\w*|plan-Y|done-Y|merges?|merged|releases?|released|destructive|archiv\w*)\b", re.I)
                                                     # a consequence a precedent outcome may never carry (#642 Q7)
@@ -58,7 +60,7 @@ TUNABLE_KEYS = ("dyad:preference", "dyad:defaultValue", "dyad:allowed", "dyad:re
 TUNABLE_PATH = "dyad:readBy"                                       # path-valued, inside a tunable
 PREF_KEY = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")            # a preference key's shape
 TEMPLATE = ("templates", "PREFERENCES.md")                         # the core's preference template, under the package
-FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH, "dyad:set")
+FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH, "dyad:set", "dyad:measured")
 CONTEXT = ["https://schema.org", {"dyad": "urn:dyad:term:"}]   # what dyad/dmc/context.jsonld holds
 CONTEXT_FILE, STORE, CORE_CONTAINER, INSTANCE_CONTAINER = "context.jsonld", "dmc", "dyad-operator", "instance"
 MASTER_DIRS = ("playbooks", "runbooks")   # #626 C0: a record homed in a file of one of these is the decision's master
@@ -226,8 +228,11 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
     fails when the set's file is missing or no precedent set (`similar.load`), its sha256 differs, its labels are not the
     record's outcome names, the threshold or margin names no preference of the record's `dyad:tunables`, the agreement
     or bar is no number in [0, 1], the agreement is below the bar, or an outcome's `dyad:then` names a ratification
-    event or a destructive act (Q7: a precedent settles agent-side calls only). It warns when the owner Rule moved after
-    the set's base commit (Q5: the set is rebuilt)."""
+    event or a destructive act (Q7: a precedent settles agent-side calls only); and (revision 3) when `dyad:kinds` does not
+    declare every input exactly as structured, prose or read, the set's fields are not structured inputs, or
+    `dyad:measured` is no date. It warns when the owner Rule moved after the set's base commit (Q5: the set is rebuilt),
+    and `fallen` when the set's leave-one-out agreement at the record's default threshold and margin is below its bar
+    (R3: the re-measure)."""
     c = d.get("dyad:precedents")
     if kind != PRECEDENT:
         bad(f"dyad:precedents on a record of kind {kind!r}: only a precedent record carries one"); return
@@ -242,6 +247,7 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
             bad(f"precedent outcome {o.get('termCode')!r} names {m.group(0)!r} in its consequence: a ratification event "
                 f"or a destructive act is never derived from precedent (#642 Q7)")
     st, path, why = resolve(c["dyad:set"], base, root, pkg)
+    cset_ok = None
     if st != "ok":
         (warn if st == "warn" else bad)(f"dyad:precedents dyad:set {c['dyad:set']!r} {why}")
     else:
@@ -250,6 +256,7 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
             cset = similar.load(path)
         except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
             bad(f"dyad:precedents dyad:set {c['dyad:set']!r}: {e}"); cset = None
+        cset_ok = cset
         if cset is not None:
             if not (isinstance(c["dyad:sha256"], str) and SHA256.fullmatch(c["dyad:sha256"])):
                 bad("dyad:precedents dyad:sha256 is not 64 hex")
@@ -265,6 +272,37 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
     for k in ("dyad:threshold", "dyad:margin"):
         if c[k] not in keys:
             bad(f"dyad:precedents {k} {c[k]!r} names no preference of this record's dyad:tunables")
+    kinds, inputs = c.get("dyad:kinds"), d.get("dyad:inputs") if isinstance(d.get("dyad:inputs"), list) else []
+    if not isinstance(kinds, dict):
+        bad("dyad:precedents dyad:kinds is not an object {input: structured|prose|read}")
+    else:
+        for i in inputs:
+            if i not in kinds:
+                bad(f"dyad:precedents dyad:kinds does not declare the input {i!r} (structured, prose or read; revision 3)")
+        for k, v in kinds.items():
+            if k not in inputs:
+                bad(f"dyad:precedents dyad:kinds names {k!r}, which is no input of this record")
+            elif v not in INPUT_KINDS:
+                bad(f"dyad:precedents dyad:kinds {k!r} is {v!r}, not one of {', '.join(INPUT_KINDS)}")
+    if not (isinstance(c.get("dyad:measured"), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", c["dyad:measured"])):
+        bad("dyad:precedents dyad:measured is not the agreement's UTC date, YYYY-MM-DD")
+    if cset_ok is not None and isinstance(kinds, dict):
+        structured = {k for k, v in kinds.items() if v == "structured"}
+        stray = sorted({f for fs in cset_ok["fields"] for f in fs} - structured)
+        if stray:
+            bad(f"the precedent set's fields {stray} are not inputs this record declares structured")
+        defaults = {t.get("dyad:preference"): t.get("dyad:defaultValue") for t in d.get("dyad:tunables") or [] if isinstance(t, dict)}
+        try:
+            th, mg = float(defaults.get(c["dyad:threshold"])), float(defaults.get(c["dyad:margin"]))
+        except (TypeError, ValueError):
+            th = mg = None
+        bar = c.get("dyad:bar")
+        if th is not None and isinstance(bar, (int, float)):
+            import similar
+            loo = similar.loo_agreement(cset_ok, th, mg)
+            if loo["agreement"] < bar:
+                warn(f"fallen: the set's leave-one-out agreement {loo['agreement']:.2f} ({loo['reproduced']} of "
+                     f"{loo['n']}) is below its bar {bar}; return the record to inference or rebuild its set (#642 R3)")
     nums = {k: c[k] for k in ("dyad:agreement", "dyad:bar")}
     if not all(isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1 for v in nums.values()):
         bad("dyad:precedents dyad:agreement and dyad:bar are numbers in [0, 1]")
