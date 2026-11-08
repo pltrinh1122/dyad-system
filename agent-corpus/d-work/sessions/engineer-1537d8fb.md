@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-08T14:28:22+00:00
+seen: 2026-11-08T14:32:54+00:00
 root: /home/user/dyad-system
 rows: 640
 files: agent-corpus/d-work/ crafts/cabinet/guards/tidy.py crafts/cabinet/playbooks/session-tidy.md crafts/cabinet/runbooks/session-tidy.md crafts/cabinet/tests/guards/test_tidy.py dyad/VERSION dyad/scripts/runbook.py dyad/tests/test_runbook.py
