@@ -12,8 +12,7 @@ outcomes, an outcome lacking `@type DefinedTerm` or a non-empty `termCode`/`name
 termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared or whose
 `dyad:implementation` is neither null nor an existing path; a `dyad:home` or `dyad:alsoIn` path that does not
 exist; an outcome name absent from the home file (case-insensitive, whitespace runs collapsed), for a record
-homed in a Rule, a craft rule or any other non-procedure file, and for one homed in a play-book or run-book whose home
-cites no record yet; a date,
+homed in a Rule, a craft rule or any other non-procedure file; a date,
 version, commit sha or email outside the path fields and `dyad:owner`; an `@id` declared twice. Paths are
 relative to the craft root (`dyad/`, `crafts/<craft>/`) for core and craft records and to the repo root for
 instance records; `../` may reach another craft but never leave the repo. A path into a craft this system
@@ -21,10 +20,9 @@ has not installed (`../crafts/<x>/…` with no `crafts/<x>/`) warns instead of f
 severity for an absent store). No record anywhere, or no `dmc/` directory, passes: the summary says so.
 The master rule (#626 C0): a record whose `dyad:home` is a play-book or run-book (a file directly under `playbooks/` or
 `runbooks/`) is the master of its decision, and its home cites it as `dmc:<identifier>` at the step that applies it.
-Once a home cites any record it is converted, and each record homed there fails when the home does not cite it and
-when the home names every one of its outcomes (a restatement). A home that cites none still holds the index form: its
-records keep the outcome-name check, and it warns once, naming how many are `not yet master`, until its child of #626
-converts it. Every `dmc:<id>` in a play-book or run-book of the core or a craft, or in a run-book of the instance's store
+Each such record fails when its home does not cite it and when the home names every one of its outcomes (a
+restatement); C0's per-home phase-in, under which a home citing no record kept the index form and warned, ended with
+the last child of #626 (the hard flip). Every `dmc:<id>` in a play-book or run-book of the core or a craft, or in a run-book of the instance's store
 (`DYAD_RUNBOOKS`, default `<host path>/runbooks`), names a record, or fails.
 Inference, stated: whether a criterion's outcomes are right, whether its home states it, and whether
 `dyad:kind` describes how the decision is really made.
@@ -60,7 +58,6 @@ CONTEXT = ["https://schema.org", {"dyad": "urn:dyad:term:"}]   # what dyad/dmc/c
 CONTEXT_FILE, STORE, CORE_CONTAINER, INSTANCE_CONTAINER = "context.jsonld", "dmc", "dyad-operator", "instance"
 MASTER_DIRS = ("playbooks", "runbooks")   # #626 C0: a record homed in a file of one of these is the decision's master
 CITE = re.compile(r"(?<![\w:/-])dmc:([a-z0-9][a-z0-9-]*)")   # a home's citation `dmc:<identifier>`; never a urn's `…:dmc:<container>`
-PENDING = "not yet master (#626)"         # the warning of a home that cites no record yet
 FORBIDDEN = (("date", re.compile(r"\d{4}-\d{2}-\d{2}")),
              ("version", re.compile(r"\bv?\d+\.\d+\.\d+\b")),
              ("commit", re.compile(r"\b[0-9a-f]{40}\b")),
@@ -292,7 +289,7 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                     (warn if st == "warn" else bad)(f"dyad:alsoIn {a!r} {why}")
     if home is not None and home.is_file() and outcomes:
         raw = home.read_text(errors="replace"); text = _collapse(raw)
-        if is_master_home(home) and citations(raw):   # #626 C0: a converted home; the record is the master
+        if is_master_home(home):   # #626: the record is the master (the per-home phase-in ended with the hard flip)
             if ident not in citations(raw):
                 bad(f"master record not cited: its dyad:home {d['dyad:home']} cites no `dmc:{ident}` (dyad/dmc/schema.md)")
             if all(_collapse(o) in text for o in outcomes):
@@ -332,7 +329,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
                 claims.setdefault(k, []).append(p)
         except (json.JSONDecodeError, UnicodeDecodeError):
             pass
-    idents, pending = set(), {}
+    idents = set()
     for container, p, base in recs:
         try:
             d = json.loads(p.read_text())
@@ -340,17 +337,11 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             continue
         if isinstance(d, dict) and isinstance(d.get("identifier"), str):
             idents.add(d["identifier"])
-            st, home, _ = resolve(d.get("dyad:home"), base, root, pkg) if isinstance(d.get("dyad:home"), str) else ("fail", None, "")
-            if st == "ok" and is_master_home(home) and home.is_file() and not citations(home.read_text(errors="replace")):
-                pending.setdefault(home, []).append(d["identifier"])
     for f in procedure_files(pkg, root):   # #626 C0: every `dmc:<id>` names a record, from C0 on; the host's run-books too (#639)
         name = f.relative_to(root).as_posix() if f.is_relative_to(root) else str(f)
         for c in citations(f.read_text(errors="replace")):
             if c not in idents:
                 msgs.append(f"{name}: `dmc:{c}` names no DMC record (dyad/dmc/, crafts/<craft>/dmc/, <instance>/dmc/)")
-    for home, ids in sorted(pending.items()):   # one line per home still holding the index form (#626 C0)
-        name = home.relative_to(root).as_posix() if home.is_relative_to(root) else str(home)
-        msgs.append(f"warning: {name}: {len(ids)} record(s) homed here {PENDING}: it cites no `dmc:<id>`")
     tkeys, unseeded = template_keys(pkg), {}
     for k, ps in sorted(claims.items()):
         if len(ps) > 1:
