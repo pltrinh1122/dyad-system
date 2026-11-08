@@ -276,6 +276,19 @@ class MasterTests(unittest.TestCase):
         c = self.t.craft("pottery"); self.t.put(c, record("pottery", ident="no-such"))
         self.assertEqual(self.t.check(), [])                                   # a craft's record resolves it too
 
+    def test_a_host_runbook_citation_names_a_record(self):
+        """#639: the instance's run-books (`<host path>/runbooks/`, Rule-19) are master homes, so their citations resolve too."""
+        os.environ.pop("DYAD_RUNBOOKS", None); os.environ.pop("DYAD_HOST", None)
+        rb = self.t.root / "workstation-corpus" / "runbooks"; rb.mkdir(parents=True)
+        (rb / "server.md").write_text("## Health\n1. `dmc:no-such`.\n")
+        (rb / "README.md").write_text("`dmc:readme-skipped`\n")
+        self.t.put(self.t.pkg, record("dyad-operator"))                        # a store with a record: the check runs
+        bad, _ = self.split()
+        self.assertEqual(bad, ["workstation-corpus/runbooks/server.md: `dmc:no-such` names no DMC record "
+                               "(dyad/dmc/, crafts/<craft>/dmc/, <instance>/dmc/)"])
+        self.assertIn(rb / "server.md", g.procedure_files(self.t.pkg, self.t.root))
+        self.assertNotIn(rb / "server.md", g.procedure_files(self.t.pkg))
+
     def test_a_record_homed_in_a_rule_is_unchanged(self):
         self.home("## Steps\n1. `dmc:action-class`.\n")
         self.t.put(self.t.pkg, record("dyad-operator"))                        # rules/home.md, which names every outcome
