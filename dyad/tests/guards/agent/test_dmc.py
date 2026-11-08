@@ -221,5 +221,69 @@ class DmcGuardTests(unittest.TestCase):
         self.fails("dyad:tunables is the core's only")
 
 
+
+class MasterTests(unittest.TestCase):
+    """#626 C0: a record homed in a play-book or run-book is the decision's master. A home that cites no `dmc:<id>` keeps
+    the index form (today's outcome-name check) and warns once; a home that cites any is converted, and there each
+    record homed in it must be cited and must not have every outcome named; every `dmc:<id>` in a play-book or run-book
+    names a record; a record homed in a Rule is unchanged."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None); self.t = Tree()
+        (self.t.pkg / "playbooks").mkdir(); (self.t.pkg / "runbooks").mkdir()
+    def tearDown(self):
+        shutil.rmtree(self.t.root, ignore_errors=True)
+    def home(self, text, rel="playbooks/p.md"):
+        (self.t.pkg / rel).write_text(text)
+    def split(self):
+        msgs = self.t.check()
+        return [m for m in msgs if not m.startswith("warning:")], [m for m in msgs if m.startswith("warning:")]
+
+    def test_an_unconverted_home_keeps_the_index_form_and_warns_once(self):
+        self.home(HOME)
+        self.t.put(self.t.pkg, record("dyad-operator", home="playbooks/p.md"))
+        self.t.put(self.t.pkg, record("dyad-operator", ident="other", home="playbooks/p.md"))
+        bad, warn = self.split()
+        self.assertEqual(bad, [])
+        self.assertEqual(warn, ["warning: dyad/playbooks/p.md: 2 record(s) homed here not yet master (#626): it cites no `dmc:<id>`"])
+        self.home("# a play-book naming no outcome\n")
+        bad, _ = self.split()
+        self.assertTrue(any("outcome name 'read-only' not found" in m for m in bad), bad)
+
+    def test_a_converted_home_cites_and_restates_nothing(self):
+        self.home("## Steps\n1. Class the action: `dmc:action-class`.\n")
+        self.t.put(self.t.pkg, record("dyad-operator", home="playbooks/p.md"))
+        self.assertEqual(self.t.check(), [])
+        self.home("## Steps\n1. Class the action: `dmc:action-class` (read-only, or a reversible\n  action).\n")
+        bad, _ = self.split()
+        self.assertEqual(len(bad), 1); self.assertIn("restated: dyad:home playbooks/p.md names every outcome", bad[0])
+        self.home("## Steps\n1. Class it: `dmc:action-class`; read-only is free.\n")
+        self.assertEqual(self.t.check(), [])                                   # one outcome named is no restatement
+
+    def test_a_converted_home_cites_every_record_homed_in_it(self):
+        self.home("## Steps\n1. `dmc:action-class`.\n", rel="runbooks/r.md")
+        self.t.put(self.t.pkg, record("dyad-operator", home="runbooks/r.md"))
+        self.t.put(self.t.pkg, record("dyad-operator", ident="other", home="runbooks/r.md"))
+        bad, warn = self.split()
+        self.assertEqual(warn, [])
+        self.assertEqual(bad, ["dyad/dmc/other.jsonld: master record not cited: its dyad:home runbooks/r.md cites no "
+                               "`dmc:other` (dyad/dmc/schema.md)"])
+
+    def test_a_citation_names_a_record(self):
+        self.home("## Steps\n1. `dmc:action-class`, then `dmc:no-such`; a urn:dyad:dmc:dyad-operator/x is no citation.\n")
+        self.t.put(self.t.pkg, record("dyad-operator", home="playbooks/p.md"))
+        bad, _ = self.split()
+        self.assertEqual(bad, ["dyad/playbooks/p.md: `dmc:no-such` names no DMC record (dyad/dmc/, crafts/<craft>/dmc/, <instance>/dmc/)"])
+        c = self.t.craft("pottery"); self.t.put(c, record("pottery", ident="no-such"))
+        self.assertEqual(self.t.check(), [])                                   # a craft's record resolves it too
+
+    def test_a_record_homed_in_a_rule_is_unchanged(self):
+        self.home("## Steps\n1. `dmc:action-class`.\n")
+        self.t.put(self.t.pkg, record("dyad-operator"))                        # rules/home.md, which names every outcome
+        self.assertEqual(self.t.check(), [])
+        self.assertFalse(g.is_master_home(self.t.pkg / "rules" / "home.md"))
+        self.assertTrue(g.is_master_home(self.t.pkg / "playbooks" / "p.md"))
+        self.assertEqual(g.citations("`dmc:a` `dmc:b-c` dmc:a urn:dyad:dmc:x/y"), ["a", "b-c"])
+
+
 if __name__ == "__main__":
     unittest.main()
