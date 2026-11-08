@@ -64,6 +64,8 @@ integration dyad/tests/test_replays.py                     # a scratch install, 
 integration dyad/tests/test_merge.py                       # scratch repos, a bare origin with refs/pull, merge and push (#532)
 integration dyad/tests/test_hygiene.py                     # scratch repos and git, the backlog hygiene of the sweep (#565)
 integration dyad/tests/test_decisions.py                   # scratch repos and git, the decision functions of #641
+unit dyad/tests/test_similar.py                             # temp files only, in process: the comparator set (#642)
+integration dyad/tests/test_playbook_profile.py                   # temp files and the live tree (the d-work play-book), #642
 integration dyad/tests/test_groom.py                       # scratch repos and git, the backlog grooming report (#625)
 unit dyad/tests/test_intent.py                          # a temp instance and the live surface, in process (#615)
 integration dyad/tests/test_cli.py                         # the runner as a child per form, git status of the live repo (#592)

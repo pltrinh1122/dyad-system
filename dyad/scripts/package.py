@@ -251,6 +251,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <sha> and <sha> is not yet on main; then `git merge --no-ff <sha>` onto origin/main in
                                 the land worktree and one push to main through the pre-push gate (Rule-14 property 3);
                                 one line naming the authorizing entry, or `refused: <reason>`
+  dyad playbook profile <name>  one play-book's profile (scripts/playbook_profile.py, #642): each step's words and the
+                                dmc ids and commands it cites, each cited record's words and kind, the run total, and
+                                the median inference and mechanical seconds of the traces of rows whose plan names it
   dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none … | groom]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
@@ -2576,6 +2579,10 @@ if __name__ == "__main__":
         sys.exit(cmd_steps(a[1:]))
     if a and a[0] == "automaton":
         sys.exit(cmd_automaton(a[1:]))
+    if a and a[0] == "playbook":   # #642: read-only, a play-book's profile (scripts/playbook_profile.py)
+        if a[1:2] != ["profile"]:
+            sys.exit("usage: dyad playbook profile <name>")
+        sys.exit(dyadlib.load_module(PKG / "scripts" / "playbook_profile.py", "dyad_playbook_profile").main(a[2:], REPO))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
     if a and a[0] == "inbox":

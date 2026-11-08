@@ -277,6 +277,7 @@ class IntentMachineTests(unittest.TestCase):
         self.assertIn(("intent-asked", "hold"), E)
         self.assertEqual(dyadlib.orch_release_to("intent-asked"), "planning")
         self.assertEqual(dyadlib.CLI[("dwork", "intent")].pos, "<id>")
+        self.assertEqual(dyadlib.CLI[("playbook", "profile")].pos, "<name>")   # #642: one read-only verb
 
 class GroomFormTests(unittest.TestCase):
     """#625 step 5: `dyad board groom` is one row of the CLI table, read-only and taking no word or flag."""
