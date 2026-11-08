@@ -1,55 +1,22 @@
-# Run-book: released (the release service on GitHub Actions) — d-work #461
+# Run-book: released (the release service on GitHub Actions) — d-work #461, #626
 # sections: Status/health, Pending, Retry, Logs, Data
 
-Instance: not a server on this host — the workflow `.github/workflows/dyad-release.yml` (display name `released`; its
-logic the core verb `dyad release`, `dyad/scripts/release.py`, since #470), run by GitHub Actions with the hosting's token on a push to `main` that touches the
-ledger rows, and on manual dispatch (plan #461 revisions 3 and 4). Its supervisor is the hosting: nothing here starts, stops
-or restarts it, and it survives every session because no session runs it (plan #461 attack 1). The workflow is the
-distribute seat's (its fence, `.github/workflows/`); this run-book, its events location and its health are the operate
-seat's (`MANDATES.md`; #461 revision 2). So this run-book declares its own section set (the sysadmin craft's
-`server-instances.md` property 2). Every command but `retry` is **read-only**. There is no process to start, stop or
-restart: start is a release entry landing on `main` (or `retry`, below); stop is disabling the workflow in the
-hosting's settings, the Operator's act; upgrade and credential rotation are changes to the two workflow files, each a
-distribute-seat infra-zone PR, and none is run from here.
+Instance: the workflow `.github/workflows/dyad-release.yml` (`released`; logic `dyad release`, `dyad/scripts/release.py`),
+supervised by the hosting. The workflow is distribute's; this run-book and its health are operate's (`MANDATES.md`).
+Stop is disabling the workflow (the operator's); upgrade and credential rotation are distribute's infra-zone PRs.
+Every command but `retry` is read-only, runs from the git root with no token, and reads the repo from `origin`.
 
-**Trigger.** The only trigger is the ledger entry that records the Operator's release `Y` on the release's row,
-`Y release <tag> at <cut sha> (archive <sha256>)`, written by the cos as a ledger-only clerical commit (Rule-11
-Ratification events; Rule-2). There is no request file. `released` reads `main`, finds a release entry whose tag does
-not exist yet, checks the tag equals its `VERSION` at the cut sha, builds by the one code path, verifies the archive's
-sha256, creates the annotated tag and the Release. A forged entry would publish (plan #461 attack 4): the
-optional one-tap environment gate is the Operator's to ask for, by the cos.
+**Trigger.** A push to `main` that lands the ledger entry `Y release <tag> at <cut sha> (archive <sha256>)` on a
+release's row (Rule-11 Ratification events), or `retry`. `released` builds at the cut by the one code path, refuses an
+archive whose sha256 differs from the recorded one, and creates the annotated tag and the Release. The archive's sha256
+is distribute's one build per tag (`dyad/playbooks/release.md`); the CI rebuild is the determinism proof.
 
-**Procedure: one seat build per tag** (#478, child C5 of #473). The distribute seat builds each release once, at
-the cut sha, by the one distribution code path in a worktree of that sha: `dyad build` for the core, `dyad craft export
-<craft>` for a craft, `dyad bundle build` for the bundle. It reads the archive's sha256 — `BUNDLE.sha256`'s for a
-bundle — and that one value goes into the release question and into the cos's ledger entry. Nothing else on the seat
-builds the archive again: not the evidence run, not a second check. `released` then rebuilds at the cut sha in CI and
-refuses the entry when its sha256 differs from the recorded one (`dyad release`: `archive sha256 … != recorded …`).
-That CI rebuild is the determinism proof, so a nondeterministic build is found at publish and refused there, with the
-tag never created.
-
-**Record.** `released` writes nothing to the repo (plan #461 revision 4): no events file and no commit. Its record is
-what it creates — the annotated tag, whose message names the cut sha, the archive sha256 and the row, and the Release
-with its archive — and the workflow run, all read through the hosting (The World; Rule-20 `world`). The health below
-reads that record against the ledger, and the cos closes the release row once health shows its tag. This run-book's
-own commands, run through the core runner, leave the runner's events (Rule-19), written only when a reading changes
-(#438) and committed as events-only: they are observations of the record, never part of it.
-
-Every command runs from the git root as either party, `sudo`-free and with no GitHub token: tags are read with
-`git ls-remote`, Releases through the public REST endpoint. The repo is read from `origin`.
-
-```text
-dyad runbook list released
-dyad runbook run released health
-```
+**Evidence.** `released` writes nothing to the repo: its record is the tag, the Release and the workflow run, read
+through the hosting. The cos closes the release row once health shows its tag.
 
 ## Status/health
-Health (server-instances rule, property 4; Rule-19 kernel): every recorded release entry has its tag, at its cut sha,
-and its GitHub Release. The command reads every row's `disposed` for the form `Y release <tag> at <sha>`, resolves the
-tag on `origin` (the peeled commit of an annotated tag), and asks the hosting for the Release. One line per gap, `no
-tag: <tag>`, `tag not at cut: <tag> (<sha>)` or `no Release: <tag>`, then a count line. **Pass: exit 0 and no gap
-line**; the postcondition is the same check, silent. Entries recorded before #461 carry no `at <sha>` and are not read. With no entry in the new form, the command
-reads zero entries and passes: there is nothing yet to reconcile.
+Step: `dmc:release-entry-state`, for every recorded entry. One line per gap, then a count line; exit 0 is the pass. The
+postcondition is the same check, silent.
 ```dyad-cmd
 name: health
 class: read-only
@@ -62,9 +29,8 @@ r=$(git remote get-url origin | sed -E 's#^https?://([^@]*@)?github.com/##; s#^g
 ```
 
 ## Pending
-The release entries the service has not acted on yet: a recorded `Y release <tag> at <sha>` whose tag does not exist
-on `origin`. Empty is the normal state between releases. A line that stays here after the workflow has run on that
-entry's commit is a failed run: read its log (below) and report it to the distribute seat.
+Entries whose tag does not exist yet (`dmc:release-entry-state`). A line that outlasts the workflow's run on the
+entry's commit goes to distribute, with the run's log.
 ```dyad-cmd
 name: pending
 class: read-only
@@ -77,12 +43,9 @@ for e in $(grep -hoE 'Y release [A-Za-z0-9._-]+ at [0-9a-f]{7,40}' agent-corpus/
 ```
 
 ## Retry
-A manual run of the service for one recorded entry, after a refused or failed run whose cause has been fixed — the
-workflow's dispatch with its `tag` input. It executes a release the Operator already ratified, so it is no new
-disposition and never a first release: the entry must already be on the row. It publishes, and tags never move, so it
-is **destructive** and Operator-run (a token); the runner confirms it on the terminal. The postcondition holds when the
-tag exists on `origin` and its Release exists. A cloud seat without a token reaches the same dispatch through the
-hosting's actions API, as the distribute seat does, on the Operator's word.
+Question: the operator runs it for one already-recorded entry after its cause is fixed. It publishes and a tag never
+moves, so it is destructive and operator-run; the runner confirms it on the terminal. A cloud seat without a token
+reaches the same dispatch through the hosting's actions API, on the operator's word.
 ```dyad-cmd
 name: retry
 class: destructive
@@ -95,8 +58,7 @@ gh workflow run dyad-release.yml -f tag="${TAG:?release tag}"
 ```
 
 ## Logs
-The workflow's last runs, from the hosting's public REST endpoint: run number, event, status, conclusion and the run's
-page. A run's log itself needs a token and is read on the run's page.
+The workflow's last runs, from the hosting's public endpoint; a run's log is read on its page.
 ```dyad-cmd
 name: logs
 class: read-only
@@ -109,10 +71,8 @@ r=$(git remote get-url origin | sed -E 's#^https?://([^@]*@)?github.com/##; s#^g
 ```
 
 ## Data
-Where state lives: the ledger rows that record each release `Y` (`agent-corpus/d-work/rows/`), the tags and Releases
-and the workflow runs on the hosting. Nothing lives on this host, and the service keeps no file in the repo. A fresh deployment
-needs only `main`: the workflow file and the ledger; every release it has made is recomputable from the tags. The
-command lists the recorded release entries in the new form.
+State lives in the release entries on the rows and in the tags, Releases and runs on the hosting; nothing on this host,
+no file in the repo. A fresh deployment needs only `main`. The command lists the recorded entries.
 ```dyad-cmd
 name: data
 class: read-only

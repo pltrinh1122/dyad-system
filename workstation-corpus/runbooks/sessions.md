@@ -1,50 +1,19 @@
-# Run-book: sessions (the harness's session list against the presence store) — d-work #431
+# Run-book: sessions (the harness's session list against the presence store) — d-work #431, #626
 # sections: Status/health, Seats, Harness, Tidy, Bootstrap
 
-Instance: not a server — the agent application's own session records (Claude Code: `~/.claude/projects/<slug>/`,
-one kernel's path, read through `dyad/scripts/hostadapter.py` so another kernel plugs in as data; plan #431
-attack 4) read against the dyad's presence store, `agent-corpus/d-work/sessions/<seat>.md` (Rule-16 Presence).
-Nothing here runs under a supervisor and nothing persists: the harness side is The World (Rule-14), a host
-artifact the dyad observes and never writes; the presence side is written only by the seat that owns each
-file (Rule-16, one writer). So this run-book's section set is its own (the `# sections:` line above; the
-sysadmin craft's `server-instances.md` property 2 admits it) and every command is **read-only**: the
-`operate` seat detects and reports (Rule-8 Conduct, detect don't dispose); remediation is the writer's — the
-seat touches its presence file, the program seat retitles or archives the harness session — never a write of
-this run-book's (plan #431 attack 2). Every command runs from the git root, `sudo`-free, as either party:
+Instance: not a server. The harness's own session records (read through `dyad/scripts/hostadapter.py`, so another
+kernel plugs in as data) against the presence store, `agent-corpus/d-work/sessions/<seat>.md` (Rule-16 Presence). The
+harness side is The World and is never written; each presence file has one writer. Every command but `bootstrap` is
+read-only: operate detects and reports, and the writer remedies (Rule-8 Conduct).
 
-```text
-dyad runbook list sessions
-dyad runbook run sessions health
-```
+**Trigger.** Session start, and the program seat's request.
 
-Operate runs `health` at session start and on the program seat's request — monitoring is a standing read-only
-class, not d-work, and a cadence is this run-book's to set (#438, alternative e); a run whose reading's digest
-equals the last recorded event's leaves no event (a heartbeat is not an event: server-instances rule, property 7
-as #438 S amends it), and a change of reading appends one to `events/sessions.jsonl`, committed as an
-events-only clerical range (#438 R; Rule-2 Not ratification, Rule-3 Ledger). The audit seat reads and grades the
-events (a seat repeatedly `stale while titled` is an incident-hardening input, #409 G1; plan #431 revision 2) and
-never on a cadence of its own. A mismatch goes to operate's board; the writer fixes it.
+**Evidence.** A run with a new reading appends one event to `events/sessions.jsonl`, committed events-only (#438);
+a repeated reading leaves none. A mismatch goes to operate's board; the audit seat reads the events.
 
 ## Status/health
-Health (the pass criterion for Done — server-instances rule, property 4; Rule-19 kernel): the reconcile
-command compares the two lists both ways — for each live presence file a harness session whose title is the
-seat's `dyad session name` form, and for each harness session titled in the seat form a live presence file —
-and prints one line per mismatch (the command is #431 C1, `dyad session reconcile`, the engineer seat's, #434):
-`no harness session: <seat>`, `no presence: <title>`, `title differs: <seat> (<title>)`, `stale while
-titled: <seat>`, then a count line; exit 0 and one `ok [reconcile] … aligned` line when the lists agree. A
-title matches on its `<seat>: <kernel> (<system>)` prefix, so a suffix the harness appends is no mismatch.
-
-**Pass:** exit 0 — or, on a cloud kernel (`CLAUDE_CODE_REMOTE=true`), exit 1 whose mismatch lines are all of
-the two kinds that kernel produces by construction: `no harness session: <seat>` and `title differs: <seat>
-(no title recorded)`. Each cloud container's harness store holds only its own session and never the UI title
-(#434, record attack 52), so in any one container every *other* live seat reads `no harness session` and the
-seat's own reads `title differs (no title recorded)`: those two lines carry no information there and are not
-read as failures; a `no presence`, a `stale while titled`, or a `title differs` with a title recorded still
-fails. On a terminal kernel the harness store holds every session with its title and the criterion is exit 0
-alone. The postcondition is that test; a hosting-side session list would be a further adapter behind
-`hostadapter.harness_sessions()` and would retire the cloud clause — stated, not built here. The check is
-advisory (Rule-16 Presence: never a guard failure); a failed postcondition is operate's report to its board,
-not a fence, and the writer remedies.
+Step: `dmc:sessions-health` over `dyad session reconcile` (its mismatch kinds: `dmc:session-reconcile`). Advisory,
+never a guard failure. The postcondition is the pass, silent.
 ```dyad-cmd
 name: health
 class: read-only
@@ -57,10 +26,8 @@ dyad/bin/dyad session reconcile
 ```
 
 ## Seats
-The presence side on its own: every seat's presence file, its freshness, rows, holder and host, the
-attendance mode over the live seats, and a same-root flag (Rule-16 Presence) — counted only when the `host` lines agree and, on a cloud kernel, the
-holders agree, since every cloud container reports the same `root` by name and not by filesystem (found
-opening this seat, #431 H0; #434).
+The presence side: every seat's presence file, freshness, rows, holder and host, the attendance mode, and a same-root
+flag, counted only when the `host` lines agree and, on a cloud kernel, the holders agree.
 ```dyad-cmd
 name: seats
 class: read-only
@@ -73,9 +40,8 @@ dyad/bin/dyad session list
 ```
 
 ## Harness
-The harness side for the seat running the command: the seat name with its form, the holder, and the harness
-session title as the adapter reads it from the environment — the title the reconcile command expects to
-match the seat's form. Set `DYAD_SESSION` to the seat whose title is being read.
+The seat name with its form, the holder, and the harness session title the reconcile expects. Set `DYAD_SESSION` to
+the seat whose title is read.
 ```dyad-cmd
 name: name
 class: read-only
@@ -128,25 +94,10 @@ dyad/bin/dyad session reconcile; dyad/bin/dyad session list
 ```
 
 ## Bootstrap
-A seat's clone, prepared once at container start so the guards read a whole history (#474, child C1 of #473). The core
-verb `dyad bootstrap` (`dyad/scripts/bootstrap.py`, the engineer seat's) sets `core.hooksPath` to `dyad/hooks`,
-unshallows a shallow clone and fetches its tags (`fetch --unshallow --tags`), fetches the tags when they are missing,
-and exits 0 with one warning line when the network fails: idempotent and never blocking. A shallow or tagless clone
-otherwise turns the bundle drift check and a plan's base-commit resolution into false failures, which is what
-`check --evidence` now refuses in one line. The `.claude/settings.json` SessionStart hook that calls it at container
-start, `"$CLAUDE_PROJECT_DIR"/dyad/bin/dyad bootstrap` with a timeout of about 600 s (an unshallow can be slow), is the
-distribute seat's; until it lands, a seat runs `bootstrap` itself before its first push.
-
-After it, the order is **evidence, then push, from the same clone, with no fetch between**: a `git fetch --tags`
-after `check --evidence` changes the suite memo's key (it holds a digest of the tags), so the pre-push gate runs the
-whole suite again for no assurance gained (#473, finding 2).
-
-`bootstrap` changes only this clone (its git config and its fetched history), so it is **reversible**: the hook path
-is undone by unsetting it, and fetched history only adds. `bootstrap-check` is its read-only form. Every line either
-form prints is `<state> [bootstrap] <step>: <detail>`, the state `ok`, `changed` or `warn`, and both always exit 0
-(only misuse exits 2), so the pass test reads the lines and not the exit: **pass is no `warn` line from `--check`**,
-which is the `bootstrap` postcondition. A `warn` after `bootstrap` has run means the network or the remote refused,
-and the clone's next evidence run will say which check it breaks.
+A seat's clone, prepared once at container start (`dyad bootstrap`, `dyad/scripts/bootstrap.py`): hook path, full
+history, tags; idempotent, never blocking. The SessionStart hook that calls it is distribute's. Step:
+`dmc:bootstrap-state`; the pass is no `warn` line from `--check`, the postcondition. After it, evidence then push from
+the same clone with no fetch between: a tag fetch after `check --evidence` changes the suite memo's key (#473).
 ```dyad-cmd
 name: bootstrap
 class: reversible
