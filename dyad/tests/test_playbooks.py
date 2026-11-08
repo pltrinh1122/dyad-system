@@ -251,19 +251,30 @@ if __name__ == "__main__":
 RELEASE_PLAYBOOK = PKG / "playbooks" / "release.md"
 RELEASE_RUNBOOK = PKG / "runbooks" / "release.md"
 RELEASE_CLASSES = ("critical-fix", "capability", "enhancement", "breaking", "maintenance")
+RELEASE_CRITERIA = ("release-class", "release-timing", "release-break", "release-number", "release-reply")
 
 class ReleasePlaybookTests(unittest.TestCase):
     """The release play-book and its run-book (#493): headings, the five classes and their number, the bundle rule,
     the run-book's two read-only steps, and `number`'s mapping run against a scratch repo's tags."""
     def test_playbook_sections_classes_and_citations(self):
+        """#626 C10: the decisions are master records the play-book cites as `dmc:<id>`; the classes, their numbers
+        and the reply's two shapes live in the records, and every step names its act's class."""
+        import json
         text = RELEASE_PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Parameter", "Trigger", "Classes", "Numbers", "Steps", "Evidence"])
-        classes = next(t for h, t in dyadlib.tables(text) if h[0] == "class")
-        self.assertEqual(tuple(r[1].strip("`") for r in classes), RELEASE_CLASSES)
-        self.assertEqual([r[4] for r in classes][:3], ["patch", "minor", "minor"])
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence"])
+        cited = set(re.findall(r"dmc:([a-z0-9-]+)", text))
+        self.assertEqual(cited, set(RELEASE_CRITERIA))
+        recs = {c: json.loads((PKG / "dmc" / f"{c}.jsonld").read_text()) for c in cited}
+        for c, d in recs.items():
+            self.assertEqual(d["dyad:home"], "playbooks/release.md", c)
+        self.assertEqual(tuple(t["termCode"] for t in recs["release-class"]["hasDefinedTerm"]), RELEASE_CLASSES)
+        then = [t["dyad:then"].split(";")[0] for t in recs["release-class"]["hasDefinedTerm"]][:3]
+        self.assertEqual([t.split(",")[0] for t in then], ["patch", "minor", "minor"])
+        steps = next(t for h, t in dyadlib.tables(text) if h[0] == "step")
+        self.assertTrue({r[2] for r in steps} <= {"read-only", "inference", "question", "reversible", "clerical"}, steps)
         for cite in ("dyad/runbooks/release.md", "dyad/rules/RULE-11-distribution-structure.md", "`Y/N: release <tag>?`",
-                     "highest class", "drift guard", "dyad/playbooks/port.md"):
+                     "highest class", "drift guard", "dyad/playbooks/port.md", "dyad release ready"):
             self.assertIn(cite, text, cite)
     def test_runbook_parses_into_two_read_only_steps(self):
         text = RELEASE_RUNBOOK.read_text()
