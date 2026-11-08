@@ -12,7 +12,7 @@
   ],
   "identifier": "board-lines",
   "name": "Pending board lines",
-  "description": "Places each pending item on one line of the board reported at the end of every reply.",
+  "description": "Places each pending item on one line of the board reported at the end of every reply while any line is non-empty, in the form: board: <p> plan-ready · <d> done-ready · <b> backlog (threshold <t>) · named not opened: <ids or none>. Conversational, derived from the row store and the stored plans; no corpus file holds it.",
   "dyad:decides": "On which line of the pending board does an item appear?",
   "dyad:inputs": [
     "the row store",
