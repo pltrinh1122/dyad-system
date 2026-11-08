@@ -57,11 +57,14 @@ CASES = {   # record: [(outcome termCode, a call that must decide it)]
 
 class DecisionTests(unittest.TestCase):
     def test_every_outcome_of_every_record_is_decided(self):
+        """One subTest per (record, outcome): 9 records here, deployed-done's 2 in the tree test below (#641 step 2)."""
+        self.assertEqual(len(CASES), 9)
         for record, cases in CASES.items():
-            with self.subTest(record=record):
+            with self.subTest(record=record, outcome="(coverage)"):
                 self.assertEqual({c for c, _ in cases}, codes(record), "the cases cover exactly the record's outcomes")
-                for code, call in cases:
-                    self.assertEqual(call(), code, f"{record}: {code}")
+            for code, call in cases:
+                with self.subTest(record=record, outcome=code):
+                    self.assertEqual(call(), code)
 
     def test_the_undecided_cases_say_none_or_refuse(self):
         self.assertIsNone(dyadlib.answer_kind("maybe later"))                 # two readings: the agent asks
@@ -93,6 +96,7 @@ class DecisionTests(unittest.TestCase):
         self.assertEqual(runbook.deployed_done(d, "srv", since="2026-11-08T11:00:00Z"), "not-done")   # before the plan-Y
         ep.write_text(ep.read_text() + json.dumps({"name": "health", "exit": 1, "postcondition": "n/a"}) + "\n")
         self.assertEqual(runbook.deployed_done(d, "srv"), "not-done")         # the latest event decides
+        self.assertEqual(codes("deployed-done"), {"deployed", "not-done"})    # both of the record's outcomes, exercised above
 
 
 if __name__ == "__main__":
