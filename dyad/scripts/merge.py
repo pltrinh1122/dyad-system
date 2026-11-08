@@ -80,6 +80,15 @@ def authorizing(rows, pr: int, sha: str) -> tuple[int, str]:
     raise Refused(f"no operative Y done on origin/main names PR #{pr} (a Done-Y is recorded before its merge, Rule-3)")
 
 
+def y_binding(named: dict[int, str], pr: int, live: str) -> str:
+    """dmc:y-binding (#641): whether a recorded Y binds the merge of PR `pr` whose live head is `live`. `named` maps each
+    PR the operative `Y done` names to the head it was given on. `bound` (named in the question) when the PR is named
+    and its head is unchanged; `re-prompt` (re-prompts) when a named head changed since the question was asked;
+    `fresh-y` (fresh Y) when the PR is new to the question, one created to recover from an error included."""
+    if pr not in named:
+        return "fresh-y"
+    return "bound" if named[pr] == live else "re-prompt"
+
 def live_head(repo: Path, pr: int) -> str:
     r = land.git(repo, "ls-remote", "origin", f"refs/pull/{pr}/head", timeout=land.NETWORK_TIMEOUT)
     return (r.stdout.split() or [""])[0]

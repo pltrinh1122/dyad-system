@@ -49,6 +49,17 @@ PARTITIONS = {"operator": ("operator", "idle"),
               "agent": ("inference", "suite", "guards", "github", "git/local", "subagent", "background", "other")}
 MECHANICAL = ("suite", "guards", "github", "git/local", "subagent", "other")   # a tool's kind; overlapping calls take the first
 PRIORITY = ("operator", "idle", "background") + MECHANICAL           # uncovered time is inference
+def bottleneck_side(bucket: str) -> str:
+    """dmc:trace-bottleneck (#641): which side leads, from the bucket on top of a trace's bottleneck line. `operator`
+    (operator on top) for the Operator's partition (operator, idle); `inference` (inference on top) for inference;
+    `mechanical` (mechanical bucket on top) for every other agent bucket. One trace gives no verdict (the record's
+    default): this names the side of one line. ValueError on a name that is no bucket."""
+    if bucket not in BUCKETS:
+        raise ValueError(f"trace-bottleneck: {bucket!r} is no bucket ({', '.join(BUCKETS)})")
+    if bucket in PARTITIONS["operator"]:
+        return "operator"
+    return "inference" if bucket == "inference" else "mechanical"
+
 MEANING = {
     "operator": "a reply ending in a `Y/N:` line, to the Operator's next message",
     "idle": "a reply with no `Y/N:` line, to the Operator's next message",

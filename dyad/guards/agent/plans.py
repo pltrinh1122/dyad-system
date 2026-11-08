@@ -78,6 +78,22 @@ def parts_for(opened: str | None) -> tuple[str, ...]:
     (#574: the part is new, and a stored plan is never asked to grow one)."""
     return dyadlib.PLAN_PARTS if opened and opened >= dyadlib.DOD_SINCE else dyadlib.PLAN_PARTS[:-1]
 
+def replan(accreted: bool, moved: list[str]) -> str:
+    """dmc:replan (#641): whether execution re-plans. `accreted` (accreted row) for a row accreted under a mandate,
+    which has no drift check of its own; `replan` (re-plans) when `main` has moved past a file the plan touches
+    (`moved`, from `moved_files`); `as-written` (executes as written) otherwise."""
+    if accreted:
+        return "accreted"
+    return "replan" if moved else "as-written"
+
+def moved_files(root: Path, base: str, files: list[str], main: str = "origin/main") -> list[str]:
+    """The files of `files` some commit in `base..main` touches (`git log --name-only`), in `files`' order; [] when the
+    base or main does not resolve (no drift can be read, so none is claimed)."""
+    r = subprocess.run(["git", "log", "--format=", "--name-only", f"{base}..{main}", "--", *files], cwd=root,
+                       capture_output=True, text=True, env=dyadlib.git_env())
+    touched = set(r.stdout.split()) if r.returncode == 0 else set()
+    return [f for f in files if f in touched]
+
 def check_plan(path: Path, text: str | None = None, opened: str | None = None) -> list[str]:
     text = path.read_text() if text is None else text
     d = parse(text); msgs = []

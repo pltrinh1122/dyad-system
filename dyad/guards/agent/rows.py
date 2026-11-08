@@ -167,6 +167,13 @@ def intent_close_problems(path: str, before, after, label: str) -> list[str]:
             f"holding no `Y plan` (Rule-3 Ledger: open is archived only by the bare intent-N, #615)"]
 
 # ---- the Done state follows the merge (d-work #202)
+def parent_askable(children: list[tuple[str, bool]]) -> str:
+    """dmc:parent-askable (#641): whether a parent row's question may be asked, from each child's (state, whether it
+    holds its own recorded `Y done`). `askable` (asked only when) when every child is terminal (done or archived),
+    blocked or backlog, or carries its own recorded done-Y and waits on its merge; `unaskable` (unaskable) when any
+    child is still open or planned without a recorded Done-Y."""
+    return "unaskable" if any(s in ("open", "planned") and not y for s, y in children) else "askable"
+
 def done_order_problems(path: str, before, after, label: str) -> list[str]:
     """Rule-3 Completion: a Done-`Y` that ratifies a merge is recorded with the state left as it is, the
     merges execute, and a second commit sets `done`. One commit that does both is the old order, and it is

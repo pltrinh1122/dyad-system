@@ -254,6 +254,24 @@ def git_env() -> dict[str, str]:
     """`os.environ` without GIT_VARS, for a git call that must see the tree it is pointed at."""
     return {k: v for k, v in os.environ.items() if k not in GIT_VARS}
 
+ANSWER_Y, ANSWER_N = ("y", "yes"), ("n", "no")   # dmc:answer-grammar's tokens (one answer, read by its meaning, #553)
+
+def answer_kind(words: str | None, intent: bool = False) -> str | None:
+    """dmc:answer-grammar (#641), its token rules: the answer to a counter-prompt from its words as typed. `silence`
+    (Silence) when it is unanswered (None); `y` (Y) when the first word is Y, y or yes (a Y with text is also a prompt);
+    `amend` (amend) when it is N with text; bare N is `n-bare-intent` (intent question) when asked as the intent
+    question and `n-bare` (bare) otherwise. None for any other reply: two readings may lead to different acts, so the
+    agent asks (Rule-3 Answer grammar); this function never guesses one."""
+    if words is None:
+        return "silence"
+    first, _, rest = words.strip().partition(" ")
+    tok = first.rstrip(".,:;!").lower()
+    if tok in ANSWER_Y:
+        return "y"
+    if tok in ANSWER_N:
+        return "amend" if rest.strip() else ("n-bare-intent" if intent else "n-bare")
+    return None
+
 def utc_date() -> str:
     """Today in UTC, `YYYY-MM-DD`: the one date every store writes — a row's `disposed` entry, a provenance entry's
     heading, `land`'s already-landed and Done-order tests, `release ready`'s entry (#592 R-b, the audit's mode 41).
