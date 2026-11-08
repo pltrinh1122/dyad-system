@@ -1,0 +1,49 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-reply",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-reply",
+  "name": "Release reply",
+  "description": "Decides the shape of the unit's release reply: the Done reply carrying the evidence under the release gate, or the chat release question with the gate off.",
+  "dyad:decides": "Which reply carries a release's evidence and its question?",
+  "dyad:inputs": [
+    "the repository variable RELEASE_APPROVAL (tap: the release gate, #545)",
+    "the d-works whose done-Y verified the tags"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "gated",
+      "name": "gated",
+      "dyad:when": "RELEASE_APPROVAL is tap",
+      "dyad:then": "the Done reply carries the evidence (each tag's class with each d-work that meets it, the number, the bundle's component classes, the cut PR's head and each archive's sha256 at the cut, one unit build per archive, #478) and its last line is the Done question naming the cut PR and the tags, `Y/N: Done with #<id> <title> (merges PR #a, releases <tag>, <tag>)?`; no release question follows; after the merge the unit reports each tag's fence result and the publishing run's link, with no Y/N, the operator's approval on the hosting authenticating the done-Y"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ungated",
+      "name": "ungated",
+      "dyad:when": "the release gate is off",
+      "dyad:then": "after the Done, one chat release question per d-work in Rule-11's batch form, `Y/N: release <tag-a>, <tag-b>?`, the bundle named last, single questions only for tags of different d-works; the reply holds the same evidence before that line, and one Y is recorded as one `Y release <tag> at <cut> (archive <sha256>)` entry per named tag in one ledger commit, each entry's provenance the same Y"
+    }
+  ],
+  "dyad:default": "A release question that names no class, or a class it cannot evidence, is not asked; anything but Y releases none of the named tags (Rule-2, Binding).",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/release.md",
+  "dyad:alsoIn": [
+    "rules/RULE-11-distribution-structure.md",
+    "scripts/release.py"
+  ],
+  "dyad:owner": "Rule-11"
+}
