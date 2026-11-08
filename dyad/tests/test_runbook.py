@@ -182,7 +182,7 @@ class RunTests(livetest.LiveCase):
         env.update(DYAD_HOST=dyadlib.DEFAULT_HOST, DYAD_HOST_ZONE=dyadlib.DEFAULT_HOST_ZONE)   # the fixture's default host path, never the live repo's preferences (#179)
         py = [sys.executable, str(Path(rb.__file__))]
         r = subprocess.run(py + ["check"], cwd=self.root, env=env, capture_output=True, text=True)
-        core = rb.core_runbooks(dyadlib.repo_root())                     # the package's own run-books count too (#165)
+        core = {**rb.core_runbooks(dyadlib.repo_root()), **rb.craft_runbooks(dyadlib.repo_root())}   # the package's own run-books count too (#165), and each craft's (#640)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.strip(),
             "warn [rule-19] x.md: cites no crafts/*/server*/ or workstation-corpus/server*/ directory (no server counterpart)\n"

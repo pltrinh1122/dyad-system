@@ -584,7 +584,8 @@ class PackageTests(livetest.LiveCase):
         r = subprocess.run(py + ["runbook", "check"], capture_output=True, text=True, env=env())
         self.assertEqual(r.returncode, 0, r.stderr)
         core_rbs = sorted(p_.stem for p_ in (dyadlib.PKG / "runbooks").glob("*.md"))
-        self.assertIn(f"ok   [rule-19] {len(core_rbs)} run-book(s), ", r.stdout)   # every core run-book ships with the package (#165, #137); the count is derived, never pinned (backlog #10)
+        craft_rbs = sorted((d / "crafts").glob("*/runbooks/*.md"))                            # each installed craft's too (#640)
+        self.assertIn(f"ok   [rule-19] {len(core_rbs) + len(craft_rbs)} run-book(s), ", r.stdout)   # every core run-book ships with the package (#165, #137); the count is derived, never pinned (backlog #10)
         for name in core_rbs: self.assertIn(name, subprocess.run(py + ["runbook", "list", name], capture_output=True, text=True, env=env()).stdout + name)
         shutil.rmtree(d, ignore_errors=True)
     # #177 (Rule-11 property 5): the scratch install above only ever ran `check --guards` with an
