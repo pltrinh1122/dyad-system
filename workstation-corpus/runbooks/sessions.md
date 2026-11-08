@@ -41,6 +41,18 @@ scope: agent-corpus/d-work/sessions/ (read)
 dyad/bin/dyad session list
 ```
 
+The census pointer: kept so the census events already recorded resolve (Rule-20); the census itself is the cabinet's.
+```dyad-cmd
+name: census
+class: read-only
+role: any
+undo: none
+postcondition: none
+scope: agent-corpus/d-work/sessions/, the ledger rows and the harness's session records (read)
+
+dyad/bin/dyad runbook run cabinet:session-tidy census
+```
+
 ## Harness
 The seat name with its form, the holder, and the harness session title the reconcile expects. Set `DYAD_SESSION` to
 the seat whose title is read.
