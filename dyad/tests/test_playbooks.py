@@ -215,17 +215,25 @@ class PortPlaybookTests(unittest.TestCase):
     """The port play-book and its run-book (#353): headings, the three procedures, the steps pinned to the run-book's
     blocks, the bar on a mirror (Rule-2) and the citations the play-book rests on instead of restating them."""
     def test_playbook_sections_procedures_and_citations(self):
+        """#626 C11: the directions, the port owed and the back-port's row are master records the play-book cites;
+        its one steps table names each step's direction, class and repository."""
+        import json
         text = PORT_PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Parameter", "Trigger", "Default", "Procedures", "Steps", "Evidence"])
-        self.assertEqual([l[4:].split(" (")[0] for l in text.splitlines() if l.startswith("### ")], ["Forward", "Diff", "Back"])
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence"])
+        self.assertEqual(set(re.findall(r"dmc:([a-z0-9-]+)", text)), {"port-direction", "port-diff", "port-row"})
+        steps = next(t for h, t in dyadlib.tables(text) if h[0] == "direction")
+        self.assertEqual([r[0] for r in steps], ["forward"] * 4 + ["diff", "back", "back"])
+        self.assertTrue({r[3] for r in steps} <= {"read-only", "reversible", "clerical"}, steps)
         for s in PORT_STEPS:
             self.assertIn(f"`{s}`", text, s)
         for cite in ("dyad/runbooks/port.md", "crafts/sysarch/rules/distribution.md", "crafts/sysadmin/rules/host-install.md",
                      "dyad/rules/RULE-2-no-self-ratify.md", "dyad/rules/RULE-11-distribution-structure.md", "dyad craft diff", "--from", "--relayed-via"):
             self.assertIn(cite, text, cite)
-        self.assertIn("nothing is mirrored", text); self.assertIn("never a sync", text)
-        self.assertIn("retired craft", text); self.assertIn("never removes it", text)   # #369 C8: retirement ports nothing
+        self.assertIn("nothing is mirrored", text); self.assertIn("never a sync", text); self.assertIn("never removes it", text)
+        retired = next(t for t in json.loads((PKG / "dmc" / "port-direction.jsonld").read_text())["hasDefinedTerm"]
+                       if t["termCode"] == "retired")
+        self.assertIn("ports nothing", retired["dyad:then"]); self.assertIn("never removes it", retired["dyad:then"])   # #369 C8
     def test_runbook_parses_into_the_steps(self):
         text = PORT_RUNBOOK.read_text()
         cmds = rb.parse_text(text)
