@@ -253,6 +253,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | plan-gate | frozen |
 | port-diff | frozen |
 | port-direction | frozen |
+| port-row | frozen |
 | preference-kind | frozen |
 | prepush-judgeable | frozen |
 | promotion | frozen |

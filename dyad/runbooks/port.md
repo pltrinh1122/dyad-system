@@ -1,14 +1,11 @@
 # Run-book: port (install and port between dyad systems) — play-book `dyad/playbooks/port.md`, #353
 # sections: Install, Crafts, Guards, Diff, Patch, Port
 
-A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the port play-book as `dyad-cmd`
-blocks, run by either party through the core runner, which prints the native line, records an event in the
-instance's `<runbooks>/events/port.jsonl` and tests the postcondition. Its section set is its own (the
-`# sections:` line above; the sysadmin craft's server sections are a server's). Each command reads its
-arguments from the environment, as the native line shows — `SRC` (a release archive or a tree), `TAG`,
-`CRAFT` (`dyad-operator` for the core), `TARGET` (the receiving root, default `.`), `DWORK` — and runs from
-the git root of the repository it acts in: Install, Crafts and Guards in the receiving repository; Diff and
-Patch in the receiving repository; Port in the authoring repository.
+A core run-book (agent zone): the port play-book's steps as `dyad-cmd` blocks, run by either party through the core
+runner, which prints the native line, records an event in `<runbooks>/events/port.jsonl` and tests the
+postcondition. Its sections are its own (`# sections:` above). Each command reads `SRC`, `TAG`, `CRAFT`, `TARGET`
+(default `.`), `DWORK` or `PATCH` from the environment, and runs from the git root it acts in: the receiving
+repository for every step but Port, which runs in the authoring repository.
 
 ```text
 SRC=dyad-0.11.0.tar.gz TARGET=. dyad runbook run port install
@@ -16,7 +13,7 @@ CRAFT=dyad-operator SRC=../dyad-system dyad runbook run port diff
 ```
 
 ## Install
-The core craft from a release (play-book, Forward 1): VERSION, roots and bundled crafts read from `SRC`:
+The core craft from a release (play-book, forward 1): VERSION, roots and bundled crafts read from `SRC`:
 ```dyad-cmd
 name: install
 class: reversible
@@ -29,7 +26,7 @@ dyad/bin/dyad install "${TARGET:-.}" --from "${SRC:?release archive or authoring
 ```
 
 ## Crafts
-One cited Tended craft the release does not bundle (play-book, Forward 2); once per craft, each its own PR:
+One cited Tended craft the release does not bundle (play-book, forward 2); once per craft, each its own PR:
 ```dyad-cmd
 name: crafts
 class: reversible
@@ -42,7 +39,7 @@ dyad/bin/dyad craft install "${SRC:?archive or crafts/<name> directory}" --dwork
 ```
 
 ## Guards
-The pass's postcondition (play-book, Forward 3; Rule-14 property 3), pass criterion: exit 0, no `FAIL` line:
+The pass's postcondition (play-book, forward 3; Rule-14 property 3): exit 0, no `FAIL` line:
 ```dyad-cmd
 name: guards
 class: read-only
@@ -55,7 +52,7 @@ dyad/bin/dyad check --guards
 ```
 
 ## Diff
-What this system changed in an installed tree, by path (play-book, Diff); exit 1 is a port owed:
+What this system changed in an installed tree, by path (play-book, diff 1): `dmc:port-diff`:
 ```dyad-cmd
 name: diff
 class: read-only
@@ -68,7 +65,7 @@ dyad/bin/dyad craft diff "${CRAFT:?dyad-operator or a craft name}" --against "${
 ```
 
 ## Patch
-The back-port's patch, source -> installed (play-book, Back 1):
+The back-port's patch, source -> installed (play-book, back 1):
 ```dyad-cmd
 name: patch
 class: read-only
@@ -81,9 +78,8 @@ dyad/bin/dyad craft diff "${CRAFT:?dyad-operator or a craft name}" --against "${
 ```
 
 ## Port
-In the authoring repository, on a branch from `main`: apply the patch (play-book, Back 2); the row is opened
-on the receiving Operator's own words by the Agent's `dwork new … --relayed-via … -d 'Y plan' --said 'Y'`
-once that `Y` is given — a ledger write the runner never makes for the Operator (Rule-2):
+In the authoring repository, on a branch from `main`: apply the patch (play-book, back 2). The row is the Agent's
+`dyad dwork new`, by `dmc:port-row`, once its `Y` is given: a ledger write the runner never makes (Rule-2):
 ```dyad-cmd
 name: port
 class: reversible

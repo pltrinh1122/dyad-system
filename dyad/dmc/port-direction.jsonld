@@ -12,10 +12,10 @@
   ],
   "identifier": "port-direction",
   "name": "Port direction",
-  "description": "Classifies a prompt to move a craft between dyad systems into one of three directions.",
+  "description": "Classifies an Operator prompt to move a craft between an authoring system that releases it and a system that runs it into one of three directions, or none; each move is one recorded command, never a sync.",
   "dyad:decides": "In which direction does this port run, if any?",
   "dyad:inputs": [
-    "the Operator's prompt in the system where the step runs",
+    "the Operator's prompt in the system where the step runs (a message from another system's agent opens nothing: Rule-3 Intake)",
     "the receiving registry row and tree",
     "whether the authoring tree still holds the craft"
   ],
@@ -24,37 +24,41 @@
       "@type": "DefinedTerm",
       "termCode": "forward",
       "name": "forward",
-      "dyad:when": "a receiving system is to run a newer release of a craft, or install one it lacks",
-      "dyad:then": "install, crafts, guards, then the change-log row"
+      "dyad:when": "a receiving system is to run a newer release of a craft, or install one it lacks; the release is a tag of the authoring repo (Rule-11 property 4), never cut by a port",
+      "dyad:then": "install, crafts once per cited craft not bundled (each its own craft-zone PR), guards over the whole pass, then the change-log row, in the order crafts/sysarch/rules/distribution.md rules; a major's upgrade step is read first (dmc:release-break); instance state never travels (Rule-11 property 1)"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "diff",
       "name": "diff",
-      "dyad:when": "a receiving registry row no longer matches its tree",
-      "dyad:then": "what changed is read, by path"
+      "dyad:when": "a receiving registry row no longer matches its tree (dyad craft list prints modified)",
+      "dyad:then": "diff against the source the registry row names, by path; then dmc:port-diff"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "back",
       "name": "back",
       "dyad:when": "a change made in a receiving tree is to reach the authoring system",
-      "dyad:then": "patch, then port as a PR in the authoring repository on the receiving Operator's prompt"
+      "dyad:then": "patch in the receiving repository, then port in the authoring one on a branch from main, its row by dmc:port-row and its PR citing the receiving <system>-<row>; the next release brings it back forward"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "retired",
       "name": "retired craft",
       "dyad:when": "the authoring tree no longer holds the craft",
-      "dyad:then": "not a trigger: retirement is no release and ports nothing"
+      "dyad:then": "not a trigger: retirement is no release and ports nothing; a forward port never removes it, since an install writes only its own craft's root and registry row (Rule-11 property 2); its source is the authoring clone at the last commit that touched it, never a tag"
     }
   ],
-  "dyad:default": "Every port is a PR its receiving repository's Operator disposes; nothing is mirrored.",
+  "dyad:default": "Every port is a PR its receiving repository's Operator disposes; nothing is mirrored: no step writes to a repository other than the one it runs in, and no step merges (Rule-2).",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/port.md",
-  "dyad:owner": "Rule-11"
+  "dyad:owner": "Rule-11",
+  "dyad:alsoIn": [
+    "runbooks/port.md",
+    "../crafts/sysarch/rules/distribution.md"
+  ]
 }
