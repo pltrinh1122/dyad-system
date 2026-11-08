@@ -1,0 +1,55 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/sessions-health",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "sessions-health",
+  "name": "Sessions health",
+  "description": "Whether the reconcile reading of presence files against harness sessions passes on this kernel.",
+  "dyad:decides": "Does `dyad session reconcile` pass, given the kernel it runs on?",
+  "dyad:inputs": [
+    "`dyad session reconcile`'s exit and mismatch lines (their kinds: dmc:session-reconcile)",
+    "CLAUDE_CODE_REMOTE, whether the kernel is a cloud container"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pass",
+      "name": "exit 0",
+      "dyad:when": "reconcile exits 0: the two lists agree",
+      "dyad:then": "health passes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cloud-expected",
+      "name": "carry no information",
+      "dyad:when": "on a cloud kernel, reconcile exits 1 and every mismatch line is `no harness session: <seat>` or `title differs: <seat> (no title recorded)`: each cloud container's harness store holds only its own session and never the UI title (#434)",
+      "dyad:then": "health passes; those lines are not read as failures"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fail",
+      "name": "still fails",
+      "dyad:when": "any other mismatch: a `no presence`, a `stale while titled`, or a `title differs` with a title recorded, on any kernel, or any mismatch on a terminal kernel",
+      "dyad:then": "health fails; operate reports it to its board and the writer remedies; advisory, never a guard failure (Rule-16)"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "workstation-corpus/runbooks/sessions.md",
+  "dyad:alsoIn": [
+    "dyad/guards/agent/sessions.py",
+    "dyad/scripts/hostadapter.py"
+  ],
+  "dyad:owner": "sysadmin:server-instances"
+}
