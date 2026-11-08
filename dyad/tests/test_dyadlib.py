@@ -278,6 +278,10 @@ class IntentMachineTests(unittest.TestCase):
         self.assertEqual(dyadlib.orch_release_to("intent-asked"), "planning")
         self.assertEqual(dyadlib.CLI[("dwork", "intent")].pos, "<id>")
         self.assertEqual(dyadlib.CLI[("playbook", "profile")].pos, "<name>")   # #642: one read-only verb
+        self.assertEqual((dyadlib.CLI[("precedent", "prompt")].pos, dyadlib.CLI[("precedent", "score")].pos),
+                         ("<cases-file>", "<cases-file> <answers-a> <answers-b>"))   # #645: two read-only verbs
+        self.assertEqual((dyadlib.CLI[("precedent", "prompt")].values, dyadlib.CLI[("precedent", "score")].values),
+                         ((("--out", "<file>"),), (("--kept", "<file>"),)))
 
 class GroomFormTests(unittest.TestCase):
     """#625 step 5: `dyad board groom` is one row of the CLI table, read-only and taking no word or flag."""

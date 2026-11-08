@@ -1098,6 +1098,8 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("dwork", "batch"):         CliForm("<file>|-", LAND_FLAGS, (LAND_FLAG,)),
     ("dwork", "intent"):        CliForm("<id>"),   # #615: the intent reading's candidates, ranked, no threshold
     ("playbook", "profile"):    CliForm("<name>"),   # #642: a play-book's words, citations, records and trace times, read-only
+    ("precedent", "prompt"):    CliForm("<cases-file>", (("--out", "<file>"),)),   # #645: the blind two-reader prompt, read-only
+    ("precedent", "score"):     CliForm("<cases-file> <answers-a> <answers-b>", (("--kept", "<file>"),)),   # #645: the readers scored
     ("dwork", "trace"):         CliForm("<id>", (("--transcript", "<path>"), ("--said-file", "<file>")), ("--out",), ("--transcript",)),
     ("plan", "check"):          CliForm("<id>"),
     ("session", None):          CliForm("[<root>]"),
