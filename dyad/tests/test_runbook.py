@@ -182,7 +182,7 @@ class RunTests(livetest.LiveCase):
         env.update(DYAD_HOST=dyadlib.DEFAULT_HOST, DYAD_HOST_ZONE=dyadlib.DEFAULT_HOST_ZONE)   # the fixture's default host path, never the live repo's preferences (#179)
         py = [sys.executable, str(Path(rb.__file__))]
         r = subprocess.run(py + ["check"], cwd=self.root, env=env, capture_output=True, text=True)
-        core = rb.core_runbooks(dyadlib.repo_root())                     # the package's own run-books count too (#165)
+        core = {**rb.core_runbooks(dyadlib.repo_root()), **rb.craft_runbooks(dyadlib.repo_root())}   # the package's own run-books count too (#165), and each craft's (#640)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.strip(),
             "warn [rule-19] x.md: cites no crafts/*/server*/ or workstation-corpus/server*/ directory (no server counterpart)\n"
@@ -285,6 +285,47 @@ class CoreRunbookTests(unittest.TestCase):
         self.assertEqual(rb.declared_sections("# T\nsections: A\n## A\n"), ["A"])
         self.assertIsNone(rb.declared_sections("# T\n\n## A\n# sections: A\n"))     # after the first section: not a header
         self.assertIsNone(rb.declared_sections(runbook_text()))
+
+
+class CraftRunbookTests(unittest.TestCase):
+    """#640: a Tended craft's run-book, `crafts/<craft>/runbooks/<name>.md`, resolves under the key `<craft>:<name>` for
+    list, run and check; its events go to `<runbooks>/events/<craft>-<name>.jsonl`, the event's `instance` that file's
+    stem; a bare name resolves as before, instance first, then core, and never to a craft's run-book."""
+    def setUp(self):
+        os.environ.pop("DYAD_RUNBOOKS", None); self.root = fixture(); self.out = io.StringIO()
+        d = self.root / "crafts" / "pottery" / "runbooks"; d.mkdir(parents=True)
+        (d / "kiln.md").write_text("# Run-book: kiln\n# sections: Census\n\n## Census\n" + block("census", "echo fired"))
+        (d / "README.md").write_text("# not a run-book\n")
+        c = self.root / rb.CORE_RUNBOOKS; c.mkdir(parents=True)
+        (c / "kiln.md").write_text("# Run-book: core kiln\n# sections: One\n\n## One\n" + block("one", "echo core"))
+        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=t", "-c", "user.email=t@t", "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], check=True)
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+    def test_the_craft_key_resolves_and_a_bare_name_is_unchanged(self):
+        self.assertEqual(rb.craft_runbooks(self.root), {"pottery:kiln": self.root / "crafts" / "pottery" / "runbooks" / "kiln.md"})
+        self.assertEqual(sorted(rb.all_runbooks(self.root)), ["kiln", "pottery:kiln", "x"])
+        self.assertEqual(rb.runbook_path(self.root, "pottery:kiln"), self.root / "crafts" / "pottery" / "runbooks" / "kiln.md")
+        self.assertEqual(rb.runbook_path(self.root, "kiln"), self.root / rb.CORE_RUNBOOKS / "kiln.md")   # the core's, as before
+        self.assertEqual([c.name for c in rb.list_commands(self.root, "pottery:kiln")], ["census"])
+        with self.assertRaises(rb.Refused):
+            rb.list_commands(self.root, "pottery:none")
+    def test_a_craft_runbooks_events_go_to_craft_dash_name(self):
+        ev = rb.run(self.root, "pottery:kiln", "census", "agent", out=self.out)
+        self.assertEqual((ev.instance, ev.exit), ("pottery-kiln", 0))
+        self.assertTrue(ev.id.startswith("pottery-kiln-") and ev.id.endswith("-census"), ev.id)
+        ep = self.root / rb.DEFAULT_RUNBOOKS / "events" / "pottery-kiln.jsonl"
+        self.assertEqual(rb.events_path(self.root, "pottery:kiln"), ep)
+        self.assertEqual([e["instance"] for e in rb.read_events(ep)], ["pottery-kiln"])
+        self.assertEqual(rb.last_event(ep, "census")["id"], ev.id)
+        evg = dyadlib.find_guard("workstation", "events")
+        if evg is not None:                                                    # the craft's events guard accepts the file
+            self.assertEqual([m for m in evg.check_package(self.root) if not m.startswith("warning")], [])
+    def test_the_craft_guard_checks_a_craft_runbook(self):
+        if rbg is None:
+            self.skipTest("no craft provides the run-book check")
+        msgs = [m for m in rbg.check_package(self.root) if not m.startswith("warning") and "kiln" in m]
+        self.assertEqual(msgs, [])
 
 
 class _HostEnv:

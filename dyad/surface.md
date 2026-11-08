@@ -64,7 +64,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad session list` | — | frozen |
 | `dyad session reconcile` | — | frozen |
 | `dyad project <surface>` / `--list` | `--craft <name>` (the kanban projector's, #22) | frozen |
-| `dyad runbook check` / `list <instance>` / `run <instance> <name>` / `new <instance>` | `--as operator\|agent\|automaton` (automaton: a read-only command only, #593) | frozen |
+| `dyad runbook check` / `list <instance>` / `run <instance> <name>` / `new <instance>` | `--as operator\|agent\|automaton` (automaton: a read-only command only, #593); `<instance>` may be `<craft>:<name>`, a craft's `crafts/<craft>/runbooks/<name>.md` (#640) | frozen |
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
@@ -102,7 +102,7 @@ are each guard's own constant, the source the test reads.
 | provenance legacy | `provenance_legacy.local.txt` | `<id> <n> <reason>` per line: the rows that predate provenance enforcement and the dispositions each holds without words (Rule-7 Enforcement) | `provenance.LEGACY` | frozen |
 | public remotes | `public_remotes.local.txt` | one remote per line, compared after `normalize_remote`: the remotes the private-citation fence reads pushes to (#518) | `privatecite.PUBLIC` | frozen |
 | private repos | `private_repos.local.txt` | one sha256 hex of a lowercased `owner/repo` per line: the repositories whose quoted text never leaves for a public remote (#518) | `privatecite.PRIVATE` | frozen |
-| event | `<runbooks>/events/<instance>.jsonl` | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
+| event | `<runbooks>/events/<instance>.jsonl`, a craft run-book's `<craft>-<name>.jsonl` (#640) | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
 

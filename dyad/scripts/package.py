@@ -227,7 +227,9 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 run-book (exit 2 when no craft provides the check), list one's commands,
                                 execute one command through the one runner — it prints the native
                                 command line, tests the postcondition and appends an event to
-                                <runbooks>/events/<instance>.jsonl — or seed a run-book from the craft's template
+                                <runbooks>/events/<instance>.jsonl — or seed a run-book from the craft's template;
+                                <instance> `<craft>:<name>` is a craft's crafts/<craft>/runbooks/<name>.md,
+                                its events <runbooks>/events/<craft>-<name>.jsonl (#640)
   dyad release [--scan]         the release service (scripts/release.py, d-work #470; run by the `released` workflow,
                                 dyad-release.yml): every `<date> Y release <tag> at <cut sha> (archive <sha256>)` entry
                                 on <instance>/d-work/rows that this push added (BEFORE) or a dispatch names (ONLY) —
