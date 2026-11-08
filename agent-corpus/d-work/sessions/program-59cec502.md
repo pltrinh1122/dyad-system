@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-08T18:49:39+00:00
+seen: 2026-11-08T18:55:53+00:00
 root: /home/user/dyad-system
 rows: 645
 files: agent-corpus/d-work/ dyad/playbooks/precedent-bootstrap.md dyad/scripts/dyadlib.py dyad/scripts/package.py dyad/scripts/precedent.py dyad/tests/test_dyadlib.py dyad/tests/test_package.py dyad/tests/test_playbooks.py dyad/tests/test_precedent.py
