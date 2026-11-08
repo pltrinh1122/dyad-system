@@ -1116,7 +1116,8 @@ class PackageTests(livetest.LiveCase):
         naming that entry, in the decision log beside the row; a bad line, a missing -d or another entry writes nothing."""
         import json
         sys.path.insert(0, str(PKG / "scripts")); import dyadlib
-        d, rows = self.dwork_repo(); log = rows.parent / "decisions" / "1.jsonl"
+        d, rows = self.dwork_repo(); log = rows.parent / "decisions" / "1.md"
+        dl = dyadlib.load_guard("agent", "decision_log")
         f = d / "dec.jsonl"
         f.write_text(json.dumps({"record": "replan", "case": "r1", "fields": {"accreted": False}, "inputs": "main moved",
                                  "outcome": "replan", "row": 2}) + "\n")
@@ -1131,17 +1132,17 @@ class PackageTests(livetest.LiveCase):
         self.assertNotEqual(r.returncode, 0); self.assertIn("is no outcome of dmc:replan", r.stderr); self.assertFalse(log.exists())
         r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y, done", "--decisions", str(f))
         self.assertEqual(r.returncode, 0, r.stderr)
-        (cand,) = [json.loads(l) for l in log.read_text().splitlines()]
-        self.assertEqual((cand["status"], cand["source"], cand["row"]), ("candidate", "done", 2))
+        (cand,) = dl.parse(log.read_text())
+        self.assertEqual((cand["status"], cand["source"], cand["row"], cand["fields"]), ("candidate", "done", 2, {"accreted": "false"}))
+        first = log.read_text()
         f.write_text(json.dumps({"record": "replan", "case": "r1"}) + "\n")
         r = self.dwork_state(d, "1", "open", "-d", "Y precedent (1 cases: replan×1)", "--said", "Y, admit", "--decisions", str(f))
         self.assertEqual(r.returncode, 0, r.stderr)
-        lines = [json.loads(l) for l in log.read_text().splitlines()]
+        lines = dl.parse(log.read_text()); self.assertTrue(log.read_text().startswith(first))
         self.assertEqual(lines[0], cand)                                                       # append-only
         self.assertEqual({k: v for k, v in lines[1].items() if k not in ("status", "y")}, {k: v for k, v in cand.items() if k != "status"})
         self.assertEqual(lines[1]["status"], "precedent"); self.assertRegex(lines[1]["y"], r"^\d{4}-\d{2}-\d{2} Y precedent \(1 cases: replan×1\)$")
         self.assertIn(lines[1]["y"], rows.joinpath("1.md").read_text())
-        dl = dyadlib.load_guard("agent", "decision_log")
         import os
         with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": str(d / "inst")}):
             self.assertEqual(dl.check_package(d), [])

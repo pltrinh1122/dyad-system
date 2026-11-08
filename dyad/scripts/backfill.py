@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """The structured backfill of the decision log (core script, read-only; d-work #644 plan step 5(a)). Kernel: Python 3.12+.
 It reads the sources whose cells already hold a DMC record's own outcome name, so no inference labels a case, and prints
-one candidate line per case for the decision log (`guards/agent/decision_log.py`): `{record, case, fields, inputs,
-outcome, row, source: "structured"}`, the covering row the row whose ruling it was. The home lists them, beside the
+one candidate per case as a JSON line, the form a `--decisions` file may take (the decision log itself is
+`decisions/<row>.md` blocks, `guards/agent/decision_log.py`): `{record, case, fields, inputs, outcome, row, source:
+"structured"}`, the covering row the row whose ruling it was. The home lists them, beside the
 two-reader prose cases, before the operator's precedent question; `dwork state <row> … -d 'Y precedent (…)' --decisions
 <file>` then writes the listed ones `precedent`. It writes nothing and decides nothing.
 Sources (`SOURCES`):

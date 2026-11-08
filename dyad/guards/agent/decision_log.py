@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Decision-log guard (entity `decision`, agent corpus; Rule-3 owns the decision log as the record of the rulings a
 `Y` covers, d-work #644, placed per Rule-11 property 1). Kernel: Python 3.12+.
-The store is `<instance>/d-work/decisions/<row>.jsonl`, one JSON object per line, one line per ruling a disposition of
-row `<row>` (the file's row, the row whose entry records it) names: `record` (a DMC record's identifier), `case` (a case
-id, unique within the record), `fields` (the structured inputs, an object), `inputs` (the prose inputs, a string),
-`outcome` (one of the record's `termCode`s), `row` (the covering row, where the case was ruled), `status` (`candidate`, or
-`precedent`), `source` (`done`, `structured` or `two-readers`) and `date` (the UTC date of the write); a `precedent`
-line also carries `y`, the `Y precedent (…)` entry of the file's row that admitted it, verbatim, and a line whose
-outcome a precedent set gave carries `precedent`, that set's sha256 (so `precedent-admission` refuses it as
-self-derived). A `candidate` line of source `done` sits in the file of a row holding a `Y done`.
-Append-only: a line is never edited or removed; a case's status moves by a later line (`candidate` → `precedent`), so a
-file only grows, and the latest line of a (record, case) is its state (`latest`). Written by `dwork state … --decisions
-<file>` in the commit that records the `Y` (`lines_for`, every refusal before a write); read by `similar.admit`.
+The store is `<instance>/d-work/decisions/<row>.md`, the d-work store pattern (`crafts/sysarch/rules/stores.md`, plan
+#644 revision 2: a tracked `*.jsonl` under d-work is a transcript to Rule-7 property 2): one block per ruling a
+disposition of row `<row>` (the file's row, the row whose entry records it) names, under `## <case id>` (`## <case id>
+precedent` for a precedent block), of `key: value` lines: `record` (a DMC record's identifier), `outcome` (one of its
+`termCode`s), `row` (the covering row, where the case was ruled), `status` (`candidate` or `precedent`), `source`
+(`done`, `structured` or `two-readers`), `date` (the UTC date of the write), `precedent-entry` (a precedent block's `Y
+precedent (…)` entry of the file's row, verbatim), `precedent-set` (only on a ruling a precedent set gave: that set's
+sha256, so `precedent-admission` refuses it as self-derived), one `field.<name>: <value>` line per structured input (a
+string), and `inputs: <prose>` on one line. A `candidate` block of source `done` sits in the file of a row holding a
+`Y done`. Parsed, a block is a dict (`record`, `case`, `fields`, `inputs`, `outcome`, `row`, `status`, `source`, `date`,
+`y`, `precedent`).
+Append-only: a block is never edited or removed; a case's status moves by a later block (`candidate` → `precedent`),
+so a file only grows, and the latest block of a (record, case) is its state (`latest`). Written by `dwork state …
+--decisions <file>` in the commit that records the `Y` (`lines_for`, every refusal before a write; <file> holds blocks
+of this form, or one JSON object per line); read by `similar.admit`.
 An absent store passes (no ruling logged yet, a fresh install).
   decision_log.py [repo-root]
 """
@@ -32,7 +36,10 @@ STATUSES = ("candidate", "precedent")
 SOURCES = ("done", "structured", "two-readers")
 PRECEDENT_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y precedent \([^;]*\)")   # `<date> Y precedent (<n> cases: <record>×<k>, …)`
 DONE_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y done\b")
-FILE = re.compile(r"(\d+)\.jsonl")
+FILE = re.compile(r"(\d+)\.md")
+HEADING = re.compile(r"## (\S+)( precedent)?")
+KEYS = {"precedent-entry": "y", "precedent-set": "precedent"}   # stored key -> parsed key; the rest keep their names
+ORDER = ("record", "outcome", "row", "status", "source", "date", "precedent-entry", "precedent-set")
 CASE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:#/-]{0,79}")
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("required-fields-lead", lambda: FIELDS[:len(REQUIRED)] == REQUIRED and set(FIELDS) - set(REQUIRED) == {"y", "precedent"}),
@@ -48,23 +55,60 @@ def store(root: Path | None = None) -> Path:
 
 def files(root: Path) -> list[Path]:
     d = store(root)
-    return sorted(d.glob("*.jsonl"), key=lambda p: (int(p.stem) if p.stem.isdigit() else 0, p.name)) if d.is_dir() else []
+    return sorted(d.glob("*.md"), key=lambda p: (int(p.stem) if p.stem.isdigit() else 0, p.name)) if d.is_dir() else []
 
 
 def parse(text: str) -> list[dict]:
-    """The lines of one file, each a dict; a line that is not a JSON object raises ValueError naming its number."""
-    out = []
+    """The blocks of one file, each a dict; JSON lines are read too (a `--decisions` input file). A line outside a
+    block, a line that is no `key: value` or a heading whose ` precedent` disagrees with its `status` raises ValueError
+    naming its number."""
+    if text.lstrip().startswith("{"):
+        out = []
+        for n, line in enumerate(text.splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"line {n} is not JSON ({e.msg})")
+            if not isinstance(obj, dict):
+                raise ValueError(f"line {n} is not a JSON object")
+            out.append(obj)
+        return out
+    out, cur, heads = [], None, []
     for n, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
-        try:
-            obj = json.loads(line)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"line {n} is not JSON ({e.msg})")
-        if not isinstance(obj, dict):
-            raise ValueError(f"line {n} is not a JSON object")
-        out.append(obj)
+        if line.startswith("## "):
+            m = HEADING.fullmatch(line.rstrip())
+            if not m:
+                raise ValueError(f"line {n}: a block opens `## <case id>` or `## <case id> precedent`")
+            cur = {"case": m.group(1), "fields": {}}; out.append(cur); heads.append((n, bool(m.group(2))))
+            continue
+        k, sep, v = line.partition(":")
+        if cur is None or not sep or not k.strip() or k != k.strip():
+            raise ValueError(f"line {n} is no `key: value` line of a block")
+        k, v = k.strip(), v.strip()
+        if k.startswith("field."):
+            cur["fields"][k[6:]] = v
+        else:
+            cur[KEYS.get(k, k)] = int(v) if k == "row" and v.isdigit() else v
+    for (n, prec), b in zip(heads, out):
+        b.setdefault("inputs", "")
+        if prec != (b.get("status") == "precedent"):
+            raise ValueError(f"line {n}: the heading says {'precedent' if prec else 'candidate'}, the block's status {b.get('status')!r}")
     return out
+
+
+def render(ln: dict) -> str:
+    """One block, as `append` writes it; a value is one line (a line break becomes a space)."""
+    one = lambda v: " ".join(str(v).split())
+    out = [f"## {ln['case']}" + (" precedent" if ln.get("status") == "precedent" else "")]
+    out += [f"{k}: {one(ln[KEYS.get(k, k)])}" for k in ORDER if KEYS.get(k, k) in ln]
+    out += [f"{k}: {one(v)}" for k, v in ln.items() if k not in {KEYS.get(o, o) for o in ORDER} | {"case", "fields", "inputs"}]
+    out += [f"field.{k}: {one(v)}" for k, v in (ln.get("fields") or {}).items()]
+    out.append(f"inputs: {one(ln.get('inputs', ''))}")
+    return "\n".join(out) + "\n"
 
 
 def read(root: Path) -> dict[int, list[dict]]:
@@ -100,7 +144,7 @@ def outcomes_by_record(root: Path) -> dict[str, set[str]]:
 
 
 def line_problems(ln: dict, file_row: int, disposed: str | None, rows: set[int], codes: dict[str, set[str]]) -> list[str]:
-    """What is wrong with one line of `<file_row>.jsonl`, given that row's `disposed` (None: no such row)."""
+    """What is wrong with one block of `<file_row>.md`, given that row's `disposed` (None: no such row)."""
     bad = []
     keys = set(ln)
     if missing := [k for k in REQUIRED if k not in keys]:
@@ -116,6 +160,9 @@ def line_problems(ln: dict, file_row: int, disposed: str | None, rows: set[int],
         bad.append(f"case {case!r} is not a case id")
     if "fields" in keys and not isinstance(ln.get("fields"), dict):
         bad.append("fields is not an object")
+    elif "fields" in keys and (odd := [k for k, v in ln["fields"].items()
+                                       if not (re.fullmatch(r"[A-Za-z0-9_.-]+", str(k)) and isinstance(v, str))]):
+        bad.append(f"field(s) {', '.join(map(str, odd))}: a field is `field.<name>: <value>`, its value a string")
     if "inputs" in keys and not isinstance(ln.get("inputs"), str):
         bad.append("inputs is not a string")
     if "row" in keys and not (isinstance(ln.get("row"), int) and ln["row"] in rows):
@@ -155,7 +202,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     for p in sorted(d.iterdir()):
         m = FILE.fullmatch(p.name)
         if not m:
-            msgs.append(f"{p.name}: not `<row>.jsonl`; the decision log holds one file per row (#644)"); continue
+            msgs.append(f"{p.name}: not `<row>.md`; the decision log holds one file per row (#644)"); continue
         fr = int(m.group(1))
         if fr not in rows:
             msgs.append(f"{p.name}: names no row"); continue
@@ -164,7 +211,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
         except ValueError as e:
             msgs.append(f"{p.name}: {e}"); continue
         for n, ln in enumerate(lines, 1):
-            msgs += [f"{p.name} line {n}: {b}" for b in line_problems(ln, fr, rows[fr].disposed, set(rows), codes)]
+            msgs += [f"{p.name} block {n}: {b}" for b in line_problems(ln, fr, rows[fr].disposed, set(rows), codes)]
     return msgs
 
 
@@ -215,9 +262,13 @@ def lines_for(root: Path, file_row: int, entry: str, given: list[dict], today: s
     codes, out = outcomes_by_record(root), []
     for n, g in enumerate(given, 1):
         if not isinstance(g, dict):
-            raise ValueError(f"--decisions line {n} is not a JSON object")
+            raise ValueError(f"--decisions block {n} is not a block")
         base = dict(logged.get((g.get("record"), g.get("case")), {})) if precedent else {}
         ln = {**base, **{k: v for k, v in g.items() if k not in ("status", "y", "date")}}
+        if isinstance(ln.get("fields"), dict):   # stored as `field.<name>: <value>` lines: a value is a string
+            ln["fields"] = {k: v if isinstance(v, str) else json.dumps(v) for k, v in ln["fields"].items()}
+        if isinstance(ln.get("inputs"), str):
+            ln["inputs"] = " ".join(ln["inputs"].split())   # one line, as the block holds it
         ln.setdefault("source", "done")
         ln.update(status="precedent" if precedent else "candidate", date=today)
         if precedent:
@@ -227,7 +278,7 @@ def lines_for(root: Path, file_row: int, entry: str, given: list[dict], today: s
         ln = {k: ln[k] for k in FIELDS if k in ln}
         bad = line_problems(ln, file_row, disposed, set(rows), codes)
         if bad:
-            raise ValueError(f"--decisions line {n} ({g.get('record')}/{g.get('case')}): {'; '.join(bad)}")
+            raise ValueError(f"--decisions block {n} ({g.get('record')}/{g.get('case')}): {'; '.join(bad)}")
         out.append(ln)
     seen = [(ln["record"], ln["case"]) for ln in out]
     if dup := sorted({k for k in seen if seen.count(k) > 1}):
@@ -236,11 +287,11 @@ def lines_for(root: Path, file_row: int, entry: str, given: list[dict], today: s
 
 
 def append(root: Path, file_row: int, lines: list[dict]) -> Path:
-    p = store(root) / f"{file_row}.jsonl"
+    p = store(root) / f"{file_row}.md"
     p.parent.mkdir(parents=True, exist_ok=True)
+    text = "\n".join(render(ln) for ln in lines)
     with p.open("a", encoding="utf-8") as f:
-        for ln in lines:
-            f.write(json.dumps(ln, sort_keys=False, ensure_ascii=False) + "\n")
+        f.write(("\n" if p.stat().st_size else "") + text)   # one blank line between blocks
     return p
 
 
@@ -248,15 +299,15 @@ def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     got = read(root or dyadlib.repo_root())
     n = sum(len(v) for v in got.values())
     p = sum(1 for v in got.values() for ln in latest(v).values() if ln.get("status") == "precedent")
-    return f"{n} decision line(s) in {len(got)} file(s), {p} case(s) precedent"
+    return f"{n} decision block(s) in {len(got)} file(s), {p} case(s) precedent"
 
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     d = store(root); rel = d.relative_to(root) if d.is_relative_to(root) else d
-    return {"store": f"{rel}/<row>.jsonl",
-            "parser": "`decision_log.parse` (one JSON object per line)",
+    return {"store": f"{rel}/<row>.md",
+            "parser": "`decision_log.parse` (`## <case id>` blocks of `key: value` lines)",
             "observed": sum(len(v) for v in read(root).values()),
-            "note": "one line per ruling a disposition names, append-only; a case's status moves by a later line (#644)",
+            "note": "one block per ruling a disposition names, append-only; a case's status moves by a later block (#644)",
             "fields": [(f, "json", "", f in REQUIRED, "", "decision_log.FIELDS") for f in FIELDS]}
 
 

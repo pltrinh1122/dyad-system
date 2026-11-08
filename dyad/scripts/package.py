@@ -122,7 +122,8 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 by <login> at <YYYY-MM-DDTHH:MM[:SS]Z>`, noted `by reference` (#545)
   dyad dwork state <id> <state> -d 'Y done …'|'Y precedent (…)' --said[-file] <s> --decisions <file>
                                 with the entry, append the rulings it names to the decision log
-                                <instance>/d-work/decisions/<id>.jsonl (one JSON object per line of <file>):
+                                <instance>/d-work/decisions/<id>.md (one `## <case id>` block per ruling;
+                                <file> holds such blocks, or one JSON object per line):
                                 under a `Y done` as candidates, under a `Y precedent (…)` as precedents
                                 naming that entry, from the candidates already logged; every line checked
                                 before any write (guards/agent/decision_log.py, #644)

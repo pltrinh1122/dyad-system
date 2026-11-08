@@ -136,7 +136,8 @@ class AdmissionTests(unittest.TestCase):
         lines = [P, {**P, "case": "r2", "inputs": "the plans touch different files", "outcome": "disjoint", "row": 6},
                  {**P, "case": "r3", "status": "candidate"}, {**P, "case": "r4", "precedent": "1" * 64},
                  {**P, "case": "r5"}, {**P, "case": "r5", "status": "candidate", "date": "2026-11-09"}]
-        (log / "6.jsonl").write_text("".join(json.dumps(l) + "\n" for l in lines))
+        dl = dyadlib.load_guard("agent", "decision_log")
+        (log / "6.md").write_text("\n".join(dl.render(l) for l in lines))
         entries, refused = similar.admit(self.d, "session-overlap")
         self.assertEqual([(lab, row) for lab, _, _, row in entries], [("overlap", 5), ("disjoint", 6)])
         self.assertEqual(refused, [("r3", "uncovered"), ("r4", "self-derived"), ("r5", "superseded")])
@@ -147,7 +148,7 @@ class AdmissionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as e:
             similar.freeze_record(self.d, "session-overlap", self.d / "none.jsonl", BASE, cases=["r3"])
         self.assertIn("r3 uncovered", str(e.exception)); self.assertFalse((self.d / "none.jsonl").exists())
-        (log / "6.jsonl").write_text(json.dumps({**P, "record": "replan", "outcome": "replan"}) + "\n")
+        (log / "6.md").write_text(dl.render({**P, "record": "replan", "outcome": "replan"}))
         self.assertEqual(similar.admit(self.d, "replan")[1], [("r1", "operator-side")])   # its consequence asks a plan-Y
         with self.assertRaises(ValueError):
             similar.admit(self.d, "no-such-record")
