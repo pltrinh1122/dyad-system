@@ -138,9 +138,17 @@ slug is presentation: a question binds the rows it names by their numbers, and e
 - An **execution detail** is a change of step order, of how PRs are split or stacked, of which unit executes a step
   within its charter, or of tooling route, where the mutation's content and end state are unchanged, the plan stated
   none of these as a requirement (Rule-15 phase 1), and no intermediate state is irreversible or reaches the world (a
-  release cut, a tag, a publish, a destructive host action, a preference value). The plan-`Y` covers it and the
-  completion evidence reports it. A change that meets fewer than all of these conditions is a departure, and so a new
-  plan (`dyad/dmc/plan-departure.jsonld`, #555).
+  release cut, a tag, a publish, a destructive host action, a preference value). So is an **internal realization**, a
+  change whose effect stays inside the PR, in one of three forms: **placement**, a file's path differing where the
+  move stays within one zone and one craft root, the content is byte-identical, the old path never landed on `main`,
+  no file outside the PR refers to it, it is in no released craft's tree and the plan did not name it as a
+  requirement; **implied means**, where the plan's text names the effect and the means adds no public surface; and
+  **compatible extension**, an optional parameter of an internal function that defaults to the old behaviour, with no
+  caller changed and a test showing it. Public surface is a `dyadlib.CLI` row, a `dyad/surface.md` row, a path in a
+  released craft's tree, or Rule or preference text, and each use of an internal realization is a departure line in
+  the completion evidence (`dmc:plan-departure`, #643). The plan-`Y` covers an execution detail and the completion
+  evidence reports it. A change that meets fewer than all of these conditions is a departure, and so a new plan
+  (`dyad/dmc/plan-departure.jsonld`, #555).
 - **Mandate scope.** A plan carries rows from two sources, each stated in the plan file, so the plan question names it.
   (a) A **mandate scope** the plan states: a *rule* for the class of row it will open ("one child per failure mode") and
   a *ceiling* on how many. (b) A step of a play-book the plan runs that prescribes a class of row: the plan states that
@@ -391,6 +399,10 @@ the row slug 2026-11-07 (d-work #622), under the preference `dwork-slug`: the op
 with two or three tags after its number, so a row is known by more than a number; the question still binds by the
 number; see `../falsification/rules/rule-3-d-work.md`, amendment #622. Incidents gains the blocker home 2026-11-07 (d-work
 #623): a fault found downstream had been fixed under three homes in one week at up to three questions each, with nothing
-to say which; see the same record, amendment #623.
+to say which; see the same record, amendment #623. Plan's execution detail gains internal realization 2026-11-08
+(d-work #643): two file moves ruled execution detail (#626, #640) and two #619 cases ratified as planned or as
+execution detail fitted none of the record's differences, and a blind precedent test read all four as new plans; one
+clause, fenced by no effect outside the PR, admits the three forms and overrules #626's move; see the same record,
+amendment #643.
 
 Set: System Requirements.
