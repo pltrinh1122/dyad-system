@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-08T21:06:07+00:00
+seen: 2026-11-08T21:20:43+00:00
 root: /home/user/dyad-system
 rows: 647
 files: agent-corpus/d-work/
