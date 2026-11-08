@@ -227,9 +227,18 @@ slug is presentation: a question binds the rows it names by their numbers, and e
 ## Batch disposition
 - Preference `batch-disposition-mode`: `off` — every intent, plan and Done question asked singly; `on-ignore` — singly, until
   the operator leaves one outstanding, the engagement signal itself; `always` — never singly. Once engaged the agent
-  holds a **pending queue** of intent-ready, plan-ready and, separately, done-ready d-works, reports their counts at the
-  end of every reply while any is non-empty, and drains it by naming items in batch questions; under `on-ignore` engagement lapses
-  once both are empty.
+  holds a **pending queue** of intent-ready, plan-ready and, separately, done-ready d-works, and drains it by naming items
+  in batch questions; under `on-ignore` engagement lapses once both are empty.
+- Every reply ends, before its one `Y/N` line, with the **closing line** in the form the preference `awaiting-you`
+  (`preferences-corpus/PREFERENCES.md`; absent, `on`) names. Under `on` it reads
+  `Awaiting you: <n> <kind> (#id…), …`, or `Awaiting you: nothing.`, then `Coming: <n> <kind>`, each part shown only
+  when non-zero. **Awaiting you** counts the questions asked and not answered, by kind (intent, plan, Done, precedent,
+  release, destructive), a batch question once. **Coming** counts the pending queue. Under `off` it reports the queue's
+  counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
+  records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
+  Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
+  is an incident (Incidents), never a line the agent adds by hand. The line counts what the records show; its form
+  authorizes nothing (#646).
 - The batch forms replace the single forms, one kind per question: `Y/N: intent aligned for #a, #b, #c?`, each with its
   own stored intent reading; `Y/N: proceed with #a, #b, #c as planned?`, each with
   its own stored plan file; and `Y/N: Done with #a <title-a>, #b <title-b> (merges PR #w, #x)?`, full evidence for each
@@ -418,6 +427,9 @@ clause, fenced by no effect outside the PR, admits the three forms and overrules
 amendment #643. What a `Y` binds, Batch disposition, Ledger and Ratification
 events gain the precedent question 2026-11-08 (d-work #644): a done-`Y` had covered every ruling inside its work
 without the operator examining one (#626's zone move), so a ruling becomes a precedent only by a `Y` that names it;
-see the same record, amendment #644.
+see the same record, amendment #644. Batch disposition gains the closing line, `Awaiting you` under the preference
+`awaiting-you`, 2026-11-08 (d-work #646): the line every reply ended with counted rows ready for a question not yet
+asked, which is the agent's work, and never a question asked and not answered, the one thing that waits on the operator;
+it was written by hand. It is now generated from the asks the board records; see the same record, amendment #646.
 
 Set: System Requirements.

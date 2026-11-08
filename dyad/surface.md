@@ -138,6 +138,7 @@ the operator's. The key names and allowed values are the surface.
 | relay-form | frozen |
 | intent-reading | frozen |
 | dwork-slug | frozen |
+| awaiting-you | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
