@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/automaton-health",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "automaton-health",
+  "name": "Automaton delivery health",
+  "description": "Whether every sweep the automaton owes main has been delivered, read from the home's stall block.",
+  "dyad:decides": "Has every full sweep and stores sweep owed on main been delivered?",
+  "dyad:inputs": [
+    "the stall block `dyad board resume` prints, read from the ledger at this checkout's HEAD",
+    "the hosting's run lists for d-work sweep and d-work automaton, as `sweep_ci` reads them"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pass",
+      "name": "Pass",
+      "dyad:when": "a stall block was printed, it holds no `finding: delivery` line and no line saying the hosting was not read",
+      "dyad:then": "health exits 0; nothing to report"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-delivered",
+      "name": "finding: delivery",
+      "dyad:when": "the stall block holds a `finding: delivery` line: the newest landed merge has no d-work sweep run at it or later, or the newest ledger or events push not made by the jobs' own identity has no d-work automaton run at it or later; a run counts when queued, in progress, or completed with success or failure, and a push younger than DELIVERY_GRACE_S is not yet judged",
+      "dyad:then": "health exits 1 and prints the line; operate reports it to the home"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hosting-unread",
+      "name": "hosting was not read",
+      "dyad:when": "the stall block says the hosting's runs were not read",
+      "dyad:then": "health exits 1; an unread hosting is never a pass"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-block",
+      "name": "stall block",
+      "dyad:when": "`dyad board resume` printed no stall block header",
+      "dyad:then": "health exits 1: nothing was read"
+    }
+  ],
+  "dyad:precedence": "no-block, then hosting-unread, then not-delivered, before pass",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "workstation-corpus/runbooks/automaton.md",
+  "dyad:alsoIn": [
+    "dyad/scripts/automaton.py",
+    "dyad/guards/agent/board.py"
+  ],
+  "dyad:owner": "sysadmin:server-instances"
+}

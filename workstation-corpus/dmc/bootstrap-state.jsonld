@@ -1,0 +1,51 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:instance/bootstrap-state",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "bootstrap-state",
+  "name": "Bootstrap state",
+  "description": "Whether a seat's clone is prepared for the guards: hooks path set, full history, tags present.",
+  "dyad:decides": "Is this clone ready for the guards, by the lines `dyad bootstrap` prints?",
+  "dyad:inputs": [
+    "each `<state> [bootstrap] <step>: <detail>` line of `dyad bootstrap` or `dyad bootstrap --check` (both exit 0 unless misused)"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ok",
+      "name": "ok",
+      "dyad:when": "a step's line reads ok: the hook path is dyad/hooks, the clone is not shallow, the core's tags are present",
+      "dyad:then": "nothing to do for that step"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "changed",
+      "name": "changed",
+      "dyad:when": "`dyad bootstrap` changed the step: set core.hooksPath, unshallowed, or fetched tags",
+      "dyad:then": "reversible: undo by unsetting core.hooksPath; fetched history only adds"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "warn",
+      "name": "warn",
+      "dyad:when": "a step could not be completed: the network or the remote refused",
+      "dyad:then": "not ready; the clone's next evidence run names the check it breaks; pass is no warn line from --check"
+    }
+  ],
+  "dyad:precedence": "any warn line makes the clone not ready",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "dyad/scripts/bootstrap.py"
+  },
+  "isPartOf": "urn:dyad:instance",
+  "dyad:home": "workstation-corpus/runbooks/sessions.md",
+  "dyad:owner": "sysadmin:server-instances"
+}
