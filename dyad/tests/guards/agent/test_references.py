@@ -159,10 +159,11 @@ class FixtureTests(Fixtured):
 
     def test_register_shape(self):
         kinds = [r[0] for r in refint.REFERENCES]
-        self.assertEqual(len(kinds), 35); self.assertEqual(len(set(kinds)), 35, "one entry per kind")   # +trace.id->row (#227), +3 dmc (#507), +merge (#541), +board (#535), +message (#536)
-        self.assertEqual(kinds[-11:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft",
+        self.assertEqual(len(kinds), 37); self.assertEqual(len(set(kinds)), 37, "one entry per kind")   # +trace.id->row (#227), +3 dmc (#507), +merge (#541), +board (#535), +message (#536), +2 decision (#644)
+        self.assertEqual(kinds[-13:], ["record.ledger->provenance", "craft_rule.text->provenance", "bundle.component->craft",
                                        "provenance.legacy->row", "trace.id->row", "dmc.home->file", "dmc.also_in->file",
-                                       "dmc.implementation->file", "merge.parent->row", "board.id->row", "message.row->row"])   # #177, #196, #191, #227, #507, #541, #535, #536 appended; order stable
+                                       "dmc.implementation->file", "merge.parent->row", "board.id->row", "message.row->row",
+                                       "decision.row->row", "decision.record->dmc"])   # #177, #196, #191, #227, #507, #541, #535, #536, #644 appended; order stable
         for kind, src, field, ext, tgt, res in refint.REFERENCES:
             self.assertRegex(kind, r"^[a-z_]+\.[a-z_#]+->[a-z]+$")
             self.assertTrue(callable(res) or res == "world" or res.startswith("guard:"), kind)

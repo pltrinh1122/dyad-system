@@ -14,6 +14,9 @@ and `groom.py` read through hygiene), and a frozen precedent set built on them:
                           Q4; `ratified_rows` reads them from `main`). Returns the file's sha256. Fitted only at that named
                           event and rebuilt when the owner Rule moves or a later Done supersedes a case (Q5), so the same
                           input always scores the same against the same digest.
+  admit(root, record), freeze_record(root, record, out, base)
+                          #644: the decision log's cases of a record, each judged by `admission` (`dmc:precedent-admission`,
+                          mechanical), and the set frozen from the admitted ones alone, every refusal named.
   load(path)              the set, `{"idf", "max_df", "base", "examples", "rows", "sha256"}`.
   score(set, inputs)      (top label, its cosine, (runner-up label, its cosine)): each label's score is its nearest
                           precedent's cosine to `inputs` under the frozen IDF; a token outside the vocabulary weighs 0.
@@ -119,6 +122,101 @@ def freeze(entries: list[tuple[str, str, dict, int]], out: Path, ratified: set[i
     data = ("\n".join(lines) + "\n").encode()
     Path(out).write_bytes(data)
     return hashlib.sha256(data).hexdigest()
+
+
+# ---- admission over the decision log (d-work #644; dmc:precedent-admission, mechanical, decided here)
+ADMISSION = ("admitted", "uncovered", "unnamed", "superseded", "self-derived", "operator-side")
+
+
+def admission(line: dict | None, later: list[dict], operator_side: bool, amended: bool = False) -> str:
+    """dmc:precedent-admission (#644): whether one logged ruling of a record enters its frozen set. `operator-side`
+    (operator-side) when the record's own outcomes name a ratification event (no case of it is frozen, Q7); `unnamed`
+    when no decision-log line names the case; `self-derived` when the line's outcome came from a precedent set (it
+    carries that set's sha256); `superseded` when a later line names the same case (`later`) or a commit after the line's
+    date changed the record or its home and named the case (`amended`); `uncovered` when the line is a candidate no
+    precedent-Y has named; `admitted` (admitted) otherwise."""
+    if operator_side:
+        return "operator-side"
+    if line is None:
+        return "unnamed"
+    if line.get("precedent"):
+        return "self-derived"
+    if later or amended:
+        return "superseded"
+    return "admitted" if line.get("status") == "precedent" else "uncovered"
+
+
+def _record_doc(root: Path, record: str) -> tuple[dict, Path] | None:
+    dmc = dyadlib.load_guard("agent", "dmc")
+    for _, p, _ in dmc.records(Path(root)):
+        if p.stem == record:
+            return json.loads(p.read_text()), p
+    return None
+
+
+def operator_side(doc: dict) -> bool:
+    """True when an outcome's consequence (`dyad:then`) names a ratification event or a destructive act (the dmc guard's
+    RATIFYING, the test a precedent record's outcomes pass, #642 Q7)."""
+    rat = dyadlib.load_guard("agent", "dmc").RATIFYING
+    return any(rat.search(str(o.get("dyad:then", ""))) for o in doc.get("hasDefinedTerm") or [] if isinstance(o, dict))
+
+
+def amended_since(root: Path, paths: list[str], date: str, case: str) -> bool:
+    """True when a commit dated after `date` (UTC, YYYY-MM-DD) touches one of `paths` with a line naming `case` (git's
+    `-G`): the amendment that names the case supersedes its ruling. False when git cannot read it."""
+    if not paths:
+        return False
+    import subprocess
+    r = subprocess.run(["git", "log", "--format=%h", f"--since={date}T23:59:59Z", "-G", re.escape(case), "--", *paths],
+                       cwd=root, capture_output=True, text=True, env=dyadlib.git_env())
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+
+def admit(root: Path, record: str, cases: list[str] | None = None) -> tuple[list[tuple[str, str, dict, int]], list[tuple[str, str]]]:
+    """(entries, refused) for `record` over the decision log: each admitted case as a freeze entry (outcome, prose,
+    fields, covering row), in log order; every other case as (case id, outcome of `admission`). `cases` names the cases
+    asked for (one not in the log is `unnamed`); absent, every case the log names. Lines are ordered by date, then file
+    row, then position; a case's latest precedent line is judged, and every line after it is `later`."""
+    root = Path(root)
+    got = _record_doc(root, record)
+    if got is None:
+        raise ValueError(f"no DMC record {record!r}")
+    doc, path = got
+    dl = dyadlib.load_guard("agent", "decision_log")
+    lines = sorted(((ln.get("date", ""), fr, i, ln) for fr, lns in dl.read(root).items()
+                    for i, ln in enumerate(lns) if ln.get("record") == record), key=lambda t: t[:3])
+    by_case: dict[str, list[dict]] = {}
+    for *_, ln in lines:
+        by_case.setdefault(ln.get("case"), []).append(ln)
+    side = operator_side(doc)
+    home = doc.get("dyad:home")
+    paths = [p for p in [path.relative_to(root).as_posix() if path.is_relative_to(root) else None,
+                         (dyadlib.PKG / home).relative_to(root).as_posix()
+                         if home and (dyadlib.PKG / home).is_relative_to(root) else None] if p]
+    entries, refused = [], []
+    for case in (cases if cases is not None else list(by_case)):
+        lns = by_case.get(case, [])
+        # the case's latest precedent line is judged (its latest line when none is precedent); a line after it, a later
+        # Done's candidate or another ruling, supersedes it
+        at = max((i for i, ln in enumerate(lns) if ln.get("status") == "precedent"), default=len(lns) - 1)
+        line, later = (lns[at], lns[at + 1:]) if lns else (None, [])
+        amended = bool(line) and not side and amended_since(root, paths, str(line.get("date")), case)
+        verdict = admission(line, later, side, amended)
+        if verdict == "admitted":
+            entries.append((line["outcome"], line.get("inputs", ""), dict(line.get("fields") or {}), line["row"]))
+        else:
+            refused.append((case, verdict))
+    return entries, refused
+
+
+def freeze_record(root: Path, record: str, out: Path, base: str, max_df: float = MAX_DF,
+                  cases: list[str] | None = None) -> tuple[str, list[tuple[str, str]]]:
+    """Freeze `record`'s admitted cases (`admit`) to `out`: (sha256, refused). Every entry is a `precedent` line its own
+    latest, so the set holds no unadmitted case (#644 F5); refused (ValueError) when none is admitted."""
+    entries, refused = admit(root, record, cases)
+    if not entries:
+        raise ValueError(f"freeze: no admitted case of dmc:{record} ({', '.join(f'{c} {v}' for c, v in refused) or 'none logged'})")
+    return freeze(entries, out, {row for *_, row in entries}, base, max_df), refused
 
 
 def load(path: Path) -> dict:

@@ -812,7 +812,7 @@ INPUT_TRIGGERS: dict[str, tuple[str, str]] = {   # input -> (its trigger, the de
 }
 CHECK_INPUTS: dict[str, tuple[str, ...]] = {
     # core guards
-    "agent/board": (LEDGER,), "agent/dmc": (CODE,), "agent/frame": (CODE,), "agent/inbox": (LEDGER,),
+    "agent/board": (LEDGER,), "agent/decision_log": (CODE, LEDGER), "agent/dmc": (CODE,), "agent/frame": (CODE,), "agent/inbox": (LEDGER,),
     "agent/merges": (CODE, LEDGER), "agent/plans": (CODE, LEDGER), "agent/provenance": (LEDGER,), "agent/prs": (CODE,),
     "agent/records": (CODE,), "agent/references": (CODE, LEDGER), "agent/rows": (LEDGER,), "agent/rules": (CODE,),
     "agent/sessions": (LEDGER,), "agent/traces": (LEDGER,), "agent/vocabulary": (CODE,), "craft/crafts": (CODE,),
@@ -1089,7 +1089,8 @@ CLI: dict[tuple[str, str | None], CliForm] = {
                                                              *_SAID[1:], ("--relayed-via", "<seat>"), ("--mandate", "<id>"), ("--slug", "<slug>")) + LAND_FLAGS, ("--backlog", LAND_FLAG)),
     ("dwork", "state"):         CliForm("<id> <state>", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
                                                          *_SAID[1:], ("--said-ref", "<ref>"), ("--relayed-via", "<seat>"),
-                                                         ("--mandate", "<id>"), ("--retired-by", "<id>"), ("--slug", "<slug>")) + LAND_FLAGS,
+                                                         ("--mandate", "<id>"), ("--retired-by", "<id>"), ("--slug", "<slug>"),
+                                                         ("--decisions", "<file>")) + LAND_FLAGS,
                                         ("--check", LAND_FLAG)),
     ("dwork", "retire"):        CliForm("<id>...", _SAID),
     ("dwork", "list"):          CliForm("", (("--state", "<state>"), ("--craft", "<craft>"))),

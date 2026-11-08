@@ -120,6 +120,13 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 <seat>`, appended to a disposition's note), with --prompt or --said (#422).
                                 --said-ref records a hosting approval in place of --said: `run <id> approved
                                 by <login> at <YYYY-MM-DDTHH:MM[:SS]Z>`, noted `by reference` (#545)
+  dyad dwork state <id> <state> -d 'Y done …'|'Y precedent (…)' --said[-file] <s> --decisions <file>
+                                with the entry, append the rulings it names to the decision log
+                                <instance>/d-work/decisions/<id>.md (one `## <case id>` block per ruling;
+                                <file> holds such blocks, or one JSON object per line):
+                                under a `Y done` as candidates, under a `Y precedent (…)` as precedents
+                                naming that entry, from the candidates already logged; every line checked
+                                before any write (guards/agent/decision_log.py, #644)
   dyad dwork state … --check    the same call, every refusal it would make — flags, words, fences, the
                                 Done order, the head and trace tests, landing, the transition — and no
                                 write: no row, no record, no trace. Prints `ok <id>: <from> -> <to>` and
@@ -2395,16 +2402,33 @@ def cmd_dwork(a):
             # #592 R-c: the plan check runs at the transition, before the first write (not on a Done record of a planned row) — warnings, never a refusal (counsel's, hand-off)
             for m in dyadlib.load_guard("agent", "plans").check_dwork(rid, REPO):
                 print(f"warn [plan] {m.removeprefix('warning: ')}", file=sys.stderr)
+        decided = []
+        if "--decisions" in vals:
+            # #644: the rulings a `Y done` names, logged as candidates, or the lines a `Y precedent (…)` admits, in the
+            # commit that records that `Y` (the decision log, `guards/agent/decision_log.py`); every refusal precedes a write
+            if d is None:
+                sys.exit("refused: --decisions logs the rulings a disposition names; give the entry with -d and its words (#644)")
+            dl = dyadlib.load_guard("agent", "decision_log")
+            try:
+                given = dl.parse(Path(vals["--decisions"]).read_text(encoding="utf-8"))
+                decided = dl.lines_for(REPO, rid, d, given, today, rows)
+            except (OSError, ValueError) as e:
+                sys.exit(f"refused: --decisions {vals['--decisions']}: {e}")
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dataclasses.replace(r, state=state, disposed=disposed, refs=refs, slug=slug or r.slug)   # #290, #622: every other field is carried
         try:   # an unknown state or a transition outside Rule-16's table is refused here, before either write (#203)
-            dyadlib.write_row(REPO, new, r.state, first=(lambda: append_provenance(rid, entries, today)) if entries else None,
-                              dry_run=check)
+            def first():
+                if entries:
+                    append_provenance(rid, entries, today)
+                if decided:
+                    dyadlib.load_guard("agent", "decision_log").append(REPO, rid, decided)
+            dyadlib.write_row(REPO, new, r.state, first=first if entries or decided else None, dry_run=check)
         except dyadlib.TransitionError as e:
             sys.exit(str(e))
         if check:
             print(f"ok {rid}: {r.state} -> {state}" + (f", entries {', '.join(k for k, _, _ in entries)}" if entries else "")
+                  + (f", {len(decided)} decision line(s)" if decided else "")
                   + " (--check: nothing written)"); return 0
         print(f"{rid}: {state}"); return 0
     if verb == "retire":

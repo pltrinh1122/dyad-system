@@ -1495,3 +1495,43 @@ are as amendment #555 left them, since the bullet's existing conditions and its 
 orthogonal.
 
 Disposition: see ledger #643.
+
+## Amendment — d-work #644 (2026-11-08: the precedent question)
+Claim (plan #644): a ruling a d-work's completion evidence names on a decision record becomes a precedent of that
+record only by the operator's `Y` to a question naming it. What a `Y` binds gains the **precedent question**,
+`Y/N: admit as precedents <cases>?`, listing decision-log entries by record and case id, whose **precedent-Y** binds exactly
+those lines and nothing else; Batch disposition names it its own kind, never folded into a Done question, asked as one
+batch at the next backlog grooming or once at least five candidates are pending; Ledger gives its entry,
+`<date> Y precedent (<n> cases: <record>×<k>, …)`; Ratification events gains a fifth bullet. Rule-16 Store gains the
+decision log, the store a Done's named rulings are written to as candidates with the `Y` that covers the work. The
+d-work play-book's Evidence step names departure and class lines as its candidates. With it, four records whose
+context the plan's blind precedent test found missing are restated so a reader reads them one way: `attack-result`
+(its outcomes renamed to read one way only — attack holds, attack fails, claim survives, no attack found — their
+termCodes kept, and Rule-9 gains one Form line mapping the table's confirmed, refuted and survives onto them), `release-class` (a
+decision record with its test that changes what a check runs or when is a significant enhancement, as #621 classed
+#618, and no longer maintenance), `retirement-candidate` (a retirement decided before #626 stated its grounds is not a
+case of it) and `craft-instantiation` (each criterion's input states its firing condition, as the play-book's table
+does). Only `attack-result`'s outcome names change; every termCode stays.
+
+| id | claim | attack | result | survivor |
+|---|---|---|---|---|
+| F1 | a `precedent-Y` is needed beside the Done | a Done naming each ruling would do | refuted for practice | a Done covers the work, and its rulings were not examined (#626's zone move); a separate question the operator answers on a listed batch is the examination |
+| F2 | it adds little attention | one more question per batch | survives, scoped | batches of five or more, asked at grooming or at the count, never per ruling; the backfill is one question |
+| F3 | its entry needs no guard change | `rows.py` and Rule-7's count read every `Y …` entry as a disposition | survives | `Y precedent (…)` is a disposition like `Y archive (…)`, so its words are copied into the provenance record (Rule-7 property 5) |
+| F4 | the two-reader backfill is sound | both readers may agree with each other and still be wrong | survives, scoped | a case is kept only when both match the source's own wording too, and the precedent-`Y` reads the listed entries |
+| F5 | order is needed | conversions before admission would freeze unadmitted cases | confirmed | `order: required` for the record fixes, the admission and the conversions; `freeze` refuses a set with any line not `precedent` |
+| F6 | instance precedents serve core records | a core record pointing at instance data | survives | a record's precedents resolve through `DYAD_INSTANCE` (Rule-11 property 3), so each system keeps its own and a fresh install has none |
+| F7 | the decision log fits the d-work store as planned | a `<row>.jsonl` there is a tracked `*.jsonl` under the d-work store, which Rule-7 property 2 and `provenance.tracked_jsonl` refuse as a raw transcript | confirmed (counsel, during PR A) | the store takes the d-work store's own pattern, `decisions/<row>.md`, one `## <case id>` block of `key: value` lines per ruling, a status change a later block (plan revision 2, the operator's `Y`), and Rule-7 is unchanged |
+
+**Rule-6.** `precedent-Y` and `precedent` (the kind, and a decision-log entry's status) are added, owner Rule-3; `precedent`
+is used by Rules 3 and 16, `precedent-Y` by Rule-3. No other term changes.
+**Pairwise (Rule-5).** **3–2**: the precedent question is a ratification event declared under Rule-3's own heading, to
+which Rule-2 applies by reference with no edit (G5); its `Y` binds exactly the listed entries, as Binding's first sentence
+binds every `Y`, and it is never carried by a plan-`Y` or a done-`Y`. **3–7**: the entry is a disposition, its words
+copied with the row (property 5); the decision log holds the agent's record of rulings, never the operator's words, and
+no `*.jsonl` is tracked under the d-work store (F7). **3–9**: the one Form line maps the table's three words onto the record's renamed
+outcomes, which the record's index check reads in Rule-9; the attack table's words are unchanged. **3–16**: the decision log is a store beside the inbox, written in the
+clerical commit that records the `Y` it rests on, so it is ledger-only; its guard checks shape and append-only, as the
+inbox's does. The other pairs are as amendment #643 left them. Coherent, orthogonal.
+
+Disposition: see ledger #644.

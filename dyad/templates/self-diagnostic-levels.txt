@@ -29,6 +29,7 @@ unit        dyad/tests/guards/agent/test_dmc.py
 unit        dyad/tests/guards/agent/test_frame.py
 integration dyad/tests/guards/agent/test_board.py          # scratch repos, a bare origin, push through land (#535)
 integration dyad/tests/guards/agent/test_inbox.py          # scratch repos, a bare origin, push through land (#536)
+integration dyad/tests/guards/agent/test_decision_log.py   # temp files and a scratch git repo: the decision log (#644)
 integration dyad/tests/guards/agent/test_merges.py         # scratch repos, git merge, merge-tree and cat-file (#541)
 unit        dyad/tests/guards/agent/test_plans.py
 integration dyad/tests/guards/agent/test_provenance.py     # scratch repos
@@ -65,6 +66,7 @@ integration dyad/tests/test_merge.py                       # scratch repos, a ba
 integration dyad/tests/test_hygiene.py                     # scratch repos and git, the backlog hygiene of the sweep (#565)
 integration dyad/tests/test_decisions.py                   # scratch repos and git, the decision functions of #641
 unit dyad/tests/test_similar.py                             # temp files only, in process: the comparator set (#642)
+unit dyad/tests/test_backfill.py                            # temp files only, in process: the structured backfill (#644)
 integration dyad/tests/test_playbook_profile.py                   # temp files and the live tree (the d-work play-book), #642
 integration dyad/tests/test_groom.py                       # scratch repos and git, the backlog grooming report (#625)
 unit dyad/tests/test_intent.py                          # a temp instance and the live surface, in process (#615)

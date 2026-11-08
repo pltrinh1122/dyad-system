@@ -3,7 +3,7 @@ set; it holds ratified cases only (freeze refuses a row with no Y) with their pr
 commit; `decide` matches on prose, distinguishes on structured fields and abstains with its reason (no-match, near-tie,
 distinguish <field>, prose-only), citing the precedent row and score; `agreement` and the leave-one-out re-measure count
 reproduced and abstained cases; a malformed set is refused; and hygiene's TF-IDF is similar.py's, its output unchanged."""
-import json, shutil, sys, tempfile, unittest, unittest.mock
+import json, os, shutil, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts"))
@@ -100,6 +100,73 @@ class SimilarTests(unittest.TestCase):
         docs = {i: t for i, (_, t, _, _) in enumerate(EXAMPLES * 2)} | {99: "fonts colours spacing margins borders"}
         self.assertEqual(hy.tfidf(docs), similar.tfidf(docs, hy.HYGIENE_MAX_DF))
         self.assertFalse(hasattr(hy, "TOKEN"))                            # one implementation (#642)
+
+
+class AdmissionTests(unittest.TestCase):
+    """dmc:precedent-admission (#644): one case per outcome of `admission`, the cases covering exactly the record's
+    outcomes; `admit` and `freeze_record` over a scratch decision log; the amendment test over a scratch git tree."""
+    LINE = {"record": "session-overlap", "case": "r1", "fields": {"root": "other"}, "inputs": "both plans touch dmc.py",
+            "outcome": "overlap", "row": 5, "status": "precedent", "source": "structured", "date": "2026-11-08",
+            "y": "2026-11-08 Y precedent (2 cases: session-overlap×2)"}
+
+    def test_every_outcome_is_decided(self):
+        P, C = self.LINE, {**self.LINE, "status": "candidate"}
+        cases = {"operator-side": similar.admission(P, [], True), "unnamed": similar.admission(None, [], False),
+                 "self-derived": similar.admission({**P, "precedent": "0" * 64}, [], False),
+                 "superseded": similar.admission(P, [C], False), "uncovered": similar.admission(C, [], False),
+                 "admitted": similar.admission(P, [], False)}
+        for code, got in cases.items():
+            with self.subTest(outcome=code):
+                self.assertEqual(got, code)
+        self.assertEqual(similar.admission(P, [], False, amended=True), "superseded")
+        record = json.loads((PKG / "dmc" / "precedent-admission.jsonld").read_text())
+        self.assertEqual({o["termCode"] for o in record["hasDefinedTerm"]}, set(cases)); self.assertEqual(set(cases), set(similar.ADMISSION))
+
+    def test_operator_side_reads_the_consequences(self):
+        self.assertTrue(similar.operator_side({"hasDefinedTerm": [{"dyad:then": "the agent merges the PR"}]}))
+        self.assertFalse(similar.operator_side({"hasDefinedTerm": [{"dyad:then": "the agent re-plans"}]}))
+
+    def test_admit_and_freeze_record_over_the_log(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "inst"}); e.start(); self.addCleanup(e.stop)
+        rows = self.d / "inst" / "d-work" / "rows"; rows.mkdir(parents=True)
+        for i in (5, 6):
+            (rows / f"{i}.md").write_text(f"id: {i}\ntitle: t\nopened: 2026-11-01\nstate: planned\ndisposed: 2026-11-01 Y plan\nrefs: \n")
+        log = self.d / "inst" / "d-work" / "decisions"; log.mkdir(parents=True)
+        P = self.LINE
+        lines = [P, {**P, "case": "r2", "inputs": "the plans touch different files", "outcome": "disjoint", "row": 6},
+                 {**P, "case": "r3", "status": "candidate"}, {**P, "case": "r4", "precedent": "1" * 64},
+                 {**P, "case": "r5"}, {**P, "case": "r5", "status": "candidate", "date": "2026-11-09"}]
+        dl = dyadlib.load_guard("agent", "decision_log")
+        (log / "6.md").write_text("\n".join(dl.render(l) for l in lines))
+        entries, refused = similar.admit(self.d, "session-overlap")
+        self.assertEqual([(lab, row) for lab, _, _, row in entries], [("overlap", 5), ("disjoint", 6)])
+        self.assertEqual(refused, [("r3", "uncovered"), ("r4", "self-derived"), ("r5", "superseded")])
+        self.assertEqual(similar.admit(self.d, "session-overlap", ["r1", "r9"])[1], [("r9", "unnamed")])
+        sha, refused = similar.freeze_record(self.d, "session-overlap", self.d / "set.jsonl", BASE, max_df=0.9)
+        cset = similar.load(self.d / "set.jsonl")
+        self.assertEqual((cset["sha256"], cset["rows"], similar.labels(cset)), (sha, [5, 6], {"overlap", "disjoint"}))
+        with self.assertRaises(ValueError) as e:
+            similar.freeze_record(self.d, "session-overlap", self.d / "none.jsonl", BASE, cases=["r3"])
+        self.assertIn("r3 uncovered", str(e.exception)); self.assertFalse((self.d / "none.jsonl").exists())
+        (log / "6.md").write_text(dl.render({**P, "record": "replan", "outcome": "replan"}))
+        self.assertEqual(similar.admit(self.d, "replan")[1], [("r1", "operator-side")])   # its consequence asks a plan-Y
+        with self.assertRaises(ValueError):
+            similar.admit(self.d, "no-such-record")
+
+    def test_an_amendment_naming_the_case_supersedes_it(self):
+        import subprocess
+        run = lambda *a: subprocess.run(["git", "-C", str(self.d), "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                                        check=True, capture_output=True, text=True, env={**os.environ, **dyadlib.git_env(),
+                                        "GIT_COMMITTER_DATE": "2026-11-10T12:00:00Z", "GIT_AUTHOR_DATE": "2026-11-10T12:00:00Z"})
+        run("init", "-q", "-b", "main"); (self.d / "home.md").write_text("one\n"); run("add", "-A"); run("commit", "-qm", "a")
+        (self.d / "home.md").write_text("one\ncase r1 now reads otherwise\n"); run("commit", "-qam", "amend")
+        self.assertTrue(similar.amended_since(self.d, ["home.md"], "2026-11-08", "r1"))
+        self.assertFalse(similar.amended_since(self.d, ["home.md"], "2026-11-08", "r2"))       # the case is not named
+        self.assertFalse(similar.amended_since(self.d, ["home.md"], "2026-11-11", "r1"))       # before the line's date
+        self.assertFalse(similar.amended_since(self.d, [], "2026-11-08", "r1"))
+
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
 
 
 if __name__ == "__main__":

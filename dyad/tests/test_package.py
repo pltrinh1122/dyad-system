@@ -2,7 +2,7 @@ import contextlib, importlib.util, inspect, io, os, shutil, subprocess, sys, tem
 from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "scripts")); import dyadlib, livetest
-CORE = ["agent/board", "agent/dmc", "agent/frame", "agent/inbox", "agent/merges", "agent/plans", "agent/provenance", "agent/prs", "agent/records", "agent/references", "agent/rows", "agent/rules", "agent/sessions", "agent/traces", "agent/vocabulary",
+CORE = ["agent/board", "agent/decision_log", "agent/dmc", "agent/frame", "agent/inbox", "agent/merges", "agent/plans", "agent/provenance", "agent/prs", "agent/records", "agent/references", "agent/rows", "agent/rules", "agent/sessions", "agent/traces", "agent/vocabulary",
         "craft/crafts", "infra/bundle", "infra/containment", "infra/manifest", "preferences/preferences"]   # craft/crafts: the craft guard (#156); infra/bundle: Rule-11 p7 (#196)
 KNOWN_CRAFTS = {"sysadmin": ["changelog", "events", "ops_scripts", "runbooks"], "sysarch": ["registry"], "syseng": ["invariants", "naming", "tests"], "lan-git": ["image"]}   # #155, #160, #162, #181
 def craft_guards(name: str, pkg: Path = PKG) -> list[str]:
@@ -104,7 +104,7 @@ class PackageTests(livetest.LiveCase):
             self.assertIsInstance(mod.ENTITY, str); self.assertTrue(mod.FIELDS); self.assertTrue(callable(mod.check_package))
             self.assertEqual(tx, mod.TRANSACTION); self.assertEqual(tx, hasattr(mod, "check_transaction") and tx)
             self.assertTrue(callable(mod.describe), f"{rel}: no describe()")
-        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs", "provenance", "merges", "inbox"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171); provenance: #191; merges: #541; inbox: #536
+        self.assertEqual({e[1] for e in reg if e[3]}, {"containment", "rows", "prs", "provenance", "merges", "inbox", "decision_log"} | ({"events"} if "sysadmin" in CRAFTS else set()))   # events: the sysadmin craft's (#171); provenance: #191; merges: #541; inbox: #536; decision_log: #644
         self.assertEqual(pkg.CONTRACT, dyadlib.CONTRACT)   # one contract definition, shared with the craft guard (#156)
         self.assertEqual(len({mod.ENTITY for *_, mod, _ in reg}), len(reg), "one ENTITY per guard")
     def test_list_prints_registry(self):
@@ -1111,6 +1111,41 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual([(x["kind"], x["text"]) for x in e], [("disposition", "Y, run the exercise")])
         self.assertRegex(e[0]["note"], r"^mandate #1, \d{4}-\d{2}-\d{2}$")
         self.assertEqual(pv.check_record(rec / "3.md", row=born), [])                          # Rule-7 property 5
+    def test_decisions_ride_the_done_and_the_precedent_y(self):
+        """#644: `--decisions <file>` logs a `Y done`'s rulings as candidates and a `Y precedent (…)`'s as precedents
+        naming that entry, in the decision log beside the row; a bad line, a missing -d or another entry writes nothing."""
+        import json
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        d, rows = self.dwork_repo(); log = rows.parent / "decisions" / "1.md"
+        dl = dyadlib.load_guard("agent", "decision_log")
+        f = d / "dec.jsonl"
+        f.write_text(json.dumps({"record": "replan", "case": "r1", "fields": {"accreted": False}, "inputs": "main moved",
+                                 "outcome": "replan", "row": 2}) + "\n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y", "--decisions", str(f))
+        self.assertNotEqual(r.returncode, 0); self.assertIn("rides a `Y done`", r.stderr)
+        self.assertFalse(log.exists()); self.assertNotIn("Y plan", rows.joinpath("1.md").read_text())   # nothing written
+        r = self.dwork_state(d, "1", "planned", "--decisions", str(f))
+        self.assertNotEqual(r.returncode, 0); self.assertIn("give the entry with -d", r.stderr)
+        self.trace(rows, 1)
+        bad = d / "bad.jsonl"; bad.write_text(json.dumps({"record": "replan", "case": "r1", "outcome": "maybe"}) + "\n")
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y", "--decisions", str(bad))
+        self.assertNotEqual(r.returncode, 0); self.assertIn("is no outcome of dmc:replan", r.stderr); self.assertFalse(log.exists())
+        r = self.dwork_state(d, "1", "open", "-d", "Y done", "--said", "Y, done", "--decisions", str(f))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        (cand,) = dl.parse(log.read_text())
+        self.assertEqual((cand["status"], cand["source"], cand["row"], cand["fields"]), ("candidate", "done", 2, {"accreted": "false"}))
+        first = log.read_text()
+        f.write_text(json.dumps({"record": "replan", "case": "r1"}) + "\n")
+        r = self.dwork_state(d, "1", "open", "-d", "Y precedent (1 cases: replan×1)", "--said", "Y, admit", "--decisions", str(f))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = dl.parse(log.read_text()); self.assertTrue(log.read_text().startswith(first))
+        self.assertEqual(lines[0], cand)                                                       # append-only
+        self.assertEqual({k: v for k, v in lines[1].items() if k not in ("status", "y")}, {k: v for k, v in cand.items() if k != "status"})
+        self.assertEqual(lines[1]["status"], "precedent"); self.assertRegex(lines[1]["y"], r"^\d{4}-\d{2}-\d{2} Y precedent \(1 cases: replan×1\)$")
+        self.assertIn(lines[1]["y"], rows.joinpath("1.md").read_text())
+        import os
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": str(d / "inst")}):
+            self.assertEqual(dl.check_package(d), [])
     def test_a_done_retires_only_backlog_or_done_rows_and_archives_them_on_its_words(self):
         """#574 revision 3: G2, the record refuses a `retires` naming an open row or itself; G6, `state <r> archived
         --retired-by <id>` writes `Y archive (done #<id>)` and copies the done words noted `done #<id>, <date>`."""

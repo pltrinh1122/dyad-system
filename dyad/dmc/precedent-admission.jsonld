@@ -1,0 +1,76 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/precedent-admission",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "precedent-admission",
+  "name": "Precedent admission",
+  "description": "Whether a logged ruling enters a record's frozen precedent set.",
+  "dyad:decides": "May this case of the decision log be frozen as a precedent of its record?",
+  "dyad:inputs": [
+    "the case's lines in the decision log, every file",
+    "the record and the consequences of its outcomes",
+    "the commits that touched the record or its home after the line's date"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "operator-side",
+      "name": "operator-side",
+      "dyad:when": "an outcome of the record names a ratification event or a destructive act in its consequence",
+      "dyad:then": "refused: a precedent settles agent-side calls only, so no case of this record is frozen"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unnamed",
+      "name": "unnamed",
+      "dyad:when": "no line of the decision log names the case",
+      "dyad:then": "refused: a ruling not stored with the Y that covered it is reconstruction, never a precedent"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "self-derived",
+      "name": "self-derived",
+      "dyad:when": "the line's outcome was given by a precedent set (it carries that set's sha256)",
+      "dyad:then": "refused: a set never learns from its own applications"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "superseded",
+      "name": "superseded",
+      "dyad:when": "a later line names the same case, or a commit after the line's date changed the record or its home and named the case",
+      "dyad:then": "refused: only the latest standing ruling of a case is frozen"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "uncovered",
+      "name": "uncovered",
+      "dyad:when": "the case's line is a candidate, named by no precedent question's Y",
+      "dyad:then": "refused until a precedent-Y names it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "admitted",
+      "name": "admitted",
+      "dyad:when": "none of the above: the line is a precedent line, its own latest, on an agent-side record",
+      "dyad:then": "freeze writes it into the record's set"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/similar.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "scripts/similar.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "guards/agent/decision_log.py"
+  ]
+}

@@ -443,6 +443,8 @@ REFERENCES = [
     ("merge.parent->row",         "merge",      "second parent", None,              "row",        "guard:agent/merges.py"),       # #541: a merge executes a row's Y done
     ("board.id->row",             "board",      "<id>",          None,              "row",        "guard:agent/board.py"),        # #535: an entry orchestrates a row
     ("message.row->row",          "message",    "row",           None,              "row",        "guard:agent/inbox.py"),        # #536: a message is about a row
+    ("decision.row->row",         "decision",   "row",           None,              "row",        "guard:agent/decision_log.py"), # #644: a ruling's covering row, and its file's
+    ("decision.record->dmc",      "decision",   "record",        None,              "dmc",        "guard:agent/decision_log.py"), # #644: the record it applies
 ]
 
 def craft_references_contrib(pkg: Path = dyadlib.PKG) -> list[tuple[str, tuple]]:

@@ -99,7 +99,7 @@ def out(cwd: Path, *a: str, **kw) -> str:
 # ---- the arguments
 def split_argv(a: list[str], value_flags) -> tuple[list[str], str | None]:
     """The verb's own argv and the mirror branch: `--land` and `--mirror <branch>` removed by position (a flag's
-    value is never a flag, as `dwork_args` reads it, #133), and a `--prompt-file` / `--said-file` path made
+    value is never a flag, as `dwork_args` reads it, #133), and a `--prompt-file` / `--said-file` / `--decisions` path made
     absolute, because the verb runs in the worktree, not in the caller's directory."""
     argv, mirror, i = [], None, 0
     while i < len(a):
@@ -111,7 +111,7 @@ def split_argv(a: list[str], value_flags) -> tuple[list[str], str | None]:
             if x == MIRROR:
                 mirror = v
             else:
-                argv += [x, os.path.abspath(v) if x in ("--prompt-file", "--said-file") else v]
+                argv += [x, os.path.abspath(v) if x in ("--prompt-file", "--said-file", "--decisions") else v]
             i += 2; continue
         if x != LAND:
             argv.append(x)
