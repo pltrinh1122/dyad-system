@@ -41,6 +41,9 @@
     "dyad:implementation": "scripts/trace.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/dwork-trace.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "scripts/trace.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "playbooks/dwork-trace.md"
+  ]
 }

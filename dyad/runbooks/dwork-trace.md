@@ -1,15 +1,10 @@
-# Run-book: dwork-trace (where a d-work's time went) — play-book `dyad/playbooks/dwork-trace.md`, #213
+# Run-book: dwork-trace (where a d-work's time went) — play-book `dyad/playbooks/dwork-trace.md`, #213, #626
 # sections: Locate, Trace, Compare
 
-A core run-book (package, `dyad/runbooks/`; agent zone): the steps of the d-work trace play-book as
-`dyad-cmd` blocks, run by either party through the core runner, which prints the native line, records an
-event in the instance's `<runbooks>/events/dwork-trace.jsonl` and tests the postcondition. Its section set is
-its own (the `# sections:` line above; the sysadmin craft's server sections are a server's). Every step takes
-the d-work id from the environment — `DWORK`, the play-book's parameter, with no default: a trace of the
-wrong d-work is worse than none — and reaches the instance through `${DYAD_INSTANCE:-agent-corpus}` (Rule-11
-property 3). Every command runs from the git root. Locate and Compare are **read-only**; Trace is the one
-writing step, **reversible**: it writes one file of the trace store, `<instance>/d-work/traces/<DWORK>.md`
-(plan #213 revision 2), and its undo deletes it.
+The d-work trace play-book's steps, each a call of `dyad dwork trace`, run through the core runner from the git root
+by choice (the native command is the default, #247), recording an event in `<runbooks>/events/dwork-trace.jsonl`.
+`DWORK` names the d-work, with no default; `trace` also reads `SAID`. The instance is
+`${DYAD_INSTANCE:-agent-corpus}`.
 
 ```text
 DWORK=<id> dyad runbook list dwork-trace
@@ -17,10 +12,7 @@ DWORK=<id> dyad runbook run dwork-trace locate
 ```
 
 ## Locate
-The inputs the trace reads, before it reads them: the row, its provenance record and its plan file, and the
-commits that cite the d-work. A missing provenance record is an anchorless trace — every bucket absent —
-and is said so here rather than discovered in the trace. The postcondition tests the one input without which
-there is nothing to trace, the row:
+The inputs the trace reads, before it reads them:
 ```dyad-cmd
 name: locate
 class: read-only
@@ -33,17 +25,12 @@ I="${DYAD_INSTANCE:-agent-corpus}"; D="${DWORK:?d-work id}"; for k in rows prove
 ```
 
 ## Trace
-The trace itself, written to the trace store at the Done-`Y` — through the Operator's Done words, the file
-`SAID` names, which the record act then records with the state left as it is (`dyad dwork state <DWORK> <that
-state> -d 'Y done (merges PR #n at <head>)' --said-file "$SAID"`, Rule-3 Completion, #202); without `SAID`, and
-with no Done entry in the record, the command refuses and writes nothing, since a stored trace is never a preview
-(#592) — and before the Done record commit, which then carries all three (the store lies under `<instance>/d-work/`, so that commit stays
-ledger-only). Timeline, buckets, counts,
-bottleneck line and limits, in the play-book's format, from the row, its provenance and plan, git and the
-newest transcript of this working tree's harness project directory (read in place, never copied, never
-quoted). The completion reply's preview is the native command without `--out`, which writes nothing; a
-d-work worked in another session is traced by the native command with `--transcript <path>`, outside this
-step, and said so. The postcondition tests that the file exists and is not empty:
+The trace itself, written to the trace store at the Done-`Y` — through the Operator's Done words, the file `SAID`
+names, which the record act then records with the state left as it is (`dyad dwork state <DWORK> <that state> -d 'Y
+done (merges PR #n at <head>)' --said-file "$SAID"`, Rule-3 Completion, #202); without `SAID`, and with no Done entry
+in the record, the command refuses and writes nothing, since a stored trace is never a preview (#592) — and before the
+Done record commit, which then carries all three (the store lies under `<instance>/d-work/`, so that commit stays
+ledger-only):
 ```dyad-cmd
 name: trace
 class: reversible
@@ -56,9 +43,8 @@ dyad/bin/dyad dwork trace "${DWORK:?d-work id}" --out ${SAID:+--said-file "$SAID
 ```
 
 ## Compare
-The bottleneck line of this trace beside every other trace's agent-side seconds, the figures the play-book's
-Reading compares against their median. An empty listing beyond this d-work's own line is the first trace,
-and the step says nothing more:
+The bottleneck line of this trace beside every other trace's agent-side seconds, the figures the play-book's Reading
+compares against their median:
 ```dyad-cmd
 name: compare
 class: read-only

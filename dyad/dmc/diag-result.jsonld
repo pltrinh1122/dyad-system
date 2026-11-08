@@ -49,7 +49,7 @@
       "dyad:then": "recorded so; no finding"
     }
   ],
-  "dyad:precedence": "L1 always runs; level N runs only when level N-1 passed.",
+  "dyad:precedence": "L1 always runs; level N runs only when level N-1 passed; a level that does not pass ends the run, every later level recorded not run (gate); a run asked to end after level n records each later level not run (last level <n>), which is no finding, and a run that ends at L2 spends no inference",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null

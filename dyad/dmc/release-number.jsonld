@@ -12,12 +12,13 @@
   ],
   "identifier": "release-number",
   "name": "Release number",
-  "description": "Maps a change set's release class to the part of the version its release moves.",
+  "description": "Maps a change set's release class to the part of the version its release moves, and says how VERSION and the bundle row reach that number.",
   "dyad:decides": "Which version part does a release of this class move?",
   "dyad:inputs": [
     "CRAFT (the core, a Tended craft or the bundle)",
-    "CLASS",
-    "the craft's last tag"
+    "CLASS (dmc:release-class)",
+    "the craft's last tag",
+    "whether the craft's major is 0"
   ],
   "hasDefinedTerm": [
     {
@@ -49,7 +50,7 @@
       "dyad:then": "no release; only the drift guard's working bump"
     }
   ],
-  "dyad:precedence": "The bundle takes the highest class among its components since the bundle's last tag and moves the same part.",
+  "dyad:precedence": "The bundle takes the highest class among its components since the bundle's last tag and moves the same part, except that a break in a component whose major is 0 moves it by a minor; a release of the core or of a Tended craft always also proposes the bundle that names it, in the PR that moves its row. VERSION follows the class at release time, not the drift guard: between releases the first change under a craft's root after its tag bumps VERSION by a patch (Rule-11 property 4), a working number that is no release, and the PR that prepares the release sets VERSION to this number, which the tag equals. To keep the bundle guard green, VERSION (the craft's zone) and the bundle row (BUNDLE.md, infra) never move in one PR: first the craft-zone or agent-zone PR sets VERSION while the row names the last release, then the infra-zone PR moves the row and the bundle's own version, and that merge is the cut (Rule-11 property 7). Calling the first major is the operator's decision; from it on, what is major is dmc:release-break's.",
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
     "dyad:implementation": null
@@ -57,7 +58,8 @@
   "isPartOf": "urn:dyad:craft:dyad-operator",
   "dyad:home": "playbooks/release.md",
   "dyad:alsoIn": [
-    "runbooks/release.md"
+    "runbooks/release.md",
+    "dmc/release-class.jsonld"
   ],
   "dyad:owner": "Rule-11"
 }

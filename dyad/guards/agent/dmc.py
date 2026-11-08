@@ -4,19 +4,26 @@ the dyad states in prose carries a mechanical one — placed per Rule-11 propert
 A DMC record is a JSON-LD file `<container>/dmc/<identifier>.jsonld`, its form `dyad/dmc/schema.md`, its
 context the core's `dyad/dmc/context.jsonld`. Three containers: the core (`dyad/dmc/`, container
 `dyad-operator`), every Tended craft (`crafts/<craft>/dmc/`, container `<craft>`) and the instance
-(`<instance>/dmc/`, container `instance`). Per record it fails on: a JSON parse error; a missing required key;
+(`<instance>/dmc/` and `<host path>/dmc/`, container `instance`; #626). Per record it fails on: a JSON parse error; a missing required key;
 an `@context` other than the core context's; an `@type` lacking `DefinedTermSet` or `dyad:DecisionCriterion`;
 an `@id` other than `urn:dyad:dmc:<container>/<identifier>`, an `identifier` other than the file stem, an
 `isPartOf` other than the container's urn; `dyad:inputs` not a non-empty list of strings; fewer than two
 outcomes, an outcome lacking `@type DefinedTerm` or a non-empty `termCode`/`name`/`dyad:when`/`dyad:then`, a
 termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared or whose
 `dyad:implementation` is neither null nor an existing path; a `dyad:home` or `dyad:alsoIn` path that does not
-exist; an outcome name absent from the home file (case-insensitive, whitespace runs collapsed); a date,
+exist; an outcome name absent from the home file (case-insensitive, whitespace runs collapsed), for a record
+homed in a Rule, a craft rule or any other non-procedure file; a date,
 version, commit sha or email outside the path fields and `dyad:owner`; an `@id` declared twice. Paths are
 relative to the craft root (`dyad/`, `crafts/<craft>/`) for core and craft records and to the repo root for
 instance records; `../` may reach another craft but never leave the repo. A path into a craft this system
 has not installed (`../crafts/<x>/…` with no `crafts/<x>/`) warns instead of failing (Rule-20 property 2's
 severity for an absent store). No record anywhere, or no `dmc/` directory, passes: the summary says so.
+The master rule (#626 C0): a record whose `dyad:home` is a play-book or run-book (a file directly under `playbooks/` or
+`runbooks/`) is the master of its decision, and its home cites it as `dmc:<identifier>` at the step that applies it.
+Each such record fails when its home does not cite it and when the home names every one of its outcomes (a
+restatement); C0's per-home phase-in, under which a home citing no record kept the index form and warned, ended with
+the last child of #626 (the hard flip). Every `dmc:<id>` in a play-book or run-book of the core or a craft, or in a run-book of the instance's store
+(`DYAD_RUNBOOKS`, default `<host path>/runbooks`), names a record, or fails.
 Inference, stated: whether a criterion's outcomes are right, whether its home states it, and whether
 `dyad:kind` describes how the decision is really made.
   dmc.py [repo-root]
@@ -49,6 +56,8 @@ TEMPLATE = ("templates", "PREFERENCES.md")                         # the core's 
 FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH)
 CONTEXT = ["https://schema.org", {"dyad": "urn:dyad:term:"}]   # what dyad/dmc/context.jsonld holds
 CONTEXT_FILE, STORE, CORE_CONTAINER, INSTANCE_CONTAINER = "context.jsonld", "dmc", "dyad-operator", "instance"
+MASTER_DIRS = ("playbooks", "runbooks")   # #626 C0: a record homed in a file of one of these is the decision's master
+CITE = re.compile(r"(?<![\w:/-])dmc:([a-z0-9][a-z0-9-]*)")   # a home's citation `dmc:<identifier>`; never a urn's `…:dmc:<container>`
 FORBIDDEN = (("date", re.compile(r"\d{4}-\d{2}-\d{2}")),
              ("version", re.compile(r"\bv?\d+\.\d+\.\d+\b")),
              ("commit", re.compile(r"\b[0-9a-f]{40}\b")),
@@ -64,6 +73,9 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md: pure, enforced at import
     ("context-is-schema-org-plus-dyad", lambda: CONTEXT[0] == "https://schema.org" and CONTEXT[1] == {"dyad": "urn:dyad:term:"}),
     ("forbidden-patterns-catch-their-kind", lambda: [bool(r.search(s)) for (_, r), s in zip(FORBIDDEN, (
         "on 2026-01-02", "at v1.2.3", "a" * 40, "x@y.org"))] == [True] * 4),
+    ("cite-reads-a-citation-not-a-urn", lambda: CITE.findall("step 3: `dmc:release-plan`; urn:dyad:dmc:dyad-operator/x")
+                                                == ["release-plan"]),
+    ("master-dirs-are-the-procedures", lambda: MASTER_DIRS == ("playbooks", "runbooks")),
     ("forbidden-patterns-spare-a-rule-name", lambda: not any(r.search("Rule-11 sysadmin:host-mutation") for _, r in FORBIDDEN)),
 ]
 TREE_INVARIANTS = [   # reads the package tree: the runner's pass, never at import
@@ -71,10 +83,19 @@ TREE_INVARIANTS = [   # reads the package tree: the runner's pass, never at impo
 ]
 
 def stores(root: Path, pkg: Path = dyadlib.PKG) -> list[tuple[str, Path, Path]]:
-    """[(container, dmc dir, path base)] for every container whose `dmc/` directory exists: the core, each craft, the instance."""
+    """[(container, dmc dir, path base)] for every container whose `dmc/` directory exists: the core, each craft, the
+    instance, and the host path's `<host path>/dmc/` (#626: a record homed in a host run-book sits in the host's zone,
+    Rule-1), which is the instance's container too, its paths relative to the repo root. An unreadable host path, or
+    one whose store is the instance's own, adds nothing."""
     out = [(CORE_CONTAINER, pkg / STORE, pkg)]
     out += [(d.parent.name, d, d.parent) for d in dyadlib.craft_glob(STORE, pkg)]
     out.append((INSTANCE_CONTAINER, dyadlib.instance(root) / STORE, root))
+    try:
+        host = Path(root) / dyadlib.host_path(root) / STORE
+    except ValueError:
+        host = None
+    if host is not None and os.path.normpath(host) != os.path.normpath(out[-1][1]):
+        out.append((INSTANCE_CONTAINER, host, root))
     return [(c, d, b) for c, d, b in out if d.is_dir()]
 
 def records(root: Path, pkg: Path = dyadlib.PKG) -> list[tuple[str, Path, Path]]:
@@ -113,6 +134,34 @@ def resolve(rel: str, base: Path, root: Path, pkg: Path) -> tuple[str, Path | No
 
 def _collapse(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
+
+def is_master_home(home: Path | None) -> bool:
+    """#626 C0: True when `home` is a play-book or run-book (a file directly under a `playbooks/` or `runbooks/`
+    directory): a record homed there is the master of its decision. A record homed in an Agent Rule or a craft rule
+    is not, and its home stays the master (plan #626 A1)."""
+    return home is not None and home.parent.name in MASTER_DIRS
+
+def citations(text: str) -> list[str]:
+    """The identifiers `text` cites as `dmc:<identifier>`, in order, each once."""
+    return list(dict.fromkeys(CITE.findall(text)))
+
+def host_runbooks(root: Path) -> Path | None:
+    """The instance's run-book store (Rule-19 property 1): `DYAD_RUNBOOKS`, else `<host path>/runbooks`, as
+    `runbook.runbooks_rel` reads it; None when the host path is unreadable."""
+    try:
+        rel = os.environ.get("DYAD_RUNBOOKS") or f"{dyadlib.host_path(root)}/runbooks"
+    except ValueError:
+        return None
+    return Path(root) / rel.rstrip("/")
+
+def procedure_files(pkg: Path = dyadlib.PKG, root: Path | None = None) -> list[Path]:
+    """Every play-book and run-book of the core and of each Tended craft, and with `root` every run-book of the
+    instance's store (`host_runbooks`): the files whose citations must resolve (#626 C0, #639)."""
+    roots = [pkg] + [d.parent for d in dyadlib.craft_glob("VERSION", pkg)]
+    files = {f for r in roots for m in MASTER_DIRS for f in (r / m).glob("*.md")}
+    if root is not None and (h := host_runbooks(root)) is not None and h.is_dir():
+        files |= {f for f in h.glob("*.md") if f.stem.lower() != "readme"}
+    return sorted(files)
 
 def tunable_keys(d) -> list[str]:
     """The preference keys a record's `dyad:tunables` names, malformed entries skipped."""
@@ -239,10 +288,17 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 if st != "ok":
                     (warn if st == "warn" else bad)(f"dyad:alsoIn {a!r} {why}")
     if home is not None and home.is_file() and outcomes:
-        text = _collapse(home.read_text(errors="replace"))
-        for o in outcomes:
-            if _collapse(o) not in text:
-                bad(f"outcome name {o!r} not found in dyad:home {d['dyad:home']}")
+        raw = home.read_text(errors="replace"); text = _collapse(raw)
+        if is_master_home(home):   # #626: the record is the master (the per-home phase-in ended with the hard flip)
+            if ident not in citations(raw):
+                bad(f"master record not cited: its dyad:home {d['dyad:home']} cites no `dmc:{ident}` (dyad/dmc/schema.md)")
+            if all(_collapse(o) in text for o in outcomes):
+                bad(f"restated: dyad:home {d['dyad:home']} names every outcome of this master record; the home "
+                    f"cites `dmc:{ident}` and restates none of its definitions (dyad/dmc/schema.md)")
+        else:
+            for o in outcomes:
+                if _collapse(o) not in text:
+                    bad(f"outcome name {o!r} not found in dyad:home {d['dyad:home']}")
     found = set()
     for s in _strings(d):
         for kind, rx in FORBIDDEN:
@@ -273,6 +329,19 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
                 claims.setdefault(k, []).append(p)
         except (json.JSONDecodeError, UnicodeDecodeError):
             pass
+    idents = set()
+    for container, p, base in recs:
+        try:
+            d = json.loads(p.read_text())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if isinstance(d, dict) and isinstance(d.get("identifier"), str):
+            idents.add(d["identifier"])
+    for f in procedure_files(pkg, root):   # #626 C0: every `dmc:<id>` names a record, from C0 on; the host's run-books too (#639)
+        name = f.relative_to(root).as_posix() if f.is_relative_to(root) else str(f)
+        for c in citations(f.read_text(errors="replace")):
+            if c not in idents:
+                msgs.append(f"{name}: `dmc:{c}` names no DMC record (dyad/dmc/, crafts/<craft>/dmc/, <instance>/dmc/)")
     tkeys, unseeded = template_keys(pkg), {}
     for k, ps in sorted(claims.items()):
         if len(ps) > 1:

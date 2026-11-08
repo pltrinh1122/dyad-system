@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/release-break",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-break",
+  "name": "Release break",
+  "description": "Decides, once the core's major is above 0, whether a change is a break that needs a major, an addition that ships as a minor, or a fix; ratified by the operator before any second major was planned (#611).",
+  "dyad:decides": "Does this change make the release a major?",
+  "dyad:inputs": [
+    "the change's effect on a frozen item of dyad/surface.md: removed, renamed, narrowed, or added beside",
+    "for a new fence: whether the Rule's text allowed what it now refuses",
+    "whether the removal or rename was deprecated in an earlier minor, the old form warning and naming the new one",
+    "whether the major's window is planned and open",
+    "the component's own major"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "break",
+      "name": "break",
+      "dyad:when": "an installing system must change something on upgrade: a frozen item removed, renamed or narrowed, or a Rule changed to forbid what its text allowed",
+      "dyad:then": "a major, carrying its upgrade step (playbooks/port.md); the removal merges only inside a planned major's window and only after at least one minor deprecated it, so a major is planned, never the first break ratified; the major ends the minor line, and no maintenance branch is kept"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "addition",
+      "name": "addition",
+      "dyad:when": "adding beside a frozen item (a new flag on a frozen verb, a new optional key), or a feature with no break, however large",
+      "dyad:then": "a minor"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "enforcement",
+      "name": "enforcement",
+      "dyad:when": "a new fence refuses what a Rule already forbade: it enforces existing text",
+      "dyad:then": "classed as a fix (dmc:release-class), never a break; a critical fix ships as a patch at once"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unstable-break",
+      "name": "unstable component break",
+      "dyad:when": "a Tended craft whose own major is 0 breaks",
+      "dyad:then": "the craft moves by a minor, the bundle moves by a minor, and the release question marks it breaking; the bundle's major follows the core's and those of components whose major is above 0"
+    }
+  ],
+  "dyad:precedence": "break before addition; a deprecation lands in any minor, while the removal it announces waits for the planned major.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/release.md",
+  "dyad:alsoIn": [
+    "dmc/release-class.jsonld",
+    "dmc/release-number.jsonld",
+    "surface.md"
+  ],
+  "dyad:owner": "Rule-11"
+}

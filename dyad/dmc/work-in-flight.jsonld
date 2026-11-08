@@ -18,7 +18,8 @@
     "inbox files and their read markers",
     "board entries, their phase and their since",
     "stored plans, PR heads and the promised list",
-    "the preferences inflight-unread-hours, inflight-planned-quiet-days, inflight-unplanned-hours, inflight-pr-still-days, inflight-promise-days, inflight-question-hours and inflight-done-ready-hours"
+    "the preferences inflight-unread-hours, inflight-planned-quiet-days, inflight-unplanned-hours, inflight-pr-still-days, inflight-promise-days, inflight-question-hours and inflight-done-ready-hours",
+    "the hosting's open PRs and the origin branches, read with GITHUB_TOKEN, each kind printing one skip line without them"
   ],
   "hasDefinedTerm": [
     {
@@ -68,7 +69,35 @@
       "termCode": "done-ready",
       "name": "A drafted Done not asked",
       "dyad:when": "a phased board entry has been in done-ready, its Done question drafted and not asked, for inflight-done-ready-hours",
-      "dyad:then": "the home asks the Done question or names what holds it"
+      "dyad:then": "the home asks the Done question or names what holds it; every other phase keeps W11's fixed age, an asked phase 24 h and every other 3 days"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W4-5",
+      "name": "a PR or branch with no live row",
+      "dyad:when": "an open PR cites no d-work #N of a live row, or an origin branch whose tip is not on main has no open PR and no commit citing a live row",
+      "dyad:then": "the home proposes a close or a delete; deleting a branch is destructive, so each deletion is its own question to the operator (Rule-8), never folded into another"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W7",
+      "name": "a board unit unknown",
+      "dyad:when": "a board entry names a unit missing from its cabinet's unit table, or waits on a unit whose presence is stale",
+      "dyad:then": "the home fixes the board, write-ahead (Rule-3)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W9",
+      "name": "an operator wait with no question",
+      "dyad:when": "a live row waits on the operator with no question recorded",
+      "dyad:then": "reported once and again only if it changes; the home asks it, or records the question it waits on"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W10",
+      "name": "a report newer than the board",
+      "dyad:when": "an owner posted a report on the row after the board entry's since",
+      "dyad:then": "the home reads the report and fixes the board"
     },
     {
       "@type": "DefinedTerm",

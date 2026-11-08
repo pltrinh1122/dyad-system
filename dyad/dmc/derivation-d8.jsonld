@@ -44,7 +44,7 @@
     {
       "@type": "DefinedTerm",
       "termCode": "none",
-      "name": "kind: null",
+      "name": "no prompt entry",
       "dyad:when": "none of the three found",
       "dyad:then": "missing names what was looked for"
     },
@@ -62,6 +62,9 @@
     "dyad:implementation": "scripts/project_countersign.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/countersign-model.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "scripts/project_countersign.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "playbooks/countersign-model.md"
+  ]
 }

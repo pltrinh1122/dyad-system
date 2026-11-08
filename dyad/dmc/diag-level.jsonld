@@ -24,31 +24,31 @@
       "termCode": "l1",
       "name": "L1",
       "dyad:when": "unit scope, coded check",
-      "dyad:then": "unit tests, each through dyad check --tests"
+      "dyad:then": "the unit test modules' failing tests, classed from the automaton sweep's report on main by the levels file (audits.py level unit), never run a second time; passes with no failing test in a unit module"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "l2",
       "name": "L2",
       "dyad:when": "system scope, coded check",
-      "dyad:then": "integration tests, the guards on the live tree, the transaction guards and the evidence block"
+      "dyad:then": "the integration test modules' failing tests and every failing check line of that same report (the invariant pass, every check and guard on the kernel alone), its checks-sha256 kept; read on the head of main only; passes with no failing test in an integration module and no failing check line"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "l3",
       "name": "L3",
       "dyad:when": "unit scope, prose claim",
-      "dyad:then": "each unit's contract read against its invariants and tests, K units in rotation"
+      "dyad:then": "the report's invariant reading first (every [invariant] line ok), then K units' contracts, each a module declaring INVARIANTS, read against the attack: name a contract clause whose breaking no invariant and no test would catch; passes when every invariant is ok and the attack lands on no sampled unit"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "l4",
       "name": "L4",
       "dyad:when": "system scope, prose claim",
-      "dyad:then": "the fixed list of system claims and the instance's own, P samples each"
+      "dyad:then": "the fixed system claims S1-S11 with their attacks (the self-diagnostic run-book's Level 4) and the instance's own, P samples each; passes when no attack lands"
     }
   ],
-  "dyad:precedence": "Coded before prose and unit before system: L1, L2, L3, L4; each level gates the next.",
+  "dyad:precedence": "coded before prose and unit before system: L1, L2, L3, L4; each level gates the next; the invariant pass sits at the head of L3, as the unit-scope fact its reading rests on",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null

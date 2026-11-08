@@ -1,56 +1,29 @@
-# Run-book: self-diagnostic (a system's four diagnostic levels, run on itself) — play-book `dyad/playbooks/audit.md`, The self-diagnostic; #308, #381
+# Run-book: self-diagnostic (a system's four diagnostic levels, run on itself) — play-book `dyad/playbooks/audit.md`, The self-diagnostic; #308, #381, #626
 # sections: Level 1, Level 2, Level 3, Level 4
 
-A core run-book (package, `dyad/runbooks/`; agent zone) in the sysadmin craft's run-book form
-(`crafts/sysadmin/rules/server-instances.md`), run by `dyad runbook run self-diagnostic <step>`; a system that wants
-its own L4 claims in a run-book copies it to `<host>/runbooks/self-diagnostic.md` (`<host>` the host path,
-preference `host-path`), which the runner then finds first (`runbook.all_runbooks`: an instance run-book of the
-same name wins), and from then on that copy is the system's own. The
-levels file it reads is instance data: `<host>/self-diagnostic-levels.txt`, seeded by hand from
-`dyad/templates/self-diagnostic-levels.txt` and the levels script `dyad/scripts/levels.py` (the core's since C4 of #369, d-work #378, which re-pointed the paths below from the craft's). Since #619 the coded halves are not run here: `unit` runs the automaton sweep's report once (`dyad automaton sweep` with no `--row`, the audit's report), and `unit`, `integration` and `invariants` read it, classing its failing tests by the levels file (`audits.py level`), so no step re-runs a check the report carries. Its section set is its own (the `# sections:` line above), one section per diagnostic level in the
-model's order — L1 unit × coded check, L2 system × coded check, L3 unit × prose claim, L4 system × prose claim
-(the play-book §2) — so the sysadmin craft's run-book guard checks it against these four and not
-against a server's ten. Each step is a `dyad-cmd` block run by either party through the core runner, which prints
-the native line, tests the postcondition and appends one event to `<host>/runbooks/events/self-diagnostic.jsonl`
-(`DYAD_RUNBOOKS` overrides `<host>/runbooks`): the runner's telemetry, which the gate below reads. Every command
-runs from the git root, with `main` checked out at the head diagnosed (play-book §2, L2), and every command is
-**read-only**. A run writes two things, in two zones (play-book §8): the runner's events, in the host path's zone —
-committed, and append-only on `main` (the sysadmin craft's `server-instances.md` property 7) — and its record,
-`${DYAD_INSTANCE:-agent-corpus}/audits/<YYYY-MM-DD>-self-diagnostic.md` (play-book §7; its form is under Level 4), in
-the agent zone. The record holds what the reading found, so it is written by the party that ran the diagnostic,
-never by a step. The two land as two changes, the events first and then the record that cites their ids — the
-referent before the referrer (dyad-system Rule-1) — and the last step, `record`, reads the record back against the
-events. What a finding becomes is the system's own process — in a dyad system its core Rules (play-book §5) — never a
-command here: nothing is repaired inside a run.
-
-Two parameters, read from the environment: `K`, the units L3 reads (default 4), and `P`, the samples L4 reads
-(default 3) — play-book §4. The rotation cursor is the newest previous record's `**Cursor:**` line; `health` prints it,
-and `units`, `acts` and `pairs` start where it points and print where the next run starts.
+The self-diagnostic's steps, each read-only, run through the core runner from the git root with `main` checked out at
+the head diagnosed; each appends one event to `<host>/runbooks/events/self-diagnostic.jsonl` (`DYAD_RUNBOOKS`
+overrides). A system's own L4 claims go in its copy at `<host>/runbooks/self-diagnostic.md`, which the runner finds
+first. The levels file is `<host>/self-diagnostic-levels.txt`, checked by `dyad/scripts/levels.py`. Coded halves are
+read from the automaton sweep's report, which `unit` runs once (`audits.py level` classes its failing tests); no step
+re-runs a check it carries. A run writes its events, then its record (`${DYAD_INSTANCE:-agent-corpus}/audits/
+<YYYY-MM-DD>-self-diagnostic.md`, written by the party, never by a step) citing them: two changes, referent first
+(Rule-1). Parameters: `K` (default 4) and `P` (default 3); the cursor is the newest record's `**Cursor:**` line.
 
 ```text
 dyad/bin/dyad runbook list self-diagnostic
 K=4 P=3 dyad/bin/dyad runbook run self-diagnostic health
 ```
 
-**The gate** (play-book §3). Every step after `unit` except `record` opens with one line that reads the event store:
-the latest event of each step it names must have exit 0 at the commit checked out now. Otherwise the line prints
-`gate closed at <sha>: not passed at this head: <steps>` and the step exits 3 having run nothing else; the record
-writes that level, and every later one, `not run (gate)`. A run asked to end after level n (`/diagnose n`) runs no
-later step, and the record writes each later level `not run (last level <n>)` (play-book §3). Exit status throughout:
-0 pass, 1 fail, 2 refused — by the runner (a role, a missing run-book or command), or by `levels.py list` or
-`audits.py level` (no levels file, no stored report at this head) — 3 gate closed. The gate keys on the head, so on a head whose
-earlier levels already passed a later level may be run alone. The run's own events are a change in the working tree
-until they are committed, so the report is never computed there: the sweep runs in its own worktree, on `main` as
-fetched, and `unit` prints first what the checkout holds besides the event store (L4's S4 reads that line). The gate
-is mechanical between coded steps only: L3's prose half — no attack landed on a sampled unit — is read, so the
-L3 → L4 gate is the reading's, and the record holds it. The diagnostic reads the head of `main`: the report is
-always `origin/main`'s, so `health` names the branch and the fetched `main`, and its pass criterion fails off `main`
-or on a head that is not `origin/main` (D24).
+**The gate.** Every step after `unit` except `record` first checks the event store: each step it names must have
+exit 0 at the commit checked out, or it prints `gate closed at <sha>: not passed at this head: <steps>` and exits 3.
+Exit status: 0 pass, 1 fail, 2 refused, 3 gate closed. The L3 → L4 gate's prose half is the reading's. `health`
+fails off `main` or on a head that is not `origin/main` (D24).
 
 ## Level 1 (unit × coded check)
 `health` first: whether the diagnostic can run here at all. It prints the head and the branch, `origin/main`, the
 budget, and the newest previous record's `**Diagnosed:**` and `**Cursor:**` lines (none: the first run, and every
-rotation starts at its first item). The levels file's own check (`dyad/scripts/levels.py`, play-book §6) is in the
+rotation starts at its first item). The levels file's own check (`dyad/scripts/levels.py`, the audit play-book's self-diagnostic) is in the
 report (`finding: levels: …`, #619 P21); its pass criterion, the postcondition, is that `main` is checked out at
 `origin/main` and the levels file classifies (`levels.py list unit`, the classification the levels use), so a run off
 `main`, on a head the report does not read, or with a file that is absent, classifies too little or names what is
@@ -58,7 +31,7 @@ gone, is red before the report runs. It is named
 `health` because a run-book under `<host>/runbooks/` carries a health command whose postcondition is its pass
 criterion (dyad-system Rule-19 property 1; the core's live run-book test asserts it of every instance run-book). A
 record already carrying today's date is named: the record's path is one per day, so this run reads its cursor and
-then rewrites it (play-book §7):
+then rewrites it (the audit play-book's self-diagnostic):
 ```dyad-cmd
 name: health
 class: read-only
@@ -69,7 +42,7 @@ scope: HEAD, its branch and origin/main, <host>/self-diagnostic-levels.txt and <
 
 I="${DYAD_INSTANCE:-agent-corpus}"; R="$(ls -1 "$I"/audits/*-self-diagnostic.md 2>/dev/null | tail -n 1)"; T="$I/audits/$(date -u +%F)-self-diagnostic.md"; B="$(git symbolic-ref -q --short HEAD || echo 'a detached HEAD')"
 printf 'head %s on %s · K %s · P %s · today %s\n' "$(git rev-parse --short HEAD)" "$B" "${K:-4}" "${P:-3}" "$(date -u +%F)"
-[ "$B" = main ] || echo "not on main: the report reads main, not this ref (play-book §2, L2)"
+[ "$B" = main ] || echo "not on main: the report reads main, not this ref (the audit play-book's self-diagnostic)"
 O="$(git rev-parse -q --verify origin/main || echo absent)"; [ "$O" = "$(git rev-parse HEAD)" ] || echo "HEAD is not origin/main (${O:0:7}): the report reads origin/main (D24)"
 printf 'last record: %s\n' "${R:-none: the first run, every rotation starts at its first item}"; [ -z "$R" ] || grep -h '^\*\*Diagnosed:\*\*\|^\*\*Cursor:\*\*' "$R"
 [ ! -f "$T" ] || echo "a record already carries today's date: $T"
@@ -98,7 +71,7 @@ dyad/bin/dyad-python dyad/scripts/audits.py level unit "$(sed -n 's/^report-sha2
 
 ## Level 2 (system × coded check)
 `integration` reads the same stored report, behind the gate on `unit`: the failing tests of every module classified
-`integration` — the ones that build a scratch repo, run git, install or spawn the runner (play-book §6) — and every
+`integration` — the ones that build a scratch repo, run git, install or spawn the runner (the audit play-book's self-diagnostic) — and every
 failing check line, the coded checks of prose among them (Rule blocks, vocabulary, references, provenance counts,
 zones, the manifest). It runs nothing; `checks-sha256=`, the tree's own check lines, is the level's evidence, and
 anyone may re-run the report on the same head and compare it (D4, D21):
@@ -133,11 +106,11 @@ dyad/bin/dyad-python dyad/scripts/audits.py level invariants
 
 `units` names the K units the prose half reads: a unit is a tracked module declaring an `INVARIANTS` list
 (templates and test modules aside), in sorted path order, starting at the first at or after the cursor's `units=`
-and wrapping at the end (play-book §4). Each is printed with its docstring's first line and the test modules found by
+and wrapping at the end (the audit play-book's self-diagnostic). Each is printed with its docstring's first line and the test modules found by
 its name; its contract is that docstring and the rule that owns it. For each, the reading holds the claim *"this
 unit's invariants and tests cover its stated contract"* against the attack *"name a contract clause whose breaking
 no invariant and no test would catch"*; a landed attack is a finding, the uncovered clause and the invariant or test
-that would cover it, and it stops the run before L4 (play-book §3). The last line is the next run's `units=`:
+that would cover it, and it stops the run before L4 (the audit play-book's self-diagnostic). The last line is the next run's `units=`:
 ```dyad-cmd
 name: units
 class: read-only
@@ -165,12 +138,24 @@ PY
 ```
 
 ## Level 4 (system × prose claim)
-The fixed claims, each with its attack and its coded half where it has one (play-book §2, L4) — the interaction
-model's eight imperatives, then three of the system's own: S1 only a human countersigns (I1); S2 one question per
-reply, its last line (I2); S3 falsified before proposed (I3); S4 detect, don't dispose (I4); S5 the ledger and the
-provenance agree (I5); S6 no act is self-initiated (I6); S7 every act carries its mode and a countersignature
-reference (I7); S8 silence is not consent (I8); S9 the host record matches the host; S10 the Rules are coherent; S11
-the frame loads. Then the instance's own claims (below). Each landed attack is a finding (play-book §5). Three steps print
+The fixed claims, each with its attack and its coded half where it has one — the interaction model's eight
+imperatives (`countersign-model.md` Part II §3, I1–I8), then three of the system's own:
+
+| # | claim | attack | coded half |
+|---|---|---|---|
+| S1 | only a human countersigns (`countersign-model.md` I1) | among P sampled acts, find a countersignature whose signer is not the human party, or a disposition with no human's words behind it | the projector's `check` (I1), where the countersign projector runs: its live test at L2 and the `acts` step |
+| S2 | one question per reply, its last line (I2) | in the session that runs the diagnostic, find a reply asking more than one question, or asking one anywhere but its last line | none: a question lives in the conversation, not in a store (`countersign-model.md` Part II §3) |
+| S3 | falsified before proposed (I3) | among P sampled rows, find one carrying a plan whose plan file holds no falsification section and no pointer to a falsification record | none: the record's existence is the evidence (`countersign-model.md` Part II §3) |
+| S4 | detect, don't dispose (I4) | in the session that runs the diagnostic, find a finding repaired rather than proposed, or a change to the tree since the head diagnosed besides the run's two writes (§8) | the line naming what the checkout holds besides the event store, printed before the report |
+| S5 | the ledger and the provenance agree (I5) | for P sampled rows, find a `disposed` entry whose provenance text does not carry that answer | dyad-system's `agent/provenance` (the count, Rule-7 property 5) |
+| S6 | no act is self-initiated (I6) | among the projector's I6 warnings and P sampled acts, find an act opened on a non-human party's own finding | the projector's `interaction`, warnings only |
+| S7 | every act carries its mode and a countersignature reference (I7) | among P sampled acts, find one with no mode, a mode its processor contradicts, or an answered question no countersignature resolves to | the projector's schema validation and `check` (I7): a red one is the finding, and the reading confirms the sample |
+| S8 | silence is not consent (I8) | among P sampled rows, find a state past `open` or a merge for which the row's `disposed` column records no answer: an act taken on silence | the projector derives no countersignature from an absent answer (`countersign-model.md` I8); dyad-system's plan gate (`agent/prs`) refuses a branch whose cited row carries no `Y plan` |
+| S9 | the host record matches the host | find a kernel component whose observed version or presence differs from the system's host record under its host path, or a zone or profile the observed host contradicts | the manifest guard (the record's form, never its truth) |
+| S10 | the Rules are coherent | for P Rule pairs in rotation, find a trigger on which the two instruct differently | none: coherence is inference (dyad-system Rule-5) |
+| S11 | the frame loads | find the frame's sentinel absent from the start report of the session that runs the diagnostic | none |
+
+Then the instance's own claims (below). Each landed attack is a finding (the audit play-book's self-diagnostic). Three steps print
 what the reading needs, behind the gate on L3's coded half; the L3 → L4 gate's prose half is the reading's (the
 gate, above): after a landed L3 attack these steps are not run. S2, S4 and S11 are read by no step, over the
 session running the diagnostic (below).
@@ -263,19 +248,13 @@ H="$(dyad/bin/dyad-python -c 'import sys;sys.path.insert(0,"dyad/scripts");impor
 printf 'observed: %s · %s · python %s · %s · %s\n' "$(uname -sr)" "$(git --version)" "$(dyad/bin/dyad-python -c 'import sys;print("%d.%d.%d" % sys.version_info[:3])')" "$(dyad/bin/dyad-python -c 'import pydantic;print("pydantic", pydantic.VERSION)' 2>/dev/null || echo 'pydantic not importable')" "$(timeout 10 claude --version 2>/dev/null || echo 'claude not on PATH')"
 grep -H '| kernel |' dyad/infrastructure/INFRASTRUCTURE.md "$H/INFRASTRUCTURE.md" 2>/dev/null | cut -c1-200
 grep -HE '^\| (Claude Code|Git|Python|pydantic) \|' "$H"/*.md 2>/dev/null | grep -v '| kernel |' | cut -c1-200 || echo "no kernel lines in $H/*.md beyond the manifest's"
-```
-
-S2, S4 and S11 are read whole and by no step, over the one conversation a run can see, the session running the
-diagnostic (play-book §2, L4; D23): S2 finds a reply of that session asking more than one question, or one anywhere but
-its last line, or does not; S4 finds a finding of this run repaired rather than proposed, or a change to the tree
-since the head diagnosed besides the run's two writes — `unit`'s first line is its coded half — or does not; S11
-finds the frame's sentinel in that session's start report, or does not. No step prints the sentinel, since a step's
-output lands in the committed event store and the frame's sentinel is never cached anywhere.
+```S2, S4 and S11 are read whole by no step, over the session running the diagnostic (D23); no step prints the
+sentinel.
 
 ### Instance claims
 A system adds its own L4 claims in the play-book's three columns, by its own d-work — in its own copy of this
 run-book under `<host>/runbooks/`, or as rows of its record's Level 4 table — each read whole or over the same P
-samples, its coded half, where it has one, already run in L2 (play-book §2: countersign-system adds its hand-over
+samples, its coded half, where it has one, already run in L2 (the audit play-book's self-diagnostic: countersign-system adds its hand-over
 criteria H1–H5, each *"its status is as recorded"* against *"find an H whose stated status the corpus
 contradicts"*). This core run-book carries none; a system with none keeps the row below as its placeholder, and its
 record says so:
@@ -289,7 +268,7 @@ Written once per run by the party that ran it, after the last step it reached, i
 seams the next run's `health` and this run's `record` step read; a level the gate stopped keeps its heading and says
 `not run (gate)`, a level after the one a run was asked to end at says `not run (last level <n>)`; a run that did
 not reach L3 or L4 carries the previous `**Cursor:**` values forward (`none` on a first run). A second run on one
-day rewrites that day's record (play-book §7):
+day rewrites that day's record (the audit play-book's self-diagnostic):
 
     # Self-diagnostic <YYYY-MM-DD>
     **Diagnosed:** head <short sha> · K <k> · P <p> · checks-sha256 <the unit step's value, or not run>
@@ -319,17 +298,8 @@ day rewrites that day's record (play-book §7):
 
     **Cursor:** units=<path> rows=<id> pairs=<a>-<b>
 
-`record` runs last, whatever the gate did, and needs no gate, once the record is written. It reads the newest
-record's `**Diagnosed:**` head and judges the record against the events the steps left **at that head** — the latest
-event of each step there (`pass`, `fail`, `gate` or `absent`) and the `unit` step's `checks-sha256` — so a
-commit made since the run (the plan file's, the record's own) moves nothing it reads. It fails when that head does
-not resolve, when the record's checks sha is not the events', when a level's result is one the events rule out —
-a step that failed recorded as anything but `fail`, a gated step recorded as anything but `not run (gate)`, a coded
-level recorded `pass` that its events do not show, a level whose steps all left no event recorded as anything but
-`not run (last level <n>)` for the level before it, a level only partly run — when a level after a `fail` or a
-`not run (gate)` is anything but `not run (gate)`, or one after a `not run (last level <n>)` anything but the same,
-or when the cursor lacks `units=`, `rows=` or `pairs=`. L1 always runs, so an L1 with no event fails. What it cannot
-check is the reading itself, L3's and L4's tables, which stay inference (play-book, Inference, stated):
+`record` runs last, needs no gate, and judges the record against the events left at its `**Diagnosed:**` head; the
+L3 and L4 tables stay inference:
 ```dyad-cmd
 name: record
 class: read-only

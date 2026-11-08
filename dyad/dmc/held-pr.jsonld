@@ -59,5 +59,6 @@
     "rules/RULE-2-no-self-ratify.md",
     "rules/RULE-3-d-work.md"
   ],
-  "dyad:owner": "Rule-3"
+  "dyad:owner": "Rule-3",
+  "dyad:precedence": "a PR carrying a tail-append path (INCIDENTS.md, CHANGELOG.md, REGISTRY.md, BUNDLE.md) is cut narrow and landed first; a held PR is rebased as main moves and never has main merged in; a rebase after the Done-Y re-prompts, never executes the old Y; the completion evidence names each held PR's number, zone, age, rebase count and observed mergeability; between the recorded Done-Y and the close the row stays citable, so a refused merge is rebased and re-pushed under its own plan-Y"
 }

@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/port-row",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "port-row",
+  "name": "Back-port row",
+  "description": "Decides how the authoring system opens the row a back-port lands on, by whose words stand behind it.",
+  "dyad:decides": "How is a back-port's row opened in the authoring system?",
+  "dyad:inputs": [
+    "whether the receiving row's prompt is the same Operator's as the authoring system's",
+    "the receiving row's provenance entry",
+    "whether an Operator prompt stands behind the change at all"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "same-operator",
+      "name": "same Operator",
+      "dyad:when": "the receiving row's prompt is the authoring Operator's own words",
+      "dyad:then": "`dyad dwork new \"<title>\" \"<refs>\" --prompt-file <the receiving row's provenance entry> --relayed-via <system>-<row> -d 'Y plan' --said 'Y'`: the intake's Y and the plan-Y are one question, asked with the plan and the patch, and the Done-Y the second (Rule-3's floor)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-operator",
+      "name": "other Operator",
+      "dyad:when": "the receiving system's Operator is not the authoring one",
+      "dyad:then": "the same form, with the authoring Operator's Y opening the row first as an Intake (Rule-3), never the one-question shortcut"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "defect",
+      "name": "defect",
+      "dyad:when": "a defect is ported with no Operator prompt behind it",
+      "dyad:then": "its evidence goes in the plan file (Intake's defect shape), and the row opens on the Operator's Y alone"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/port.md",
+  "dyad:alsoIn": [
+    "runbooks/port.md",
+    "rules/RULE-3-d-work.md"
+  ],
+  "dyad:owner": "Rule-3"
+}

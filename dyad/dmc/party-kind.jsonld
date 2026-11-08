@@ -45,6 +45,9 @@
     "dyad:implementation": "scripts/project_countersign.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/countersign-model.md",
-  "dyad:owner": "Rule-2"
+  "dyad:home": "scripts/project_countersign.py",
+  "dyad:owner": "Rule-2",
+  "dyad:alsoIn": [
+    "playbooks/countersign-model.md"
+  ]
 }
