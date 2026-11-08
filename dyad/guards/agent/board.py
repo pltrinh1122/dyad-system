@@ -671,7 +671,7 @@ def board_lines(root: Path, now: datetime.datetime | None = None) -> list[str]:
             by.setdefault(entry_cabinet(f), []).append(n)
         out.append(f"{len(others)} entr{'y' if len(others) == 1 else 'ies'} on other cabinets' boards ("
                    + "; ".join(f"{c}: {' '.join(L(n) for n in sorted(ns, key=int))}" for c, ns in sorted(by.items())) + ")")
-    out.append(queue_line(derived_queue(root, got, cab)))
+    out.append(closing_line(root, got, cab))
     if cos:
         for k in ("queue", "seats", "question"):
             if cos.get(k):
@@ -711,6 +711,90 @@ def derived_queue(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
 def queue_line(q: dict[str, list[int]]) -> str:
     return ("queue (derived, #572): " + ", ".join(f"{k} {len(v)}" + (f" ({' '.join(f'#{i}' for i in v)})" if v else "")
                                                  for k, v in q.items()))
+
+
+# ---- the closing line (d-work #646): the questions the operator owes, read from the questions the board records
+CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "closing-line", ("awaiting-you", "pending-queue"), "pending-queue"
+ASKED_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
+ASKED_FORMS = (("Y/N: admit as precedents", "precedent"), ("Y/N: release ", "release"), ("Y/N: run ", "destructive"))
+AWAITING_KINDS = ("intent", "plan", "done", "precedent", "release", "destructive")
+
+
+def asked_kind(f: dict[str, str]) -> str | None:
+    """The kind of question a live entry records as asked and not answered: its phase's when phased (`intent-asked`,
+    `plan-asked`, `done-asked`), else the open `Y/N:` form of its stored question's last line (a precedent, a release, a
+    destructive host action); None otherwise. `waiting-on` is never read: a wait with no question owes no answer (#503)."""
+    if f.get("phase"):
+        return ASKED_PHASES.get(phase_name(f))
+    q = (f.get("question") or "").strip().splitlines()
+    last = q[-1].strip() if q else ""
+    return next((kind for form, kind in ASKED_FORMS if last.startswith(form)), None)
+
+
+def awaiting(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
+             cabinet: str | None = None) -> list[tuple[str, str, list[int]]]:
+    """[(kind, question, row ids)]: each question asked and not answered, once however many rows a batch names, in
+    AWAITING_KINDS order then by first row; with `cabinet`, that cabinet's entries alone (#594)."""
+    got = load(root) if got is None else got
+    live = {r.id for r in dyadlib.read_rows(root) if r.state not in dyadlib.TERMINAL_STATES}
+    groups: dict[tuple[str, str], list[int]] = {}
+    for n, f in got:
+        if not n.isdigit() or int(n) not in live or (cabinet is not None and entry_cabinet(f) != cabinet):
+            continue
+        kind = asked_kind(f)
+        if kind:
+            q = (f.get("question") or "").strip()
+            groups.setdefault((kind, q or f"#{n}"), []).append(int(n))
+    out = [(k, q, sorted(ids)) for (k, q), ids in groups.items()]
+    return sorted(out, key=lambda t: (AWAITING_KINDS.index(t[0]), t[2][0]))
+
+
+def intent_ready(root: Path, got: list[tuple[str, dict[str, str]]] | None = None) -> list[int]:
+    """Under `intent-reading: on`: the open rows a prompt opened (its record's entry 1 a `prompt`) that hold no `Y intent`
+    and no `Y plan`, are not accreted, and carry no phased entry (so no intent question asked)."""
+    got = load(root) if got is None else got
+    phased = {int(n) for n, f in got if n.isdigit() and f.get("phase")}
+    prov = dyadlib.instance(root) / "d-work" / "provenance"
+    out = []
+    for r in dyadlib.read_rows(root):
+        if r.state != "open" or r.id in phased or "mandate #" in r.disposed:
+            continue
+        if re.search(r"\bY (?:intent|plan)\b", r.disposed or ""):
+            continue
+        p = prov / f"{r.id}.md"
+        if p.is_file() and re.search(r"(?m)^## 1 prompt\b", p.read_text(errors="ignore")):
+            out.append(r.id)
+    return sorted(out)
+
+
+def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
+    """`Awaiting you: <n> <kind> (#id…), …` (or `Awaiting you: nothing.`), then `Coming: <n> <kind>, …` from the derived
+    queue, intent-ready included under `intent-reading: on`; each part only when it is non-zero (#646)."""
+    got = load(root) if got is None else got
+    rows = {r.id: r for r in dyadlib.read_rows(root)}
+    on = dyadlib.slugs_on(root)
+    L = lambda i: dyadlib.row_label(i, rows, on)
+    by: dict[str, list[list[int]]] = {}
+    for kind, _, ids in awaiting(root, got, cabinet):
+        by.setdefault(kind, []).append(ids)
+    parts = [f"{len(qs)} {kind} ({' '.join(L(i) for i in sorted({i for ids in qs for i in ids}))})"
+             for kind in AWAITING_KINDS if (qs := by.get(kind))]
+    line = "Awaiting you: " + (", ".join(parts) if parts else "nothing") + "."
+    q = derived_queue(root, got, cabinet)
+    if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
+        filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
+        q = {"intent-ready": [i for i in intent_ready(root, got) if cabinet is None or filed.get(i, SOLO) == cabinet], **q}
+    coming = [f"{len(v)} {k}" for k, v in q.items() if v]
+    return line + (f" Coming: {', '.join(coming)}." if coming else "")
+
+
+def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
+    """The board's last count line: `awaiting_line` under `closing-line: awaiting-you`, the derived queue's line
+    otherwise; an absent or unknown value reads `pending-queue`."""
+    v = (dyadlib.preference(CLOSING_KEY, root) or CLOSING_DEFAULT).strip()
+    if v == "awaiting-you":
+        return awaiting_line(root, got, cabinet)
+    return queue_line(derived_queue(root, got, cabinet))
 
 
 def owners(f: dict[str, str]) -> list[str]:
@@ -771,7 +855,7 @@ def resume_lines(root: Path) -> list[str]:
             if f.get(k):
                 first, *rest = f[k].split("\n")
                 out.append(f"  {k}: {first}"); out.extend(f"    {r}" for r in rest)
-    out.append(queue_line(derived_queue(root, None, v["cabinet"])))
+    out.append(closing_line(root, None, v["cabinet"]))
     if cos:
         block(f"{cos_name(v['cabinet'])}:", cos, COS_FIELDS)
     for n, f in v["live"]:
@@ -1933,6 +2017,13 @@ INVARIANTS += [   # #587: the machine's derived fields (crafts/syseng/rules/inva
     ("orchestrate-sections-distinct", lambda: len({h for h, _ in ORCHESTRATE_SECTIONS}) == len(ORCHESTRATE_SECTIONS)
                                               and all(h and w and "Y/N" not in h + w for h, w in ORCHESTRATE_SECTIONS)),
     ("relays-name-known-events", lambda: all(e in dyadlib.ORCH_EVENT_NAMES and (t in dyadlib.ORCH_PHASES or t in (dyadlib.ORCH_DROP, dyadlib.ORCH_FROM)) for e, t in RELAYS)),
+]
+INVARIANTS += [   # #646: the closing line reads the questions recorded, never the wait (crafts/syseng/rules/invariants.md)
+    ("asked-kind-reads-the-phase-or-the-form", lambda: asked_kind({"phase": "done-asked"}) == "done"
+                                                   and asked_kind({"question": "x\nY/N: admit as precedents 3 cases?"}) == "precedent"
+                                                   and asked_kind({"question": "Y/N: run rm -rf x?"}) == "destructive"
+                                                   and asked_kind({"waiting-on": "operator"}) is None),
+    ("closing-default-is-a-value", lambda: CLOSING_DEFAULT in CLOSING_VALUES and set(ASKED_PHASES.values()) <= set(AWAITING_KINDS)),
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)
     ("hp-tail-is-the-seat-keys", lambda: all((sessions()._seat_key(v) == v) == (not HP_TAIL.search(v))

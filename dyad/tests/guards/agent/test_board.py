@@ -9,7 +9,8 @@ stands on origin/main, removes a key on `key=`, warns on another writer, refuses
 `resume` prints the owed question verbatim, the gates and the seats to announce to. #594, the board keyed by cabinet:
 `cabinet_of` reads the organization, `check_entry` and `parse_set` judge the `cabinet` key and a `_cos-<operator>` file,
 `board set` fences one leader off another cabinet's entries and `_cos` file and files a unit's first write by the seats
-that name it, `resume` and `dyad board` read the resumer's cabinet, and a board without `cabinet` keys reads the same."""
+that name it, `resume` and `dyad board` read the resumer's cabinet, and a board without `cabinet` keys reads the same.
+#646: `Awaiting you` (AwaitingTests) counts the questions recorded as asked and not answered, by kind, a batch once."""
 import contextlib, datetime, io, os, re, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parents[3]
@@ -1217,6 +1218,66 @@ class PhasedQueueTests(unittest.TestCase):
 
     def test_the_phase_counts_and_the_old_clause_keeps_the_unphased(self):
         self.assertEqual(bd.derived_queue(self.root), {"plan-ready": [5, 8], "done-ready": [7]})
+
+
+class AwaitingTests(unittest.TestCase):
+    """#646: `Awaiting you` counts the questions the board records as asked and not answered, by kind and a batch once,
+    and never a wait without a question (#503); `closing-line` picks it or the derived queue's line, absent the latter."""
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+        d = self.root / INST / "d-work"
+        for sub in ("rows", "plans", "board", "provenance"):
+            (d / sub).mkdir(parents=True)
+        self.d = d
+        for rid in range(1, 12):
+            (d / "rows" / f"{rid}.md").write_text(ROW.format(id=rid, state="planned" if rid < 9 else "open"))
+        (d / "rows" / "12.md").write_text(ROW.format(id=12, state="done"))
+        put = lambda rid, text: (d / "board" / f"{rid}.md").write_text(text)
+        put(1, phased(1, "intent-asked", {}, question="Y/N: intent aligned for #1 one?"))
+        put(2, phased(2, "plan-asked", {}, question="Y/N: proceed with #2, #3 as planned?"))   # one batch question
+        put(3, phased(3, "plan-asked", {}, question="Y/N: proceed with #2, #3 as planned?"))
+        put(4, phased(4, "done-asked", {"unit": [ENG]}, question="Y/N: Done with #4 four?"))
+        plain = lambda q: f"holder: {HOME}\nwaiting-on: operator\nsince: 2026-11-04T10:00Z\n" + (f"question: {q}\n" if q else "")
+        put(5, plain("Y/N: admit as precedents 3 cases of promotion?"))
+        put(6, plain("Release run 1 waits.\n  Y/N: release v1.2.0?"))
+        put(7, plain("Y/N: run docker volume rm x?"))
+        put(8, plain(None))                                                       # #503: waiting on the operator, no question
+        put(12, phased(12, "done-asked", {"unit": [ENG]}, question="Y/N: Done with #12 twelve?"))   # terminal: owes nothing
+        (d / "rows" / "9.md").write_text(ROW.format(id=9, state="open").replace("2026-11-01 Y plan", "2026-11-01 Y open"))
+        (d / "plans" / "9.md").write_text("# Plan\n")                            # plan-ready: Coming
+        (d / "rows" / "10.md").write_text(ROW.format(id=10, state="open").replace("disposed: 2026-11-01 Y plan", "disposed: "))
+        (d / "provenance" / "10.md").write_text("# Provenance #10\n\n## 1 prompt 2026-11-08\n```\ndo it\n```\n")   # intent-ready
+
+    def prefs(self, **kv):
+        p = self.root / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + "".join(f"| {k} | {v} | x | y |\n" for k, v in kv.items()))
+
+    def test_each_kind_once_per_question(self):
+        got = bd.awaiting(self.root)
+        self.assertEqual([(k, ids) for k, _, ids in got], [("intent", [1]), ("plan", [2, 3]), ("done", [4]),
+                                                          ("precedent", [5]), ("release", [6]), ("destructive", [7])])
+        self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: 1 intent (#1), 1 plan (#2 #3), 1 done (#4), "
+                         "1 precedent (#5), 1 release (#6), 1 destructive (#7). Coming: 1 plan-ready.")
+        self.prefs(**{"intent-reading": "on"})
+        self.assertTrue(bd.awaiting_line(self.root).endswith(" Coming: 1 intent-ready, 1 plan-ready."))
+
+    def test_a_wait_with_no_question_counts_nothing(self):
+        for rid in range(1, 8):
+            (self.d / "board" / f"{rid}.md").unlink()
+        (self.d / "plans" / "9.md").unlink()
+        self.assertEqual(bd.awaiting(self.root), [])
+        self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: nothing.")       # #8 waits on the operator, asked nothing
+
+    def test_the_preference_picks_the_line(self):
+        self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))   # absent: pending-queue
+        self.prefs(**{"closing-line": "pending-queue"})
+        self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))
+        self.prefs(**{"closing-line": "awaiting-you"})
+        self.assertTrue(bd.closing_line(self.root).startswith("Awaiting you: 1 intent (#1)"))
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
+            self.assertIn(bd.closing_line(self.root), bd.board_lines(self.root))
+            self.assertIn(bd.closing_line(self.root), bd.resume_lines(self.root))
 
 
 class AdvanceTests(unittest.TestCase):
