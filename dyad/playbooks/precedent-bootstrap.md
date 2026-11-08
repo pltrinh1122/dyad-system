@@ -33,6 +33,7 @@ In order, each citing its criterion:
    - `facts`: the decisive inputs, stated neutrally, with no outcome name and no verdict;
    - `label`: the outcome, quoted from the source that set it;
    - `row`: the row whose plan-`Y` or Done-`Y` covered the ruling. A case no `Y` covered is not built.
+   - `record`: the record's bare id (`changelog-actor`), never craft-prefixed (`sysadmin/changelog-actor`); a prefixed id names no record, and the `prompt` step refuses the case.
    - Cap: at most 12 cases per record, the most recent first (#645 F1).
 4. **readers** — the run-book's `prompt` step builds the blind prompt from the case file. It holds each record's question, outcomes, precedence and default, and each case's id and facts, never a label.
    - Two readers answer it blind, by role: `cheap` and `default`. Each instance names its own models, and the event records which.

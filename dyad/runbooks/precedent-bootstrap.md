@@ -35,7 +35,7 @@ dyad/bin/dyad-python dyad/scripts/backfill.py > "$STRUCTURED"
 ```
 
 ## Prompt
-`dyad precedent prompt`: the blind prompt, built from the case file (`{case, record, row, facts, label}` per line) and the
+`dyad precedent prompt`: the blind prompt, built from the case file (`{case, record, row, facts, label}` per line, `record` the bare id) and the
 records it names — each record's question, outcomes, precedence and default, and each case's id and facts, never a label
 — in record then case order, so the same inputs give the same bytes. It refuses, exit 1, a case whose record is not
 judged by inference or whose consequences name a ratifying act:
