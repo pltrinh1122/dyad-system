@@ -2,13 +2,11 @@
 
 The model the d-work framework is checked against: a core schema of eight entities and one attribute that every
 countersigning system maps to **by projection** (Part I), and one interaction model — five primitives, eight
-imperatives, one lifecycle per mode — that is the same in every mode and every system (Part II). It was
-authored here as the Tended craft countersign (0.1.0 #156, 0.2.0 #152, 0.3.0 #308; its tree retired by #369 C5, last authored commit 346a9a2), projected from the
-core's own countersigning spine (`agent-corpus/falsification/core-vs-countersign.md`, #334), and is carried by the
-core since #369 (direction (c) of the #330 audit's D-10, carried to its end: `agent-corpus/falsification/countersign-consolidation.md`),
-its words adopted rather than coined (Rule-13 property 1). Its records travel with it:
-`dyad/falsification/countersign-schema.md` (F1–F7), `countersign-interaction.md` (R1–R15),
-`countersign-self-diagnostic.md` (C1–C6, D1–D25).
+imperatives, one lifecycle per mode — the same in every mode and every system (Part II). Carried by the core since
+#369 (`agent-corpus/falsification/countersign-consolidation.md`); its records are
+`dyad/falsification/countersign-schema.md` (F1–F7), `countersign-interaction.md` (R1–R15) and
+`countersign-self-diagnostic.md` (C1–C6, D1–D25). Its decisions that code makes are records homed in the projector,
+`dyad/scripts/project_countersign.py` (#626); the one decision this file declares is `dmc:preference-kind` (§5).
 
 **Non-normative where the vocabulary carries no term.** This play-book binds nothing by itself: in a dyad system
 only the Agent Rules bind, and a Rule that uses one of the model's words cites the vocabulary row for it (Rule-6).
@@ -113,7 +111,7 @@ The projector applies exactly these (D1–D7 here, D8 in Part II §3); a change 
   in the append-only file; no d-work id is recorded on an event, so no row is its act.
 - **D7 — escalations.** A row's `refs` token shaped `<system>-<id>` (other than `parent-<id>`) is
   an intake origin (Rule-3 Intake names its origin that way): an Escalation from `ext:<token>`
-  opening the row's act. Every incident-log row is an Escalation from its d-work's act (or `ext:`
+  opening the row's act. Every incident row is an Escalation from its d-work's act (or `ext:`
   when the row is not in this instance), opening none. Both are "where identifiable": a
   `<system>-<id>` token that is a plain cross-reference, not an intake, is read as one — stated, not
   checked.
@@ -222,11 +220,11 @@ The mode-specific parts are only *which basis* the countersignature has and *who
 attributes of the act (#153), so one model spans the three (R1).
 
 ### 5. Preferences in the model
-A preference is a standing countersignature, of one of two kinds:
+A preference is a standing countersignature, of one of two kinds (`dmc:preference-kind`):
 - a **form preference** shapes how countersign proposals and reports look, and authorizes nothing;
 - an **authority preference** is a mandate: it countersigns in advance one class of act.
 
-dyad-system's preferences, classified (the four rows after `import-support` close #330 D-4):
+dyad-system's preferences, classified (`none`: not a preference of the interaction):
 
 | preference | kind | note |
 |---|---|---|
@@ -235,13 +233,13 @@ dyad-system's preferences, classified (the four rows after `import-support` clos
 | `merge-disposition` | form | the done countersignature also covers the named merges |
 | `delegation` | form | who drafts |
 | `ledger-pr-merge` | **authority → mandate** | already a standing countersignature; the projector emits it as `mandate-ledger-pr-merge` (D4) |
-| `cli-pattern` | not interaction | command-line form |
-| `import-licenses` | not interaction | import criteria |
-| `import-support` | not interaction | import criteria |
+| `cli-pattern` | none | command-line form |
+| `import-licenses` | none | import criteria |
+| `import-support` | none | import criteria |
 | `accretion` | **authority → mandate** | `implicit`: a plan-`Y` over a stated mandate scope countersigns every row the scope names (Rule-3 Scope, #290); the mandate the projector should emit per such plan is #330 D-5 |
 | `dwork-trace` | form | whether the completion report carries the d-work trace |
-| `host-path` | not interaction | where the host records live (Rule-1) |
-| `host-zone` | not interaction | the zone of that row (Rule-1) |
+| `host-path` | none | where the host records live (Rule-1) |
+| `host-zone` | none | the zone of that row (Rule-1) |
 
 A new preference is classified here when it is added: an authority preference that is not projected as a mandate
 is an I7 gap (its covered acts would carry no countersignature reference).
@@ -289,11 +287,7 @@ deployed core (plan #152 §6). The dyad-system rows are read against the corpus 
 - A command adapter is added: its template names the procedure file it reads, and §6 lists it.
 
 ### Sources
-dyad-system #146 and #147 (the modes and edges), #150 (the countersign), #153 (modes of an act), #156 (the core
-schema, F4's answer mapping), #115 (a command is the adapter, never the artifact), #152 revision 2 (this model);
-dsys by name only: its decision-record and CTA specification (answers yes / no / counter, disposition kinds),
-its "three keys" invariant, its E3 and E5 rules, and its slash commands `pb-decide`, `pb-extend`, `eval-meta`,
-`eval-pb`, `eval-rb`, `eval-sc`, `sc-author`.
+dyad-system #146, #147, #150, #152 revision 2, #153, #156, #115; dsys by name only (no text copied, R6).
 
 ## Glossary — the model's own terms, outside the agent vocabulary
 The terms below are **model-only** by the reconciliation table (`agent-corpus/falsification/countersign-consolidation.md`,

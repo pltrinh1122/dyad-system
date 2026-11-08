@@ -29,7 +29,7 @@
     {
       "@type": "DefinedTerm",
       "termCode": "incident",
-      "name": "incident-log row",
+      "name": "incident row",
       "dyad:when": "a row of the incident log",
       "dyad:then": "an escalation from its d-work's act (or ext: when not in this instance), opening none"
     }
@@ -40,6 +40,9 @@
     "dyad:implementation": "scripts/project_countersign.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "playbooks/countersign-model.md",
-  "dyad:owner": "Rule-3"
+  "dyad:home": "scripts/project_countersign.py",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "playbooks/countersign-model.md"
+  ]
 }
