@@ -289,6 +289,21 @@ class MasterTests(unittest.TestCase):
         self.assertIn(rb / "server.md", g.procedure_files(self.t.pkg, self.t.root))
         self.assertNotIn(rb / "server.md", g.procedure_files(self.t.pkg))
 
+    def test_the_host_store_holds_instance_records(self):
+        """#626: `<host path>/dmc/` is a store of the instance's container, so a host run-book's record lives in the host's
+        zone; an absent host store adds nothing, and an @id declared in both instance stores is one fault."""
+        os.environ.pop("DYAD_HOST", None)
+        self.assertEqual([c for c, *_ in g.stores(self.t.root, self.t.pkg)], ["dyad-operator"])
+        rb = self.t.root / "workstation-corpus" / "runbooks"; rb.mkdir(parents=True)
+        (rb / "server.md").write_text("## Health\n1. `dmc:server-health`.\n")
+        host = self.t.root / "workstation-corpus"
+        rec = record("instance", ident="server-health", home="workstation-corpus/runbooks/server.md")
+        self.t.put(host, rec)
+        self.assertEqual(self.t.check(), [])
+        self.assertIn(("instance", host / "dmc", self.t.root), g.stores(self.t.root, self.t.pkg))
+        inst = self.t.root / "agent-corpus"; self.t.put(inst, rec)
+        self.assertTrue(any("declared by 2 records" in m for m in self.t.check()))
+
     def test_a_record_homed_in_a_rule_is_unchanged(self):
         self.home("## Steps\n1. `dmc:action-class`.\n")
         self.t.put(self.t.pkg, record("dyad-operator"))                        # rules/home.md, which names every outcome

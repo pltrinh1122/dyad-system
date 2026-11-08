@@ -4,7 +4,7 @@ the dyad states in prose carries a mechanical one — placed per Rule-11 propert
 A DMC record is a JSON-LD file `<container>/dmc/<identifier>.jsonld`, its form `dyad/dmc/schema.md`, its
 context the core's `dyad/dmc/context.jsonld`. Three containers: the core (`dyad/dmc/`, container
 `dyad-operator`), every Tended craft (`crafts/<craft>/dmc/`, container `<craft>`) and the instance
-(`<instance>/dmc/`, container `instance`). Per record it fails on: a JSON parse error; a missing required key;
+(`<instance>/dmc/` and `<host path>/dmc/`, container `instance`; #626). Per record it fails on: a JSON parse error; a missing required key;
 an `@context` other than the core context's; an `@type` lacking `DefinedTermSet` or `dyad:DecisionCriterion`;
 an `@id` other than `urn:dyad:dmc:<container>/<identifier>`, an `identifier` other than the file stem, an
 `isPartOf` other than the container's urn; `dyad:inputs` not a non-empty list of strings; fewer than two
@@ -86,10 +86,19 @@ TREE_INVARIANTS = [   # reads the package tree: the runner's pass, never at impo
 ]
 
 def stores(root: Path, pkg: Path = dyadlib.PKG) -> list[tuple[str, Path, Path]]:
-    """[(container, dmc dir, path base)] for every container whose `dmc/` directory exists: the core, each craft, the instance."""
+    """[(container, dmc dir, path base)] for every container whose `dmc/` directory exists: the core, each craft, the
+    instance, and the host path's `<host path>/dmc/` (#626: a record homed in a host run-book sits in the host's zone,
+    Rule-1), which is the instance's container too, its paths relative to the repo root. An unreadable host path, or
+    one whose store is the instance's own, adds nothing."""
     out = [(CORE_CONTAINER, pkg / STORE, pkg)]
     out += [(d.parent.name, d, d.parent) for d in dyadlib.craft_glob(STORE, pkg)]
     out.append((INSTANCE_CONTAINER, dyadlib.instance(root) / STORE, root))
+    try:
+        host = Path(root) / dyadlib.host_path(root) / STORE
+    except ValueError:
+        host = None
+    if host is not None and os.path.normpath(host) != os.path.normpath(out[-1][1]):
+        out.append((INSTANCE_CONTAINER, host, root))
     return [(c, d, b) for c, d, b in out if d.is_dir()]
 
 def records(root: Path, pkg: Path = dyadlib.PKG) -> list[tuple[str, Path, Path]]:
