@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-08T20:10:35+00:00
+seen: 2026-11-08T20:23:56+00:00
 root: /home/user/dyad-system
 rows: 646 647
 files: agent-corpus/d-work/ dyad/guards/agent/board.py dyad/rules/RULE-3-d-work.md dyad/templates/PREFERENCES.md dyad/tests/guards/agent/test_board.py dyad/vocabulary/VOCABULARY.md
