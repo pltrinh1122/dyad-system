@@ -20,5 +20,5 @@ undo: none
 postcondition: none
 scope: <instance>/d-work/sessions/, the ledger rows, the instance's mandates table and the harness list (read)
 
-dyad/bin/dyad-python crafts/cabinet/guards/tidy.py census ${HARNESS:+--harness "$HARNESS"}
+dyad/bin/dyad-python crafts/cabinet/scripts/tidy.py ${HARNESS:+--harness "$HARNESS"}
 ```
