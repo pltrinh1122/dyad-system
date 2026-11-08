@@ -54,6 +54,10 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork intent <id>` | — (read-only: the rows of any state and the surface items nearest the row's prompts, ten each, no threshold, #615) | frozen |
 | `dyad playbook profile <name>` | — (read-only: a play-book's steps with their words, `dmc:` citations and commands, its cited records' words and kind, the run total, and the median trace seconds of rows whose plan names it, #642) | frozen |
+| `dyad precedent prompt <cases-file>` | `--out` (read-only: the blind prompt, each record's question and outcomes and each case's facts, never its label; refuses a record not judged by inference or operator-side, #645) | frozen |
+| `dyad precedent score <cases-file> <answers-a> <answers-b>` | `--kept` (read-only: each reader's score per record, the kept cases and each mismatch, model-limit or context-gap; `--kept` writes the kept as a decisions input file, #645) | frozen |
+| `dyad precedent gate <kept-file>` | `--out` (read-only: each line judged by precedent-admission as its case's precedent line would be, before the question; prints each refused line and writes the admitted, #645) | frozen |
+| `dyad precedent agreement <record>` | — (read-only: the record's admitted cases re-measured leave-one-out: n, reproduced, abstained, agreement, its bar, #645) | frozen |
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |

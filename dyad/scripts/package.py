@@ -261,6 +261,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
   dyad playbook profile <name>  one play-book's profile (scripts/playbook_profile.py, #642): each step's words and the
                                 dmc ids and commands it cites, each cited record's words and kind, the run total, and
                                 the median inference and mechanical seconds of the traces of rows whose plan names it
+  dyad precedent prompt <cases-file> [--out <file>] | score <cases-file> <answers-a> <answers-b> [--kept <file>]
+                | gate <kept-file> [--out <file>] | agreement <record>
+                                the blind two-reader labelling (scripts/precedent.py, #645): `prompt` prints each
+                                record's question and outcomes and each case's facts, never its label; `score` counts
+                                each reader against the labels, the kept cases and each mismatch (model-limit or
+                                context-gap), --kept writing the kept as a `--decisions` file; `gate` judges each
+                                kept line by precedent-admission before the question; `agreement` re-measures a
+                                record's admitted set leave-one-out; read-only
   dyad board [set <id>|_cos[-<operator>] key=value… [--drop] | resume | phases | advance <id>… <event> --expect <phase>|none … | groom]
                                 the cos's orchestration in flight (guards/agent/board.py, d-work #535): render the
                                 board store `<instance>/d-work/board/`; `set` merges the pairs into the entry on a
@@ -2607,6 +2615,8 @@ if __name__ == "__main__":
         if a[1:2] != ["profile"]:
             sys.exit("usage: dyad playbook profile <name>")
         sys.exit(dyadlib.load_module(PKG / "scripts" / "playbook_profile.py", "dyad_playbook_profile").main(a[2:], REPO))
+    if a and a[0] == "precedent":   # #645: read-only, the blind two-reader labelling (scripts/precedent.py)
+        sys.exit(dyadlib.load_module(PKG / "scripts" / "precedent.py", "dyad_precedent").main(a[1:], REPO))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
     if a and a[0] == "inbox":

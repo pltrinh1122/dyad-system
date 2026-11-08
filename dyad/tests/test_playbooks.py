@@ -405,3 +405,35 @@ class PlaybookOptimizePlaybookTests(unittest.TestCase):
         self.assertEqual((cmds[0].cls, cmds[0].role), ("read-only", "any"))
         self.assertEqual(cmds[0].cmd.strip(), 'dyad/bin/dyad playbook profile "$PLAYBOOK"')
         self.assertIn("playbook-optimize", rb.core_runbooks(PKG.parent))
+
+
+BOOTSTRAP_PLAYBOOK = PKG / "playbooks" / "precedent-bootstrap.md"
+BOOTSTRAP_RUNBOOK = PKG / "runbooks" / "precedent-bootstrap.md"
+
+class PrecedentBootstrapPlaybookTests(unittest.TestCase):
+    """The precedent-bootstrap play-book and its run-book (#645): headings, the criteria it cites and restates none of,
+    the gate before the question, and five read-only steps."""
+    def test_playbook_sections_and_criteria(self):
+        text = BOOTSTRAP_PLAYBOOK.read_text()
+        heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
+        self.assertEqual(heads, ["Parameter", "Trigger", "Steps", "Question", "Evidence"])
+        cited = set(re.findall(r"`dmc:([a-z0-9-]+)`", text))
+        self.assertEqual(cited, {"judgement-complexity", "precedent-admission"})
+        self.assertEqual(dyadlib.tables(text), [])
+        self.assertIn("dyad/runbooks/precedent-bootstrap.md", text)
+        self.assertIn("`Y/N: admit as precedents <cases>?`", text)
+        self.assertLess(text.index("**gate**"), text.index("**question**"))   # #644's order, fixed
+    def test_restates_no_cited_outcomes(self):
+        import json
+        text = BOOTSTRAP_PLAYBOOK.read_text()
+        for rid in ("judgement-complexity", "precedent-admission"):
+            rec = json.loads((PKG / "dmc" / f"{rid}.jsonld").read_text())
+            self.assertFalse(all(t["name"] in text for t in rec["hasDefinedTerm"]), rid)
+    def test_runbook_parses_into_five_read_only_steps(self):
+        text = BOOTSTRAP_RUNBOOK.read_text()
+        cmds = rb.parse_text(text)
+        self.assertEqual([c.name for c in cmds], ["structured", "prompt", "score", "gate", "agreement"])
+        self.assertEqual(rb.declared_sections(text), ["Structured", "Prompt", "Score", "Gate", "Agreement"])
+        self.assertEqual(rb.prose_blocks(text), [])
+        self.assertTrue(all((c.cls, c.role) == ("read-only", "any") for c in cmds))
+        self.assertIn("precedent-bootstrap", rb.core_runbooks(PKG.parent))

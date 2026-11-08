@@ -66,6 +66,7 @@ integration dyad/tests/test_merge.py                       # scratch repos, a ba
 integration dyad/tests/test_hygiene.py                     # scratch repos and git, the backlog hygiene of the sweep (#565)
 integration dyad/tests/test_decisions.py                   # scratch repos and git, the decision functions of #641
 unit dyad/tests/test_similar.py                             # temp files only, in process: the comparator set (#642)
+unit dyad/tests/test_precedent.py                           # temp files and the live DMC store, in process: blind labelling (#645)
 unit dyad/tests/test_backfill.py                            # temp files only, in process: the structured backfill (#644)
 integration dyad/tests/test_playbook_profile.py                   # temp files and the live tree (the d-work play-book), #642
 integration dyad/tests/test_groom.py                       # scratch repos and git, the backlog grooming report (#625)
