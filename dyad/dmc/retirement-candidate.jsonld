@@ -48,7 +48,7 @@
       "dyad:then": "proposed as a reading, never as a retirement"
     }
   ],
-  "dyad:precedence": "Candidates are taken oldest first; the proposal names the ground by path or row id; the one Y is written as the same disposition entry into every named row's record, the row's disposed gaining `<date> Y archive (sweep #a,#b,#k)`.",
+  "dyad:precedence": "Candidates are taken oldest first; the proposal names the ground by path or row id; the one Y is written as the same disposition entry into every named row's record, the row's disposed gaining `<date> Y archive (sweep #a,#b,#k)`. A retirement decided before #626 stated these grounds is not a case of this criterion: it is never read as one of its outcomes, nor admitted as its precedent.",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null

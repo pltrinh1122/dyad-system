@@ -98,6 +98,12 @@ cites directly. A row of work takes two questions, or three under the preference
   done-`Y` verifies the output, closes the accreted set, archives exactly the retired rows and ratifies exactly those
   merges (Completion counter-prompt, below).
 
+Beside a row's questions stands the **precedent question**, `Y/N: admit as precedents <cases>?`, listing decision-log
+entries (Rule-16 Store) by record and case id before it: its **precedent-Y** binds exactly the listed entries, which become
+precedents of their records' kind `precedent` (`dyad/dmc/judgement-complexity.jsonld`), and nothing else. A done-`Y`
+covers the work and its rulings only as candidates; a ruling becomes a precedent only by a precedent-`Y` naming it
+(#644).
+
 A batch counter-prompt binds each d-work it names as its single question would (Batch disposition, below). A row or act
 is **carried** when another's question names it — a plan question naming its class, a Done question naming it under
 `retires` — so that `Y` binds it with no question of its own. Work the plan does not describe, and a row its scope or
@@ -233,7 +239,9 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   record (Rule-7). Beside the batch forms stands the **mandate form** — the plan question over a plan that carries rows
   and the Done question naming them, two questions whatever the set's size: a batch compresses questions, a mandate
   compresses acts. A carried row, a release question and the retirement form never enter the queue: the first is never
-  asked, the others are asked on their own.
+  asked, the others are asked on their own. The precedent question is its own kind too, never folded into a Done
+  question: candidates wait and are asked as one batch at the next backlog grooming or once at least five are pending,
+  whichever is first (#644).
 - The queue is recorded: its counts and the last question asked live in the **board store** (Rule-16 Store), beside each
   open row's orchestration in flight — holder, wait, next act, the question owed verbatim, promises — so a **hop** of
   the session holding the board (the home, under `organization: m4`) loses none of it and asks the operator nothing
@@ -276,7 +284,9 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   written clerically when given, so the chain of
   authorization is reconstructible from the ledger alone (D4). A carried row's entry names the `Y` it rides — an
   accreted row's first `<date> Y plan (mandate #<id>)`, a carried `backlog` row's `<date> Y backlog (mandate #<id>)`, a
-  retired row's `<date> Y archive (done #<id>)` — and its record copies that `Y`'s words, noted `mandate #<id>, <date>`
+  retired row's `<date> Y archive (done #<id>)` — and a precedent-`Y`'s entry, on the row whose decision log holds the
+  entries, is `<date> Y precedent (<n> cases: <record>×<k>, …)`, its words copied into that row's record as any
+  disposition's are (Rule-7 property 5); a carried row's record copies that `Y`'s words, noted `mandate #<id>, <date>`
   or `done #<id>, <date>` (Rule-7 property 4). The optional `mode` field names how a row was opened (Rule-16 Store):
   `implicit` on an accreted row, born `open` under another row's plan-`Y`; `explicit`, or the field absent, on every
   other row, a carried `backlog` row included. It says nothing of which Done closes the row. The agent chooses a
@@ -375,7 +385,9 @@ a row as every prompt does (Scope).
 - Answering `Y` to a plan counter-prompt (mutation authorization, with every row the plan carries).
 - Answering `Y` to a d-work completion counter-prompt (intent verification, with the rows it names as accreted or
   retired and, under `merge-disposition: with-done`, the named merges).
-- Answering `Y` to the retirement form. Rule-2 applies by reference to all four.
+- Answering `Y` to the retirement form.
+- Answering `Y` to a precedent question (the listed decision-log entries admitted as precedents). Rule-2 applies by
+  reference to all five.
 
 ## Provenance
 Operator rule, 2026-09-12. Refactored by d-work #585 (2026-11-04) around what opens a row, what a `Y` binds and the two
@@ -403,6 +415,9 @@ to say which; see the same record, amendment #623. Plan's execution detail gains
 (d-work #643): two file moves ruled execution detail (#626, #640) and two #619 cases ratified as planned or as
 execution detail fitted none of the record's differences, and a blind precedent test read all four as new plans; one
 clause, fenced by no effect outside the PR, admits the three forms and overrules #626's move; see the same record,
-amendment #643.
+amendment #643. What a `Y` binds, Batch disposition, Ledger and Ratification
+events gain the precedent question 2026-11-08 (d-work #644): a done-`Y` had covered every ruling inside its work
+without the operator examining one (#626's zone move), so a ruling becomes a precedent only by a `Y` that names it;
+see the same record, amendment #644.
 
 Set: System Requirements.

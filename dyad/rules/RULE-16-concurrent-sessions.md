@@ -96,6 +96,19 @@ files and almost never merge.
   `dyad inbox list`, and its unread count is printed by `dyad board resume` and `dyad session touch`. Its guard,
   `dyad/guards/agent/inbox.py` (entity `message`), checks shape — `to` the box, `from` the sender in the name, `row`
   an existing row, no marker without its message — the refusal, and, on each commit pushed, append-only (#536).
+- Beside the inbox, the **decision log**: `<instance>/d-work/decisions/<row>.md`, one file per row in the store
+  pattern of the rows, the board and the inbox, one block per ruling the row's completion evidence names: a
+  `## <case id>` heading, then `key: value` lines — `record`, `outcome`, `row`, `status` (`candidate` or `precedent`),
+  `source` (`done`, `structured` or `two-readers`), `date` (the UTC date of the write), `precedent-entry` on a
+  precedent block and, when a precedent set gave the outcome, `precedent-set` (that set's sha256, which admission refuses
+  as self-derived); then one `field.<name>: <value>` per structured input and one `inputs: <prose>`. It is **append-only**: a block is never edited or deleted, and a status moves only
+  from `candidate` to `precedent`, by a later block `## <case id> precedent` naming the `Y precedent` entry. It is
+  written by `dyad dwork state … --decisions <file>` in the clerical commit that records the `Y` it rests on — a
+  `Y done` writes `candidate` blocks, a `Y precedent` the blocks it admits (Rule-3, What a `Y` binds) — so it sits
+  under `<instance>/d-work/` and is a ledger-only commit, and no `*.jsonl` is tracked there (Rule-7 property 2). Its
+  guard, `dyad/guards/agent/decision_log.py`, checks shape, append-only, that each record is an existing decision
+  record and each outcome one of its names, and that a `precedent` block names an existing `Y precedent` entry of its
+  row (#644).
 
 ## Presence
 - A session announces what it is working so another reads it *before* opening related work,
@@ -246,6 +259,8 @@ bullet gains the cabinet 2026-11-05 (d-work #594, #548 S13): with two operators'
 `open → archived` and the board the `intent-asked` phase 2026-11-06 (d-work #615): a row the operator declines at its
 intent question had no exit but a Done; see the same record, amendment #615. Store gains the optional `slug` field and
 Enforcement its write-once fence 2026-11-07 (d-work #622): the row slug Rule-3 presents needs a home on the row; see
-`../falsification/rules/rule-3-d-work.md`, amendment #622.
+`../falsification/rules/rule-3-d-work.md`, amendment #622. Store gains the decision log 2026-11-08 (d-work #644): the rulings a
+Done named were stored nowhere, so no precedent could be admitted or audited; see `../falsification/rules/rule-3-d-work.md`,
+amendment #644.
 
 Set: System Requirements.

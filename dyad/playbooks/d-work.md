@@ -131,4 +131,7 @@ Tunables (#590): every threshold a cited record names is a preference whose defa
 ## Evidence
 The completion reply cites, for its row: the transitions taken in order with each input (from `disposed` and the
 record), the records written (the row, the plan and its revisions, the record's entry count, the trace), and every
-accreted row with its mode. A step run through the runner names its event id.
+accreted row with its mode. A step run through the runner names its event id. Each ruling the reply names on a decision record — a departure
+line (`dyad/dmc/plan-departure.jsonld`, an internal realization among them) or a class line, a record's outcome given
+to a case — is a candidate for the row's decision log (Rule-16 Store), written with the `Y` that covers the work and
+made a precedent only by a later precedent-`Y` (Rule-3, What a `Y` binds; #644).

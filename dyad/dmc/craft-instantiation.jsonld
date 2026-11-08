@@ -15,11 +15,11 @@
   "description": "Applies the craft-instantiation criteria D1, D2, D4, D5 and D6 to decide between a new craft in this system and a new dyad system.",
   "dyad:decides": "Does a new body of work become a new craft in this dyad system or a new dyad system?",
   "dyad:inputs": [
-    "D1 classification boundary",
-    "D2 disposer identity",
-    "D4 ledger coupling",
-    "D5 lifecycle",
-    "D6 zone fit (Rule-1)"
+    "D1 classification boundary: fires when the work holds sensitive data (PII, financial, credentials) while this system is non-sensitive, or the reverse",
+    "D2 disposer identity: fires when a different operator, or the same operator acting for a distinct party, must dispose",
+    "D4 ledger coupling: fires when its d-works would rarely refs this ledger's rows and its audits would sweep its own Tended Rules only",
+    "D5 lifecycle: fires when it has its own beginning and end, or its own retention or deletion requirement, distinct from the host's",
+    "D6 zone fit (Rule-1): fires when it would need a zone beyond agent, workstation, preferences, infra and craft"
   ],
   "hasDefinedTerm": [
     {
@@ -33,7 +33,7 @@
       "@type": "DefinedTerm",
       "termCode": "new-system",
       "name": "new dyad system",
-      "dyad:when": "any one of D1, D2, D4, D5 or D6 fires",
+      "dyad:when": "any one of D1, D2, D4, D5 or D6 fires, each by the condition its input states; D3' never fires, deciding only the craft's source",
       "dyad:then": "the plan advises a new dyad system, quoting the criterion, and stops at the plan-Y; the Agent never instantiates either on its own"
     }
   ],
