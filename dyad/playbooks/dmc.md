@@ -37,8 +37,10 @@ no run-book: its one mechanical step is the guard, which every push already runs
    compares case-insensitively, whitespace collapsed), and `dyad:precedence` and `dyad:default` are written only
    where the home states them.
 4. **Say how it is judged.** `dyad:kind` is `mechanical` when code decides, `inference` when the Agent reads
-   and judges, `declared` when a party states it; `dyad:implementation` names the module that decides, or is
-   null, with core code or a run-book named in `dyad:alsoIn` instead.
+   and judges, `declared` when a party states it, and `precedent` when its ratified precedents label it by resemblance
+   over its decisive inputs, carrying its `dyad:precedents` (which judgement may be judged so: `dmc:judgement-complexity`, #642);
+   `dyad:implementation` names the module that decides, or is null, with core code or a run-book named in
+   `dyad:alsoIn` instead.
 5. **Keep it still.** No date, version, commit sha or address outside the path fields and `dyad:owner`: the
    record states the criterion as it stands, and its history is git's.
 6. **Check.** `dyad check --guards` prints the `agent/dmc` line; a failing record names its file and its fault,

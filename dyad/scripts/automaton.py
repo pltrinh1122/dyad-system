@@ -884,7 +884,36 @@ def sweep_audit(wt: Path) -> list[str]:
     import time
     t = time.monotonic()
     out = dyadlib.load_module(HERE / "audits.py", "audits").audit(wt)
-    return out + [f"reading: audit: {time.monotonic() - t:.1f} s"]
+    return out + precedent_lines(wt) + [f"reading: audit: {time.monotonic() - t:.1f} s"]
+
+def precedent_lines(wt: Path) -> list[str]:
+    """#642 revision 3 (R3): each `precedent` record's set re-measured on the swept tree, leave-one-out at the record's
+    default threshold and margin (`similar.loo_agreement`). One `reading:` line per record; a `finding:` line when it
+    falls below its bar (the record is `fallen`: the dmc guard warns too, until it returns to inference or its set is
+    rebuilt). The audit sample of recent mechanical applications reads as none drawn: no store holds them (each is cited
+    in its reply, R7). Nothing here raises into the sweep."""
+    import json
+    sim = dyadlib.load_module(HERE / "similar.py", "similar")
+    dmc = dyadlib.load_guard("agent", "dmc")
+    out, pkg = [], wt / "dyad"
+    for _, p, base in dmc.records(wt, pkg):
+        try:
+            d = json.loads(p.read_text())
+            if (d.get("dyad:judgedBy") or {}).get("dyad:kind") != dmc.PRECEDENT:
+                continue
+            c = d["dyad:precedents"]
+            st, path, _ = dmc.resolve(c["dyad:set"], base, wt, pkg)
+            defaults = {t.get("dyad:preference"): t.get("dyad:defaultValue") for t in d.get("dyad:tunables") or []}
+            loo = sim.loo_agreement(sim.load(path), float(defaults[c["dyad:threshold"]]), float(defaults[c["dyad:margin"]]))
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
+            out.append(f"reading: precedent {p.stem}: not re-measured ({type(e).__name__})")
+            continue
+        out.append(f"reading: precedent {p.stem}: agreement {loo['agreement']:.2f} ({loo['reproduced']} of {loo['n']}, "
+                   f"{loo['abstained']} abstained), bar {c['dyad:bar']}; audit sample: none drawn (no store records "
+                   f"mechanical applications; each is cited in its reply)")
+        if loo["agreement"] < c["dyad:bar"]:
+            out.append(f"finding: precedent {p.stem} fallen: agreement {loo['agreement']:.2f} below its bar {c['dyad:bar']}")
+    return out
 
 def new_events(wt: Path) -> tuple[str | None, dict[str, str], list[str]]:
     """(store, {path: appended text}, notes) for the run-book event files the sweep's runs appended to in the swept

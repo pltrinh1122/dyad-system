@@ -46,6 +46,7 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("dwork", "land"): ["dwork", "land", "a.md", "b.md", "-m", "ledger: x", "--mirror", "m"],
     ("dwork", "batch"): ["dwork", "batch", "-", "--land"],
     ("dwork", "intent"): ["dwork", "intent", "615"],
+    ("playbook", "profile"): ["playbook", "profile", "d-work"],
     ("dwork", "trace"): ["dwork", "trace", "592", "--transcript", "t.jsonl", "--out", "--said-file", "f"],
     ("plan", "check"): ["plan", "check", "589"],
     ("session", None): ["session"],

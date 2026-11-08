@@ -122,7 +122,7 @@ class DmcGuardTests(unittest.TestCase):
         self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": "declared", "dyad:implementation": "guards/x.py"}}))
         self.assertEqual(self.t.check(), [])
     def test_null_implementation_allowed(self):
-        for k in g.KINDS:
+        for k in (k for k in g.KINDS if k != g.PRECEDENT):                 # a precedent record needs its set (PrecedentTests)
             self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": k, "dyad:implementation": None}}))
             self.assertEqual(self.t.check(), [], k)
 
@@ -220,6 +220,104 @@ class DmcGuardTests(unittest.TestCase):
         self.t.put(c, record("cabinet", **{"dyad:tunables": [self.tun()]}))
         self.fails("dyad:tunables is the core's only")
 
+
+
+class PrecedentTests(unittest.TestCase):
+    """#642 revision 2: a record of kind `precedent` carries `dyad:precedents`: its frozen set of ratified cases exists,
+    its digest matches, its labels are the record's outcome names, its threshold and margin are the record's tunables, its
+    agreement meets its bar, and no outcome's consequence is a ratification event or a destructive act; it warns when
+    the owner Rule moved after the set's base; no other kind carries one."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None); self.t = Tree()
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts")); import similar
+        (self.t.pkg / "dmc" / "sets").mkdir()
+        self.sha = similar.freeze([("read-only", "it changes nothing, a status read", {}, 1), ("reversible action", "it can be undone", {}, 2)],
+                                  self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, "nosuchbase", max_df=1.0)
+        (self.t.pkg / "templates").mkdir()
+        (self.t.pkg / "templates" / "PREFERENCES.md").write_text(
+            "| key | value | allowed | read by |\n|---|---|---|---|\n| sim-threshold | 0.2 | n | x |\n| sim-margin | 0.05 | n | x |\n")
+    def tearDown(self):
+        shutil.rmtree(self.t.root, ignore_errors=True)
+    def rec(self, **comp):
+        tun = lambda k, v: {"dyad:preference": k, "dyad:defaultValue": v, "dyad:allowed": "a number", "dyad:readBy": "rules/home.md"}
+        c = {"dyad:set": "dmc/sets/action-class.jsonl", "dyad:sha256": self.sha, "dyad:threshold": "sim-threshold",
+             "dyad:margin": "sim-margin", "dyad:agreement": 0.95, "dyad:bar": 0.0, "dyad:measured": "2026-11-08",
+             "dyad:kinds": {"the action": "prose"}} | comp
+        r = record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": "precedent", "dyad:implementation": None},
+                                    "dyad:tunables": [tun("sim-threshold", "0.2"), tun("sim-margin", "0.05")],
+                                    "dyad:precedents": c})
+        r["hasDefinedTerm"][1]["dyad:then"] = "listed for the reader"         # the fixture's own `plan-Y` is a ratification
+        return r
+    def bad(self, rec):
+        self.t.put(self.t.pkg, rec)
+        return [m for m in self.t.check() if not m.startswith("warning:")]
+
+    def test_a_well_formed_precedent_record_passes(self):
+        self.assertEqual(self.bad(self.rec()), [])
+
+    def test_each_precedent_defect_fails(self):
+        cases = {"no precedents": ({"dyad:precedents": None}, "carries dyad:precedents"),
+                 "missing key": ({"dyad:precedents": {"dyad:set": "dmc/sets/action-class.jsonl"}}, "lacks dyad:sha256"),
+                 "no set": ({"dyad:set": "dmc/sets/none.jsonl"}, "does not exist"),
+                 "digest": ({"dyad:sha256": "0" * 64}, "differs from the set's"),
+                 "threshold": ({"dyad:threshold": "nope"}, "names no preference"),
+                 "range": ({"dyad:bar": 1.5}, "numbers in [0, 1]"),
+                 "below bar": ({"dyad:agreement": 0.8, "dyad:bar": 0.9}, "below its bar"),
+                 "undeclared input": ({"dyad:kinds": {}}, "does not declare the input 'the action'"),
+                 "stray kind": ({"dyad:kinds": {"the action": "prose", "other": "prose"}}, "which is no input"),
+                 "bad kind": ({"dyad:kinds": {"the action": "fuzzy"}}, "not one of structured, prose, read"),
+                 "measured": ({"dyad:measured": "today"}, "dyad:measured is not")}
+        for label, (over, says) in cases.items():
+            r = self.rec()
+            if "dyad:precedents" in over:
+                r["dyad:precedents"] = over["dyad:precedents"]
+                if r["dyad:precedents"] is None:
+                    del r["dyad:precedents"]
+            else:
+                r["dyad:precedents"].update(over)
+            with self.subTest(label):
+                self.assertTrue(any(says in m for m in self.bad(r)), (label, self.t.check()))
+
+    def test_fields_must_be_structured_inputs(self):
+        import similar
+        sha = similar.freeze([("read-only", "it changes nothing, a status read", {"zone": "agent"}, 1),
+                              ("reversible action", "it can be undone", {}, 2)],
+                             self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, "nosuchbase", max_df=1.0)
+        self.assertTrue(any("are not inputs this record declares structured" in m for m in self.bad(self.rec(**{"dyad:sha256": sha}))))
+
+    def test_a_fallen_set_warns(self):
+        self.t.put(self.t.pkg, self.rec(**{"dyad:bar": 0.9}))           # stored 0.95 meets the bar; leave-one-out does not
+        msgs = self.t.check()
+        self.assertFalse([m for m in msgs if not m.startswith("warning:")], msgs)
+        self.assertTrue(any(m.startswith("warning:") and "fallen:" in m for m in msgs), msgs)
+
+    def test_labels_must_be_the_outcome_names(self):
+        r = self.rec(); r["hasDefinedTerm"][1]["name"] = "undoable"
+        self.assertTrue(any("are not the record's outcome names" in m for m in self.bad(r)))
+
+    def test_a_disposition_is_never_derived(self):
+        r = self.rec(); r["hasDefinedTerm"][1]["dyad:then"] = "the named merge may be executed"
+        self.assertTrue(any("never derived from precedent" in m for m in self.bad(r)))
+
+    def test_only_a_precedent_record_carries_precedents(self):
+        r = self.rec(); r["dyad:judgedBy"]["dyad:kind"] = "inference"
+        self.assertTrue(any("only a precedent record carries one" in m for m in self.bad(r)))
+
+    def test_a_moved_owner_rule_warns(self):
+        import subprocess as sp
+        env = {**os.environ, **dyadlib.git_env()}
+        git = lambda *a: sp.run(["git", "-C", str(self.t.root), "-c", "user.name=t", "-c", "user.email=t@t", *a],
+                                check=True, capture_output=True, text=True, env=env).stdout.strip()
+        rule = self.t.pkg / "rules" / "RULE-12-verifiable-code.md"; rule.write_text("# Rule-12\n")
+        git("init", "-q"); git("add", "-A"); git("commit", "-qm", "base"); base = git("rev-parse", "HEAD")
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts")); import similar
+        sha = similar.freeze([("read-only", "it changes nothing, a status read", {}, 1), ("reversible action", "it can be undone", {}, 2)],
+                             self.t.pkg / "dmc" / "sets" / "action-class.jsonl", {1, 2}, base, max_df=1.0)
+        r = self.rec(**{"dyad:sha256": sha}); r["dyad:owner"] = "Rule-12"
+        self.t.put(self.t.pkg, r)
+        self.assertFalse(any("moved after" in m for m in self.t.check()))
+        rule.write_text("# Rule-12, amended\n"); git("commit", "-qam", "amend Rule-12")
+        self.assertTrue(any(m.startswith("warning:") and "moved after the set's base" in m for m in self.t.check()))
 
 
 class MasterTests(unittest.TestCase):

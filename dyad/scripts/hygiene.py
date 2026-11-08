@@ -58,12 +58,13 @@ pre-push gate nor CI runs it (plan #565, Placement). Every line it returns is in
 import sys
 if sys.version_info < (3, 12):
     sys.exit("hygiene.py: Python 3.12+ required")
-import math, re, subprocess
-from collections import Counter
+import re, subprocess
 from pathlib import Path
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dyadlib
+import similar                       # #642: tokens, tfidf and cosine have one implementation, similar.py
+from similar import tokens, cosine   # noqa: F401 (re-exported: intent.py and groom.py read them through hygiene)
 
 # The operator-tunable thresholds (d-work #590): each a preference key, read at use time by `dyadlib.tunable`, whose
 # default has one home, its DMC record's `dyad:defaultValue` (dmc/backlog-hygiene.jsonld, dmc/work-in-flight.jsonld).
@@ -83,7 +84,6 @@ HYGIENE_MAX_DF = 0.20          # ranking: a token in more than this share of row
 PARENT = re.compile(r"\bparent #(\d+)")
 CITE = re.compile(r"\bd-work #(\d+)\b")
 ROW_REF = re.compile(r"\brow #(\d+)")          # the row an `inflight` line is about (#594: its cabinet's home is told)
-TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 INFLIGHT_W11_HOURS = {          # W11 (#587 F5): a phased entry in this phase longer than this; asked phases 24 h
     "planning": 72, "intent-asked": 24, "plan-ready": 72, "plan-asked": 24, "building": 72, "verifying": 72,
     "done-asked": 24, "landing": 72, "held": 72}
@@ -147,23 +147,10 @@ def cited_on_branches(repo: Path) -> dict[int, tuple[str, str]]:
     return out
 
 
-def tokens(text: str) -> list[str]:
-    return TOKEN.findall(text.lower())
-
-
 def tfidf(docs: dict) -> tuple[dict, dict]:
-    """({key: {token: weight}}, {key: norm}) of `docs` ({key: text}): TF-IDF with every token in more than
-    HYGIENE_MAX_DF of the documents dropped as boilerplate — the one weighting `ranking` and `intent.candidates` (#615) read."""
-    counts = {k: Counter(tokens(t)) for k, t in docs.items()}
-    n = max(len(counts), 1)
-    df = Counter(t for d in counts.values() for t in d)
-    idf = {t: math.log(n / c) for t, c in df.items() if c / n <= HYGIENE_MAX_DF}
-    vec = {k: {t: c * idf[t] for t, c in d.items() if t in idf} for k, d in counts.items()}
-    return vec, {k: math.sqrt(sum(v * v for v in w.values())) for k, w in vec.items()}
-
-
-def cosine(vec: dict, norm: dict, a, b) -> float:
-    return (sum(v * vec[b].get(t, 0.0) for t, v in vec[a].items()) / (norm[a] * norm[b])) if norm[a] and norm[b] else 0.0
+    """({key: {token: weight}}, {key: norm}) of `docs` ({key: text}): `similar.tfidf` with HYGIENE_MAX_DF, the one
+    weighting `ranking` and `intent.candidates` (#615) read; the implementation is `similar.py`'s (#642)."""
+    return similar.tfidf(docs, HYGIENE_MAX_DF)
 
 
 def ranking(rows, texts: dict[int, str], backlog: list, root: Path | None = None) -> list[tuple[float, int, int]]:

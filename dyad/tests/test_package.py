@@ -188,7 +188,7 @@ class PackageTests(livetest.LiveCase):
                             "dyad.tests.test_playbooks"], capture_output=True, text=True,
                            env={k: v for k, v in os.environ.items() if k != "DYAD_NO_NESTED_TESTS"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 30 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 4 (#223; #619 moved the survey test to test_audits) + the d-work play-book's 6 (#309) + the port play-book's 3 (#353) + the release play-book's 4 (#493) + the backlog-groom play-book's 5 (#625)
+        self.assertIn("[Rule-12] dyad.tests.test_playbooks: Ran 33 tests OK", r.stdout)   # 4 + the d-work trace play-book's 4 (#213) + the audit play-book's 4 (#223; #619 moved the survey test to test_audits) + the d-work play-book's 6 (#309) + the port play-book's 3 (#353) + the release play-book's 4 (#493) + the backlog-groom play-book's 5 (#625) + the play-book-optimize play-book's 3 (#642)
         # the target only, never the whole root: `cmd_tests` prints one `[Rule-12] … Ran` line for one
         # dotted target, where a rootful run prints one per test root (six as this repo stands). #186
         # replaced `assertNotIn("Ran 479", …)`: 479 was a whole-root total from an older tree, and the

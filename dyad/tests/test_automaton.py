@@ -1335,5 +1335,28 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(dyadlib.check_invariants(am), len(am.INVARIANTS) + len(am.TREE_INVARIANTS))
 
 
+class PrecedentLinesTests(unittest.TestCase):
+    """#642 revision 3 (R3): sweep_audit re-measures each precedent record's set leave-one-out and reports a fallen one."""
+    def test_a_precedent_record_is_re_measured_and_fallen_is_a_finding(self):
+        import shutil
+        sim = dyadlib.load_module(PKG / "scripts" / "similar.py", "similar")
+        root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, root, True)
+        pkg = root / "dyad"; (pkg / "dmc").mkdir(parents=True); (pkg / "rules").mkdir()
+        (pkg / "dmc" / "context.jsonld").write_text(json.dumps({"@context": ["https://schema.org", {"dyad": "urn:dyad:term:"}]}))
+        sim.freeze([("a", "alpha beta gamma", {}, 1), ("a", "alpha beta delta", {}, 2), ("b", "omega psi chi", {}, 3)],
+                   pkg / "dmc" / "s.jsonl", {1, 2, 3}, "base", max_df=1.0)
+        tun = lambda k, v: {"dyad:preference": k, "dyad:defaultValue": v}
+        rec = {"identifier": "p", "dyad:judgedBy": {"dyad:kind": "precedent"},
+               "dyad:tunables": [tun("t", "0.0"), tun("m", "0.0")],
+               "dyad:precedents": {"dyad:set": "dmc/s.jsonl", "dyad:threshold": "t", "dyad:margin": "m", "dyad:bar": 0.5}}
+        (pkg / "dmc" / "p.jsonld").write_text(json.dumps(rec))
+        os.environ.pop("DYAD_INSTANCE", None)
+        lines = am.precedent_lines(root)
+        self.assertTrue(lines[0].startswith("reading: precedent p: agreement 0.67 (2 of 3, 1 abstained), bar 0.5"), lines)
+        self.assertEqual(len(lines), 1)                                      # 0.67 meets 0.5: not fallen
+        rec["dyad:precedents"]["dyad:bar"] = 0.9; (pkg / "dmc" / "p.jsonld").write_text(json.dumps(rec))
+        self.assertEqual(am.precedent_lines(root)[1], "finding: precedent p fallen: agreement 0.67 below its bar 0.9")
+
+
 if __name__ == "__main__":
     unittest.main()

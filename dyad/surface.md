@@ -53,6 +53,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--slug` (once, on a row that holds none and is not terminal, #622), `--check`, `--land`, `--mirror` (`planned` prints the plan check, #592) | frozen |
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork intent <id>` | — (read-only: the rows of any state and the surface items nearest the row's prompts, ten each, no threshold, #615) | frozen |
+| `dyad playbook profile <name>` | — (read-only: a play-book's steps with their words, `dmc:` citations and commands, its cited records' words and kind, the run total, and the median trace seconds of rows whose plan names it, #642) | frozen |
 | `dyad dwork list` | `--state`, `--craft` | frozen |
 | `dyad dwork land <path>...` | `-m`, `--mirror` | frozen |
 | `dyad dwork batch <file>\|-` | `--land`, `--mirror` | frozen |
@@ -235,6 +236,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | install-refusal | frozen |
 | intake-shape | frozen |
 | intent-reading | frozen |
+| judgement-complexity | frozen |
 | label-case | frozen |
 | mandate-accretable | frozen |
 | manifest-token | frozen |

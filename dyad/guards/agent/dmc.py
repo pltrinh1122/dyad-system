@@ -9,7 +9,7 @@ an `@context` other than the core context's; an `@type` lacking `DefinedTermSet`
 an `@id` other than `urn:dyad:dmc:<container>/<identifier>`, an `identifier` other than the file stem, an
 `isPartOf` other than the container's urn; `dyad:inputs` not a non-empty list of strings; fewer than two
 outcomes, an outcome lacking `@type DefinedTerm` or a non-empty `termCode`/`name`/`dyad:when`/`dyad:then`, a
-termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared or whose
+termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared|precedent or whose
 `dyad:implementation` is neither null nor an existing path; a `dyad:home` or `dyad:alsoIn` path that does not
 exist; an outcome name absent from the home file (case-insensitive, whitespace runs collapsed), for a record
 homed in a Rule, a craft rule or any other non-procedure file; a date,
@@ -31,7 +31,7 @@ Inference, stated: whether a criterion's outcomes are right, whether its home st
 import sys
 if sys.version_info < (3, 12):
     sys.exit("dmc.py: Python 3.12+ required")
-import json, os, re
+import json, os, re, subprocess
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -42,18 +42,25 @@ CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative)
 NAME, OWNER = "decision-making criterion", "Rule-12"
 FIELDS = ("@context", "@id", "@type", "identifier", "name", "description", "dyad:decides", "dyad:inputs",
           "hasDefinedTerm", "dyad:precedence", "dyad:default", "dyad:tunables", "dyad:judgedBy", "isPartOf", "dyad:home",
-          "dyad:alsoIn", "dyad:owner")                                   # every key of a record, schema.md order
-OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:tunables", "dyad:alsoIn")
+          "dyad:alsoIn", "dyad:precedents", "dyad:owner")               # every key of a record, schema.md order
+OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:tunables", "dyad:alsoIn", "dyad:precedents")
 REQUIRED = tuple(f for f in FIELDS if f not in OPTIONAL)
 TYPES = ("DefinedTermSet", "dyad:DecisionCriterion")
 OUTCOME_KEYS = ("termCode", "name", "dyad:when", "dyad:then")
-KINDS = ("mechanical", "inference", "declared")
+KINDS = ("mechanical", "inference", "declared", "precedent")   # precedent: derived from ratified cases (#642 revision 2)
+PRECEDENT = "precedent"
+PRECEDENT_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "dyad:agreement", "dyad:bar",
+                  "dyad:measured", "dyad:kinds")   # #642 (schema.md; the base is the set header's, pinned by the sha256)
+INPUT_KINDS = ("structured", "prose", "read")      # revision 3: how each decisive input is compared, declared per input
+SHA256 = re.compile(r"[0-9a-f]{64}")
+RATIFYING = re.compile(r"\b(ratif\w*|dispos\w*|plan-Y|done-Y|merges?|merged|releases?|released|destructive|archiv\w*)\b", re.I)
+                                                    # a consequence a precedent outcome may never carry (#642 Q7)
 PATH_KEYS = ("dyad:home", "dyad:alsoIn", "dyad:implementation")   # path-valued: exempt from the forbidden scan
 TUNABLE_KEYS = ("dyad:preference", "dyad:defaultValue", "dyad:allowed", "dyad:readBy")   # one tunable (#590)
 TUNABLE_PATH = "dyad:readBy"                                       # path-valued, inside a tunable
 PREF_KEY = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")            # a preference key's shape
 TEMPLATE = ("templates", "PREFERENCES.md")                         # the core's preference template, under the package
-FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH)
+FORBIDDEN_EXEMPT = PATH_KEYS + ("dyad:owner", TUNABLE_PATH, "dyad:set", "dyad:measured")
 CONTEXT = ["https://schema.org", {"dyad": "urn:dyad:term:"}]   # what dyad/dmc/context.jsonld holds
 CONTEXT_FILE, STORE, CORE_CONTAINER, INSTANCE_CONTAINER = "context.jsonld", "dmc", "dyad-operator", "instance"
 MASTER_DIRS = ("playbooks", "runbooks")   # #626 C0: a record homed in a file of one of these is the decision's master
@@ -69,7 +76,10 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md: pure, enforced at import
     ("owner-required", lambda: "dyad:owner" in REQUIRED and "dyad:owner" in FORBIDDEN_EXEMPT),
     ("tunables-optional", lambda: "dyad:tunables" in OPTIONAL and TUNABLE_PATH in TUNABLE_KEYS and TUNABLE_PATH in FORBIDDEN_EXEMPT),
     ("pref-key-shape", lambda: bool(PREF_KEY.fullmatch("hygiene-stale-days")) and not PREF_KEY.fullmatch("Hygiene_days")),
-    ("kinds-are-three", lambda: KINDS == ("mechanical", "inference", "declared")),
+    ("kinds-are-four", lambda: KINDS == ("mechanical", "inference", "declared", "precedent") and PRECEDENT in KINDS),
+    ("precedents-optional", lambda: "dyad:precedents" in OPTIONAL and len(set(PRECEDENT_KEYS)) == len(PRECEDENT_KEYS)),
+    ("ratifying-catches-a-merge-and-spares-a-finding", lambda: bool(RATIFYING.search("the named merge may be executed"))
+                                                                and not RATIFYING.search("listed as a finding for the home")),
     ("context-is-schema-org-plus-dyad", lambda: CONTEXT[0] == "https://schema.org" and CONTEXT[1] == {"dyad": "urn:dyad:term:"}),
     ("forbidden-patterns-catch-their-kind", lambda: [bool(r.search(s)) for (_, r), s in zip(FORBIDDEN, (
         "on 2026-01-02", "at v1.2.3", "a" * 40, "x@y.org"))] == [True] * 4),
@@ -195,6 +205,111 @@ def tunable_problems(t, base: Path, root: Path, pkg: Path, bad, warn) -> list[st
         bad(f"dyad:tunables names preference {k!r} twice")
     return keys
 
+def owner_paths(d: dict, root: Path, pkg: Path) -> list[str]:
+    """The repo paths of the Rule a record's `dyad:owner` names (`Rule-<n>` -> `dyad/rules/RULE-<n>-*.md`) and of its
+    home: what a precedent set is rebuilt after when they move (#642 Q5)."""
+    out = []
+    m = re.fullmatch(r"Rule-(\d+)", str(d.get("dyad:owner", "")).strip())
+    if m:
+        out += [p.relative_to(root).as_posix() for p in sorted((pkg / "rules").glob(f"RULE-{m.group(1)}-*.md"))
+                if p.is_relative_to(root)]
+    return out
+
+def moved_since(root: Path, base: str, paths: list[str]) -> bool:
+    """True when a commit after `base` touches one of `paths` (`git log base..HEAD`); False when base does not resolve."""
+    if not paths:
+        return False
+    r = subprocess.run(["git", "log", "--format=%h", f"{base}..HEAD", "--", *paths], cwd=root, capture_output=True,
+                       text=True, env=dyadlib.git_env())
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: Path, bad, warn) -> None:
+    """#642 revision 2: a `precedent` record carries `dyad:precedents` (PRECEDENT_KEYS), and only such a record does. It
+    fails when the set's file is missing or no precedent set (`similar.load`), its sha256 differs, its labels are not the
+    record's outcome names, the threshold or margin names no preference of the record's `dyad:tunables`, the agreement
+    or bar is no number in [0, 1], the agreement is below the bar, or an outcome's `dyad:then` names a ratification
+    event or a destructive act (Q7: a precedent settles agent-side calls only); and (revision 3) when `dyad:kinds` does not
+    declare every input exactly as structured, prose or read, the set's fields are not structured inputs, or
+    `dyad:measured` is no date. It warns when the owner Rule moved after the set's base commit (Q5: the set is rebuilt),
+    and `fallen` when the set's leave-one-out agreement at the record's default threshold and margin is below its bar
+    (R3: the re-measure)."""
+    c = d.get("dyad:precedents")
+    if kind != PRECEDENT:
+        bad(f"dyad:precedents on a record of kind {kind!r}: only a precedent record carries one"); return
+    if not isinstance(c, dict):
+        bad("a precedent record carries dyad:precedents, an object of " + ", ".join(PRECEDENT_KEYS)); return
+    missing = [k for k in PRECEDENT_KEYS if k not in c]
+    if missing:
+        bad(f"dyad:precedents lacks {', '.join(missing)}"); return
+    names = {o.get("name") for o in terms if isinstance(o, dict)}
+    for o in terms:
+        if isinstance(o, dict) and isinstance(o.get("dyad:then"), str) and (m := RATIFYING.search(o["dyad:then"])):
+            bad(f"precedent outcome {o.get('termCode')!r} names {m.group(0)!r} in its consequence: a ratification event "
+                f"or a destructive act is never derived from precedent (#642 Q7)")
+    st, path, why = resolve(c["dyad:set"], base, root, pkg)
+    cset_ok = None
+    if st != "ok":
+        (warn if st == "warn" else bad)(f"dyad:precedents dyad:set {c['dyad:set']!r} {why}")
+    else:
+        import similar
+        try:
+            cset = similar.load(path)
+        except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
+            bad(f"dyad:precedents dyad:set {c['dyad:set']!r}: {e}"); cset = None
+        cset_ok = cset
+        if cset is not None:
+            if not (isinstance(c["dyad:sha256"], str) and SHA256.fullmatch(c["dyad:sha256"])):
+                bad("dyad:precedents dyad:sha256 is not 64 hex")
+            elif cset["sha256"] != c["dyad:sha256"]:
+                bad(f"dyad:precedents dyad:sha256 differs from the set's ({cset['sha256'][:12]}…): the set changed "
+                    f"since it was measured")
+            if similar.labels(cset) != names:
+                bad(f"the precedent set's labels {sorted(similar.labels(cset))} are not the record's outcome names {sorted(names)}")
+            if moved_since(root, cset["base"], owner_paths(d, root, pkg)):
+                warn(f"the owner Rule of this precedent record moved after the set's base {str(cset['base'])[:12]}: "
+                     f"rebuild the set (#642 Q5)")
+    keys = tunable_keys(d)
+    for k in ("dyad:threshold", "dyad:margin"):
+        if c[k] not in keys:
+            bad(f"dyad:precedents {k} {c[k]!r} names no preference of this record's dyad:tunables")
+    kinds, inputs = c.get("dyad:kinds"), d.get("dyad:inputs") if isinstance(d.get("dyad:inputs"), list) else []
+    if not isinstance(kinds, dict):
+        bad("dyad:precedents dyad:kinds is not an object {input: structured|prose|read}")
+    else:
+        for i in inputs:
+            if i not in kinds:
+                bad(f"dyad:precedents dyad:kinds does not declare the input {i!r} (structured, prose or read; revision 3)")
+        for k, v in kinds.items():
+            if k not in inputs:
+                bad(f"dyad:precedents dyad:kinds names {k!r}, which is no input of this record")
+            elif v not in INPUT_KINDS:
+                bad(f"dyad:precedents dyad:kinds {k!r} is {v!r}, not one of {', '.join(INPUT_KINDS)}")
+    if not (isinstance(c.get("dyad:measured"), str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", c["dyad:measured"])):
+        bad("dyad:precedents dyad:measured is not the agreement's UTC date, YYYY-MM-DD")
+    if cset_ok is not None and isinstance(kinds, dict):
+        structured = {k for k, v in kinds.items() if v == "structured"}
+        stray = sorted({f for fs in cset_ok["fields"] for f in fs} - structured)
+        if stray:
+            bad(f"the precedent set's fields {stray} are not inputs this record declares structured")
+        defaults = {t.get("dyad:preference"): t.get("dyad:defaultValue") for t in d.get("dyad:tunables") or [] if isinstance(t, dict)}
+        try:
+            th, mg = float(defaults.get(c["dyad:threshold"])), float(defaults.get(c["dyad:margin"]))
+        except (TypeError, ValueError):
+            th = mg = None
+        bar = c.get("dyad:bar")
+        if th is not None and isinstance(bar, (int, float)):
+            import similar
+            loo = similar.loo_agreement(cset_ok, th, mg)
+            if loo["agreement"] < bar:
+                warn(f"fallen: the set's leave-one-out agreement {loo['agreement']:.2f} ({loo['reproduced']} of "
+                     f"{loo['n']}) is below its bar {bar}; return the record to inference or rebuild its set (#642 R3)")
+    nums = {k: c[k] for k in ("dyad:agreement", "dyad:bar")}
+    if not all(isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1 for v in nums.values()):
+        bad("dyad:precedents dyad:agreement and dyad:bar are numbers in [0, 1]")
+    elif nums["dyad:agreement"] < nums["dyad:bar"]:
+        bad(f"dyad:precedents agreement {nums['dyad:agreement']} is below its bar {nums['dyad:bar']}: the decision "
+            f"returns to inference (#642 A4)")
+
 def template_keys(pkg: Path) -> set[str] | None:
     """The keys of the core's preference template, or None when it is absent."""
     p = pkg.joinpath(*TEMPLATE)
@@ -268,6 +383,9 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 st, _, why = resolve(jb["dyad:implementation"], base, root, pkg)
                 if st != "ok":
                     (warn if st == "warn" else bad)(f"dyad:implementation {jb['dyad:implementation']!r} {why}")
+    kind = jb.get("dyad:kind") if isinstance(jb, dict) else None
+    if kind == PRECEDENT or "dyad:precedents" in d:
+        precedent_problems(d, kind, terms if isinstance(terms, list) else [], base, root, pkg, bad, warn)
     if "dyad:tunables" in d:
         if container != CORE_CONTAINER:   # one home for a default, the core's: dyadlib.tunable reads no other record (#590)
             bad("dyad:tunables is the core's only (dyad/dmc/): dyadlib.tunable reads no craft or instance record (#590)")
