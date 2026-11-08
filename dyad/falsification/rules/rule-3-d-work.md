@@ -1437,3 +1437,61 @@ re-planning. **3–16**: `refs: parent #<id>` and the ceiling count are the stor
 script or run-book changes. **3–20**: the record's paths resolve; no reference kind is added. Coherent, orthogonal.
 
 Disposition: see ledger #623.
+
+## Amendment — d-work #643 (2026-11-08: internal realization as execution detail)
+Claim (plan #643): Rule-3 Plan's execution-detail bullet, and the `execution detail` outcome of
+`dyad/dmc/plan-departure.jsonld`, admit an **internal realization**, a change whose effect stays inside the PR, in one
+of three forms. **Placement**: a file's path differs while the move stays within one zone and one craft root, the content
+is byte-identical, the old path never landed on `main`, no file outside the PR refers to the old path, the path is in no
+released craft's tree, and the plan did not name the path as a requirement. **Implied means**: the plan's text names the
+effect, and the means adds no public surface. **Compatible extension**: an optional parameter of an internal function,
+defaulting to the old behaviour, with no caller changed and a test showing it. Public surface is a `dyadlib.CLI` row, a
+`dyad/surface.md` row, a path in a released craft's tree, or Rule or preference text; each use is a departure line in the
+completion evidence. Origin: #626 and #640 each moved files and were ruled execution detail, which the record's words did
+not admit; a blind precedent test then read two #619 cases (`audits.py level`, ratified as planned, and `code_digest`'s
+`repo=`, ratified as execution detail) as new plans too.
+
+Moves — the home's read-only falsification of the record's wording (W1–W6):
+
+| id | attack | result | survivor |
+|---|---|---|---|
+| W1 | The list is exhaustive: only the order of steps, the split or stacking of PRs, the unit executing a step within its charter, or the tooling route may differ; a path is not on it | confirmed | a move fails "only … differs", and precedence gives new plan, so placement must be named to be admitted |
+| W2 | A path is part of the plan's files touched and of the tree it ends with | confirmed | a move changes the stated mutation and its end state, so placement is admitted only where nothing outside the PR sees the path |
+| W3 | "Tooling route" stretches to where code lives | refuted reading | tooling route is how a step is executed (which command, tool or route), not where a file sits |
+| W4 | A path is a contract once referenced: resolvers, a craft's archive, installs; moving a path in a released craft's tree breaks installs | confirmed | any allowance excludes a path that ever landed on `main`, one a file outside the PR refers to, and one in a released craft's tree |
+| W5 | #626 moved four records from the agent zone to the workstation zone, changing which zone, PR and charter own them | confirmed | a zone change, or a move across craft roots, is never placement |
+| W6 | A new `Y` for every forced move costs the operator a question each time (#623's target) | survives, scoped | the old wording's cost, which this amendment reduces for moves inside the fence alone |
+
+The two further classes — the plan's own falsification (I1, I2, C1, C2, U1):
+
+| id | attack | result | survivor |
+|---|---|---|---|
+| I1 | "Implied means" admits any new artifact a builder claims the plan required, a new verb included | confirmed | admitted only when the plan's text names the effect the means achieves and the means adds no public surface: no `dyadlib.CLI` row, no `dyad/surface.md` row, no path in a released craft's tree, no Rule or preference text |
+| I2 | A new subcommand of an internal script (`audits.py level`) is still a way in | survives, scoped | a script's own argv that no `dyadlib.CLI` row or `surface.md` row lists is internal; #619's case passes under I1 |
+| C1 | "Compatible extension" covers a new CLI flag, which installing systems see | confirmed | admitted only for an optional parameter of an internal function, defaulting to the old behaviour, with no caller changed; a CLI flag, a record field or a file format is public surface, and so a new plan |
+| C2 | An optional parameter can still change behaviour through its default | survives | the default reproduces the old behaviour, and a test the plan lists, or one added, shows it |
+| U1 | Three new classes widen the plan-`Y`'s cover | survives, scoped | all three share one fence, no effect outside the PR: no public surface, nothing landed at an old path, nothing released; past it, a change stays a new plan |
+
+**Survivor (as implemented).** One clause, internal realization, in three forms — placement with its six conditions,
+implied means, compatible extension — fenced by public surface and reported as a departure line, added to the
+execution-detail bullet and to the record's `execution detail` condition. No outcome name changes, so the record's
+index check reads the Rule as before.
+
+**Verdicts on the precedents.** #619 case 3 (`audits.py level`) and case 4 (`code_digest(repo=)`) pass as execution
+detail under internal realization; case 3's label `as planned` is read as execution detail, a relabel, not an overrule.
+#640's `tidy.py` move, from `crafts/cabinet/guards/` to `crafts/cabinet/scripts/`, was a new plan under the old wording and
+passes as placement under this one. #626's records move, a zone change, was a new plan under any reading and stays a
+misruling. None is reopened: their Dones stand, and the two misrulings are incidents.
+
+**Rule-6.** No term is added: "internal realization", "placement", "implied means" and "compatible extension" are
+prose inside the bullet, and "public surface" is defined in the same sentence; the record's outcome names are its own.
+**Pairwise (Rule-5).** **3–1**: placement's first condition reads the zone table and the craft root; it never moves a
+path across a zone, so containment is untouched and a zone move stays a new plan (W5). **3–11**: the released-craft
+condition reads each craft's tags and tree; nothing in a released craft's tree may move, and a release stays Rule-11's
+question. **3–15**: "the plan did not name it as a requirement" reads Rule-15 phase 1's stated requirements; a plan that
+names a path makes it a requirement. **3–20**: "no file outside the PR refers to it" reads references as they stand; the
+register gains no kind, and a moved path no reference resolves to is the condition, not a new check. The other pairs
+are as amendment #555 left them, since the bullet's existing conditions and its Rule-2 bound are unchanged. Coherent,
+orthogonal.
+
+Disposition: see ledger #643.
