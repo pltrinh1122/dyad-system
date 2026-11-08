@@ -69,7 +69,8 @@ dyad/bin/dyad precedent score "$CASES" "$ANSWERS_CHEAP" "$ANSWERS_DEFAULT" --kep
 `dyad precedent gate`: `dmc:precedent-admission` over each kept case — the structured candidates appended to the kept
 file — judged as if the precedent-`Y` had already named it; the admitted cases written to `--out` as `--decisions` input,
 every other case printed with the record's outcome. Run before the question, so the question lists only cases admission
-admits:
+admits. It does not see a ruling the log already holds under another id, so the kept file holds one case id per ruling
+(the play-book's prose-cases step):
 ```dyad-cmd
 name: gate
 class: read-only

@@ -35,13 +35,14 @@ In order, each citing its criterion:
    - `row`: the row whose plan-`Y` or Done-`Y` covered the ruling. A case no `Y` covered is not built.
    - `record`: the record's bare id (`changelog-actor`), never craft-prefixed (`sysadmin/changelog-actor`); a prefixed id names no record, and the `prompt` step refuses the case.
    - Cap: at most 12 cases per record, the most recent first (#645 F1).
+   - One case id per ruling: a ruling the decision log or step 2's structured candidates already name, under any id, is dropped here, since the gate admits a line whose ruling the log holds under another id (the dry run: 15 admitted, 9 of them repeats).
 4. **readers** — the run-book's `prompt` step builds the blind prompt from the case file. It holds each record's question, outcomes, precedence and default, and each case's id and facts, never a label.
    - Two readers answer it blind, by role: `cheap` and `default`. Each instance names its own models, and the event records which.
    - The run-book's `score` step compares each answer with the label. A case is kept only when both readers match.
    - Each mismatch is arbitrated by the agent:
      - one reader missed: a limit of that model, and the case is set aside;
      - both missed: a gap in the record's context, and the agent proposes either refactoring the record or overruling the label, never both.
-5. **gate** — the run-book's `gate` step runs `dmc:precedent-admission` over the kept cases, the structured candidates among them. It judges each case as if the question had already admitted it. Only the admitted cases go on; every other case is listed refused, with the record's own outcome.
+5. **gate** — the run-book's `gate` step runs `dmc:precedent-admission` over the kept cases, the structured candidates among them, once each ruling stands under one case id (step 3). It judges each case as if the question had already admitted it. Only the admitted cases go on; every other case is listed refused, with the record's own outcome.
 6. **question** — the precedent-`Y` over the admitted cases alone (Question). The set-aside and refused lists stand beside it, never in it.
 7. **convert or wait** — once the precedent-`Y` is recorded, the run-book's `agreement` step measures each record's frozen set against that record's bar:
    - a record at the bar is proposed for conversion as a row of its own;
