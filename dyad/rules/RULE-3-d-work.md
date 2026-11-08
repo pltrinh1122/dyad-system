@@ -232,8 +232,11 @@ slug is presentation: a question binds the rows it names by their numbers, and e
 - Every reply ends, before its one `Y/N` line, with the **closing line** in the form the preference `awaiting-you`
   (`preferences-corpus/PREFERENCES.md`; absent, `on`) names. Under `on` it reads
   `Awaiting you: <n> <kind> (#id…), …`, or `Awaiting you: nothing.`, then `Coming: <n> <kind>`, each part shown only
-  when non-zero. **Awaiting you** counts the questions asked and not answered, by kind (intent, plan, Done, precedent,
-  release, destructive), a batch question once. **Coming** counts the pending queue. Under `off` it reports the queue's
+  when non-zero. **Awaiting you** counts the questions asked and not answered, a batch question once, by the kind
+  `dmc:disposition-request` gives each recorded question, in two groups printed d-work first —
+  `Awaiting you: d-work 1 plan (#647); merge 1 (PR #723).`: the d-work group (`intent`, `plan`, `done`, `retirement`,
+  `precedent`) and the merge group (`merge`, `release`, `destructive`); a recorded question of no listed form, `none`,
+  counts nothing and is warned. **Coming** counts the pending queue. Under `off` it reports the queue's
   counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
   records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
   Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
@@ -430,6 +433,7 @@ without the operator examining one (#626's zone move), so a ruling becomes a pre
 see the same record, amendment #644. Batch disposition gains the closing line, `Awaiting you` under the preference
 `awaiting-you`, 2026-11-08 (d-work #646): the line every reply ended with counted rows ready for a question not yet
 asked, which is the agent's work, and never a question asked and not answered, the one thing that waits on the operator;
-it was written by hand. It is now generated from the asks the board records; see the same record, amendment #646.
+it was written by hand. It is now generated from the asks the board records, each classed by the record
+`dmc:disposition-request` (plan revision 3), which also counts merge questions; see the same record, amendment #646.
 
 Set: System Requirements.
