@@ -1,6 +1,6 @@
 """naming.py (the syseng craft's guard, entity `name`; #162): data parsing, path globs, kind/mode/symbol/env/allow checks
 over fixtures, the table-data agreement, and the live repo passes with every kind and mode a table row."""
-import shutil, subprocess, sys, tempfile, unittest
+import re, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "dyad" / "scripts"))
 import dyadlib
@@ -333,3 +333,15 @@ class HostPathTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CraftTreeKindTests(unittest.TestCase):
+    """d-work #640: the live craft-tree kind admits a craft's play-books and run-books (the cabinet's session-tidy),
+    as it admits its rules and docs, and still refuses a directory no row names."""
+    def test_playbooks_and_runbooks_are_craft_children(self):
+        rules = (Path(naming.__file__).resolve().parent / "naming_rules.txt").read_text()
+        line = next(l for l in rules.splitlines() if l.startswith("kind: crafts/<craft>/ ="))
+        pattern = line.split(" = ", 2)[2].strip()
+        for ok in ("crafts/cabinet/playbooks/session-tidy.md", "crafts/cabinet/runbooks/session-tidy.md"):
+            self.assertTrue(re.fullmatch(pattern, ok), ok)
+        self.assertFalse(re.fullmatch(pattern, "crafts/cabinet/notes/x.md"))

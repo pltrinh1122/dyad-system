@@ -1,0 +1,82 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/session-tidy",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "session-tidy",
+  "name": "Session tidy",
+  "description": "The class of each open harness session in the census, toward the north star that the only sessions open are live seats and live desks, and the order in which the others are proposed to the operator.",
+  "dyad:decides": "For each open session: a live seat, a live desk, neglected, done, stale or never registered?",
+  "dyad:inputs": [
+    "the presence store: each file's seen time, rows and holder",
+    "the ledger rows each session holds, and their states",
+    "the instance's mandates table: which seats its charter rows name",
+    "the window: the attendance-window preference",
+    "the harness's list of sessions, transcribed by the cos from the operator's interface when a container sees only its own (a cloud kernel), else session reconcile's own reading"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "live-seat",
+      "name": "live seat",
+      "dyad:when": "a charter row of the mandates table names it, by its full unit name or by its <function>-<hp> form with the hp left open, and its presence is within the window",
+      "dyad:then": "kept"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "live-desk",
+      "name": "live desk",
+      "dyad:when": "a desk (<function>-<topic>-<hp>) holding an open or planned row, its presence within the window",
+      "dyad:then": "kept; closed by its secretary when its topic's rows close"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "neglected",
+      "name": "neglected",
+      "dyad:when": "it holds an open or planned row, its presence past the window",
+      "dyad:then": "proposed last, and only after the operator disposes each row it holds, since a planned row cannot be archived (Rule-16) and an archived session moves no row"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "done",
+      "name": "done",
+      "dyad:when": "it holds at least one row, every one done or archived, its presence past the window",
+      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stale",
+      "name": "stale",
+      "dyad:when": "it holds no row, its presence past the window",
+      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "never-registered",
+      "name": "never registered",
+      "dyad:when": "a harness session no presence file matches, by name or by holder; read only from a transcribed harness list or session reconcile's own harness reading",
+      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+    }
+  ],
+  "dyad:precedence": "never registered is decided first, from the harness side; then each presence file, as live seat, live desk, neglected, done, stale, the first that holds. Pass when every session is a live seat or a live desk; otherwise one line per class to the board and one batch proposal to the cos, in order: done, stale and never registered first; then a charter seat with nothing open, alone; then the neglected, after the operator disposes each row they hold. Archiving is the cos's hosting act, Rule-8 reversible with the undo unarchive_session, one change-log row per call; a terminal session the operator closes by hand.",
+  "dyad:default": "a session no class above describes (within the window, neither a charter seat nor a desk holding an open or planned row) is reported as unclassed and never proposed; it fails the pass, so the cos reads it",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "playbooks/session-tidy.md",
+  "dyad:alsoIn": [
+    "runbooks/session-tidy.md",
+    "dmc/unit-lifecycle.jsonld",
+    "rules/organization.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

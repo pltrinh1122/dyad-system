@@ -17,7 +17,7 @@ guard fails on a `kind:` whose pattern is not in this table, so the two cannot d
 |---|---|---|---|---|
 | `dyad/rules/RULE-<n>-<slug>.md` | an Agent Rule file | Rule-4 | `RULE-12-verifiable-code.md` | yes (`<n>` unique) |
 | `crafts/<craft>/rules/<slug>.md` | a Tended rule of a craft | Rule-11 (a craft's tree) | `crafts/syseng/rules/naming.md` | yes (kebab; `README.md` allowed) |
-| `crafts/<craft>/` (+ `VERSION`, `README.md`, `MANIFEST.md`, `rules/`, `vocabulary/CRAFT.md`, `templates/`, `guards/`, `tests/`, `falsification/`, `docs/`, `projectors/`, `scripts/`, `server/`) | a craft corpus tree | Rule-11 (the sysarch `distribution.md`) | `crafts/sysadmin/` | yes (allowed children) |
+| `crafts/<craft>/` (+ `VERSION`, `README.md`, `MANIFEST.md`, `rules/`, `vocabulary/CRAFT.md`, `templates/`, `guards/`, `tests/`, `falsification/`, `docs/`, `projectors/`, `scripts/`, `server/`, `dmc/`, `playbooks/`, `runbooks/`) | a craft corpus tree | Rule-11 (the sysarch `distribution.md`) | `crafts/sysadmin/` | yes (allowed children) |
 | `<instance>/d-work/rows/<id>.md` | a row file | Rule-16 | `rows/162.md` | yes (`<id>` digits, unique; `README.md` allowed) |
 | `<instance>/d-work/plans/<id>.md` | a plan file | Rule-15 | `plans/162.md` | yes |
 | `<instance>/d-work/sessions/<id>.md` | a session presence file | Rule-16 | `sessions/lan-git-install.md` | yes (`<id>` a path-safe session name, no digits-only requirement) |
