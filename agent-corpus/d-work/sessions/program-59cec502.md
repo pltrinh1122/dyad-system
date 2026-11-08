@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-08T18:03:20+00:00
+seen: 2026-11-08T18:03:58+00:00
 root: /home/user/dyad-system
 rows: 644
 files: agent-corpus/d-work/ agent-corpus/dmc/precedents/ dyad/dmc/precedent-admission.jsonld dyad/rules/RULE-16-concurrent-sessions.md dyad/rules/RULE-3-d-work.md dyad/tests/guards/agent/test_dmc.py
