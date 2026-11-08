@@ -6,7 +6,9 @@ dyad, stated as a question, its inputs and a finite set of outcomes — is writt
 that record lives. Every decision has one definition (Rule-6 by analogy), and where it lives depends on its home,
 the file the record names as `dyad:home`. A record homed in a **play-book or run-book** (`playbooks/` or `runbooks/`
 under its container's path base) is the **master**: its outcomes, conditions, consequences and precedence are defined
-in the record alone, and the home cites it once, as `dmc:<identifier>`, at the step that applies it (#626). A record
+in the record alone, and the home cites it once, as `dmc:<identifier>`, at the step that applies it (#626). Until
+the last child of #626 lands, a play-book or run-book becomes strict once it cites any `dmc:<id>`; before that it is
+checked as an index, with one warning (the schema's phase-in). A record
 homed in an Agent Rule, a craft rule or a preference is an **index**: that file defines the outcomes, and the record
 quotes their names from it. The shape is `dyad/dmc/schema.md`, the one context `dyad/dmc/context.jsonld`, and the check the
 guard `dyad/guards/agent/dmc.py` (entity `dmc`, run on every push through `package.py check --guards`). It has

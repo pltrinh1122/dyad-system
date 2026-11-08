@@ -69,6 +69,12 @@ Defined here and nowhere else; a craft uses them, never defines one.
   `dmc:<identifier>`. The home names every outcome of a master record at most partly: a home that holds every outcome
   `name` restates the decision. Any other record is an **index**, and its outcome names are quoted from the home file:
   each `name` appears in `dyad:home`, compared case-insensitively with every whitespace run collapsed to one space.
+- **Phase-in, per home** (#626). A play-book or run-book is **converted** once it cites any `dmc:<id>`. In a
+  converted home every record homed there is a master and both master checks fail. An unconverted home keeps the
+  index check, its outcome names quoted from it, plus one warning per home naming how many of its records are not yet
+  master. A `dmc:<id>` that names no record fails in every home. The phase-in ends with the last child of #626 to
+  land: its own commit removes the per-home gate, so every play-book- or run-book-homed record is a master and no home
+  stays lenient.
 - **No moving values.** Outside the path fields (`dyad:home`, `dyad:alsoIn`, `dyad:implementation`, a tunable's
   `dyad:readBy`) and
   `dyad:owner`, no value holds a date (`YYYY-MM-DD`), a version (`[v]N.N.N`), a 40-hex commit sha or an
@@ -78,8 +84,8 @@ Defined here and nowhere else; a craft uses them, never defines one.
 Every rule above, mechanically, per record: JSON parses; the required keys; `@context`; `@type`; `@id`,
 `identifier` and `isPartOf` against the container and file; the shapes of `dyad:inputs`,
 `hasDefinedTerm` and `dyad:judgedBy`; that every path exists inside the repo; for an index record, that every
-outcome name appears in the home file; for a master record, that its home cites `dmc:<identifier>` and does not
-hold every outcome name; that every `dmc:<id>` a play-book or run-book cites names a record; the forbidden values; a `dyad:tunables` list's shape and paths; and, across all records, that no `@id` is
+outcome name appears in the home file; for a master record (while the phase-in lasts, one homed in a converted home), that its home cites
+`dmc:<identifier>` and does not hold every outcome name; one warning per unconverted home; that every `dmc:<id>` a play-book or run-book cites names a record; the forbidden values; a `dyad:tunables` list's shape and paths; and, across all records, that no `@id` is
 declared twice and no preference is claimed as a tunable twice. A tunable whose key has no row in
 `dyad/templates/PREFERENCES.md` warns.
 A path into a craft this system has not installed warns instead of failing (Rule-20 property 2). No
