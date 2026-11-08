@@ -9,7 +9,8 @@ stands on origin/main, removes a key on `key=`, warns on another writer, refuses
 `resume` prints the owed question verbatim, the gates and the seats to announce to. #594, the board keyed by cabinet:
 `cabinet_of` reads the organization, `check_entry` and `parse_set` judge the `cabinet` key and a `_cos-<operator>` file,
 `board set` fences one leader off another cabinet's entries and `_cos` file and files a unit's first write by the seats
-that name it, `resume` and `dyad board` read the resumer's cabinet, and a board without `cabinet` keys reads the same."""
+that name it, `resume` and `dyad board` read the resumer's cabinet, and a board without `cabinet` keys reads the same.
+#646: `Awaiting you` (AwaitingTests) counts the questions recorded as asked and not answered, by kind, a batch once."""
 import contextlib, datetime, io, os, re, shutil, subprocess, sys, tempfile, unittest, unittest.mock
 from pathlib import Path
 PKG = Path(__file__).resolve().parents[3]
@@ -21,10 +22,10 @@ SCRATCH = livetest.ScratchInstalls()
 tearDownModule = SCRATCH.cleanup
 INST = "agent-corpus"
 ROW = "id: {id}\ntitle: row {id}\nopened: 2026-11-01\nstate: {state}\ndisposed: 2026-11-01 Y plan\nrefs: \n"
-QUESTION = "Release run 41331223332 is waiting.\n\n# not a comment: part of the words\nY/N: approve the release run?"
+QUESTION = "Release run 41331223332 is waiting.\n\n# not a comment: part of the words\nY/N: release v1.2.0?"
 ENTRY = ("holder: program-aaaaaaaa\nowner: engineer-1537d8fb session_01x\nwaiting-on: operator\n"
          "next: re-present the question\nsince: 2026-11-02T10:00Z\nquestion: Release run 41331223332 is waiting.\n  \n"
-         "  # not a comment: part of the words\n  Y/N: approve the release run?\nwriter: h1\n")
+         "  # not a comment: part of the words\n  Y/N: release v1.2.0?\nwriter: h1\n")
 
 
 def git(d, *a):
@@ -154,9 +155,9 @@ class GuardTests(unittest.TestCase):
             res = bd.resume_lines(self.root)
         self.assertTrue(lines[1].startswith("#7 open     waiting-on operator for 4h"), lines)     # oldest first
         self.assertTrue(lines[3].startswith("#5 planned  waiting-on external run 41331223332 for 2h"), lines)
-        self.assertIn("    question: Y/N: approve the release run?", lines)
+        self.assertIn("    question: Y/N: release v1.2.0?", lines)
         self.assertIn("_cos queue: plan 0, done 1", lines)
-        self.assertIn("queue (derived, #572): plan-ready 0, done-ready 0", lines)
+        self.assertIn("Awaiting you: merge 1 release (#7).", lines)       # #646: the closing line, `awaiting-you: on` by default
         self.assertIn("0 open, planned or blocked row(s) carry no board entry", lines)
         self.assertTrue(any(l.startswith("warn: board/5.md was last written by h1, not this session (h2)") for l in lines), lines)
         text = "\n".join(res)
@@ -221,7 +222,7 @@ class GuardTests(unittest.TestCase):
         (rows / "8.md").write_text(ROW.format(id=8, state="open").replace("2026-11-01 Y plan", "2026-11-01 Y plan (mandate #5)"))
         for i in (5, 7, 8):
             (plans / f"{i}.md").write_text("# Plan\n")
-        self.put("5", ENTRY.replace("Y/N: approve the release run?", "Y/N: Done with #5 five (merges PR #1)?"))
+        self.put("5", ENTRY.replace("Y/N: release v1.2.0?", "Y/N: Done with #5 five (merges PR #1)?"))
         q = bd.derived_queue(self.root)
         self.assertEqual(q, {"plan-ready": [7], "done-ready": [5]})
         self.assertEqual(bd.queue_line(q), "queue (derived, #572): plan-ready 1 (#7), done-ready 1 (#5)")
@@ -327,11 +328,12 @@ def prefs(root: Path, org: str = "m4") -> None:
 
 
 # The exact lines the pre-#594 board.py (origin/587-automaton, 7244db36) printed for the zero-migration fixture,
-# captured once by running that file on it: the DoD's before, which the patched code must still print (#594).
+# captured once by running that file on it: the DoD's before, which the patched code must still print (#594). Its count
+# line is the closing line, `Awaiting you` since #646 revision 2 made `awaiting-you: on` the default (the queue line before).
 PRE_594_RESUME = [
     "resume: this session program-59cec502 (writer h9); the board's holder program-aaaaaaaa, last written by h1",
     'inbox program-59cec502: 0 unread — `dyad inbox read` before any other act',
-    'queue (derived, #572): plan-ready 0, done-ready 0',
+    'Awaiting you: merge 1 release (#5).',
     '_cos:',
     '  holder: program-aaaaaaaa',
     '  seats: counsel-11111111 s1',
@@ -345,7 +347,7 @@ PRE_594_RESUME = [
     '  question: Release run 41331223332 is waiting.',
     '    ',
     '    # not a comment: part of the words',
-    '    Y/N: approve the release run?',
+    '    Y/N: release v1.2.0?',
     '  writer: h1',
     '#8:',
     '  holder: program-aaaaaaaa',
@@ -356,14 +358,14 @@ PRE_594_RESUME = [
     '  promised: Release run 41331223332 is waiting.',
     '    ',
     '    # not a comment: part of the words',
-    '    Y/N: approve the release run?',
+    '    Y/N: release v1.2.0?',
     '  writer: h1',
     'owed to the Operator (1): re-present each question verbatim, or report it pending',
     '  #5 since 2026-11-02T10:00Z:',
     '    Release run 41331223332 is waiting.',
     '    ',
     '    # not a comment: part of the words',
-    '    Y/N: approve the release run?',
+    '    Y/N: release v1.2.0?',
     'external gates (1): #8 external run 41',
     'announce to (1): engineer-1537d8fb; seat table: counsel-11111111 s1',
     'last ledger act (presence `seen`, information only, #567): engineer-1537d8fb none',
@@ -372,9 +374,9 @@ PRE_594_RESUME = [
 PRE_594_BOARD = [
     "board: 2 entries, holder program-aaaaaaaa (read from the working tree; `git pull` first for main's)",
     '#5 planned  waiting-on operator for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 5',
-    '    question: Y/N: approve the release run?',
+    '    question: Y/N: release v1.2.0?',
     '#8 planned  waiting-on external run 41 for 4h | owner engineer-1537d8fb session_01x | next: re-present the question | row 8',
-    'queue (derived, #572): plan-ready 0, done-ready 0',
+    'Awaiting you: merge 1 release (#5).',
     '_cos seats: counsel-11111111 s1',
     '0 open, planned or blocked row(s) carry no board entry',
     'warn: board/5.md was last written by h1, not this session (h9): two holders may be writing (plan #535 attack 6; the lease, #537, arbitrates)',
@@ -509,7 +511,7 @@ class CabinetFormTests(unittest.TestCase):
     def test_resume_and_board_read_the_resumers_cabinet(self):
         prefs(self.root)
         b8 = ENTRY.replace("holder: program-aaaaaaaa\n", f"holder: {BOB}\ncabinet: program-bob\n").replace(
-            "Y/N: approve the release run?", "Y/N: B's question?")
+            "Y/N: release v1.2.0?", "Y/N: B's question?")
         self.board_at({"5": ENTRY, "8": b8, "_cos": COS_A, "_cos-bob": COS_B})
         res_a, lines_a, v_a = self.views("program-dddddddd")                               # A's new holder
         self.assertEqual(([n for n, _ in v_a["live"]], [n for n, _ in v_a["owed"]], v_a["cabinet"]), (["5"], ["5"], "program"))
@@ -1217,6 +1219,92 @@ class PhasedQueueTests(unittest.TestCase):
 
     def test_the_phase_counts_and_the_old_clause_keeps_the_unphased(self):
         self.assertEqual(bd.derived_queue(self.root), {"plan-ready": [5, 8], "done-ready": [7]})
+
+
+class AwaitingTests(unittest.TestCase):
+    """#646: `Awaiting you` counts the questions the board records as asked and not answered, by kind and a batch once,
+    and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line."""
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+        d = self.root / INST / "d-work"
+        for sub in ("rows", "plans", "board", "provenance"):
+            (d / sub).mkdir(parents=True)
+        self.d = d
+        for rid in range(1, 12):
+            (d / "rows" / f"{rid}.md").write_text(ROW.format(id=rid, state="planned" if rid < 9 else "open"))
+        (d / "rows" / "12.md").write_text(ROW.format(id=12, state="done"))
+        put = lambda rid, text: (d / "board" / f"{rid}.md").write_text(text)
+        put(1, phased(1, "intent-asked", {}, question="Y/N: intent aligned for #1 one?"))
+        put(2, phased(2, "plan-asked", {}, question="Y/N: proceed with #2, #3 as planned?"))   # one batch question
+        put(3, phased(3, "plan-asked", {}, question="Y/N: proceed with #2, #3 as planned?"))
+        put(4, phased(4, "done-asked", {"unit": [ENG]}, question="Y/N: Done with #4 four?"))
+        plain = lambda q: f"holder: {HOME}\nwaiting-on: operator\nsince: 2026-11-04T10:00Z\n" + (f"question: {q}\n" if q else "")
+        put(5, plain("Y/N: admit as precedents 3 cases of promotion?"))
+        put(6, plain("Release run 1 waits.\n  Y/N: release v1.2.0?"))
+        put(7, plain("Y/N: run docker volume rm x?"))
+        put(8, plain(None))                                                       # #503: waiting on the operator, no question
+        put(11, plain("Y/N: archive #3, #4?"))
+        (d / "rows" / "13.md").write_text(ROW.format(id=13, state="planned"))
+        put(13, plain("Y/N: merge PR #723 at abc (preferences)?"))
+        put(12, phased(12, "done-asked", {"unit": [ENG]}, question="Y/N: Done with #12 twelve?"))   # terminal: owes nothing
+        (d / "rows" / "9.md").write_text(ROW.format(id=9, state="open").replace("2026-11-01 Y plan", "2026-11-01 Y open"))
+        (d / "plans" / "9.md").write_text("# Plan\n")                            # plan-ready: Coming
+        (d / "rows" / "10.md").write_text(ROW.format(id=10, state="open").replace("disposed: 2026-11-01 Y plan", "disposed: "))
+        (d / "provenance" / "10.md").write_text("# Provenance #10\n\n## 1 prompt 2026-11-08\n```\ndo it\n```\n")   # intent-ready
+
+    def prefs(self, **kv):
+        p = self.root / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + "".join(f"| {k} | {v} | x | y |\n" for k, v in kv.items()))
+
+    def test_each_kind_once_per_question(self):
+        got = bd.awaiting(self.root)
+        self.assertEqual([(k, ids) for k, _, ids in got], [("intent", [1]), ("plan", [2, 3]), ("done", [4]), ("retirement", [11]),
+                                                          ("precedent", [5]), ("merge", [13]), ("release", [6]), ("destructive", [7])])
+        self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: d-work 1 intent (#1), 1 plan (#2 #3), 1 done (#4), "
+                         "1 retirement (#11), 1 precedent (#5); merge 1 (PR #723), 1 release (#6), 1 destructive (#7). "
+                         "Coming: 1 plan-ready.")
+        self.prefs(**{"intent-reading": "on"})
+        self.assertTrue(bd.awaiting_line(self.root).endswith(" Coming: 1 intent-ready, 1 plan-ready."))
+
+    def test_dmc_disposition_request_each_outcome_precedence_and_default(self):
+        import json
+        record = json.loads((PKG / "dmc" / "disposition-request.jsonld").read_text())
+        cases = {"intent": ("intent-asked", None), "plan": ("plan-asked", None), "done": ("done-asked", None),
+                 "retirement": (None, "Y/N: archive #3, #4?"), "precedent": (None, "x\nY/N: admit as precedents 2 cases?"),
+                 "merge": (None, "Y/N: merge PR #723?"), "release": (None, "Y/N: release v1.2.0?"),
+                 "destructive": (None, "Y/N: run docker volume rm x?"), "none": (None, "Y/N: approve the run?")}
+        self.assertEqual(set(cases), {o["termCode"] for o in record["hasDefinedTerm"]})   # every outcome, one case each
+        for code, (phase, q) in cases.items():
+            with self.subTest(outcome=code):
+                self.assertEqual(bd.disposition_request(phase, q), code)
+        self.assertEqual(bd.disposition_request("plan-asked", "Y/N: merge PR #1?"), "plan")       # the phase over the form
+        self.assertEqual(bd.disposition_request("building", "Y/N: merge PR #1?"), "none")         # a phase asks nothing else
+        self.assertEqual((bd.disposition_request(None, None), bd.disposition_request(None, "Y/N: runner?")), ("none", "none"))
+        self.assertEqual(record["dyad:default"], bd.REQUEST_NONE)
+        e = "holder: program-aaaaaaaa\nwaiting-on: operator\nsince: 2026-11-04T10:00Z\nquestion: Y/N: approve the run?\n"
+        (self.d / "board" / "9.md").write_text(e)                                 # the default warns, never fails
+        got = [m for m in bd.check_package(self.root) if "board/9.md" in m]
+        self.assertEqual(len(got), 1); self.assertTrue(got[0].startswith("warning: board/9.md: its question 'Y/N: approve the run?'"))
+
+    def test_a_wait_with_no_question_counts_nothing(self):
+        for rid in (11, 13):
+            (self.d / "board" / f"{rid}.md").unlink()
+        for rid in range(1, 8):
+            (self.d / "board" / f"{rid}.md").unlink()
+        (self.d / "plans" / "9.md").unlink()
+        self.assertEqual(bd.awaiting(self.root), [])
+        self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: nothing.")       # #8 waits on the operator, asked nothing
+
+    def test_the_preference_picks_the_line(self):
+        self.assertTrue(bd.closing_line(self.root).startswith("Awaiting you: d-work 1 intent (#1)"))   # absent: on (revision 2)
+        self.prefs(**{"awaiting-you": "off"})
+        self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))
+        self.prefs(**{"awaiting-you": "on"})
+        self.assertTrue(bd.closing_line(self.root).startswith("Awaiting you: d-work 1 intent (#1)"))
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
+            self.assertIn(bd.closing_line(self.root), bd.board_lines(self.root))
+            self.assertIn(bd.closing_line(self.root), bd.resume_lines(self.root))
 
 
 class AdvanceTests(unittest.TestCase):

@@ -27,6 +27,7 @@ defines what each value means.
 | relay-form | verbatim | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 | intent-reading | off | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
+| awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -208,6 +209,17 @@ defines what each value means.
   - Why: the authoring operator's prompt, "to assist operator with identifying d-work by its identifier, as a
     preference ("on" by default), d-work id should be presented along with 2-3 tag slugs after then number, e.g.
     "#621-release-intent-Y"".
+- `awaiting-you` — the form of the line every reply ends with before its one `Y/N` (Rule-3 Batch disposition; d-work
+  #646). A form preference: it authorizes nothing. What is owed is a fact of the records, never of this value: only the
+  line's form is chosen here.
+  - `on` — `Awaiting you: <n> <kind> (#id…), …`, or `Awaiting you: nothing.`, then `Coming: <n> <kind>`, each
+    part only when non-zero. It counts the questions asked and not answered, by kind, a batch once, and then the rows
+    ready for a question not yet asked. `dyad board` generates it from the asks the board records. The value this
+    template ships, and the reading of an absent key, so an upgrading system shows the new line from its upgrade on.
+  - `off` — the pending queue's counts, as before #646, while any is non-empty.
+  - Why: the authoring operator's prompts, "use "Awaiting you" and fold it into a row", then ""Awaiting you" is a
+    preference setting. falsify." and ""Awaiting you" is mechanically generated or can be mechanically generated.
+    falsify.", and, setting the default, "default setting is "On" to display "Awaiting you:" ."
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that

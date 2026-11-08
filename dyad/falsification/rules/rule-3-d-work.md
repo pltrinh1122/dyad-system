@@ -1535,3 +1535,87 @@ clerical commit that records the `Y` it rests on, so it is ledger-only; its guar
 inbox's does. The other pairs are as amendment #643 left them. Coherent, orthogonal.
 
 Disposition: see ledger #644.
+
+## Amendment — d-work #646 (2026-11-08: the closing line, awaiting you)
+Claim (plan #646): the line every reply ends with should count what waits on the operator. That is the questions asked
+and not answered, by kind, with a batch question counted once. The rows ready for a question not yet asked are the
+agent's own work and come after it. The line is generated from the asks the board records, and its form is a preference.
+
+Batch disposition loses "reports their counts at the end of every reply" and gains the **closing line** bullet. Its form
+is the preference `awaiting-you`:
+- `on` — `Awaiting you: …` then `Coming: …`;
+- `off` — the counts as before.
+
+The template ships `on`, and an absent key reads `on` (plan revision 2, provenance #646 entries 9 and 10; the name
+`closing-line` of revision 1 was withdrawn before it landed). `dyad board` generates the line from the
+questions the board records. Each question is recorded on its row's entry before it is asked: by its phase for intent,
+plan and Done, and as the entry's `question` for precedent, release and destructive. So a question asked unrecorded is
+an incident, never a line written by hand. The vocabulary gains `awaiting you`.
+
+The finding behind it: the line counted rows ready to be asked and never a question owed. The free-text
+`waiting-on: operator` of a board entry was no substitute: #503's entry said it while recording no question.
+
+### Falsification of "Awaiting you" is a preference setting (provenance #646, entry 6)
+| id | attack | result | survivor |
+|---|---|---|---|
+| Q1 | a preference chooses among values; are there two? | survives, scoped | two forms of the closing line: `on` (questions owed, then coming) and `off` (the counts as before) |
+| Q2 | the count itself is a preference | confirmed | what is owed is a fact of the records; no value may change it. Only the line's **form** is a preference |
+| Q3 | a preference here authorizes something | refuted | like `relay-form` and `dwork-slug`, it shapes what the operator reads, never what a `Y` binds: a form preference |
+| Q4 | an installing system's behaviour changes silently | survives, scoped; reversed by revision 2 | revision 1 read an absent key as the old line; the operator set the default `on` (entry 9), so an upgrading system shows the new line, stated in the release's changes (R1) |
+| Q5 | it costs no more | confirmed, then moot | setting a value here is a preferences-zone PR with its own merge question; with the default `on` this instance sets none, so that PR is dropped (R2) |
+
+### Falsification of "Awaiting you" is mechanically generated (provenance #646, entry 7)
+| id | attack | result | survivor |
+|---|---|---|---|
+| G1 | it is generated today | confirmed | nothing generated it: the line in the replies before this amendment was written by hand |
+| G2 | intent, plan and Done can be | survives | `board advance … asked` records each ask and `answered-Y`/`answered-N` each answer, so owed is a predicate over the board |
+| G3 | precedent, release and destructive can be | confirmed as first planned, survives as revised | none has a phase, and #644's precedent question was recorded on no board entry; recording each as its entry's `question` before it is asked makes all six kinds mechanical |
+| G4 | complete only if every ask is recorded | survives, scoped | write-ahead is already this section's rule; a question asked unrecorded is the incident, and the line is never patched by hand |
+| G5 | the reply itself is generated | refuted | the line's content is generated; placing it last before the `Y/N` is the agent's copy, which no harness hook makes mechanical. Out of scope |
+| G6 | a gap between the reply and its recording | survives, scoped | for the moments before `answered-Y` lands, the line still shows the question as owed, and the next `dyad board` read corrects it |
+
+### Revision 2 (provenance #646, entry 9: "default setting is "On" to display "Awaiting you:" .")
+| id | attack | result | survivor |
+|---|---|---|---|
+| R1 | a default that changes an upgrading system's output breaks it | survives, scoped | the line is presentation; it authorizes nothing and no code parses it, so nothing downstream reads the old text; the release's changes name it |
+| R2 | dropping the instance's preference PR leaves the instance unrecorded | survives, scoped | the preference guard warns that the template's key has no row here, naming its own fix, until the instance's table is next edited |
+| R3 | `on`/`off` loses the two-form reading | refuted | `off` is the old form, so both forms stay |
+
+### Revision 3 (provenance #646, entries 11 and 12: the kinds are a decision record's outcomes)
+The kinds the line counts are the outcomes of a new mechanical record, `dyad/dmc/disposition-request.jsonld`, homed
+in this Rule as an index record (each outcome name appears in Batch disposition), `alsoIn` Rules 2, 8 and 11, which own
+the merge, destructive and release forms, and implemented by `board.awaiting`. Its two groups are d-work (`intent`,
+`plan`, `done` by phase; `retirement` and `precedent` by form) and merge (`merge`, `release`, `destructive` by form);
+the phase takes precedence over the form, and the default `none` counts nothing and warns. A merge asked as its own
+question and the retirement form, which revision 2 missed, now count.
+
+| id | attack | result | survivor |
+|---|---|---|---|
+| D1 | an existing record already decides it | refuted | no record of `dyad/dmc/` or `crafts/*/dmc/` classes a question asked of the operator; `merge-question`, `held-pr` and `disposition-budget` decide other things |
+| D2 | the forms change and the record goes stale | survives, scoped | each form is the one its owning Rule states (Rule-3, Rule-8, Rule-11), so a changed form is a Rule edit, whose falsification names this record |
+| D3 | an intake is a request for disposition too | survives, scoped | Rule-3 Intake gives it no fixed `Y/N` form, so it falls to the default, and the guard's warning names it |
+| D4 | two groups add words to every reply | survives, scoped | each group is printed only when it is non-zero |
+| L1 | a record cannot be made without a Rule | refuted as a mechanism | the schema asks only for a home file; 47 records name no Rule in their home or `alsoIn` (a finding, not this row's) |
+| L2 | a record must have one | survives as discipline | only a Rule path in the record lets that Rule's falsification find it when the Rule changes (D2 rests on it) |
+| L3 | this record has one | survives | homed in this Rule, which owns the questions, as an index record whose outcome names the dmc guard finds in its text |
+
+**Survivor.** The count is a fact of the board store, generated by `dyad board` for every kind
+`dmc:disposition-request` names and never written by hand. The line's form is the form preference `awaiting-you`,
+`on` or `off`, the template shipping `on` and an absent key reading `on`.
+
+**Rule-6.** `awaiting you` is added, owner Rule-3, used by Rule-3, its kinds cited from `dmc:disposition-request`. `pending queue` keeps its definition: it is still the
+agent's batch store, now reported as the line's `Coming` part. No other term changes.
+
+**Pairwise (Rule-5).**
+- **3–2**: Binding is unchanged. The line counts questions and binds nothing, and a `Y` still binds exactly what its
+  question names; the record's merge form is Rule-2's, cited in `alsoIn`. **3–8** and **3–11**: the destructive and
+  release forms are theirs, read by the record and never restated, so either Rule's change of form names the record
+  (D2).
+- **3–10**: the closing line stands before the reply's last line, which is still its one `Y/N` (Rule-10 Form). The
+  line is a count and never a second question.
+- **3–16**: the line reads the board store and writes nothing to it. The board's phases and its `question` field are
+  Rule-16's, unchanged.
+
+The other pairs are as amendment #644 left them. Coherent, orthogonal.
+
+Disposition: see ledger #646.

@@ -138,6 +138,7 @@ the operator's. The key names and allowed values are the surface.
 | relay-form | frozen |
 | intent-reading | frozen |
 | dwork-slug | frozen |
+| awaiting-you | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
@@ -223,6 +224,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | diag-result | frozen |
 | direct-commit-class | frozen |
 | disposition-budget | frozen |
+| disposition-request | frozen |
 | done-order | frozen |
 | dwork-input-kind | frozen |
 | dwork-state | frozen |
