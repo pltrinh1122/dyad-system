@@ -1011,6 +1011,17 @@ def delivered(c: str, order: dict[str, int], listed: list[dict], name: str) -> b
             return True
     return False
 
+def ci_state(evidence_ok: bool, heads_unchanged: bool, run: dict | None) -> str | None:
+    """dmc:ci-red-vs-absent (#641): what a merge reads from its checks. `red` (red check) when a hosted job started and
+    failed (`run`'s conclusion `failure`); `passes` (observed passes) when the guards pass as observed on the exact
+    head (the evidence block) and the heads are unchanged; `absent` (absent) when no job started at all (`run` None:
+    an account or adapter failure), which is not a red check. None when none holds (the evidence failed)."""
+    if run is not None and run.get("conclusion") == "failure":
+        return "red"
+    if evidence_ok and heads_unchanged:
+        return "passes"
+    return "absent" if run is None else None
+
 def sweep_ci(repo: Path, base: str, now, prefs: Path | None = None) -> list[tuple[bool, str]]:
     """Code pushes to main within `sweep-ci-hours` with no successful corroborating run (`CI_WORKFLOWS`), and sweeps not
     delivered (#619): the newest code push with no `d-work sweep` run at it or after, and the newest ledger-only or

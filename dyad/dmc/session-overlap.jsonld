@@ -44,10 +44,13 @@
   ],
   "dyad:precedence": "Same root outranks a file overlap.",
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
+    "dyad:kind": "mechanical",
     "dyad:implementation": "guards/agent/sessions.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-16-concurrent-sessions.md",
-  "dyad:owner": "Rule-16"
+  "dyad:home": "guards/agent/sessions.py",
+  "dyad:owner": "Rule-16",
+  "dyad:alsoIn": [
+    "rules/RULE-16-concurrent-sessions.md"
+  ]
 }

@@ -42,10 +42,13 @@
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/automaton.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-2-no-self-ratify.md",
-  "dyad:owner": "Rule-2"
+  "dyad:home": "scripts/automaton.py",
+  "dyad:owner": "Rule-2",
+  "dyad:alsoIn": [
+    "rules/RULE-2-no-self-ratify.md"
+  ]
 }

@@ -741,6 +741,20 @@ def batch(a_pos: list[str], vals: dict, bare: set, repo: Path, inst: str, mirror
     return rc
 
 
+def message_route(sender_is_automaton: bool, actionable: bool, self_addressed: bool, reachable: bool) -> str:
+    """dmc:message-route (#641): how a message reaches its unit, in the record's precedence (self-addressed, then
+    automaton notice, then polls, then information-only copy, then actionable post, the default). `self`
+    (self-addressed) when the receiver is the sender; `home-rings` (automaton notice) when the automaton posts;
+    `poll` (polls) when no direct message reaches the receiving unit's current session; `copy` (information-only
+    copy) when the receiver need not act; `post-and-ring` (actionable post) otherwise."""
+    if self_addressed:
+        return "self"
+    if sender_is_automaton:
+        return "home-rings"
+    if not reachable:
+        return "poll"
+    return "post-and-ring" if actionable else "copy"
+
 def ring_list(lines: list[Line]) -> list[str]:
     """#586 X4: the units the batch's actionable posts reach (every `post` line not of kind `notice`, its `--cc`
     seats too), in order and once each; the session rings them, since no command can (#584 M4)."""

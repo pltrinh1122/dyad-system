@@ -551,6 +551,14 @@ def is_stale(seen: str, now: datetime.datetime | None = None) -> bool:
         t = t.replace(tzinfo=datetime.UTC)
     return (now or datetime.datetime.now(datetime.UTC)) - t > STALE_AFTER
 
+def session_overlap(my_files: set[str], my_root: str, other: dict[str, str]) -> str:
+    """dmc:session-overlap (#641): one other session's presence file against this session's new plan.
+    `same-root` (same root) when its `root` is this session's, the sharper signal, which outranks a file overlap;
+    `overlap` (overlaps) when its `files` set meets the plan's touched files; `disjoint` (different) otherwise."""
+    if my_root and (other.get("root") or "") == my_root:
+        return "same-root"
+    return "overlap" if my_files & set((other.get("files") or "").split()) else "disjoint"
+
 def overlaps(root: Path, my_files: set[str], exclude: str | None = None) -> list[tuple[str, set[str]]]:
     """Other sessions' presence files whose `files` set intersects `my_files` — the finding a new
     plan's falsification section states (#185); never a guard FAIL — the mechanism only surfaces

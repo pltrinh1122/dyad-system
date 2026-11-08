@@ -60,12 +60,13 @@
   "dyad:precedence": "self-addressed, then automaton notice, then polls, then information-only copy, then actionable post",
   "dyad:default": "actionable post",
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/land.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:home": "scripts/land.py",
   "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
     "playbooks/d-work.md"
   ],
   "dyad:owner": "Rule-3"

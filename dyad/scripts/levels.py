@@ -92,6 +92,15 @@ TREE_INVARIANTS = [
     ("seed-template-exists", lambda: (PKG / "templates" / FILE).is_file()),
 ]
 
+def diag_level(kind: str, scope: str) -> str:
+    """dmc:diag-level (#641): the self-diagnostic's level of one check, from its kind (`coded` check or `prose` claim)
+    and its scope (`unit` or `system`): `l1` (L1) unit and coded, `l2` (L2) system and coded, `l3` (L3) unit and prose,
+    `l4` (L4) system and prose. ValueError on any other kind or scope."""
+    table = {("coded", "unit"): "l1", ("coded", "system"): "l2", ("prose", "unit"): "l3", ("prose", "system"): "l4"}
+    if (kind, scope) not in table:
+        raise ValueError(f"diag-level: kind {kind!r} (coded|prose), scope {scope!r} (unit|system)")
+    return table[(kind, scope)]
+
 def levels_path(root: Path) -> Path:
     return Path(root) / dyadlib.host_path(Path(root)) / FILE   # the host path (preference `host-path`, #175)
 

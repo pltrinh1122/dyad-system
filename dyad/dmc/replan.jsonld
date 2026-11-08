@@ -44,10 +44,13 @@
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/plans.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-15-d-work-phases.md",
-  "dyad:owner": "Rule-15"
+  "dyad:home": "guards/agent/plans.py",
+  "dyad:owner": "Rule-15",
+  "dyad:alsoIn": [
+    "rules/RULE-15-d-work-phases.md"
+  ]
 }

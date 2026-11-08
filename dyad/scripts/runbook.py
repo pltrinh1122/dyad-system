@@ -374,6 +374,24 @@ def run(root: Path, instance: str, name: str, role: str, confirm_tty: bool = Tru
     print(f"event {ev.id} -> {ep.relative_to(root) if ep.is_relative_to(root) else ep}", file=out)
     return ev
 
+HEALTH = "health"   # dmc:deployed-done: the health command's name; else the first command of a `Status/health` section
+
+def deployed_done(root: Path, instance: str, since: str | None = None) -> str:
+    """dmc:deployed-done (#641): whether a server's deploying d-work may be Done. `deployed` (deployed) when the
+    run-book exists and its health command's latest event exited 0 with its postcondition not failed, that event
+    recorded at or after `since` (the deploying row's plan-Y, an ISO-8601 UTC time; Rule-19 property 2: the run-book's
+    events are the evidence); `not-done` (not Done) when the run-book is missing, has no health command, or that
+    command has no passing event since then."""
+    path = runbook_path(root, instance)
+    if not path.exists():
+        return "not-done"
+    cmds = parse(path)
+    health = next((c for c in cmds if c.name == HEALTH), None) or next(
+        (c for c in cmds if in_section(c.section, "Status/health")), None)
+    ev = last_event(events_path(root, instance), health.name) if health else None
+    ok = ev and ev.get("exit") == 0 and ev.get("postcondition") != "failed" and (since is None or (ev.get("ts") or "") >= since)
+    return "deployed" if ok else "not-done"
+
 def exit_code(ev: Event) -> int:
     """Rule-18 property 7f: 0 done or already satisfied; 1 failed postcondition; else the command's exit."""
     if ev.exit:

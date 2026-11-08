@@ -16,31 +16,33 @@
   "dyad:decides": "May the deploying d-work of this server instance be asked Done?",
   "dyad:inputs": [
     "the run-book at its instance path",
-    "the health command's observed output"
+    "the latest event of its health command",
+    "the deploying row's plan-Y"
   ],
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
       "termCode": "deployed",
       "name": "deployed",
-      "dyad:when": "the run-book exists and its health command passes as observed",
+      "dyad:when": "the run-book exists and the latest event of its health command exited 0, recorded at or after the deploying row's plan-Y (Rule-19 property 2: the run-book's events are the evidence)",
       "dyad:then": "the completion reply cites the run-book path and the observed output"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "not-done",
       "name": "not Done",
-      "dyad:when": "the run-book is missing or the health command does not pass",
+      "dyad:when": "the run-book is missing, has no health command, or that command has no event exiting 0 at or after the deploying row's plan-Y",
       "dyad:then": "the d-work is not Done"
     }
   ],
   "dyad:judgedBy": {
-    "dyad:kind": "inference",
-    "dyad:implementation": null
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/runbook.py"
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
-  "dyad:home": "rules/RULE-19-server-instances.md",
+  "dyad:home": "scripts/runbook.py",
   "dyad:alsoIn": [
+    "rules/RULE-19-server-instances.md",
     "../crafts/sysadmin/rules/server-instances.md"
   ],
   "dyad:owner": "Rule-19"
