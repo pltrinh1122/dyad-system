@@ -17,7 +17,7 @@ class PlaybookTests(unittest.TestCase):
     def test_playbook_sections_and_criteria(self):
         text = PLAYBOOK.read_text()
         heads = [l[3:].strip() for l in text.splitlines() if l.startswith("## ")]
-        self.assertEqual(heads, ["Trigger", "Default", "craft-instantiation-criteria", "Steps: new craft", "Steps: new dyad system", "Evidence"])
+        self.assertEqual(heads, ["Trigger", "Default", "craft-instantiation-criteria", "Steps: a craft here", "Steps: another dyad system", "Evidence"])   # #626 C8
         rows = [r for r in dyadlib.tables(text)[0][1]]
         self.assertEqual(tuple(r[0] for r in rows), CRITERIA)
         self.assertIn("agent-corpus/d-work/plans/153.md", text)
