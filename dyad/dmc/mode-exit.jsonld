@@ -32,7 +32,7 @@
       "termCode": "backlog",
       "name": "backlog",
       "dyad:when": "a backlog row names the fence to build and the incidents it would have caught",
-      "dyad:then": "closed"
+      "dyad:then": "closed; the row is carried, born backlog under the plan-Y that runs the exercise (Y backlog (mandate #<id>)), never asked again, and listed in the exercise's completion evidence"
     },
     {
       "@type": "DefinedTerm",
