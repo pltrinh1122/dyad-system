@@ -9,7 +9,7 @@ an `@context` other than the core context's; an `@type` lacking `DefinedTermSet`
 an `@id` other than `urn:dyad:dmc:<container>/<identifier>`, an `identifier` other than the file stem, an
 `isPartOf` other than the container's urn; `dyad:inputs` not a non-empty list of strings; fewer than two
 outcomes, an outcome lacking `@type DefinedTerm` or a non-empty `termCode`/`name`/`dyad:when`/`dyad:then`, a
-termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared|similarity or whose
+termCode used twice; a `dyad:judgedBy` whose `dyad:kind` is not mechanical|inference|declared|precedent or whose
 `dyad:implementation` is neither null nor an existing path; a `dyad:home` or `dyad:alsoIn` path that does not
 exist; an outcome name absent from the home file (case-insensitive, whitespace runs collapsed), for a record
 homed in a Rule, a craft rule or any other non-procedure file; a date,
@@ -31,7 +31,7 @@ Inference, stated: whether a criterion's outcomes are right, whether its home st
 import sys
 if sys.version_info < (3, 12):
     sys.exit("dmc.py: Python 3.12+ required")
-import json, os, re
+import json, os, re, subprocess
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import dyadlib
@@ -42,17 +42,17 @@ CLERICAL_READS = ()   # d-work #564: the ledger/events paths (instance-relative)
 NAME, OWNER = "decision-making criterion", "Rule-12"
 FIELDS = ("@context", "@id", "@type", "identifier", "name", "description", "dyad:decides", "dyad:inputs",
           "hasDefinedTerm", "dyad:precedence", "dyad:default", "dyad:tunables", "dyad:judgedBy", "isPartOf", "dyad:home",
-          "dyad:alsoIn", "dyad:comparators", "dyad:owner")               # every key of a record, schema.md order
-OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:tunables", "dyad:alsoIn", "dyad:comparators")
+          "dyad:alsoIn", "dyad:precedents", "dyad:owner")               # every key of a record, schema.md order
+OPTIONAL = ("dyad:precedence", "dyad:default", "dyad:tunables", "dyad:alsoIn", "dyad:precedents")
 REQUIRED = tuple(f for f in FIELDS if f not in OPTIONAL)
 TYPES = ("DefinedTermSet", "dyad:DecisionCriterion")
 OUTCOME_KEYS = ("termCode", "name", "dyad:when", "dyad:then")
-KINDS = ("mechanical", "inference", "declared", "similarity")   # similarity: derived over a frozen comparator set (#642)
-SIMILARITY = "similarity"
-COMPARATOR_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "dyad:agreement", "dyad:bar")   # #642
+KINDS = ("mechanical", "inference", "declared", "precedent")   # precedent: derived from ratified cases (#642 revision 2)
+PRECEDENT = "precedent"
+PRECEDENT_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "dyad:agreement", "dyad:bar")   # #642 (schema.md; the base is the set header's)
 SHA256 = re.compile(r"[0-9a-f]{64}")
 RATIFYING = re.compile(r"\b(ratif\w*|dispos\w*|plan-Y|done-Y|merges?|merged|releases?|released|destructive|archiv\w*)\b", re.I)
-                                                    # a consequence a similarity outcome may never carry (#642 A5)
+                                                    # a consequence a precedent outcome may never carry (#642 Q7)
 PATH_KEYS = ("dyad:home", "dyad:alsoIn", "dyad:implementation")   # path-valued: exempt from the forbidden scan
 TUNABLE_KEYS = ("dyad:preference", "dyad:defaultValue", "dyad:allowed", "dyad:readBy")   # one tunable (#590)
 TUNABLE_PATH = "dyad:readBy"                                       # path-valued, inside a tunable
@@ -74,8 +74,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md: pure, enforced at import
     ("owner-required", lambda: "dyad:owner" in REQUIRED and "dyad:owner" in FORBIDDEN_EXEMPT),
     ("tunables-optional", lambda: "dyad:tunables" in OPTIONAL and TUNABLE_PATH in TUNABLE_KEYS and TUNABLE_PATH in FORBIDDEN_EXEMPT),
     ("pref-key-shape", lambda: bool(PREF_KEY.fullmatch("hygiene-stale-days")) and not PREF_KEY.fullmatch("Hygiene_days")),
-    ("kinds-are-four", lambda: KINDS == ("mechanical", "inference", "declared", "similarity") and SIMILARITY in KINDS),
-    ("comparators-optional", lambda: "dyad:comparators" in OPTIONAL and len(set(COMPARATOR_KEYS)) == len(COMPARATOR_KEYS)),
+    ("kinds-are-four", lambda: KINDS == ("mechanical", "inference", "declared", "precedent") and PRECEDENT in KINDS),
+    ("precedents-optional", lambda: "dyad:precedents" in OPTIONAL and len(set(PRECEDENT_KEYS)) == len(PRECEDENT_KEYS)),
     ("ratifying-catches-a-merge-and-spares-a-finding", lambda: bool(RATIFYING.search("the named merge may be executed"))
                                                                 and not RATIFYING.search("listed as a finding for the home")),
     ("context-is-schema-org-plus-dyad", lambda: CONTEXT[0] == "https://schema.org" and CONTEXT[1] == {"dyad": "urn:dyad:term:"}),
@@ -203,51 +203,73 @@ def tunable_problems(t, base: Path, root: Path, pkg: Path, bad, warn) -> list[st
         bad(f"dyad:tunables names preference {k!r} twice")
     return keys
 
-def comparator_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: Path, bad, warn) -> None:
-    """#642: a `similarity` record carries `dyad:comparators` ({COMPARATOR_KEYS}), and only such a record does. It fails
-    when the set's file is missing or no comparator set (`similar.load`), its sha256 differs, its labels are not the
+def owner_paths(d: dict, root: Path, pkg: Path) -> list[str]:
+    """The repo paths of the Rule a record's `dyad:owner` names (`Rule-<n>` -> `dyad/rules/RULE-<n>-*.md`) and of its
+    home: what a precedent set is rebuilt after when they move (#642 Q5)."""
+    out = []
+    m = re.fullmatch(r"Rule-(\d+)", str(d.get("dyad:owner", "")).strip())
+    if m:
+        out += [p.relative_to(root).as_posix() for p in sorted((pkg / "rules").glob(f"RULE-{m.group(1)}-*.md"))
+                if p.is_relative_to(root)]
+    return out
+
+def moved_since(root: Path, base: str, paths: list[str]) -> bool:
+    """True when a commit after `base` touches one of `paths` (`git log base..HEAD`); False when base does not resolve."""
+    if not paths:
+        return False
+    r = subprocess.run(["git", "log", "--format=%h", f"{base}..HEAD", "--", *paths], cwd=root, capture_output=True,
+                       text=True, env=dyadlib.git_env())
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: Path, bad, warn) -> None:
+    """#642 revision 2: a `precedent` record carries `dyad:precedents` (PRECEDENT_KEYS), and only such a record does. It
+    fails when the set's file is missing or no precedent set (`similar.load`), its sha256 differs, its labels are not the
     record's outcome names, the threshold or margin names no preference of the record's `dyad:tunables`, the agreement
     or bar is no number in [0, 1], the agreement is below the bar, or an outcome's `dyad:then` names a ratification
-    event or a destructive act (A5: a disposition is never derived)."""
-    c = d.get("dyad:comparators")
-    if kind != SIMILARITY:
-        bad(f"dyad:comparators on a record of kind {kind!r}: only a similarity record carries one"); return
+    event or a destructive act (Q7: a precedent settles agent-side calls only). It warns when the owner Rule moved after
+    the set's base commit (Q5: the set is rebuilt)."""
+    c = d.get("dyad:precedents")
+    if kind != PRECEDENT:
+        bad(f"dyad:precedents on a record of kind {kind!r}: only a precedent record carries one"); return
     if not isinstance(c, dict):
-        bad("a similarity record carries dyad:comparators, an object of " + ", ".join(COMPARATOR_KEYS)); return
-    missing = [k for k in COMPARATOR_KEYS if k not in c]
+        bad("a precedent record carries dyad:precedents, an object of " + ", ".join(PRECEDENT_KEYS)); return
+    missing = [k for k in PRECEDENT_KEYS if k not in c]
     if missing:
-        bad(f"dyad:comparators lacks {', '.join(missing)}"); return
+        bad(f"dyad:precedents lacks {', '.join(missing)}"); return
     names = {o.get("name") for o in terms if isinstance(o, dict)}
     for o in terms:
         if isinstance(o, dict) and isinstance(o.get("dyad:then"), str) and (m := RATIFYING.search(o["dyad:then"])):
-            bad(f"similarity outcome {o.get('termCode')!r} names {m.group(0)!r} in its consequence: a ratification event "
-                f"or a destructive act is never derived by similarity (#642 A5)")
+            bad(f"precedent outcome {o.get('termCode')!r} names {m.group(0)!r} in its consequence: a ratification event "
+                f"or a destructive act is never derived from precedent (#642 Q7)")
     st, path, why = resolve(c["dyad:set"], base, root, pkg)
     if st != "ok":
-        (warn if st == "warn" else bad)(f"dyad:comparators dyad:set {c['dyad:set']!r} {why}")
+        (warn if st == "warn" else bad)(f"dyad:precedents dyad:set {c['dyad:set']!r} {why}")
     else:
         import similar
         try:
             cset = similar.load(path)
         except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
-            bad(f"dyad:comparators dyad:set {c['dyad:set']!r}: {e}"); cset = None
+            bad(f"dyad:precedents dyad:set {c['dyad:set']!r}: {e}"); cset = None
         if cset is not None:
             if not (isinstance(c["dyad:sha256"], str) and SHA256.fullmatch(c["dyad:sha256"])):
-                bad("dyad:comparators dyad:sha256 is not 64 hex")
+                bad("dyad:precedents dyad:sha256 is not 64 hex")
             elif cset["sha256"] != c["dyad:sha256"]:
-                bad(f"dyad:comparators dyad:sha256 differs from the set's ({cset['sha256'][:12]}…): the set changed "
+                bad(f"dyad:precedents dyad:sha256 differs from the set's ({cset['sha256'][:12]}…): the set changed "
                     f"since it was measured")
             if similar.labels(cset) != names:
-                bad(f"the comparator set's labels {sorted(similar.labels(cset))} are not the record's outcome names {sorted(names)}")
+                bad(f"the precedent set's labels {sorted(similar.labels(cset))} are not the record's outcome names {sorted(names)}")
+            if moved_since(root, cset["base"], owner_paths(d, root, pkg)):
+                warn(f"the owner Rule of this precedent record moved after the set's base {str(cset['base'])[:12]}: "
+                     f"rebuild the set (#642 Q5)")
     keys = tunable_keys(d)
     for k in ("dyad:threshold", "dyad:margin"):
         if c[k] not in keys:
-            bad(f"dyad:comparators {k} {c[k]!r} names no preference of this record's dyad:tunables")
+            bad(f"dyad:precedents {k} {c[k]!r} names no preference of this record's dyad:tunables")
     nums = {k: c[k] for k in ("dyad:agreement", "dyad:bar")}
     if not all(isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1 for v in nums.values()):
-        bad("dyad:comparators dyad:agreement and dyad:bar are numbers in [0, 1]")
+        bad("dyad:precedents dyad:agreement and dyad:bar are numbers in [0, 1]")
     elif nums["dyad:agreement"] < nums["dyad:bar"]:
-        bad(f"dyad:comparators agreement {nums['dyad:agreement']} is below its bar {nums['dyad:bar']}: the decision "
+        bad(f"dyad:precedents agreement {nums['dyad:agreement']} is below its bar {nums['dyad:bar']}: the decision "
             f"returns to inference (#642 A4)")
 
 def template_keys(pkg: Path) -> set[str] | None:
@@ -324,8 +346,8 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 if st != "ok":
                     (warn if st == "warn" else bad)(f"dyad:implementation {jb['dyad:implementation']!r} {why}")
     kind = jb.get("dyad:kind") if isinstance(jb, dict) else None
-    if kind == SIMILARITY or "dyad:comparators" in d:
-        comparator_problems(d, kind, terms if isinstance(terms, list) else [], base, root, pkg, bad, warn)
+    if kind == PRECEDENT or "dyad:precedents" in d:
+        precedent_problems(d, kind, terms if isinstance(terms, list) else [], base, root, pkg, bad, warn)
     if "dyad:tunables" in d:
         if container != CORE_CONTAINER:   # one home for a default, the core's: dyadlib.tunable reads no other record (#590)
             bad("dyad:tunables is the core's only (dyad/dmc/): dyadlib.tunable reads no craft or instance record (#590)")

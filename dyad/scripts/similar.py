@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
-"""Fixed-set similarity (core script; d-work #642; the decision criterion `dyad/dmc/judgement-complexity.jsonld` names
-when a decision may be derived by it). Kernel: Python 3.12+, stdlib only.
-One TF-IDF implementation for the core: `tokens`, `tfidf` and `cosine` (which `hygiene.py`, `intent.py` and `groom.py`
-read through hygiene), and a frozen comparator set built on them:
+"""Fixed-set similarity over ratified precedents (core script; d-work #642 revision 2; the decision criterion
+`dyad/dmc/judgement-complexity.jsonld` names when an agent-side decision is precedent-derivable). Kernel: Python 3.12+,
+stdlib only. One TF-IDF implementation for the core: `tokens`, `tfidf` and `cosine` (which `hygiene.py`, `intent.py`
+and `groom.py` read through hygiene), and a frozen precedent set built on them:
 
-  freeze(examples, out)   writes a comparator set: one JSON object per line, the first `{"idf": {...}, "max_df": x}`
-                          (the vocabulary and its IDF, fitted once on the examples and frozen), then one
-                          `{"label", "text"}` per example; returns the file's sha256. Fitted only at that named event
-                          (plan #642 A3: a set that grows would change tomorrow's scores), so the same input always
-                          scores the same against the same digest.
-  load(path)              the set, `{"idf", "max_df", "examples", "sha256"}`.
-  score(set, text)        (top label, its cosine, (runner-up label, its cosine)): each label's score is its nearest
-                          example's cosine to `text` under the frozen IDF; a token outside the vocabulary weighs 0.
-  label(set, text, threshold, margin)
-                          the top label, or ABSTAIN when its cosine is below `threshold` or within `margin` of the
-                          runner-up's (A6: a near-tie is as uncertain as a miss, so it returns to inference).
+  freeze(entries, out, ratified, base)
+                          writes a precedent set: one JSON object per line, the first `{"idf": {...}, "max_df": x,
+                          "base": <commit>}` (the vocabulary and IDF fitted once on the entries, and the `main` commit the
+                          set was built at), then one `{"label", "inputs", "row"}` per ratified case: the outcome it set,
+                          the record's decisive inputs as stored facts (Q2), and the row whose plan-Y or done-Y covered it.
+                          Refused when an entry's row is not in `ratified` (an agent ruling no Y covered is no precedent,
+                          Q4; `ratified_rows` reads them from `main`). Returns the file's sha256. Fitted only at that named
+                          event and rebuilt when the owner Rule moves or a later Done supersedes a case (Q5), so the same
+                          input always scores the same against the same digest.
+  load(path)              the set, `{"idf", "max_df", "base", "examples", "rows", "sha256"}`.
+  score(set, inputs)      (top label, its cosine, (runner-up label, its cosine)): each label's score is its nearest
+                          precedent's cosine to `inputs` under the frozen IDF; a token outside the vocabulary weighs 0.
+  label(set, inputs, threshold, margin)
+                          the top label, or ABSTAIN when there is no precedent at all (a zero cosine: first of its kind),
+                          when its cosine is below `threshold`, or within `margin` of the runner-up's (Q3, Q6: a case
+                          that may differ from its precedent stays with the agent, which may depart naming the input).
   agreement(set, held_out)
-                          over held-out (label, text) cases: n, reproduced, abstained, and `agreement`, the share of all
-                          n the set reproduces (an abstention never counts as agreeing; A4's bar is read against it).
-It decides nothing on its own: a record of kind `similarity` names its set, digest, threshold, margin and bar (the
-`dmc` guard checks them), and its home calls `label`.
+                          over held-out (label, inputs) cases: n, reproduced, abstained, and `agreement`, the share of all
+                          n the set reproduces (an abstention never counts as agreeing; the bar is read against it).
+It decides nothing on its own and settles only agent-side calls, never a disposition (Q7): a record of kind `precedent`
+names its set, digest, threshold, margin and bar (the `dmc` guard checks them), and its home calls `label`.
 """
 import sys
 if sys.version_info < (3, 12):
@@ -83,27 +88,41 @@ def _cos(a: dict, b: dict) -> float:
     return sum(v * b.get(t, 0.0) for t, v in a.items()) / (na * nb) if na and nb else 0.0
 
 
-def freeze(examples: list[tuple[str, str]], out: Path, max_df: float = MAX_DF) -> str:
-    """Write the comparator set of `examples` ((label, text) pairs, kept in their order) to `out`; return its sha256.
-    The bytes are deterministic: keys sorted, IDF rounded to 12 places, one example per line."""
-    if not examples:
-        raise ValueError("freeze: no examples")
-    idf = fit_idf((Counter(tokens(t)) for _, t in examples), max_df)
-    lines = [json.dumps({"idf": {t: round(v, 12) for t, v in sorted(idf.items())}, "max_df": max_df}, sort_keys=True)]
-    lines += [json.dumps({"label": lab, "text": text}, sort_keys=True) for lab, text in examples]
+def ratified_rows(root: Path, at: str = "origin/main") -> set[int]:
+    """The ids of the rows on `at` that hold a plan-Y or a done-Y: the rows whose cases may be precedents (Q4)."""
+    return {r.id for r in dyadlib.read_rows(root, at=at)
+            if re.search(r"\bY (?:plan|done)\b", r.disposed or "")}
+
+
+def freeze(entries: list[tuple[str, str, int]], out: Path, ratified: set[int], base: str, max_df: float = MAX_DF) -> str:
+    """Write the precedent set of `entries` ((outcome name, decisive inputs, covering row) triples, kept in their order)
+    to `out`, built at `base`; return its sha256. Refused (ValueError) when an entry's row is not in `ratified`. The bytes
+    are deterministic: keys sorted, IDF rounded to 12 places, one precedent per line."""
+    if not entries:
+        raise ValueError("freeze: no precedents")
+    unratified = sorted({row for _, _, row in entries if row not in ratified})
+    if unratified:
+        raise ValueError(f"freeze: row(s) {', '.join(f'#{r}' for r in unratified)} hold no plan-Y or done-Y on main: "
+                         f"an agent ruling no Y covered is no precedent (#642 Q4)")
+    idf = fit_idf((Counter(tokens(t)) for _, t, _ in entries), max_df)
+    lines = [json.dumps({"idf": {t: round(v, 12) for t, v in sorted(idf.items())}, "max_df": max_df, "base": base},
+                        sort_keys=True)]
+    lines += [json.dumps({"label": lab, "inputs": text, "row": row}, sort_keys=True) for lab, text, row in entries]
     data = ("\n".join(lines) + "\n").encode()
     Path(out).write_bytes(data)
     return hashlib.sha256(data).hexdigest()
 
 
 def load(path: Path) -> dict:
-    """The set at `path`: {idf, max_df, examples: [(label, text)], sha256}. ValueError on a file of another shape."""
+    """The set at `path`: {idf, max_df, base, examples: [(label, inputs)], rows, sha256}. ValueError on another shape."""
     data = Path(path).read_bytes()
     rows = [json.loads(l) for l in data.decode().splitlines() if l.strip()]
-    if not rows or "idf" not in rows[0] or any(set(r) != {"label", "text"} for r in rows[1:]) or len(rows) < 2:
-        raise ValueError(f"{path}: not a comparator set (a header line, then label/text lines)")
-    return {"idf": rows[0]["idf"], "max_df": rows[0].get("max_df", MAX_DF),
-            "examples": [(r["label"], r["text"]) for r in rows[1:]], "sha256": hashlib.sha256(data).hexdigest()}
+    if (len(rows) < 2 or "idf" not in rows[0] or "base" not in rows[0]
+            or any(set(r) != {"label", "inputs", "row"} for r in rows[1:])):
+        raise ValueError(f"{path}: not a precedent set (a header line with idf and base, then label/inputs/row lines)")
+    return {"idf": rows[0]["idf"], "max_df": rows[0].get("max_df", MAX_DF), "base": rows[0]["base"],
+            "examples": [(r["label"], r["inputs"]) for r in rows[1:]], "rows": [r["row"] for r in rows[1:]],
+            "sha256": hashlib.sha256(data).hexdigest()}
 
 
 def labels(cset: dict) -> set[str]:
@@ -122,9 +141,10 @@ def score(cset: dict, text: str) -> tuple[str, float, tuple[str | None, float]]:
 
 
 def label(cset: dict, text: str, threshold: float, margin: float) -> str:
-    """The top label, or ABSTAIN below `threshold` or within `margin` of the runner-up."""
+    """The top label, or ABSTAIN with no precedent at all (a zero cosine), below `threshold`, or within `margin` of the
+    runner-up."""
     top, cos, (_, second) = score(cset, text)
-    return ABSTAIN if cos < threshold or cos - second < margin else top
+    return ABSTAIN if cos == 0.0 or cos < threshold or cos - second < margin else top
 
 
 def agreement(cset: dict, held_out: list[tuple[str, str]], threshold: float = 0.0, margin: float = 0.0) -> dict:
