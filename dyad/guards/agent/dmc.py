@@ -24,7 +24,8 @@ The master rule (#626 C0): a record whose `dyad:home` is a play-book or run-book
 Once a home cites any record it is converted, and each record homed there fails when the home does not cite it and
 when the home names every one of its outcomes (a restatement). A home that cites none still holds the index form: its
 records keep the outcome-name check, and it warns once, naming how many are `not yet master`, until its child of #626
-converts it. Every `dmc:<id>` in a play-book or run-book of the core or a craft names a record, or fails.
+converts it. Every `dmc:<id>` in a play-book or run-book of the core or a craft, or in a run-book of the instance's store
+(`DYAD_RUNBOOKS`, default `<host path>/runbooks`), names a record, or fails.
 Inference, stated: whether a criterion's outcomes are right, whether its home states it, and whether
 `dyad:kind` describes how the decision is really made.
   dmc.py [repo-root]
@@ -138,10 +139,23 @@ def citations(text: str) -> list[str]:
     """The identifiers `text` cites as `dmc:<identifier>`, in order, each once."""
     return list(dict.fromkeys(CITE.findall(text)))
 
-def procedure_files(pkg: Path = dyadlib.PKG) -> list[Path]:
-    """Every play-book and run-book of the core and of each Tended craft: the files whose citations must resolve."""
+def host_runbooks(root: Path) -> Path | None:
+    """The instance's run-book store (Rule-19 property 1): `DYAD_RUNBOOKS`, else `<host path>/runbooks`, as
+    `runbook.runbooks_rel` reads it; None when the host path is unreadable."""
+    try:
+        rel = os.environ.get("DYAD_RUNBOOKS") or f"{dyadlib.host_path(root)}/runbooks"
+    except ValueError:
+        return None
+    return Path(root) / rel.rstrip("/")
+
+def procedure_files(pkg: Path = dyadlib.PKG, root: Path | None = None) -> list[Path]:
+    """Every play-book and run-book of the core and of each Tended craft, and with `root` every run-book of the
+    instance's store (`host_runbooks`): the files whose citations must resolve (#626 C0, #639)."""
     roots = [pkg] + [d.parent for d in dyadlib.craft_glob("VERSION", pkg)]
-    return sorted({f for r in roots for m in MASTER_DIRS for f in (r / m).glob("*.md")})
+    files = {f for r in roots for m in MASTER_DIRS for f in (r / m).glob("*.md")}
+    if root is not None and (h := host_runbooks(root)) is not None and h.is_dir():
+        files |= {f for f in h.glob("*.md") if f.stem.lower() != "readme"}
+    return sorted(files)
 
 def tunable_keys(d) -> list[str]:
     """The preference keys a record's `dyad:tunables` names, malformed entries skipped."""
@@ -320,7 +334,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
             st, home, _ = resolve(d.get("dyad:home"), base, root, pkg) if isinstance(d.get("dyad:home"), str) else ("fail", None, "")
             if st == "ok" and is_master_home(home) and home.is_file() and not citations(home.read_text(errors="replace")):
                 pending.setdefault(home, []).append(d["identifier"])
-    for f in procedure_files(pkg):   # #626 C0: every `dmc:<id>` names a record, from C0 on
+    for f in procedure_files(pkg, root):   # #626 C0: every `dmc:<id>` names a record, from C0 on; the host's run-books too (#639)
         name = f.relative_to(root).as_posix() if f.is_relative_to(root) else str(f)
         for c in citations(f.read_text(errors="replace")):
             if c not in idents:
