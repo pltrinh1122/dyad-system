@@ -122,7 +122,7 @@ class DmcGuardTests(unittest.TestCase):
         self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": "declared", "dyad:implementation": "guards/x.py"}}))
         self.assertEqual(self.t.check(), [])
     def test_null_implementation_allowed(self):
-        for k in g.KINDS:
+        for k in (k for k in g.KINDS if k != g.SIMILARITY):                # a similarity record needs its comparators (SimilarityTests)
             self.t.put(self.t.pkg, record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": k, "dyad:implementation": None}}))
             self.assertEqual(self.t.check(), [], k)
 
@@ -220,6 +220,69 @@ class DmcGuardTests(unittest.TestCase):
         self.t.put(c, record("cabinet", **{"dyad:tunables": [self.tun()]}))
         self.fails("dyad:tunables is the core's only")
 
+
+
+class SimilarityTests(unittest.TestCase):
+    """#642: a record of kind `similarity` carries `dyad:comparators`: its frozen set exists, its digest matches, its
+    labels are the record's outcome names, its threshold and margin are the record's tunables, its agreement meets its
+    bar, and no outcome's consequence is a ratification event or a destructive act; no other kind carries one."""
+    def setUp(self):
+        os.environ.pop("DYAD_INSTANCE", None); self.t = Tree()
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts")); import similar
+        (self.t.pkg / "dmc" / "sets").mkdir()
+        self.sha = similar.freeze([("read-only", "it changes nothing, a status read"), ("reversible action", "it can be undone")],
+                                  self.t.pkg / "dmc" / "sets" / "action-class.jsonl", max_df=1.0)
+        (self.t.pkg / "templates").mkdir()
+        (self.t.pkg / "templates" / "PREFERENCES.md").write_text(
+            "| key | value | allowed | read by |\n|---|---|---|---|\n| sim-threshold | 0.2 | n | x |\n| sim-margin | 0.05 | n | x |\n")
+    def tearDown(self):
+        shutil.rmtree(self.t.root, ignore_errors=True)
+    def rec(self, **comp):
+        tun = lambda k, v: {"dyad:preference": k, "dyad:defaultValue": v, "dyad:allowed": "a number", "dyad:readBy": "rules/home.md"}
+        c = {"dyad:set": "dmc/sets/action-class.jsonl", "dyad:sha256": self.sha, "dyad:threshold": "sim-threshold",
+             "dyad:margin": "sim-margin", "dyad:agreement": 0.95, "dyad:bar": 0.9} | comp
+        r = record("dyad-operator", **{"dyad:judgedBy": {"dyad:kind": "similarity", "dyad:implementation": None},
+                                    "dyad:tunables": [tun("sim-threshold", "0.2"), tun("sim-margin", "0.05")],
+                                    "dyad:comparators": c})
+        r["hasDefinedTerm"][1]["dyad:then"] = "listed for the reader"         # the fixture's own `plan-Y` is a ratification
+        return r
+    def bad(self, rec):
+        self.t.put(self.t.pkg, rec)
+        return [m for m in self.t.check() if not m.startswith("warning:")]
+
+    def test_a_well_formed_similarity_record_passes(self):
+        self.assertEqual(self.bad(self.rec()), [])
+
+    def test_each_comparator_defect_fails(self):
+        cases = {"no comparators": ({"dyad:comparators": None}, "carries dyad:comparators"),
+                 "missing key": ({"dyad:comparators": {"dyad:set": "dmc/sets/action-class.jsonl"}}, "lacks dyad:sha256"),
+                 "no set": ({"dyad:set": "dmc/sets/none.jsonl"}, "does not exist"),
+                 "digest": ({"dyad:sha256": "0" * 64}, "differs from the set's"),
+                 "threshold": ({"dyad:threshold": "nope"}, "names no preference"),
+                 "range": ({"dyad:bar": 1.5}, "numbers in [0, 1]"),
+                 "below bar": ({"dyad:agreement": 0.8}, "below its bar")}
+        for label, (over, says) in cases.items():
+            r = self.rec()
+            if "dyad:comparators" in over:
+                r["dyad:comparators"] = over["dyad:comparators"]
+                if r["dyad:comparators"] is None:
+                    del r["dyad:comparators"]
+            else:
+                r["dyad:comparators"].update(over)
+            with self.subTest(label):
+                self.assertTrue(any(says in m for m in self.bad(r)), (label, self.t.check()))
+
+    def test_labels_must_be_the_outcome_names(self):
+        r = self.rec(); r["hasDefinedTerm"][1]["name"] = "undoable"
+        self.assertTrue(any("are not the record's outcome names" in m for m in self.bad(r)))
+
+    def test_a_disposition_is_never_derived(self):
+        r = self.rec(); r["hasDefinedTerm"][1]["dyad:then"] = "the named merge may be executed"
+        self.assertTrue(any("never derived by similarity" in m for m in self.bad(r)))
+
+    def test_only_a_similarity_record_carries_comparators(self):
+        r = self.rec(); r["dyad:judgedBy"]["dyad:kind"] = "inference"
+        self.assertTrue(any("only a similarity record carries one" in m for m in self.bad(r)))
 
 
 class MasterTests(unittest.TestCase):
