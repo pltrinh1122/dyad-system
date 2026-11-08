@@ -65,7 +65,7 @@ property 1).
    proposes every definition of done in one document, the operator amends only those it would define differently, and
    the counts are kept: rows in, definitions out, absorbed, merged, split, delivered or no longer owed, and amended.
 3. **Plan** — `plan`: the plan file (Rule-15 phase 1), opening with its definition of done, after the presence read
-   (Rule-16); a play-book the plan runs carries the rows its steps prescribe, stated with their number (Rule-3 Plan);
+   (`dyad session list`, Rule-16); a play-book the plan runs carries the rows its steps prescribe, stated with their number (Rule-3 Plan);
    a plan split among units names each part on one line, `parts: <unit>: <part>; …`, which the automaton's plan notice
    quotes to each owner, so the home relays only what the plan does not say (#572); ask the plan question.
 4. **Authorize** — `authorize`: on `Y`, `open → planned` and the presence touched; a bare `N` revises; `N` with text
