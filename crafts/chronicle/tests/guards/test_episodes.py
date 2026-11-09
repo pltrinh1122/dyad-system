@@ -1,6 +1,9 @@
 """episodes.py (the chronicle craft's guard, entity `episode`; #502, #498 C4): the absent store, a good episode, each
 failing shape (missing path, bad time line, undeclared repo, missing provenance entry), the commit: form, the inference warning for a
-cross-repo citation with no clone, a citation resolved in a local clone, the invariants, and the live repo."""
+cross-repo citation with no clone, a citation resolved in a local clone, the invariants, and the live repo; the keyed
+form (#650): a passing keyed piece and key, an unkeyed paragraph, a key line naming no paragraph, first words that
+differ, an uncited or unresolvable record line, an undeclared composite, a marker, footnote or `fiction:` line left in
+keyed prose, a missing key, and a labelled piece unchanged."""
 import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 from unittest import mock
@@ -148,6 +151,86 @@ class Episodes(Fixture):
         self.assertEqual(len(f), 1); self.assertIn("has no entry 3", f[0])
         f = self.fails(self.write(episode(notes=("prov:#8/1",))))
         self.assertEqual(len(f), 1); self.assertIn("no provenance record #8", f[0])
+
+KEYED_HEAD = "title: The key\nseason: 1\nepisode: 1\ntime: present, 2026-11-09\nrepos: {repos}\nform: keyed\nkey: {key}\n"
+KEYED_BODY = ["The cos opened the board at dawn.", "He lay awake, counting the questions.", "Mara painted all night."]
+KEY_LINES = ["¶1 The cos opened | record path:agent-corpus/d-work/rows/1.md; prov:#7/1",
+             "¶2 He lay awake | fiction persona", "¶3 Mara painted | fiction composites: Mara"]
+
+class Keyed(Fixture):
+    def keyed(self, body=KEYED_BODY, key=KEY_LINES, repos="none", head_extra="", keyname="s1e1.key.md", write_key=True):
+        d = self.root / "site" / "episodes"; d.mkdir(parents=True, exist_ok=True)
+        if write_key:
+            (d / "s1e1.key.md").write_text("<!-- the key of s1e1 -->\n\n" + "\n".join(key) + "\n")
+        return self.write(KEYED_HEAD.format(repos=repos, key=keyname) + head_extra + "\n" + "\n\n".join(body) + "\n", "s1e1.md")
+    def test_keyed_piece_passes_and_its_key_is_no_episode(self):
+        self.assertEqual(self.keyed(), [])
+        self.assertEqual([p.name for p in episodes.episodes(self.root)], ["s1e1.md"])
+        self.assertIn("1 episode(s), 2 citation(s)", episodes.summary(self.root))
+    def test_unkeyed_paragraph_and_doubled_line_fail(self):
+        f = self.fails(self.keyed(key=KEY_LINES[:2]))
+        self.assertEqual(f, ["site/episodes/s1e1.md: paragraph 3 has no key line (chronicle.md §2)"])
+        f = self.fails(self.keyed(key=KEY_LINES + ["¶3 Mara painted | fiction persona"]))
+        self.assertEqual(len(f), 1); self.assertIn("paragraph 3 has 2 key lines", f[0])
+    def test_key_line_naming_no_paragraph_fails(self):
+        f = self.fails(self.keyed(key=KEY_LINES + ["¶4 Gone | fiction persona"]))
+        self.assertEqual(len(f), 1); self.assertIn("key line ¶4 names no paragraph; the piece has 3", f[0])
+    def test_first_words_must_match(self):
+        f = self.fails(self.keyed(key=["¶1 The home opened | record prov:#7/1"] + KEY_LINES[1:]))
+        self.assertEqual(len(f), 1); self.assertIn("'The home opened' is not how paragraph 1 opens", f[0])
+    def test_record_line_uncited_or_unresolvable_fails(self):
+        f = self.fails(self.keyed(key=["¶1 The cos opened | record "] + KEY_LINES[1:]))
+        self.assertTrue(any("is not `¶<n> <first words> | record" in m for m in f), f)
+        f = self.fails(self.keyed(key=["¶1 The cos opened | record prov:#7/9; http://example.com"] + KEY_LINES[1:]))
+        self.assertEqual(len(f), 2, f); self.assertTrue(any("¶1 prov:#7/9: provenance record #7 has no entry 9" in m for m in f))
+        self.assertTrue(any("¶1 'http://example.com' is none of path:" in m for m in f))
+        f = self.fails(self.keyed(key=["¶1 The cos opened | fiction persona"] + KEY_LINES[1:]))
+        self.assertEqual(len(f), 1); self.assertIn("its key holds no record line", f[0])
+    def test_cross_repo_key_line_is_judged_as_a_footnote(self):
+        key = [f"¶1 The cos opened | record repo:pltrinh1122/old@{SHA}:a.md"] + KEY_LINES[1:]
+        f = self.fails(self.keyed(key=key))
+        self.assertEqual(len(f), 1); self.assertIn("¶1 repo:pltrinh1122/old is not declared in `repos:`", f[0])
+        msgs = self.keyed(key=key, repos="pltrinh1122/old=private")
+        self.assertEqual(self.fails(msgs), [])
+        self.assertTrue(any("1 cross-repo citation(s) unresolvable" in m for m in msgs))
+        self.assertTrue(any("private repo(s) pltrinh1122/old" in m for m in msgs))
+    def test_undeclared_composite_fails(self):
+        f = self.fails(self.keyed(body=KEYED_BODY[:2] + ["Mara painted all night; Ivo watched."],
+                                  key=KEY_LINES[:2] + ["¶3 Mara painted | fiction composites: Mara, Ivo"]))
+        self.assertEqual(f, [])
+        f = self.fails(self.keyed(body=KEYED_BODY + ["Mara read the release notes."],
+                                  key=KEY_LINES + ["¶4 Mara read | record prov:#7/2"]))
+        self.assertEqual(len(f), 1); self.assertIn("composite(s) Mara in paragraph 4, which its key line does not label", f[0])
+        f = self.fails(self.keyed(key=KEY_LINES[:2] + ["¶3 Mara painted | fiction composites: Mara, Mara"]))
+        self.assertEqual(len(f), 1); self.assertIn("empty or repeated", f[0])
+    def test_labels_left_in_keyed_prose_fail(self):
+        f = self.fails(self.keyed(body=KEYED_BODY[:1] + ["*(fiction)* He lay awake, counting."] + KEYED_BODY[2:],
+                                  key=KEY_LINES[:1] + ["¶2 *(fiction)* He lay | fiction persona"] + KEY_LINES[2:]))
+        self.assertEqual(len(f), 1); self.assertIn("marks paragraph(s) 2 *(fiction)*", f[0])
+        f = self.fails(self.keyed(body=["The cos opened the board at dawn.[^1]"] + KEYED_BODY[1:] + ["[^1]: prov:#7/1"]))
+        self.assertEqual(len(f), 1); self.assertIn("holds footnotes", f[0])
+        f = self.fails(self.keyed(head_extra=f"fiction: {episodes.FICTION_LABEL}\n"))
+        self.assertEqual(len(f), 1); self.assertIn("carries a `fiction:` line", f[0])
+    def test_missing_or_misnamed_key_fails(self):
+        f = self.fails(self.keyed(write_key=False))
+        self.assertEqual(len(f), 1); self.assertIn("`key: s1e1.key.md` names no `*.key.md` file beside the piece", f[0])
+        f = self.fails(self.keyed(keyname="../s1e1.key.md"))
+        self.assertEqual(len(f), 1); self.assertIn("names no `*.key.md` file", f[0])
+        f = self.fails(self.write(KEYED_HEAD.format(repos="none", key="x").replace("key: x\n", "") + "\nA.\n", "s1e1.md"))
+        self.assertEqual(len(f), 1); self.assertIn("header lacks `key:`", f[0])
+    def test_unknown_form_fails(self):
+        f = self.fails(self.write(episode().replace("repos: none\n", "repos: none\nform: annotated\n"), "s1e0.md"))
+        self.assertEqual(len(f), 1); self.assertIn("`form: annotated` is neither labelled nor keyed", f[0])
+    def test_bad_key_line_fails(self):
+        f = self.fails(self.keyed(key=KEY_LINES + ["paragraph four is record"]))
+        self.assertEqual(len(f), 1); self.assertIn("key line 'paragraph four is record' is not", f[0])
+    def test_labelled_piece_unchanged(self):
+        self.assertEqual(self.write(episode(), "s1e0.md"), [])
+        self.assertEqual(self.write(episode().replace("repos: none\n", "repos: none\nform: labelled\n"), "s1e0.md"), [])
+    def test_key_template_parses(self):
+        lines, bad = episodes.parse_key((TEMPLATE.parent / "key.md").read_text())
+        self.assertEqual(bad, []); self.assertEqual([l["layer"] for l in lines], ["record", "record", "fiction", "fiction"])
+        self.assertEqual(lines[1]["citations"][1].split(":", 1)[0], "commit")
 
 class Template(Fixture):
     def test_template_header_has_every_key(self):
