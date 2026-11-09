@@ -41,7 +41,9 @@ it appears — in its own prose in the labelled form, in the key in the keyed fo
 
 In the keyed form engagement governs the events a piece tells (§2), and two **fixed points** hold whatever it tells:
 - **exact quotes** — text between quotation marks is a record passage: its key line is `record`, and its citation
-  holds those exact characters, so a `path:` or `prov:` citation contains the quoted string verbatim;
+  holds those exact characters, so a `path:` or `prov:` citation contains the quoted string verbatim — quotation
+  marks are `"…"` or `“…”`, never single quotes, which an apostrophe would collide with, and a run of whitespace
+  compares as one space, so a quote may wrap across lines;
 - **the sourcing and privacy rule**, unchanged — no real person beyond the persona; composites never cited to anyone;
   §4's private-repo flag on every key line; §3's flaw approval for anything said of the real Operator in a record
   passage.
