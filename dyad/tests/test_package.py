@@ -1146,6 +1146,35 @@ class PackageTests(livetest.LiveCase):
         import os
         with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": str(d / "inst")}):
             self.assertEqual(dl.check_package(d), [])
+    def test_a_done_with_candidates_needs_its_decisions(self):
+        """#648: a `Y done` on a row whose sources hold candidate rulings is refused without `--decisions`, before any
+        write, naming the file to write; with the file it records them; a row with none needs no file."""
+        import json, os
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        d, rows = self.dwork_repo()
+        plans = rows.parent / "plans"; plans.mkdir()
+        (plans / "1.md").write_text("# Plan #1\n\n## Falsification\n| id | claim | attack | result | survivor |\n"
+                                    "|---|---|---|---|---|\n| F1 | a claim | an attack | refuted | s |\n")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y"); self.assertEqual(r.returncode, 0, r.stderr)
+        self.trace(rows, 1)
+        before = rows.joinpath("1.md").read_text()
+        r = self.dwork_state(d, "1", "done", "-d", "Y done", "--said", "Y, done")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("#1's Done names 1 candidate ruling(s) (attack-result-1-1)", r.stderr)
+        self.assertIn("dyad board draft 1 --decisions-out <file>", r.stderr)
+        self.assertEqual(rows.joinpath("1.md").read_text(), before)                      # nothing written
+        bf = dyadlib.load_module(PKG / "scripts" / "backfill.py", "pkg_test_backfill")
+        with unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": str(d / "inst")}):
+            cands = bf.capture(PKG.parent, 1)
+        f = d / "dec.jsonl"; f.write_text("".join(json.dumps(c) + "\n" for c in cands))
+        r = self.dwork_state(d, "1", "done", "-d", "Y done", "--said", "Y, done", "--decisions", str(f))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        (block,) = dyadlib.load_guard("agent", "decision_log").parse((rows.parent / "decisions" / "1.md").read_text())
+        self.assertEqual((block["case"], block["outcome"], block["status"], block["source"]), ("attack-result-1-1", "refuted", "candidate", "done"))
+        rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: planned\ndisposed: 2026-11-01 Y plan\nrefs: \n")
+        self.trace(rows, 3)
+        r = self.dwork_state(d, "3", "done", "-d", "Y done", "--said", "Y")             # no sources, no file needed
+        self.assertEqual(r.returncode, 0, r.stderr)
     def test_a_done_retires_only_backlog_or_done_rows_and_archives_them_on_its_words(self):
         """#574 revision 3: G2, the record refuses a `retires` naming an open row or itself; G6, `state <r> archived
         --retired-by <id>` writes `Y archive (done #<id>)` and copies the done words noted `done #<id>, <date>`."""
