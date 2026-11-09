@@ -245,7 +245,9 @@ def lines_for(root: Path, file_row: int, entry: str, given: list[dict], today: s
     """The lines `dwork state <file_row> … -d <entry> --decisions <file>` appends, every refusal raised as ValueError
     before any write. Under a `Y done` entry each given line is a `candidate` (source `done` unless given); under a
     `Y precedent (…)` entry each becomes a `precedent` line naming that entry, from the candidate already logged for its
-    (record, case) when there is one, so the precedent-Y admits exactly the listed lines. Any other entry is refused."""
+    (record, case) when there is one, so the precedent-Y admits exactly the listed lines. Any other entry is refused.
+    Under a batch `Y done` only the lines whose `row` is `file_row` (or that name none) are this row's: one file may hold
+    every row's, and a row holding none of them gets [] (#648)."""
     root = Path(root)
     rows = rows if rows is not None else {r.id: r for r in dyadlib.read_rows(root)}
     if file_row not in rows:
@@ -257,6 +259,10 @@ def lines_for(root: Path, file_row: int, entry: str, given: list[dict], today: s
                          "(the listed lines admitted as precedents), and no other entry (#644)")
     if not given:
         raise ValueError("--decisions names no line")
+    if not precedent and "(batch #" in stamped:   # #648: one file may serve a batch Done, each row taking its own lines
+        given = [g for g in given if not isinstance(g, dict) or g.get("row", file_row) == file_row]
+        if not given:
+            return []
     logged = latest(read(root).get(file_row, []))
     disposed = (rows[file_row].disposed + "; " if rows[file_row].disposed else "") + stamped
     codes, out = outcomes_by_record(root), []

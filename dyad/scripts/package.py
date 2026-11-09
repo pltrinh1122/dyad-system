@@ -2422,6 +2422,14 @@ def cmd_dwork(a):
                 decided = dl.lines_for(REPO, rid, d, given, today, rows)
             except (OSError, ValueError) as e:
                 sys.exit(f"refused: --decisions {vals['--decisions']}: {e}")
+        elif d is not None and "--mandate" not in vals and rg.DONE_Y.search(f"{today} {d}"):
+            # #648: a Done records the rulings it names. When `board draft` would list candidates for this row, a `Y done`
+            # without them is refused, before any write, naming the file to write; a row with none needs no file
+            cands = dyadlib.load_module(PKG / "scripts" / "backfill.py", "dyad_backfill").capture(REPO, rid)
+            if cands:
+                sys.exit(f"refused: #{rid}'s Done names {len(cands)} candidate ruling(s) ({', '.join(c['case'] for c in cands[:3])}"
+                         f"{', …' if len(cands) > 3 else ''}): write them with `dyad board draft {rid} --decisions-out <file>` "
+                         f"(drop a line only with its reason, named in the evidence) and give `--decisions <file>` (#648)")
         if d is not None: disposed = (disposed + "; " if disposed else "") + f"{today} " + d
         if "-r" in vals: refs = vals["-r"]
         new = dataclasses.replace(r, state=state, disposed=disposed, refs=refs, slug=slug or r.slug)   # #290, #622: every other field is carried

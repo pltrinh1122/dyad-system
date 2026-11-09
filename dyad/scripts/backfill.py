@@ -15,7 +15,8 @@ Sources (`SOURCES`):
 - verdict tables: a markdown table with a `result` column in a plan file (`<instance>/d-work/plans/<id>.md`, the plan's
   row covering it) or a falsification record (`<instance>/falsification/`, `dyad/falsification/`, the row the nearest
   heading above it names), whose result cell opens with an outcome name of `dmc:attack-result`.
-A cell that names no outcome is counted, per source, in the summary on stderr, never guessed.
+A cell that names no outcome is counted, per source, in the summary on stderr, never guessed. `for_row` and `capture`
+(#648) scope the sources to one row for its Done: `board draft`'s Candidates and the `Y done` refusal read them.
   backfill.py [--record <id>] [repo-root]      (JSON lines on stdout, the counts on stderr)
 """
 import sys
@@ -148,10 +149,11 @@ def verdict_files(root: Path) -> list[tuple[Path, int | None]]:
     return out
 
 
-def from_verdicts(root: Path, names: dict, skipped: Counter, rows: set[int]) -> list[dict]:
+def from_verdicts(root: Path, names: dict, skipped: Counter, rows: set[int],
+                  files: list[tuple[Path, int | None]] | None = None) -> list[dict]:
     names = names.get("attack-result") or {}
     out = []
-    for p, file_row in verdict_files(root):
+    for p, file_row in (verdict_files(root) if files is None else files):
         covering, head, t = file_row, None, 0
         for raw in p.read_text(errors="replace").splitlines():
             if file_row is None and (h := HEADING_ROW.match(raw)):
@@ -190,6 +192,32 @@ def backfill(root: Path, record: str | None = None) -> tuple[list[dict], Counter
         if (g["record"], g["case"]) not in seen and (record is None or g["record"] == record):
             seen.add((g["record"], g["case"])); out.append(g)
     return out, skipped
+
+
+def for_row(root: Path, rid: int) -> list[dict]:
+    """#648: the candidate rulings of row `rid` alone, from the sources this script reads — its plan file's verdict
+    tables, its own `Y archive` / `Y open (promotion …)` / `Y release` entries and the change-log rows naming it — each
+    renamed to the one case id form `<record>-<rid>-<n>` (n counting from 1 per record, in source order, so #645's one id
+    per ruling holds), source `done`: the rulings its Done records."""
+    root = Path(root)
+    names, skipped = outcomes(root), Counter()
+    rows = {r.id for r in dyadlib.read_rows(root)}
+    plan = dyadlib.instance(root) / "d-work" / "plans" / f"{rid}.md"
+    got = [g for g in from_changelog(root, names, skipped) + from_entries(root, names, skipped) if g["row"] == rid]
+    got += from_verdicts(root, names, skipped, rows, [(plan, rid)] if plan.is_file() else [])
+    n: Counter = Counter()
+    out = []
+    for g in got:
+        n[g["record"]] += 1
+        out.append({**g, "case": f"{g['record']}-{rid}-{n[g['record']]}", "source": "done"})
+    return out
+
+
+def capture(root: Path, rid: int) -> list[dict]:
+    """The candidates of `for_row` that `dmc:precedent-admission` could admit (`precedent.gate`): what row `rid`'s
+    `Y done` must record with `--decisions` (#648)."""
+    pr = dyadlib.load_module(dyadlib.PKG / "scripts" / "precedent.py", "dyad_precedent")
+    return pr.gate(Path(root), for_row(root, rid))[0]
 
 
 def main(argv=None) -> int:

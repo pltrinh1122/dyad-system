@@ -105,7 +105,8 @@ RETIRED_WAITING = "seat "                           # #604: `seat <name>`, remov
 KEY = re.compile(r"[a-z][a-z-]*")
 CLI_FLAGS = dyadlib.cli_forms("board")   # #592 R-a: {verb: its dyadlib.CLI form}, the one home of the flags this parser reads (dyad/tests/test_cli.py)
 DROP, = CLI_FLAGS["set"].bare
-OUT, = CLI_FLAGS["draft"].value_flags   # #587 X7: the skeleton's file, never under the work tree
+OUT, DECISIONS_OUT = CLI_FLAGS["draft"].value_flags   # #587 X7: the skeleton's file, never under the work tree; #648
+PROSE_SLOT = "TODO plan-departure: facts | outcome"   # #648: the draft's fixed slot for a prose ruling
 USAGE = ("usage: dyad board | dyad board set <id>|_cos[-<operator>] key=value… [--drop] | dyad board resume | dyad board phases | "
          "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>] | "
          "dyad board draft <id> [--out <file>] | dyad board groom")
@@ -1345,7 +1346,7 @@ def transition(rid: int, entry: dict[str, str], row, event: str, pairs: dict[str
 
 
 def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref: str | None = None,
-                 slugs: bool = False) -> list[str]:
+                 slugs: bool = False, decisions_abs: str | None = None) -> list[str]:
     """The `dwork state` lines of an answer (X4), composed from the phase and the question the machine stored at
     `asked`, never typed: one per named row, each carrying the same `--said-file`, so the one `Y` is written into each
     record (Rule-3 Batch, Rule-7). [] for any other event."""
@@ -1390,16 +1391,17 @@ def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref
     for i in ids:
         clauses = ([batch] if len(ids) > 1 else []) + accl(i) + ([f"merges {merges}"] if merges else [])
         d = "Y done" + (f" ({', '.join(clauses)})" if clauses else "")
-        out.append(shlex.join(["state", str(i), "done" if not prs else rows[i].state, "-d", d, "--said-file", said_abs]))
+        out.append(shlex.join(["state", str(i), "done" if not prs else rows[i].state, "-d", d, "--said-file", said_abs]
+                              + (["--decisions", decisions_abs] if decisions_abs else [])))   # #648: each row its own lines
         if not prs:                                       # done at once: its accreted rows close under its mandate now,
             out += [shlex.join(["state", str(c), "done", "--mandate", str(i)]) for c in acc[i]]   # as close_landed would
     return out
 
 
 # ---- the builder (X4, X9): one code path for every event, run on every try in land's worktree
-def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | None, str | None, str | None]:
-    """(ids, event, pairs, expect, said-file made absolute, mirror) from the argv; every refusal here is before any
-    fetch."""
+def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | None, str | None, str | None, str | None]:
+    """(ids, event, pairs, expect, said-file made absolute, mirror, decisions file made absolute) from the argv; every
+    refusal here is before any fetch."""
     ids, i = [], 0
     while i < len(a) and a[i].isdigit():
         ids.append(int(a[i])); i += 1
@@ -1415,12 +1417,12 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
         raise Refused(f"only {', '.join(MULTI_ID_EVENTS)} take several ids, not {event}")
     if len(set(ids)) != len(ids):
         raise Refused("an id named twice")
-    expect = said = mirror = None
+    expect = said = mirror = decisions = None
     pairs: dict[str, str] = {}
     j = 0
     while j < len(rest):
         x = rest[j]
-        if x in ("--expect", "--said-file", "--mirror"):
+        if x in ("--expect", "--said-file", "--mirror", "--decisions"):
             if j + 1 >= len(rest):
                 raise Refused(f"{x} needs a value")
             v = rest[j + 1]; j += 2
@@ -1428,12 +1430,14 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
                 expect = v
             elif x == "--said-file":
                 said = os.path.abspath(v)
+            elif x == "--decisions":
+                decisions = os.path.abspath(v)
             else:
                 mirror = v
             continue
         k, sep, v = x.partition("=")
         if not sep or k not in PAIR_KEYS:
-            raise Refused(f"{x!r} is not one of {', '.join(f'{p}=' for p in PAIR_KEYS)}, --expect, --said-file or --mirror")
+            raise Refused(f"{x!r} is not one of {', '.join(f'{p}=' for p in PAIR_KEYS)}, --expect, --said-file, --decisions or --mirror")
         if k in pairs:
             raise Refused(f"{k}= given twice")
         pairs[k] = v; j += 1
@@ -1468,7 +1472,11 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
     if "note" in pairs and inbox().DISPOSITION.search(pairs["note"]):
         raise Refused("note= is disposition-shaped (a `Y/N:` line or a ledger entry): the board carries information, "
                       "never authority (#587 X2)")
-    return ids, event, pairs, expect, said, mirror
+    if decisions is not None and (event, expect) != ("answered-Y", "done-asked"):
+        raise Refused("--decisions rides the Done answer only: answered-Y --expect done-asked (#648)")
+    if decisions is not None and not Path(decisions).is_file():
+        raise Refused(f"--decisions {decisions} is not a file")
+    return ids, event, pairs, expect, said, mirror, decisions
 
 
 def trace_lines(ids, wt: Path, inst: str, repo: Path) -> tuple[list[str], list[str]]:
@@ -1559,7 +1567,7 @@ def batch_union(ids, entries: dict) -> dict:
 
 def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, said_abs: str | None, inst: str,
                     repo: Path, value_flags, parse, words, sender: str, recorded: bool = False, landed=None, ran=None,
-                    automaton: bool = False):
+                    automaton: bool = False, decisions_abs: str | None = None):
     """land's builder for one `board advance` (section 7 of plan #587 PR2). On every try, in land's worktree on a freshly
     fetched origin/main: read and refuse (`--expect`, the cabinet fence of `board set` on an existing entry (#594 K6),
     the table, the actor, the fields, the binding set), and file a birth under the sender's cabinet as `board set`
@@ -1658,7 +1666,7 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 lines += tl
                 landed[:] = rels
             lines += ledger_lines(ids, entries, rows, event, said_abs or "", dyadlib.preference("merge-disposition", wt),
-                                  slugs=dyadlib.slugs_on(wt))
+                                  slugs=dyadlib.slugs_on(wt), decisions_abs=decisions_abs)
         changed, paths = [], []
         for rid in ids:
             target, new = results[rid]
@@ -1734,7 +1742,7 @@ def cmd_advance(a: list[str], repo: Path, value_flags, dwork_args, words) -> int
     """`dyad board advance`: exit 0 landed, 1 refused (one `refused: …` line, nothing landed), 2 usage."""
     L = land_mod()
     try:
-        ids, event, pairs, expect, said, mirror = parse_advance(a)
+        ids, event, pairs, expect, said, mirror, decisions = parse_advance(a)
         L.check_mirror(repo, mirror)
         inst = dyadlib.instance_rel(repo)
         if inst is None:
@@ -1744,7 +1752,7 @@ def cmd_advance(a: list[str], repo: Path, value_flags, dwork_args, words) -> int
             raise Refused("DYAD_SESSION names no seat: an event is fired from a seat (#587)")
         landed, ran = [], []
         build = advance_builder(ids, event, pairs, expect, said, inst, repo, value_flags, dwork_args, words, sender,
-                                landed=landed, ran=ran)
+                                landed=landed, ran=ran, decisions_abs=decisions)
         rc = L.land(repo, inst, mirror, build, "board advance", landed)
         ring = L.ring_list(ran)
         if rc == 0 and ring:
@@ -1952,6 +1960,18 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
     pref = dyadlib.preference(rows_guard().TRACE_KEY, repo)
     out += ["## Trace", "", f"`{rel(tr)}`: " + ("present" if tr.is_file() else
             f"absent (dwork-trace: {clean(pref or 'unset')}; write it with `dyad dwork trace {rid} --out`)"), ""]
+    cands = candidates(repo, rid)
+    out += [f"## Candidates (dmc:precedent-admission over this row's sources; its `Y done` records them with "
+            f"`--decisions`, #648)", ""]
+    if cands:
+        out += [f"- `{c['record']}` {clean(c['case'])}: {clean(c['outcome'])} — {clean(' '.join(c['inputs'].split())[:100])}"
+                for c in cands]
+        out += ["", f"Write them with `dyad board draft {rid} {DECISIONS_OUT} <file>`; drop a line only with its reason, "
+                    f"named in the evidence.", ""]
+    else:
+        out += ["none: this Done records no `--decisions`", ""]
+    out += [f"## Prose rulings (orchestrate)", "", ORCHESTRATE,
+            f"{PROSE_SLOT}   <!-- one line per departure line the evidence names, judged by dmc:plan-departure -->", ""]
     for head, what in ORCHESTRATE_SECTIONS:
         out += [f"## {head} (orchestrate)", "", ORCHESTRATE, f"<!-- {what} -->", ""]
     try:
@@ -1964,6 +1984,11 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
     if starts[:-1] or (starts and starts[-1] != text.rfind("\n") + 1):   # F2's fail-loud check, before the one print
         raise Refused(f"#{rid}: the draft holds a line starting `Y/N:` other than its last; not printed (#587 X7)")
     return out
+
+
+def candidates(repo: Path, rid: int) -> list[dict]:
+    """#648: row `rid`'s candidate rulings its Done records (`backfill.capture`): its own sources, admissible ones only."""
+    return dyadlib.load_module(dyadlib.PKG / "scripts" / "backfill.py", "dyad_backfill").capture(Path(repo), rid)
 
 
 def out_roots(repo: Path) -> list[Path]:
@@ -1990,20 +2015,38 @@ def out_refusal(dest: Path, repo: Path) -> None:
 
 
 def cmd_draft(a: list[str], repo: Path) -> int:
-    """`dyad board draft <id> [--out <file>]`: print the Done skeleton, or write it to a file outside the work tree."""
+    """`dyad board draft <id> [--out <file>] [--decisions-out <file>]`: print the Done skeleton, or write it to a file
+    outside the work tree; --decisions-out writes the row's candidate rulings as `--decisions` lines (#648), and given
+    alone it needs no done-ready entry and prints no skeleton."""
     got = dyadlib.cli_parse(CLI_FLAGS["draft"], list(a))
     usage = dyadlib.cli_usage(("board", "draft"))
     if got.helped:
         print(usage); return 0
-    if got.unknown or got.extra or len(got.pos) != 1 or not got.pos[0].isdigit() or (OUT in got.values and not got.one(OUT)):
+    if got.unknown or got.extra or len(got.pos) != 1 or not got.pos[0].isdigit() \
+            or any(f in got.values and not got.one(f) for f in (OUT, DECISIONS_OUT)):
         print(usage, file=sys.stderr); return 2
     try:
         dest = Path(got.one(OUT)).resolve() if got.one(OUT) else None
-        if dest is not None:
-            out_refusal(dest, Path(repo))
-        lines = draft_lines(int(got.pos[0]), Path(repo).resolve())
+        ddest = Path(got.one(DECISIONS_OUT)).resolve() if got.one(DECISIONS_OUT) else None
+        for d in (dest, ddest):
+            if d is not None:
+                out_refusal(d, Path(repo))
+        # #648: --decisions-out alone needs no done-ready entry, so a Done recorded by hand can write its file too
+        lines = draft_lines(int(got.pos[0]), Path(repo).resolve()) if dest is not None or ddest is None else []
     except Refused as e:
         print(f"refused: {e}", file=sys.stderr); return 1
+    if ddest is not None:   # #648: the structured candidates as `--decisions` lines, source done
+        import json
+        cands = candidates(Path(repo).resolve(), int(got.pos[0]))
+        try:
+            ddest.parent.mkdir(parents=True, exist_ok=True)
+            with ddest.open("x") as h:
+                h.write("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in cands))
+        except OSError as e:
+            print(f"refused: {DECISIONS_OUT} {clean(str(ddest))}: {clean(e.strerror or type(e).__name__)}", file=sys.stderr); return 1
+        print(f"wrote {clean(str(ddest))} ({len(cands)} candidate(s) as --decisions input)")
+        if dest is None:
+            return 0
     if dest is None:
         print("\n".join(lines)); return 0
     try:
