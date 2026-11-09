@@ -142,4 +142,24 @@ searches the repository. The record layer's rule, that nothing is invented, is u
 - **Guard:** `episodes.py` checks a keyed piece against its key, with a test for each check; the engineer's part of this d-work.
 - **VERSION:** 0.3.0 → 0.4.0, a capability. The bundle row warns until the next cut.
 
+**Revision 2 (plan #650 revision 2; dyad-system #498 entries 121–122, relayed via communicate):** engagement governs
+the keyed form's events, with exact quotes and the sourcing and privacy rule as its only fixed points. §2's sentence
+that a fiction passage never tells a system event now binds the labelled form only; in the keyed form a fiction line
+may tell an invented, moved or compressed event, the key labelling it `fiction`. Attack 36 is scoped to the labelled
+form by this: in the keyed form a passage's layer is its key line, which must say `record` wherever a quote stands.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| R1 | Invented events about a real system are read as fact, so readers are deceived. | **Survives, scoped** | The piece declares no truth (#650 entry 2), and its key, published beside it, labels every invented passage `fiction`. |
+| R2 | An exact quote placed in an invented scene breaks the easter egg. | **Survives** | The quote is a record line, its paragraph keyed `record`, checked verbatim at its `path:` or `prov:` citation; only its surroundings are fiction. A quote in a paragraph keyed `fiction` fails the guard. |
+| R3 | An invented event attributes something to the real Operator. | **Survives, scoped** | The persona is the Operator's own choice (§2), and anything said of the real Operator in a record passage still needs §3's approval. |
+
+**Verdict:** the revision survives.
+- **Rules:** §1 states the keyed form's two fixed points; §2 scopes its no-system-event sentence to the labelled form
+  and admits invented, moved and compressed events in the keyed form; §8 lists the quote checks and the empty or
+  repeated composites refusal.
+- **Guard:** quoted text must be a record line; a `path:` or `prov:` citation must hold the quoted string verbatim, a
+  `repo:` or `commit:` citation is warned; the engineer's part of this revision.
+- **VERSION:** stays 0.4.0, still unreleased.
+
 Disposition: see ledger #650.

@@ -39,6 +39,13 @@ lens on the record, never a mould: a part the record does not hold is a gap, not
 and everyone else in a piece is its other layer, the **fiction layer** (§2): it cites nothing and is labelled wherever
 it appears — in its own prose in the labelled form, in the key in the keyed form.
 
+In the keyed form engagement governs the events a piece tells (§2), and two **fixed points** hold whatever it tells:
+- **exact quotes** — text between quotation marks is a record passage: its key line is `record`, and its citation
+  holds those exact characters, so a `path:` or `prov:` citation contains the quoted string verbatim;
+- **the sourcing and privacy rule**, unchanged — no real person beyond the persona; composites never cited to anyone;
+  §4's private-repo flag on every key line; §3's flaw approval for anything said of the real Operator in a record
+  passage.
+
 ## 2. The fiction layer: the persona and composites
 The Operator may appear in a piece as a **persona**, named by the Operator: the Operator's choice of how to appear.
 No other real person is a character, and the commons and its people are not named.
@@ -63,9 +70,13 @@ its key says, of every passage, which layer it is:
   (`../templates/key.md`): `¶<n> <first words> | record <citation>[; <citation>]` for a record passage, or
   `¶<n> <first words> | fiction persona` or `… | fiction composites: <name>, <name>` for a fiction passage;
 - a declared composite appears only in a paragraph its key line labels `fiction composites:` with that name.
-A piece is in one form only, so a keyed piece carries neither footnotes nor markers. In either form, a fiction passage
-never tells a system event, a seat's thought, or the Operator's recorded prompts and approvals: those are the record
-layer's and cite as §1 says, and an outlandish telling of a recorded event is still a record passage and cites it.
+A piece is in one form only, so a keyed piece carries neither footnotes nor markers. In the labelled form, a fiction
+passage never tells a system event, a seat's thought, or the Operator's recorded prompts and approvals: those are the
+record layer's and cite as §1 says, and an outlandish telling of a recorded event is still a record passage and cites
+it. In the keyed form engagement governs events: a fiction line may tell an event that is invented, moved or
+compressed — a system event, a unit's work, or the persona's — because its key line labels it `fiction`, so the key
+always says which passages are record and which are not. Its two fixed points still hold (§1): a quoted string is a
+record passage, never in a paragraph keyed `fiction`, and the sourcing and privacy rule is unchanged.
 
 ## 3. Flaws and the real Operator
 A seat's flaws are the failure modes an audit has classed, each cited to the incident ledger or the audit that
@@ -128,10 +139,13 @@ them: never a pass by assumption. A citation into a private repo prints one warn
 `key:` names no file beside it; a paragraph with no key line, or more than one, or whose first words differ from its
 line's; a key line naming no paragraph; a record line with no citation, or one that is not one of the four forms or
 does not resolve, judged as a footnote is (the same `path:`, `prov:`, `repo:` and `commit:` checks, the same
-warnings); a declared composite — one a `fiction composites:` line of the key names — named in a paragraph its line
-does not label so; and any footnote, `*(fiction)*` marker or `fiction:` line in the piece. Whether each composite a key
+warnings); a quoted string in a paragraph its key line labels `fiction`; a quoted string not found verbatim at its
+line's `path:` or `prov:` citation, a `repo:` or `commit:` citation's quotes warned, not read (§1's exact quotes); a
+`fiction composites:` line whose names are empty or repeated; a declared composite — one a `fiction composites:` line
+of the key names — named in a paragraph its line does not label so; and any footnote, `*(fiction)*` marker or `fiction:` line in the piece. Whether each composite a key
 names is declared in the form's character list is inference, read at the piece's publication, as the labelled form's
 is. Whether a cited artifact says what the piece
 says it does, whether a marked passage holds only what the record does not, and whether a composite is drawn from
-no single real person, is inference, read at the piece's publication. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
+no single real person, is inference, read at the piece's publication; in the keyed form, whether a fiction line's
+invented, moved or compressed event is labelled where it should be is the key's, and the key is read at publication too. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
 question.
