@@ -7,8 +7,8 @@ its covering row, its facts as prose, and the outcome the source recorded (the l
       the blind prompt: per record (sorted by identifier) its question, inputs, outcomes with their when and then,
       precedence and default, then each case (sorted by id) with its id and facts, never its label; the same inputs give
       the same bytes. Refused, before anything is written, when a case lacks a key, names no record, names an outcome
-      that is not its record's, or names a record not judged by inference or operator-side (`dmc:precedent-admission`:
-      a precedent settles agent-side calls only).
+      that is not its record's, names a record not judged by inference, or labels an outcome operator-side by its
+      declared effect (`dmc:precedent-scope`, #649; a record declaring no effect, by the record-wide test).
   dyad precedent score <cases-file> <answers-a> <answers-b> [--kept <file>]
       each reader's answers (`<case id>: <outcome>` lines, or JSON lines `{case, label}`) against the labels: per record
       the count and each reader's score, the kept cases (both readers match the label) and each mismatch, classed
@@ -103,8 +103,9 @@ def problems(cases: list[dict], recs: dict[str, dict]) -> list[str]:
         kind = (doc.get("dyad:judgedBy") or {}).get("dyad:kind")
         if kind != "inference":
             bad.append(f"{who}: dmc:{c['record']} is judged {kind}, not by inference: nothing to label")
-        elif similar.operator_side(doc):
-            bad.append(f"{who}: dmc:{c['record']} is operator-side (dmc:precedent-admission): a precedent settles agent-side calls only")
+        elif c["label"] in codes(doc) and similar.outcome_operator_side(doc, c["label"]):
+            bad.append(f"{who}: dmc:{c['record']} outcome {c['label']!r} is operator-side ({similar.scope(doc, c['label']) if similar.declares_effects(doc) else 'the record-wide test'}; "
+                       f"dmc:precedent-scope): a precedent settles only an outcome whose wrong match costs at most a question")
         if c["label"] not in codes(doc):
             bad.append(f"{who}: label {c['label']!r} is no outcome of dmc:{c['record']}")
         if not ANSWER.match(f"{c['case']}: x"):
@@ -222,7 +223,7 @@ def gate(root: Path, lines: list[dict]) -> tuple[list[dict], list[tuple[str, str
         if got is None:
             refused.append((str(rec), str(case), "no-record")); continue
         doc, path = got
-        side = sim.operator_side(doc)
+        side = sim.outcome_operator_side(doc, str(ln.get("outcome", "")))   # #649: per case, by its outcome's effect
         date = str(ln.get("date") or opened.get(ln.get("row"), ""))
         amended = (not side) and bool(date) and sim.amended_since(Path(root), record_paths(Path(root), doc, path), date, str(case))
         verdict = sim.admission({**ln, "status": "precedent"}, logged.get((rec, case), []), side, amended)

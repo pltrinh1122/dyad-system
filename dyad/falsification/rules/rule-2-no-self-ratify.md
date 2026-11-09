@@ -205,3 +205,67 @@ This Rule's sentence changes with Rule-3's refactor. The claims, attacks and pai
 `rule-3-d-work.md`, amendment #585.
 
 Disposition: see ledger #585.
+
+## Amendment — d-work #649 (2026-11-09: the precedent's scope, by what a wrong match costs)
+Claim (plan #649): a precedent may settle an outcome only when a wrong match of that outcome costs the operator at most
+a question. Each outcome declares the effect it has, and the new mechanical record `dyad/dmc/precedent-scope.jsonld`
+decides from that declaration. The record is homed in this Rule as an index record, with `alsoIn` Rule-3 and
+`scripts/similar.py`.
+
+The effects:
+- **settles**: an agent-side call. It asks no question, skips none and ratifies nothing.
+- **asks**: a question put to the operator, such as a new plan, a plan revision, a row of its own, or a preferences PR.
+- **shapes**: what a question the operator answers anyway shows, such as the class that sets the number in a release
+  question.
+- **skips**: a question another outcome would ask is not asked.
+- **acts**: a ratification, a destructive act, a release or a preference change with no question of its own.
+
+A precedent settles only `settles`, `asks` and `shapes`. Precedence is `acts`, then `skips`, then the rest. In a
+record that declares an effect on any outcome, an undeclared outcome reads `skips`. A record that declares none keeps
+the record-wide consequence test (#642 Q7) until it does, so a record moves to the effect test whole, when its
+effects are declared, and is never half-read.
+
+This replaces the record-wide word test of #642 Q7 (`dmc.py` `RATIFYING`) as admission's refusal. The word test stays
+as a warning. Binding gains one bullet, Rule-3's precedent paragraph cites the record, and the vocabulary row
+`precedent` gains it.
+
+Effects declared in the core, reviewed outcome by outcome:
+
+| record | settles | asks | shapes | skips |
+|---|---|---|---|---|
+| blocker-home | own-diff | never, own-row, revision | | port, ride, carried |
+| plan-departure | | new-plan | | as-planned, mandate, execution-detail |
+| release-class | | | critical-fix, capability, enhancement, breaking | maintenance |
+| promotion | P1–P6 | | | none, hold |
+| attack-result | confirmed, refuted, survives, no-attack-found | | | |
+
+The craft records' effects come in a later PR in the craft zone: cabinet's unit-lifecycle and sysadmin's
+changelog-actor. Over #644's decision log this admits 18 of the 20 cases refused before:
+- blocker-home: 4;
+- plan-departure: the 2 new-plan cases (the 2 execution-detail cases stay refused);
+- release-class: 6;
+- unit-lifecycle: 6, after the craft PR.
+
+| id | claim | attack | result | survivor |
+|---|---|---|---|---|
+| S1 | `asks` is safe | a wrong `new plan` precedent asks the operator a needless question | survives | its cost is one question, which the operator still decides |
+| S2 | `shapes` is safe | a wrong release class understates a release | survives, scoped | the number is in the release question the operator answers, and the release play-book classes each d-work again |
+| S3 | the declared effect is right | an author declares `asks` for an outcome that skips | survives, scoped | the guard's `RATIFYING` warning catches the words, and the effect is reviewed in the PR's evidence outcome by outcome |
+| S4 | the broadened set is safe | it changes decisions | survives | nothing converts until a record's agreement meets its bar, measured after the change |
+| S5 | the zones are ordered | effects declared in a craft before the code that reads them | survives | the agent-zone PR lands first (`order: required`) |
+| S6 | `maintenance` and promotion's `none` and `hold` are `skips` | they decide nothing the operator is asked | survives, scoped | each means a question another outcome would ask (a release, a proposal) is not asked, so a wrong match would remove it; `skips` is the conservative reading, and no admitted case holds one |
+| S7 | the `skips` default refuses what is admitted today | the craft records unit-lifecycle and changelog-actor declare no effect until the craft-zone PR, so a bare `skips` default would refuse changelog-actor's 4 cases, admitted today | survives, scoped | the default applies only in a record that declares an effect; a record declaring none keeps the record-wide test (`similar.declares_effects`), so today's 9 stay admitted until the craft PR declares those records' effects |
+
+**Rule-6.** No term is added. `precedent` gains the record in its definition and Rule-2 in its `used by`, since
+Binding now uses it.
+
+**Pairwise (Rule-5).**
+- **2–3**: a precedent-`Y` still binds exactly the listed entries (Rule-3 What a `Y` binds). Which entries admission
+  passes is this record's, so Rule-3's paragraph cites it and restates none of it.
+- **2–16**: the decision log's shape and append-only rule are unchanged. Only admission's reading of a case's outcome
+  moves.
+- **2–8 and 2–11**: a destructive act and a release stay their own questions, which no precedent settles (`acts`).
+
+The other pairs are as amendment #585 left them. Coherent, orthogonal.
+
+Disposition: see ledger #649.

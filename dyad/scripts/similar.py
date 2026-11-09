@@ -56,6 +56,8 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
         *tfidf({"a": "alpha beta", "b": "gamma delta", "c": "epsilon zeta", "d": "eta theta", "e": "iota kappa",
                 "f": "lambda sigma"}))),
     ("abstain-is-no-outcome-name", lambda: ABSTAIN == "abstain"),
+    ("settleable-are-the-cheap-effects", lambda: set(SETTLEABLE) < set(EFFECTS) and SCOPE_DEFAULT not in SETTLEABLE
+                                                 and "acts" not in SETTLEABLE),
 ]
 
 
@@ -146,6 +148,34 @@ def admission(line: dict | None, later: list[dict], operator_side: bool, amended
     return "admitted" if line.get("status") == "precedent" else "uncovered"
 
 
+# ---- scope (d-work #649; dmc:precedent-scope, mechanical): which outcomes a precedent may settle, by a wrong match's cost
+EFFECTS = ("settles", "asks", "shapes", "skips", "acts")
+SETTLEABLE = ("settles", "asks", "shapes")   # a wrong match costs at most a question the operator still answers
+SCOPE_DEFAULT = "skips"
+
+
+def declares_effects(doc: dict) -> bool:
+    return any(isinstance(o, dict) and "dyad:effect" in o for o in doc.get("hasDefinedTerm") or [])
+
+
+def scope(doc: dict, outcome: str) -> str:
+    """dmc:precedent-scope (#649): the declared `dyad:effect` of `outcome` — settles, asks, shapes, skips or acts — or
+    `skips` (the default) when the outcome declares none or is no outcome of the record. Only a settles, asks or shapes
+    outcome may be settled by a precedent: a wrong one costs at most a question; a skips or acts one never."""
+    for o in doc.get("hasDefinedTerm") or []:
+        if isinstance(o, dict) and o.get("termCode") == outcome:
+            e = o.get("dyad:effect")
+            return e if e in EFFECTS else SCOPE_DEFAULT
+    return SCOPE_DEFAULT
+
+
+def outcome_operator_side(doc: dict, outcome: str) -> bool:
+    """Whether a case of `outcome` is refused as operator-side: by its own effect (`scope` not settleable) when the record
+    declares any effect, else by the record-wide consequence test (`operator_side`, #642 Q7), which a record keeps until
+    its effects are declared (#649 (b): today's admitted cases stay admitted)."""
+    return scope(doc, outcome) not in SETTLEABLE if declares_effects(doc) else operator_side(doc)
+
+
 def _record_doc(root: Path, record: str) -> tuple[dict, Path] | None:
     dmc = dyadlib.load_guard("agent", "dmc")
     for _, p, _ in dmc.records(Path(root)):
@@ -188,7 +218,7 @@ def admit(root: Path, record: str, cases: list[str] | None = None) -> tuple[list
     by_case: dict[str, list[dict]] = {}
     for *_, ln in lines:
         by_case.setdefault(ln.get("case"), []).append(ln)
-    side = operator_side(doc)
+    whole = None if declares_effects(doc) else operator_side(doc)   # #649: per outcome once effects are declared
     home = doc.get("dyad:home")
     paths = [p for p in [path.relative_to(root).as_posix() if path.is_relative_to(root) else None,
                          (dyadlib.PKG / home).relative_to(root).as_posix()
@@ -200,6 +230,7 @@ def admit(root: Path, record: str, cases: list[str] | None = None) -> tuple[list
         # Done's candidate or another ruling, supersedes it
         at = max((i for i, ln in enumerate(lns) if ln.get("status") == "precedent"), default=len(lns) - 1)
         line, later = (lns[at], lns[at + 1:]) if lns else (None, [])
+        side = whole if whole is not None else (outcome_operator_side(doc, line.get("outcome", "")) if line else False)
         amended = bool(line) and not side and amended_since(root, paths, str(line.get("date")), case)
         verdict = admission(line, later, side, amended)
         if verdict == "admitted":
@@ -255,13 +286,15 @@ def label(cset: dict, text: str, threshold: float, margin: float) -> str:
 
 
 def decide(cset: dict, prose: str, fields: dict, threshold: float, margin: float,
-           read: list[str] = ()) -> dict:
+           read: list[str] = (), doc: dict | None = None) -> dict:
     """#642 revision 3: {outcome, reason, row, score}. Match the case's prose inputs to the nearest precedent; then each
     structured field the precedent holds must equal the case's. The outcome is that precedent's, with reason None, only
     when the match clears `threshold` and `margin` and no field differs; otherwise ABSTAIN with the reason:
     `prose-only` when the case holds a value for an input the record marks `read` (`read`, those values' input names);
     `no-match` below the threshold or with no precedent at all; `near-tie` inside the margin; `distinguish <field>` at
-    the first structured field that differs. `row` and `score` cite the matched precedent (R7), on an abstention too."""
+    the first structured field that differs; `scope` (#649) when the record `doc` is given and the winning outcome's
+    effect is no settleable one (`dmc:precedent-scope`). `row` and `score` cite the matched precedent (R7), on an
+    abstention too."""
     q = _vector(cset["idf"], prose)
     scored = [(_cos(q, _vector(cset["idf"], ex)), i) for i, (_, ex) in enumerate(cset["examples"])]
     best_by_label: dict[str, tuple[float, int]] = {}
@@ -281,6 +314,8 @@ def decide(cset: dict, prose: str, fields: dict, threshold: float, margin: float
     for field, value in sorted(cset["fields"][i].items()):
         if fields.get(field) != value:
             return {"outcome": ABSTAIN, "reason": f"distinguish {field}", **cite}
+    if doc is not None and scope(doc, top) not in SETTLEABLE:
+        return {"outcome": ABSTAIN, "reason": "scope", **cite}
     return {"outcome": top, "reason": None, **cite}
 
 

@@ -25,28 +25,32 @@
       "termCode": "confirmed",
       "name": "attack holds",
       "dyad:when": "the attack holds against the claim: the claim, as attacked, falls (the attack is what is confirmed, never the claim)",
-      "dyad:then": "the claim as attacked is not implemented; only a survivor is"
+      "dyad:then": "the claim as attacked is not implemented; only a survivor is",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "refuted",
       "name": "attack fails",
       "dyad:when": "the attack fails against the claim: the attack is what is refuted, and the claim stands against it",
-      "dyad:then": "the claim stands against this attack"
+      "dyad:then": "the claim stands against this attack",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "survives",
       "name": "claim survives",
       "dyad:when": "the claim outlives the attack, possibly scoped",
-      "dyad:then": "its surviving form is the survivor, the only form implemented"
+      "dyad:then": "its surviving form is the survivor, the only form implemented",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "no-attack-found",
       "name": "no attack found",
       "dyad:when": "no attack could be made",
-      "dyad:then": "permitted only by naming what was tried"
+      "dyad:then": "permitted only by naming what was tried",
+      "dyad:effect": "settles"
     }
   ],
   "dyad:precedence": "On easy agreement at least one attack is pushed to confirmed or refuted before the claim is accepted.",

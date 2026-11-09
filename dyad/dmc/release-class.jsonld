@@ -24,35 +24,40 @@
       "termCode": "critical-fix",
       "name": "critical fix",
       "dyad:when": "a defect that gives an installing system a wrong result it can act on (a wrong disposition, a ratification or merge path broken, an install or a release refused, a fence that passes what it must refuse), loses or leaks data, or turns its CI red",
-      "dyad:then": "patch; released when dmc:release-timing says (at once by default); evidence: the incident row, the red run or a reproduction, and the fixing PR with its done-Y"
+      "dyad:then": "patch; released when dmc:release-timing says (at once by default); evidence: the incident row, the red run or a reproduction, and the fixing PR with its done-Y",
+      "dyad:effect": "shapes"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "capability",
       "name": "new capability",
       "dyad:when": "something an installing system can do that it could not: a new verb or flag, a new guard or check, a new craft, a new Rule property",
-      "dyad:then": "minor; released with the change set; evidence: the d-work and PR, and the help text, the guard's registry line or the Rule sentence that names it"
+      "dyad:then": "minor; released with the change set; evidence: the d-work and PR, and the help text, the guard's registry line or the Rule sentence that names it",
+      "dyad:effect": "shapes"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "enhancement",
       "name": "significant enhancement",
       "dyad:when": "an existing capability changed in what it does or decides for an installing system: a new mode of a verb, a check that now catches more, a path materially faster or cheaper in how a unit works, or a decision record with its test that changes what a check runs or when (#618, classed so by #621)",
-      "dyad:then": "minor; released with the change set; evidence: the d-work and PR, and a before/after observation (a timing, a line that now appears)"
+      "dyad:then": "minor; released with the change set; evidence: the d-work and PR, and a before/after observation (a timing, a line that now appears)",
+      "dyad:effect": "shapes"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "breaking",
       "name": "breaking",
       "dyad:when": "an installing system must change something on upgrade: a verb or a file format removed, renamed or narrowed, a Rule whose text now refuses what its text allowed, an install contract changed; adding beside a frozen item is not (dmc:release-break); combines with the classes above",
-      "dyad:then": "major, or minor while the major is 0 with the question marking it breaking (dmc:release-number); never released without its upgrade step (playbooks/port.md); evidence: the changed contract and that upgrade step"
+      "dyad:then": "major, or minor while the major is 0 with the question marking it breaking (dmc:release-number); never released without its upgrade step (playbooks/port.md); evidence: the changed contract and that upgrade step",
+      "dyad:effect": "shapes"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "maintenance",
       "name": "maintenance",
       "dyad:when": "nothing an installing system would notice: Rule wording with no behaviour change, records that change no check or decision an installing system runs, docs, tests, internal refactors, an ordinary fix with no wrong result outside this repo",
-      "dyad:then": "no release, only the drift guard's working bump: the change set waits for the next class that releases; no evidence"
+      "dyad:then": "no release, only the drift guard's working bump: the change set waits for the next class that releases; no evidence",
+      "dyad:effect": "skips"
     }
   ],
   "dyad:precedence": "Highest first: breaking, then critical fix, new capability and significant enhancement, then maintenance. The change set takes the highest class among its d-works, and the bundle the highest among its components; a change set holding a critical fix and a new capability takes the minor number, and the critical fix is why it is asked now.",

@@ -53,6 +53,8 @@ PRECEDENT_KEYS = ("dyad:set", "dyad:sha256", "dyad:threshold", "dyad:margin", "d
                   "dyad:measured", "dyad:kinds")   # #642 (schema.md; the base is the set header's, pinned by the sha256)
 INPUT_KINDS = ("structured", "prose", "read")      # revision 3: how each decisive input is compared, declared per input
 SHA256 = re.compile(r"[0-9a-f]{64}")
+EFFECTS = ("settles", "asks", "shapes", "skips", "acts")   # dmc:precedent-scope's outcomes, an outcome's `dyad:effect` (#649)
+SETTLEABLE = ("settles", "asks", "shapes")
 RATIFYING = re.compile(r"\b(ratif\w*|dispos\w*|plan-Y|done-Y|merges?|merged|releases?|released|destructive|archiv\w*)\b", re.I)
                                                     # a consequence a precedent outcome may never carry (#642 Q7)
 PATH_KEYS = ("dyad:home", "dyad:alsoIn", "dyad:implementation")   # path-valued: exempt from the forbidden scan
@@ -233,6 +235,11 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
     `dyad:measured` is no date. It warns when the owner Rule moved after the set's base commit (Q5: the set is rebuilt),
     and `fallen` when the set's leave-one-out agreement at the record's default threshold and margin is below its bar
     (R3: the re-measure)."""
+    if kind == PRECEDENT:   # #649: the effects first — a precedent record declares what each outcome costs if matched wrongly
+        for o in terms:
+            if isinstance(o, dict) and "dyad:effect" not in o:
+                bad(f"precedent outcome {o.get('termCode')!r} declares no dyad:effect ({', '.join(EFFECTS)}): a precedent "
+                    f"record states which outcomes it may settle (dmc:precedent-scope, #649)")
     c = d.get("dyad:precedents")
     if kind != PRECEDENT:
         bad(f"dyad:precedents on a record of kind {kind!r}: only a precedent record carries one"); return
@@ -242,10 +249,11 @@ def precedent_problems(d: dict, kind, terms: list, base: Path, root: Path, pkg: 
     if missing:
         bad(f"dyad:precedents lacks {', '.join(missing)}"); return
     names = {o.get("name") for o in terms if isinstance(o, dict)}
-    for o in terms:
-        if isinstance(o, dict) and isinstance(o.get("dyad:then"), str) and (m := RATIFYING.search(o["dyad:then"])):
-            bad(f"precedent outcome {o.get('termCode')!r} names {m.group(0)!r} in its consequence: a ratification event "
-                f"or a destructive act is never derived from precedent (#642 Q7)")
+    for o in terms:   # #649: the declared effect decides; the words are a warning on an outcome declared settleable
+        if isinstance(o, dict) and o.get("dyad:effect") in SETTLEABLE and isinstance(o.get("dyad:then"), str) \
+                and (m := RATIFYING.search(o["dyad:then"])):
+            warn(f"precedent outcome {o.get('termCode')!r} is declared {o['dyad:effect']} and names {m.group(0)!r} in its "
+                 f"consequence: check the effect, a ratification or a destructive act is never settled (dmc:precedent-scope)")
     st, path, why = resolve(c["dyad:set"], base, root, pkg)
     cset_ok = None
     if st != "ok":
@@ -364,6 +372,8 @@ def check_record(container: str, path: Path, base: Path, root: Path, pkg: Path, 
                 for k in OUTCOME_KEYS:
                     if not (isinstance(o.get(k), str) and o[k].strip()):
                         bad(f"hasDefinedTerm[{i}] {k} is not a non-empty string")
+                if "dyad:effect" in o and o["dyad:effect"] not in EFFECTS:
+                    bad(f"hasDefinedTerm[{i}] dyad:effect {o['dyad:effect']!r} is not one of {', '.join(EFFECTS)} (#649)")
                 if isinstance(o.get("termCode"), str):
                     codes.append(o["termCode"])
                 if isinstance(o.get("name"), str) and o["name"].strip():

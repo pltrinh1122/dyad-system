@@ -34,56 +34,64 @@
       "termCode": "P1",
       "name": "a live defect",
       "dyad:when": "the row is a defect in a live mechanism, or a monitoring gap",
-      "dyad:then": "proposed first"
+      "dyad:then": "proposed first",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P2",
       "name": "a promise",
       "dyad:when": "a promised entry of the board made while working an anchor names the work, matched to the row by the home",
-      "dyad:then": "proposed after P1"
+      "dyad:then": "proposed after P1",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P3",
       "name": "a fired trigger",
       "dyad:when": "the row waits on a named event and that event has come",
-      "dyad:then": "proposed after P2"
+      "dyad:then": "proposed after P2",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P4",
       "name": "adjacent to the last delivered row",
       "dyad:when": "the row is adjacent to the row just delivered",
-      "dyad:then": "proposed after P3"
+      "dyad:then": "proposed after P3",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P5",
       "name": "worked under backlog",
       "dyad:when": "the home's read shows a commit claiming the row while it is still backlog; its other hygiene findings (orphaned, untouched, malformed) are reasons to read a row, never grounds to retire it or to promote it",
-      "dyad:then": "proposed after P4"
+      "dyad:then": "proposed after P4",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "P6",
       "name": "the oldest valid row",
       "dyad:when": "the row is the oldest backlog row whose reason still holds and that no other row's plan absorbs",
-      "dyad:then": "proposed after P5"
+      "dyad:then": "proposed after P5",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "none",
       "name": "not a candidate",
       "dyad:when": "the row is in no class above, duplicates another row, or is absorbed by another row's plan",
-      "dyad:then": "not proposed; a duplicate is replaced by the row it duplicates, and an absorbed row is proposed only through the row that absorbed it, with the reason stated"
+      "dyad:then": "not proposed; a duplicate is replaced by the row it duplicates, and an absorbed row is proposed only through the row that absorbed it, with the reason stated",
+      "dyad:effect": "skips"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "hold",
       "name": "no proposal",
       "dyad:when": "no unit is idle or about to be, or a counter-prompt the home asked is unanswered",
-      "dyad:then": "nothing is proposed and nothing reaches the operator (the message-overhead criterion)"
+      "dyad:then": "nothing is proposed and nothing reaches the operator (the message-overhead criterion)",
+      "dyad:effect": "skips"
     }
   ],
   "dyad:precedence": "P1 before P2 before P3 before P4 before P5 before P6; within a class a candidate the release plan places in the next release comes first, then a candidate another depends on, and within P1 the higher impact; then ties go to an idle unit before a new one, then to one writer per file, then to the smaller plan; at most the smaller of 2 and the number of idle units are proposed, each with a different owner; the proposal is one question naming each candidate with its class, reason and owner, and a Y opens each named row (backlog to open, the operator's words its prompt entry) and one new row, born open, for each named promise or finding; under organization flat there is one unit, so S6 and the unit tie-breaks drop out; adjacency moves to its own adjacency.jsonld when a second decision needs it",

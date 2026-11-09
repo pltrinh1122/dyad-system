@@ -79,9 +79,14 @@ property 1).
        Mandate scope: the d-work play-book's blocker-fix row (a restore that stops this row from outside its diff); ceiling 1.
 
 6. **Evidence** — `evidence`: `dyad check --evidence` on each head; at `done-ready`, `dyad board draft <id>` prints the
-   data half of the completion evidence, and the agent writes the judgement; ask the Done question.
+   data half of the completion evidence, and the agent writes the judgement; its **Candidates** section lists the
+   row's structured rulings, one `<record>-<row>-<n>` case each, kept only where `dmc:precedent-admission` could admit
+   them, and a `TODO plan-departure: facts | outcome` slot per departure line, which the agent fills; ask the Done
+   question.
 7. **Record, merge, close** — `record`, `done-record`, `complete`, `close-landed`: record the done-`Y` with the state
-   unchanged (`-d 'Y done (merges PR #a at <head-a>)'`, the trace in the same commit); merge as clerical execution;
+   unchanged (`-d 'Y done (merges PR #a at <head-a>)'`, the trace and the candidates in the same commit: `board draft
+   <id> --decisions-out <file>`, then `--decisions <file>` on the record, which `dwork state` requires while the draft
+   lists a candidate); merge as clerical execution;
    set `done` in a second commit once every named head is on `main` (Rule-3, #202). With the automaton on, the record
    is the last inferring act; it merges and closes from that line.
 8. **Defer, resume, mirror** — `defer`, `resume`, `sync-mirror`: a deferral names the blocking row in `refs`; a

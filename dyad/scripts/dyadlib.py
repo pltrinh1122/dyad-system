@@ -1121,9 +1121,9 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("board", "set"):           CliForm("<id>|_cos[-<operator>] key=value...", (), ("--drop",)),
     ("board", "resume"):        CliForm(),
     ("board", "advance"):       CliForm("<id>... <event> key=value...", (("--expect", "<phase>|none"), ("--said-file", "<path>"),
-                                                                       ("--mirror", "<branch>"))),
+                                                                       ("--decisions", "<file>"), ("--mirror", "<branch>"))),
     ("board", "phases"):        CliForm(),
-    ("board", "draft"):         CliForm("<id>", (("--out", "<file>"),)),   # #587 X7: the Done skeleton, read-only
+    ("board", "draft"):         CliForm("<id>", (("--out", "<file>"), ("--decisions-out", "<file>"))),   # #587 X7: the Done skeleton, read-only; #648
     ("board", "groom"):         CliForm(),                                 # #625: the grooming report, read-only
     ("inbox", "post"):          CliForm("<unit> [<body>...]", (("--row", "<id>"), ("--kind", "report|relay|ack|notice"),
                                                                ("--body-file", "<path>"), ("--cc", "<unit>")), (), ("--cc",), 1),

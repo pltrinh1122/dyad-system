@@ -102,7 +102,8 @@ Beside a row's questions stands the **precedent question**, `Y/N: admit as prece
 entries (Rule-16 Store) by record and case id before it: its **precedent-Y** binds exactly the listed entries, which become
 precedents of their records' kind `precedent` (`dyad/dmc/judgement-complexity.jsonld`), and nothing else. A done-`Y`
 covers the work and its rulings only as candidates; a ruling becomes a precedent only by a precedent-`Y` naming it
-(#644).
+(#644). Which outcomes a precedent may settle at all is `dmc:precedent-scope`'s, by each outcome's declared effect
+(Rule-2, Binding of approval; #649).
 
 A batch counter-prompt binds each d-work it names as its single question would (Batch disposition, below). A row or act
 is **carried** when another's question names it — a plan question naming its class, a Done question naming it under
@@ -200,12 +201,18 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   it, so it covers the `Y` and stays ledger-only; one with no transcript is still cited, its
   buckets marked absent (#213). A mandate close rides the mandate's own trace.
 - The reply that asks does not merge. A done-`Y` that names no merge has nothing in flight: one ledger commit holds its
-  `disposed` entry, its provenance entry and the trace, sets `done` at once, and archives each retired row it names.
+  `disposed` entry, its provenance entry, the trace and the row's candidates (Record, below), sets `done` at once, and
+  archives each retired row it names.
 - **Record, merge, Close** (#202), for a done-`Y` that names a merge. The reply that receives it takes three acts in
   order, so the ledger's record of the `Y` precedes every merge it ratifies. (1) **Record**: one clerical ledger commit
   holding the `disposed` entry, its provenance entry and the trace, the state left as it is, the entry naming each
   retired row and each PR with the head its `Y` was given on — `-d 'Y done (retires #r, merges PR #a at <head-a>)'`;
-  that entry is the record of the `Y`, and the state is not. (2) **Merge**, as clerical execution of it. (3) **Close**:
+  that entry is the record of the `Y`, and the state is not. The same commit carries the row's rulings as decision-log
+  candidates (Rule-16 Store): the file `dyad board draft <id> --decisions-out <file>` writes, the structured
+  candidates of the row's own sources and the prose lines the agent filled in its slots, recorded by `--decisions`
+  on `dwork state … -d 'Y done …'` or `board advance … answered-Y`; `dwork state` refuses, before any write, a `Y done`
+  with no `--decisions` on a row whose draft lists a candidate, and the evidence names any line the agent dropped with
+  its reason (#648). (2) **Merge**, as clerical execution of it. (3) **Close**:
   a dispositionless ledger commit that sets `done` once every head the **operative** entry (the last `Y done`) names is
   on `main` — by the hosting's merge or Rule-14 property 3's local merge, a squash or rebase recorded `landed <sha>` —
   and archives each retired row.
@@ -435,5 +442,9 @@ see the same record, amendment #644. Batch disposition gains the closing line, `
 asked, which is the agent's work, and never a question asked and not answered, the one thing that waits on the operator;
 it was written by hand. It is now generated from the asks the board records, each classed by the record
 `dmc:disposition-request` (plan revision 3), which also counts merge questions; see the same record, amendment #646.
+Completion counter-prompt's Record step carries the row's decision-log candidates 2026-11-09 (d-work #648): the log was
+filled only by hand-run backfills, so a ruling named in a Done reached it only if someone later searched for it; see
+the same record, amendment #648. What a `Y` binds cites the precedent's scope 2026-11-09 (d-work #649); see
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #649.
 
 Set: System Requirements.

@@ -61,6 +61,12 @@ not edited when they are added (G5).
   execution of the given `Y`, exactly as a hosted merge is; the row's `disposed` and the
   completion reply record it (#138).
 - A new PR, including one created to recover from an error, needs a fresh Y.
+- A precedent never settles a question's absence or an act: it decides only an outcome whose wrong match costs the
+  operator at most a question, by the outcome's declared effect (`dmc:precedent-scope`) — `settles` (an agent-side
+  call), `asks` (a question put to the operator) or `shapes` (what a question the operator answers anyway shows). An
+  outcome that `skips` a question another outcome would ask, or `acts` with no question of its own, is never settled by
+  a precedent, which abstains. In a record that declares an effect on any outcome, an undeclared outcome reads `skips`;
+  a record that declares none keeps the record-wide consequence test until it does (#649).
 - The agent may *execute* a merge the operator has ratified; execution is clerical, not disposal.
 - A batch counter-prompt (Rule-3, Batch disposition) names several d-works, PRs, or both in one
   question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked
@@ -137,6 +143,10 @@ after-merge check is corroboration where the merge ran 2026-11-03 (d-work #564):
 that play-book prescribes, and they were asked again; the never-accretable list is unchanged; see the same record,
 amendment #574. Binding's first bullet names the rows a done-`Y` retires 2026-11-04 (d-work #585, absorbing #574
 revision 3): a delivered row's report retires rows the operator had been asked about again in the retirement form; see
-`../falsification/rules/rule-3-d-work.md`, amendment #585.
+`../falsification/rules/rule-3-d-work.md`, amendment #585. Binding gains the precedent's scope 2026-11-09 (d-work #649):
+admission refused every case of a record when any of its consequences held a ratifying word, so a release class that
+only sets the number a release question shows, and a new plan that only asks one, were refused with the outcomes that
+skip a question; the line is drawn by what a wrong match costs, declared per outcome; see the same record, amendment
+#649.
 
 Set: System Requirements.

@@ -24,14 +24,16 @@
       "termCode": "operator",
       "name": "operator",
       "dyad:when": "the Operator drove it, including an Operator-run ops script",
-      "dyad:then": "actor is operator; a divergent credential is named in the outcome"
+      "dyad:then": "actor is operator; a divergent credential is named in the outcome",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "agent",
       "name": "agent",
       "dyad:when": "the Agent's own process ran it",
-      "dyad:then": "actor is agent; a divergent credential (such as the Operator's git identity) is named in the outcome"
+      "dyad:then": "actor is agent; a divergent credential (such as the Operator's git identity) is named in the outcome",
+      "dyad:effect": "settles"
     }
   ],
   "dyad:judgedBy": {
