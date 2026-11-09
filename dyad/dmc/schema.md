@@ -26,6 +26,7 @@ The file is `<identifier>.jsonld`. `dyad/dmc/context.jsonld` is the one context 
 | `dyad:decides` | yes | the question it answers |
 | `dyad:inputs` | yes | a non-empty list of strings: what it reads |
 | `hasDefinedTerm` | yes | a list of ≥ 2 outcomes, each `{"@type": "DefinedTerm", "termCode", "name", "dyad:when", "dyad:then"}`, every value a non-empty string, `termCode` unique in the record |
+| `dyad:effect` | on each outcome of a `precedent` record; optional elsewhere | an outcome's declared effect, one of `settles`, `asks`, `shapes`, `skips` or `acts` (`dmc:precedent-scope`): what a wrong match of that outcome would cost the operator; a precedent settles only a `settles`, `asks` or `shapes` outcome; in a record that declares any effect an undeclared outcome reads `skips`, and a record that declares none keeps the record-wide consequence test (#649) |
 | `dyad:precedence` | no | the order or tie-break among outcomes |
 | `dyad:default` | no | the outcome when the inputs cannot decide |
 | `dyad:tunables` | no | a non-empty list of the numbers this criterion lets the operator tune, each `{"dyad:preference": <key>, "dyad:defaultValue", "dyad:allowed", "dyad:readBy": <path>}`, every value a non-empty string: the preference key (lowercase, hyphenated), the value used when the preference is absent, what the `allowed` cell says, and the file that reads it; a key is claimed by one record only; core records only (`dyad/dmc/`), since `dyadlib.tunable` reads no craft or instance record (#590) |
@@ -46,6 +47,7 @@ Defined here and nowhere else; a craft uses them, never defines one.
 | `dyad:inputs` | what the decision reads |
 | `dyad:when` | an outcome's condition |
 | `dyad:then` | an outcome's consequence |
+| `dyad:effect` | an outcome's declared effect, which decides whether a precedent may settle it (`dmc:precedent-scope`) |
 | `dyad:precedence` | how outcomes are ordered or a tie is broken |
 | `dyad:default` | the outcome taken when the inputs cannot decide |
 | `dyad:tunables` | the operator-tunable numbers of the criterion, each a preference with its default here |

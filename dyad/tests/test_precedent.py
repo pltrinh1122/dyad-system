@@ -58,12 +58,12 @@ class PrecedentTests(unittest.TestCase):
                {"case": "x-2", "record": "no-such", "row": 5, "facts": "f", "label": "a"},
                {"case": "x-3", "record": "attack-result", "row": 5, "facts": "f", "label": "maybe"},
                {"case": "x-4", "record": "replan", "row": 5, "facts": "f", "label": "replan"},
-               {"case": "x-5", "record": "release-class", "row": 5, "facts": "f", "label": "capability"},
+               {"case": "x-5", "record": "plan-departure", "row": 5, "facts": "f", "label": "execution-detail"},
                {"case": "two words", "record": "attack-result", "row": 5, "facts": "f", "label": "confirmed"}]
         with self.assertRaises(ValueError) as e:
             pr.prompt(self.root, bad + CASES[:1] + CASES[:1])
         for says in ("x-1: lacks label", "x-2: names no DMC record", "x-3: label 'maybe' is no outcome",
-                     "x-4: dmc:replan is judged mechanical", "x-5: dmc:release-class is operator-side",
+                     "x-4: dmc:replan is judged mechanical", "x-5: dmc:plan-departure outcome 'execution-detail' is operator-side (skips",
                      "two words: the case id", "ar-2: named twice"):
             self.assertIn(says, str(e.exception))
         (self.d / "bad.jsonl").write_text(json.dumps(bad[4]) + "\n")
@@ -120,18 +120,19 @@ class GateTests(unittest.TestCase):
 
     def test_gate_judges_each_line_before_the_question(self):
         lines = [self.line("new-1"), self.line("p-1"), self.line("new-2", precedent="0" * 64),
-                 self.line("rc-1", "release-class", "capability"), self.line("x-1", "no-such")]
+                 self.line("pd-1", "plan-departure", "execution-detail"), self.line("x-1", "no-such"),
+                 self.line("rc-1", "release-class", "capability")]                  # #649: shapes, so admitted
         admitted, refused = pr.gate(self.d, lines)
-        self.assertEqual([l["case"] for l in admitted], ["new-1"])
+        self.assertEqual([l["case"] for l in admitted], ["new-1", "rc-1"])
         self.assertEqual(refused, [("promotion", "p-1", "superseded"), ("promotion", "new-2", "self-derived"),
-                                   ("release-class", "rc-1", "operator-side"), ("no-such", "x-1", "no-record")])
+                                   ("plan-departure", "pd-1", "operator-side"), ("no-such", "x-1", "no-record")])
         kept = self.d / "kept.jsonl"; kept.write_text("".join(json.dumps(l) + "\n" for l in lines))
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             self.assertEqual(pr.main(["gate", str(kept), "--out", str(self.d / "adm.jsonl")], self.d), 0, err.getvalue())
         self.assertIn("refused p-1 (dmc:promotion): superseded", out.getvalue())
-        self.assertIn("admitted: 1; refused: 4", out.getvalue())
-        self.assertEqual([json.loads(l)["case"] for l in (self.d / "adm.jsonl").read_text().splitlines()], ["new-1"])
+        self.assertIn("admitted: 2; refused: 4", out.getvalue())
+        self.assertEqual([json.loads(l)["case"] for l in (self.d / "adm.jsonl").read_text().splitlines()], ["new-1", "rc-1"])
 
     def test_agreement_re_measures_the_admitted_set(self):
         m = pr.agreement(self.d, "promotion")
