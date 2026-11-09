@@ -162,4 +162,12 @@ form by this: in the keyed form a passage's layer is its key line, which must sa
   `repo:` or `commit:` citation is warned; the engineer's part of this revision.
 - **VERSION:** stays 0.4.0, still unreleased.
 
+**Revision 3 (plan #650 revision 3):** the craft vocabulary's `fiction layer` row had said the layer is labelled twice
+and never tells a system event, untrue of the keyed form since revision 1. It now defines one term with two forms. The
+vocabulary has no `key` row, so none is added or amended.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| V1 | A term defined two ways is two terms. | **Survives, scoped** | One term with two forms, each named in its definition as §2 states it; what the layer is (everything the record layer does not hold) is one definition, and only how it is labelled, and what it may tell, differs by form. The craft vocabulary guard checks shape only, so the reading stays inference. |
+
 Disposition: see ledger #650.
