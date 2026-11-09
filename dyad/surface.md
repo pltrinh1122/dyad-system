@@ -73,7 +73,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` | `--drop`; advance: `--expect`, `--said-file`, `--mirror`; draft: `--out <file>` | frozen |
+| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` | `--drop`; advance: `--expect`, `--said-file`, `--decisions` (the Done answer's candidate rulings, #648), `--mirror`; draft: `--out <file>`, `--decisions-out <file>` (the row's candidate rulings as a decisions input file, #648) | frozen |
 | `dyad inbox post <unit> [<body>...]` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file` | frozen |
 | `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | frozen |
 | `dyad inbox post … --cc <unit>` | — | frozen |
