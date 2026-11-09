@@ -169,5 +169,66 @@ class AdmissionTests(unittest.TestCase):
         self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
 
 
+class ScopeTests(unittest.TestCase):
+    """dmc:precedent-scope (#649): each effect read, the default skips, the fallback to the record-wide test while a record
+    declares none, decide abstaining with `scope`, and the 20 entries #644's gate refused: 18 admitted, 2 refused."""
+    DOC = {"hasDefinedTerm": [{"termCode": c, "dyad:then": "x", **({"dyad:effect": e} if e else {})}
+                              for c, e in (("s", "settles"), ("a", "asks"), ("h", "shapes"), ("k", "skips"), ("t", "acts"), ("u", None))]}
+
+    def test_each_effect_and_the_default(self):
+        for code, effect in (("s", "settles"), ("a", "asks"), ("h", "shapes"), ("k", "skips"), ("t", "acts"), ("u", "skips"), ("zz", "skips")):
+            with self.subTest(outcome=code):
+                self.assertEqual(similar.scope(self.DOC, code), effect)
+                self.assertEqual(similar.outcome_operator_side(self.DOC, code), effect not in similar.SETTLEABLE)
+        record = json.loads((PKG / "dmc" / "precedent-scope.jsonld").read_text())
+        self.assertEqual({o["termCode"] for o in record["hasDefinedTerm"]}, set(similar.EFFECTS))
+        self.assertEqual(record["dyad:default"], similar.SCOPE_DEFAULT)
+
+    def test_a_record_declaring_no_effect_keeps_the_record_wide_test(self):
+        plain = {"hasDefinedTerm": [{"termCode": "a", "dyad:then": "the agent re-plans"}, {"termCode": "b", "dyad:then": "noted"}]}
+        self.assertFalse(similar.outcome_operator_side(plain, "a"))                 # (b): admitted as before #649
+        ratifying = {"hasDefinedTerm": [{"termCode": "a", "dyad:then": "it merges the PR"}, {"termCode": "b", "dyad:then": "noted"}]}
+        self.assertTrue(similar.outcome_operator_side(ratifying, "b"))             # the whole record, as before
+
+    def test_decide_abstains_out_of_scope(self):
+        d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, d, True)
+        similar.freeze([("s", "alpha beta gamma", {}, 1), ("k", "delta epsilon zeta", {}, 2)], d / "set.jsonl", {1, 2}, BASE, max_df=0.9)
+        cset = similar.load(d / "set.jsonl")
+        self.assertEqual(similar.decide(cset, "alpha beta", {}, 0.0, 0.0, doc=self.DOC)["outcome"], "s")
+        got = similar.decide(cset, "delta epsilon", {}, 0.0, 0.0, doc=self.DOC)
+        self.assertEqual((got["outcome"], got["reason"]), (similar.ABSTAIN, "scope"))
+        self.assertEqual(similar.decide(cset, "delta epsilon", {}, 0.0, 0.0)["outcome"], "k")   # no doc: as before
+
+    def test_the_twenty_refused_entries(self):
+        """The 29 cases the operator's precedent-Y admitted on #644, restricted to the 4 records #644's gate refused as
+        operator-side (20 cases): under the declared effects 18 are admitted and the 2 `execution-detail` cases refused.
+        unit-lifecycle's effects arrive with PR B (craft zone), so this test declares them as the plan's table does."""
+        root = dyadlib.repo_root()
+        dl = dyadlib.load_guard("agent", "decision_log")
+        log = dl.read(root).get(644)
+        if not log:
+            self.skipTest("no decisions/644.md in this instance")
+        records = ("blocker-home", "plan-departure", "release-class", "unit-lifecycle")
+        cases = {r: sorted({ln["case"] for ln in log if ln.get("record") == r and ln.get("status") == "precedent"}) for r in records}
+        self.assertEqual(sum(map(len, cases.values())), 20)
+        real = similar._record_doc
+        ul = {"idle-unit": "settles", "keep": "settles", "re-seat": "asks", "retire": "asks"}
+        def doc(root_, record):
+            got = real(root_, record)
+            if record == "unit-lifecycle" and got:
+                d, p = got
+                d = {**d, "hasDefinedTerm": [{**o, "dyad:effect": ul.get(o["termCode"], "skips")} for o in d["hasDefinedTerm"]]}
+                return d, p
+            return got
+        with unittest.mock.patch.object(similar, "_record_doc", doc):
+            got = {r: similar.admit(root, r, cases[r]) for r in records}
+        admitted = sum(len(e) for e, _ in got.values())
+        refused = [(r, c, v) for r, (_, ref) in got.items() for c, v in ref]
+        self.assertEqual((admitted, len(refused)), (18, 2), refused)
+        self.assertEqual({(r, v) for r, _, v in refused}, {("plan-departure", "operator-side")})
+        for r, c, _ in refused:
+            self.assertEqual(next(ln["outcome"] for ln in log if ln["case"] == c), "execution-detail")
+
+
 if __name__ == "__main__":
     unittest.main()

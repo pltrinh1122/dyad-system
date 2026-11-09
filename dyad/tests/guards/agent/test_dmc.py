@@ -225,7 +225,7 @@ class DmcGuardTests(unittest.TestCase):
 class PrecedentTests(unittest.TestCase):
     """#642 revision 2: a record of kind `precedent` carries `dyad:precedents`: its frozen set of ratified cases exists,
     its digest matches, its labels are the record's outcome names, its threshold and margin are the record's tunables, its
-    agreement meets its bar, and no outcome's consequence is a ratification event or a destructive act; it warns when
+    agreement meets its bar, and every outcome declares its effect (#649: the words only warn); it warns when
     the owner Rule moved after the set's base; no other kind carries one."""
     def setUp(self):
         os.environ.pop("DYAD_INSTANCE", None); self.t = Tree()
@@ -247,6 +247,8 @@ class PrecedentTests(unittest.TestCase):
                                     "dyad:tunables": [tun("sim-threshold", "0.2"), tun("sim-margin", "0.05")],
                                     "dyad:precedents": c})
         r["hasDefinedTerm"][1]["dyad:then"] = "listed for the reader"         # the fixture's own `plan-Y` is a ratification
+        for o in r["hasDefinedTerm"]:
+            o["dyad:effect"] = "settles"                                       # #649: a precedent record declares each effect
         return r
     def bad(self, rec):
         self.t.put(self.t.pkg, rec)
@@ -295,9 +297,22 @@ class PrecedentTests(unittest.TestCase):
         r = self.rec(); r["hasDefinedTerm"][1]["name"] = "undoable"
         self.assertTrue(any("are not the record's outcome names" in m for m in self.bad(r)))
 
-    def test_a_disposition_is_never_derived(self):
+    def test_the_effect_decides_and_the_words_warn(self):
+        """#649: a precedent record declares every outcome's effect (missing fails, an unknown value fails on any record);
+        a settleable outcome whose consequence names a ratification only warns, and an `acts` one does not."""
+        r = self.rec(); del r["hasDefinedTerm"][0]["dyad:effect"]
+        self.assertTrue(any("declares no dyad:effect" in m for m in self.bad(r)))
+        r = self.rec(); r["hasDefinedTerm"][0]["dyad:effect"] = "maybe"
+        self.assertTrue(any("dyad:effect 'maybe' is not one of" in m for m in self.bad(r)))
         r = self.rec(); r["hasDefinedTerm"][1]["dyad:then"] = "the named merge may be executed"
-        self.assertTrue(any("never derived from precedent" in m for m in self.bad(r)))
+        self.assertEqual(self.bad(r), [])
+        self.assertTrue(any(m.startswith("warning:") and "is declared settles and names 'merge'" in m for m in self.t.check()))
+        r["hasDefinedTerm"][1]["dyad:effect"] = "acts"
+        self.assertEqual(self.bad(r), []); self.assertFalse(any("is declared" in m for m in self.t.check()))
+        g = dyadlib.load_guard("agent", "dmc"); import similar
+        self.assertEqual((g.EFFECTS, g.SETTLEABLE), (similar.EFFECTS, similar.SETTLEABLE))   # one list, two readers
+        doc = json.loads((Path(__file__).resolve().parents[3] / "dmc" / "precedent-scope.jsonld").read_text())
+        self.assertEqual({o["termCode"] for o in doc["hasDefinedTerm"]}, set(g.EFFECTS))
 
     def test_only_a_precedent_record_carries_precedents(self):
         r = self.rec(); r["dyad:judgedBy"]["dyad:kind"] = "inference"
