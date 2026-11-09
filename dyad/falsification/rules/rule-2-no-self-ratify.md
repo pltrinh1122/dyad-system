@@ -220,8 +220,10 @@ The effects:
 - **skips**: a question another outcome would ask is not asked.
 - **acts**: a ratification, a destructive act, a release or a preference change with no question of its own.
 
-A precedent settles only `settles`, `asks` and `shapes`. Precedence is `acts`, then `skips`, then the rest, and an
-outcome with no declared effect reads `skips`.
+A precedent settles only `settles`, `asks` and `shapes`. Precedence is `acts`, then `skips`, then the rest. In a
+record that declares an effect on any outcome, an undeclared outcome reads `skips`. A record that declares none keeps
+the record-wide consequence test (#642 Q7) until it does, so a record moves to the effect test whole, when its
+effects are declared, and is never half-read.
 
 This replaces the record-wide word test of #642 Q7 (`dmc.py` `RATIFYING`) as admission's refusal. The word test stays
 as a warning. Binding gains one bullet, Rule-3's precedent paragraph cites the record, and the vocabulary row
@@ -252,6 +254,7 @@ changelog-actor. Over #644's decision log this admits 18 of the 20 cases refused
 | S4 | the broadened set is safe | it changes decisions | survives | nothing converts until a record's agreement meets its bar, measured after the change |
 | S5 | the zones are ordered | effects declared in a craft before the code that reads them | survives | the agent-zone PR lands first (`order: required`) |
 | S6 | `maintenance` and promotion's `none` and `hold` are `skips` | they decide nothing the operator is asked | survives, scoped | each means a question another outcome would ask (a release, a proposal) is not asked, so a wrong match would remove it; `skips` is the conservative reading, and no admitted case holds one |
+| S7 | the `skips` default refuses what is admitted today | the craft records unit-lifecycle and changelog-actor declare no effect until the craft-zone PR, so a bare `skips` default would refuse changelog-actor's 4 cases, admitted today | survives, scoped | the default applies only in a record that declares an effect; a record declaring none keeps the record-wide test (`similar.declares_effects`), so today's 9 stay admitted until the craft PR declares those records' effects |
 
 **Rule-6.** No term is added. `precedent` gains the record in its definition and Rule-2 in its `used by`, since
 Binding now uses it.

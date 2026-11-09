@@ -65,7 +65,8 @@ not edited when they are added (G5).
   operator at most a question, by the outcome's declared effect (`dmc:precedent-scope`) — `settles` (an agent-side
   call), `asks` (a question put to the operator) or `shapes` (what a question the operator answers anyway shows). An
   outcome that `skips` a question another outcome would ask, or `acts` with no question of its own, is never settled by
-  a precedent, which abstains; an outcome with no declared effect reads `skips` (#649).
+  a precedent, which abstains. In a record that declares an effect on any outcome, an undeclared outcome reads `skips`;
+  a record that declares none keeps the record-wide consequence test until it does (#649).
 - The agent may *execute* a merge the operator has ratified; execution is clerical, not disposal.
 - A batch counter-prompt (Rule-3, Batch disposition) names several d-works, PRs, or both in one
   question; the binding is unchanged — a `Y` ratifies exactly the named set, each still checked

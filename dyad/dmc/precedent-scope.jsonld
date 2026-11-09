@@ -54,7 +54,7 @@
       "dyad:then": "a precedent may not settle it: the precedent abstains, admission refuses the case, and a record of kind precedent may not hold one"
     }
   ],
-  "dyad:precedence": "acts over skips over the rest: an outcome is classed by the strongest effect its consequence carries",
+  "dyad:precedence": "acts over skips over the rest: an outcome is classed by the strongest effect its consequence carries; in a record that declares an effect on any outcome, an undeclared outcome is skips, and a record that declares none is judged by the record-wide consequence test until it does",
   "dyad:default": "skips",
   "dyad:judgedBy": {
     "dyad:kind": "mechanical",
