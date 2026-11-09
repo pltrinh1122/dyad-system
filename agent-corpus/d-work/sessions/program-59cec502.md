@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-09T22:47:26+00:00
+seen: 2026-11-09T22:48:24+00:00
 root: /home/user/dyad-system
 rows: 650
 files: agent-corpus/d-work/ chronicle.md crafts/chronicle/falsification/rules/chronicle.md crafts/chronicle/guards/episodes.py episodes.py serial.md
