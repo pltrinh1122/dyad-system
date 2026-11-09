@@ -1975,6 +1975,58 @@ class DraftTests(unittest.TestCase):
         self.assertTrue(out.startswith(f"wrote {dest} ("), out)
         self.assertTrue(dest.read_text().startswith("# Done #700 the machine: skeleton"))
 
+    def test_candidates_the_prose_slot_and_decisions_out(self):
+        """#648: the draft lists the row's candidate rulings (its plan's verdict table, admission-filtered), a fixed prose
+        slot, and --decisions-out writes them as `--decisions` lines that the decision log's check passes; given alone it
+        needs no done-ready entry."""
+        import json
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        self.assertIn("none: this Done records no `--decisions`", self.section(out, "Candidates (dmc:precedent-admission "
+                      "over this row's sources; its `Y done` records them with `--decisions`, #648)"))
+        plan = self.repo / INST / "d-work" / "plans" / "700.md"
+        plan.write_text(plan.read_text() + "\n## Falsification\n| id | claim | attack | result | survivor |\n|---|---|---|---|---|\n"
+                        "| F1 | the claim | the attack | survives, scoped | s |\n| F2 | c | a | unclear | s |\n")
+        git(self.repo, *livetest.IDENTITY, "commit", "-qam", "ledger: plan")
+        rc, out, _ = self.draft("700")
+        self.assertEqual(rc, 0)
+        cand = self.section(out, "Candidates (dmc:precedent-admission over this row's sources; its `Y done` records them "
+                            "with `--decisions`, #648)")
+        self.assertIn("- `attack-result` attack-result-700-1: survives — the claim — the attack", cand)
+        self.assertNotIn("700-2", cand)                                              # a result naming no outcome
+        self.assertIn(bd.PROSE_SLOT, self.section(out, "Prose rulings (orchestrate)"))
+        self.assertEqual(QSTART.findall(out), ["Y/N:"])                              # the question is still the one last line
+        dest = Path(tempfile.mkdtemp()) / "dec.jsonl"; self.addCleanup(shutil.rmtree, dest.parent, True)
+        rc, out, err = self.draft("700", "--decisions-out", str(dest))
+        self.assertEqual(rc, 0, err); self.assertTrue(out.startswith(f"wrote {dest} (1 candidate(s)"), out)
+        (line,) = [json.loads(l) for l in dest.read_text().splitlines()]
+        self.assertEqual((line["record"], line["case"], line["outcome"], line["row"], line["source"]),
+                         ("attack-result", "attack-result-700-1", "survives", 700, "done"))
+        dl = dyadlib.load_guard("agent", "decision_log")
+        self.assertEqual(dl.line_problems({**line, "status": "candidate", "date": "2026-11-09"}, 700, "2026-11-09 Y done",
+                                          {700}, dl.outcomes_by_record(self.repo)), [])
+        rc, out, err = self.draft("704", "--decisions-out", str(dest.parent / "704.jsonl"))   # not done-ready: still written
+        self.assertEqual(rc, 0, err); self.assertEqual((dest.parent / "704.jsonl").read_text(), "")
+        rc, _, err = self.draft("700", "--decisions-out", str(dest))                  # never overwrites
+        self.assertEqual(rc, 1); self.assertIn("exists", err)
+        self.assertEqual(self.status(), "")
+
+    def test_the_done_answer_carries_decisions(self):
+        """#648: `board advance … answered-Y --decisions <f>` adds the file to each row's `Y done` line; only that event
+        takes it."""
+        rows = {r.id: r for r in dyadlib.read_rows(self.repo)}
+        e = bd.parse((self.repo / INST / "d-work" / "board" / "700.md").read_text())[0]
+        q = bd.question("done", [700], {700: e}, rows, "with-done")
+        got = bd.ledger_lines([700], {700: {**e, "question": q}}, rows, "answered-Y", "/w/said", "with-done", decisions_abs="/w/dec")
+        self.assertTrue(got[0].endswith("--said-file /w/said --decisions /w/dec"), got[0])
+        said = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, said, True); (said / "s").write_text("Y")
+        (said / "d").write_text("")
+        self.assertEqual(bd.parse_advance(["700", "answered-Y", "--expect", "done-asked", "--said-file", str(said / "s"),
+                                           "--decisions", str(said / "d")])[6], str(said / "d"))
+        with self.assertRaises(bd.Refused) as r:
+            bd.parse_advance(["700", "answered-Y", "--expect", "plan-asked", "--said-file", str(said / "s"), "--decisions", str(said / "d")])
+        self.assertIn("rides the Done answer only", str(r.exception))
+
     def test_a_with_separate_preference_composes_no_question(self):
         p = self.repo / "preferences-corpus" / "PREFERENCES.md"
         p.write_text(p.read_text().replace("| with-done |", "| separate |"))

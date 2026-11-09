@@ -76,5 +76,19 @@ class BackfillTests(unittest.TestCase):
             self.assertEqual(bf.main(["--record"]), 1)
 
 
+class ForRowTests(BackfillTests):
+    def test_for_row_scopes_each_source_and_names_one_id_per_ruling(self):
+        """#648: a row's own plan table, entries and change-log rows, renamed `<record>-<row>-<n>`, source done."""
+        got = {(g["record"], g["case"], g["outcome"]) for g in bf.for_row(self.root, 4)}
+        self.assertEqual(got, {("attack-result", "attack-result-4-1", "refuted"), ("attack-result", "attack-result-4-2", "survives")})
+        self.assertEqual({(g["record"], g["case"]) for g in bf.for_row(self.root, 3)},
+                         {("host-action-class", "host-action-class-3-1"), ("party-kind", "party-kind-3-1")})
+        six = bf.for_row(self.root, 6)
+        self.assertEqual([(g["record"], g["case"], g["source"]) for g in six], [("promotion", "promotion-6-1", "done")])
+        self.assertEqual(bf.for_row(self.root, 99), [])
+        cap = {g["case"] for g in bf.capture(self.root, 3)}
+        self.assertEqual(cap, {"party-kind-3-1"})                                    # host-action-class is operator-side
+
+
 if __name__ == "__main__":
     unittest.main()

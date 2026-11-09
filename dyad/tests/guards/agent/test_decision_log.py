@@ -128,6 +128,16 @@ class FormTests(unittest.TestCase):
             dl.lines_for(self.root, 99, "Y done", given, "2026-11-08")
 
 
+class BatchTests(FormTests):
+    def test_a_batch_done_takes_only_its_rows_lines(self):
+        """#648: one --decisions file may serve a batch Done; each row's state call takes the lines naming it."""
+        lines = [{**{k: CAND[k] for k in ("record", "fields", "inputs", "outcome")}, "case": f"r{r}", "row": r} for r in (5, 6)]
+        got = dl.lines_for(self.root, 5, "Y done (batch #5,#6)", lines, "2026-11-09")
+        self.assertEqual([g["case"] for g in got], ["r5"])
+        self.assertEqual(dl.lines_for(self.root, 7, "Y done (batch #5,#7)", lines[:1], "2026-11-09"), [])   # none of its own
+        self.assertEqual(len(dl.lines_for(self.root, 5, "Y done", lines, "2026-11-09")), 2)               # a single Done: all
+
+
 class TransactionTests(unittest.TestCase):
     def setUp(self):
         e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
