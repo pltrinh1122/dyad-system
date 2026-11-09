@@ -1619,3 +1619,38 @@ agent's batch store, now reported as the line's `Coming` part. No other term cha
 The other pairs are as amendment #644 left them. Coherent, orthogonal.
 
 Disposition: see ledger #646.
+
+## Amendment — d-work #648 (2026-11-09: precedent capture at every Done)
+Claim (plan #648): the rulings a row's Done names reach the decision log as candidates in the commit that records that
+Done, so the set of precedents grows with the work and no backfill has to find them later.
+
+What changes:
+- Completion counter-prompt's Record step gains the candidates. The commit carries the file `dyad board draft <id>
+  --decisions-out <file>` writes: the structured candidates of the row's own sources (its plan's verdict tables, its own
+  entries, the change-log rows naming it, each case `<record>-<row>-<n>`, kept only where `dmc:precedent-admission`
+  could admit it), and the prose lines the agent fills in the draft's `TODO plan-departure: facts | outcome` slots.
+- The file is recorded by `--decisions` on `dwork state … -d 'Y done …'` or on `board advance … answered-Y`.
+  `dwork state` refuses, before any write, a `Y done` with no `--decisions` on a row whose draft lists a candidate.
+- The no-merge Done path names the candidates in its one commit.
+- The d-work play-book's Evidence and Record steps name the draft's Candidates section and the file.
+
+| id | claim | attack | result | survivor |
+|---|---|---|---|---|
+| K1 | capture cannot be skipped | the agent records `Y done` by `dwork state` by hand, around `board advance` | survives | both paths take `--decisions`, and `dwork state` refuses a `Y done` with none while the draft lists a candidate |
+| K2 | the case ids are unique | two rows' tables hold the same attack id | survives | the id carries the row, `<record>-<row>-<n>` |
+| K3 | one ruling, one id (#645) | backfill already lists the same ruling under another id | survives, scoped | capture uses the one id form, and `precedent gate` refuses a case the log already names |
+| K4 | the refusal costs no question | the agent disputes a candidate | survives | the agent may drop a line from the file, and the completion evidence names each dropped line with its reason |
+| K5 | the candidates are a disposition | a candidate written with the `Y done` is read as admitted | refuted | the block is written `candidate`; only a later precedent-`Y` naming it makes it a precedent (What a `Y` binds, #644) |
+
+**Rule-6.** No term is added or changed.
+
+**Pairwise (Rule-5).**
+- **3–7**: the Record commit's provenance entry is unchanged. The decision log holds the agent's record of rulings,
+  never the operator's words.
+- **3–16**: the decision log's store, shape and append-only rule are Rule-16's, unchanged; this Rule names only when its
+  candidate blocks are written.
+- **3–2**: a done-`Y` binds what its question names. A candidate is no act it binds, so Binding is unchanged.
+
+The other pairs are as amendment #646 left them. Coherent, orthogonal.
+
+Disposition: see ledger #648.
