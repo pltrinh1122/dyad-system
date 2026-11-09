@@ -1,0 +1,70 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/precedent-scope",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "precedent-scope",
+  "name": "Precedent scope",
+  "description": "Whether a precedent may settle an outcome, by what a wrong match of that outcome would cost the operator.",
+  "dyad:decides": "May a precedent settle this outcome?",
+  "dyad:inputs": [
+    "the outcome's declared dyad:effect"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "settles",
+      "name": "settles",
+      "dyad:when": "an agent-side call: the outcome asks no question, skips none and ratifies nothing",
+      "dyad:then": "a precedent may settle it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "asks",
+      "name": "asks",
+      "dyad:when": "the outcome puts a question to the operator: a new plan, a plan revision, a row of its own, a preferences PR",
+      "dyad:then": "a precedent may settle it: a wrong match costs one question, which the operator still answers"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "shapes",
+      "name": "shapes",
+      "dyad:when": "the outcome fills in what a question shows the operator, who answers that question anyway, such as the class that sets the number in a release question",
+      "dyad:then": "a precedent may settle it: the operator sees it in the question"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "skips",
+      "name": "skips",
+      "dyad:when": "the outcome means a question another outcome would ask is not asked: execution detail, as planned, carried, ride, port, not proposed",
+      "dyad:then": "a precedent may not settle it: the precedent abstains, the reason scope, and the call stays inference; admission refuses the case"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "acts",
+      "name": "acts",
+      "dyad:when": "the outcome performs a ratification, a destructive act, a release or a preference change with no question of its own",
+      "dyad:then": "a precedent may not settle it: the precedent abstains, admission refuses the case, and a record of kind precedent may not hold one"
+    }
+  ],
+  "dyad:precedence": "acts over skips over the rest: an outcome is classed by the strongest effect its consequence carries",
+  "dyad:default": "skips",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/similar.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-2-no-self-ratify.md",
+  "dyad:owner": "Rule-2",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
+    "scripts/similar.py"
+  ]
+}

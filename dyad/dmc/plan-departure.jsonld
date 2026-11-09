@@ -26,28 +26,32 @@
       "termCode": "as-planned",
       "name": "as planned",
       "dyad:when": "the work is the mutation the plan describes",
-      "dyad:then": "authorized by the plan-Y"
+      "dyad:then": "authorized by the plan-Y",
+      "dyad:effect": "skips"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "mandate",
       "name": "mandate scope",
       "dyad:when": "a row the plan's stated rule covers, within its ceiling",
-      "dyad:then": "accreted under the plan-Y, not asked a second time"
+      "dyad:then": "accreted under the plan-Y, not asked a second time",
+      "dyad:effect": "skips"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "execution-detail",
       "name": "execution detail",
       "dyad:when": "the plan's mutation is unchanged in content and only the order of its steps, the split or stacking of its PRs, the seat executing a step within its charter, or the tooling route differs; the plan stated none as a requirement; the end state is the same; and no intermediate state is irreversible or reaches the world (a release cut, a tag, a publish, a destructive host action, a preference value); or the change is an internal realization, whose effect stays inside the PR: placement (a file's path differs while the move stays within one zone and one craft root, the content is byte-identical, the old path never landed on main, no file outside the PR refers to it, it is in no released craft's tree, and the plan did not name it as a requirement), implied means (the plan's text names the effect, and the means adds no public surface), or compatible extension (an optional parameter of an internal function, defaulting to the old behaviour, with no caller changed and a test showing it); public surface is a dyadlib.CLI row, a dyad/surface.md row, a path in a released craft's tree, or Rule or preference text, and each use is a departure line in the completion evidence",
-      "dyad:then": "authorized by the plan-Y, never asked, and reported as a departure line in the completion evidence"
+      "dyad:then": "authorized by the plan-Y, never asked, and reported as a departure line in the completion evidence",
+      "dyad:effect": "skips"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "new-plan",
       "name": "new plan",
       "dyad:when": "work departs from the plan, or a row outside the stated rule or past the ceiling",
-      "dyad:then": "a new plan needing a new Y"
+      "dyad:then": "a new plan needing a new Y",
+      "dyad:effect": "asks"
     }
   ],
   "dyad:judgedBy": {
