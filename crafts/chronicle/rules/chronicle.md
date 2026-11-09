@@ -128,8 +128,10 @@ them: never a pass by assumption. A citation into a private repo prints one warn
 `key:` names no file beside it; a paragraph with no key line, or more than one, or whose first words differ from its
 line's; a key line naming no paragraph; a record line with no citation, or one that is not one of the four forms or
 does not resolve, judged as a footnote is (the same `path:`, `prov:`, `repo:` and `commit:` checks, the same
-warnings); a fiction line whose composites the form's character list does not declare; a declared composite named in
-a paragraph its line does not label so; and any footnote, `*(fiction)*` marker or `fiction:` line in the piece. Whether a cited artifact says what the piece
+warnings); a declared composite — one a `fiction composites:` line of the key names — named in a paragraph its line
+does not label so; and any footnote, `*(fiction)*` marker or `fiction:` line in the piece. Whether each composite a key
+names is declared in the form's character list is inference, read at the piece's publication, as the labelled form's
+is. Whether a cited artifact says what the piece
 says it does, whether a marked passage holds only what the record does not, and whether a composite is drawn from
 no single real person, is inference, read at the piece's publication. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
 question.
