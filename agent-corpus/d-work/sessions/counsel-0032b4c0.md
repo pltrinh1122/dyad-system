@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-09T22:46:44+00:00
+seen: 2026-11-09T22:55:21+00:00
 root: /home/user/wt/650
 rows: 650
 files: agent-corpus/d-work/ chronicle.md crafts/chronicle/falsification/rules/chronicle.md crafts/chronicle/guards/episodes.py episodes.py serial.md
