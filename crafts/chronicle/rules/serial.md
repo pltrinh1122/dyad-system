@@ -10,8 +10,10 @@ editing, and television only where prose has no term (DR-3).
 
 ## 1. Episodes
 The serial's pieces are **episodes**, files under `<site>/episodes/` seeded from `../templates/episode.md`. An
-episode's header names its `title`, `season`, `episode` number, `time` (§3) and `repos` (the core's §4), and carries
-`fiction:` whenever its text holds the fiction layer (the core's §2).
+episode's header names its `title`, `season`, `episode` number, `time` (§3) and `repos` (the core's §4). In the
+labelled form it carries `fiction:` whenever its text holds the fiction layer; in the keyed form it carries
+`form: keyed` and `key:` instead, and its key, `<site>/episodes/<episode>.key.md` seeded from `../templates/key.md`,
+labels every passage (the core's §1, §2).
 
 ## 2. Characters
 The main character is the Operator's persona (the core's §2), and the arc is the persona's growth in the
@@ -19,7 +21,8 @@ Dyad-Operator craft, readable in the record: the preferences set, the correction
 plans, the Rules made. The other characters are the parties and the seats of the system (the cos, counsel, audit,
 engineer, distribute, operate, communicate, and any seat the organization opens), their flaws as the core's §3 says.
 Every other character is fiction (the core's §2): a composite is declared as one in the series bible, named in each
-episode's `fiction:` line, and appears only in marked passages; no real person is one.
+episode's `fiction:` line or, in a keyed episode, its key line, and appears only in passages so labelled; no real
+person is one.
 The Operator's role in the serial is the **showrunner**: the final creative say over the whole series (the core's §5).
 
 ## 3. Time and interleave
@@ -53,7 +56,7 @@ a season arc that covers it. Each episode is approved at its publication (the co
 
 ## 7. The guard
 `../guards/episodes.py` reads every episode under `<site>/episodes/*.md` (`DYAD_SITE`, default `site`; an absent
-store prints one `skip` line). Beyond the core's checks (the core's §8), it fails an episode whose header lacks a key
+store prints one `skip` line), a key `*.key.md` read with the episode that names it and never as an episode. Beyond the core's checks (the core's §8), it fails an episode whose header lacks a key
 (`title`, `season`, `episode`, `time`, `repos`), whose `season` or `episode` is not a number, whose `time:` line is
-not `present|past, YYYY-MM-DD`, or which cites nothing. The documents of §4 are checked by inference, at the
+not `present|past, YYYY-MM-DD`, or which cites nothing — in the keyed form, whose key holds no record line. The documents of §4 are checked by inference, at the
 questions that approve them.

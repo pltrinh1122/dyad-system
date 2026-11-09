@@ -116,3 +116,29 @@ characters drawn as composites.
 The instance's own composites are declared in its series bible, not here.
 
 Disposition: see ledger #530.
+
+## Amendment — d-work #650: the keyed form, a piece that declares no truth, its truth in a key beside it
+
+**Claim (the Operator, relayed from the communicate seat; dyad-system #498 entries 110–112, #650 entries 1–3):** a
+piece may read as fiction throughout and declare no truth in its prose. Its citations and fiction labels move into a
+published, guard-checked key beside it, so its truth can be found. Its exact quotes are an easter egg for whoever
+searches the repository. The record layer's rule, that nothing is invented, is unchanged.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 30 | A reader takes a fiction passage for record, or a record passage for fiction. | **Survives, scoped** | The key is published beside the piece and labels every passage, and §1's rule that nothing is invented still binds every record passage. A piece that reads as fiction is the Operator's stated intent (#650 entry 2), and its truth is one file away. |
+| 31 | The easter egg cannot be found: a quote is paraphrased, so a search finds nothing. | **Survives** | §1's exact-quote rule is unchanged and now stated beside the keyed form. The guard checks that each record line's citation resolves, as it checks a footnote. Whether the quote is exact stays inference at publication, as before. |
+| 32 | With no in-prose labels, a composite reads as a real person. | **Survives, scoped** | A composite is still declared in the form's character list and in its key line, and its traits are never cited to anyone. The guard fails a declared composite named in a paragraph its key line does not label `fiction composites:` with that name. |
+| 33 | A key line quotes a private repo. | **Survives** | §4's flag is unchanged. The guard applies the `repos:` declaration and the private-repo warning to key lines as it does to footnotes. |
+| 34 | The two forms mix in one piece, so neither check holds. | **Survives** | `form: keyed` forbids footnotes, `*(fiction)*` markers and the `fiction:` line in the prose, and the guard fails a mix. A piece without the header is checked in the labelled form as before. |
+| 35 | Keying by paragraph number breaks when a paragraph is inserted. | **Survives, procedure** | Each key line names its paragraph by its number and its first words, so an insertion fails the guard at once rather than mislabelling a passage. A published piece is canon and never rewritten (§6), so a key changes only before publication. |
+| 36 | An outlandish telling of a real event becomes fiction because it reads as fiction. | **Refuted** | The layer of a passage is what it tells, not how it reads. A passage that tells a system event, a seat's thought or the Operator's recorded words is a record passage and cites it (§2). |
+| 37 | One form only would give the craft one check. | **Survives as counter** | The existing episodes are in the labelled form. Keeping both changes none of them and lets the Operator choose per piece; the guard selects its check by the header. |
+
+**Verdict:** the claim survives.
+- **Rules:** §1 names both forms and the key. §2 gains the keyed form: its header lines, the key's grammar, and the composite rule. §7 admits either form, and §8 lists the keyed form's checks. `serial.md` §1, §2 and §7 follow.
+- **Template:** `key.md` beside `episode.md`, and the templates README gains its row.
+- **Guard:** `episodes.py` checks a keyed piece against its key, with a test for each check; the engineer's part of this d-work.
+- **VERSION:** 0.3.0 → 0.4.0, a capability. The bundle row warns until the next cut.
+
+Disposition: see ledger #650.
