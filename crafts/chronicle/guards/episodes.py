@@ -25,6 +25,10 @@ and fails what the record cannot hold (the core `chronicle.md` §1, §2, §4, §
   from its line's; a key line naming no paragraph; a key with no record line; a record citation judged as a footnote
   is (the same forms, resolution and warnings); a composite a key line declares named in a paragraph whose line does
   not label it. That a composite is in the series bible is inference: the bible is no file the guard reads.
+  The keyed form's fixed point, exact quotes (plan #650 revision 2): text between quotation marks (`"…"` or `“…”`) is
+  a record passage, so a quote in a paragraph keyed `fiction` fails, and a quote in a record paragraph must occur
+  verbatim at one of its line's `path:` or `prov:` citations (the file, or the entry's fenced body), whitespace runs
+  read as one space; a quote whose line cites only `repo:` or `commit:` is one warning line, not read.
 A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
 naming it (`chronicle.md` §4). Left to inference, stated: whether a cited artifact says what the episode says.
@@ -58,6 +62,7 @@ _PROV = re.compile(r"^prov:#(\d+)/(\d+)$")
 _REPO = re.compile(r"^repo:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@([^:\s]+):(\S+)$")
 _COMMIT = re.compile(r"^commit:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@(\S+)$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+_QUOTE = re.compile(r'"([^"\n]+)"|“([^”\n]+)”')   # the keyed form's exact quotes (plan #650 revision 2)
 _KEYLINE = re.compile(r"^¶(\d+) (.+?) \| (record (.+)|fiction persona|fiction composites: (.+))$")   # templates/key.md
 INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set(FIELDS)) == len(FIELDS)),   # crafts/syseng/rules/invariants.md
               ("time-pattern-matches-times", lambda: all(_TIME.match(f"{t}, 2026-01-01") for t in TIMES)),
@@ -70,6 +75,7 @@ INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set
               ("key-line-grammar", lambda: _KEYLINE.match("¶2 The cos | record prov:#7/1; path:a.md").group(4) == "prov:#7/1; path:a.md"
                and _KEYLINE.match("¶1 He lay | fiction composites: Mara").group(5) == "Mara"
                and _KEYLINE.match("¶1 He lay | fiction") is None),
+              ("quotes-straight-and-curly", lambda: [a or b for a, b in _QUOTE.findall('He said "go" and “stay”.')] == ["go", "stay"]),
               ("labelled-form-first", lambda: FORMS_OF_PIECE[0] == "labelled" and KEY_SUFFIX.endswith(".md"))]
 dyadlib.enforce(INVARIANTS, __name__)
 
@@ -234,6 +240,45 @@ def _resolve(root: Path, where: str, label: str, txt: str, repos: dict[str, str]
         return [f"{where}: {label} {what} is not in the clone at {clone}"]
     return []
 
+def quotes(text: str) -> list[str]:
+    """The quoted strings of a paragraph's text, `"…"` or `“…”`, in order."""
+    return [a or b for a, b in _QUOTE.findall(text)]
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+def _cited_text(root: Path, txt: str) -> str | None:
+    """The text an in-repo citation holds — a `path:` file, a `prov:` entry's fenced body — or None when it is a
+    cross-repo citation, unresolvable here, or no citation (its own problem is `_resolve`'s)."""
+    c = citation(txt)
+    if c is None:
+        return None
+    form, g = c
+    if form == "path":
+        f = root / g[0]
+        return f.read_text(errors="replace") if _in_tree(root, g[0]) and f.is_file() else None
+    if form == "prov":
+        prov = dyadlib.find_guard("agent", "provenance")
+        rec = prov.store(root) / f"{int(g[0])}.md" if prov else None
+        if rec is None or not rec.is_file():
+            return None
+        return next((e["text"] for e in prov.parse(rec.read_text()) if e["n"] == str(int(g[1]))), None)
+    return None
+
+def _quote_problems(root: Path, where: str, n: int, said: list[str], kl: dict) -> list[str]:
+    """The keyed form's exact-quote fixed point for paragraph `n` (plan #650 revision 2)."""
+    if not said:
+        return []
+    if kl["layer"] != "record":
+        return [f"{where}: paragraph {n} quotes {', '.join(repr(q) for q in said)} and its key line is `fiction`; "
+                f"a quote is a record passage (chronicle.md §1, §2)"]
+    held = [t for t in (_cited_text(root, c) for c in kl["citations"] if c) if t is not None]
+    in_repo = [c for c in kl["citations"] if (x := citation(c)) and x[0] in ("path", "prov")]
+    if not in_repo:
+        return [f"warning: {where}: paragraph {n} quotes {len(said)} string(s) at repo:/commit: citations only; not read, inference"]
+    return [f"{where}: paragraph {n} quotes {q!r}, which its key line's path:/prov: citations do not hold verbatim (chronicle.md §1)"
+            for q in said if not any(_squash(q) in _squash(t) for t in held)]
+
 def _named(names: list[str], text: str) -> list[str]:
     return [n for n in names if re.search(rf"(?<!\w){re.escape(n)}(?!\w)", text)]
 
@@ -272,6 +317,7 @@ def check_keyed(root: Path, path: Path, where: str, header: dict, body: list[str
         kl = got[0]
         if not text.startswith(kl["words"]):
             msgs.append(f"{where}: key line ¶{i} {kl['words']!r} is not how paragraph {i} opens")
+        msgs += _quote_problems(root, where, i, quotes(text), kl)
         if hits := [c for c in _named(declared, text) if c not in kl["composites"]]:
             msgs.append(f"{where}: composite(s) {', '.join(hits)} in paragraph {i}, which its key line does not label "
                         f"`fiction {COMPOSITES} {', '.join(hits)}`; a composite is fiction (chronicle.md §2)")

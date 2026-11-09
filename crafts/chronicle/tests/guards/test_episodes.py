@@ -3,7 +3,9 @@ failing shape (missing path, bad time line, undeclared repo, missing provenance 
 cross-repo citation with no clone, a citation resolved in a local clone, the invariants, and the live repo; the keyed
 form (#650): a passing keyed piece and key, an unkeyed paragraph, a key line naming no paragraph, first words that
 differ, an uncited or unresolvable record line, an undeclared composite, a marker, footnote or `fiction:` line left in
-keyed prose, a missing key, and a labelled piece unchanged."""
+keyed prose, a missing key, and a labelled piece unchanged; the exact-quote fixed point (#650 revision 2): a fiction
+line telling a system event passes, a quote keyed `fiction` fails, a quote not held verbatim at its `path:` or `prov:`
+citation fails, one only at a `repo:` citation is warned, and quotes in a labelled piece are not read."""
 import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 from unittest import mock
@@ -231,6 +233,35 @@ class Keyed(Fixture):
         lines, bad = episodes.parse_key((TEMPLATE.parent / "key.md").read_text())
         self.assertEqual(bad, []); self.assertEqual([l["layer"] for l in lines], ["record", "record", "fiction", "fiction"])
         self.assertEqual(lines[1]["citations"][1].split(":", 1)[0], "commit")
+
+class Quotes(Fixture):
+    keyed = Keyed.keyed
+    def test_fiction_line_may_tell_a_system_event(self):
+        body = KEYED_BODY[:1] + ["The automaton merged all forty PRs at midnight and the cos wept."] + KEYED_BODY[2:]
+        key = KEY_LINES[:1] + ["¶2 The automaton merged | fiction persona"] + KEY_LINES[2:]
+        self.assertEqual(self.keyed(body=body, key=key), [])
+    def test_quote_keyed_fiction_fails(self):
+        body = KEYED_BODY[:1] + ['He lay awake: "I began with AI agents a year ago."'] + KEYED_BODY[2:]
+        f = self.fails(self.keyed(body=body))
+        self.assertEqual(len(f), 1); self.assertIn("paragraph 2 quotes 'I began with AI agents a year ago.' and its key line is `fiction`", f[0])
+    def test_quote_held_verbatim_at_prov_or_path_passes(self):
+        body = ['The cos opened the board: “I began with\nAI agents a year ago.” Then "id: 1".'] + KEYED_BODY[1:]
+        self.assertEqual(self.keyed(body=body), [])
+    def test_quote_not_held_fails(self):
+        body = ['The cos opened the board: "I began with AI agents two years ago."'] + KEYED_BODY[1:]
+        f = self.fails(self.keyed(body=body))
+        self.assertEqual(len(f), 1); self.assertIn("quotes 'I began with AI agents two years ago.', which its key line's path:/prov: citations do not hold verbatim", f[0])
+        f = self.fails(self.keyed(body=['The cos opened: "a year ago"'] + KEYED_BODY[1:],
+                                  key=["¶1 The cos opened | record prov:#7/2"] + KEY_LINES[1:]))
+        self.assertEqual(len(f), 1); self.assertIn("do not hold verbatim", f[0])
+    def test_quote_at_cross_repo_citation_only_is_warned(self):
+        body = ['The cos opened: "bond"'] + KEYED_BODY[1:]
+        msgs = self.keyed(body=body, repos="pltrinh1122/dyad-bond=public",
+                          key=[f"¶1 The cos opened | record repo:pltrinh1122/dyad-bond@{SHA}:README.md"] + KEY_LINES[1:])
+        self.assertEqual(self.fails(msgs), [])
+        self.assertTrue(any(m.startswith("warning:") and "repo:/commit: citations only; not read" in m for m in msgs), msgs)
+    def test_labelled_piece_quotes_unread(self):
+        self.assertEqual(self.write(episode().replace("Event 1.", 'He said "nothing like this".'), "s1e0.md"), [])
 
 class Template(Fixture):
     def test_template_header_has_every_key(self):
