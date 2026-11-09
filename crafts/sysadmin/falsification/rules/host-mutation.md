@@ -17,3 +17,15 @@ Attacks carried from the core record (`dyad/falsification/rules/rule-8-host-muta
 | 92.1 | `actor`'s definition conjoins "hands and credential"; undefined when they diverge — e.g. every Agent-authored git commit already carries the Operator's own git identity (Rule-2 Enforcement), so hands=agent, credential=operator on nearly every agent-actor row, not an edge case. | Confirmed | `actor` names hands only (who drove the action); a divergent credential is named in `outcome`, not a new column (workstation #240/#241, wording carried forward, d-work #92). |
 
 Disposition: see ledger #155, #216, #92.
+
+## Amendment — dyad-system #649 (2026-11-09: the change-log actor's declared effects)
+**Claim (plan #649, core record `dyad/dmc/precedent-scope.jsonld`):** both outcomes of `dmc/changelog-actor.jsonld`
+declare `dyad:effect: settles`. The actor cell is an agent-side call that asks no question, skips none and ratifies
+nothing, so a wrong precedent match costs only a corrected cell, which the change-log guard and the PR's done-`Y` read.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | `operator` as the actor attributes an act to the operator, so a wrong match misstates who acted. | **Survives, scoped** | The cell records who ran the command, and a divergent credential is named in the outcome. The row is read in its workstation-zone PR before the done-`Y` that merges it, so a wrong cell is visible before it lands. |
+| 2 | Declaring the field changes the craft's checks. | **Refuted** | Only admission and precedent matching read `dyad:effect`; `guards/changelog.py` is unchanged. `VERSION` 0.3.2 → 0.3.3, a working bump. |
+
+Disposition: see ledger #649.

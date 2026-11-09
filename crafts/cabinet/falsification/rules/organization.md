@@ -328,3 +328,27 @@ units", and solos scale with the host's capacity.
 `dmc/scale-out.jsonld`'s `idle-first`, this rule's Intent, §1, §6 and When, the Guide's §2, §8 and §11, and
 `CRAFT.md`'s `roll-up` and `secretary`, as amended. `VERSION` 0.5.1 → 0.6.0, its bundle row and tag at the next
 release. No Agent Rule is touched. Disposition: see ledger #620.
+
+## Amendment — dyad-system #649 (2026-11-09: the unit lifecycle's declared effects)
+**Claim (plan #649, core record `dyad/dmc/precedent-scope.jsonld`):** each outcome of `dmc/unit-lifecycle.jsonld`
+declares its `dyad:effect`: what a wrong precedent match of that outcome would cost the operator. A precedent may settle
+only a `settles`, `asks` or `shapes` outcome.
+
+| outcome | effect | why |
+|---|---|---|
+| idle-unit | settles | routing work to an idle unit by inbox relay opens nothing and asks nothing |
+| keep | settles | nothing changes |
+| re-seat | asks | it changes the mandates row by the operator's preferences PR, a question the operator answers |
+| new-function | asks | its mandates row comes first, by the operator's preferences PR |
+| re-home | asks | each row moves by its own row, the operator's words relayed verbatim |
+| retire | asks | the unit's own row, which the operator disposes, and its mandates row by a preferences PR |
+| desk | skips | a desk opens under a secretary's charter and ceiling with no question of its own; a wrong match in place of `new-function` would remove the preferences PR that outcome asks for |
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 1 | `desk` asks nothing, so it should be `settles`. | **Survives, scoped** | Taken alone it asks nothing, but a precedent that picks it where `new-function` was due skips that outcome's question. `skips` is the conservative reading, and no admitted case of #644's log holds a `desk`. |
+| 2 | `re-home` moves rows without a question. | **Refuted** | Each move is its own row, which the operator disposes, carrying the operator's words. A wrong match costs at most that row's question. |
+| 3 | Declaring effects here changes the craft's behaviour for an installing system. | **Survives, scoped** | Only admission and precedent matching read the field; the record's outcomes and the Guide are unchanged. `VERSION` 0.6.0 → 0.6.1, a working bump. |
+
+With these effects declared, the six unit-lifecycle cases of #644's log are admitted (idle-unit, keep ×2, re-seat,
+retire ×2), and none holds a `desk`. No rule text changes. Disposition: see ledger #649.
