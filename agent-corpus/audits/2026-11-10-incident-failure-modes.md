@@ -1,4 +1,4 @@
-# Incident audit by failure mode — 2026-11-10 (delta 253–306)
+# Incident audit by failure mode — 2026-11-10 (delta 253–307)
 
 *Audit of `agent-corpus/audits/INCIDENTS.md` on branch `651-incidents` (base `main` `8c9fab79`), with the 16 rows this
 d-work logs from the home's board. d-work #651 (Mutation 2), unit audit-90a13c0e. Play-book
@@ -7,13 +7,13 @@ proposes; disposes nothing and opens no row (audit charter, `preferences-corpus/
 children listed below with `dwork new … --mandate 651`. A delta on the 2026-11-04 index
 (`2026-11-04-incident-failure-modes.md`), whose 51 modes and their records stay as they are, never renumbered.*
 
-**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 306 rows, latest 2026-11-09
+**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** 307 rows, latest 2026-11-10
 
 ## Phase 0 — survey
 `LEDGER=agent-corpus/audits/INCIDENTS.md dyad runbook run incident-hardening survey`, event
 `incident-hardening-20261110T004105Z-survey` (landed on `main` at `8c9fab79`, events-only): live 290 rows, latest
 2026-11-07, against the watermark 252 (latest 2026-11-03); verdict `delta`. This d-work then adds rows 291–306 (the
-board's promised incidents not yet logged), so the delta is rows **253–306, 54 rows**. One row's mechanism (257) is
+board's promised incidents not yet logged), so the delta is rows **253–306, 54 rows**, and row 307 (this audit's own incident, 2026-11-10) makes it 253–307, 55. One row's mechanism (257) is
 named by no existing mode, so a new mode, 52, is derived for it (the play-book's second trigger, scoped to that row);
 the rest is grouped against the 51 modes, re-derived from each row's cells, never read off the cells' own
 `Failure mode` notes.
@@ -23,8 +23,8 @@ Each row was read cause first and given one mode by `dmc:failure-mode-primary` (
 incident). The rows' own `Failure mode NN` notes, written by counsel and the home on rows 261–290, were compared
 afterwards: 29 of 30 agree (rows 291–306 carry this audit's own notes, so they are not a comparison). **Row 263** is noted mode 29 (presence identity), but its mechanism is the automaton's
 planned flip writing a board entry over a newer one, the mechanism of rows 268 and 279: re-derived as mode 07. Rows
-253–260, which carry no note, were classed here. Mechanical check: every row of 253–306 in exactly one mode, counts
-summing to 54.
+253–260, which carry no note, were classed here. Mechanical check: every row of 253–307 in exactly one mode, counts
+summing to 55.
 
 | mode | observed failure mode | delta rows | rows | exit | fence row | fence | child |
 |------|-----------------------|-----------|------|------|-----------|-------|----------------|
@@ -38,7 +38,7 @@ summing to 54.
 | 17 | a plan's closure or a question written without checking what authorizes each step | 2 | 254, 259 | 1 | — | `dyad/scripts/package.py:cmd_plan` | none |
 | 18 | a plan's files or surfaces listed from the deliverables, not derived from the mutation | 2 | 271, 285 | 2 | #660 | — | #660 (K-18) |
 | 19 | a corpus artifact written in a guarded form from memory; the guard runs only later | 2 | 266, 281 | 2 | #661 | — | #661 (K-19) |
-| 21 | success read before, or other than, the command's own exit and the remote state | 5 | 264, 277, 297, 298, 301 | 2 | #652 | — | #652 (K-21) |
+| 21 | success read before, or other than, the command's own exit and the remote state | 6 | 264, 277, 297, 298, 301, 307 | 2 | #652 | — | #652 (K-21) |
 | 22 | an ad hoc shell step or a CLI form typed from memory | 2 | 275, 289 | 3 | — | — | none (Rule-14 p3; a harness hook is operator-side) |
 | 27 | a checker judges a proxy of its object | 4 | 270, 283, 284, 286 | 2 | #656 | — | #656 (K-27) |
 | 28 | a check passes or reports confidently over empty or absent input | 3 | 265, 276, 287 | 2 | #657 | — | #657 (K-28) |
@@ -52,7 +52,7 @@ summing to 54.
 Exit: 1 fenced, 2 a `backlog` row naming the fence (#595, or a child #652–#662 the home opened under mandate #651
 from this index's proposals K-nn), 3 unfenceable on this kernel (`dmc:mode-exit`).
 
-Sum: 20 modes; 3+3+4+3+3+4+1+2+2+2+5+2+4+3+1+2+3+5+1+1 = 54 rows.
+Sum: 20 modes; 3+3+4+3+3+4+1+2+2+2+6+2+4+3+1+2+3+5+1+1 = 55 rows.
 
 ## Mode records (the delta)
 Each: the delta's incidents, the pattern, the live mitigations (Phase 2 inventory, read from code at `8c9fab79`), and
@@ -99,7 +99,8 @@ one candidate.
   *Candidate K-19:* `dwork state` and `dwork batch` refuse, before any write, a `merges PR #n at <head>` whose head is
   not 40 hex.
 - **21.** 264, 277, 297, 301 (the home rang a unit beside a post that was then refused: four times over 11-05 to
-  11-08), 298 (#642: a push reported landed from the local commit). *Shipped:* none; the doorbell route
+  11-08), 298 (#642: a push reported landed from the local commit), 307 (#651: this audit's own refused push read as
+  landed through a filtered output). *Shipped:* none; the doorbell route
   (`dmc:message-route`, #584) says when to ring, not after what. *Candidate K-21:* `inbox post` prints its ring line
   only after the post's commit lands on `main`, and the home rings only on that line.
 - **22.** 275, 289. *Shipped:* `inbox post --body-file`; every verb's `-h` (#592). *Residue:* exit 3 stands.
@@ -177,7 +178,7 @@ automaton sweep`), on `main` at `8c9fab79`, event `incident-hardening-20261110T0
 W8` promises listed over three days; `checks-sha256=eef0a690…`, `report-sha256=fd3ec94d…`. The report's
 `agent/merges` warning on `07d79833` (a conflicted merge differing on `sessions/engineer-1537d8fb.md`) is row 295's
 merge, read back as #541 A3 designed. Every fence the table names resolves (`audits.index_fences`: none unresolved),
-and the survey on this branch reads `no-op` (306 rows against this index's 306).
+and the survey on this branch reads `no-op` (307 rows against this index's 307, after row 307 was added).
 
 **Closure of the delta.**
 
@@ -185,10 +186,10 @@ and the survey on this branch reads `no-op` (306 rows against this index's 306).
 |---|---|---|
 | 1 fenced | 2: 17, 52 | 3 |
 | 2 backlog: #595 | 3: 01, 02, 06 | 9 |
-| 2 backlog: children #652–#662 | 11: 07, 12, 16, 18, 19, 21, 27, 28, 35, 37, 40 | 34 |
+| 2 backlog: children #652–#662 | 11: 07, 12, 16, 18, 19, 21, 27, 28, 35, 37, 40 | 35 |
 | 3 unfenceable | 4: 05, 22, 33, 46 | 8 |
 
-Sum: 20 modes; 3 + 9 + 34 + 8 = 54 rows. The 11 exit-2 modes are closed as `backlog` by their children
+Sum: 20 modes; 3 + 9 + 35 + 8 = 55 rows. The 11 exit-2 modes are closed as `backlog` by their children
 #652–#662 (`dmc:mode-exit`), each carried under #651's plan-`Y`.
 
 ## Limits
