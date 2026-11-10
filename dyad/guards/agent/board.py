@@ -965,9 +965,9 @@ def stall_block(root: Path, cabinet: str | None) -> list[str]:
 
 # ---- the orchestration machine (d-work #587: X1 derived fields, X2 relays, X3 questions, X4 the answer, X9 --expect)
 PHASE_SUBKEYS = ("unit", "pr", "evidence", "from", "on", "retires", "releases")   # #659: the asked Done's two stated sets
-PR_HEAD = re.compile(r"(\d+) at ([0-9a-f]{7,40})")      # heads take 7-40 hex, as `rows.PR_AT` accepts
+PR_HEAD = re.compile(r"(\d+) at ([0-9a-f]{7,40})")      # a stored head reads 7-40 hex, as `rows.PR_AT` accepts: history
 HEX64 = re.compile(r"[0-9a-f]{64}")
-HEAD_HEX = re.compile(r"[0-9a-f]{7,40}")
+HEAD_HEX = re.compile(r"[0-9a-f]{40}")                  # #661: a head written by `pr-up`/`head-moved` is full, as merge.FULL_SHA
 DERIVED = ("phase", "waiting-on", "next", "since", "question")   # written by `board advance` alone on a phased entry
 PHASE_REQUIRES = {                                       # phase -> the sub-keys it must carry beside `unit`
     "verifying": ("pr",), "landing": ("pr", "evidence"), "done-ready": ("evidence",), "done-asked": ("evidence",),
@@ -1576,7 +1576,7 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
         bad = {"unit": not inbox().SEAT.fullmatch(v), "pr": not v.isdigit(), "head": not HEAD_HEX.fullmatch(v),
                "evidence": not HEX64.fullmatch(v), "on": not WAITING.fullmatch(v), "note": not v.strip()}[k]
         if bad:
-            raise Refused(f"{k}={v!r} is not {dict(unit='a seat', pr='a PR number', head='7-40 hex', evidence='64 hex', on='`operator`, `unit <name>` or `external <ref>`', note='text')[k]}")
+            raise Refused(f"{k}={v!r} is not {dict(unit='a seat', pr='a PR number', head='40 hex (the full sha, #661)', evidence='64 hex', on='`operator`, `unit <name>` or `external <ref>`', note='text')[k]}")
     if "note" in pairs and inbox().DISPOSITION.search(pairs["note"]):
         raise Refused("note= is disposition-shaped (a `Y/N:` line or a ledger entry): the board carries information, "
                       "never authority (#587 X2)")

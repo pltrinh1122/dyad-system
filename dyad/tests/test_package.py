@@ -836,7 +836,7 @@ class PackageTests(livetest.LiveCase):
         d, rows = self.dwork_repo(); self.trace(rows, 1)
         r = self.dwork_state(d, "1", "planned", "-d", "Y done (merges PR #9)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("the head its `Y` was given on", r.stderr)
-        r = self.dwork_state(d, "1", "done", "-d", "Y done (merges PR #9 at 0123abc)", "--said", "Y")
+        r = self.dwork_state(d, "1", "done", "-d", "Y done (merges PR #9 at 0123abcdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("the state follows the merge", r.stderr)
         self.assertIn("state: open", rows.joinpath("1.md").read_text(), "nothing written")
         # #439: package.py runs git in the checkout that holds it (REPO), not in the scratch repo, so the head
@@ -892,9 +892,16 @@ class PackageTests(livetest.LiveCase):
         self.assertIn("state: done", rows.joinpath("1.md").read_text())
     def test_dwork_requires_a_head_per_PR_the_done_names(self):
         d, rows = self.dwork_repo(); self.trace(rows, 1)
-        r = self.dwork_state(d, "1", "open", "-d", "Y done (batch #1,#2, merges PR #9,#10 at 0123abcd)", "--said", "Y")
+        r = self.dwork_state(d, "1", "open", "-d", "Y done (batch #1,#2, merges PR #9,#10 at 0123abcdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)", "--said", "Y")
         self.assertNotEqual(r.returncode, 0); self.assertIn("2 named, 1 head(s) given", r.stderr)
-        r = self.dwork_state(d, "1", "open", "-d", "Y done (merges PR #9 at 0123abcd, PR #10 at 4567bcde)", "--said", "Y")
+        before = rows.joinpath("1.md").read_text()
+        for short in ("Y done (merges PR #9 at 0123abcd, PR #10 at 4567bcdeffffffffffffffffffffffffffffffff)", "Y done (merges PR #9 at 0123abcdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee, PR #10 at 4567bcd)"):
+            with self.subTest(short=short):                                       # #661: every head in full, before any write
+                r = self.dwork_state(d, "1", "open", "-d", short, "--said", "Y")
+                self.assertNotEqual(r.returncode, 0); self.assertIn("names each head in full, 40 hex", r.stderr)
+                self.assertIn("git ls-remote origin refs/pull/<n>/head", r.stderr)
+                self.assertEqual(rows.joinpath("1.md").read_text(), before, "nothing written")
+        r = self.dwork_state(d, "1", "open", "-d", "Y done (merges PR #9 at 0123abcdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee, PR #10 at 4567bcdeffffffffffffffffffffffffffffffff)", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr)
     def test_dwork_refuses_a_done_record_without_its_trace(self):
         """#465: under `dwork-trace: always` (the real repo's value, which package.py reads), a `Y done` entry is
@@ -903,7 +910,7 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(dyadlib.preference("dwork-trace", PKG.parent), "always", "the case reads the live preference")
         d, rows = self.dwork_repo(); rec = rows.parent / "provenance"; before = rows.joinpath("1.md").read_text()
         for args in (("1", "open", "-d", "Y done", "--said", "Y"), ("1", "done", "-d", "Y done", "--said", "Y"),
-                     ("1", "open", "-d", "Y done (batch #1,#2, merges PR #9 at 0123abcd)", "--said", "Y")):
+                     ("1", "open", "-d", "Y done (batch #1,#2, merges PR #9 at 0123abcdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)", "--said", "Y")):
             with self.subTest(args=args):
                 r = self.dwork_state(d, *args)
                 self.assertNotEqual(r.returncode, 0); self.assertIn("refused: a `Y done` entry is recorded with its trace", r.stderr)
@@ -1210,13 +1217,13 @@ class PackageTests(livetest.LiveCase):
         rows.joinpath("3.md").write_text("id: 3\ntitle: three\nopened: d\nstate: backlog\ndisposed: \nrefs: \n")
         r = self.dwork_state(d, "1", "planned", "-d", "Y plan", "--said", "Y, go"); self.assertEqual(r.returncode, 0, r.stderr)
         self.trace(rows, 1)
-        r = self.dwork_state(d, "1", "planned", "-d", "Y done (retires #3, merges PR #5 at abc1234)", "--said", "Y")
+        r = self.dwork_state(d, "1", "planned", "-d", "Y done (retires #3, merges PR #5 at abc1234000000000000000000000000000000000)", "--said", "Y")
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
         self.assertNotEqual(r.returncode, 0); self.assertIn("#1 is planned", r.stderr)
         one = rows.joinpath("1.md").read_text()
         rows.joinpath("1.md").write_text(one.replace("state: planned", "state: done").replace(
-            "abc1234)\n", "abc1234); 2026-11-05 release-ready v0.9.0 at " + "b" * 40 + " (archive " + "a" * 64 + ")\n"))
+            "abc1234000000000000000000000000000000000)\n", "abc1234000000000000000000000000000000000); 2026-11-05 release-ready v0.9.0 at " + "b" * 40 + " (archive " + "a" * 64 + ")\n"))
         r = self.dwork_state(d, "3", "archived", "--retired-by", "1")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(dyadlib.parse_row_file(rows.joinpath("3.md").read_text()).state, "archived")
