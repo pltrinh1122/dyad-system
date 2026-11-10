@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-10T01:57:26+00:00
+seen: 2026-11-10T02:09:50+00:00
 root: /home/user/dyad-system
 rows: 663
 files: agent-corpus/d-work/ dyad/dmc/bundled-craft.jsonld dyad/rules/RULE-11-distribution-structure.md
