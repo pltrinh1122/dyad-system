@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-10T14:19:53+00:00
+seen: 2026-11-10T15:12:30+00:00
 root: /home/user/dyad-system
 rows: 659 661
 files: dyad/scripts/package.py dyad/tests/guards/agent/test_board.py dyad/tests/test_cli.py dyad/tests/test_package.py
