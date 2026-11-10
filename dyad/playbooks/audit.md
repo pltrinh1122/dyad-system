@@ -49,7 +49,11 @@ documents older than the running kernel, through `host`, on the host that keeps 
 The report carries the ingestion through `dyad/scripts/incidents.py` (`reading: incidents`) and hardening's survey
 (`reading: hardening`, a `hardening` finding when rows lie past the watermark). State the delta and whether
 `incident-hardening` ran since; a delta with none behind it is a finding, with "run `incident-hardening` on the delta" a
-proposed row. Does not classify: failure modes, mitigations and child rows are `dyad/playbooks/incident-hardening.md`'s.
+proposed row. It also carries **promised incidents not logged** (#651): each incident a cabinet's board `promised`
+line still holds (an entry opening `incident`), so not yet a row of `INCIDENTS.md`, one `finding: audit: incident promised, not logged (<file>): <first
+words>` line apiece, and their count, `reading: incidents promised on the board, not logged: <n>`. A board line is no
+log (Rule-3 Incidents), so each is a finding, with "log the promised incidents in the next agent-zone PR" a proposed row.
+Does not classify: failure modes, mitigations and child rows are `dyad/playbooks/incident-hardening.md`'s.
 
 ### Phase 4 — Record
 Only when Phase 0 found something to read: `<instance>/audits/<date>-audit.md` — the title, the two watermark lines,

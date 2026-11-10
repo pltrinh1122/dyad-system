@@ -1940,6 +1940,23 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(last, bd.question("done", [700], {700: entry}, rows, "with-done"))   # what `asked` stores
         self.assertEqual(QSTART.findall(out), ["Y/N:"])
 
+    def test_the_promised_incidents_that_name_the_row(self):
+        """#651 Fence 2: the draft lists the cross-row file's promised incidents naming #700, and nothing else."""
+        rc, out, err = self.draft("700")
+        self.assertEqual(self.section(out, "Promised incidents"), "Promised incidents (`promised` entries of the cross-row "
+                         "file naming #700; its PR logs them in INCIDENTS.md, Rule-3 Incidents, #651)\n\nnone\n")
+        line = ("row for #700's own follow-up; 2026-11-09 incident on #700: the relay was refused; re-posted after the "
+                "board write; incident #7001: not this row; 2026-11-09 finding: #700's test is slow")
+        cos = self.repo / INST / "d-work" / "board" / "_cos.md"
+        cos.write_text(f"holder: {ENG}\npromised: {line}\nwriter: x\n")
+        git(self.repo, "add", "-A"); git(self.repo, *livetest.IDENTITY, "commit", "-qm", "ledger: promises")
+        rc, out, err = self.draft("700")
+        self.assertEqual((rc, err), (0, ""), err)
+        sec = self.section(out, "Promised incidents")
+        self.assertIn("- 2026-11-09 incident on #700: the relay was refused; re-posted after the board write (_cos.md)", sec)
+        self.assertEqual(sec.count("\n- "), 1)                     # not #7001, not the plain promise, not the finding
+        self.assertEqual(QSTART.findall(out), ["Y/N:"])
+
     def test_an_unstored_block_and_a_present_trace(self):
         t = self.repo / INST / "d-work" / "traces" / "700.md"
         t.parent.mkdir(parents=True); t.write_text("# Trace #700\n")

@@ -183,6 +183,34 @@ def cos_cabinet(name: str) -> str | None:
     return None
 
 
+PROMISE_SPLIT = re.compile(r";\s+(?=\d{4}-\d{2}-\d{2} |incident|finding)")   # #651: a promise opens a date, or the word
+INCIDENT = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?incident")                  # #651 A1: the entries the fence reads
+
+
+def promises(value: str) -> list[str]:
+    """The entries of a `promised` value (#651). Entries are `;`-separated, but an entry may hold `;` itself, so the
+    value splits only where `; ` is followed by a date, `incident` or `finding`, the forms the home opens an entry
+    with. A promise of another form that follows an incident stays part of that incident's text."""
+    return [e.strip() for e in PROMISE_SPLIT.split(" ".join((value or "").split())) if e.strip()]
+
+
+def promised_incidents(repo: Path) -> list[tuple[str, str]]:
+    """(file stem, entry) for every `promised` entry of every cabinet's cross-row file (`_cos*.md`) that opens
+    `<date> incident` or `incident`: an incident promised for the log and not yet in it (#651, Rule-3 Incidents). It
+    reads the board, never the log: an entry stays here until the home removes it."""
+    d, out = store(repo), []
+    for f in sorted(d.glob(f"{COS}*.md")) if d.is_dir() else []:
+        if not is_cos(f.stem):
+            continue
+        fields = parse(f.read_text(errors="replace"))[0]
+        out += [(f.stem, e) for e in promises(fields.get("promised", "")) if INCIDENT.match(e)]
+    return out
+
+
+def names_row(entry: str, rid: int) -> bool:
+    return re.search(rf"#{rid}(?!\d)", entry) is not None
+
+
 def is_cos(name: str) -> bool:
     """True when `name` is a cabinet's cross-row file: `_cos` or `_cos-<operator>` (K8: the one predicate every reader
     that skips the cross-row file uses before `int(name)`)."""
@@ -1970,6 +1998,10 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
                     f"named in the evidence.", ""]
     else:
         out += ["none: this Done records no `--decisions`", ""]
+    inc = [(f, e) for f, e in promised_incidents(repo) if names_row(e, rid)]
+    out += [f"## Promised incidents (`promised` entries of the cross-row file naming #{rid}; its PR logs them in "
+            f"INCIDENTS.md, Rule-3 Incidents, #651)", ""]
+    out += [f"- {clean(e)} ({f}.md)" for f, e in inc] + [""] if inc else ["none", ""]
     out += [f"## Prose rulings (orchestrate)", "", ORCHESTRATE,
             f"{PROSE_SLOT}   <!-- one line per departure line the evidence names, judged by dmc:plan-departure -->", ""]
     for head, what in ORCHESTRATE_SECTIONS:
