@@ -173,7 +173,12 @@ Ceiling 12 (plan #651); proposed 11. Owner of each fence engineer, unless noted.
 
 ## Phase 4 — verify
 `LEDGER=agent-corpus/audits/INCIDENTS.md dyad runbook run incident-hardening verify` (`dyad check --list; dyad
-automaton sweep`), on `main` at `8c9fab79`: see *Verify result* below.
+automaton sweep`), on `main` at `8c9fab79`, event `incident-hardening-20261110T004330Z-verify` (landed on `main` at
+`e87c388d`, events-only): exit 0, 243 s; `sweep of main 8c9fab79064f: 94 finding(s), 0 failing, 2 new`, both `inflight
+W8` promises listed over three days; `checks-sha256=eef0a690…`, `report-sha256=fd3ec94d…`. The report's
+`agent/merges` warning on `07d79833` (a conflicted merge differing on `sessions/engineer-1537d8fb.md`) is row 295's
+merge, read back as #541 A3 designed. Every fence the table names resolves (`audits.index_fences`: none unresolved),
+and the survey on this branch reads `no-op` (306 rows against this index's 306).
 
 **Closure of the delta.**
 
