@@ -198,6 +198,39 @@ class LevelTests(Scratch):
         self.assertEqual(au.level(self.d, "invariants")[0][1], "L3 invariants: the report holds no invariant reading")
 
 
+PROMISED = "row for running longest test groups first; 2026-11-05 incident: the automaton's planned flip (61bf885, 20:14:39Z) overwrote board 609 written by the home at 20:14:21Z; S11 should have skipped it; the home restored the entry; engineer to check; 2026-11-06 finding: #618's cut held sibling PRs (#715 based on main); stack every PR of a cut as one chain; 2026-11-08 incidents (the home's own rulings): the home ruled two file moves execution detail; fence: the precedent question is asked only over lines similar.admit admits; incident #650: a plan-revision question asked on a building row has no phase; finding #650: test_sessions test_list_runs fails"   # shaped from main's board/_cos.md (#651)
+
+
+class PromisedTests(Scratch):
+    """#651 Fence 1: every incident on a cabinet's `promised` line is one finding until the home removes it."""
+    def cos(self, line: str, name: str = "_cos") -> None:
+        self.write({f"agent-corpus/d-work/board/{name}.md": f"holder: program-59cec502\npromised: {line}\nwriter: x\n"})
+    def test_a_promised_incident_is_a_finding_and_other_promises_are_not_read(self):
+        self.cos(PROMISED)
+        got = au.promised(self.d)
+        self.assertEqual(got[0], "reading: incidents promised on the board, not logged: 3")
+        self.assertEqual([l.split("): ", 1)[1][:22] for l in got[1:]],
+                         ["2026-11-05 incident: t", "2026-11-08 incidents (", "incident #650: a plan-"])
+        self.assertTrue(all(l.startswith("finding: audit: incident promised, not logged (_cos.md): ") for l in got[1:]))
+        self.assertTrue(got[1].endswith(" …") and len(got[1].split("): ", 1)[1]) <= au.INCIDENT_WORDS + 2)
+        self.assertFalse(any("row for running" in l or "finding #650" in l or "#618's cut" in l for l in got))
+        self.assertIn("finding: audit: incident promised, not logged (_cos.md): incident #650", "\n".join(au.audit(self.d)))
+    def test_an_entry_keeps_its_own_semicolons(self):
+        bd = dyadlib.load_guard("agent", "board")
+        es = bd.promises(PROMISED)
+        self.assertEqual(len(es), 6)
+        self.assertIn("S11 should have skipped it; the home restored the entry; engineer to check", es[1])
+        self.assertTrue(es[3].endswith("fence: the precedent question is asked only over lines similar.admit admits"))
+    def test_a_logged_incident_no_longer_warns_and_every_cabinet_is_read(self):
+        self.cos("row for running longest test groups first")                      # the home logged them and removed them
+        self.assertEqual(au.promised(self.d), ["reading: incidents promised on the board, not logged: 0"])
+        self.cos("incident #7: a relay refused", "_cos-alice")
+        self.write({"agent-corpus/d-work/board/_cos.bak.md": "promised: incident #8: not a cabinet's file\n"})
+        self.assertEqual(au.promised(self.d)[1:], ["finding: audit: incident promised, not logged (_cos-alice.md): incident #7: a relay refused"])
+        self.write({"agent-corpus/d-work/board/_cos.md": None, "agent-corpus/d-work/board/_cos-alice.md": None})
+        self.assertEqual(au.promised(self.d), ["reading: incidents promised on the board, not logged: 0"])
+
+
 class AuditTests(Scratch):
     def test_readings_and_a_check_that_raises_is_one_finding(self):
         self.commit("p", {"agent-corpus/d-work/sessions/a.md": "session: a\nseen: 2020-01-01T00:00:00+00:00\n"})

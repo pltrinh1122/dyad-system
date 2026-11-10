@@ -207,6 +207,20 @@ def incidents(root: Path) -> list[str]:
             f"{sum(1 for n in per.values() if n > 1)} d-works carry two or more rows"]
 
 
+INCIDENT_WORDS = 80            # #651: how much of a promised incident its finding quotes, whitespace squashed
+
+
+def promised(root: Path) -> list[str]:
+    """#651 Fence 1: every incident promised on a cabinet's cross-row file (`board.promised_incidents`) and so not yet
+    logged in INCIDENTS.md, one `finding:` line each, which the sweep's fold tells the home once; and one reading."""
+    got = dyadlib.load_guard("agent", "board").promised_incidents(root)
+    out = [f"reading: incidents promised on the board, not logged: {len(got)}"]
+    for f, e in got:
+        words = e if len(e) <= INCIDENT_WORDS else e[:INCIDENT_WORDS].rsplit(" ", 1)[0] + " …"
+        out.append(f"finding: audit: incident promised, not logged ({f}.md): {words}")
+    return out
+
+
 def index_for(ledger: Path, root: Path | None = None) -> tuple[Path, int, str] | None:
     """(index, rows, latest) of the watermark line, among the index audits beside `ledger`, that names it (by its path
     from `root`, as the survey's `grep -F "$LEDGER"` matched) and comes last; None when none does."""
@@ -352,7 +366,7 @@ def audit(root: Path) -> list[str]:
     finding naming it, never a crash of the sweep."""
     out = []
     checks = (("watermark", watermark), ("registry", registry), ("guards_left", guards_left), ("rule_drift", rule_drift),
-              ("incidents", incidents), ("hardening", lambda r: hardening(r)[0]), ("index_fences", index_fences),
+              ("incidents", incidents), ("promised", promised), ("hardening", lambda r: hardening(r)[0]), ("index_fences", index_fences),
               ("record_lines", record_lines), ("levels", levels), ("presence", presence), ("branches", branches))
     for name, f in checks:
         try:

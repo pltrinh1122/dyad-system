@@ -1025,6 +1025,19 @@ class AutomatonTests(unittest.TestCase):
         self.assertEqual(run(["sweep", "--row"], self.w.seat)[0], 2)
         self.assertEqual(self.swept, [False])                                             # the full check
 
+    def test_a_promised_incident_is_told_once(self):
+        """#651 Fence 1: the audit's promised-incident finding reaches the home's inbox once; the next sweep is 0 new,
+        though the entry's sha moved; a second incident is new."""
+        self.w.write_main(self.files)
+        one = "finding: audit: incident promised, not logged (_cos.md): 2026-11-05 incident: the planned flip (61bf885) overwrote board 609 …"
+        rc, out, err = self.sweep(audit=[one])
+        self.assertEqual(rc, 0, out + err)
+        (msg,) = self.inbox(HOME); self.assertIn("incident promised, not logged", msg)
+        rc, out, _ = self.sweep(audit=[one.replace("61bf885", "629d735")])
+        self.assertIn("0 new", out); self.assertEqual(len(self.inbox(HOME)), 1)
+        self.sweep(audit=[one, one.replace("2026-11-05 incident: the planned flip", "incident #650: a question")])
+        self.assertEqual(len(self.inbox(HOME)), 2)
+
     def test_readings_print_first_and_findings_in_two_groups(self):
         """#619 Decision 1: readings first, never posted or counted; then `standing` and `new`."""
         self.w.write_main(self.files)
