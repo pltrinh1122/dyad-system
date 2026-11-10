@@ -500,3 +500,33 @@ optional; the kernel-only path is unchanged. **11–6**: `release` reworded; `re
 **11–4, 11–5, 11–9, 11–10, 11–12, 11–13, 11–15, 11–16, 11–18, 11–19, 11–20**: unchanged. Coherent and orthogonal but for the 11–3 gap named above.
 
 Disposition: see ledger #545.
+
+## Amendment — d-work #663 (2026-11-10): property 2, the purpose ground judged on the craft alone
+
+**Claim (plan #663, the operator's prompt of 2026-11-10, provenance #663 entries 1–2):** ground (b) names its
+evidence: the craft's own tree at the version proposed (its rules, guards, templates and tests), read against the
+system's purpose as the instance's identity record states it (`dyad:purpose`, `site/identity.jsonld`). The instance's
+use of the craft (published content, an applied domain's results, a pending event) is never evidence. The same clause
+corrects the identity record's path, which this property gave as `README.md`. `dmc:bundled-craft`'s third input and
+its `purpose` outcome say the same.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| B1 | The tree is not enough evidence: a craft whose purpose shows only in use, a story craft for one. | **Survives, scoped** | Its rules, guards and templates state what it does for any operator. Use shows whether one instance liked the result, which is exactly the exclusion. |
+| B2 | The record stops being general, since the identity record differs per instance. | **Survives** | That is the one instance value, read by path, so each installing system decides for itself on its own purpose; the record names no craft, story or event. |
+| B3 | Something else moves: sysadmin's bundling. | **Survives** | Sysadmin is bundled by dependency (ground (a)), which this clause does not touch. |
+
+**Verdict:** the claim survives.
+- **Rules:** property 2 ground (b) gains the clause and the path `site/identity.jsonld`; Provenance gains its line.
+- **DMC:** `bundled-craft`'s third input and `purpose`'s `when` name the evidence and the exclusion; the outcome names
+  are unchanged, and the record stays mechanical (A1: the guard decides from the declaration and its `PURPOSE` line;
+  whether the purpose holds stays the operator's, by the done-`Y` of the PR that adds it).
+
+**Pairwise (Rule-5).** **11–2**: Binding is unchanged; the `PURPOSE` reason is still ratified by the done-`Y` of the
+PR that adds it, and the clause bounds only what that reason may cite; coherent and orthogonal. **11–3**: no question
+form changes; a bundling decision is still asked as a d-work's Done, and #514's retirement rides this row's own Done
+(`retires #514`) under Rule-3's form; coherent. **11–14**: the identity record is instance data, never a manifest row;
+the kernel and the kernel-only path are unchanged; orthogonal. **11–1, 11–4 to 11–10, 11–12, 11–13, 11–15, 11–16,
+11–18 to 11–20**: unchanged. Coherent and orthogonal.
+
+Disposition: see ledger #663.
