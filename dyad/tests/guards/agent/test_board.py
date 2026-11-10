@@ -697,7 +697,7 @@ class OneCabinetSetTests(CabinetWorld, unittest.TestCase):
 
 
 # ---- d-work #587 PR2: the orchestration machine (X1, X2, X3, X4, X9)
-H1, H2, H3 = "9bbb5cc8", "f35eb112", "a1b2c3d4"
+H1, H2, H3 = "9bbb5cc8" + "0" * 32, "f35eb112" + "1" * 32, "a1b2c3d4" + "2" * 32   # #661: a written head is full
 EV = "0123456789abcdef" * 4
 HOME, ENG, COU = "program-aaaaaaaa", "engineer-bbbbbbbb", "counsel-cccccccc"
 
@@ -1045,13 +1045,14 @@ class MachineTests(unittest.TestCase):
         with self.assertRaises(bd.Refused) as c:                       # #604: the removed form is refused, never rewritten
             bd.parse_advance(["5", "hold", "--expect", "building", "note=x", "on=seat eng-1"])
         self.assertIn("write `waiting-on: unit eng-1`", str(c.exception))
-        for adopt in (["pr-up", "--expect", "none", "pr=5", "head=abc1234"], ["plan-landed", "--expect", "none"]):
+        for adopt in (["pr-up", "--expect", "none", "pr=5", f"head={H1}"], ["plan-landed", "--expect", "none"]):
             self.assertEqual(bd.parse_advance(["5", *adopt, "unit=engineer-x"])[2]["unit"], "engineer-x", adopt)   # #587
         for argv, says in ((["5"], "usage"), (["5", "asked"], "usage"), (["5", "fly", "--expect", "none"], "not an event"),
                            (["5", "6", "hold", "--expect", "building"], "several ids"),
                            (["5", "asked", "--expect", "building"], "not an event from building"),
                            (["5", "pr-up", "--expect", "building", "pr=1"], "needs head="),
-                           (["5", "pr-up", "--expect", "building", "pr=1", "head=zz", ], "7-40 hex"),
+                           (["5", "pr-up", "--expect", "building", "pr=1", "head=zz", ], "40 hex"),
+                           (["5", "pr-up", "--expect", "building", "pr=1", "head=abc1234def567"], "is not 40 hex (the full sha, #661)"),
                            (["5", "asked", "--expect", "plan-ready", "unit=x"], "does not take unit="),
                            (["5", "answered-Y", "--expect", "plan-asked"], "--said-file is required"),
                            (["5", "asked", "--expect", "plan-ready", "--said-file", str(f)], "--said-file is refused"),

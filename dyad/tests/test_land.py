@@ -458,13 +458,26 @@ class LandTests(unittest.TestCase):
         self.assertEqual(self.main_at_origin(), head, "nothing pushed")
         self.assertEqual(len(self.hook_runs()), 1)
 
+    def test_a_short_head_line_refuses_the_batch(self):
+        """#661: a `Y done` line whose head is not 40 hex is refused by its own `dwork state` in the worktree, so the
+        batch lands none of its lines."""
+        self.second_row()
+        before = self.main_at_origin()
+        t1 = self.write_trace(1)
+        rc, _, err = self.batch(f"land {t1}\n"
+                                "state 2 open -d 'Y plan' --said Y\n"
+                                "state 1 open -d 'Y done (merges PR #3 at abc1234)' --said Y\n")
+        self.assertEqual(rc, 1, err)
+        self.assertIn("names each head in full, 40 hex", err)
+        self.assertEqual(self.main_at_origin(), before, "nothing landed")
+
     def test_a_merge_naming_done_and_its_close_are_refused_before_any_push(self):
         before = self.main_at_origin()
-        rc, _, err = self.batch("state 1 open -d 'Y done (merges PR #3 at abc1234)' --said Y\nstate 1 done\n")
+        rc, _, err = self.batch("state 1 open -d 'Y done (merges PR #3 at abc1234000000000000000000000000000000000)' --said Y\nstate 1 done\n")
         self.assertEqual(rc, 1)
         self.assertIn("line 1 (state 1 open", err); self.assertIn("line 2 (state 1 done)", err)
         self.assertIn("the state follows the merge", err)
-        rc, _, err = self.batch("state 1 done -d 'Y done (merges PR #3 at abc1234)' --said Y\n")
+        rc, _, err = self.batch("state 1 done -d 'Y done (merges PR #3 at abc1234000000000000000000000000000000000)' --said Y\n")
         self.assertEqual(rc, 1); self.assertIn("and sets #1 done", err)
         self.assertEqual(self.main_at_origin(), before)
         self.assertEqual(self.hook_runs(), [])
