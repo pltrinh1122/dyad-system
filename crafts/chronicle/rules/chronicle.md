@@ -6,7 +6,7 @@ block, no sweep. Each form adds its own section beside this one (§7); the seria
 `../vocabulary/CRAFT.md`; the core's `Operator`, `provenance record`, `seat`, `subagent`, `failure mode`, `audit`.
 Record: `../falsification/rules/chronicle.md`. Source: dyad-system plan #498 revisions 1–3, authored as its child
 C4 (#502); the commit form (#511); the fiction layer (#515); the core and its form sections (#521, decision record
-DR-9).
+DR-9); the keyed form (#650).
 
 ## Intent
 Tell a dyad system's journey to readers, in whatever form the piece takes, without one sentence of its record layer
@@ -28,13 +28,25 @@ material, and nothing else:
   records. A **context citation** names one entry: `prov:#<row id>/<entry n>`. It is the Operator's words only
   outside the entry's quoted lines: a line beginning `>` quotes the earlier reply the Operator was answering, and is
   never told as the Operator's voice.
-Every event a piece tells cites one or the other, as a footnote (`[^n]: <citation>`, the templates' form). A
+Every event a piece tells cites one or the other, in one of two **forms** of piece: the **labelled form**, as a
+footnote (`[^n]: <citation>`, the templates' form), or the **keyed form**, as the entry for its passage in the piece's
+**key**, a sidecar `<piece>.key.md` published beside it (§2). Either way the citation is the same one of the four
+forms, and a quote is exact, character for character, so a search of the cited repo finds it. A
 seat's "thinking" is its plan or its falsification record, never fiction. A commit message is record, never the
 Operator's voice: commits carry the Operator's git identity whoever wrote them, so authorship in git says nothing
 of who wrote the words. A gap in the record is reported as a gap, never filled — and a structure a form uses is a
 lens on the record, never a mould: a part the record does not hold is a gap, not a cue to invent one. Everything
 and everyone else in a piece is its other layer, the **fiction layer** (§2): it cites nothing and is labelled wherever
-it appears.
+it appears — in its own prose in the labelled form, in the key in the keyed form.
+
+In the keyed form engagement governs the events a piece tells (§2), and two **fixed points** hold whatever it tells:
+- **exact quotes** — text between quotation marks is a record passage: its key line is `record`, and its citation
+  holds those exact characters, so a `path:` or `prov:` citation contains the quoted string verbatim — quotation
+  marks are `"…"` or `“…”`, never single quotes, which an apostrophe would collide with, and a run of whitespace
+  compares as one space, so a quote may wrap across lines;
+- **the sourcing and privacy rule**, unchanged — no real person beyond the persona; composites never cited to anyone;
+  §4's private-repo flag on every key line; §3's flaw approval for anything said of the real Operator in a record
+  passage.
 
 ## 2. The fiction layer: the persona and composites
 The Operator may appear in a piece as a **persona**, named by the Operator: the Operator's choice of how to appear.
@@ -45,14 +57,28 @@ are private and which the record is not asked to prove; the world around the wor
 a character drawn from more than one real person and from no single one, so it is fiction and never a real person.
 Each composite is declared as one, in the form's character list and in every piece it appears in, and its traits are
 never cited to anyone. All of it is written as **fiction based on real-life models**, with no citations. Fiction is
-admitted only because it is labelled, twice:
+admitted only because it is labelled: twice in the labelled form, once, in the key, in the keyed form. In the
+**labelled form**:
 - the piece's header carries a `fiction:` line whenever its text holds the layer. The line names what the layer
   holds, its parts separated by `;`: `persona, based on a real-life model` when the persona's interior is told, and
   `composites: <name>, <name>` naming every composite the piece tells;
 - each fiction passage is a paragraph that opens with the marker `*(fiction)*`, so the layer of any sentence can be
   decided by reading its paragraph. A declared composite appears only in such a paragraph.
-A marked passage never tells a system event, a seat's thought, or the Operator's recorded prompts and approvals:
-those are the record layer's and cite as §1 says.
+In the **keyed form** the piece's prose declares nothing — it may read as fiction throughout and claim no truth — and
+its key says, of every passage, which layer it is:
+- the piece's header carries `form: keyed` and `key: <file>`, naming its key, and no `fiction:` line; its prose holds
+  no footnote and no `*(fiction)*` marker;
+- the key holds one line per paragraph of the piece, in order, naming the paragraph by its number and its first words
+  (`../templates/key.md`): `¶<n> <first words> | record <citation>[; <citation>]` for a record passage, or
+  `¶<n> <first words> | fiction persona` or `… | fiction composites: <name>, <name>` for a fiction passage;
+- a declared composite appears only in a paragraph its key line labels `fiction composites:` with that name.
+A piece is in one form only, so a keyed piece carries neither footnotes nor markers. In the labelled form, a fiction
+passage never tells a system event, a seat's thought, or the Operator's recorded prompts and approvals: those are the
+record layer's and cite as §1 says, and an outlandish telling of a recorded event is still a record passage and cites
+it. In the keyed form engagement governs events: a fiction line may tell an event that is invented, moved or
+compressed — a system event, a unit's work, or the persona's — because its key line labels it `fiction`, so the key
+always says which passages are record and which are not. Its two fixed points still hold (§1): a quoted string is a
+record passage, never in a paragraph keyed `fiction`, and the sourcing and privacy rule is unchanged.
 
 ## 3. Flaws and the real Operator
 A seat's flaws are the failure modes an audit has classed, each cited to the incident ledger or the audit that
@@ -95,12 +121,13 @@ pieces it moved.
 A **form** is a kind of piece — the serial, the essay, the blog post, the press release. Each form has its own
 section beside this one, `<form>.md`, which names its pieces and their header, its documents, its structure (a lens,
 §1) and its style guide, and which may narrow this core but never loosen it. A form with no section yet is written
-under this core alone, its pieces carrying the header lines §2 and §4 name. The serial's section is `serial.md`, the
+under this core alone, its pieces carrying the header lines §2 and §4 name, in either form of §1. The serial's section is `serial.md`, the
 first form.
 
 ## 8. The guard and its severity
 `../guards/episodes.py` checks the serial's pieces, its episodes (`serial.md` §7), and with them every rule of this
-core that a file can show. It fails a footnote that is not one of the four citation forms; a marked passage
+core that a file can show, by the piece's form (§1, §2). In the labelled form it fails a footnote that is not one of
+the four citation forms; a marked passage
 (`*(fiction)*`) under no `fiction:` header; a `fiction:` part that is neither `persona, based on a real-life model`
 nor `composites: <name>, <name>`; a footnote reference inside a marked passage; a declared composite named in a
 paragraph not marked; a `path:` that does not exist in the tree; a
@@ -110,7 +137,17 @@ paragraph not marked; a `path:` that does not exist in the tree; a
 likewise, by `git cat-file -e <sha>^{commit}`; with no clone it is unresolvable — The World, the `world` severity of
 the core's Rule-20 register, property 2 — and the guard prints one `warning: … inference` line per piece counting
 them: never a pass by assumption. A citation into a private repo prints one warning naming the repo (§4). A
-`fiction:` header over a text with no marked passage prints one warning. Whether a cited artifact says what the piece
+`fiction:` header over a text with no marked passage prints one warning. In the keyed form it fails a piece whose
+`key:` names no file beside it; a paragraph with no key line, or more than one, or whose first words differ from its
+line's; a key line naming no paragraph; a record line with no citation, or one that is not one of the four forms or
+does not resolve, judged as a footnote is (the same `path:`, `prov:`, `repo:` and `commit:` checks, the same
+warnings); a quoted string in a paragraph its key line labels `fiction`; a quoted string not found verbatim at its
+line's `path:` or `prov:` citation, a `repo:` or `commit:` citation's quotes warned, not read (§1's exact quotes); a
+`fiction composites:` line whose names are empty or repeated; a declared composite — one a `fiction composites:` line
+of the key names — named in a paragraph its line does not label so; and any footnote, `*(fiction)*` marker or `fiction:` line in the piece. Whether each composite a key
+names is declared in the form's character list is inference, read at the piece's publication, as the labelled form's
+is. Whether a cited artifact says what the piece
 says it does, whether a marked passage holds only what the record does not, and whether a composite is drawn from
-no single real person, is inference, read at the piece's publication. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
+no single real person, is inference, read at the piece's publication; in the keyed form, whether a fiction line's
+invented, moved or compressed event is labelled where it should be is the key's, and the key is read at publication too. A form whose pieces no guard reads yet is checked by inference alone, stated in its publication
 question.

@@ -16,7 +16,19 @@ and fails what the record cannot hold (the core `chronicle.md` §1, §2, §4, §
 - the fiction layer's labels (`chronicle.md` §2): a marked passage (a paragraph opening `*(fiction)*`) in an episode
   with no `fiction:` header; a `fiction:` part that is neither `persona, based on a real-life model` nor
   `composites: <name>, <name>`; a footnote reference inside a marked passage; a declared composite's name in a
-  paragraph not marked (#530). A `fiction:` header with no marked passage is one warning line.
+  paragraph not marked (#530). A `fiction:` header with no marked passage is one warning line;
+- a keyed piece (`form: keyed`, `chronicle.md` §1, §2, §8; #650), read against its key `<piece>.key.md` beside it,
+  named by `key:` (a key is never read as an episode): a `form:` that is neither `labelled` nor `keyed`; a `key:`
+  missing or naming no file beside the piece; a `fiction:` line, a footnote or a `*(fiction)*` marker in the piece; a
+  key line not `¶<n> <first words> | record <citation>[; <citation>]`, `… | fiction persona` or
+  `… | fiction composites: <name>, …`; a paragraph with no key line, or more than one, or whose first words differ
+  from its line's; a key line naming no paragraph; a key with no record line; a record citation judged as a footnote
+  is (the same forms, resolution and warnings); a composite a key line declares named in a paragraph whose line does
+  not label it. That a composite is in the series bible is inference: the bible is no file the guard reads.
+  The keyed form's fixed point, exact quotes (plan #650 revision 2): text between quotation marks (`"…"` or `“…”`) is
+  a record passage, so a quote in a paragraph keyed `fiction` fails, and a quote in a record paragraph must occur
+  verbatim at one of its line's `path:` or `prov:` citations (the file, or the entry's fenced body), whitespace runs
+  read as one space; a quote whose line cites only `repo:` or `commit:` is one warning line, not read.
 A `repo:` or `commit:` citation with no local clone is The World (the core's Rule-20 register, property 2, `world` severity):
 one `warning: … inference` line per episode, never a pass by assumption. A cited private repo is one warning line
 naming it (`chronicle.md` §4). Left to inference, stated: whether a cited artifact says what the episode says.
@@ -39,6 +51,7 @@ VISIBILITY = ("public", "private")
 FORMS = ("path", "prov", "repo", "commit")                          # the four citation forms (chronicle.md §1)
 FICTION_KEY, FICTION_LABEL, MARKER = "fiction", "persona, based on a real-life model", "*(fiction)*"   # chronicle.md §2
 COMPOSITES = "composites:"                                         # the fiction header's composite part (chronicle.md §2, #530)
+FORM_KEY, KEY_KEY, FORMS_OF_PIECE, KEY_SUFFIX = "form", "key", ("labelled", "keyed"), ".key.md"   # chronicle.md §1, §2 (#650)
 SITE_ENV, SITE_DEFAULT, REPOS_ENV = "DYAD_SITE", "site", "DYAD_REPOS_DIR"
 _TIME = re.compile(r"^(present|past),\s*(\d{4}-\d{2}-\d{2})$")
 _REPO_DECL = re.compile(r"^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)=(public|private)$")
@@ -49,6 +62,8 @@ _PROV = re.compile(r"^prov:#(\d+)/(\d+)$")
 _REPO = re.compile(r"^repo:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@([^:\s]+):(\S+)$")
 _COMMIT = re.compile(r"^commit:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@(\S+)$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+_QUOTE = re.compile(r'"([^"\n]+)"|“([^”\n]+)”')   # the keyed form's exact quotes (plan #650 revision 2)
+_KEYLINE = re.compile(r"^¶(\d+) (.+?) \| (record (.+)|fiction persona|fiction composites: (.+))$")   # templates/key.md
 INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set(FIELDS)) == len(FIELDS)),   # crafts/syseng/rules/invariants.md
               ("time-pattern-matches-times", lambda: all(_TIME.match(f"{t}, 2026-01-01") for t in TIMES)),
               ("four-citation-forms", lambda: FORMS == ("path", "prov", "repo", "commit")
@@ -56,7 +71,12 @@ INVARIANTS = [("fields-start-with-file", lambda: FIELDS[0] == "file" and len(set
               ("visibility-two", lambda: set(VISIBILITY) == {"public", "private"}),
               ("fiction-key-optional", lambda: FICTION_KEY not in HEADER and FICTION_LABEL.startswith("persona, ")
                and MARKER.strip() == MARKER and MARKER != ""),
-              ("composites-part-is-not-the-label", lambda: not FICTION_LABEL.startswith(COMPOSITES) and COMPOSITES.endswith(":"))]
+              ("composites-part-is-not-the-label", lambda: not FICTION_LABEL.startswith(COMPOSITES) and COMPOSITES.endswith(":")),
+              ("key-line-grammar", lambda: _KEYLINE.match("¶2 The cos | record prov:#7/1; path:a.md").group(4) == "prov:#7/1; path:a.md"
+               and _KEYLINE.match("¶1 He lay | fiction composites: Mara").group(5) == "Mara"
+               and _KEYLINE.match("¶1 He lay | fiction") is None),
+              ("quotes-straight-and-curly", lambda: [a or b for a, b in _QUOTE.findall('He said "go" and “stay”.')] == ["go", "stay"]),
+              ("labelled-form-first", lambda: FORMS_OF_PIECE[0] == "labelled" and KEY_SUFFIX.endswith(".md"))]
 dyadlib.enforce(INVARIANTS, __name__)
 
 def store(root: Path | None = None) -> Path:
@@ -64,7 +84,7 @@ def store(root: Path | None = None) -> Path:
 
 def episodes(root: Path | None = None) -> list[Path]:
     d = store(root)
-    return sorted(p for p in d.glob("*.md") if p.name.lower() != "readme.md") if d.is_dir() else []
+    return sorted(p for p in d.glob("*.md") if p.name.lower() != "readme.md" and not p.name.endswith(KEY_SUFFIX)) if d.is_dir() else []
 
 def parse(text: str) -> tuple[dict[str, str], list[str], dict[str, str]]:
     """(header, body lines, footnotes): the header is the leading `key: value` lines up to the first blank line;
@@ -176,6 +196,141 @@ def _git_has(clone: Path, sha: str, path: str | None) -> bool:
         return False
     return r.returncode == 0
 
+def parse_key(text: str) -> tuple[list[dict], list[str]]:
+    """(lines, bad lines) of a key (templates/key.md): each `¶<n> <first words> | <layer>` line as {n, words, layer
+    (`record` or `fiction`), citations, composites}; an HTML comment and blank lines are skipped."""
+    out, bad = [], []
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    for line in (l.strip() for l in text.splitlines()):
+        if not line:
+            continue
+        m = _KEYLINE.match(line)
+        if not m:
+            bad.append(line); continue
+        cites = [c.strip() for c in (m.group(4) or "").split(";")] if m.group(4) is not None else []
+        names = [c.strip() for c in m.group(5).split(",")] if m.group(5) is not None else []
+        out.append({"n": int(m.group(1)), "words": m.group(2).strip(), "layer": "record" if m.group(4) is not None else "fiction",
+                    "citations": cites, "composites": names, "line": line})
+    return out, bad
+
+def _resolve(root: Path, where: str, label: str, txt: str, repos: dict[str, str], seen: dict) -> list[str]:
+    """The problems of one citation `txt` at `label` (`[^n]` or `¶n`), judged as chronicle.md §1 and §8 say; counts an
+    unresolvable cross-repo citation in seen["world"] and a cited private repo in seen["private"]."""
+    c = citation(txt)
+    if c is None:
+        return [f"{where}: {label} {txt!r} is none of path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path>, commit:<owner>/<repo>@<sha> (chronicle.md §1)"]
+    form, g = c
+    if form == "path":
+        return [] if _in_tree(root, g[0]) else [f"{where}: {label} path:{g[0]} does not exist in the tree"]
+    if form == "prov":
+        problem = _prov_entry(root, *g)
+        return [f"{where}: {label} prov:#{g[0]}/{g[1]}: {problem}"] if problem else []
+    repo, sha, rel = g if form == "repo" else (*g, None)
+    if repo not in repos:
+        return [f"{where}: {label} {form}:{repo} is not declared in `repos:` with its visibility (chronicle.md §4)"]
+    if not _SHA.match(sha):
+        return [f"{where}: {label} {form}:{repo}@{sha}: not a full 40-hex commit sha"]
+    if repos[repo] == "private":
+        seen["private"].add(repo)
+    clone = _clone(repo)
+    if clone is None:
+        seen["world"] += 1
+    elif not _git_has(clone, sha, rel):
+        what = f"repo:{repo}@{sha[:12]}:{rel}" if rel is not None else f"commit:{repo}@{sha[:12]}"
+        return [f"{where}: {label} {what} is not in the clone at {clone}"]
+    return []
+
+def quotes(text: str) -> list[str]:
+    """The quoted strings of a paragraph's text, `"…"` or `“…”`, in order."""
+    return [a or b for a, b in _QUOTE.findall(text)]
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+def _cited_text(root: Path, txt: str) -> str | None:
+    """The text an in-repo citation holds — a `path:` file, a `prov:` entry's fenced body — or None when it is a
+    cross-repo citation, unresolvable here, or no citation (its own problem is `_resolve`'s)."""
+    c = citation(txt)
+    if c is None:
+        return None
+    form, g = c
+    if form == "path":
+        f = root / g[0]
+        return f.read_text(errors="replace") if _in_tree(root, g[0]) and f.is_file() else None
+    if form == "prov":
+        prov = dyadlib.find_guard("agent", "provenance")
+        rec = prov.store(root) / f"{int(g[0])}.md" if prov else None
+        if rec is None or not rec.is_file():
+            return None
+        return next((e["text"] for e in prov.parse(rec.read_text()) if e["n"] == str(int(g[1]))), None)
+    return None
+
+def _quote_problems(root: Path, where: str, n: int, said: list[str], kl: dict) -> list[str]:
+    """The keyed form's exact-quote fixed point for paragraph `n` (plan #650 revision 2)."""
+    if not said:
+        return []
+    if kl["layer"] != "record":
+        return [f"{where}: paragraph {n} quotes {', '.join(repr(q) for q in said)} and its key line is `fiction`; "
+                f"a quote is a record passage (chronicle.md §1, §2)"]
+    held = [t for t in (_cited_text(root, c) for c in kl["citations"] if c) if t is not None]
+    in_repo = [c for c in kl["citations"] if (x := citation(c)) and x[0] in ("path", "prov")]
+    if not in_repo:
+        return [f"warning: {where}: paragraph {n} quotes {len(said)} string(s) at repo:/commit: citations only; not read, inference"]
+    return [f"{where}: paragraph {n} quotes {q!r}, which its key line's path:/prov: citations do not hold verbatim (chronicle.md §1)"
+            for q in said if not any(_squash(q) in _squash(t) for t in held)]
+
+def _named(names: list[str], text: str) -> list[str]:
+    return [n for n in names if re.search(rf"(?<!\w){re.escape(n)}(?!\w)", text)]
+
+def check_keyed(root: Path, path: Path, where: str, header: dict, body: list[str], notes: dict,
+                repos: dict[str, str], seen: dict) -> list[str]:
+    """The keyed form's checks (chronicle.md §2, §8; #650): the piece declares nothing, its key labels every paragraph."""
+    msgs = []
+    if FICTION_KEY in header:
+        msgs.append(f"{where}: a keyed piece carries a `{FICTION_KEY}:` line; its key labels the fiction (chronicle.md §2)")
+    if notes or any(_FOOTREF.search(l) for l in body):
+        msgs.append(f"{where}: a keyed piece holds footnotes; its citations live in its key (chronicle.md §2)")
+    paras = paragraphs(body)
+    if marked := [i for i, p in enumerate(paras, 1) if p[0].lstrip().startswith(MARKER)]:
+        msgs.append(f"{where}: a keyed piece marks paragraph(s) {', '.join(map(str, marked))} {MARKER}; its key labels the fiction (chronicle.md §2)")
+    name = header.get(KEY_KEY, "")
+    if not name:
+        return msgs + [f"{where}: a keyed piece's header lacks `{KEY_KEY}:` (chronicle.md §2)"]
+    kp = path.parent / name
+    if Path(name).name != name or not name.endswith(KEY_SUFFIX) or not kp.is_file():
+        return msgs + [f"{where}: `{KEY_KEY}: {name}` names no `*{KEY_SUFFIX}` file beside the piece (chronicle.md §1)"]
+    lines, bad = parse_key(kp.read_text())
+    msgs += [f"{where}: key line {b!r} is not `¶<n> <first words> | record <citation>` or `… | fiction persona|composites: <name>, …` (templates/key.md)"
+             for b in bad]
+    by_n: dict[int, list[dict]] = {}
+    for kl in lines:
+        by_n.setdefault(kl["n"], []).append(kl)
+    for n in sorted(set(by_n) - set(range(1, len(paras) + 1))):
+        msgs.append(f"{where}: key line ¶{n} names no paragraph; the piece has {len(paras)}")
+    declared = [c for kl in lines for c in kl["composites"]]
+    for i, para in enumerate(paras, 1):
+        got, text = by_n.get(i, []), " ".join(l.strip() for l in para)
+        if not got:
+            msgs.append(f"{where}: paragraph {i} has no key line (chronicle.md §2)"); continue
+        if len(got) > 1:
+            msgs.append(f"{where}: paragraph {i} has {len(got)} key lines; one labels it (chronicle.md §2)"); continue
+        kl = got[0]
+        if not text.startswith(kl["words"]):
+            msgs.append(f"{where}: key line ¶{i} {kl['words']!r} is not how paragraph {i} opens")
+        msgs += _quote_problems(root, where, i, quotes(text), kl)
+        if hits := [c for c in _named(declared, text) if c not in kl["composites"]]:
+            msgs.append(f"{where}: composite(s) {', '.join(hits)} in paragraph {i}, which its key line does not label "
+                        f"`fiction {COMPOSITES} {', '.join(hits)}`; a composite is fiction (chronicle.md §2)")
+    for kl in lines:
+        names = kl["composites"]
+        if kl["layer"] == "fiction" and names and (any(not c for c in names) or len(set(names)) != len(names)):
+            msgs.append(f"{where}: key line ¶{kl['n']} declares composites {', '.join(names)!r}: empty or repeated (templates/key.md)")
+        for c in kl["citations"]:
+            msgs += _resolve(root, where, f"¶{kl['n']}", c, repos, seen) if c else [f"{where}: key line ¶{kl['n']} has an empty record citation"]
+    if not any(kl["layer"] == "record" for kl in lines):
+        msgs.append(f"{where}: its key holds no record line; every event cites the record or the Operator's context (chronicle.md §1, serial.md §7)")
+    return msgs
+
 def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
     where = path.relative_to(root).as_posix() if path.is_relative_to(root) else str(path)
     header, body, notes = parse(text if text is not None else path.read_text())
@@ -191,6 +346,26 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
             ok = False
         if not ok:
             msgs.append(f"{where}: `time: {header['time']}` is not `present|past, YYYY-MM-DD` (serial.md §3)")
+    form = header.get(FORM_KEY, FORMS_OF_PIECE[0])
+    repos, bad = declared_repos(header.get("repos", "none"))
+    msgs += [f"{where}: `repos:` entry {b!r} is not `<owner>/<repo>=public|private` (chronicle.md §4)" for b in bad]
+    seen = {"world": 0, "private": set()}
+    if form not in FORMS_OF_PIECE:
+        msgs.append(f"{where}: `{FORM_KEY}: {form}` is neither {' nor '.join(FORMS_OF_PIECE)} (chronicle.md §1)")
+    elif form == "keyed":
+        msgs += check_keyed(root, path, where, header, body, notes, repos, seen)
+    else:
+        msgs += check_labelled(root, where, header, body, notes, repos, seen)
+    if seen["world"]:
+        msgs.append(f"warning: {where}: {seen['world']} cross-repo citation(s) unresolvable (The World: no clone under ${REPOS_ENV}), inference")
+    if seen["private"]:
+        msgs.append(f"warning: {where}: cites private repo(s) {', '.join(sorted(seen['private']))}; its publication names them (chronicle.md §4)")
+    return msgs
+
+def check_labelled(root: Path, where: str, header: dict, body: list[str], notes: dict,
+                   repos: dict[str, str], seen: dict) -> list[str]:
+    """The labelled form's checks (chronicle.md §1, §2, §8): footnotes, the `fiction:` line and marked passages."""
+    msgs = []
     fiction, marked = header.get(FICTION_KEY), marked_passages(body)
     composites: list[str] = []
     if fiction is not None:
@@ -202,53 +377,19 @@ def check_episode(root: Path, path: Path, text: str | None = None) -> list[str]:
     for para in paragraphs(body):
         if para[0].lstrip().startswith(MARKER):
             continue
-        text = " ".join(para)
-        if hits := [n for n in composites if re.search(rf"(?<!\w){re.escape(n)}(?!\w)", text)]:
+        if hits := _named(composites, " ".join(para)):
             msgs.append(f"{where}: composite(s) {', '.join(hits)} in a passage not marked {MARKER}; a composite is fiction (chronicle.md §2)")
     if fiction is not None and not marked:
         msgs.append(f"warning: {where}: `{FICTION_KEY}:` header and no passage marked {MARKER} (chronicle.md §2)")
     for para in marked:
         if refs := sorted({r for line in para for r in _FOOTREF.findall(line)}):
             msgs.append(f"{where}: a passage marked {MARKER} cites [^{'], [^'.join(refs)}]; the fiction layer cites nothing (chronicle.md §2)")
-    repos, bad = declared_repos(header.get("repos", "none"))
-    msgs += [f"{where}: `repos:` entry {b!r} is not `<owner>/<repo>=public|private` (chronicle.md §4)" for b in bad]
     if not notes:
         msgs.append(f"{where}: cites nothing; every event cites the record or the Operator's context (chronicle.md §1)")
     used = {r for line in body for r in _FOOTREF.findall(line)}
     msgs += [f"{where}: footnote [^{r}] is referenced and never defined" for r in sorted(used - set(notes))]
-    world, private = 0, set()
     for n, txt in notes.items():
-        c = citation(txt)
-        if c is None:
-            msgs.append(f"{where}: [^{n}] {txt!r} is none of path:, prov:#<id>/<n>, repo:<owner>/<repo>@<sha>:<path>, commit:<owner>/<repo>@<sha> (chronicle.md §1)")
-            continue
-        form, g = c
-        if form == "path":
-            if not _in_tree(root, g[0]):
-                msgs.append(f"{where}: [^{n}] path:{g[0]} does not exist in the tree")
-        elif form == "prov":
-            if problem := _prov_entry(root, *g):
-                msgs.append(f"{where}: [^{n}] prov:#{g[0]}/{g[1]}: {problem}")
-        else:
-            repo, sha, rel = g if form == "repo" else (*g, None)
-            if repo not in repos:
-                msgs.append(f"{where}: [^{n}] {form}:{repo} is not declared in `repos:` with its visibility (chronicle.md §4)")
-                continue
-            if not _SHA.match(sha):
-                msgs.append(f"{where}: [^{n}] {form}:{repo}@{sha}: not a full 40-hex commit sha")
-                continue
-            if repos[repo] == "private":
-                private.add(repo)
-            clone = _clone(repo)
-            if clone is None:
-                world += 1
-            elif not _git_has(clone, sha, rel):
-                what = f"repo:{repo}@{sha[:12]}:{rel}" if rel is not None else f"commit:{repo}@{sha[:12]}"
-                msgs.append(f"{where}: [^{n}] {what} is not in the clone at {clone}")
-    if world:
-        msgs.append(f"warning: {where}: {world} cross-repo citation(s) unresolvable (The World: no clone under ${REPOS_ENV}), inference")
-    if private:
-        msgs.append(f"warning: {where}: cites private repo(s) {', '.join(sorted(private))}; its publication names them (chronicle.md §4)")
+        msgs += _resolve(root, where, f"[^{n}]", txt, repos, seen)
     return msgs
 
 def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str]:
@@ -260,10 +401,18 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
         msgs += check_episode(root, p)
     return msgs
 
+def _citations(path: Path) -> int:
+    """How many citations a piece makes: its footnotes, or in the keyed form its key's record citations."""
+    header, _, notes = parse(path.read_text())
+    if header.get(FORM_KEY) != "keyed":
+        return len(notes)
+    kp = path.parent / header.get(KEY_KEY, "")
+    return sum(len(kl["citations"]) for kl in parse_key(kp.read_text())[0]) if header.get(KEY_KEY) and kp.is_file() else 0
+
 def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
     root = root or dyadlib.repo_root()
     eps = episodes(root)
-    cites = sum(len(parse(p.read_text())[2]) for p in eps)
+    cites = sum(_citations(p) for p in eps)
     return f"{len(eps)} episode(s), {cites} citation(s)"
 
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:

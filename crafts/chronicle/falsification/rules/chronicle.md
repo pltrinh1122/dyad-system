@@ -116,3 +116,58 @@ characters drawn as composites.
 The instance's own composites are declared in its series bible, not here.
 
 Disposition: see ledger #530.
+
+## Amendment — d-work #650: the keyed form, a piece that declares no truth, its truth in a key beside it
+
+**Claim (the Operator, relayed from the communicate seat; dyad-system #498 entries 110–112, #650 entries 1–3):** a
+piece may read as fiction throughout and declare no truth in its prose. Its citations and fiction labels move into a
+published, guard-checked key beside it, so its truth can be found. Its exact quotes are an easter egg for whoever
+searches the repository. The record layer's rule, that nothing is invented, is unchanged.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| 30 | A reader takes a fiction passage for record, or a record passage for fiction. | **Survives, scoped** | The key is published beside the piece and labels every passage, and §1's rule that nothing is invented still binds every record passage. A piece that reads as fiction is the Operator's stated intent (#650 entry 2), and its truth is one file away. |
+| 31 | The easter egg cannot be found: a quote is paraphrased, so a search finds nothing. | **Survives** | §1's exact-quote rule is unchanged and now stated beside the keyed form. The guard checks that each record line's citation resolves, as it checks a footnote. Whether the quote is exact stays inference at publication, as before. |
+| 32 | With no in-prose labels, a composite reads as a real person. | **Survives, scoped** | A composite is still declared in the form's character list and in its key line, and its traits are never cited to anyone. The guard fails a declared composite named in a paragraph its key line does not label `fiction composites:` with that name. |
+| 33 | A key line quotes a private repo. | **Survives** | §4's flag is unchanged. The guard applies the `repos:` declaration and the private-repo warning to key lines as it does to footnotes. |
+| 34 | The two forms mix in one piece, so neither check holds. | **Survives** | `form: keyed` forbids footnotes, `*(fiction)*` markers and the `fiction:` line in the prose, and the guard fails a mix. A piece without the header is checked in the labelled form as before. |
+| 35 | Keying by paragraph number breaks when a paragraph is inserted. | **Survives, procedure** | Each key line names its paragraph by its number and its first words, so an insertion fails the guard at once rather than mislabelling a passage. A published piece is canon and never rewritten (§6), so a key changes only before publication. |
+| 36 | An outlandish telling of a real event becomes fiction because it reads as fiction. | **Refuted** | The layer of a passage is what it tells, not how it reads. A passage that tells a system event, a seat's thought or the Operator's recorded words is a record passage and cites it (§2). |
+| 37 | One form only would give the craft one check. | **Survives as counter** | The existing episodes are in the labelled form. Keeping both changes none of them and lets the Operator choose per piece; the guard selects its check by the header. |
+| 38 | The guard checks a key's composites against the form's character list. | **Confirmed, scoped** | The character list lives in the form's documents (the serial's series bible), which no guard reads. The guard takes the key's own `fiction composites:` lines as the declaration and fails a declared composite named outside a passage so labelled; that each one is in the character list stays inference at publication, as in the labelled form (§8). |
+
+**Verdict:** the claim survives.
+- **Rules:** §1 names both forms and the key. §2 gains the keyed form: its header lines, the key's grammar, and the composite rule. §7 admits either form, and §8 lists the keyed form's checks. `serial.md` §1, §2 and §7 follow.
+- **Template:** `key.md` beside `episode.md`, and the templates README gains its row.
+- **Guard:** `episodes.py` checks a keyed piece against its key, with a test for each check; the engineer's part of this d-work.
+- **VERSION:** 0.3.0 → 0.4.0, a capability. The bundle row warns until the next cut.
+
+**Revision 2 (plan #650 revision 2; dyad-system #498 entries 121–122, relayed via communicate):** engagement governs
+the keyed form's events, with exact quotes and the sourcing and privacy rule as its only fixed points. §2's sentence
+that a fiction passage never tells a system event now binds the labelled form only; in the keyed form a fiction line
+may tell an invented, moved or compressed event, the key labelling it `fiction`. Attack 36 is scoped to the labelled
+form by this: in the keyed form a passage's layer is its key line, which must say `record` wherever a quote stands.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| R1 | Invented events about a real system are read as fact, so readers are deceived. | **Survives, scoped** | The piece declares no truth (#650 entry 2), and its key, published beside it, labels every invented passage `fiction`. |
+| R2 | An exact quote placed in an invented scene breaks the easter egg. | **Survives** | The quote is a record line, its paragraph keyed `record`, checked verbatim at its `path:` or `prov:` citation; only its surroundings are fiction. A quote in a paragraph keyed `fiction` fails the guard. |
+| R3 | An invented event attributes something to the real Operator. | **Survives, scoped** | The persona is the Operator's own choice (§2), and anything said of the real Operator in a record passage still needs §3's approval. |
+
+**Verdict:** the revision survives.
+- **Rules:** §1 states the keyed form's two fixed points; §2 scopes its no-system-event sentence to the labelled form
+  and admits invented, moved and compressed events in the keyed form; §8 lists the quote checks and the empty or
+  repeated composites refusal.
+- **Guard:** quoted text must be a record line; a `path:` or `prov:` citation must hold the quoted string verbatim, a
+  `repo:` or `commit:` citation is warned; the engineer's part of this revision.
+- **VERSION:** stays 0.4.0, still unreleased.
+
+**Revision 3 (plan #650 revision 3):** the craft vocabulary's `fiction layer` row had said the layer is labelled twice
+and never tells a system event, untrue of the keyed form since revision 1. It now defines one term with two forms. The
+vocabulary has no `key` row, so none is added or amended.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| V1 | A term defined two ways is two terms. | **Survives, scoped** | One term with two forms, each named in its definition as §2 states it; what the layer is (everything the record layer does not hold) is one definition, and only how it is labelled, and what it may tell, differs by form. The craft vocabulary guard checks shape only, so the reading stays inference. |
+
+Disposition: see ledger #650.
