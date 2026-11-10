@@ -808,6 +808,71 @@ class MachineTests(unittest.TestCase):
             bd.question("done", [5], ents, rows, "separate")
         self.assertIn("not with-done", str(c.exception))
 
+    def test_the_done_question_carries_retires_and_releases(self):
+        """#659: the clauses Rule-3 and Rule-11 name, in their order, each only when non-empty; a batch row's retires in
+        its own clause, the merges and releases unions last; the ledger line carries the same sets."""
+        rows = {5: Row(5, "five", "planned"), 6: Row(6, "six", "planned"), 7: Row(7, "seven", "open", "2026-11-04 Y plan (mandate #5)", "parent #5"),
+                40: Row(40, "forty", "backlog"), 41: Row(41, "forty-one", "done")}
+        def e(prs=(), retires=None, releases=None, phase="done-asked"):
+            sub = {"unit": ["u"], "pr": list(prs), "evidence": [EV]}
+            if retires: sub["retires"] = [retires]
+            if releases: sub["releases"] = [releases]
+            return {"phase": bd.phase_render(phase, sub)}
+        cases = [({5: e(retires="40")}, [5], "Y/N: Done with #5 five (accreted #7, retires #40)?"),
+                 ({5: e([f"650 at {H1}"], releases="dyad-operator-v1.2.1, v1.2.1")}, [5],
+                  "Y/N: Done with #5 five (accreted #7, merges PR #650, releases dyad-operator-v1.2.1, v1.2.1)?"),
+                 ({5: e([f"650 at {H1}"], "40, 41", "v1.2.1")}, [5],
+                  "Y/N: Done with #5 five (accreted #7, retires #40, #41, merges PR #650, releases v1.2.1)?"),
+                 ({5: e([f"650 at {H1}"], "40", "v1.2.1"), 6: e([f"651 at {H2}"], "41", "v1.2.1")}, [5, 6],
+                  "Y/N: Done with #5 five (accreted #7, retires #40), #6 six (retires #41) (merges PR #650, #651, releases v1.2.1)?")]
+        for ents, ids, want in cases:
+            with self.subTest(want=want):
+                q = bd.question("done", ids, ents, rows, "with-done")
+                self.assertEqual(q, want)
+                self.assertEqual((bd.ids_of(q), bd.question_kind(q)), (ids, "done"))
+        ents = {5: {**e([f"650 at {H1}"], "40, 41", "v1.2.1"), "question": cases[2][2]}}
+        (line, *_) = bd.ledger_lines([5], ents, rows, "answered-Y", "/w", "with-done")
+        self.assertEqual(line, f"state 5 planned -d 'Y done (accreted #7, retires #40, #41, merges PR #650 at {H1}, releases v1.2.1)' --said-file /w")
+        rg = dyadlib.load_guard("agent", "rows")
+        entry = f"2026-11-10 Y done (accreted #7, retires #40, #41, merges PR #650 at {H1}, releases v1.2.1)"
+        self.assertTrue(rg.DONE_Y.search(entry)); self.assertEqual(rg.HEAD_AT.findall(entry), [H1])
+        self.assertIn("v1.2.1", entry.split("releases", 1)[1])                    # the clause release.py reads (#545)
+        ents[5]["question"] = "Y/N: Done with #5 five (accreted #7, merges PR #650)?"     # asked before the sets: drift
+        with self.assertRaises(bd.Refused):
+            bd.ledger_lines([5], ents, rows, "answered-Y", "/w", "with-done")
+
+    def test_asked_states_the_sets_and_refuses_bad_ones_first(self):
+        rows = {5: Row(5, "five", "planned"), 6: Row(6, "six", "planned"), 40: Row(40, "forty", "backlog"),
+                41: Row(41, "forty-one", "done"), 42: Row(42, "open one", "open")}
+        ready = lambda: {"phase": bd.phase_render("done-ready", {"unit": ["u"], "evidence": [EV]})}
+        got = bd.asked_sets([5], {5: ready()}, rows, {"retires": "#40,#41", "releases": "v1.2.1"})
+        sub = bd.phase_of(got[5]["phase"])[1]
+        self.assertEqual((bd.retires_of(sub), bd.releases_of(sub)), ([40, 41], ["v1.2.1"]))
+        self.assertEqual(bd.retires_of(bd.phase_of(bd.asked_sets([5], got, rows, {})[5]["phase"])[1]), [])   # a re-ask states anew
+        both = bd.asked_sets([5, 6], {5: ready(), 6: ready()}, rows, {"retires": "5:#40,6:#41"})
+        self.assertEqual([bd.retires_of(bd.phase_of(both[i]["phase"])[1]) for i in (5, 6)], [[40], [41]])
+        for ids, pairs, says in (([5], {"retires": "#42"}, "#42 (open)"), ([5], {"retires": "#5"}, "#5 (planned)"),
+                                 ([5], {"retires": "#99"}, "#99 (no row)"), ([5, 6], {"retires": "#40"}, "as `<id>:#<row>`"),
+                                 ([5], {"retires": "#40,#40"}, "named twice"), ([5], {"retires": "7:#40"}, "is not a row this question names"),
+                                 ([5], {"releases": "1.2.1"}, "is not a release tag"), ([5], {"releases": "v1.2.1,v1.2.1"}, "named twice")):
+            with self.subTest(says=says), self.assertRaises(bd.Refused) as c:
+                bd.asked_sets(ids, {i: ready() for i in ids}, rows, pairs)
+            self.assertIn(says, str(c.exception))
+        for argv, says in ((["5", "asked", "--expect", "done-ready", "releases=1.2"], "is not a release tag"),
+                           (["5", "asked", "--expect", "done-ready", "retires=x"], "is not `#<row>`"),
+                           (["5", "asked", "--expect", "plan-ready", "retires=#40"], "asked does not take retires="),
+                           (["5", "pr-up", "--expect", "building", "pr=1", f"head={H1}", "releases=v1.0.0"], "does not take releases=")):
+            with self.subTest(argv=argv), self.assertRaises(bd.Refused) as c:
+                bd.parse_advance(argv)
+            self.assertIn(says, str(c.exception))
+        self.assertEqual(bd.parse_advance(["5", "asked", "--expect", "done-ready", "retires=#40", "releases=v1.2.1"])[2],
+                         {"retires": "#40", "releases": "v1.2.1"})
+        bad = {"phase": bd.phase_render("done-asked", {"unit": ["u"], "evidence": [EV], "retires": ["forty"], "releases": ["1.2"]}),
+               "holder": "h", "owner": "u"}
+        msgs = bd.check_phased("5", bad, None)
+        self.assertTrue(any("retires 'forty' is not a list of row ids" in m for m in msgs), msgs)
+        self.assertTrue(any("releases '1.2' is not a list of release tags" in m for m in msgs), msgs)
+
     def test_a_labelled_question_reads_and_binds_by_number(self):
         """#622 Decision 4: under `dwork-slug: on` every row id the question writes is `#<id>-<slug>` and no PR number
         is; the readers of a stored question read the labels as numbers; the answer's entries stay bare."""
@@ -1570,6 +1635,24 @@ class AdvanceTests(unittest.TestCase):
         self.assertEqual([m["kind"] for m in self.box(ENG) + self.box(COU)], ["notice", "notice"])
         self.assertNotIn("ring:", out)                                           # notices are not rung
         self.guards_pass(before, head)
+
+    def test_replay_659_asked_with_retires_and_releases_then_answered(self):
+        """#659: the ask stores the stated sets and the full question; the Y writes them into the done entry; the sets
+        survive on the phase."""
+        self.seed_board({"rows/8.md": "id: 8\ntitle: eight\nopened: 2026-11-01\nstate: backlog\ndisposed: \nrefs: \n",
+                         "board/7.md": phased(7, "done-ready", {"unit": [ENG], "pr": [f"650 at {H1}"], "evidence": [EV]},
+                                              owner=f"{ENG}; {COU}")})
+        rc, out, err = self.adv("7", "asked", "--expect", "done-ready", "retires=#5")
+        self.assertEqual(rc, 1); self.assertIn("#5 (open)", err)
+        rc, out, err = self.adv("7", "asked", "--expect", "done-ready", "retires=#8", "releases=dyad-operator-v1.2.1")
+        self.assertEqual(rc, 0, out + err)
+        f = self.entry(7)
+        self.assertEqual(f["question"], "Y/N: Done with #7 seven (retires #8, merges PR #650, releases dyad-operator-v1.2.1)?")
+        self.trace(7)
+        rc, out, err = self.adv("7", "answered-Y", "--expect", "done-asked", "--said-file", str(self.said))
+        self.assertEqual(rc, 0, out + err)
+        self.assertRegex(self.show("rows/7.md"), rf"Y done \(retires #8, merges PR #650 at {H1}, releases dyad-operator-v1.2.1\)\n")
+        self.assertEqual(bd.retires_of(bd.phase_of(self.entry(7)["phase"])[1]), [8])
 
     def test_replay_binding_refuses_another_id_set(self):
         q = "Y/N: proceed with #5, #6 as planned?"

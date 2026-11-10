@@ -362,6 +362,10 @@ def check_phased(name: str, f: dict[str, str], rows: dict | None) -> list[str]:
     msgs = []
     bad_pr = [v for v in sub.get("pr", []) if not PR_HEAD.fullmatch(v)]
     msgs += [f"{where}: phase pr {v!r} is not `<n> at <7-40 hex>`" for v in bad_pr]
+    if sub.get("retires") and not all(x.lstrip("#").isdigit() for x in split_list(sub["retires"][0])):
+        msgs.append(f"{where}: phase retires {sub['retires'][0]!r} is not a list of row ids (#659)")
+    if sub.get("releases") and not all(RELEASE_TAG.fullmatch(t) for t in split_list(sub["releases"][0])):
+        msgs.append(f"{where}: phase releases {sub['releases'][0]!r} is not a list of release tags (#659)")
     if sub.get("evidence") and not HEX64.fullmatch(sub["evidence"][0]):
         msgs.append(f"{where}: phase evidence {sub['evidence'][0]!r} is not 64 hex")
     for k in ("unit",) + PHASE_REQUIRES.get(p, ()):
@@ -960,7 +964,7 @@ def stall_block(root: Path, cabinet: str | None) -> list[str]:
 
 
 # ---- the orchestration machine (d-work #587: X1 derived fields, X2 relays, X3 questions, X4 the answer, X9 --expect)
-PHASE_SUBKEYS = ("unit", "pr", "evidence", "from", "on")
+PHASE_SUBKEYS = ("unit", "pr", "evidence", "from", "on", "retires", "releases")   # #659: the asked Done's two stated sets
 PR_HEAD = re.compile(r"(\d+) at ([0-9a-f]{7,40})")      # heads take 7-40 hex, as `rows.PR_AT` accepts
 HEX64 = re.compile(r"[0-9a-f]{64}")
 HEAD_HEX = re.compile(r"[0-9a-f]{7,40}")
@@ -968,7 +972,7 @@ DERIVED = ("phase", "waiting-on", "next", "since", "question")   # written by `b
 PHASE_REQUIRES = {                                       # phase -> the sub-keys it must carry beside `unit`
     "verifying": ("pr",), "landing": ("pr", "evidence"), "done-ready": ("evidence",), "done-asked": ("evidence",),
     "held": ("from", "on")}
-ADVANCE_USAGE = ("usage: dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] "
+ADVANCE_USAGE = ("usage: dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] (asked from done-ready: [retires=#<row>,…] [releases=<tag>,…]) "
                  "[--said-file <path>] [--mirror <branch>]")
 MULTI_ID_EVENTS = ("asked", "answered-Y", "answered-N")
 ASKED_KIND = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
@@ -978,7 +982,54 @@ CATCH_UP_PLAN = ("plan-ready", "plan-asked")            # a hand-recorded Y plan
 CATCH_UP_DONE = ("done-ready", "done-asked")            # a hand-recorded Y done likewise
 ASKED_OF = {"plan-ready": "plan-asked", "done-ready": "done-asked"}   # the catch-up reads a *-ready entry as asked
 BATCH_IDS = re.compile(r"\bbatch (#\d+(?:,#\d+)*)")
-PAIR_KEYS = ("unit", "pr", "head", "evidence", "on", "note")
+PAIR_KEYS = ("unit", "pr", "head", "evidence", "on", "note", "retires", "releases")
+ASK_OPTIONAL = {("done-ready", "asked"): ("retires", "releases")}   # #659: optional pairs, beside each event's required
+RETIRE_ITEM = re.compile(r"(?:(\d+):)?#?(\d+)")                       # `#r`, or `<id>:#r` in a batch
+RELEASE_TAG = re.compile(r"(?:[a-z][a-z0-9-]*-)?v\d+\.\d+\.\d+")       # Rule-11 p4 and p7: `<craft>-vX.Y.Z` or `vX.Y.Z`
+
+
+def split_list(v: str) -> list[str]:
+    return [x.strip() for x in (v or "").split(",") if x.strip()]
+
+
+def retires_of(sub: dict[str, list[str]]) -> list[int]:
+    """The rows a phase's `retires` sub-key names (#659), in the order given."""
+    return [int(x.lstrip("#")) for x in split_list(first(sub, "retires")) if x.lstrip("#").isdigit()]
+
+
+def releases_of(sub: dict[str, list[str]]) -> list[str]:
+    return split_list(first(sub, "releases"))
+
+
+def parse_retires(v: str, ids: list[int]) -> dict[int, list[int]]:
+    """{row: [retired rows]} from a `retires=` pair (#659): `#r[,#s]` for one row, `<id>:#r[,<id>:#s]` in a batch.
+    Refused on a bad item, an id not named, an untagged item in a batch, or a row named twice."""
+    out: dict[int, list[int]] = {i: [] for i in ids}
+    seen = set()
+    for x in split_list(v):
+        m = RETIRE_ITEM.fullmatch(x)
+        if not m:
+            raise Refused(f"retires={v!r}: {x!r} is not `#<row>` (or `<id>:#<row>` in a batch)")
+        owner = int(m[1]) if m[1] else (ids[0] if len(ids) == 1 else None)
+        if owner is None:
+            raise Refused(f"retires={v!r}: a batch names each retired row's Done as `<id>:#<row>` ({x!r})")
+        if owner not in out:
+            raise Refused(f"retires={v!r}: #{owner} is not a row this question names")
+        r = int(m[2])
+        if r in seen:
+            raise Refused(f"retires={v!r}: #{r} named twice")
+        seen.add(r); out[owner].append(r)
+    return out
+
+
+def parse_releases(v: str) -> list[str]:
+    tags = split_list(v)
+    bad = [t for t in tags if not RELEASE_TAG.fullmatch(t)]
+    if not tags or bad:
+        raise Refused(f"releases={v!r}: {', '.join(bad) or 'no tag'} is not a release tag (`vX.Y.Z` or `<craft>-vX.Y.Z`, Rule-11)")
+    if len(set(tags)) != len(tags):
+        raise Refused(f"releases={v!r}: a tag named twice")
+    return tags
 
 
 def phase_of(value: str) -> tuple[str, dict[str, list[str]]]:
@@ -1123,15 +1174,34 @@ def question(kind: str, ids, entries: dict, rows: dict, pref: str | None, slugs:
         raise Refused(f"merge-disposition is {pref or 'unset'}, not with-done: a Done question naming PRs is not composed "
                       f"here; ask the merge and the Done by hand (#587)")
     merges = f"merges PR {', '.join(f'#{n}' for n in prs)}" if prs else ""
+    rel = union_releases(ids, entries)
+    releases = f"releases {', '.join(rel)}" if rel else ""
     def acc(a):
         got = accreted_of(a, rows)
         return f"accreted {', '.join(L(c) for c in got)}" if got else ""
+    def ret(a):                                           # #659: the rows its report retires, stated at `asked`
+        got = retires_of(sub_of(entries, a))
+        return f"retires {', '.join(L(c) for c in got)}" if got else ""
+    own = lambda a: [c for c in (acc(a), ret(a)) if c]
+    tail = [c for c in (merges, releases) if c]
     if len(ids) == 1:
         a = ids[0]
-        clauses = [c for c in (acc(a), merges) if c]
+        clauses = own(a) + tail
         return f"Y/N: Done with {L(a)} {rows[a].title}" + (f" ({', '.join(clauses)})" if clauses else "") + "?"
-    parts = [f"{L(a)} {rows[a].title}" + (f" ({acc(a)})" if acc(a) else "") for a in ids]
-    return "Y/N: Done with " + ", ".join(parts) + (f" ({merges})" if merges else "") + "?"
+    parts = [f"{L(a)} {rows[a].title}" + (f" ({', '.join(own(a))})" if own(a) else "") for a in ids]
+    return "Y/N: Done with " + ", ".join(parts) + (f" ({', '.join(tail)})" if tail else "") + "?"
+
+
+def sub_of(entries: dict, rid: int) -> dict[str, list[str]]:
+    try:
+        return phase_of(entries.get(rid, {}).get("phase", ""))[1]
+    except ValueError:
+        return {}
+
+
+def union_releases(ids, entries: dict) -> list[str]:
+    """#659: the tags the named entries' phases state, each once, in id order."""
+    return list(dict.fromkeys(t for i in ids for t in releases_of(sub_of(entries, i))))
 
 
 QUESTION_LINE = re.compile(r"Y/N: (?:proceed with (?P<plan>.*) as planned|Done with (?P<done>.*)|intent aligned for (?P<intent>.*))\?")
@@ -1416,8 +1486,13 @@ def ledger_lines(ids, entries: dict, rows: dict, event: str, said_abs: str, pref
                       + "): ask again (Rule-2, Binding)")
     def accl(i):
         return [f"accreted {', '.join(f'#{c}' for c in acc[i])}"] if acc[i] else []
+    def retl(i):                                          # #659: what `dwork state` archives at the close (#574)
+        got = retires_of(sub_of(entries, i))
+        return [f"retires {', '.join(f'#{c}' for c in got)}"] if got else []
+    rel = union_releases(ids, entries)
     for i in ids:
-        clauses = ([batch] if len(ids) > 1 else []) + accl(i) + ([f"merges {merges}"] if merges else [])
+        clauses = (([batch] if len(ids) > 1 else []) + accl(i) + retl(i) + ([f"merges {merges}"] if merges else [])
+                   + ([f"releases {', '.join(rel)}"] if rel else []))
         d = "Y done" + (f" ({', '.join(clauses)})" if clauses else "")
         out.append(shlex.join(["state", str(i), "done" if not prs else rows[i].state, "-d", d, "--said-file", said_abs]
                               + (["--decisions", decisions_abs] if decisions_abs else [])))   # #648: each row its own lines
@@ -1478,7 +1553,8 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
         legal = sorted(e for f, e in dyadlib.ORCH_EVENTS if f == key[0] and e in dyadlib.ORCH_CLI_EVENTS)
         raise Refused(f"{event} is not an event from {expect} (legal: {', '.join(legal) or 'none'})")
     _, _, required = dyadlib.ORCH_EVENTS[key]
-    allowed_keys = (set(required) - {"said-file"}) | {"note"} | ({"unit"} if key[0] is None else set())   # adoption
+    allowed_keys = ((set(required) - {"said-file"}) | {"note"} | ({"unit"} if key[0] is None else set())   # adoption
+                    | set(ASK_OPTIONAL.get(key, ())))
     extra = sorted(set(pairs) - allowed_keys)
     if extra:
         raise Refused(f"{event} does not take {', '.join(f'{k}=' for k in extra)} (it takes {', '.join(sorted(f'{k}=' for k in allowed_keys))})")
@@ -1493,6 +1569,10 @@ def parse_advance(a: list[str]) -> tuple[list[int], str, dict[str, str], str | N
     for k, v in pairs.items():
         if k == "on" and (r := retired_waiting(v)):
             raise Refused(f"on={v!r}: {r}")
+        if k == "retires":
+            parse_retires(v, ids); continue
+        if k == "releases":
+            parse_releases(v); continue
         bad = {"unit": not inbox().SEAT.fullmatch(v), "pr": not v.isdigit(), "head": not HEAD_HEX.fullmatch(v),
                "evidence": not HEX64.fullmatch(v), "on": not WAITING.fullmatch(v), "note": not v.strip()}[k]
         if bad:
@@ -1593,6 +1673,29 @@ def batch_union(ids, entries: dict) -> dict:
     return out
 
 
+def asked_sets(ids, entries: dict, rows: dict, pairs: dict[str, str]) -> dict[int, dict]:
+    """#659: each named entry with its phase's `retires` and `releases` set from the `asked` pairs (or cleared), after
+    the refusals `dwork state` makes at the record (#574 G2), said at the ask: a retired row exists, is `backlog` or
+    `done`, and is no row this question names."""
+    ids = list(ids)
+    ret = parse_retires(pairs.get("retires", ""), ids)
+    rel = parse_releases(pairs["releases"]) if pairs.get("releases") else []
+    bad = [f"#{r} ({rows[r].state if r in rows else 'no row'})" for rs in ret.values() for r in rs
+           if r in ids or r not in rows or rows[r].state not in ("backlog", "done")]
+    if bad:
+        raise Refused(f"retires names only backlog or done rows the question does not name (#574 G2, #659): {', '.join(bad)}")
+    out = {}
+    for rid in ids:
+        nm, sub = phase_of(entries[rid]["phase"])
+        sub = {k: v for k, v in sub.items() if k not in ("retires", "releases")}
+        if ret[rid]:
+            sub["retires"] = [", ".join(str(r) for r in ret[rid])]
+        if rel:
+            sub["releases"] = [", ".join(rel)]
+        out[rid] = {**entries[rid], "phase": phase_render(nm, sub)}
+    return out
+
+
 def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, said_abs: str | None, inst: str,
                     repo: Path, value_flags, parse, words, sender: str, recorded: bool = False, landed=None, ran=None,
                     automaton: bool = False, decisions_abs: str | None = None):
@@ -1658,6 +1761,8 @@ def advance_builder(ids, event: str, pairs: dict[str, str], expect: str | None, 
                 if not (wt / inst / "d-work" / "plans" / f"{rid}.md").is_file():
                     raise Refused(f"#{rid} asked: the intent reading is plans/{rid}.md's first section, and it is not on "
                                   f"origin/main; land it first (`dyad dwork land`)")
+        if event == "asked" and exp == "done-ready":     # #659: the stated sets, checked and stored on the phase
+            entries.update(asked_sets(ids, entries, rows, pairs))
         if event == "asked":
             kind = {"planning": "intent", "plan-ready": "plan"}.get(exp, "done")
             qtext = question(kind, ids, entries, rows, dyadlib.preference("merge-disposition", wt), dyadlib.slugs_on(wt))
@@ -2010,7 +2115,9 @@ def draft_lines(rid: int, repo: Path) -> list[str]:
         q = clean(question("done", [rid], {rid: entry}, rows, dyadlib.preference("merge-disposition", repo), on))
     except Refused as e:
         q = f"(question not composed: {clean(str(e))})"
-    out += ["## Question (as `asked` would store it)", "", q]
+    out += ["## Question (as `asked` would store it)", "",
+            f"<!-- retired rows and released tags are stated, never derived: pass them at the ask, `dyad board advance "
+            f"{rid} asked --expect done-ready retires=#<row>,… releases=<tag>,…` (#659) -->", q]
     text = "\n".join(out)
     starts = [m.start() for m in QUESTION_START.finditer(text)]
     if starts[:-1] or (starts and starts[-1] != text.rfind("\n") + 1):   # F2's fail-loud check, before the one print
