@@ -26,32 +26,31 @@ planned flip writing a board entry over a newer one, the mechanism of rows 268 a
 253–260, which carry no note, were classed here. Mechanical check: every row of 253–306 in exactly one mode, counts
 summing to 54.
 
-| mode | observed failure mode | delta rows | rows | exit | fence row | fence | proposed child |
+| mode | observed failure mode | delta rows | rows | exit | fence row | fence | child |
 |------|-----------------------|-----------|------|------|-----------|-------|----------------|
 | 01 | a test asserts or reads live repo or instance state that a legitimate change or the clock falsifies | 3 | 269, 291, 305 | 2 | #595 | — | none: #595 (R-g) |
 | 02 | cross-zone coupled state whose guards admit no one-zone PR order | 3 | 262, 272, 278 | 2 | #595 | — | none: #595 (R-h) |
 | 05 | a figure or rule clause stated from memory or a digest, not re-read from its source | 4 | 258, 267, 274, 299 | 3 | — | — | none (Rule-9, Rule-10: inference only) |
 | 06 | a claim about a mechanism accepted on a proxy without positive observation | 3 | 253, 273, 293 | 2 | #595 | — | none: #595 (R-g) |
-| 07 | a stale view of shared state written over the live one | 3 | 263, 268, 279 | 2 | — | — | K-07 |
-| 12 | an act (ask, relay, dispatch) taken before the record or check that must precede it | 4 | 255, 261, 294, 302 | 2 | — | — | K-12 |
-| 16 | a PR held for its done-`Y` conflicts on a file concurrent writes change | 1 | 295 | 2 | — | — | K-16 |
+| 07 | a stale view of shared state written over the live one | 3 | 263, 268, 279 | 2 | #654 | — | #654 (K-07) |
+| 12 | an act (ask, relay, dispatch) taken before the record or check that must precede it | 4 | 255, 261, 294, 302 | 2 | #655 | — | #655 (K-12) |
+| 16 | a PR held for its done-`Y` conflicts on a file concurrent writes change | 1 | 295 | 2 | #662 | — | #662 (K-16) |
 | 17 | a plan's closure or a question written without checking what authorizes each step | 2 | 254, 259 | 1 | — | `dyad/scripts/package.py:cmd_plan` | none |
-| 18 | a plan's files or surfaces listed from the deliverables, not derived from the mutation | 2 | 271, 285 | 2 | — | — | K-18 |
-| 19 | a corpus artifact written in a guarded form from memory; the guard runs only later | 2 | 266, 281 | 2 | — | — | K-19 |
-| 21 | success read before, or other than, the command's own exit and the remote state | 5 | 264, 277, 297, 298, 301 | 2 | — | — | K-21 |
+| 18 | a plan's files or surfaces listed from the deliverables, not derived from the mutation | 2 | 271, 285 | 2 | #660 | — | #660 (K-18) |
+| 19 | a corpus artifact written in a guarded form from memory; the guard runs only later | 2 | 266, 281 | 2 | #661 | — | #661 (K-19) |
+| 21 | success read before, or other than, the command's own exit and the remote state | 5 | 264, 277, 297, 298, 301 | 2 | #652 | — | #652 (K-21) |
 | 22 | an ad hoc shell step or a CLI form typed from memory | 2 | 275, 289 | 3 | — | — | none (Rule-14 p3; a harness hook is operator-side) |
-| 27 | a checker judges a proxy of its object | 4 | 270, 283, 284, 286 | 2 | — | — | K-27 |
-| 28 | a check passes or reports confidently over empty or absent input | 3 | 265, 276, 287 | 2 | — | — | K-28 |
+| 27 | a checker judges a proxy of its object | 4 | 270, 283, 284, 286 | 2 | #656 | — | #656 (K-27) |
+| 28 | a check passes or reports confidently over empty or absent input | 3 | 265, 276, 287 | 2 | #657 | — | #657 (K-28) |
 | 33 | an environment property the step relies on differs from the authoring host | 1 | 282 | 3 | — | — | none (Rule-14 p4: the next unknown property) |
-| 35 | concurrent processes on one host contend for CPU, so a wall-clock ceiling fails | 2 | 288, 306 | 2 | — | — | K-35 |
-| 37 | a new form or writer added without enumerating the other paths to the same state | 3 | 280, 290, 303 | 2 | — | — | K-37 |
-| 40 | the practice requires an act the CLI or store has no form for | 5 | 256, 260, 292, 296, 304 | 2 | — | — | K-40 |
+| 35 | concurrent processes on one host contend for CPU, so a wall-clock ceiling fails | 2 | 288, 306 | 2 | #658 | — | #658 (K-35) |
+| 37 | a new form or writer added without enumerating the other paths to the same state | 3 | 280, 290, 303 | 2 | #659 | — | #659 (K-37) |
+| 40 | the practice requires an act the CLI or store has no form for | 5 | 256, 260, 292, 296, 304 | 2 | #653 | — | #653 (K-40) |
 | 46 | coordination carried on a channel the acting session does not read before acting | 1 | 300 | 3 | — | — | none (Rule-3: the inbox is read at the start of each turn; the residue is that latency) |
 | 52 | a read that changes state as a side effect | 1 | 257 | 1 | — | `dyad/guards/agent/inbox.py:read` | none |
 
-Exit: 1 fenced, 2 a `backlog` row naming the fence (here #595, or a proposed child K-nn until the home opens it), 3
-unfenceable on this kernel (`dmc:mode-exit`). The `fence row` cell of a K-nn mode stays `—` until its row exists, so
-the sweep's P16 reads no row that is not there; the home rewrites it to `#<id>` with the children.
+Exit: 1 fenced, 2 a `backlog` row naming the fence (#595, or a child #652–#662 the home opened under mandate #651
+from this index's proposals K-nn), 3 unfenceable on this kernel (`dmc:mode-exit`).
 
 Sum: 20 modes; 3+3+4+3+3+4+1+2+2+2+5+2+4+3+1+2+3+5+1+1 = 54 rows.
 
@@ -154,22 +153,22 @@ Written here because `agent-corpus/falsification/` is counsel's, not audit's.
 | 9 | 05, 22, 33 and 46 are cop-outs at exit 3 | a moment a guard could read | **survives**: chat, a typed shell line, The World and a turn's latency reach no guard on this kernel | exit 3 |
 | 10 | 11 children fit the ceiling | count | **survives**: 11 of 12 | the list below |
 
-## Proposed children (for the home: `dwork new … --mandate 651`, born `backlog`, `refs: parent #651`)
-Ceiling 12 (plan #651); proposed 11. Owner of each fence engineer, unless noted.
+## Children (opened by the home, `dwork new … --mandate 651`, born `backlog`, `refs: parent #651`)
+Ceiling 12 (plan #651); proposed 11, opened as #652–#662. Owner of each fence engineer, unless noted.
 
 | child | mode | title | slug | its one mitigation candidate | rows |
 |---|---|---|---|---|---|
-| K-21 | 21 | ring a unit only after its post lands | `ring-after-land` | `inbox post` prints the ring line only once the post's commit is on `main`; the home rings only on that line | 5 |
-| K-40 | 40 | a withheld provenance entry form (Rule-7) | `withheld-entry` | a provenance entry noted `withheld by the operator`, its body the operator's direction, counted by `provenance.py` as the entry it stands for (counsel's Rule-7 text) | 5 |
-| K-07 | 07 | the planned flip refuses a board moved since its read | `flip-board-cas` | the flip carries the board text it read and refuses at landing when the tip's `board/<id>.md` differs | 3 |
-| K-12 | 12 | an asked question waits for its prerequisite check | `ask-after-check` | `board advance … asked` for a Done refuses without an evidence sha256 on the named head; the precedent question lists only `similar.admit`'s admitted lines | 4 |
-| K-27 | 27 | sweep findings masked by count as well as sha | `finding-key-counts` | `automaton.finding_key` masks counts, with a test | 4 |
-| K-28 | 28 | the mirror check says when it skips | `mirror-skip-line` | `sweep_drift` prints one `skip` line when `MIRROR` is unset | 3 |
-| K-35 | 35 | live tests out of the code gate | `live-out-of-gate` | the code suite excludes `LiveCase` tests, run only in `suite:live` | 2 |
-| K-37 | 37 | the Done template carries the releases clause | `done-template-releases` | `board advance`'s Done template derives its clauses from the row's question form, `releases` included, with a test | 3 |
-| K-18 | 18 | plan check reads prose that names a renamed term | `plan-check-terms` | `dyad plan check` warns on a tracked file outside the plan's list naming a term or path the mutation renames or removes | 2 |
-| K-19 | 19 | a `Y done` head is the full sha | `full-head` | `dwork state` and `dwork batch` refuse a `merges PR #n at <head>` whose head is not 40 hex, before any write | 2 |
-| K-16 | 16 | no presence file on a PR branch | `presence-off-branch` | the pre-push gate refuses a non-ledger range touching `<instance>/d-work/sessions/`, or the automaton resolves a presence-only conflict to the base | 1 |
+| #652 (K-21) | 21 | ring a unit only after its post lands | `ring-after-land` | `inbox post` prints the ring line only once the post's commit is on `main`; the home rings only on that line | 5 |
+| #653 (K-40) | 40 | a withheld provenance entry form (Rule-7) | `withheld-entry` | a provenance entry noted `withheld by the operator`, its body the operator's direction, counted by `provenance.py` as the entry it stands for (counsel's Rule-7 text) | 5 |
+| #654 (K-07) | 07 | the planned flip refuses a board moved since its read | `flip-board-cas` | the flip carries the board text it read and refuses at landing when the tip's `board/<id>.md` differs | 3 |
+| #655 (K-12) | 12 | an asked question waits for its prerequisite check | `ask-after-check` | `board advance … asked` for a Done refuses without an evidence sha256 on the named head; the precedent question lists only `similar.admit`'s admitted lines | 4 |
+| #656 (K-27) | 27 | sweep findings masked by count as well as sha | `finding-key-counts` | `automaton.finding_key` masks counts, with a test | 4 |
+| #657 (K-28) | 28 | the mirror check says when it skips | `mirror-skip-line` | `sweep_drift` prints one `skip` line when `MIRROR` is unset | 3 |
+| #658 (K-35) | 35 | live tests out of the code gate | `live-out-of-gate` | the code suite excludes `LiveCase` tests, run only in `suite:live` | 2 |
+| #659 (K-37) | 37 | the Done template carries the releases clause | `done-template-releases` | `board advance`'s Done template derives its clauses from the row's question form, `releases` included, with a test | 3 |
+| #660 (K-18) | 18 | plan check reads prose that names a renamed term | `plan-check-terms` | `dyad plan check` warns on a tracked file outside the plan's list naming a term or path the mutation renames or removes | 2 |
+| #661 (K-19) | 19 | a `Y done` head is the full sha | `full-head` | `dwork state` and `dwork batch` refuse a `merges PR #n at <head>` whose head is not 40 hex, before any write | 2 |
+| #662 (K-16) | 16 | no presence file on a PR branch | `presence-off-branch` | the pre-push gate refuses a non-ledger range touching `<instance>/d-work/sessions/`, or the automaton resolves a presence-only conflict to the base | 1 |
 
 ## Phase 4 — verify
 `LEDGER=agent-corpus/audits/INCIDENTS.md dyad runbook run incident-hardening verify` (`dyad check --list; dyad
@@ -186,11 +185,11 @@ and the survey on this branch reads `no-op` (306 rows against this index's 306).
 |---|---|---|
 | 1 fenced | 2: 17, 52 | 3 |
 | 2 backlog: #595 | 3: 01, 02, 06 | 9 |
-| 2 backlog: proposed K-nn | 11: 07, 12, 16, 18, 19, 21, 27, 28, 35, 37, 40 | 34 |
+| 2 backlog: children #652–#662 | 11: 07, 12, 16, 18, 19, 21, 27, 28, 35, 37, 40 | 34 |
 | 3 unfenceable | 4: 05, 22, 33, 46 | 8 |
 
-Sum: 20 modes; 3 + 9 + 34 + 8 = 54 rows. The 11 exit-2 modes close as `backlog` only once the home opens their
-children; until then each is open in the index (`dmc:mode-exit`), named to its K-nn.
+Sum: 20 modes; 3 + 9 + 34 + 8 = 54 rows. The 11 exit-2 modes are closed as `backlog` by their children
+#652–#662 (`dmc:mode-exit`), each carried under #651's plan-`Y`.
 
 ## Limits
 - Nothing was run except the read-only survey and verify steps and one `dyad inbox read`. Every mitigation claim is
