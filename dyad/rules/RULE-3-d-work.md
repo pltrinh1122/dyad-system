@@ -239,7 +239,7 @@ slug is presentation: a question binds the rows it names by their numbers, and e
 - Every reply ends, before its one `Y/N` line, with the **closing line** in the form the preference `awaiting-you`
   (`preferences-corpus/PREFERENCES.md`; absent, `on`) names. Under `on` it reads
   `Awaiting you: <n> <kind> (#id…), …`, or `Awaiting you: nothing.`, then `Coming: <n> <kind>`, each part shown only
-  when non-zero. **Awaiting you** counts the questions asked and not answered, a batch question once, by the kind
+  when non-zero, the Coming part only under the preference `coming` (absent, `on`; #665). **Awaiting you** counts the questions asked and not answered, a batch question once, by the kind
   `dmc:disposition-request` gives each recorded question, in two groups printed d-work first —
   `Awaiting you: d-work 1 plan (#647); merge 1 (PR #723).`: the d-work group (`intent`, `plan`, `done`, `retirement`,
   `precedent`) and the merge group (`merge`, `release`, `destructive`); a recorded question of no listed form, `none`,
@@ -445,6 +445,9 @@ it was written by hand. It is now generated from the asks the board records, eac
 Completion counter-prompt's Record step carries the row's decision-log candidates 2026-11-09 (d-work #648): the log was
 filled only by hand-run backfills, so a ruling named in a Done reached it only if someone later searched for it; see
 the same record, amendment #648. What a `Y` binds cites the precedent's scope 2026-11-09 (d-work #649); see
-`../falsification/rules/rule-2-no-self-ratify.md`, amendment #649.
+`../falsification/rules/rule-2-no-self-ratify.md`, amendment #649. Batch disposition's closing line shows its Coming
+part under the preference `coming` 2026-11-10 (d-work #665): the operator asked that the part counting the agent's own
+queue be a setting of its own, on by default, while `awaiting-you: off` hid the Awaiting part with it; see
+`../falsification/rules/rule-3-d-work.md`, amendment #665.
 
 Set: System Requirements.

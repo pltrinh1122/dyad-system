@@ -1654,3 +1654,33 @@ What changes:
 The other pairs are as amendment #646 left them. Coherent, orthogonal.
 
 Disposition: see ledger #648.
+
+## Amendment — d-work #665 (2026-11-10: the Coming part as its own preference)
+
+**Claim (the operator, provenance #665 entry 1):** "making "Coming:" a preferences setting with default of "on"". The
+closing line's Coming part, which counts the pending queue, is shown under its own preference `coming`, absent read as
+`on`; with `off` the line is the Awaiting part alone. The key is read only under `awaiting-you: on`.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| C1 | An upgrading system changes its line, having no `coming` row. | **Refuted** | An absent key reads `on`, today's line; the guard's "seed it" warning is the only effect, as for `awaiting-you`. |
+| C2 | Hiding Coming hides something owed: a row ready for a question drops from the operator's sight. | **Survives, scoped** | Coming counts rows not yet asked, the agent's work and never the operator's (#646); Awaiting is unchanged, and `dyad board` still prints the queue line. |
+| C3 | Under `awaiting-you: off` an operator sets `coming: on` and expects a Coming part. | **Survives, scoped** | `off` prints the queue line, which is the Coming part's content; the template says `coming` is inert there. |
+| C4 | A bad value (`coming: Off`, a typo) breaks a reply's last line. | **Refuted** | The board reads it as `on`, and the preferences guard warns on a value outside `on|off`; the line still prints. |
+| C5 | One PR carries the instance's seed with the code. | **Confirmed, so planned apart** | `preferences-corpus/` is its own zone (Rule-1); the seed is a second PR, asked as its own merge question. |
+
+**Verdict:** the claim survives.
+- **Rules:** Batch disposition's closing-line bullet names the preference; Provenance gains its line.
+- **Vocabulary:** `awaiting you` names the key. No term is added.
+- **Template:** the `coming` row and its description; `surface.md` freezes the key.
+- **Code:** `board.py` reads the key (the engineer's part).
+
+**Pairwise (Rule-5).**
+- **3–6**: one row's definition gains the key; the row's `used by` (Rule-3) still reads correctly.
+- **3–2**: the closing line authorizes nothing, so Binding is unchanged; `coming` is a form preference.
+- **3–1**: the code PR is agent zone and the instance seed a separate preferences-zone PR.
+- **3–16**: the board store and its derived queue are unchanged; only the line's form reads the key.
+
+The other pairs are as amendment #648 left them. Coherent, orthogonal.
+
+Disposition: see ledger #665.

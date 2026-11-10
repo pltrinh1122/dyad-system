@@ -221,6 +221,15 @@ defines what each value means.
   - Why: the authoring operator's prompts, "use "Awaiting you" and fold it into a row", then ""Awaiting you" is a
     preference setting. falsify." and ""Awaiting you" is mechanically generated or can be mechanically generated.
     falsify.", and, setting the default, "default setting is "On" to display "Awaiting you:" ."
+- `coming` — whether the closing line shows its `Coming: <n> <kind>` part (Rule-3 Batch disposition; d-work #665). A form
+  preference: it authorizes nothing, and it hides only that part — the pending queue is still derived and recorded, and
+  `dyad board` still prints its queue line.
+  - `on` — the Coming part is shown after the Awaiting part, as `awaiting-you: on` describes. The value this template
+    ships, and the reading of an absent key, so an upgrading system's line does not change; a value outside `on|off`
+    reads as `on` at the board and is warned by the preferences guard.
+  - `off` — the closing line is the Awaiting part alone, ending with its `.`.
+  - Inert under `awaiting-you: off`, whose queue line is the Coming part's content.
+  - Why: the authoring operator's prompt, "making "Coming:" a preferences setting with default of "on"".
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys,
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each value's one default is the `dyad:defaultValue` of the decision criterion that
