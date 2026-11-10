@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-10T00:33:40+00:00
+seen: 2026-11-10T00:46:05+00:00
 root: /home/user/dyad-system
 rows: 651
 files: agent-corpus/audits/INCIDENTS.md agent-corpus/d-work/ dyad/guards/agent/board.py dyad/tests/test_audits.py dyad/tests/test_automaton.py
