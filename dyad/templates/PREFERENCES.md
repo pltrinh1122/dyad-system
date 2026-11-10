@@ -28,6 +28,7 @@ defines what each value means.
 | intent-reading | off | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
+| coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |

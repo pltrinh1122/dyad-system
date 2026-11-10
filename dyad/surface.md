@@ -139,6 +139,7 @@ the operator's. The key names and allowed values are the surface.
 | intent-reading | frozen |
 | dwork-slug | frozen |
 | awaiting-you | frozen |
+| coming | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
