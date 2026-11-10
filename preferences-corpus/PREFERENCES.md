@@ -23,11 +23,13 @@ defines what each value means.
 | dwork-trace | always | `always` \| `on-demand` | Rule-3 (completion evidence) |
 | accretion | implicit | `explicit` \| `implicit` | Rule-3 (scope, plan, ledger, completion), Rule-2 (binding) |
 | organization | m4 | `flat` \| `m4` | Rule-16 (Presence: the seat-name form), Rule-3 (Ledger: what a session reads at start) |
-| paired-units | communicate | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
+| paired-units | communicate, communicate-marketing | `none`, or seat names (with or without their `-<hp>`) | Rule-16 (Presence: attendance, declared), the cabinet Operating Guide (§8) |
 | attendance-window | 7 | a positive number of days | Rule-16 (Presence: attendance, checked against the records) |
 | relay-form | brief | `verbatim` \| `brief` | the cabinet Operating Guide (§8, the route table), Rule-3 (Completion counter-prompt: the form a relayed Done question's evidence takes) |
 | intent-reading | on | `on` \| `off` | Rule-3 (Plan, Answer grammar: the intent question before the plan), Rule-15 (phase 1: what accepts the definition of done) |
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
+| awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
+| coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -183,6 +185,8 @@ defines what each value means.
   Operator's prompt of 2026-10-27 ("I need to have this conversation in the `communicate` session.  Mark that session as 'attended' because i'll need to hard-context switch whenever i'm working on the story.  the story is also asynchronous and has no dependency on other matters, persistent for the duration of the dyad-system at a minimimum - so it's an exemplar for when operator attendance should happen.") — the instance's reading: a seat is attended when its work is a
   hard context switch for the Operator, asynchronous, independent of other matters and long-lived; the leader is
   always attended.
+  dyad-system adds `communicate-marketing`, the product-marketing desk of the communicate function (d-work #666), on the
+  Operator's prompt of 2026-11-10: "i'll be attending the dyad unit after you spawn it".
 - `attendance-window` — how many days the records are read back to check `paired-units` (d-work #388, #412): a
   seat holds an own disposition when a provenance record whose `session:` line names it holds a disposition
   whose note holds neither `mandate #<id>` nor `relayed via`, anywhere (#422), within the window. A live seat holding one that
@@ -214,6 +218,12 @@ defines what each value means.
   dyad-system: `on`, the Operator's prompt of 2026-11-07: "to assist operator with identifying d-work by its identifier,
   as a preference ("on" by default), d-work id should be presented along with 2-3 tag slugs after then number, e.g.
   "#621-release-intent-Y""
+- `awaiting-you` — the form of the closing line every reply ends with (Rule-3 Batch disposition; d-work #646; the
+  template's description). dyad-system: `on`, the Operator's prompt of 2026-11-08: "default setting is "On" to display
+  "Awaiting you:" ." Seeded here 2026-11-10 (d-work #665), the value it already read when absent.
+- `coming` — whether the closing line ends with its `Coming:` part, read only under `awaiting-you: on` (Rule-3 Batch
+  disposition; d-work #665; the template's description). dyad-system: `on`, the Operator's prompt of 2026-11-10:
+  "making "Coming:" a preferences setting with default of "on"". Seeded here with it, the value an absent key reads.
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
