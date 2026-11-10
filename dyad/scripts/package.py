@@ -2090,6 +2090,9 @@ def append_provenance(rid, entries, today, fresh=False):
 
 RETIRES = re.compile(r"\bretires (#\d+(?:, #\d+)*)")   # #574 revision 3: `Y done (accreted #c, retires #r, #s, merges …)`
 
+FULL_HEAD = re.compile(r"[0-9a-f]{40}")   # #661: a written head is full (merge.FULL_SHA); rows.HEAD_AT reads 7-40 (history)
+
+
 def retired_rows(entry: str) -> list[int]:
     """The rows a Done entry's `retires` clause names, in order; [] without one."""
     m = RETIRES.search(entry or "")
@@ -2384,6 +2387,10 @@ def cmd_dwork(a):
                          f"given on — -d 'Y done (merges PR #n at <head-n>)' (Rule-3 Completion, #202): "
                          f"{len(prs) or 1} named, {len(heads)} head(s) given, and the fence tests every one "
                          f"of them before the row may reach done")
+            if short := [h for h in heads if not FULL_HEAD.fullmatch(h)]:
+                sys.exit(f"refused: a `Y done` names each head in full, 40 hex, the shape `dyad merge` requires "
+                         f"(#661): {', '.join(short)}; read it with `git ls-remote origin refs/pull/<n>/head` or "
+                         f"`git rev-parse <short>`")
             if state == "done":
                 sys.exit("refused: the state follows the merge (Rule-3 Completion, #202). Record this entry "
                          f"with the state unchanged (`dwork state {rid} {r.state} -d …`), merge, then "
