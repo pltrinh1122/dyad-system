@@ -17,7 +17,7 @@
   "dyad:inputs": [
     "whether a core Rule cites the craft by path",
     "the craft's own BUNDLED_WITH_CORE declaration and its PURPOSE line",
-    "whether the craft serves the system's purpose for every installing Operator"
+    "whether the craft's own tree, at the version proposed (its rules, guards, templates and tests), serves the system's purpose, read from the instance's identity record (dyad:purpose, site/identity.jsonld), for every installing operator; never the instance's use of the craft: published content, an applied domain's results or a pending event"
   ],
   "hasDefinedTerm": [
     {
@@ -31,7 +31,7 @@
       "@type": "DefinedTerm",
       "termCode": "purpose",
       "name": "purpose",
-      "dyad:when": "no core Rule cites the craft, it serves the system's purpose for every installing Operator and never one instance's applied domain alone, and its declaration carries a one-line PURPOSE reason",
+      "dyad:when": "no core Rule cites the craft, its own tree at the version proposed (its rules, guards, templates and tests) serves the system's purpose, as the instance's identity record states it (dyad:purpose), for every installing operator and never one instance's applied domain alone, judged on that tree and never on the instance's use of the craft (published content, an applied domain's results or a pending event), and its declaration carries a one-line PURPOSE reason",
       "dyad:then": "bundled as under dependency; the reason is the Operator's to ratify, by the Done-Y of the PR that adds the declaration"
     },
     {

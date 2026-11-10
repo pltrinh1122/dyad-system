@@ -68,8 +68,10 @@ dyad system without clashes or hand-editing.
    **(a) dependency** — a core Rule cites it by path, since what the core ships and what its own
    Rules depend on must not disagree, and `dyad/guards/infra/bundle.py` fails a cited craft in the
    tree that does not declare itself bundled; or **(b) purpose** — it serves the system's purpose
-   (`dyad:purpose` of the identity record in `README.md`, #496) for every installing operator, never
-   one instance's applied domain (`dyad:appliedTo`) alone, and its declaration carries a one-line
+   (`dyad:purpose` of the identity record, `site/identity.jsonld`, #496) for every installing operator, never
+   one instance's applied domain (`dyad:appliedTo`) alone, judged on the craft's own tree at the version proposed —
+   its rules, guards, templates and tests — and never on the instance's use of it, its published content, an applied
+   domain's results or a pending event (`dmc:bundled-craft`, #663), and its declaration carries a one-line
    `PURPOSE` reason beside it, which the same guard requires of a declared craft no core Rule cites;
    that reason is the operator's to ratify, by the done-`Y` of the PR that adds it. Those grounds
    are the only reasons the core's install may write outside its own root. The registry records the core
@@ -226,6 +228,9 @@ decision, while the hosting approval stays as the authentication no agent can fo
 #545. Operator and agent are lowercase in prose and done-`Y` replaces Done-`Y`, 2026-11-02
 (d-work #553): the dyad-native terms; see `../falsification/rules/rule-6-vocabulary.md`, amendment #553 (part D). Property 2 states the
 one table every `dyad` form is read through 2026-11-05 (d-work #606, stating #592's gate); see
-`../falsification/rules/rule-3-d-work.md`, amendment #606.
+`../falsification/rules/rule-3-d-work.md`, amendment #606. Property 2's purpose ground is judged on the craft's own tree, and the identity record's
+path is corrected, 2026-11-10 (d-work #663): with no evidence named, a bundling decision had been left to wait on an
+instance event, season 1's episode 0 (#514); see
+`../falsification/rules/rule-11-distribution-structure.md`, amendment #663.
 
 Set: System Requirements (kernel; content: crafts/sysarch/rules/distribution.md, crafts/syseng/rules/idempotence.md, crafts/syseng/rules/determinism.md).
