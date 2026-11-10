@@ -1372,6 +1372,32 @@ class AwaitingTests(unittest.TestCase):
             self.assertIn(bd.closing_line(self.root), bd.board_lines(self.root))
             self.assertIn(bd.closing_line(self.root), bd.resume_lines(self.root))
 
+    def test_coming_keeps_or_drops_the_coming_part(self):
+        """#665: `coming: off` ends the line after its Awaiting part; absent, `on` or an unknown value keep today's
+        line; under `awaiting-you: off` the key is not read; the board and resume views carry the same line."""
+        full = bd.closing_line(self.root)                                           # absent: on
+        self.assertIn(" Coming: ", full)
+        awaiting = full.split(" Coming: ", 1)[0]
+        self.prefs(coming="on")
+        self.assertEqual(bd.closing_line(self.root), full)
+        self.prefs(coming="maybe")                                                  # read as on; the guard warns
+        self.assertEqual(bd.closing_line(self.root), full)
+        self.prefs(coming="off")
+        self.assertEqual(bd.closing_line(self.root), awaiting)
+        self.assertTrue(awaiting.endswith(".") and "Coming" not in awaiting)
+        self.assertEqual(bd.awaiting_line(self.root, coming=False), awaiting)
+        self.assertEqual(bd.awaiting_line(self.root), full)                          # the default keeps today's line
+        with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
+            self.assertIn(awaiting, bd.board_lines(self.root))
+            self.assertIn(awaiting, bd.resume_lines(self.root))
+        self.prefs(**{"awaiting-you": "off", "coming": "off"})                       # inert under awaiting-you: off
+        self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))
+        self.prefs(**{"awaiting-you": "on", "coming": "off"})
+        for rid in [*range(1, 8), 11, 13]:
+            (self.d / "board" / f"{rid}.md").unlink(missing_ok=True)
+        (self.d / "plans" / "9.md").unlink(missing_ok=True)
+        self.assertEqual(bd.closing_line(self.root), "Awaiting you: nothing.")
+
 
 class AdvanceTests(unittest.TestCase):
     """`board advance` over a scratch install (the worktree's runner records the answers), a bare origin, a seat whose

@@ -751,6 +751,7 @@ def queue_line(q: dict[str, list[int]]) -> str:
 
 # ---- the closing line (d-work #646): the questions the operator owes, read from the questions the board records
 CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "awaiting-you", ("on", "off"), "on"   # plan #646 revision 2
+COMING_KEY, COMING_VALUES, COMING_DEFAULT = "coming", ("on", "off"), "on"            # #665: the closing line's Coming part
 # dmc:disposition-request (#646 revision 3): what kind of request for the operator's disposition a recorded question is,
 # the phase over the form, `none` the default; the outcome names and groups are the record's
 REQUEST_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
@@ -828,12 +829,13 @@ def intent_ready(root: Path, got: list[tuple[str, dict[str, str]]] | None = None
     return sorted(out)
 
 
-def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
+def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None,
+                  coming: bool = True) -> str:
     """`Awaiting you: d-work <n> <kind> (#id…), …; merge <n> (PR #…), <n> release (#id…), ….` — the questions asked and
     not answered by dmc:disposition-request's groups, d-work first, each group and kind only when non-zero, a kind named
     after its count unless it is the group's own name, a merge counted by the PR numbers its questions name — or
     `Awaiting you: nothing.`; then ` Coming: <n> <kind>, ….` from the derived queue, intent-ready included under
-    `intent-reading: on` (#646)."""
+    `intent-reading: on` (#646). With `coming` False (the preference `coming: off`, #665) the Awaiting part alone."""
     got = load(root) if got is None else got
     rows = {r.id: r for r in dyadlib.read_rows(root)}
     on = dyadlib.slugs_on(root)
@@ -853,6 +855,8 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
         if items:
             groups.append(f"{group} " + ", ".join(items))
     line = "Awaiting you: " + ("; ".join(groups) if groups else "nothing") + "."
+    if not coming:
+        return line
     q = derived_queue(root, got, cabinet)
     if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
         filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
@@ -863,11 +867,13 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
 
 def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
     """The board's last count line: `awaiting_line` under the preference `awaiting-you: on`, which an absent key reads,
-    and the derived queue's line under `off` (plan #646 revision 2)."""
+    and the derived queue's line under `off` (plan #646 revision 2). Under `on` the preference `coming` (#665) keeps or
+    drops its Coming part: `off` drops it, and an absent key or any other value keeps it, the guard warning on a value
+    outside `on|off`; under `awaiting-you: off` `coming` is not read."""
     v = (dyadlib.preference(CLOSING_KEY, root) or CLOSING_DEFAULT).strip()
     if v == "off":
         return queue_line(derived_queue(root, got, cabinet))
-    return awaiting_line(root, got, cabinet)
+    return awaiting_line(root, got, cabinet, coming=(dyadlib.preference(COMING_KEY, root) or COMING_DEFAULT).strip() != "off")
 
 
 def owners(f: dict[str, str]) -> list[str]:
@@ -2248,6 +2254,7 @@ INVARIANTS += [   # #646: the closing line reads the questions recorded, never t
                                                     and disposition_request(None, None) == "none"),
     ("closing-default-is-a-value", lambda: CLOSING_DEFAULT in CLOSING_VALUES and set(REQUEST_PHASES.values()) <= set(AWAITING_KINDS)
                                            and {k for _, k in REQUEST_FORMS} <= set(AWAITING_KINDS)),
+    ("coming-default-is-a-value", lambda: COMING_DEFAULT in COMING_VALUES and COMING_KEY != CLOSING_KEY),   # #665
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)
     ("kinds-are-dmc-disposition-request", lambda: {o["termCode"] for o in __import__("json").loads(
