@@ -7,7 +7,10 @@ posting: <members | named <system>:<unit> …>
 monitor: <session-start | interval <min>-<max>, minutes>
 limits: <n> KiB, <n> per hour
 decision-rights: none
+content-rules: CONTENT-RULES.md#post-content #<channel>-post, channels <version>
 
 <what the channel is for, in a sentence. Each policy slot holds one allowed value; the guard (`guards/posts.py`)
 fails a missing slot or a value of no allowed form. A message on a channel carries no authority whatever this entry
-says: a post is an intake, admitted only by the receiving system's operator.>
+says: a post is an intake, admitted only by the receiving system's operator. `content-rules` names the self-imposed
+rules a subscriber reads before posting, rendered in the repository's root `CONTENT-RULES.md`: layer 1 and this
+channel's own rule. Nothing moderates a post; changing the rules takes a new entry by the creator (L7).>

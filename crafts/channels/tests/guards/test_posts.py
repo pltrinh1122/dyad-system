@@ -1,7 +1,8 @@
 """posts.py (the channels craft's guard, entity `post`; d-work #682): the absent checkout, the instance file naming the clone (relative and absolute), each template parsing to its
 field list, a well-formed store, each failing shape (missing field, wrong format, unknown kind, id or channel off its
 path, a channel with no entry, a sender off its path or no member, an unresolved reply, over the size limit, a policy
-slot of no allowed value, a member entry naming another system), an unknown field kept, the fence (a credential, a
+slot of no allowed value, a member entry naming another system, the content-rules slot: missing, malformed, without layer 1, naming a heading
+CONTENT-RULES.md lacks, or with no CONTENT-RULES.md at all, and the member's adopted version), an unknown field kept, the fence (a credential, a
 private name by hash, a disposition shape), append-only against the clone's origin, and the invariants."""
 import os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -12,8 +13,10 @@ CRAFT = Path(__file__).resolve().parents[2]
 posts = dyadlib.load_guard_file(CRAFT / "guards" / "posts.py")
 pc = dyadlib.load_module(dyadlib.PKG / "scripts" / "privatecite.py", "privatecite")
 CHANNEL = ("id: release\ncreator: up:home\nowner: up\nsources: up's releases\nadmission: open\nposting: members\n"
-           "monitor: session-start\nlimits: 4 KiB, 10 per hour\ndecision-rights: none\n\nReleases.\n")
-MEMBER = "system: {s}\nunits: home\nbound-repository: private\nplay-book: 0.1.0\n\nA system.\n"
+           "monitor: session-start\nlimits: 4 KiB, 10 per hour\ndecision-rights: none\n"
+           "content-rules: CONTENT-RULES.md#post-content #release-post, channels 0.1.0\n\nReleases.\n")
+MEMBER = "system: {s}\nunits: home\nbound-repository: private\nplay-book: 0.1.0\ncontent-rules: channels 0.1.0\n\nA system.\n"
+RULES = "content-rules: channels 0.1.0\n\n# Content rules\n\n## post-content\n\nEvery post.\n\n## release-post\n\nA release.\n"
 
 def message(mid="m1", channel="release", sender="up:home", kind="fact", body="A tag was cut.", **extra) -> str:
     head = {"format": "dyad-channels/1", "id": mid, "channel": channel, "kind": kind, "from": sender,
@@ -28,6 +31,7 @@ class Store(unittest.TestCase):
         (self.base / "registry" / "channels" / "release.md").write_text(CHANNEL)
         for s in ("up", "down"):
             (self.base / "registry" / "members" / f"{s}.md").write_text(MEMBER.format(s=s))
+        (self.base / posts.RULES).write_text(RULES)
         (self.root / "agent-corpus").mkdir()
         (self.root / "agent-corpus" / posts.LOCAL).write_text("clone: clone\nsystem: up\n")
         env = {k: v for k, v in os.environ.items() if k != "DYAD_INSTANCE"}
@@ -118,6 +122,39 @@ class Shapes(Store):
     def test_member_names_another_system(self):
         (self.base / "registry" / "members" / "down.md").write_text(MEMBER.format(s="up"))
         self.assertTrue(any("is not the file's name" in m for m in self.fails()))
+
+class ContentRules(Store):
+    def chan(self, slot):
+        text = CHANNEL.replace("content-rules: CONTENT-RULES.md#post-content #release-post, channels 0.1.0\n", slot)
+        (self.base / "registry" / "channels" / "release.md").write_text(text)
+
+    def test_slot_passes_with_its_headings(self):
+        self.assertEqual(self.fails(), [])
+        self.assertTrue({"post-content", "release-post"} <= posts.anchors(self.base))
+
+    def test_missing_slot(self):
+        self.chan("")
+        self.assertTrue(any("lacks `content-rules:`" in m for m in self.fails()))
+
+    def test_malformed_slot(self):
+        self.chan("content-rules: see the rules\n")
+        self.assertTrue(any("is not `CONTENT-RULES.md#post-content" in m for m in self.fails()))
+
+    def test_slot_without_layer_one(self):
+        self.chan("content-rules: CONTENT-RULES.md#release-post, channels 0.1.0\n")
+        self.assertTrue(any("names no #post-content" in m for m in self.fails()))
+
+    def test_slot_naming_an_absent_heading(self):
+        self.chan("content-rules: CONTENT-RULES.md#post-content #issue-post, channels 0.1.0\n")
+        self.assertTrue(any("#issue-post is no heading" in m for m in self.fails()))
+
+    def test_no_rules_file(self):
+        (self.base / posts.RULES).unlink()
+        self.assertTrue(any("does not hold" in m for m in self.fails()))
+
+    def test_member_version(self):
+        (self.base / "registry" / "members" / "down.md").write_text(MEMBER.format(s="down").replace("channels 0.1.0", "latest"))
+        self.assertTrue(any("is not `channels <version>`" in m for m in self.fails()))
 
 class Fence(Store):
     def test_credential_refused(self):
