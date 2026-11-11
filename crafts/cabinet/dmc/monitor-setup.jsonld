@@ -1,0 +1,65 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/monitor-setup",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "monitor-setup",
+  "name": "Monitor setup",
+  "description": "Decides what holds the watch on a stream something must watch (a channel, a mailbox, a hosting's runs); A monitor may read, run the stream's code checks, classify what it read and route it to the home's inbox, and, as a stream's sole sender, post only the exact bytes a recorded posting Y names by id and sha256; it never drafts, edits, answers, disposes or acts on what it read, and accretes nothing.",
+  "dyad:decides": "For a stream something must watch, what holds the watch?",
+  "dyad:inputs": [
+    "how often the stream changes: items a day, and how bursty",
+    "the latency the stream's own policy asks for: a read at session start, or an interval with a floor and a ceiling",
+    "whether each read is wholly mechanical (code decides every item) or needs judgment (an item must be classified)",
+    "token cost: what a read costs in the unit that would hold it; every token the home spends is spent in the operator's own chat and delays its next answer",
+    "whether the operator has allowed workflows for this stream: a workflow file and the repository variable that runs it, each the operator's"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "home-read",
+      "name": "a read in the home at session start",
+      "dyad:when": "the stream's policy asks for no more than a read at session start, and that read is cheap: a count of new items, nothing to classify",
+      "dyad:then": "the home reads it at each session start, by the stream's own read verb, and routes as the stream's record says; no unit is opened",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "monitor-unit",
+      "name": "a live solo monitor unit",
+      "dyad:when": "the policy asks for an interval, or each read needs classification the home should not spend its chat on",
+      "dyad:then": "a desk opened by the monitor-unit play-book under the charter of the function whose domain holds the stream: solo, posture efficient, on the cheapest model tier that runs its steps (the smallest when the steps are code plus classification), named at spawn and never stored in the repository; it wakes on the policy's schedule and routes only to the home's inbox",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "automaton-run",
+      "name": "a scheduled automaton run",
+      "dyad:when": "every read is wholly mechanical, the policy asks for an interval, and the operator has allowed workflows for this stream",
+      "dyad:then": "a scheduled run of the stream's read verb by an automaton, which posts one notice to the home's inbox for what is new and decides nothing; with no allowance the outcome is monitor-unit",
+      "dyad:effect": "asks"
+    }
+  ],
+  "dyad:precedence": "automaton-run only with the allowance and wholly mechanical reads; then home-read when the policy and the read's cost both allow it; otherwise monitor-unit.",
+  "dyad:default": "monitor-unit: a stream the inputs cannot place is watched by a unit that reports to the home, never by nothing",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "playbooks/monitor-unit.md",
+  "dyad:alsoIn": [
+    "docs/operating-guide.md",
+    "dmc/unit-lifecycle.jsonld",
+    "dmc/session-tidy.jsonld",
+    "playbooks/session-tidy.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

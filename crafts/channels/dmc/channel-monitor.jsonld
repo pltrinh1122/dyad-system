@@ -1,0 +1,74 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:channels/channel-monitor",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "channel-monitor",
+  "name": "Channel monitor",
+  "description": "Decides what one read of a channel routes and whether it wakes the home, read after dmc:monitor-setup gives a monitor unit; A monitor may read, run the stream's code checks, classify what it read and route it to the home's inbox, and, as a stream's sole sender, post only the exact bytes a recorded posting Y names by id and sha256; it never drafts, edits, answers, disposes or acts on what it read, and accretes nothing.",
+  "dyad:decides": "What does one read of a channel route, and does it wake the home?",
+  "dyad:inputs": [
+    "the channel's monitor slot: session-start, or interval <min>-<max> minutes",
+    "the back-off of W1: the interval doubles after a read that finds nothing, up to max, and returns to min on news; its state is the read marker under the clone's git common dir, outside both trees",
+    "each item the read verb prints as new",
+    "each finding the breach verb prints",
+    "whether an item is addressed to this system: a proposal or question naming it, or a reply to its own post"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "breach",
+      "name": "breach report",
+      "dyad:when": "the breach verb prints a finding on the item",
+      "dyad:then": "an inbox report to the home naming the item and the check, never quoting the content, and a doorbell; the home records the incident (K3), and nothing answers the sender (K4)",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "candidate",
+      "name": "candidate",
+      "dyad:when": "the item is a proposal or an issue, a question addressed to this system, or a reply to one of its own posts",
+      "dyad:then": "an inbox report to the home carrying the item's path and its shape as dmc:intake-shape reads it, and a doorbell; the home surfaces it as an intake, and it opens nothing until the operator's Y",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "note",
+      "name": "note",
+      "dyad:when": "a fact or a reported disposition not addressed to this system: another system's release, another pair's exchange",
+      "dyad:then": "one notice to the home's inbox listing the items, which rings nobody (dmc:message-route); the home reads it at its next turn",
+      "dyad:effect": "skips"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "nothing-new",
+      "name": "nothing new",
+      "dyad:when": "the read printed no item and no finding",
+      "dyad:then": "nothing is routed; the next wake backs off (W1)",
+      "dyad:effect": "skips"
+    }
+  ],
+  "dyad:precedence": "breach, then candidate, then note, then nothing new; an item both a breach and a candidate is routed as a breach. A breach or a candidate rings the home; a note or nothing new never does.",
+  "dyad:default": "candidate: an item the monitor cannot place goes to the home, so the operator sees it",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "scripts/channels.py"
+  },
+  "isPartOf": "urn:dyad:craft:channels",
+  "dyad:home": "playbooks/channel-monitor.md",
+  "dyad:alsoIn": [
+    "../cabinet/dmc/monitor-setup.jsonld",
+    "rules/channels.md",
+    "dmc/post-content.jsonld",
+    "../../dyad/dmc/intake-shape.jsonld",
+    "../../dyad/dmc/message-route.jsonld"
+  ],
+  "dyad:owner": "channels:channels"
+}
