@@ -24,8 +24,9 @@ only some components pins them individually by their own crafts' tags (`dyad-ope
 - **Awaiting you (#670).** A question asked in another dyad unit's chat is listed with that unit.
 - **cabinet 0.7.0 (#669).** Unit and session tidy, one play-book, run-book and record, with `tidy.py` classing each
   unit and counting sessions outside the system.
-- **chronicle 0.4.0 (#650, #668, #671, #674).** The keyed form: a piece published as fiction declaring no truth, its key
-  beside it, checked by the guard. Records for a product-marketing pitch, a lean-canvas review and problem depth.
+- **chronicle 0.4.0 (#650, #668, #671, #673, #674).** The keyed form: a piece published as fiction declaring no truth,
+  its key beside it, checked by the guard. Records for a product-marketing pitch, a lean-canvas review, problem depth
+  and segment significance.
 - **sysadmin 0.3.3 (#649).** `changelog-actor` declares its outcomes' effects.
 
 ## Known limitations (1.3.0)
