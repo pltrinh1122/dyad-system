@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-11T23:06:19+00:00
+seen: 2026-11-11T23:06:25+00:00
 root: /home/user/dyad-system
 rows: 682
 files: MANIFEST.md README.md agent-corpus/d-work/ crafts/channels/ crafts/sysarch/VERSION crafts/sysarch/tests/test_project_entities.py dyad/VERSION dyad/scripts/dyadlib.py falsification/rules/channels.md guards/posts.py rules/ runbooks/channels.md scripts/channels.py templates/ tests/
