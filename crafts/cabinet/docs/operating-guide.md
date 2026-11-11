@@ -140,6 +140,9 @@ on it but the cos, which relays and moves on, so it can spend its time instead o
 carry neither key, a dyad unit runs `responsive` and a solo one `efficient`. The posture never moves an
 act between units — the charter does (§4) — and the cos's availability rule (§2) holds under every value.
 
+**Opening a monitor unit (#682).** A unit whose one job is to watch a stream opens by its own play-book,
+`../playbooks/monitor-unit.md` (`dmc:monitor-setup`), which cites this section for the steps every unit shares.
+
 **Opening the orchestrating secretary (#557).** Open it as any unit, once its charter row is in your mandates
 table: `DYAD_SESSION=orchestrate-<hp>`. The home then hands it the rows it routes by inbox relay, and from then on
 the home's own share of a d-work is four acts — record your prompt, relay the plan question, present the Done
