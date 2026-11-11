@@ -32,6 +32,10 @@ The rule as written is plan #668 revision 2's survivor.
 | 23 | **"Any" pitch overreaches** (G4): a free product has no revenue. | **Refuted** | Nothing the canvas grounds reads revenue or cost; "none, and why" passes. |
 | 24 | **Grounding stalls every pitch** (G5) until a canvas is accepted. | **Survives, scoped** | That is the intent, a foundation; an early pitch fails `ungrounded` naming the section it lacks. |
 | 25 | **The hypothesis exemption can be abused** (#671 P2): a pitch labels a false claim "hypothesis". | **Survives, scoped** | The exemption is a lean canvas entry's alone; a pitch's claims face the reader and never pass by label. |
+| 26 | **Three conditions decide significance** (#673 S1): a yearly risk, an annual audit, is left off. | **Survives, scoped** | "Its week" is the record's one judgement call, labelled for tuning; the exclusion shows in the map, never silently. |
+| 27 | **Binary is enough** (S2): the Operator asked for "the most significant". | **Survives, scoped** | The pick is the canvas set's reading, with its reason stated; a degree is a tuning of this record if the pick keeps needing one. |
+| 28 | **`not-accountable` is too strict** (S3). | **Survives** | The map holds segments with significant problems; a beneficiary who answers for nothing is not one. |
+| 29 | **The record invents a segment's problem** (S4). | **Survives, scoped** | Each reading is labelled hypothesis, evidence only where the repository shows it. |
 | 30 | **Ten lenses cover trust** (#674 D1): cost or security is missing. | **Survives, scoped** | Security falls under consequence and verifiability, cost under attention; the lenses are a floor, and a statement fitting none is kept as other. |
 | 31 | **The whys converge** (D2): they run forever, or reach the root for every cluster. | **Survives, scoped** | Step 4 stops at the first answer the segment could remove; a cluster whose first why reaches the anchor is dropped. |
 | 32 | **The root anchor fits every segment** (D3): some answer to a client or a regulator. | **Survives** | The lens accountability to others carries it; the anchor's "answer for the result" covers answering to others. |
@@ -44,4 +48,4 @@ inference, read by the Operator at publication.
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 30–35, ledger #674 (26–29 are #673's).
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674.
