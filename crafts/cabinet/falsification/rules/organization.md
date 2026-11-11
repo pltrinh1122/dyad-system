@@ -352,3 +352,39 @@ only a `settles`, `asks` or `shapes` outcome.
 
 With these effects declared, the six unit-lifecycle cases of #644's log are admitted (idle-unit, keep ×2, re-seat,
 retire ×2), and none holds a `desk`. No rule text changes. Disposition: see ledger #649.
+
+## Amendment — dyad-system #669 (2026-11-10: unit and session tidy, one play-book and one record)
+**Claim (plan #669; the operator's prompts, provenance #669 entries 1–2):** tidying the units and sessions of one Claude
+Code account is one play-book, `playbooks/session-tidy.md`, and one record, `dmc/session-tidy.jsonld`, which decides each
+of this system's units and sessions an act: keep, retitle, re-home, retire, archive or register. A session of the
+account with no evidence that it is this system's (its attached repository, or a presence file naming it by holder) is
+outside: counted, never classed, named or acted on. `dmc/unit-lifecycle.jsonld` keeps opening and keep; its `re-home`
+and `retire` outcomes stay as pointers to the tidy record. The Guide §11 and `rules/organization.md` point to the
+play-book.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| D1 | `unit-lifecycle` can drop `re-home` and `retire`. | **Confirmed** | Two precedents admitted by #644 (`unit-lifecycle-620-*`) carry `outcome: retire`; the decision log is append-only and its guard checks each outcome against its record. The names stay, as pointers whose `then` states no procedure; the act is the tidy record's. |
+| D2 | No session of another repository is ever touched. | **Survives, scoped** | An entry with no repository column and no holder match has no evidence, so it is outside: counted, never proposed. |
+| D3 | The boundary misses none of this system's sessions. | **Survives** | A session attached to no repository (a terminal desk) is this system's when a presence file names it by holder; one neither attached nor registered is not this system's to tidy. |
+| D4 | Outside sessions leak nothing. | **Survives, scoped** | The report and the event carry the count only; the classifier stores no outside entry's id or title (a test). |
+| D5 | One record decides each act. | **Survives, scoped** | `retire` is still a name in `unit-lifecycle`, but its `then` defers to the tidy record and states no procedure; the Guide cites one. |
+| D6 | An older census call still runs. | **Survives** | The run-book still reads `HARNESS=`, a list with no repository column, read as D2 says. |
+
+**Verdict:** the claim survives, D1 scoped as stated.
+- **Records:** `session-tidy` widened (facts as inputs, acts as outcomes with their effects, `outside` first);
+  `unit-lifecycle` narrowed to opening and keep, its two ending outcomes pointers.
+- **Play-book and run-book:** the boundary, the census from the account list (`ACCOUNT=`), five acts in order, the batch
+  question `Y/N: tidy <unit or session>: <act>, …?`.
+- **Guide §11** and **`rules/organization.md`**: point to the play-book; the six changes of a retirement move into the
+  record's `retire` outcome.
+- **Code:** `scripts/tidy.py` and its tests (the engineer's part): the repository column, the outside count, the acts
+  read from the record.
+- **VERSION:** 0.6.1 → 0.7.0, a capability. The bundle row warns until the next cut.
+
+**Coherence (the cabinet's rules).** `organization.md`'s When now names the tidy play-book for ending and
+`unit-lifecycle` for opening, and no rule restates either procedure. `naming.md` is unchanged: a retitle sets a session's
+title to its unit name, the form that rule states. No Agent Rule is touched: Rule-8's classes (archiving is reversible,
+one change-log row per call) and Rule-16's presence store (never deleted) are read, never changed.
+
+Disposition: see ledger #669.

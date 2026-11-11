@@ -171,8 +171,9 @@ with it.
 - A unit is opened, renamed, re-homed or retired: a row of its own, under the operator's disposition; the mandates
   table changes by the operator's preferences-zone PR, before the unit acts under the new row. Which of these a
   moment calls for, an idle unit, a re-seat (a rename under a new holder), a desk, a new function, a re-home, a
-  retirement or nothing, is `../dmc/unit-lifecycle.jsonld`, read after `scale-out` or when a unit's work ends or its
-  holder goes; what a retirement changes is its `retire` outcome (the Guide §11).
+  retirement or nothing, is `../dmc/unit-lifecycle.jsonld` for opening and keeping, read after `scale-out`; a unit's
+  ending, re-homing its rows and retiring it with the changes that makes, is the unit and session tidy play-book's
+  (`../playbooks/session-tidy.md`), each act decided by `../dmc/session-tidy.jsonld` (#669).
 - A function is added or a charter widened: the operator's table change first; a unit never acts on a charter that
   is not yet on `main`.
 - The tree gains a second operator: each member pair's leader is named `program-<operator>-<hp>` (`naming.md`),
