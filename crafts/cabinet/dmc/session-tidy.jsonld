@@ -11,62 +11,79 @@
     "dyad:DecisionCriterion"
   ],
   "identifier": "session-tidy",
-  "name": "Session tidy",
-  "description": "The class of each open harness session in the census, toward the north star that the only sessions open are live seats and live desks, and the order in which the others are proposed to the operator.",
-  "dyad:decides": "For each open session: a live seat, a live desk, neglected, done, stale or never registered?",
+  "name": "Unit and session tidy",
+  "description": "The tidy act for each of this system's units and sessions in the census, toward the north star that the only sessions open are live seats and live desks: what each is (the census facts) and what is done with it (the acts), and the order in which the acts are proposed to the operator. Sessions with no evidence that they are this system's are outside it: counted, never classed, named or acted on (#669).",
+  "dyad:decides": "For each of this system's units and sessions: keep it, retitle the session, re-home the unit's rows, retire the unit, archive the session, or register it? And is a session outside the system?",
   "dyad:inputs": [
     "the presence store: each file's seen time, rows and holder",
     "the ledger rows each session holds, and their states",
     "the instance's mandates table: which seats its charter rows name",
     "the window: the attendance-window preference",
-    "the harness's list of sessions, transcribed by the cos from the operator's interface when a container sees only its own (a cloud kernel), else session reconcile's own reading"
+    "the account's own session list, written by the cos from list_sessions (mine: true) as one '<session id> <owner/repo|-> [<title>]' line each; a list with no repository column is read as before (a transcribed harness list), each entry's repository unknown",
+    "session reconcile's mismatch lines (no harness session, no presence, title differs, stale while titled), read as census facts",
+    "this system's evidence for a session: its attached repository is this one, or a presence file names it by holder; absence of evidence never makes a session this system's",
+    "the census facts each unit or session carries, from the inputs above: live seat (a charter row names it, within the window), live desk (a desk holding an open or planned row, within the window), neglected (an open or planned row, past the window), done (rows, every one terminal, past the window), stale (no row, past the window), never registered (attached to this repository, no presence file)"
   ],
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
-      "termCode": "live-seat",
-      "name": "live seat",
-      "dyad:when": "a charter row of the mandates table names it, by its full unit name or by its <function>-<hp> form with the hp left open, and its presence is within the window",
-      "dyad:then": "kept"
+      "termCode": "outside",
+      "name": "Outside the system",
+      "dyad:when": "a session of the account with no evidence that it is this system's: attached to another repository or to none, and named by no presence file's holder",
+      "dyad:then": "counted on one line, 'outside: <n> sessions (not this system's; not read)'; never classed, proposed, retitled or archived, and never named or described in any report, relay, event or change-log row",
+      "dyad:effect": "skips"
     },
     {
       "@type": "DefinedTerm",
-      "termCode": "live-desk",
-      "name": "live desk",
-      "dyad:when": "a desk (<function>-<topic>-<hp>) holding an open or planned row, its presence within the window",
-      "dyad:then": "kept; closed by its secretary when its topic's rows close"
+      "termCode": "keep",
+      "name": "Keep",
+      "dyad:when": "a live seat, a live desk, or a session no fact describes (unclassed)",
+      "dyad:then": "nothing changes; an unclassed session is reported and fails the pass, so the cos reads it",
+      "dyad:effect": "settles"
     },
     {
       "@type": "DefinedTerm",
-      "termCode": "neglected",
-      "name": "neglected",
-      "dyad:when": "it holds an open or planned row, its presence past the window",
-      "dyad:then": "proposed last, and only after the operator disposes each row it holds, since a planned row cannot be archived (Rule-16) and an archived session moves no row"
+      "termCode": "archive",
+      "name": "Archive the session",
+      "dyad:when": "a done, stale or never-registered session, or a retired unit's session once its retirement is acknowledged",
+      "dyad:then": "the cos archives it with archive_session: a hosting act, Rule-8 reversible with the undo unarchive_session, one change-log row per call; its presence file is kept as history",
+      "dyad:effect": "asks"
     },
     {
       "@type": "DefinedTerm",
-      "termCode": "done",
-      "name": "done",
-      "dyad:when": "it holds at least one row, every one done or archived, its presence past the window",
-      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+      "termCode": "retire",
+      "name": "Retire the unit",
+      "dyad:when": "a unit that owns no row that is not terminal, and whose work has ended: a desk's act or topic done, its function dropped by the operator, or the host's capacity needed while it is idle",
+      "dyad:then": "the six changes: the unit's own row, which the operator disposes; its mandates row, by the operator's preferences PR, its seat back to the <function>-<hp> form or the row removed when the function is dropped; paired-units, if it names the unit, by the same PR; the board's unit table, the seats line of _cos.md, by dyad board set; its session, archived as above once acknowledged; its presence file, kept as history",
+      "dyad:effect": "asks"
     },
     {
       "@type": "DefinedTerm",
-      "termCode": "stale",
-      "name": "stale",
-      "dyad:when": "it holds no row, its presence past the window",
-      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+      "termCode": "re-home",
+      "name": "Re-home its rows",
+      "dyad:when": "a unit to end that still owns rows that are not terminal (a neglected session, or a unit whose function the operator drops)",
+      "dyad:then": "each row moves to another unit by its own row, the operator's words relayed verbatim, before the unit retires",
+      "dyad:effect": "asks"
     },
     {
       "@type": "DefinedTerm",
-      "termCode": "never-registered",
-      "name": "never registered",
-      "dyad:when": "a harness session no presence file matches, by name or by holder; read only from a transcribed harness list or session reconcile's own harness reading",
-      "dyad:then": "proposed for archiving first, as unit-lifecycle's Retire a unit (dmc:unit-lifecycle)"
+      "termCode": "retitle",
+      "name": "Retitle the session",
+      "dyad:when": "a session of this system whose title differs from its unit name (reconcile's title differs, or stale while titled)",
+      "dyad:then": "the cos retitles it with set_session_title, to its unit name",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "register",
+      "name": "Register it",
+      "dyad:when": "a live session of this system with no presence file (reconcile's no presence)",
+      "dyad:then": "its holder touches its own presence file (dyad session touch -r); no other unit writes it",
+      "dyad:effect": "asks"
     }
   ],
-  "dyad:precedence": "never registered is decided first, from the harness side; then each presence file, as live seat, live desk, neglected, done, stale, the first that holds. Pass when every session is a live seat or a live desk; otherwise one line per class to the board and one batch proposal to the cos, in order: done, stale and never registered first; then a charter seat with nothing open, alone; then the neglected, after the operator disposes each row they hold. Archiving is the cos's hosting act, Rule-8 reversible with the undo unarchive_session, one change-log row per call; a terminal session the operator closes by hand.",
-  "dyad:default": "a session no class above describes (within the window, neither a charter seat nor a desk holding an open or planned row) is reported as unclassed and never proposed; it fails the pass, so the cos reads it",
+  "dyad:precedence": "Outside is decided first, from the account list: a session with no evidence it is this system's is outside and read no further. Then each of this system's units and sessions takes its facts, and its act in this order: re-home before retire, retire before archive (a retired unit's session is archived once acknowledged), then archive, retitle and register; keep is never proposed. Pass when every one of this system's sessions is kept as a live seat or a live desk; otherwise one line per act to the board of the unit whose charter holds the host, and one batch question to the operator through the cos, its acts listed in the order archive, retire, re-home, retitle, register, with a charter seat with nothing open asked alone and a neglected session's rows disposed before its re-home. The cos alone acts; a mandates or paired-units change is the operator's own preferences PR, named in the batch and asked on its own.",
+  "dyad:default": "keep: a session no fact describes (within the window, neither a charter seat nor a desk holding an open or planned row) is reported as unclassed and never proposed; it fails the pass, so the cos reads it",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null
@@ -76,6 +93,7 @@
   "dyad:alsoIn": [
     "runbooks/session-tidy.md",
     "dmc/unit-lifecycle.jsonld",
+    "docs/operating-guide.md",
     "rules/organization.md"
   ],
   "dyad:owner": "cabinet:organization"
