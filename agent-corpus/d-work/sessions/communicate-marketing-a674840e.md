@@ -1,5 +1,5 @@
 session: communicate-marketing-a674840e
-seen: 2026-11-11T15:39:52+00:00
+seen: 2026-11-11T15:39:58+00:00
 root: /home/user/dyad-system
 rows: 672 673
 files: crafts/chronicle/dmc/collateral-segment-significance.jsonld crafts/chronicle/falsification/rules/collateral.md crafts/chronicle/rules/collateral.md site/lean-canvas/cost-structure.md site/lean-canvas/index.md site/lean-canvas/platform-ops/channels.md site/lean-canvas/platform-ops/customer-segments.md site/lean-canvas/platform-ops/key-metrics.md site/lean-canvas/platform-ops/problem.md site/lean-canvas/platform-ops/revenue-streams.md site/lean-canvas/platform-ops/unique-value-proposition.md site/lean-canvas/solution.md site/lean-canvas/unfair-advantage.md
