@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-11T00:25:48+00:00
+seen: 2026-11-11T00:43:32+00:00
 root: /home/user/dyad-system
 rows: 670
 files: agent-corpus/d-work/ dyad/guards/agent/board.py dyad/rules/RULE-3-d-work.md dyad/vocabulary/VOCABULARY.md
