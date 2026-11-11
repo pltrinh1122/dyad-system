@@ -9,29 +9,26 @@ released as the unprefixed tag `vMAJOR.MINOR.PATCH` = `v` + the version below. A
 only some components pins them individually by their own crafts' tags (`dyad-operator-vX.Y.Z`,
 `<craft>-vX.Y.Z`) instead of this file.
 
-## Release notes (1.2.0)
+## Release notes (1.3.0)
 
-- **Row slugs (#622).** Under the preference `dwork-slug: on` (shipped `on`), a row id is shown as `#<id>-<slug>`, with
-  two or three tags after the number. Stored references stay the bare number.
-- **Backlog grooming (#625).** A play-book, `dyad/playbooks/backlog-groom.md`, grooms the whole backlog in one pass:
-  hygiene, retirement, sizing, promotion and a forward release plan. Its one command is `dyad board groom`.
-- **Decision criteria in records (#626, #641).** Play-books and run-books cite their criteria as `dmc:<id>`
-  records. 15 core records once judged by inference are now decided by code, and their tests pin every outcome.
-- **Internal realization (#643).** Rule-3's execution detail admits three changes whose effect stays inside a PR:
-  placement, implied means and compatible extension.
-- **Precedent (#642, #644, #645).** A decision kind, `precedent`, is decided by code from past rulings the operator
-  admitted, and abstains when unsure. The decision log (`<instance>/d-work/decisions/`) and the precedent question,
-  `Y/N: admit as precedents …?`, admit them. The play-book `precedent-bootstrap` and `dyad precedent
-  prompt|score|gate|agreement` fill an upgrading instance's store from its own ledger, with the admission check run
-  before the question.
-- **Awaiting you (#646).** Every reply's closing line counts the questions the operator has been asked and not
-  answered, in a d-work group and a merge group, by the record `dmc:disposition-request`. `dyad board` generates it.
-  The preference is `awaiting-you: on|off`, and an absent key reads `on`.
-- **cabinet 0.6.0 (#620, #640).** Session tidy ships as the craft's play-book, run-book and script. The unit-lifecycle
-  criterion counts dyad units.
-- **syseng 0.8.0 (#640).** The naming guard admits a craft's `playbooks/` and `runbooks/`.
+- **Precedent capture (#648).** At every Done, `dyad board draft` lists the row's candidate rulings and the Done record
+  writes those the operator admits (`board draft --decisions-out`, `board advance --decisions`).
+- **Precedent scope (#649).** `dmc:precedent-scope` decides which outcomes a precedent may settle, by the cost of a
+  wrong match; each outcome carries a `dyad:effect`, and admit, decide, the gate and prompt read it.
+- **Incident fences (#651).** The sweep finds incidents a reply promised and the log does not hold, and `board draft`
+  lists a row's; the audit's Phase 3b reads them.
+- **Done clauses (#659, #661).** The Done template carries the retires and releases clauses, and a done-Y's head must
+  be the full 40-hex sha.
+- **Bundling (#663).** `dmc:bundled-craft` judges a craft's purpose from its own tree, never an instance's content.
+- **Coming (#665).** The closing line's Coming part is its own preference, `coming: on|off`, absent reading `on`.
+- **Awaiting you (#670).** A question asked in another dyad unit's chat is listed with that unit.
+- **cabinet 0.7.0 (#669).** Unit and session tidy, one play-book, run-book and record, with `tidy.py` classing each
+  unit and counting sessions outside the system.
+- **chronicle 0.4.0 (#650, #668, #671, #674).** The keyed form: a piece published as fiction declaring no truth, its key
+  beside it, checked by the guard. Records for a product-marketing pitch, a lean-canvas review and problem depth.
+- **sysadmin 0.3.3 (#649).** `changelog-actor` declares its outcomes' effects.
 
-## Known limitations (1.2.0)
+## Known limitations (1.3.0)
 
 - Between a release's cut and its tag, a push that changes code, and `dyad check --evidence`, are refused for the
   missing core tag. Both pass once the publishing run, after the operator's approval, has made the tag.
@@ -50,16 +47,16 @@ only some components pins them individually by their own crafts' tags (`dyad-ope
 - An instance whose preference table predates 1.2.0 gets a warning that `awaiting-you` has no row, until its table
   is next edited. Its absent key reads `on` either way.
 
-version: 1.2.0
+version: 1.3.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 1.2.0 |
+| dyad-operator | 1.3.0 |
 | sysarch | 0.4.0 |
 | syseng | 0.8.0 |
-| sysadmin | 0.3.2 |
-| cabinet | 0.6.0 |
-| chronicle | 0.3.0 |
+| sysadmin | 0.3.3 |
+| cabinet | 0.7.0 |
+| chronicle | 0.4.0 |
 
 `disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
 not meant for release yet and is held until ready (d-work #232). Rule-11 property 7 permits an
