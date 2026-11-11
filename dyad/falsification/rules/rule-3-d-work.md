@@ -1714,3 +1714,36 @@ dyad unit's as `<labels> in <unit>`. A solo's question, relayed through the home
 The other pairs are as amendment #665 left them. Coherent, orthogonal.
 
 Disposition: see ledger #670.
+
+## Amendment — d-work #676 (2026-11-11: the intake split)
+
+**Claim (the operator, provenance #676 entry 1: "need a formal `dmc` for intaking work that can be shared with downstream
+as well"):** an admitted hand-up from a downstream dyad system of the same operator is split item by item by a core
+record, `dmc:intake-split`: upstream core, upstream craft, downstream instance, both, or asked back. Another party's
+records and every credential stay downstream data. The hand-down is shown to the operator before it is sent.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| I1 | Five outcomes do not cover an item that is half a mechanism and half one client's data. | **Refuted** | That is `both`, the privacy rule saying which half stays down. |
+| I2 | A trivial mechanism is cheaper to build with the sender's sample data. | **Refuted** | The privacy rule makes another party's records downstream data whatever the cost; upstream builds against fixtures it writes itself. |
+| I3 | It overlaps `dmc:intake-shape`, which reads the same message. | **Refuted** | intake-shape decides admission and runs first; intake-split runs only on an admitted hand-up and decides placement. |
+| I4 | It overlaps `dmc:bundled-craft`: an upstream-craft item makes a craft bundled. | **Refuted** | Placement says where a mechanism is built; whether the core release carries that craft stays bundled-craft's, judged on the craft's own tree (#663). |
+| I5 | Downstream cannot read a record its older core lacks. | **Survives, scoped** | It arrives with the next core release; until then the hand-down states each item's outcome and ground in words. |
+| I6 | A precedent could settle a split wrongly. | **Survives** | `asked-back` is `asks` and the four placements `shapes`: a wrong match costs at most a question the operator answers anyway, since every build is a row of its own. |
+
+**Verdict:** the claim survives.
+- **Rules:** Intake gains one sentence naming the record and its five outcomes; Provenance gains its line.
+- **DMC:** `dyad/dmc/intake-split.jsonld`, an index record homed here, inference, its effects declared.
+
+**Pairwise (Rule-5).**
+- **3–2**: every build the split names is a row of its own, asked as any row is; the hand-down's send is a `Y` like
+  every outward communication. Binding is unchanged.
+- **3–7**: the hand-up's operator words are cited by the sender's provenance, and a relayed prompt is entered as
+  property 4 says; nothing of the sender's own text becomes a provenance entry here.
+- **3–11**: Rule-11 property 1's craft/instance line is read, never changed: `downstream-instance` is instance state,
+  which no craft may hold, and `upstream-craft` is a craft's.
+- **3–16**: no store changes.
+
+The other pairs are as amendment #670 left them. Coherent, orthogonal.
+
+Disposition: see ledger #676.
