@@ -382,6 +382,12 @@ A message of neither shape is returned to the sender with the missing shape name
 received, not as work. These shapes bound what an agent's message may bring; an operator prompt on the same matter opens
 a row as every prompt does (Scope).
 
+An admitted hand-up from a downstream dyad system of the same operator is split item by item by `dmc:intake-split`:
+each requirement and constraint is **upstream core**, **upstream craft**, **downstream instance**, **both** (an upstream
+mechanism, the configuration or data kept downstream) or **asked back**, and another party's records and every
+credential stay downstream data. Its hand-down, one line per item with its outcome and ground, is shown to the operator
+and sent only on the operator's `Y`; every build it names is a row of its own (#676).
+
 ## Incidents
 - An incident is an action or outcome the plan did not name, or a plan item not achieved as the plan said: an error, a
   recovery, a failed check, an unplanned edit. It is reported in the reply where it occurred or the completion reply,
@@ -453,6 +459,8 @@ part under the preference `coming` 2026-11-10 (d-work #665): the operator asked 
 queue be a setting of its own, on by default, while `awaiting-you: off` hid the Awaiting part with it; see
 `../falsification/rules/rule-3-d-work.md`, amendment #665. Batch disposition's closing line names the dyad unit
 whose chat holds a question 2026-11-11 (d-work #670): the operator looked for a counter-prompt in the home that had been
-asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, amendment #670.
+asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, amendment #670. Intake gains the split of an admitted hand-up 2026-11-11
+(d-work #676): a downstream system's hand-up had been admitted with nothing to decide which part upstream builds and
+which stays down; see `../falsification/rules/rule-3-d-work.md`, amendment #676.
 
 Set: System Requirements.

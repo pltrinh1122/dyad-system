@@ -1,0 +1,79 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/intake-split",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "intake-split",
+  "name": "Intake split",
+  "description": "For an admitted hand-up from a downstream dyad system of the same operator, where each of its requirements and constraints is worked: built upstream in the core or in a craft, kept downstream in the sender's instance, split between the two, or asked back. Its consequence for the whole hand-up is the hand-down: one line per item, its outcome and its ground, shown to the operator before it is sent.",
+  "dyad:decides": "For each requirement and constraint of an admitted hand-up: upstream core, upstream craft, downstream instance, both, or asked back?",
+  "dyad:inputs": [
+    "the requirement's own words and the operator's words it cites, never the sender's code",
+    "whether every installing operator needs it, or one instance's purpose or domain alone",
+    "whether it needs instance data: another party's records, credentials, one client's domain, or a location",
+    "which Rule, core record or craft already owns the concern",
+    "whether its operator has settled it, or it rests on one of the hand-up's open questions"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "upstream-core",
+      "name": "upstream core",
+      "dyad:when": "every installing operator needs it, it needs no instance data, and the concern is a core Rule's or a core record's",
+      "dyad:then": "built upstream in dyad/, by a row of its own; the hand-down names the row",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "upstream-craft",
+      "name": "upstream craft",
+      "dyad:when": "every installing operator of one practice needs it, and it needs no instance data",
+      "dyad:then": "built upstream in a Tended craft, an existing one or a new one by the craft play-book, by a row of its own; whether the core release carries that craft is dmc:bundled-craft's",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "downstream-instance",
+      "name": "downstream instance",
+      "dyad:when": "only the sender's instance needs it, or it is instance data",
+      "dyad:then": "stays downstream; nothing is built upstream",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "both",
+      "name": "both",
+      "dyad:when": "a mechanism every installing operator needs, with a configuration, schema or data only the sender's instance holds",
+      "dyad:then": "upstream builds the mechanism by a row of its own; downstream keeps the configuration, schema or data",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "asked-back",
+      "name": "asked back",
+      "dyad:when": "its operator has not settled it, or it rests on an open question of the hand-up",
+      "dyad:then": "it goes back down as a question; nothing is built for it until it is answered",
+      "dyad:effect": "asks"
+    }
+  ],
+  "dyad:precedence": "The privacy rule first: another party's records, and every credential, are always downstream data; a requirement that needs them may put a mechanism upstream (both), never the data. Then asked back before any other outcome; both before either single side; upstream core before upstream craft when both fit. The hand-down lists every item with its outcome and ground; the home drafts it, shows it to the operator, and sends it only on the operator's Y.",
+  "dyad:default": "asked back: a requirement the inputs cannot place is a question for its operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "rules/RULE-3-d-work.md",
+  "dyad:owner": "Rule-3",
+  "dyad:alsoIn": [
+    "dmc/intake-shape.jsonld",
+    "dmc/bundled-craft.jsonld"
+  ]
+}
