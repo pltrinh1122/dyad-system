@@ -12,12 +12,13 @@
   ],
   "identifier": "collateral-problem-depth",
   "name": "Problem depth",
-  "description": "Whether a statement of a segment's problem is a symptom, a cause or a root cause, the convergence test of problem discovery.",
-  "dyad:decides": "Is this problem entry a symptom, a cause or a root cause?",
+  "description": "Whether a node of a segment's why-tree is a symptom, a cause, a root cause or the anchor, the per-node test of problem discovery.",
+  "dyad:decides": "Is this node of the why-tree a symptom, a cause, a root cause or the anchor?",
   "dyad:inputs": [
-    "the problem statement",
-    "its cluster of symptoms",
-    "the chain of whys asked of it",
+    "the segment's why-tree, read first: a claim matching a node takes that node's outcome and label, as recorded",
+    "the node's statement",
+    "its children and joins",
+    "its ancestors in its branch",
     "the root anchor written for the segment"
   ],
   "hasDefinedTerm": [
@@ -39,8 +40,15 @@
       "@type": "DefinedTerm",
       "termCode": "root-cause",
       "name": "root-cause",
-      "dyad:when": "removing it removes most of its cluster's symptoms, and the next why reaches the root anchor",
+      "dyad:when": "removing it removes most of the symptoms whose branches reach it, the next why reaches the root anchor, and it does not reword an ancestor in its own branch",
       "dyad:then": "a candidate problem entry, labelled hypothesis until a reader confirms it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "anchor",
+      "name": "anchor",
+      "dyad:when": "the answer is the root anchor itself",
+      "dyad:then": "the branch stops; on the anchor branch it shows what the symptom protects"
     },
     {
       "@type": "DefinedTerm",
@@ -51,7 +59,7 @@
     }
   ],
   "dyad:precedence": "the first outcome whose condition holds; a statement that is both a symptom and solution-shaped is restated first",
-  "dyad:default": "when the removal test cannot be decided, the statement is held as a cause and put to the Operator",
+  "dyad:default": "when the removal test cannot be decided, the node is held as a cause and put to the Operator; a claim matching no node is placed in the tree first",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null

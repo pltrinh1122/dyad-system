@@ -19,7 +19,8 @@
     "each section record's outcome",
     "the labels of its entries: hypothesis or evidence",
     "its riskiest assumption",
-    "the root anchor written for the segment"
+    "the root anchor written for the segment",
+    "the segment's why-tree"
   ],
   "hasDefinedTerm": [
     {
@@ -49,6 +50,13 @@
       "name": "misaimed",
       "dyad:when": "the value proposition, channels or key metrics aim at another segment than the one named, or a problem does not trace to the root anchor",
       "dyad:then": "aim them at the named segment"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "off-tree",
+      "name": "off-tree",
+      "dyad:when": "a problem entry or a symptom cites no node of the segment's why-tree, or its node's outcome differs: a problem entry must be a root-cause node, a symptom a symptom node",
+      "dyad:then": "cite the node, or place the entry in the tree and judge it"
     },
     {
       "@type": "DefinedTerm",
