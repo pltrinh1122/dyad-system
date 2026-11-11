@@ -1,0 +1,63 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:channels/release-post",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "release-post",
+  "name": "Release post",
+  "description": "Decides whether a draft that dmc:post-content found postable fits the release channel; its rules are self-imposed, since nothing moderates a post: the member holds these rules by its own conduct, and a breach is recorded and reported, never edited or removed.",
+  "dyad:decides": "Does this postable draft fit the release channel?",
+  "dyad:inputs": [
+    "the tags the draft names, and whether each is published",
+    "the commit each tag points to",
+    "the notes: what changed, by component",
+    "the upgrade step",
+    "the draft's kind"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fits",
+      "name": "fits this channel",
+      "dyad:when": "a fact naming each published tag, its commit in refs, notes of what changed and the upgrade step, posted after the release it reports",
+      "dyad:then": "shown to the operator whole for its posting question",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-channel",
+      "name": "belongs on another channel",
+      "dyad:when": "it asks for work (request or back-port), or reports a defect (issue)",
+      "dyad:then": "rewrite it for the channel it names, then read dmc:post-content again",
+      "dyad:effect": "settles"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "missing-part",
+      "name": "missing a part",
+      "dyad:when": "a tag not yet published, or the commit, the notes or the upgrade step absent or empty",
+      "dyad:then": "rewrite it naming the missing part; a tag not yet published waits for the release, then read dmc:post-content again",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "Read only after dmc:post-content gives postable; then belongs on another channel, missing a part, fits this channel.",
+  "dyad:default": "missing a part",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:channels",
+  "dyad:home": "playbooks/channel-post.md",
+  "dyad:alsoIn": [
+    "dmc/post-content.jsonld",
+    "rules/channels.md"
+  ],
+  "dyad:owner": "channels:channels"
+}

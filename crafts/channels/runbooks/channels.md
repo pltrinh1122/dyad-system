@@ -41,7 +41,8 @@ dyad/bin/dyad-python crafts/channels/scripts/channels.py read
 ```
 
 ## Post
-Check a post with the guard, print it whole and write it on a branch of the clone; nothing is pushed:
+Check a post with the guard, print it whole and write it on a branch of the clone; nothing is pushed. It is
+pushed, and its pull request opened, only after the operator's posting `Y` (`playbooks/channel-post.md` P5–P7):
 ```dyad-cmd
 name: post
 class: reversible

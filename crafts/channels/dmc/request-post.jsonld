@@ -1,0 +1,62 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:channels/request-post",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "request-post",
+  "name": "Request post",
+  "description": "Decides whether a draft that dmc:post-content found postable fits the request channel; its rules are self-imposed, since nothing moderates a post: the member holds these rules by its own conduct, and a breach is recorded and reported, never edited or removed.",
+  "dyad:decides": "Does this postable draft fit the request channel?",
+  "dyad:inputs": [
+    "the outcome the draft asks for",
+    "the sender's operator's words behind it, verbatim or by provenance entry (the enhancement shape of dmc:intake-shape)",
+    "the draft's kind"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fits",
+      "name": "fits this channel",
+      "dyad:when": "a proposal stating the outcome wanted, carrying its operator's recorded words or the provenance entry that holds them (M7, M5)",
+      "dyad:then": "shown to the operator whole for its posting question",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "other-channel",
+      "name": "belongs on another channel",
+      "dyad:when": "a fix offered as code (back-port), a defect observed (issue), or a published release reported (release)",
+      "dyad:then": "rewrite it for the channel it names, then read dmc:post-content again",
+      "dyad:effect": "settles"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "missing-part",
+      "name": "missing a part",
+      "dyad:when": "not a proposal, no outcome stated, or no operator words behind it: an agent's own idea is not a request",
+      "dyad:then": "rewrite it naming the missing part; an idea with no operator words goes to this system's own operator first, then read dmc:post-content again",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "Read only after dmc:post-content gives postable; then belongs on another channel, missing a part, fits this channel.",
+  "dyad:default": "missing a part",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:channels",
+  "dyad:home": "playbooks/channel-post.md",
+  "dyad:alsoIn": [
+    "dmc/post-content.jsonld",
+    "rules/channels.md",
+    "../../dyad/dmc/intake-shape.jsonld"
+  ],
+  "dyad:owner": "channels:channels"
+}
