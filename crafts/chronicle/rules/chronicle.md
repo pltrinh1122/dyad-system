@@ -122,7 +122,7 @@ A **form** is a kind of piece — the serial, the essay, the blog post, the pres
 section beside this one, `<form>.md`, which names its pieces and their header, its documents, its structure (a lens,
 §1) and its style guide, and which may narrow this core but never loosen it. A form with no section yet is written
 under this core alone, its pieces carrying the header lines §2 and §4 name, in either form of §1. The serial's section is `serial.md`, the
-first form.
+first form; product collateral's, a pitch among it, is `collateral.md`.
 
 ## 8. The guard and its severity
 `../guards/episodes.py` checks the serial's pieces, its episodes (`serial.md` §7), and with them every rule of this

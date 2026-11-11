@@ -1,0 +1,73 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-review",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-review",
+  "name": "Collateral gate",
+  "description": "The tests every piece of collateral passes first, whatever its kind, before its kind's own record is applied.",
+  "dyad:decides": "What does this piece of collateral need before its kind's own record is applied?",
+  "dyad:inputs": [
+    "the piece as drafted",
+    "its brief (audience and purpose)",
+    "the citation behind each claim",
+    "the system's own statement of purpose and its practice (an identity record, a README)",
+    "the fence: private repositories, clients, employers, people, personal context"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "fenced",
+      "name": "fenced",
+      "dyad:when": "the piece names a private repository, a client, an employer, a person or personal context",
+      "dyad:then": "strike it before anything else; the piece is judged again from the top"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "invented",
+      "name": "invented",
+      "dyad:when": "the piece claims a capability the system's own statement of purpose and its practice do not hold",
+      "dyad:then": "cut the claim"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unanchored",
+      "name": "unanchored",
+      "dyad:when": "a claim cites no path, command output or count, was not falsified, or compares with a named product it cannot show",
+      "dyad:then": "anchor the claim or cut it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "decorated",
+      "name": "decorated",
+      "dyad:when": "ornament the reader cannot use: superlatives, unexplained jargon, more than one idea a sentence; plain words naming a feeling the reader really has are not decoration",
+      "dyad:then": "rewrite it plainly"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "passes",
+      "name": "passes",
+      "dyad:when": "every test above holds",
+      "dyad:then": "apply the kind's own record, such as collateral-pitch"
+    }
+  ],
+  "dyad:precedence": "in the order listed; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the piece and its sources, the piece does not pass it: the agent asks the Operator, never infers permission",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
