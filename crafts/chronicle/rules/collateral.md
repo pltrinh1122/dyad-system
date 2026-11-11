@@ -3,8 +3,9 @@
 A form section of the chronicle core (`chronicle.md` §7). It narrows the core and never loosens it: every piece of
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
-its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`; falsification:
-`../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671.
+its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`;
+falsification:
+`../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; problem discovery, d-work #674.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -68,7 +69,7 @@ the fit record fails a canvas whose entries are not labelled.
 
 | section record (`collateral-lean-canvas-…`) | outcomes, in precedence |
 |---|---|
-| `problem` | **solution-shaped** (written as the lack of the solution) · **not-theirs** (not in the segment's own words) · **unranked** (more than three, or none marked top) · **no-alternatives** (what the segment uses today is missing) · **ready** |
+| `problem` | **solution-shaped** (written as the lack of the solution) · **symptom** (it states what the segment observes, not the root cause it would remove; `collateral-problem-depth`, §6) · **not-theirs** (not in the segment's own words) · **unranked** (more than three, or none marked top) · **no-alternatives** (what the segment uses today is missing) · **ready** |
 | `customer-segments` | **too-broad** (one person in it cannot be found) · **no-early-adopters** · **ready** |
 | `unique-value-proposition` | **not-one-line** · **not-tied** (not to the top problem) · **pitch-fails** (fails `collateral-pitch`'s no-reader, cold or abstract) · **ready** |
 | `solution` | **untied** (a feature names no problem) · **not-minimal** (more than one feature for a top problem) · **ready** |
@@ -80,7 +81,8 @@ the fit record fails a canvas whose entries are not labelled.
 
 **The fit record**, `collateral-lean-canvas`, holds only what crosses sections: **unmarked** (entries unlabelled, or no
 riskiest assumption named) · **section-fails** (a section record is not ready) · **unmapped** (features and problems
-do not match one to one) · **misaimed** (the value proposition, channels or metrics aim at another segment) · **ready**.
+do not match one to one) · **misaimed** (the value proposition, channels or metrics aim at another segment, or a
+problem does not trace to the root anchor, §6) · **ready**.
 
 **What the canvas grounds** (pitch test ← section): `no-reader` ← customer segments and early adopters; `cold` ←
 problem, in the segment's words; `no-pull` ← unique value proposition and solution, the next step ← channels; the
@@ -91,3 +93,27 @@ alternatives; `uncountered` ← existing alternatives and unfair advantage.
 1. **the reader's moment** — no section holds a concrete scene from the reader's day, which `abstract` asks for;
 2. **objections** — the canvas lists alternatives, not the objections a skeptical reader raises;
 3. **the stakes** — the problem section states the problem, not what leaving it unsolved costs the reader.
+
+## 6. Problem discovery: diverge by lens, converge by cause
+A problem entry names a **root cause**: what the segment would remove, not what it observes. It is found in six steps,
+drawn from a jobs-to-be-done statement (the anchor), a fishbone's categories (the divergence) and the five whys (the
+convergence).
+1. **Anchor.** The **root anchor** is the system's own problem: a person accountable for what an agent did must trust
+   it enough to answer for the result (`site/identity.jsonld`, `dyad:problem`, for this instance). Write it for the
+   segment: "When I let an agent `<act>` on `<what I answer for>`, I want to trust it enough to answer for the result,
+   so that `<the stake>`." Every later statement is a reason this fails.
+2. **Diverge, by lens.** At least two statements per lens, none judged yet; a statement fitting no lens is kept as
+   *other*. The ten lenses of trust: **visibility** (can I see what it did), **verifiability** (can I check it is
+   right), **predictability** (will it do what it said), **reversibility** (can I undo it), **attribution** (can I show
+   who decided), **competence** (does it know this domain), **intent** (did it understand what I meant), **attention**
+   (do I have time to check), **consequence** (what breaks if it is wrong), **accountability to others** (who will hold
+   me to it).
+3. **Cluster** the statements by what they share; each cluster is a candidate cause.
+4. **Converge, by asking why**, for each cluster, until the answer is something the segment could remove; a cluster
+   whose first why reaches the anchor has no segment cause and is dropped.
+5. **Test** each answer with `collateral-problem-depth`, its outcomes in order: **symptom** (something the segment
+   observes) · **cause** (it explains symptoms, but a deeper why explains it) · **root-cause** (removing it removes
+   most of its cluster's symptoms, and the next why reaches the anchor) · **solution-shaped** (it names a missing
+   feature).
+6. **Select** one to three root causes, ranked, as the problem section's entries, each labelled H until a reader
+   confirms it. Each keeps its symptoms beneath it, in the segment's words, where a pitch may quote them (`cold`).

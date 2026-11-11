@@ -32,11 +32,16 @@ The rule as written is plan #668 revision 2's survivor.
 | 23 | **"Any" pitch overreaches** (G4): a free product has no revenue. | **Refuted** | Nothing the canvas grounds reads revenue or cost; "none, and why" passes. |
 | 24 | **Grounding stalls every pitch** (G5) until a canvas is accepted. | **Survives, scoped** | That is the intent, a foundation; an early pitch fails `ungrounded` naming the section it lacks. |
 | 25 | **The hypothesis exemption can be abused** (#671 P2): a pitch labels a false claim "hypothesis". | **Survives, scoped** | The exemption is a lean canvas entry's alone; a pitch's claims face the reader and never pass by label. |
-
+| 30 | **Ten lenses cover trust** (#674 D1): cost or security is missing. | **Survives, scoped** | Security falls under consequence and verifiability, cost under attention; the lenses are a floor, and a statement fitting none is kept as other. |
+| 31 | **The whys converge** (D2): they run forever, or reach the root for every cluster. | **Survives, scoped** | Step 4 stops at the first answer the segment could remove; a cluster whose first why reaches the anchor is dropped. |
+| 32 | **The root anchor fits every segment** (D3): some answer to a client or a regulator. | **Survives** | The lens accountability to others carries it; the anchor's "answer for the result" covers answering to others. |
+| 33 | **`symptom` silences the reader's voice** (D4). | **Refuted** | Symptoms stay beneath their root cause, quotable, where `cold` reads them. |
+| 34 | **A cause cannot be told from a root cause** (D5). | **Survives, scoped** | The removal test is stated; the Operator reads the run before any problem entry changes. |
+| 35 | **A canvas problem can be a symptom** (the Operator's feedback, #674): "you can't read every command it wants to run" passed the problem record. | **Confirmed, the rule extended** | The problem record gains `symptom`, judged by `collateral-problem-depth`, and the method of §6. |
 **Verdict:** the claim **survives**, scoped: the records decide what a piece needs; whether a reader is moved stays
 inference, read by the Operator at publication.
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 30–35, ledger #674 (26–29 are #673's).
