@@ -1,0 +1,65 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-unique-value-proposition",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-unique-value-proposition",
+  "name": "Lean canvas: unique value proposition",
+  "description": "The unique value proposition section of a lean canvas: the single message that says why the product is different and worth attention.",
+  "dyad:decides": "What does the unique value proposition section of this lean canvas need?",
+  "dyad:inputs": [
+    "the unique value proposition section",
+    "its high-level concept, if given",
+    "the problem section's top problem",
+    "the pitch record, collateral-pitch"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-one-line",
+      "name": "not-one-line",
+      "dyad:when": "the value proposition is not one sentence",
+      "dyad:then": "cut it to one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-tied",
+      "name": "not-tied",
+      "dyad:when": "the value proposition does not answer the top problem",
+      "dyad:then": "tie it to the top problem"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pitch-fails",
+      "name": "pitch-fails",
+      "dyad:when": "the sentence fails collateral-pitch's no-reader, cold or abstract",
+      "dyad:then": "fix it as that pitch outcome says"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the unique value proposition section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

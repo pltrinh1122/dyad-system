@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-channels",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-channels",
+  "name": "Lean canvas: channels",
+  "description": "The channels section of a lean canvas: the paths by which the product reaches the segment.",
+  "dyad:decides": "What does the channels section of this lean canvas need?",
+  "dyad:inputs": [
+    "the channels section",
+    "the customer segments section's early adopters"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "vague",
+      "name": "vague",
+      "dyad:when": "a channel is a category, such as social media, rather than a named path",
+      "dyad:then": "name the path"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unreachable",
+      "name": "unreachable",
+      "dyad:when": "no channel reaches the early adopters",
+      "dyad:then": "find one that does"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the channels section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

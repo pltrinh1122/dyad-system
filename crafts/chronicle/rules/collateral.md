@@ -2,8 +2,9 @@
 
 A form section of the chronicle core (`chronicle.md` §7). It narrows the core and never loosens it: every piece of
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
-`../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`; falsification:
-`../falsification/rules/collateral.md`. Source: dyad-system d-work #668.
+`../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
+its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`; falsification:
+`../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -20,24 +21,27 @@ the outcome.
   2. **invented** — it claims a capability the system's own statement of purpose and its practice do not hold: cut
      the claim;
   3. **unanchored** — a claim cites no path, command output or count, was not falsified, or compares with a named
-     product it cannot show: anchor it or cut it;
+     product it cannot show: anchor it or cut it. An entry of a lean canvas labelled hypothesis claims nothing as
+     fact and passes (§5); a pitch's claims face the reader and never do;
   4. **decorated** — ornament the reader cannot use: superlatives, unexplained jargon, more than one idea a sentence.
      Plain words naming a feeling the reader really has are not decoration;
   5. **passes** — every test holds: go on to the kind's own record.
 - **The kind's record**, which holds only the tests that kind adds, never the gate's again. A pitch's is
   `collateral-pitch`:
   1. **no-reader** — no named reader, or no one question the pitch answers for them: stop drafting;
-  2. **manufactured** — emotion beyond the truth: false urgency or scarcity, fear larger than the real stakes,
+  2. **ungrounded** — the pitch's reader, problem or value proposition does not trace to a section of the lean canvas
+     the Operator accepted (§5): ground it there, or ground the canvas first;
+  3. **manufactured** — emotion beyond the truth: false urgency or scarcity, fear larger than the real stakes,
      flattery, or a feeling attributed to the reader that the problem the pitch states does not support: strike it;
-  3. **cold** — the reader's felt problem is not named in the reader's own terms before the product appears — what
+  4. **cold** — the reader's felt problem is not named in the reader's own terms before the product appears — what
      they worry about, are tired of or want: name it;
-  4. **abstract** — no concrete moment the reader recognizes from their own day — a scene, an example, a before and
+  5. **abstract** — no concrete moment the reader recognizes from their own day — a scene, an example, a before and
      after — only categories: show one;
-  5. **no-pull** — no picture of what changes for the reader (relief, confidence, time or attention given back) and
+  6. **no-pull** — no picture of what changes for the reader (relief, confidence, time or attention given back) and
      no next step they can take: add both;
-  6. **uncountered** — the strongest objection a skeptical reader would raise is not stated with how the copy meets
+  7. **uncountered** — the strongest objection a skeptical reader would raise is not stated with how the copy meets
      it: add it;
-  7. **ready** — every test holds: the piece goes to the Operator's publication question (§6). Ready never publishes.
+  8. **ready** — every test holds: the piece goes to the Operator's publication question (§6). Ready never publishes.
 
 ## 3. Emotion is a claim
 A feeling a piece names is a claim about its reader. It is anchored to the problem the piece states, or to the reader
@@ -53,3 +57,37 @@ pitch, and never made up: **cold** asks for it, **manufactured** strikes what go
 - Every record is judged by inference: the agent applies it to its own draft before the draft is shown, and the
   Operator may apply it to any piece. Agreed rulings may later become precedents (the core's
   `dmc:judgement-complexity`).
+
+## 5. The lean canvas: the foundation a pitch is crafted from
+A **lean canvas** is not put to a reader. It is the foundation: every pitch's reader, problem and value proposition
+trace to its sections (`ungrounded`, §2). It is judged in this order — the gate, then each section's record in any
+order, then the fit record — and a canvas the fit record finds ready goes to the Operator to be **accepted** as the
+foundation the pitches cite. It is never published by any record. Each section's sub-field is judged inside that
+section's record. An entry is labelled **hypothesis** or **evidence**; a hypothesis passes the gate's `unanchored`, and
+the fit record fails a canvas whose entries are not labelled.
+
+| section record (`collateral-lean-canvas-…`) | outcomes, in precedence |
+|---|---|
+| `problem` | **solution-shaped** (written as the lack of the solution) · **not-theirs** (not in the segment's own words) · **unranked** (more than three, or none marked top) · **no-alternatives** (what the segment uses today is missing) · **ready** |
+| `customer-segments` | **too-broad** (one person in it cannot be found) · **no-early-adopters** · **ready** |
+| `unique-value-proposition` | **not-one-line** · **not-tied** (not to the top problem) · **pitch-fails** (fails `collateral-pitch`'s no-reader, cold or abstract) · **ready** |
+| `solution` | **untied** (a feature names no problem) · **not-minimal** (more than one feature for a top problem) · **ready** |
+| `channels` | **vague** (a category, not a path) · **unreachable** (it does not reach the early adopters) · **ready** |
+| `revenue-streams` | **empty** (no model, and no "none, and why") · **unpriced** (no price, or one unrelated to the value) · **ready** |
+| `cost-structure` | **empty** · **incomplete** (omits what the canvas's own solution or channels cost) · **ready** |
+| `key-metrics` | **vanity** (counts activity, not the value received) · **uncountable** · **ready** |
+| `unfair-advantage` | **copyable** (a competitor could copy or buy it; "none yet", said honestly, passes) · **ready** |
+
+**The fit record**, `collateral-lean-canvas`, holds only what crosses sections: **unmarked** (entries unlabelled, or no
+riskiest assumption named) · **section-fails** (a section record is not ready) · **unmapped** (features and problems
+do not match one to one) · **misaimed** (the value proposition, channels or metrics aim at another segment) · **ready**.
+
+**What the canvas grounds** (pitch test ← section): `no-reader` ← customer segments and early adopters; `cold` ←
+problem, in the segment's words; `no-pull` ← unique value proposition and solution, the next step ← channels; the
+gate's `invented` and `unanchored` ← every labelled section. Partly: `manufactured` ← problem and existing
+alternatives; `uncountered` ← existing alternatives and unfair advantage.
+
+**Gaps**, named for augmentation by later records and built by none yet:
+1. **the reader's moment** — no section holds a concrete scene from the reader's day, which `abstract` asks for;
+2. **objections** — the canvas lists alternatives, not the objections a skeptical reader raises;
+3. **the stakes** — the problem section states the problem, not what leaving it unsolved costs the reader.

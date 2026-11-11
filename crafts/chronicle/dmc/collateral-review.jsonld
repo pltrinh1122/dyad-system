@@ -40,7 +40,7 @@
       "@type": "DefinedTerm",
       "termCode": "unanchored",
       "name": "unanchored",
-      "dyad:when": "a claim cites no path, command output or count, was not falsified, or compares with a named product it cannot show",
+      "dyad:when": "a claim cites no path, command output or count, was not falsified, or compares with a named product it cannot show; an entry of a lean canvas labelled hypothesis claims nothing as fact and passes",
       "dyad:then": "anchor the claim or cut it"
     },
     {

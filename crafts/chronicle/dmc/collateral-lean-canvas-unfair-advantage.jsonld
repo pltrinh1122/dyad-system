@@ -1,0 +1,48 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-unfair-advantage",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-unfair-advantage",
+  "name": "Lean canvas: unfair advantage",
+  "description": "The unfair advantage section of a lean canvas: what a competitor cannot easily copy or buy.",
+  "dyad:decides": "What does the unfair advantage section of this lean canvas need?",
+  "dyad:inputs": [
+    "the unfair advantage section"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "copyable",
+      "name": "copyable",
+      "dyad:when": "the advantage is something a competitor could copy or buy, such as a feature or being first; none yet, said honestly, passes",
+      "dyad:then": "replace it with what cannot be copied, or say none yet"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the unfair advantage section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

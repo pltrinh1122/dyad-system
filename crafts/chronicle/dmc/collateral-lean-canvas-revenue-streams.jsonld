@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-revenue-streams",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-revenue-streams",
+  "name": "Lean canvas: revenue streams",
+  "description": "The revenue streams section of a lean canvas: how the product earns, or why it does not.",
+  "dyad:decides": "What does the revenue streams section of this lean canvas need?",
+  "dyad:inputs": [
+    "the revenue streams section",
+    "the unique value proposition section"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "empty",
+      "name": "empty",
+      "dyad:when": "the section names no model and does not say none, and why",
+      "dyad:then": "state the model, or none and why"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unpriced",
+      "name": "unpriced",
+      "dyad:when": "a model is named with no price, or with a price unrelated to the value",
+      "dyad:then": "state the price and what it is for"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the revenue streams section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

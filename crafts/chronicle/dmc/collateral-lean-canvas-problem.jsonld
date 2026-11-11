@@ -1,0 +1,71 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-problem",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-problem",
+  "name": "Lean canvas: problem",
+  "description": "The problem section of a lean canvas: the segment's top problems and what they use today.",
+  "dyad:decides": "What does the problem section of this lean canvas need?",
+  "dyad:inputs": [
+    "the problem section",
+    "its existing alternatives",
+    "the customer segments section"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "solution-shaped",
+      "name": "solution-shaped",
+      "dyad:when": "a problem is written as the lack of the solution",
+      "dyad:then": "rewrite it as what the segment suffers, with no product in it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-theirs",
+      "name": "not-theirs",
+      "dyad:when": "a problem is not stated in the segment's own words",
+      "dyad:then": "restate it as the segment would say it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unranked",
+      "name": "unranked",
+      "dyad:when": "more than three problems are listed, or none is marked as the top one",
+      "dyad:then": "keep one to three and mark the top one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-alternatives",
+      "name": "no-alternatives",
+      "dyad:when": "what the segment uses today instead, the existing alternatives, is missing",
+      "dyad:then": "name them"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the problem section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

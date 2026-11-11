@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-cost-structure",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-cost-structure",
+  "name": "Lean canvas: cost structure",
+  "description": "The cost structure section of a lean canvas: what it costs to build, reach and serve the segment.",
+  "dyad:decides": "What does the cost structure section of this lean canvas need?",
+  "dyad:inputs": [
+    "the cost structure section",
+    "the solution and channels sections"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "empty",
+      "name": "empty",
+      "dyad:when": "the section lists no cost",
+      "dyad:then": "list them"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "incomplete",
+      "name": "incomplete",
+      "dyad:when": "it omits what the canvas's own solution or channels cost",
+      "dyad:then": "add those costs"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the cost structure section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

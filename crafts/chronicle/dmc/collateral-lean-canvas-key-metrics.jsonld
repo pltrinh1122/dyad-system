@@ -1,0 +1,56 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas-key-metrics",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas-key-metrics",
+  "name": "Lean canvas: key metrics",
+  "description": "The key metrics section of a lean canvas: the few numbers that show the segment getting the value.",
+  "dyad:decides": "What does the key metrics section of this lean canvas need?",
+  "dyad:inputs": [
+    "the key metrics section",
+    "the unique value proposition section"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "vanity",
+      "name": "vanity",
+      "dyad:when": "a metric counts activity rather than the segment getting the value",
+      "dyad:then": "replace it with one that counts the value received"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "uncountable",
+      "name": "uncountable",
+      "dyad:when": "a metric has no way to be counted",
+      "dyad:then": "say how it is counted, or replace it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the key metrics section is ready; the canvas's fit record is applied once every section is ready"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided from the section and its sources, the section does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

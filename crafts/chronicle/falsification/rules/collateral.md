@@ -16,6 +16,22 @@ The rule as written is plan #668 revision 2's survivor.
 | 7 | **The emotional tests cannot be judged**: two readers disagree whether a pitch is `cold`. | **Survives, scoped** | Judged by inference, stated; the Operator reads every `ready` pitch anyway, and agreed rulings may become precedents. |
 | 8 | **`abstract` duplicates `decorated`.** | **Refuted** | `decorated` removes ornament that adds nothing; `abstract` asks for a concrete moment that is missing. |
 | 9 | **The emotional tests belong in the gate**, since a vision board also has to connect. | **Survives, scoped** | A lean canvas is a working tool whose job is clarity; `cold` would fail every box. A kind that needs feeling takes the pitch's outcome names (§4). |
+| 10 | **Nine section records judge a canvas** (#671 L1): a solution-first canvas passes every box alone. | **Confirmed, the rule extended** | The fit record, `collateral-lean-canvas`, holds only what crosses sections (§5). |
+| 11 | **Sub-fields need their own records** (L2). | **Refuted** | Existing alternatives, early adopters and the high-level concept mean something only beside their box's main entry; each is an outcome of that box's record. |
+| 12 | **The cost structure cannot fail** (L3): it is a list. | **Survives, scoped** | `incomplete` fails a list omitting what the canvas's own solution and channels cost. |
+| 13 | **Section records repeat the gate** (L4). | **Refuted** | The gate judges whether a claim is anchored or labelled; `not-theirs` judges whose words the problem is in. |
+| 14 | **`pitch-fails` copies the pitch record** (L5). | **Survives** | It cites three pitch outcomes by name and holds no condition of its own. |
+| 15 | **An honest empty box fails** (L6): a product given away free. | **Survives** | "None, and why" passes revenue's `empty`. |
+| 16 | **Ten records overload the Operator** (L7). | **Survives, scoped** | A reviewer applies the record of the box in front of them; the fit record is read once per canvas. |
+| 17 | **The section list varies by edition** (L8). | **Survives, scoped** | The nine sections are stable; a sub-field moved between editions is an outcome edit. |
+| 18 | **The canvas is a named, licensed work** (L9). | **Survives, scoped** | The records name its sections and copy no template or text, and name no author or person. |
+| 19 | **`vanity` and `copyable` cannot be judged** (L10). | **Survives, scoped** | Judged by inference, stated; the Operator accepts every ready canvas. |
+| 20 | **The lean canvas is enough to ground any pitch** (the Operator's claim, #671 G1): a pitch needs a concrete moment of the reader's day, and no box holds one. | **Confirmed** | Gap 1, the reader's moment, named for augmentation (§5). |
+| 21 | **Objections are grounded** (G2). | **Survives, scoped** | Existing alternatives ground the commonest objection; gap 2, objections, is named for the rest. |
+| 22 | **Stakes are grounded** (G3). | **Survives, scoped** | Gap 3, the stakes, is named; `not-theirs` asks for the segment's own words, where stakes usually show. |
+| 23 | **"Any" pitch overreaches** (G4): a free product has no revenue. | **Refuted** | Nothing the canvas grounds reads revenue or cost; "none, and why" passes. |
+| 24 | **Grounding stalls every pitch** (G5) until a canvas is accepted. | **Survives, scoped** | That is the intent, a foundation; an early pitch fails `ungrounded` naming the section it lacks. |
+| 25 | **The hypothesis exemption can be abused** (#671 P2): a pitch labels a false claim "hypothesis". | **Survives, scoped** | The exemption is a lean canvas entry's alone; a pitch's claims face the reader and never pass by label. |
 
 **Verdict:** the claim **survives**, scoped: the records decide what a piece needs; whether a reader is moved stays
 inference, read by the Operator at publication.
@@ -23,4 +39,4 @@ inference, read by the Operator at publication.
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668.
+Disposition: see ledger #668; rows 10–25, ledger #671.
