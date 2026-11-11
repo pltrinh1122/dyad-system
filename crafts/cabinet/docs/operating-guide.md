@@ -396,8 +396,8 @@ you dispose every unit opened, re-seated, re-homed or retired (§5), each by its
 | Re-seat a function | the function's charter row exists and its unit has gone | a new session takes `<function>-<hp>`; your preferences PR changes the mandates row's seat name; the board's unit table gains the new name; the old presence file stays as history |
 | Open a desk | the work is inside an existing charter, the function's unit is busy, and the work is a topic or a host of its own | a desk under that secretary's charter and ceiling (§9) |
 | Open a new function | no charter's domain covers the work, or covering it would widen a charter (§4) | your mandates row first, then the unit opens as a solo (§3); pairing it is your separate act |
-| Re-home its rows | a unit is to end and still owns rows that are not terminal | each row moves to another unit by its own row, your words relayed verbatim |
-| Retire a unit | it owns no row that is not terminal, and its work has ended, or the host's capacity is needed while it is idle | the six changes below |
+| Re-home its rows | a unit is to end and still owns rows that are not terminal | the tidy play-book's re-home act (`playbooks/session-tidy.md`, `dmc:session-tidy`, #669) |
+| Retire a unit | it owns no row that is not terminal, and its work has ended, or the host's capacity is needed while it is idle | the tidy play-book's retire act, its six changes (`playbooks/session-tidy.md`, #669) |
 | Keep it | otherwise | nothing; an idle unit is the next work's first choice |
 
 **Opening reads the host, never the span.** Before any outcome that adds a session, read the host's capacity: for
@@ -406,14 +406,10 @@ memory. No number is fixed. At capacity, use an idle unit or subagents, or retir
 that applies: an idle unit, a re-seat, a desk, a new function. Ending, re-home before retiring. The dyad span, at
 most seven, is read only when a unit is to be paired, and a long board is never a ground to retire a unit (§2).
 
-**What retiring a unit changes:**
-- the unit's own row, which you dispose;
-- its mandates row, by your preferences PR: the seat back to the `<function>-<hp>` form, or the row removed when you
-  drop the function;
-- `paired-units`, if it names the unit (a bare function name covers the next holder);
-- the board's unit table, the `seats:` line of `_cos.md`, by `dyad board set`;
-- its harness session, archived once you have acknowledged it;
-- its presence file, kept as history: only its own session writes it.
+**Ending a unit** is the unit and session tidy play-book's (`playbooks/session-tidy.md`, dyad-system #669): its census
+classes each of this system's units and sessions by `dmc:session-tidy`, and its acts re-home a unit's rows, retire the
+unit with its six changes, archive or retitle its session, each on your `Y` to one batch question. The census never
+touches a session of the account that is not this system's.
 
 A re-seat changes the same mandates cell to the new name, and keeps the old holder's presence file.
 

@@ -12,8 +12,8 @@
   ],
   "identifier": "unit-lifecycle",
   "name": "Unit lifecycle: which unit, and when one ends",
-  "description": "After scale-out says a solo is needed, which unit takes the work; when a unit's work ends or its holder goes, what becomes of the unit.",
-  "dyad:decides": "Use an idle unit, re-seat a function, open a desk, open a new function, re-home a unit's rows, retire the unit, or keep it?",
+  "description": "After scale-out says a solo is needed, which unit takes the work, or that a unit is kept. A unit's ending, re-homing its rows and retiring it, is classed at the tidy census and acted on by dmc:session-tidy (#669); its two outcomes here only point there.",
+  "dyad:decides": "Use an idle unit, re-seat a function, open a desk, open a new function, or keep the unit? (A unit's ending is dmc:session-tidy's.)",
   "dyad:inputs": [
     "scale-out's answer: a solo is needed, and for which work",
     "the mandates table: which charter's domain and fence cover the work, and its ceiling",
@@ -60,16 +60,16 @@
       "@type": "DefinedTerm",
       "termCode": "re-home",
       "name": "Re-home its rows",
-      "dyad:when": "a unit is to end and still owns rows that are not terminal",
-      "dyad:then": "each row moves to another unit by its own row, the operator's words relayed verbatim, before the unit retires",
+      "dyad:when": "a unit is to end and still owns rows that are not terminal, as the tidy census classes it (dmc:session-tidy)",
+      "dyad:then": "the act is dmc:session-tidy's re-home, run by the unit and session tidy play-book (playbooks/session-tidy.md); this record states no procedure of its own (#669)",
       "dyad:effect": "asks"
     },
     {
       "@type": "DefinedTerm",
       "termCode": "retire",
       "name": "Retire a unit",
-      "dyad:when": "the unit owns no row that is not terminal, and its work has ended: a desk's act or topic done, its function dropped by the operator, or the host's capacity needed by other work while it is idle",
-      "dyad:then": "the unit's own row, which the operator disposes; its mandates row, by the operator's preferences PR, its seat back to the <function>-<hp> form or the row removed when the operator drops the function; paired-units, if it names the unit; the board's unit table, the seats line of _cos.md, by dyad board set; its harness session, archived once the operator has acknowledged it; its presence file, kept as history",
+      "dyad:when": "the unit owns no row that is not terminal and its work has ended, as the tidy census classes it (dmc:session-tidy)",
+      "dyad:then": "the act is dmc:session-tidy's retire, run by the unit and session tidy play-book (playbooks/session-tidy.md), which holds the six changes retiring makes; this record states no procedure of its own (#669)",
       "dyad:effect": "asks"
     },
     {
@@ -81,7 +81,7 @@
       "dyad:effect": "settles"
     }
   ],
-  "dyad:precedence": "Opening, after scale-out: read the host's capacity before any outcome that adds a session; at capacity, use an idle unit or subagents, or retire an idle unit first. Then use an idle unit, re-seat a function, open a desk, open a new function: the first that applies. Ending: re-home before retiring. The dyad span is read only for pairing, and a long board is never a ground to retire a unit.",
+  "dyad:precedence": "Opening, after scale-out: read the host's capacity before any outcome that adds a session; at capacity, use an idle unit or subagents, or retire an idle unit first (by the tidy play-book). Then use an idle unit, re-seat a function, open a desk, open a new function: the first that applies. The dyad span is read only for pairing, and a long board is never a ground to retire a unit. Ending (re-home before retiring) is dmc:session-tidy's order.",
   "dyad:default": "Keep it",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
@@ -90,7 +90,9 @@
   "isPartOf": "urn:dyad:craft:cabinet",
   "dyad:home": "docs/operating-guide.md",
   "dyad:alsoIn": [
-    "rules/organization.md"
+    "rules/organization.md",
+    "dmc/session-tidy.jsonld",
+    "playbooks/session-tidy.md"
   ],
   "dyad:owner": "cabinet:organization"
 }
