@@ -18,7 +18,8 @@
     "the pitch as drafted, after it passes the collateral gate",
     "its brief: the named reader and the one question the pitch answers for them",
     "the problem the pitch states",
-    "the strongest objection a skeptical reader would raise"
+    "the strongest objection a skeptical reader would raise",
+    "the lean canvas the Operator accepted as the foundation (collateral-lean-canvas)"
   ],
   "hasDefinedTerm": [
     {
@@ -27,6 +28,13 @@
       "name": "no-reader",
       "dyad:when": "no named reader, or no one question the pitch answers for them",
       "dyad:then": "stop drafting until the brief names both"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ungrounded",
+      "name": "ungrounded",
+      "dyad:when": "the pitch's reader, problem or value proposition does not trace to a section of the lean canvas the Operator accepted",
+      "dyad:then": "ground it in that section, or ground the canvas first"
     },
     {
       "@type": "DefinedTerm",

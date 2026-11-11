@@ -1,0 +1,72 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-lean-canvas",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-lean-canvas",
+  "name": "Lean canvas fit",
+  "description": "Whether a lean canvas, every section of it ready, holds together well enough to ground the pitches crafted from it.",
+  "dyad:decides": "What does this lean canvas need before it is accepted as the foundation its pitches cite?",
+  "dyad:inputs": [
+    "the whole canvas",
+    "each section record's outcome",
+    "the labels of its entries: hypothesis or evidence",
+    "its riskiest assumption"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmarked",
+      "name": "unmarked",
+      "dyad:when": "entries are not labelled hypothesis or evidence, or no riskiest assumption is named",
+      "dyad:then": "label every entry and name the riskiest assumption"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "section-fails",
+      "name": "section-fails",
+      "dyad:when": "a section record's outcome is not ready",
+      "dyad:then": "fix that section as its record says"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unmapped",
+      "name": "unmapped",
+      "dyad:when": "the solution's features and the listed problems do not match one to one",
+      "dyad:then": "make each feature answer one listed problem, and each problem have a feature"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "misaimed",
+      "name": "misaimed",
+      "dyad:when": "the value proposition, channels or key metrics aim at another segment than the one named",
+      "dyad:then": "aim them at the named segment"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "put the canvas to the Operator to be accepted as the foundation its pitches cite; ready never publishes it"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate and every section record; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided, the canvas does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
