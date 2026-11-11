@@ -42,10 +42,20 @@ The rule as written is plan #668 revision 2's survivor.
 | 33 | **`symptom` silences the reader's voice** (D4). | **Refuted** | Symptoms stay beneath their root cause, quotable, where `cold` reads them. |
 | 34 | **A cause cannot be told from a root cause** (D5). | **Survives, scoped** | The removal test is stated; the Operator reads the run before any problem entry changes. |
 | 35 | **A canvas problem can be a symptom** (the Operator's feedback, #674): "you can't read every command it wants to run" passed the problem record. | **Confirmed, the rule extended** | The problem record gains `symptom`, judged by `collateral-problem-depth`, and the method of §6. |
+| 36 | **Five whys is a quota** (#678 A2). | **Refuted** | Five is a ceiling: a branch stops at a root cause, the anchor or a join, and a sixth why means the branch has left the segment (`too-deep`). |
+| 37 | **A single chain per cluster finds the roots** (#672's run read back). | **Confirmed, the rule extended** | The chains ran one or two deep and one was circular; as a tree the same symptom reached a root the chains missed. §6 decomposes as a tree, judged by `collateral-why-tree`. |
+| 38 | **A built tree goes stale** (#678 T1). | **Survives, scoped** | Append-only: nodes are superseded, never edited, ids never reused. |
+| 39 | **Lookup by wording fails** (T2). | **Survives, scoped** | Lookup matches by meaning, cites the node and its path; an unmatched claim is placed first. |
+| 40 | **Lookup launders a hypothesis** (T3). | **Confirmed** | A lookup returns the node's label with its outcome; an H node validates as H only. |
+| 41 | **An incomplete tree answers wrongly** (T4). | **Survives, scoped** | Only a tree judged `ready`, unchanged since its judged commit, answers. |
+| 42 | **The canvas drifts from the tree** (T5). | **Confirmed** | The fit record's `off-tree`: every entry cites its node. |
+| 43 | **The tree grows without bound** (T6). | **Survives, scoped** | Five whys, joins never copied, superseded nodes skipped. |
+| 44 | **Segments share symptoms** (T7). | **Survives, scoped** | One tree per segment; cross-segment joins are a named gap. |
+| 45 | **Lookup is quicker than rebuilding** (T8, attacked as Q1–Q7). | **Survives, scoped** | While the judged commit is current (Q3), no evidence arrived since (Q4), the answer cites node and path (Q2), and the tree is re-derived on reader evidence and before publication (Q5, which held: a lookup on the old chains would have passed a circular step); the ratio of lookups to revisions is measurable from git (Q1); the saving is mostly the Operator's attention (Q6, Q7). |
 **Verdict:** the claim **survives**, scoped: the records decide what a piece needs; whether a reader is moved stays
 inference, read by the Operator at publication.
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678.

@@ -1,0 +1,86 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-why-tree",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-why-tree",
+  "name": "Why-tree",
+  "description": "Whether a segment's why-tree is complete and current enough to select root causes from and to answer lookups.",
+  "dyad:decides": "Is this why-tree ready to select root causes from and to answer lookups?",
+  "dyad:inputs": [
+    "the why-tree file: its header's judged commit and every node",
+    "each node's collateral-problem-depth outcome",
+    "the commit history of the file",
+    "evidence about the segment that arrived after the judged commit"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "open-branch",
+      "name": "open-branch",
+      "dyad:when": "a leaf is neither a root cause, the anchor nor a join",
+      "dyad:then": "ask why of it until the branch stops"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "circular",
+      "name": "circular",
+      "dyad:when": "a root cause rewords an ancestor in its own branch",
+      "dyad:then": "ask why of the ancestor again; the reworded node is superseded"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "too-deep",
+      "name": "too-deep",
+      "dyad:when": "a branch passes five whys without stopping",
+      "dyad:then": "the branch has left the segment: find where, and stop it there"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-anchor-branch",
+      "name": "no-anchor-branch",
+      "dyad:when": "no branch reaches the root anchor",
+      "dyad:then": "ask the reverse question of the symptom: why do I feel I must do this at all?"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "untested",
+      "name": "untested",
+      "dyad:when": "a root cause has not passed the removal test",
+      "dyad:then": "test it with collateral-problem-depth"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stale",
+      "name": "stale",
+      "dyad:when": "the file has changed since its judged commit, or evidence about the segment arrived after it",
+      "dyad:then": "place the new evidence, re-derive where it bears, and judge the tree again"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "record the judged commit in the header; select root causes, ranked first by whether the anchor branch exits through them, then by how many branches join them; the tree answers lookups until it changes"
+    }
+  ],
+  "dyad:precedence": "in the order listed; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided, the tree is not ready and the lookup returns no outcome",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
