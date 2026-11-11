@@ -1684,3 +1684,33 @@ closing line's Coming part, which counts the pending queue, is shown under its o
 The other pairs are as amendment #648 left them. Coherent, orthogonal.
 
 Disposition: see ledger #665.
+
+## Amendment — d-work #670 (2026-11-11: Awaiting you names where to answer)
+
+**Claim (the operator, provenance #670 entry 1):** "since #668 is assigned to a `dyad` unit (attended by operator), the
+unit should be included because i was looking for the Y/N counterprompt in this unit when i should have looked for it in
+another". Inside each kind's parentheses of the closing line, the reader's own questions come first, then each other
+dyad unit's as `<labels> in <unit>`. A solo's question, relayed through the home, names no unit; counts are unchanged.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| U1 | The holder is not where the question was asked: the home records a question it relays for a solo. | **Refuted** | That question is answered in the home's own chat, which names nothing; a solo's question has the home as holder or is relayed, so it is answered there either way. |
+| U2 | A question is named twice: a batch spans entries of two holders. | **Survives, scoped** | A batch is asked once, in one chat; the first entry's holder is read, and write-ahead records the same question on each entry. |
+| U3 | A unit unpaired after asking keeps its `in`. | **Survives, scoped** | The holder is the record and dyad-ness is read now: an unpaired holder's question loses its `in`, and the home relays it, the route Rule-16 gives an unpaired unit. |
+| U4 | Many places make the line long. | **Survives** | One group per place per kind; today the line shows two places at most. |
+| U5 | A reader-less run (a script, the automaton) changes the line. | **Refuted** | With no `DYAD_SESSION` nothing is named, so today's string is unchanged. |
+
+**Verdict:** the claim survives.
+- **Rules:** Batch disposition's closing-line bullet names the unit; Provenance gains its line.
+- **Vocabulary:** `awaiting you` says the same. No term is added.
+- **Code:** `board.py`'s `awaiting` keeps the holder and `answered_in` names it (the engineer's part).
+
+**Pairwise (Rule-5).**
+- **3–16**: dyad unit, solo and the relay route are Rule-16's, read and unchanged; the line reports the route, never
+  sets it.
+- **3–2**: the line authorizes nothing, so Binding is unchanged.
+- **3–6**: one row's definition gains the clause; its `used by` (Rule-3) still reads correctly.
+
+The other pairs are as amendment #665 left them. Coherent, orthogonal.
+
+Disposition: see ledger #670.
