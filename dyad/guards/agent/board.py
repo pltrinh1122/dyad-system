@@ -794,12 +794,14 @@ def unclassed_question(f: dict[str, str]) -> str | None:
 
 
 def awaiting(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
-             cabinet: str | None = None) -> list[tuple[str, str, list[int]]]:
-    """[(kind, question, row ids)]: each question asked and not answered, once however many rows a batch names, in
-    AWAITING_KINDS order then by first row; with `cabinet`, that cabinet's entries alone (#594)."""
+             cabinet: str | None = None) -> list[tuple[str, str, list[int], str]]:
+    """[(kind, question, row ids, holder)]: each question asked and not answered, once however many rows a batch names,
+    in AWAITING_KINDS order then by first row; with `cabinet`, that cabinet's entries alone (#594). `holder` is the
+    first named entry's `holder`, the unit that asked and recorded it (#670), or "" when it has none."""
     got = load(root) if got is None else got
     live = {r.id for r in dyadlib.read_rows(root) if r.state not in dyadlib.TERMINAL_STATES}
     groups: dict[tuple[str, str], list[int]] = {}
+    held: dict[tuple[str, str], str] = {}
     for n, f in got:
         if not n.isdigit() or int(n) not in live or (cabinet is not None and entry_cabinet(f) != cabinet):
             continue
@@ -807,7 +809,8 @@ def awaiting(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
         if kind:
             q = (f.get("question") or "").strip()
             groups.setdefault((kind, q or f"#{n}"), []).append(int(n))
-    out = [(k, q, sorted(ids)) for (k, q), ids in groups.items()]
+            held.setdefault((kind, q or f"#{n}"), (f.get("holder") or "").strip())
+    out = [(k, q, sorted(ids), held[(k, q)]) for (k, q), ids in groups.items()]
     return sorted(out, key=lambda t: (AWAITING_KINDS.index(t[0]), t[2][0]))
 
 
@@ -829,28 +832,50 @@ def intent_ready(root: Path, got: list[tuple[str, dict[str, str]]] | None = None
     return sorted(out)
 
 
+def answered_in(holder: str, reader: str | None, root: Path) -> str | None:
+    """#670: the unit whose own chat holds a question, when the operator must look there: `holder` when it is a dyad unit
+    (a leader, or one `paired-units` declares, Rule-16) other than `reader`; None for the reader's own question, a solo's
+    (relayed through the home, answered there), the home's own read by the home after a hop (both leaders), or when the
+    reader is unknown."""
+    if not reader or not holder or holder == reader:
+        return None
+    ss = sessions()
+    if ss.is_leader(holder):                              # the home: after a hop its new holder reads the old one's
+        return None if ss.is_leader(reader) else holder   # questions, which are answered in the home's chat (#670)
+    return holder if ss.declares(ss.declared_seats(root), holder) else None
+
+
 def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None,
-                  coming: bool = True) -> str:
+                  coming: bool = True, reader: str | None = None) -> str:
     """`Awaiting you: d-work <n> <kind> (#id…), …; merge <n> (PR #…), <n> release (#id…), ….` — the questions asked and
     not answered by dmc:disposition-request's groups, d-work first, each group and kind only when non-zero, a kind named
     after its count unless it is the group's own name, a merge counted by the PR numbers its questions name — or
     `Awaiting you: nothing.`; then ` Coming: <n> <kind>, ….` from the derived queue, intent-ready included under
-    `intent-reading: on` (#646). With `coming` False (the preference `coming: off`, #665) the Awaiting part alone."""
+    `intent-reading: on` (#646). With `coming` False (the preference `coming: off`, #665) the Awaiting part alone.
+    A question asked in another dyad unit's chat is listed with it, `<labels> in <unit>` (#670; `answered_in`), the
+    reader (`DYAD_SESSION` by default) its own questions first; the counts never change."""
     got = load(root) if got is None else got
     rows = {r.id: r for r in dyadlib.read_rows(root)}
     on = dyadlib.slugs_on(root)
     L = lambda i: dyadlib.row_label(i, rows, on)
-    by: dict[str, list[tuple[str, list[int]]]] = {}
-    for kind, q, ids in awaiting(root, got, cabinet):
-        by.setdefault(kind, []).append((q, ids))
+    reader = os.environ.get("DYAD_SESSION") if reader is None else reader
+    by: dict[str, list[tuple[str, list[int], str | None]]] = {}
+    for kind, q, ids, holder in awaiting(root, got, cabinet):
+        by.setdefault(kind, []).append((q, ids, answered_in(holder, reader, root)))
     groups = []
     for group, kinds in REQUEST_GROUPS:
         items = []
         for kind in kinds:
             if not (qs := by.get(kind)):
                 continue
-            prs = sorted({int(p) for q, _ in qs for p in PR_REF.findall(q)}) if kind == "merge" else []
-            refs = " ".join(f"PR #{p}" for p in prs) if prs else " ".join(L(i) for i in sorted({i for _, ids in qs for i in ids}))
+            places = sorted({w for _, _, w in qs}, key=lambda w: (w is not None, w or ""))   # here first (#670)
+            parts = []
+            for w in places:
+                here = [(q, ids) for q, ids, x in qs if x == w]
+                prs = sorted({int(p) for q, _ in here for p in PR_REF.findall(q)}) if kind == "merge" else []
+                part = " ".join(f"PR #{p}" for p in prs) if prs else " ".join(L(i) for i in sorted({i for _, ids in here for i in ids}))
+                parts.append(part + (f" in {w}" if w else ""))
+            refs = "; ".join(parts)
             items.append(f"{len(qs)}{'' if kind == group else ' ' + kind} ({refs})")
         if items:
             groups.append(f"{group} " + ", ".join(items))
