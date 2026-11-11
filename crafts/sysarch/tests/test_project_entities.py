@@ -16,7 +16,8 @@ vocabulary, infrastructure, containment, rule_integrity, refint = G["vocabulary"
 INSTALLED = {d.name for d in dyadlib.craft_dirs()}
 SYSADMIN, LANGIT, CABINET = "sysadmin" in INSTALLED, "lan-git" in INSTALLED, "cabinet" in INSTALLED   # cabinet: the organization craft (#369 C9, #383; renamed from cos by #417)
 CHRONICLE = "chronicle" in INSTALLED   # chronicle: the serial told from the record (#498 C4, #502)
-KNOWN_CRAFT_CORPUS = {"sysadmin": "workstation", "sysarch": "craft", "syseng": "craft", "lan-git": "craft", "cabinet": "agent", "chronicle": "infra"}   # #155, #160, #162, #181
+CHANNELS = "channels" in INSTALLED   # channels: messages between dyad systems (#682)
+KNOWN_CRAFT_CORPUS = {"sysadmin": "workstation", "sysarch": "craft", "syseng": "craft", "lan-git": "craft", "cabinet": "agent", "chronicle": "infra", "channels": "craft"}   # #155, #160, #162, #181
 ops_scripts, runbook = G.get("ops_scripts"), G.get("runbooks")
 needs_sysadmin = unittest.skipUnless(SYSADMIN, "the sysadmin craft is not installed here; its entities are not on the surface")
 
@@ -214,7 +215,7 @@ class FixtureTests(unittest.TestCase):
                 else: self.assertIn(e.corpus, containment.ZONE_NAMES)
         self.assertEqual({e.guard for e in self.ents if e.guard.startswith("crafts/")},
                          ({f"crafts/sysadmin/guards/{n}.py" for n in ("changelog", "events", "ops_scripts", "runbooks")} if SYSADMIN else set())
-                         | {"crafts/sysarch/guards/registry.py"} | {f"crafts/syseng/guards/{n}.py" for n in ("naming", "invariants", "tests")} | ({"crafts/lan-git/guards/image.py"} if LANGIT else set()) | ({"crafts/cabinet/guards/seats.py"} if CABINET else set()) | ({"crafts/chronicle/guards/episodes.py"} if CHRONICLE else set()))
+                         | {"crafts/sysarch/guards/registry.py"} | {f"crafts/syseng/guards/{n}.py" for n in ("naming", "invariants", "tests")} | ({"crafts/lan-git/guards/image.py"} if LANGIT else set()) | ({"crafts/cabinet/guards/seats.py"} if CABINET else set()) | ({"crafts/chronicle/guards/episodes.py"} if CHRONICLE else set()) | ({"crafts/channels/guards/posts.py"} if CHANNELS else set()))
         self.assertNotIn("incident", self.by); self.assertNotIn("registry", self.by)   # no guard, no card (sysarch guards.md): reported in plan #151
     def test_every_field_name_comes_from_a_parser(self):
         names = parser_names(self.pkg)

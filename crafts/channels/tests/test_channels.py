@@ -31,9 +31,10 @@ class Fixture(unittest.TestCase):
         (self.base / "registry" / "channels" / "release.md").write_text(CHANNEL)
         for s in ("up", "down"):
             (self.base / "registry" / "members" / f"{s}.md").write_text(MEMBER.format(s=s))
+        self.local = self.root / "agent-corpus" / "channels.local.txt"
+        self.local.write_text(f"clone: {self.base}\nsystem: up\n")
         env = {k: v for k, v in os.environ.items() if k not in ("DYAD_INSTANCE",)}
-        p = mock.patch.dict(os.environ, {**env, **GIT, "DYAD_CHANNELS": str(self.base), "DYAD_SYSTEM": "up",
-                                          "DYAD_SESSION": "home"}, clear=True)
+        p = mock.patch.dict(os.environ, {**env, **GIT, "DYAD_SESSION": "home"}, clear=True)
         p.start(); self.addCleanup(p.stop)
         for d in (self.root, self.base):
             subprocess.run(["git", "init", "-q", "-b", "main", str(d)], check=True)
@@ -47,7 +48,7 @@ class Fixture(unittest.TestCase):
 class Sender(Fixture):
     def test_sender_is_system_and_unit(self):
         self.assertEqual(ch.sender(self.root), "up:home")
-        os.environ.pop("DYAD_SYSTEM")
+        self.local.write_text(f"clone: {self.base}\n")
         self.assertEqual(ch.sender(self.root), "up:home")       # the checkout's directory name
 
 class Monitor(unittest.TestCase):
@@ -83,7 +84,7 @@ class Read(Fixture):
         self.assertIn("skip release", out)
 
     def test_read_without_checkout_skips(self):
-        os.environ["DYAD_CHANNELS"] = str(self.tmp / "none")
+        self.local.write_text(f"clone: {self.tmp / 'none'}\n")
         rc, out = run(ch.cmd_read, self.root, [])
         self.assertEqual(rc, 0); self.assertIn("warning: skip read", out)
 

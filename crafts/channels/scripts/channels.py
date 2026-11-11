@@ -2,8 +2,9 @@
 """Channels verbs (the channels craft's script; its run-book `crafts/channels/runbooks/channels.md`, run as
 `dyad runbook run channels:channels <step>`; d-work #682). Kernel: Python 3.12+, Git.
 A Tended craft adds no row to the core's `dyadlib.CLI` table, so its verbs are run-book steps (`cabinet:session-tidy`,
-#640). Each reads or writes the channels checkout `DYAD_CHANNELS` names; none pushes:
-- `subscribe <url>`: clone the channels repository into `DYAD_CHANNELS`, or fetch it when the clone exists;
+#640). Each reads or writes the channels checkout the instance file `<instance>/channels.local.txt` names (`clone:`);
+none pushes:
+- `subscribe <url>`: clone the channels repository into that `clone:` path, or fetch it when the clone exists;
 - `read`: fetch when a remote exists, then print each message new since this unit's last read, honouring each
   channel's `monitor` slot — `session-start` reads at every run, `interval <min>-<max>` reads once the current interval
   has passed, doubling it after an empty read up to `max` and resetting it to `min` on news (W1). The marker is
@@ -14,8 +15,8 @@ A Tended craft adds no row to the core's `dyadlib.CLI` table, so its verbs are r
 - `breach [<system>]`: run the guard's checks over the messages received (all, or one sender system's) and print each
   finding with the line an incident row needs; it detects and records nothing itself (K1–K4: safety on the receiver,
   never retaliation).
-The sender is `<system>:<unit>`: the system `DYAD_SYSTEM` names, else this checkout's directory name; the unit
-`DYAD_SESSION`. Exit 0 ok, 1 refused or a guard failure, 2 a usage error.
+The sender is `<system>:<unit>`: the system the same file's `system:` names, else this checkout's directory name;
+the unit `DYAD_SESSION`. Exit 0 ok, 1 refused or a guard failure, 2 a usage error.
   channels.py subscribe <url> | read | post <channel> <kind> <id> <body-file> [k=v …] | breach [<system>]
 """
 import sys
@@ -40,7 +41,7 @@ def now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
 
 def sender(root: Path) -> str:
-    system = os.environ.get("DYAD_SYSTEM") or dyadlib.repo_root(root).name
+    system = posts.local(root).get("system") or dyadlib.repo_root(root).name
     return f"{system}:{os.environ.get('DYAD_SESSION') or 'unknown'}"
 
 def marker_path(root: Path) -> Path:
@@ -70,7 +71,7 @@ def next_interval(ch: dict[str, str], mark: dict, news: bool) -> int | None:
 def checkout(root: Path) -> Path | None:
     base = posts.store(root)
     if base is None:
-        print(f"channels: set {posts.ENV} to the path of the channels clone", file=sys.stderr)
+        print(f"channels: name the channels clone as `clone:` in <instance>/{posts.LOCAL}", file=sys.stderr)
     return base
 
 def cmd_subscribe(root: Path, a: list[str]) -> int:

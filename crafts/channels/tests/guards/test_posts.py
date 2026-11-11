@@ -1,4 +1,4 @@
-"""posts.py (the channels craft's guard, entity `post`; d-work #682): the absent checkout, each template parsing to its
+"""posts.py (the channels craft's guard, entity `post`; d-work #682): the absent checkout, the instance file naming the clone (relative and absolute), each template parsing to its
 field list, a well-formed store, each failing shape (missing field, wrong format, unknown kind, id or channel off its
 path, a channel with no entry, a sender off its path or no member, an unresolved reply, over the size limit, a policy
 slot of no allowed value, a member entry naming another system), an unknown field kept, the fence (a credential, a
@@ -29,8 +29,9 @@ class Store(unittest.TestCase):
         for s in ("up", "down"):
             (self.base / "registry" / "members" / f"{s}.md").write_text(MEMBER.format(s=s))
         (self.root / "agent-corpus").mkdir()
+        (self.root / "agent-corpus" / posts.LOCAL).write_text("clone: clone\nsystem: up\n")
         env = {k: v for k, v in os.environ.items() if k != "DYAD_INSTANCE"}
-        p = mock.patch.dict(os.environ, {**env, posts.ENV: str(self.base)}, clear=True); p.start(); self.addCleanup(p.stop)
+        p = mock.patch.dict(os.environ, env, clear=True); p.start(); self.addCleanup(p.stop)
 
     def put(self, text, channel="release", system="up", mid="m1"):
         d = self.base / "channels" / channel / system; d.mkdir(parents=True, exist_ok=True)
@@ -41,10 +42,17 @@ class Store(unittest.TestCase):
 
 class Absent(unittest.TestCase):
     def test_no_checkout_skips(self):
-        with mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop(posts.ENV, None)
-            msgs = posts.check_package(Path(tempfile.gettempdir()))
+        root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        with mock.patch.dict(os.environ, {k: v for k, v in os.environ.items() if k != "DYAD_INSTANCE"}, clear=True):
+            msgs = posts.check_package(root)
+            self.assertIsNone(posts.store(root))
         self.assertEqual(len(msgs), 1); self.assertTrue(msgs[0].startswith("warning: skip posts"))
+
+class Local(Store):
+    def test_clone_relative_and_absolute(self):
+        self.assertEqual(posts.store(self.root), self.root / "clone")
+        (self.root / "agent-corpus" / posts.LOCAL).write_text(f"clone: {self.base}\n")
+        self.assertEqual(posts.store(self.root), self.base); self.assertEqual(posts.local(self.root), {"clone": str(self.base)})
 
 class Templates(unittest.TestCase):
     def test_message_template_fields(self):

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Post guard (entity `post`, corpus `craft`; the channels craft's guard — its rules `crafts/channels/rules/`; placed
 per `crafts/sysarch/rules/guards.md` under `crafts/channels/guards/`; d-work #682). Kernel: Python 3.12+.
-Reads a checkout of a channels repository named by `DYAD_CHANNELS` (absent: one `warning: skip` line) and fails what
+Reads a checkout of a channels repository named by the instance file `<instance>/channels.local.txt` (`clone: <path>`,
+relative to the repo root or absolute, and `system: <name>`; absent: one `warning: skip` line) and fails what
 the protocol's records cannot hold (the canonical message format `dyad-channels/1`, `../templates/message.md`):
 - a channel record (`registry/channels/<channel>.md`) lacking a required slot, or a policy slot of no allowed value;
 - a member record (`registry/members/<system>.md`) lacking a required slot, or naming another system than its file;
@@ -20,7 +21,7 @@ Left to inference, stated: whether a post's claims are its sender's own, and whe
 import sys
 if sys.version_info < (3, 12):
     sys.exit("posts.py: Python 3.12+ required")
-import os, re, subprocess
+import re, subprocess
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "dyad" / "scripts"))   # crafts/channels/guards/ -> dyad/scripts
 import dyadlib
@@ -36,7 +37,7 @@ MEMBER_FIELDS = ("system", "units", "bound-repository", "play-book")
 POLICY = {"admission": re.compile(r"open"), "posting": re.compile(r"members|named( [\w.-]+:[\w.-]+)+"),
           "monitor": re.compile(r"session-start|interval \d+-\d+"), "limits": re.compile(r"\d+ KiB, \d+ per hour"),
           "decision-rights": re.compile(r"none")}
-ENV, REGISTRY, STORE = "DYAD_CHANNELS", "registry", "channels"
+LOCAL, REGISTRY, STORE = "channels.local.txt", "registry", "channels"   # the instance file (Rule-11 p1: instance data)
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 _SENDER = re.compile(r"([A-Za-z0-9][\w.-]*):([A-Za-z0-9][\w.-]*)")      # `<system>:<unit>`, never a session
 _REPO = re.compile(r"(?<![\w.-])([A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*)(?![\w/-])")
@@ -51,9 +52,14 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
 ]
 dyadlib.enforce(INVARIANTS, __name__)
 
+def local(root: Path | None = None) -> dict[str, str]:
+    """The instance file's `key: value` lines (`clone`, `system`), or {} when it is absent."""
+    p = dyadlib.instance(root or dyadlib.repo_root()) / LOCAL
+    return parse(p.read_text(errors="replace") + "\n\n")[0] if p.is_file() else {}
+
 def store(root: Path | None = None) -> Path | None:
-    """The channels checkout `DYAD_CHANNELS` names, or None; a relative value reads from `root`."""
-    v = os.environ.get(ENV)
+    """The channels checkout the instance file's `clone:` names, or None; a relative path reads from `root`."""
+    v = local(root).get("clone")
     if not v:
         return None
     p = Path(v)
@@ -151,7 +157,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     root = root or dyadlib.repo_root()
     base = store(root)
     if base is None or not base.is_dir():
-        return [f"warning: skip posts: no channels checkout (set {ENV} to a clone of the channels repository)"]
+        return [f"warning: skip posts: no channels checkout (name one as `clone:` in <instance>/{LOCAL})"]
     private, msgs = private_hashes(root), []
     chans, mems = channels(base), members(base)
     for name, ch in chans.items():
@@ -185,7 +191,7 @@ def summary(root: Path | None = None, pkg: Path = dyadlib.PKG) -> str:
 def describe(root: Path, pkg: Path = dyadlib.PKG) -> dict:
     allowed = {"format": FORMAT, "id": "1-80 of [A-Za-z0-9._-], the file's name", "channel": "its directory",
                "kind": " | ".join(KINDS), "from": "<system>:<unit>", "sent": "an ISO-8601 UTC time"}
-    return {"store": f"<{ENV}>/channels/<channel>/<system>/<id>.md", "parser": "`posts.parse`",
+    return {"store": f"<clone: of <instance>/{LOCAL}>/channels/<channel>/<system>/<id>.md", "parser": "`posts.parse`",
             "observed": len(messages(store(root))) if store(root) and store(root).is_dir() else 0,
             "note": "unknown fields are kept and never refused; optional: " + ", ".join(OPTIONAL),
             "fields": [(f, "text", allowed[f], True, "", "posts.FIELDS") for f in FIELDS]}
