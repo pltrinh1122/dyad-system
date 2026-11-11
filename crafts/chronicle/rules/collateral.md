@@ -3,9 +3,10 @@
 A form section of the chronicle core (`chronicle.md` §7). It narrows the core and never loosens it: every piece of
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
-its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`;
-falsification:
-`../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; problem discovery, d-work #674.
+its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
+`../dmc/collateral-segment-significance.jsonld`; falsification:
+`../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
+d-work #673; problem discovery, d-work #674.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -93,6 +94,14 @@ alternatives; `uncountered` ← existing alternatives and unfair advantage.
 1. **the reader's moment** — no section holds a concrete scene from the reader's day, which `abstract` asks for;
 2. **objections** — the canvas lists alternatives, not the objections a skeptical reader raises;
 3. **the stakes** — the problem section states the problem, not what leaving it unsolved costs the reader.
+
+**The segment map.** A canvas set may map many segments, one folder each, and lists only those whose problem is
+significant. `collateral-segment-significance` decides it, its conditions in order: **not-accountable** (the segment
+does not answer for work an AI agent did: at most a beneficiary, left off) · **costless** (an unchecked error costs it
+nothing real: no money, safety, reputation, regulator or user's trust; left off) · **rare** (such an error does not
+recur within the segment's week; left off) · **significant** (all three hold: on the map, each reading labelled
+hypothesis or evidence). The record decides who is on the map, never which segment to target: that is the
+go-to-market's decision.
 
 ## 6. Problem discovery: diverge by lens, converge by cause
 A problem entry names a **root cause**: what the segment would remove, not what it observes. It is found in six steps,

@@ -1,0 +1,66 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-segment-significance",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-segment-significance",
+  "name": "Segment significance",
+  "description": "Whether a segment of a product's readers has a significant problem, and so belongs on the segment map a lean canvas set holds.",
+  "dyad:decides": "Is this segment's problem significant?",
+  "dyad:inputs": [
+    "the segment, as a class of reader, never a person or a named organization",
+    "what the segment answers for",
+    "what an unchecked error costs it",
+    "how often such an error recurs",
+    "what the system's own record shows of the segment, if anything"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-accountable",
+      "name": "not-accountable",
+      "dyad:when": "the segment does not answer for work an AI agent did",
+      "dyad:then": "left off the segment map: at most a beneficiary"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "costless",
+      "name": "costless",
+      "dyad:when": "an unchecked error costs the segment nothing real: no money, safety, reputation, regulator or user's trust",
+      "dyad:then": "left off the segment map"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "rare",
+      "name": "rare",
+      "dyad:when": "such an error does not recur within the segment's week",
+      "dyad:then": "left off the segment map"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "significant",
+      "name": "significant",
+      "dyad:when": "all three hold: the segment answers for an agent's work, an unchecked error costs it something real, and it recurs within its week",
+      "dyad:then": "on the segment map, each condition's reading labelled hypothesis or evidence; which significant segments to target is the go-to-market's decision, never this record's"
+    }
+  ],
+  "dyad:precedence": "in the order listed; the first condition that fails gives the outcome",
+  "dyad:default": "a condition that cannot be decided from the record is labelled hypothesis and put to the Operator, never assumed",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
