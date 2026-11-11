@@ -5,7 +5,10 @@ Reads a checkout of a channels repository named by the instance file `<instance>
 relative to the repo root or absolute, and `system: <name>`; absent: one `warning: skip` line) and fails what
 the protocol's records cannot hold (the canonical message format `dyad-channels/1`, `../templates/message.md`):
 - a channel record (`registry/channels/<channel>.md`) lacking a required slot, or a policy slot of no allowed value;
-- a member record (`registry/members/<system>.md`) lacking a required slot, or naming another system than its file;
+- a channel's `content-rules` slot not naming `CONTENT-RULES.md#post-content` and its own rule, or naming a heading
+  the root `CONTENT-RULES.md` lacks (the self-imposed content rules travel with the channels, plan #682 revision 5);
+- a member record (`registry/members/<system>.md`) lacking a required slot, naming another system than its file, or
+  a `content-rules` slot that is not `channels <version>`;
 - a message (`channels/<channel>/<system>/<id>.md`) lacking a required field, of a `kind` the format does not list,
   whose `id`, `channel` or `from` system disagrees with its path, whose sender is no member, whose `in-reply-to`
   names no message, or that is larger than its channel's limit;
@@ -32,8 +35,11 @@ FORMAT = "dyad-channels/1"                                                 # the
 FIELDS = ("format", "id", "channel", "kind", "from", "sent")               # a message's required fields
 OPTIONAL = ("holder", "in-reply-to", "refs")                               # named optional fields; any other is kept
 KINDS = ("fact", "proposal", "reported-disposition", "question", "reply")  # every class of the member play-book's S1
-CHANNEL_FIELDS = ("id", "creator", "owner", "sources", "admission", "posting", "monitor", "limits", "decision-rights")
-MEMBER_FIELDS = ("system", "units", "bound-repository", "play-book")
+CHANNEL_FIELDS = ("id", "creator", "owner", "sources", "admission", "posting", "monitor", "limits", "decision-rights",
+                  "content-rules")
+MEMBER_FIELDS = ("system", "units", "bound-repository", "play-book", "content-rules")
+RULES = "CONTENT-RULES.md"                                                  # the content rules rendered at the root (plan #682 rev 5)
+LAYER1 = "post-content"                                                    # every channel's rules name layer 1
 POLICY = {"admission": re.compile(r"open"), "posting": re.compile(r"members|named( [\w.-]+:[\w.-]+)+"),
           "monitor": re.compile(r"session-start|interval \d+-\d+"), "limits": re.compile(r"\d+ KiB, \d+ per hour"),
           "decision-rights": re.compile(r"none")}
@@ -42,10 +48,14 @@ _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 _SENDER = re.compile(r"([A-Za-z0-9][\w.-]*):([A-Za-z0-9][\w.-]*)")      # `<system>:<unit>`, never a session
 _REPO = re.compile(r"(?<![\w.-])([A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*)(?![\w/-])")
 _INTERVAL = re.compile(r"interval (\d+)-(\d+)")
+_CHANNEL_RULES = re.compile(rf"{re.escape(RULES)}((?: ?#[a-z0-9-]+)+), channels (\d+\.\d+\.\d+)")
+_MEMBER_RULES = re.compile(r"channels (\d+\.\d+\.\d+)")
+_HEADING = re.compile(r"(?m)^#{1,6}\s+(.+?)\s*$")
 INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("fields-open-with-format", lambda: FIELDS[0] == "format" and len(set(FIELDS + OPTIONAL)) == len(FIELDS + OPTIONAL)),
     ("kinds-are-five", lambda: len(set(KINDS)) == 5 and "reported-disposition" in KINDS),
     ("policy-slots-are-channel-fields", lambda: set(POLICY) <= set(CHANNEL_FIELDS)),
+    ("content-rules-in-both-registries", lambda: "content-rules" in CHANNEL_FIELDS and "content-rules" in MEMBER_FIELDS),
     ("session-start-is-a-monitor-value", lambda: bool(POLICY["monitor"].fullmatch("session-start"))
      and bool(POLICY["monitor"].fullmatch("interval 2-64"))),
     ("sender-is-system-and-unit", lambda: bool(_SENDER.fullmatch("dyad-system:engineer")) and not _SENDER.fullmatch("engineer")),
@@ -108,6 +118,28 @@ def limit_bytes(ch: dict[str, str]) -> int | None:
     m = re.match(r"(\d+) KiB", ch.get("limits", ""))
     return int(m[1]) * 1024 if m else None
 
+def anchors(base: Path) -> set[str] | None:
+    """The heading anchors of the root CONTENT-RULES.md (each heading lowercased, spaces as `-`), or None if absent."""
+    p = base / RULES
+    if not p.is_file():
+        return None
+    return {re.sub(r"[^a-z0-9-]", "", h.strip().lower().replace(" ", "-")) for h in _HEADING.findall(p.read_text(errors="replace"))}
+
+def check_rules_slot(where: str, ch: dict[str, str], heads: set[str] | None) -> list[str]:
+    """A channel's `content-rules` slot: `CONTENT-RULES.md#post-content #<channel>-post, channels <version>`, every
+    anchor a heading of the root CONTENT-RULES.md (the self-imposed rules a subscriber reads before posting, L7)."""
+    v = ch.get("content-rules")
+    if not v:
+        return []
+    m = _CHANNEL_RULES.fullmatch(v)
+    if not m:
+        return [f"{where}: content-rules {v!r} is not `{RULES}#{LAYER1} #<rule>, channels <version>` (templates/channel.md)"]
+    names = m[1].replace("#", " ").split()
+    msgs = [] if LAYER1 in names else [f"{where}: content-rules names no #{LAYER1}; every channel's rules start with layer 1"]
+    if heads is None:
+        return msgs + [f"{where}: content-rules names {RULES}, which the channels repository's root does not hold"]
+    return msgs + [f"{where}: content-rules #{n} is no heading of {RULES}" for n in names if n not in heads]
+
 def check_message(base: Path, path: Path, text: str, chans: dict, mems: dict, ids: set[str]) -> list[str]:
     where = path.relative_to(base).as_posix()
     head, _ = parse(text)
@@ -159,7 +191,7 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
     if base is None or not base.is_dir():
         return [f"warning: skip posts: no channels checkout (name one as `clone:` in <instance>/{LOCAL})"]
     private, msgs = private_hashes(root), []
-    chans, mems = channels(base), members(base)
+    chans, mems, heads = channels(base), members(base), anchors(base)
     for name, ch in chans.items():
         where = f"{REGISTRY}/channels/{name}.md"
         msgs += [f"{where}: lacks `{k}:` (templates/channel.md)" for k in CHANNEL_FIELDS if not ch.get(k)]
@@ -167,11 +199,14 @@ def check_package(root: Path | None = None, pkg: Path = dyadlib.PKG) -> list[str
                  if ch.get(k) and not pat.fullmatch(ch[k])]
         if (m := _INTERVAL.fullmatch(ch.get("monitor", ""))) and int(m[1]) > int(m[2]):
             msgs.append(f"{where}: monitor floor {m[1]} is above its ceiling {m[2]} (W1)")
+        msgs += check_rules_slot(where, ch, heads)
     for name, mem in mems.items():
         where = f"{REGISTRY}/members/{name}.md"
         msgs += [f"{where}: lacks `{k}:` (templates/member.md)" for k in MEMBER_FIELDS if not mem.get(k)]
         if mem.get("system") and mem["system"] != name:
             msgs.append(f"{where}: system {mem['system']!r} is not the file's name; each system writes only its own entry (G2)")
+        if mem.get("content-rules") and not _MEMBER_RULES.fullmatch(mem["content-rules"]):
+            msgs.append(f"{where}: content-rules {mem['content-rules']!r} is not `channels <version>`, the rules' version adopted (templates/member.md)")
     paths = messages(base)
     ids = {p.stem for p in paths}
     for p in paths:
