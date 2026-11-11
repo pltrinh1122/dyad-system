@@ -1,0 +1,86 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-pitch",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-pitch",
+  "name": "Pitch",
+  "description": "What a pitch needs, beyond the collateral gate, to inform and to move its reader before it is put to the Operator.",
+  "dyad:decides": "What does this pitch need before it is put to the Operator?",
+  "dyad:inputs": [
+    "the pitch as drafted, after it passes the collateral gate",
+    "its brief: the named reader and the one question the pitch answers for them",
+    "the problem the pitch states",
+    "the strongest objection a skeptical reader would raise"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-reader",
+      "name": "no-reader",
+      "dyad:when": "no named reader, or no one question the pitch answers for them",
+      "dyad:then": "stop drafting until the brief names both"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "manufactured",
+      "name": "manufactured",
+      "dyad:when": "emotion beyond the truth: false urgency or scarcity, fear larger than the real stakes, flattery, or a feeling attributed to the reader that the problem the pitch states does not support",
+      "dyad:then": "strike it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cold",
+      "name": "cold",
+      "dyad:when": "the reader's felt problem is not named in the reader's own terms before the product appears: what they worry about, are tired of or want",
+      "dyad:then": "name it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "abstract",
+      "name": "abstract",
+      "dyad:when": "no concrete moment the reader recognizes from their own day, such as a scene, an example or a before and after; only categories",
+      "dyad:then": "show one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-pull",
+      "name": "no-pull",
+      "dyad:when": "no picture of what changes for the reader, such as relief, confidence or attention given back, and no next step they can take",
+      "dyad:then": "add both"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "uncountered",
+      "name": "uncountered",
+      "dyad:when": "the strongest objection a skeptical reader would raise is not stated with how the copy meets it",
+      "dyad:then": "add it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ready",
+      "name": "ready",
+      "dyad:when": "every test above holds",
+      "dyad:then": "put the pitch to the Operator's publication question; ready never publishes"
+    }
+  ],
+  "dyad:precedence": "in the order listed, after the collateral gate passes; the first test that fails gives the outcome",
+  "dyad:default": "when a test cannot be decided, the pitch does not pass it: the agent asks the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
