@@ -17,7 +17,9 @@
   "dyad:inputs": [
     "the problem section",
     "its existing alternatives",
-    "the customer segments section"
+    "the customer segments section",
+    "the root anchor written for the segment",
+    "the record collateral-problem-depth"
   ],
   "hasDefinedTerm": [
     {
@@ -26,6 +28,13 @@
       "name": "solution-shaped",
       "dyad:when": "a problem is written as the lack of the solution",
       "dyad:then": "rewrite it as what the segment suffers, with no product in it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "symptom",
+      "name": "symptom",
+      "dyad:when": "a problem entry states what the segment observes, not the root cause it would remove (collateral-problem-depth)",
+      "dyad:then": "find its root cause by problem discovery; keep the symptom beneath it in the segment's words"
     },
     {
       "@type": "DefinedTerm",

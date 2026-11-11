@@ -18,7 +18,8 @@
     "the whole canvas",
     "each section record's outcome",
     "the labels of its entries: hypothesis or evidence",
-    "its riskiest assumption"
+    "its riskiest assumption",
+    "the root anchor written for the segment"
   ],
   "hasDefinedTerm": [
     {
@@ -46,7 +47,7 @@
       "@type": "DefinedTerm",
       "termCode": "misaimed",
       "name": "misaimed",
-      "dyad:when": "the value proposition, channels or key metrics aim at another segment than the one named",
+      "dyad:when": "the value proposition, channels or key metrics aim at another segment than the one named, or a problem does not trace to the root anchor",
       "dyad:then": "aim them at the named segment"
     },
     {

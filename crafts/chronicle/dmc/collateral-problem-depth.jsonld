@@ -1,0 +1,65 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-problem-depth",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-problem-depth",
+  "name": "Problem depth",
+  "description": "Whether a statement of a segment's problem is a symptom, a cause or a root cause, the convergence test of problem discovery.",
+  "dyad:decides": "Is this problem entry a symptom, a cause or a root cause?",
+  "dyad:inputs": [
+    "the problem statement",
+    "its cluster of symptoms",
+    "the chain of whys asked of it",
+    "the root anchor written for the segment"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "symptom",
+      "name": "symptom",
+      "dyad:when": "the statement names something the segment observes",
+      "dyad:then": "keep it as a symptom, in the segment's words, and ask why it happens"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cause",
+      "name": "cause",
+      "dyad:when": "it explains symptoms, but a deeper why explains it",
+      "dyad:then": "ask why again"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "root-cause",
+      "name": "root-cause",
+      "dyad:when": "removing it removes most of its cluster's symptoms, and the next why reaches the root anchor",
+      "dyad:then": "a candidate problem entry, labelled hypothesis until a reader confirms it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "solution-shaped",
+      "name": "solution-shaped",
+      "dyad:when": "it names a missing feature rather than something the segment suffers",
+      "dyad:then": "restate it as what the segment suffers, then judge it again"
+    }
+  ],
+  "dyad:precedence": "the first outcome whose condition holds; a statement that is both a symptom and solution-shaped is restated first",
+  "dyad:default": "when the removal test cannot be decided, the statement is held as a cause and put to the Operator",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
