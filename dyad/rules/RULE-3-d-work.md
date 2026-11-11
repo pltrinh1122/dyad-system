@@ -243,7 +243,10 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   `dmc:disposition-request` gives each recorded question, in two groups printed d-work first —
   `Awaiting you: d-work 1 plan (#647); merge 1 (PR #723).`: the d-work group (`intent`, `plan`, `done`, `retirement`,
   `precedent`) and the merge group (`merge`, `release`, `destructive`); a recorded question of no listed form, `none`,
-  counts nothing and is warned. **Coming** counts the pending queue. Under `off` it reports the queue's
+  counts nothing and is warned. Inside each kind's parentheses the questions asked in the reader's own chat come first, then, for a question asked in
+  another dyad unit's chat, its labels followed by `in <unit>`, one group per unit — `d-work 2 intent (#1; #9 in
+  <unit>)` — so the operator knows where to answer it; a solo's question, relayed through the home, names no unit, and
+  the counts are unchanged (#670). **Coming** counts the pending queue. Under `off` it reports the queue's
   counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
   records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
   Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
@@ -448,6 +451,8 @@ the same record, amendment #648. What a `Y` binds cites the precedent's scope 20
 `../falsification/rules/rule-2-no-self-ratify.md`, amendment #649. Batch disposition's closing line shows its Coming
 part under the preference `coming` 2026-11-10 (d-work #665): the operator asked that the part counting the agent's own
 queue be a setting of its own, on by default, while `awaiting-you: off` hid the Awaiting part with it; see
-`../falsification/rules/rule-3-d-work.md`, amendment #665.
+`../falsification/rules/rule-3-d-work.md`, amendment #665. Batch disposition's closing line names the dyad unit
+whose chat holds a question 2026-11-11 (d-work #670): the operator looked for a counter-prompt in the home that had been
+asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, amendment #670.
 
 Set: System Requirements.

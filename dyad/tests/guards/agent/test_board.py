@@ -1289,9 +1289,10 @@ class PhasedQueueTests(unittest.TestCase):
 
 class AwaitingTests(unittest.TestCase):
     """#646: `Awaiting you` counts the questions the board records as asked and not answered, by kind and a batch once,
-    and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line."""
+    and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line.
+    The reader is the home, where every fixture question is held (#670: a question held there names no unit)."""
     def setUp(self):
-        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "DYAD_SESSION": HOME}); e.start(); self.addCleanup(e.stop)
         self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
         d = self.root / INST / "d-work"
         for sub in ("rows", "plans", "board", "provenance"):
@@ -1325,7 +1326,7 @@ class AwaitingTests(unittest.TestCase):
 
     def test_each_kind_once_per_question(self):
         got = bd.awaiting(self.root)
-        self.assertEqual([(k, ids) for k, _, ids in got], [("intent", [1]), ("plan", [2, 3]), ("done", [4]), ("retirement", [11]),
+        self.assertEqual([(k, ids) for k, _, ids, _ in got], [("intent", [1]), ("plan", [2, 3]), ("done", [4]), ("retirement", [11]),
                                                           ("precedent", [5]), ("merge", [13]), ("release", [6]), ("destructive", [7])])
         self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: d-work 1 intent (#1), 1 plan (#2 #3), 1 done (#4), "
                          "1 retirement (#11), 1 precedent (#5); merge 1 (PR #723), 1 release (#6), 1 destructive (#7). "
@@ -1371,6 +1372,30 @@ class AwaitingTests(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
             self.assertIn(bd.closing_line(self.root), bd.board_lines(self.root))
             self.assertIn(bd.closing_line(self.root), bd.resume_lines(self.root))
+
+    def test_a_question_held_in_another_dyad_unit_names_it(self):
+        """#670: the reader's own questions first; one asked in a paired unit's chat, `in <unit>`; a solo's none; the
+        counts unchanged; no reader, no name."""
+        desk, solo = "communicate-marketing-a674840e", "distribute-dddddddd"
+        self.prefs(**{"paired-units": "communicate-marketing"})
+        put = lambda rid, holder, q, phase="intent-asked": (self.d / "board" / f"{rid}.md").write_text(phased(rid, phase, {}, holder=holder, question=q))
+        put(9, desk, "Y/N: intent aligned for #9 nine?")
+        line = bd.awaiting_line(self.root)
+        self.assertTrue(line.startswith(f"Awaiting you: d-work 2 intent (#1; #9 in {desk}), 1 plan (#2 #3)"), line)
+        put(9, solo, "Y/N: intent aligned for #9 nine?")                           # a solo's: relayed, answered here
+        self.assertTrue(bd.awaiting_line(self.root).startswith("Awaiting you: d-work 2 intent (#1 #9), 1 plan"))
+        put(9, desk, "Y/N: intent aligned for #9 nine?")
+        self.assertTrue(bd.awaiting_line(self.root, reader=desk).startswith(f"Awaiting you: d-work 2 intent (#9; #1 in {HOME})"))
+        self.assertTrue(bd.awaiting_line(self.root, reader="").startswith("Awaiting you: d-work 2 intent (#1 #9)"))   # no reader
+        (self.d / "board" / "13.md").write_text(f"holder: {desk}\nwaiting-on: operator\nsince: 2026-11-04T10:00Z\n"
+                                               "question: Y/N: merge PR #723 at abc (preferences)?\n")
+        self.assertIn(f"merge 1 (PR #723 in {desk})", bd.awaiting_line(self.root))
+        self.assertEqual([h for k, _, _, h in bd.awaiting(self.root) if k == "merge"], [desk])
+        self.assertEqual(bd.answered_in(desk, desk, self.root), None)
+        self.assertEqual(bd.answered_in(desk, HOME, self.root), desk)
+        self.assertEqual(bd.answered_in(solo, HOME, self.root), None)
+        self.assertEqual(bd.answered_in(HOME, desk, self.root), HOME)               # the home is always a dyad unit
+        self.assertIsNone(bd.answered_in(HOME, "program-bbbbbbbb", self.root))       # a hop: the new home reads the old one's
 
     def test_coming_keeps_or_drops_the_coming_part(self):
         """#665: `coming: off` ends the line after its Awaiting part; absent, `on` or an unknown value keep today's
