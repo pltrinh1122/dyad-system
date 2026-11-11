@@ -52,10 +52,11 @@ The rule as written is plan #668 revision 2's survivor.
 | 43 | **The tree grows without bound** (T6). | **Survives, scoped** | Five whys, joins never copied, superseded nodes skipped. |
 | 44 | **Segments share symptoms** (T7). | **Survives, scoped** | One tree per segment; cross-segment joins are a named gap. |
 | 45 | **Lookup is quicker than rebuilding** (T8, attacked as Q1–Q7). | **Survives, scoped** | While the judged commit is current (Q3), no evidence arrived since (Q4), the answer cites node and path (Q2), and the tree is re-derived on reader evidence and before publication (Q5, which held: a lookup on the old chains would have passed a circular step); the ratio of lookups to revisions is measurable from git (Q1); the saving is mostly the Operator's attention (Q6, Q7). |
+| 46 | **The tree's header can name its judged commit** (#683): a file cannot hold the hash of the commit that adds it, so the header could only name an earlier commit, and every lookup would read the tree as stale. | **Confirmed, the rule corrected** | The header holds the sha256 of the node lines (`tail -n +2 why-tree.md \| sha256sum`); `stale` reads a mismatch. A whitespace edit counts as a change (#683 H1). |
 **Verdict:** the claim **survives**, scoped: the records decide what a piece needs; whether a reader is moved stays
 inference, read by the Operator at publication.
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683.

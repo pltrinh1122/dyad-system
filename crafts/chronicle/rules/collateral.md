@@ -133,19 +133,21 @@ deriving the whys again.
    Then the whole tree by `collateral-why-tree`, in order — **open-branch** (a leaf that is neither a root cause, the
    anchor nor a join) · **circular** (a root cause rewords an ancestor in its branch) · **too-deep** (a branch passes
    five whys) · **no-anchor-branch** (no branch reaches the anchor) · **untested** (a root cause has not passed the
-   removal test) · **stale** (the file has changed since its judged commit, or evidence arrived after it) · **ready**.
+   removal test) · **stale** (the node lines no longer match the header's digest, or evidence arrived after the tree was judged) · **ready**.
 5. **Select** one to three root causes from a ready tree, ranked first by whether the anchor branch exits through
    them, then by how many branches join them. Each canvas problem entry and each symptom beneath it cites its node id.
 
 **The record.** One tree per segment, `<canvas set>/<segment>/why-tree.md`. Its header line is
-`judged: <collateral-why-tree outcome> at <commit>`. Then one node per line, children indented beneath their parent:
+`judged: <collateral-why-tree outcome> (nodes <sha256>)`, the sha256 of the file's node lines, every line after the
+header as committed (`tail -n +2 why-tree.md | sha256sum`). A file cannot name the commit that adds it, so the tree
+carries a digest of itself instead. Then one node per line, children indented beneath their parent:
 `N<id> [<outcome>, <H|E>] <statement>`, a join as `→ N<id>`, and a node that replaces another adds `supersedes N<id>`.
 The tree is **append-only**: a node is never edited or deleted, only superseded, and an id is never reused, so a
 citation of a node stays true of what it said.
 
 **Lookup.** A claim that a problem is a symptom or a root cause is answered from the tree. Lookup matches by meaning,
 states the node's id and its path to the symptom, and returns the node's outcome **with its label**: a node labelled H
-validates a claim as H, never as fact. Only a tree judged `ready`, whose file is unchanged since its judged commit,
+validates a claim as H, never as fact. Only a tree judged `ready`, whose node lines still match its digest,
 answers; otherwise the lookup says so and returns no outcome. A claim that matches no node is placed in the tree first,
 never judged off it.
 

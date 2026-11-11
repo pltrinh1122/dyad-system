@@ -15,10 +15,10 @@
   "description": "Whether a segment's why-tree is complete and current enough to select root causes from and to answer lookups.",
   "dyad:decides": "Is this why-tree ready to select root causes from and to answer lookups?",
   "dyad:inputs": [
-    "the why-tree file: its header's judged commit and every node",
+    "the why-tree file: its header's digest of the node lines and every node",
     "each node's collateral-problem-depth outcome",
-    "the commit history of the file",
-    "evidence about the segment that arrived after the judged commit"
+    "the sha256 of the node lines as committed",
+    "evidence about the segment that arrived after the tree was judged"
   ],
   "hasDefinedTerm": [
     {
@@ -60,7 +60,7 @@
       "@type": "DefinedTerm",
       "termCode": "stale",
       "name": "stale",
-      "dyad:when": "the file has changed since its judged commit, or evidence about the segment arrived after it",
+      "dyad:when": "the node lines no longer match the header's digest, or evidence about the segment arrived after the tree was judged",
       "dyad:then": "place the new evidence, re-derive where it bears, and judge the tree again"
     },
     {
@@ -68,7 +68,7 @@
       "termCode": "ready",
       "name": "ready",
       "dyad:when": "every test above holds",
-      "dyad:then": "record the judged commit in the header; select root causes, ranked first by whether the anchor branch exits through them, then by how many branches join them; the tree answers lookups until it changes"
+      "dyad:then": "record the outcome and the node lines' sha256 in the header; select root causes, ranked first by whether the anchor branch exits through them, then by how many branches join them; the tree answers lookups until it changes"
     }
   ],
   "dyad:precedence": "in the order listed; the first test that fails gives the outcome",
