@@ -104,10 +104,14 @@ row.
 2. **Create the session** (a cloud or terminal session of your harness with the repository attached) and **title
    it** `<unit>: cloud (ds) - <topic>` — the unit name first, then the kernel, your system's handle and what the
    unit is on. Your harness's session list then reads as your board does.
-3. **The unit's first act is its registration row**, accreted under the program that opens it or under your own
-   prompt: `dyad dwork new "registration of seat <seat>: …"` and `DYAD_SESSION=<unit> dyad session touch -r
-   <row>` — always `-r`: a bare touch claims every open row on the board (#130, #325). The presence file now
-   carries `host` and `holder`, and `seats.py` reads its name against the form.
+3. **The unit's first act is its registration.** A unit that executes rows takes its registration row, accreted under
+   the program that opens it or under your own prompt: `dyad dwork new "registration of seat <seat>: …"` and
+   `DYAD_SESSION=<unit> dyad session touch -r <row>`, the `-r` naming the row the unit takes. Since #567 a bare touch
+   claims only the rows the unit already owns (`sessions.touch_owned`); before it, a bare touch claimed every open row
+   on the board (#130, #325). A monitor desk opens no row of its own, since its loop is monitoring, which opens none
+   (Rule-3 Ledger): it registers by `DYAD_SESSION=<unit> dyad session touch` alone, and its other acts ride a row that
+   already exists (`playbooks/monitor-unit.md` M6). The presence file now carries `host` and `holder`, and `seats.py`
+   reads its name against the form.
 4. **Relay has two directions, and only one is verbatim.** *To a unit:* the words, not a summary — what a unit acts
    on is your verbatim prompt and the plan disposition that authorized it, carried by the home with the row and
    date they were given on (R29); a unit never acts on the home's paraphrase. *To you:* a question a unit that is
