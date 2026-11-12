@@ -98,6 +98,58 @@ class DriftTests(Scratch):
                          ["finding: audit drift: dyad/rules/ changed after the newest Rule-5 sweep record (2026-10-01-rule-sweep.md)"])
 
 
+class AuditDueTests(Scratch):
+    """#691: dmc:audit-trigger read from the checks' own lines — A1 the watermark `changed`, A2 ten incident rows after the
+    newest audit record, A3 the drift finding; present-now, ride and count by weight, the 20-merge count, and a finding
+    line that carries no count, so the sweep's fold posts one state once."""
+    LOG = "| date | d-work | what | cause | consequence |\n|---|---|---|---|---|\n"
+    def log(self, n, date="2026-11-10"):
+        return {self.audits("INCIDENTS.md"): self.LOG + "".join(f"| {date} | #1 | w{i} | c | q |\n" for i in range(n))}
+    def merges(self, n):
+        for i in range(n):   # a first-parent merge commit by plumbing: the tree unchanged, a side parent of its own
+            tree = self.git("rev-parse", "HEAD^{tree}")
+            side = self.git("commit-tree", tree, "-p", "HEAD", "-m", f"side {i}")
+            self.git("update-ref", "HEAD", self.git("commit-tree", tree, "-p", "HEAD", "-p", side, "-m", f"m{i}"))
+    def test_outcomes_by_weight(self):
+        self.commit("audit", {self.audits("2026-11-01-audit.md"): "x\n"})
+        changed, drift = "reading: audit watermark: tree t; 2026-11-01-audit.md: changed", \
+            "finding: audit drift: dyad/rules/ changed after the newest Rule-5 sweep record (none)"
+        self.assertEqual(au.audit_due([], self.d)[-1], "reading: audit due: none")
+        self.assertEqual(au.audit_due(["reading: audit watermark: tree t; 2026-11-01-audit.md: unchanged"], self.d)[-1],
+                         "reading: audit due: none")
+        self.assertEqual(au.audit_due([changed], self.d)[-1], "reading: audit due: A1 code moved (low); count")
+        self.assertEqual(au.audit_due([changed, drift], self.d)[-1],
+                         "finding: audit due: A1 code moved (low), A3 rules unswept (high); present-now")
+        self.commit("log", self.log(9))
+        self.assertEqual(au.audit_due([], self.d)[-1], "reading: audit due: none")             # nine is under the count
+        self.commit("log", self.log(10))
+        self.assertEqual(au.audit_due([], self.d)[-1], "finding: audit due: A2 incidents unhardened (medium); ride")
+        self.commit("old", self.log(12, date="2026-10-20"))                                      # dated before the record
+        self.assertEqual(au.audit_due([], self.d)[-1], "reading: audit due: none")
+    def test_twenty_merges_present_code_moved(self):
+        self.commit("audit", {self.audits("2026-11-01-audit.md"): "x\n"})
+        changed = "reading: audit watermark: tree t; 2026-11-01-audit.md: changed"
+        self.merges(19)
+        out = au.audit_due([changed], self.d)
+        self.assertEqual(out[0], "reading: audit due: 19 merges and 0 incident rows since 2026-11-01-audit.md")
+        self.assertTrue(out[-1].endswith("; count"))
+        self.merges(1)
+        self.assertEqual(au.audit_due([changed], self.d)[-1], "finding: audit due: A1 code moved (low); present-now")
+    def test_a_first_exercise_is_code_moved(self):
+        out = au.audit_due(["reading: audit watermark: tree t; none: first exercise"], self.d)
+        self.assertIn("since no audit record", out[0])
+        self.assertTrue(out[-1].startswith("reading: audit due: A1"))
+    def test_audit_runs_it_last(self):
+        out = au.audit(self.d)
+        self.assertTrue(out[-1].startswith("reading: audit due:") or out[-1].startswith("finding: audit due:"), out[-3:])
+    def test_the_outcomes_are_the_records(self):
+        import json
+        rec = json.loads((au.HERE.parent / "dmc" / "audit-trigger.jsonld").read_text())
+        names = [t["termCode"] for t in rec["hasDefinedTerm"]]
+        self.assertEqual([n for n in names if not n.startswith("A")], list(au.DUE_OUTCOMES))
+        self.assertEqual(rec["dyad:judgedBy"]["dyad:implementation"], "scripts/audits.py")
+
+
 class HardeningTests(Scratch):
     INDEX = "**Ledger:** `agent-corpus/audits/INCIDENTS.md` · **covered through:** {n} rows, latest {d}\n"
     def test_the_survey_says_first_exercise_no_op_or_delta(self):

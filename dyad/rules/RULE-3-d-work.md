@@ -246,7 +246,9 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   counts nothing and is warned. Inside each kind's parentheses the questions asked in the reader's own chat come first, then, for a question asked in
   another dyad unit's chat, its labels followed by `in <unit>`, one group per unit — `d-work 2 intent (#1; #9 in
   <unit>)` — so the operator knows where to answer it; a solo's question, relayed through the home, names no unit, and
-  the counts are unchanged (#670). **Coming** counts the pending queue. Under `off` it reports the queue's
+  the counts are unchanged (#670). **Coming** counts the pending queue and, as `audit-due <n>`, the conditions of
+  the audit's due state that `dmc:audit-trigger` records on the home's cross-row board entry, so the operator sees an
+  audit falling due without being asked (#691). Under `off` it reports the queue's
   counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
   records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
   Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
@@ -469,6 +471,8 @@ asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, am
 (d-work #676): a downstream system's hand-up had been admitted with nothing to decide which part upstream builds and
 which stays down; see `../falsification/rules/rule-3-d-work.md`, amendment #676. Incidents gains the judgement trace 2026-11-12 (d-work #690): an
 act the operator questioned had been examined three times by hand in plan #689, its cause found only on the third, with
-nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #690.
+nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #690. Batch disposition's Coming part counts the audit's due state 2026-11-12 (d-work #691, plan revision 3): the audit
+fell due by readings the sweep already made, and nothing showed it until the operator asked; see
+`../falsification/rules/rule-3-d-work.md`, amendment #691.
 
 Set: System Requirements.

@@ -9,9 +9,12 @@ Phase 2 and 3b audit's, Phase 3 per item, the self-diagnostic's coded-check leve
 levels counsel's. A topic review the operator asks for is its own prompt and plan.
 
 ## Trigger
-An operator prompt asking for the audit; no Rule requires it. It runs inside the d-work the prompt opened, planned
-there first (Rule-15). No clock is the gate: Phase 0's watermark decides whether there is anything to read, and between
-audits the sweep tells the home each new finding after the merge that made it.
+An operator prompt asking for the audit, or the sweep's due state by `dmc:audit-trigger`, which the home presents as
+that record weighs it; no Rule requires it. Either way only the operator's `Y` opens the audit row, and it runs inside
+that d-work, planned there first (Rule-15). No clock is the gate: the due state is read from the full sweep's lines after
+each landed merge (`audits.py`, the `audit due` line) and by the home when it lands a release; Phase 0's watermark decides
+whether there is anything to read, and between audits the sweep tells the home each new finding after the merge that
+made it.
 
 ## Steps
 ### Phase 0 — Survey (the gate)
