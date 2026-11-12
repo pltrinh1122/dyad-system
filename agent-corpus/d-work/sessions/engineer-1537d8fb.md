@@ -1,8 +1,8 @@
 session: engineer-1537d8fb
-seen: 2026-11-12T17:09:11+00:00
+seen: 2026-11-12T18:15:47+00:00
 root: /home/user/dyad-system
-rows: 689 690
-files: crafts/cabinet/docs/operating-guide.md crafts/cabinet/playbooks/monitor-unit.md dyad/VERSION dyad/dmc/intent-reading.jsonld dyad/dmc/judgement-cause.jsonld dyad/dmc/plan-question.jsonld dyad/falsification/rules/rule-3-d-work.md dyad/guards/agent/board.py dyad/playbooks/judgement-trace.md dyad/rules/RULE-3-d-work.md dyad/runbooks/judgement-trace.md dyad/surface.md dyad/templates/self-diagnostic-levels.txt dyad/tests/test_intent.py dyad/tests/test_judgement_trace.py dyad/vocabulary/VOCABULARY.md
+rows: 691 692
+files: dyad/dmc/audit-trigger.jsonld dyad/dmc/hardening-due.jsonld dyad/dmc/hardening-work.jsonld dyad/dmc/message-overhead.jsonld dyad/falsification/rules/rule-3-d-work.md dyad/guards/agent/board.py dyad/guards/agent/provenance.py dyad/playbooks/audit.md dyad/rules/RULE-2-no-self-ratify.md dyad/rules/RULE-3-d-work.md dyad/rules/RULE-7-provenance.md dyad/scripts/ dyad/scripts/audits.py dyad/scripts/automaton.py dyad/scripts/dyadlib.py dyad/scripts/package.py dyad/surface.md dyad/templates/PREFERENCES.md dyad/tests/guards/agent/test_board.py dyad/tests/guards/agent/test_provenance.py dyad/tests/guards/agent/test_prs.py dyad/tests/test_audits.py dyad/tests/test_package.py preferences-corpus/PREFERENCES.md
 writer: 1537d8fb-d96b-5c89-933a-d3ee36793d70
 host: cloud linux x86_64
 holder: 1537d8fb-d96b-5c89-933a-d3ee36793d70

@@ -41,6 +41,9 @@
     "dyad:implementation": null
   },
   "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:alsoIn": [
+    "dmc/audit-trigger.jsonld"
+  ],
   "dyad:home": "playbooks/d-work.md",
   "dyad:owner": "Rule-3"
 }

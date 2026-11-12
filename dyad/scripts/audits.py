@@ -6,7 +6,8 @@ Each check reads one tree — a worktree at one commit of `main` — and prints 
                 the hardening watermark, stale presence files and unmerged branches. Never posted, never a finding.
   `finding: …`  a warning the sweep tells the home once: a guard that left the registry, Rules edited after the newest
                 Rule-5 sweep record, rows past the hardening watermark, a fence row or fence the newest index names
-                that does not resolve, an audit record missing a line, the levels file. No finding carries a count
+                that does not resolve, an audit record missing a line, the levels file, and the audit due when
+                `dmc:audit-trigger` presents or rides it (#691). No finding carries a count
                 that grows, so one told is not new again until what it names changes.
 The automaton sweep's part `sweep_audit` runs them all after each landed merge (`dyadlib.CHECK_INPUTS`: the code tree).
 Read-only: it writes nothing. The two run-book entries:
@@ -57,6 +58,9 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("watermark-reads-the-index-line", lambda: WATERMARK.search("**covered through:** 252 rows, latest 2026-11-03") is not None),
     ("registry-reads-the-fences-line", lambda: REGISTRY.search("registry 24 lines, sha256 7a01f16b0d0692ae") is not None),
     ("outcomes-distinct", lambda: len(set(OUTCOMES)) == 3),
+    ("due-outcomes-are-the-records", lambda: [due_outcome(c, m) for c, m in (({"A3"}, 0), ({"A1"}, 20), ({"A2"}, 0),
+                                                 ({"A1"}, 19), (set(), 99))] == ["present-now", "present-now", "ride",
+                                                                                  "count", "not-due"]),
     ("failing-test-reads-the-report", lambda: FAILING_TEST.match("finding: FAIL: test_a (dyad.tests.test_x.C.test_a) — e") is not None),
 ]
 
@@ -361,6 +365,53 @@ def branches(root: Path) -> list[str]:
     return [f"reading: branches: {len(names)} not merged into main{': ' + shown if names else ''}"]
 
 
+# ---- the audit trigger (dyad/dmc/audit-trigger.jsonld, d-work #691): read from the lines the checks above printed, so
+# the sweep computes nothing twice; A4, a release published, is the home's read at the release (plan #691 revision 2)
+DUE_INCIDENTS, DUE_MERGES = 10, 20                                  # the record's fixed counts, never preferences
+DUE_WEIGHTS = {"A1": "low", "A2": "medium", "A3": "high"}
+DUE_NAMES = {"A1": "code moved", "A2": "incidents unhardened", "A3": "rules unswept"}
+DUE_OUTCOMES = ("present-now", "ride", "count", "not-due")          # the record's outcome names
+
+
+def due_outcome(conds: set[str], merges: int) -> str:
+    """dmc:audit-trigger's outcome for the conditions that hold and the merges since the newest audit record."""
+    if "A3" in conds or ("A1" in conds and merges >= DUE_MERGES):
+        return "present-now"
+    if "A2" in conds or "A4" in conds:
+        return "ride"
+    return "count" if "A1" in conds else "not-due"
+
+
+def audit_due(lines: list[str], root: Path) -> list[str]:
+    """One `finding: audit due: <cond> (<weight>), …; <outcome>` line when the due state is presented or ridden — a line
+    with no count in it, so the sweep's fold tells the home once per state — and the readings: the merges since the
+    newest audit record and, for a state only counted, the conditions. `reading: audit due: none` when none holds."""
+    conds = set()
+    if any(l.startswith("reading: audit watermark: ") and (l.endswith(": changed") or l.endswith("first exercise"))
+           for l in lines):
+        conds.add("A1")
+    if any(l.startswith("finding: audit drift: ") for l in lines):
+        conds.add("A3")
+    rec = newest(root, AUDIT_RECORD)
+    since = rec.name[:10] if rec else ""
+    inc = dyadlib.load_module(HERE / "incidents.py", "incidents")
+    rows = inc.parse(inc.log_path(root))
+    after = sum(1 for r in rows if r["date"][:2] == "20" and r["date"][:10] > since)
+    if after >= DUE_INCIDENTS:
+        conds.add("A2")
+    added = _git(root, "log", "--diff-filter=A", "-1", "--format=%H", "--", str(rec.relative_to(root))) if rec else None
+    count = _git(root, "rev-list", "--count", "--first-parent", "--merges", f"{added}..HEAD" if added else "HEAD")
+    merges = int(count) if count and count.isdigit() else 0
+    outcome = due_outcome(conds, merges)
+    out = [f"reading: audit due: {merges} merges and {after} incident rows since {rec.name if rec else 'no audit record'}"]
+    if outcome == "not-due":
+        return out + ["reading: audit due: none"]
+    named = ", ".join(f"{c} {DUE_NAMES[c]} ({DUE_WEIGHTS[c]})" for c in sorted(conds))
+    if outcome == "count":
+        return out + [f"reading: audit due: {named}; count"]
+    return out + [f"finding: audit due: {named}; {outcome}"]
+
+
 def audit(root: Path) -> list[str]:
     """Every check above on the tree at `root`, readings and findings in a fixed order; a check that raises is one
     finding naming it, never a crash of the sweep."""
@@ -373,6 +424,10 @@ def audit(root: Path) -> list[str]:
             out += f(root)
         except Exception as e:                           # one check's failure is told, the others still run
             out.append(f"finding: audit: {name} not read ({type(e).__name__})")
+    try:                                                 # last: it reads the lines above (#691)
+        out += audit_due(list(out), root)
+    except Exception as e:
+        out.append(f"finding: audit: audit_due not read ({type(e).__name__})")
     return out
 
 
