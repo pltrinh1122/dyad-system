@@ -45,6 +45,14 @@ Three things open a row: an operator prompt, an operator disposition, and a plan
   takes no disposition of its own and opens no d-work in the first bullet's sense, so nothing is suspended and nothing
   stacks. Under `accretion: explicit` it is asked for like any other row.
 
+A `backlog` row is reopened by an operator prompt, as above, or by one standing mandate: under the preference
+`hardening-mandate: on` (`preferences-corpus/PREFERENCES.md`; the template ships `off`) a `backlog` row that is
+hardening work (`dyad/dmc/hardening-work.jsonld`: its source a hardening or audit run, its fix a restore of what is
+already stated, no public surface and no act Rule-2 never lets a `Y` carry) is opened when it is due
+(`dyad/dmc/hardening-due.jsonld`), by `dyad dwork state <id> open --mandate-preference hardening-mandate`, at most
+`hardening-ceiling` such rows in flight. The operator's grant of the preference stands for the row's intent and plan
+questions, so neither is asked; its Done is always asked, and every merge it names stays the operator's (#692).
+
 A **read-only answer** — a reply that only reads the corpus, writes nothing and asks no question — opens no row and
 records nothing: it decides nothing (#492). A finding of the agent's reaches a row through one of the three above: the
 agent reports it (Incidents, below) or proposes it, or a plan-`Y` names its class.
@@ -141,7 +149,8 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   line — each a warning for the plan's reader, never a refusal (#592).
 - The plan-`Y` authorizes the mutation and binds every PR of the d-work to the plan. Work that departs from it is a
   **new plan** needing a new `Y`; until a `Y` the d-work stays open with nothing authorized. Every plan is asked, a
-  one-line plan included; a row the plan-`Y` carries was named in that question and is asked no second time.
+  one-line plan included; a row the plan-`Y` carries was named in that question and is asked no second time, and a row
+  the mandate preference `hardening-mandate` opens (Scope) is asked none, the preference's grant standing for its plan.
 - An **execution detail** is a change of step order, of how PRs are split or stacked, of which unit executes a step
   within its charter, or of tooling route, where the mutation's content and end state are unchanged, the plan stated
   none of these as a requirement (Rule-15 phase 1), and no intermediate state is irreversible or reaches the world (a
@@ -288,7 +297,8 @@ slug is presentation: a question binds the rows it names by their numbers, and e
     any session (Rule-15). `blocked` — deferred by the operator naming another d-work in `refs`; `open` again when that
     one is terminal (`done` or `archived`).
   - `backlog` — opened by an operator disposition, or carried under the plan-`Y` whose play-book prescribes it; not
-    started; `open` when the operator prompts for it, `archived` when retired.
+    started; `open` when the operator prompts for it or, for a row of hardening work that is due, under the mandate
+    preference `hardening-mandate` (Scope), `archived` when retired.
   - `done` — the operator answered `Y` to the Done question *and* every merge it named has landed; between the two the
     row keeps its state, `disposed` carries the `Y`, and the state guard warns once per row (Mechanisms).
   - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`, or reached from `open` by the
@@ -469,6 +479,8 @@ asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, am
 (d-work #676): a downstream system's hand-up had been admitted with nothing to decide which part upstream builds and
 which stays down; see `../falsification/rules/rule-3-d-work.md`, amendment #676. Incidents gains the judgement trace 2026-11-12 (d-work #690): an
 act the operator questioned had been examined three times by hand in plan #689, its cause found only on the third, with
-nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #690.
+nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #690. Scope, Plan and Ledger name the mandate preference `hardening-mandate` 2026-11-12 (d-work #692): the operator
+asked for a standing disposition over hardening work, and a `backlog` row opened only on a prompt; see
+`../falsification/rules/rule-3-d-work.md`, amendment #692.
 
 Set: System Requirements.
