@@ -1,0 +1,89 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/judgement-cause",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "judgement-cause",
+  "name": "Judgement cause",
+  "description": "What caused one act of the agent's that the operator questioned, once it is traced to the texts that decided it, and what follows from that cause: the judgement trace's classing step. The class is the agent's reading, presented to the operator and never declared final (Rule-2).",
+  "dyad:decides": "For one act the operator questioned, traced to the texts that decided it, what caused it, and what follows?",
+  "dyad:inputs": [
+    "the act, quoted from the reply or the record where it happened, with its row and commit",
+    "the cited texts that decided it: each Rule sentence, decision record outcome or preference, by path and line, as it reads on main",
+    "the conflicts found: pairs of cited texts that decide the same case differently",
+    "the stale texts found: cited texts that no longer match the code or the store on main",
+    "whether each cited text, read on main, decides the act's case, and whether the act matches what it decides"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "misapplied",
+      "name": "misapplied",
+      "dyad:when": "a cited text on main decides the case, and the act differs from what it decides (#687: the intent reading's duplicate outcome decided that nothing be done, and the agent recommended Y)",
+      "dyad:then": "an incident (Rule-3 Incidents), recorded in the row where the act happened while it is not done, else in a row of its own; the act corrected where it still can be; the text unchanged unless another class also holds",
+      "dyad:effect": "acts"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "conflict",
+      "name": "conflict",
+      "dyad:when": "two cited texts decide the case differently, so any act breaks one (#689 T4: the Operating Guide's registration row for every unit against Rule-3's monitoring that opens no row)",
+      "dyad:then": "a proposed change to the text that yields, by the precedence Rule-5 and Rule-6 give (a Rule over a record over a play-book over a guide), asked as a row's intent question; Rule-5's gap noted",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "stale",
+      "name": "stale",
+      "dyad:when": "a cited text no longer matches the code or the store on main (#689 T4: a bare session touch claiming every open row, untrue since #567)",
+      "dyad:then": "a restore homed by dmc:blocker-home: a restore rides a carried row or an open row's PR, and a change is a row of its own",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "gap",
+      "name": "gap",
+      "dyad:when": "no cited text decides the case, so the agent's act was its own inference (#689 T3: the duplicate outcome said nothing of a row already open)",
+      "dyad:then": "a proposed addition to the record or Rule nearest the case, asked as a row's intent question",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "intended",
+      "name": "intended",
+      "dyad:when": "every cited text decides the case and the act matches them all",
+      "dyad:then": "the explanation alone: no row and no change; the operator's model is what moves, unless the operator prompts a change, which opens a row as any prompt does",
+      "dyad:effect": "settles"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "undetermined",
+      "name": "undetermined",
+      "dyad:when": "a step cannot be cited or read: the record is gone, the transcript is not on this machine, or the act was another unit's",
+      "dyad:then": "the missing input named and the operator asked for it; no class is guessed",
+      "dyad:effect": "asks"
+    }
+  ],
+  "dyad:precedence": "a class is given to each line of the trace and to each finding of its third step; the trace's cause is the highest present: misapplied, then conflict, then stale, then gap, then undetermined, then intended. Several may hold at once, and every one present gets its outcome.",
+  "dyad:default": "undetermined, since a class guessed is the error this record exists to catch.",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/judgement-trace.md",
+  "dyad:alsoIn": [
+    "rules/RULE-3-d-work.md",
+    "playbooks/d-work.md",
+    "dmc/blocker-home.jsonld",
+    "dmc/precedent-scope.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

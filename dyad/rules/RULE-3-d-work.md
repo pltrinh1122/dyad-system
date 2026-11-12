@@ -402,6 +402,12 @@ and sent only on the operator's `Y`; every build it names is a row of its own (#
   fix that adds what the system did not have, or that no open row can carry or revise (#623).
 - Under `concise-mode: on` the reply where it occurred is the completion reply, and the record is written during the
   turn, before that reply, so an interrupted turn loses narration, never the record.
+- An incident the operator raises is examined by a judgement trace (`dyad/playbooks/judgement-trace.md`): when the
+  operator questions an act of the agent's, or writes `judgement trace: <the behavior>`, the act is traced back to the
+  texts on `main` that decided it and its cause classed by `dmc:judgement-cause`, the class presented to the operator
+  and never final (Rule-2). A trace that finds the act intended, or cannot decide, is a read-only answer and records
+  nothing; a cause that is an incident is recorded as this section says, and one that asks a change opens or revises a
+  row (#690).
 - Periodically the log is worked whole by the incident-hardening play-book (`dyad/playbooks/incident-hardening.md`),
   parameterized by the ledger it hardens: it groups incidents into failure modes and closes each by a fence at a named
   moment, by a `backlog` row naming the fence still to build — carried under the plan-`Y` that runs the exercise and
@@ -461,6 +467,8 @@ queue be a setting of its own, on by default, while `awaiting-you: off` hid the 
 whose chat holds a question 2026-11-11 (d-work #670): the operator looked for a counter-prompt in the home that had been
 asked in a paired unit's chat; see `../falsification/rules/rule-3-d-work.md`, amendment #670. Intake gains the split of an admitted hand-up 2026-11-11
 (d-work #676): a downstream system's hand-up had been admitted with nothing to decide which part upstream builds and
-which stays down; see `../falsification/rules/rule-3-d-work.md`, amendment #676.
+which stays down; see `../falsification/rules/rule-3-d-work.md`, amendment #676. Incidents gains the judgement trace 2026-11-12 (d-work #690): an
+act the operator questioned had been examined three times by hand in plan #689, its cause found only on the third, with
+nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #690.
 
 Set: System Requirements.

@@ -1747,3 +1747,35 @@ records and every credential stay downstream data. The hand-down is shown to the
 The other pairs are as amendment #670 left them. Coherent, orthogonal.
 
 Disposition: see ledger #676.
+
+## Amendment — d-work #690 (2026-11-12: the judgement trace)
+
+**Claim (the operator, provenance #690; the intent-Y's words: "Y, call it judgement trace. now propose the playbook and
+corresponding `dmc` for the judgement portion of the playbook"):** an act of the agent's that the operator questions is
+examined by a play-book, the judgement trace. The act is traced back to the texts on `main` that decided it, and its
+cause is classed by a core record, `dmc:judgement-cause`: misapplied, conflict, stale, gap, intended or undetermined.
+Incidents gains the one sentence that reads the play-book.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| J1 | The agent cannot class its own act honestly: it is judge of its own conduct. | **Survives, scoped** | Every class rests on cited text the operator can read; the class is presented, never final (Rule-2: an agent-authored verdict is the operator's to finalise); the play-book's two fences, anti-cave and two-models, bar a class chosen to please or to defend. |
+| J2 | An `intended` trace that records nothing loses the explanation when the chat ends. | **Survives, scoped** | The explanation is the product, and a read-only answer records nothing (Scope, #492); an operator who wants it kept prompts a change, which opens a row and stores it. |
+| J3 | The six classes are disjoint. | **Refuted as disjointness; kept as precedence** | #689 held four at once; classes are given per traced line and per finding, every class present gets its outcome, and the trace's cause is the highest by the record's precedence. |
+| J4 | The play-book needs no Rule sentence. | **Confirmed** | The vocabulary guard fails a term no Rule uses, and a play-book no Rule reads is never triggered by one (Boundaries: play-books are read by a Rule, never a Rule); hence the one Incidents sentence. |
+| J5 | The sentence overlaps Incidents' existing definition: a questioned act is already an incident. | **Refuted** | The definition says what an incident is and how it is recorded; the new sentence says how a questioned act is examined before anything is known to be an incident. Only `misapplied` makes one, recorded by the existing bullet, which is unchanged. |
+| J6 | It overlaps the blocker home (`dmc:blocker-home`). | **Refuted** | The blocker home places a fix for a fault that stops a row; the trace finds a cause. Its `stale` outcome hands the restore to the blocker home, which still decides where it rides. |
+
+**Verdict:** the claim survives.
+- **Rules:** Incidents gains one bullet naming the play-book and the record; Provenance gains its line.
+- **Vocabulary:** `judgement trace` (owner 3, used by 3).
+- **Play-book and record:** `dyad/playbooks/judgement-trace.md`, its run-book and `dmc:judgement-cause`, the master record homed in the play-book.
+
+**Pairwise (Rule-5).**
+- **3–2**: the class is an agent-authored verdict and so never final; its outcomes that change a text open or revise a row, asked as any row is. Binding is unchanged.
+- **3–7**: a trace writes nothing to a provenance record; the operator's prompt that starts it is entered as any prompt is.
+- **3–9**: the trace's attacks are its T3 conflicts; its record is the plan file of the row it opens or revises, as #689's was.
+- **3–16**: no store changes.
+
+The other pairs are as amendment #676 left them. Coherent, orthogonal.
+
+Disposition: see ledger #690.

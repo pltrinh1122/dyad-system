@@ -244,6 +244,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | intake-shape | frozen |
 | intake-split | frozen |
 | intent-reading | frozen |
+| judgement-cause | frozen |
 | judgement-complexity | frozen |
 | label-case | frozen |
 | mandate-accretable | frozen |
