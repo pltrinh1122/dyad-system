@@ -4,9 +4,11 @@ A form section of the chronicle core (`chronicle.md` §7). It narrows the core a
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
-`../dmc/collateral-segment-significance.jsonld`, `../dmc/collateral-why-tree.jsonld`; falsification:
+`../dmc/collateral-segment-significance.jsonld`, `../dmc/collateral-segment-rank.jsonld`,
+`../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
-d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684.
+d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684; source
+trees, their projection and the segment rank, d-work #685.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -105,6 +107,15 @@ recur within the segment's week; left off) · **significant** (all three hold: o
 hypothesis or evidence). The record decides who is on the map, never which segment to target: that is the
 go-to-market's decision.
 
+**The segment rank.** `collateral-segment-rank` orders the segments on the map, so the next one worked is chosen by a
+stated order rather than a reading. Its keys, in order: **harm per week** (the cost of an unchecked error, 3 a
+regulator, contract or safety · 2 an outage, a breach or money · 1 reputation or time; times its recurrence, 3 daily ·
+2 weekly · 1 rarely within the week) · **served** (2 served today, shown by evidence · 1 in part · 0 not yet, or only
+hypothesised) · **nodes added** (how many nodes the segment's source tree is expected to add to the projection, since
+the projection exists to screen). Every score is labelled hypothesis or evidence. Its outcomes: **unscored** (a score cannot be read, even as a
+hypothesis: put to the Operator) · **tied** (equal on all three keys: put to the Operator) · **ranked** (the order is
+recorded in the canvas set's index). It orders the map and targets nothing: the go-to-market picks.
+
 ## 6. Problem discovery: diverge by lens, decompose as a tree
 A problem entry names a **root cause**: what the segment would remove, not what it observes. It is found by a
 jobs-to-be-done statement (the anchor), a fishbone's categories (the divergence) and the five whys asked as a tree (the
@@ -127,49 +138,74 @@ deriving the whys again.
    reverse question, "why do I feel I must do this at all?", the **anchor branch**, which shows what the symptom
    protects. A branch stops at a root cause, at the anchor, at a join, or at five whys: five is a ceiling, never a
    quota.
-4. **Test.** Each node by `collateral-problem-depth`, per tag — **known** (the claim maps to a node already in the
-   tree: take that node's outcome) · **symptom** · **cause** · **root-cause** (removing it removes
-   most of the symptoms whose branches reach it, the next why reaches the anchor, and it does not reword an ancestor in
-   its branch) · **anchor** (the answer is the root anchor itself) · **solution-shaped** (it names a missing feature).
-   Then the whole tree by `collateral-why-tree`, in order — **open-branch** (a leaf that is neither a root cause, the
-   anchor nor a join) · **circular** (a root cause rewords an ancestor in its branch) · **too-deep** (a branch passes
-   five whys) · **no-anchor-branch** (no branch reaches the anchor) · **untested** (a root cause has not passed the
-   removal test) · **untagged** (a node carries no tag) · **untested-tag** (a tag's outcome is root-cause and that tag has no removal-test
-   line) · **stale** (the lines no longer match the digest the lookup depends on, or evidence arrived after the tree was
-   judged) · **ready**.
-5. **Select** one to three root causes from a ready tree, ranked first by whether the anchor branch exits through
-   them, then by how many branches join them. Each canvas problem entry and each symptom beneath it cites its node id.
+4. **Test.** Each node of the segment's source tree by `collateral-problem-depth` — **symptom** · **cause** ·
+   **root-cause** (removing it removes most of the symptoms whose branches reach it, the next why reaches the anchor,
+   and it does not reword an ancestor in its branch) · **anchor** (the answer is the root anchor itself) ·
+   **solution-shaped** (it names a missing feature). **known** (the claim maps to a node already in the projection)
+   is a screening outcome, never tested while a source tree is derived. Then the tree by `collateral-why-tree`, in
+   order — **open-branch** (a leaf that is neither a root cause, the anchor nor a join) · **circular** (a root cause
+   rewords an ancestor in its branch) · **too-deep** (a branch passes five whys) · **no-anchor-branch** (no branch
+   reaches the anchor) · **untested** (a root cause has not passed the removal test) · **untagged** (a projected node
+   carries no tag) · **untested-tag** (a tag's outcome is root-cause and that tag has no removal-test line) ·
+   **unsourced** (a projected line names no source) · **unprojected** (a source line has no projected line) · **stale**
+   (the lines no longer match the digest the reader depends on, a source's digest differs from the one the projection
+   names, or evidence arrived after the tree was judged) · **ready**. A source tree skips the four projection tests
+   (untagged, untested-tag, unsourced, unprojected).
+5. **Select** one to three root causes from the segment's ready source tree, ranked first by whether its anchor branch
+   exits through them, then by how many of its branches join them. Each canvas problem entry and each symptom beneath
+   it cites its **source** id.
 
-**The record.** One tree per canvas set, `<canvas set>/why-tree.md`, holding every segment. Its purpose is
-screening: when a new problem comes up, it is traversed against the **whole** tree, so a problem the tree already
-explains is caught as a red herring instead of being decomposed again. **Segments are tags** on every node, not roots,
-and different segments share nodes: a shared node keeps neutral wording, while each segment's own words live in the
-symptom nodes that join to it.
-- **Header:** `judged: <collateral-why-tree outcome> (tree <sha256>; <tag> <sha256>, …)`. The tree digest is the
-  sha256 of every node line, every line after the header as committed (`tail -n +2 why-tree.md | sha256sum`). Each
-  tag's digest is the sha256 of the lines that carry that tag (`tail -n +2 why-tree.md | grep -F '<tag>' | sha256sum`):
-  its nodes, their joins and their removal tests, since each of those lines names its tag.
-  A file cannot name the commit that adds it, so the tree carries digests of itself instead.
-- **Nodes:** one per line, children indented beneath their parent:
-  `N<id> [<tag>: <outcome>, <tag>: <outcome>; <H|E>] <statement>`. Ids are global and never reused. A node carries
-  **an outcome per tag**, because the same statement can be a root cause for one segment and only a cause for another.
-  A join is written `→ N<id> [<tag>, …]`, naming the tags it holds for, and a node that replaces another adds
-  `supersedes N<id>`.
-- **Removal tests:** one line per tag beneath a root, `removal test [<tag>, <H|E>]: …`, counting only that segment's
-  symptoms. A tag's `root-cause` outcome needs its own line.
-- The tree is **append-only**: a node is never edited or deleted, only superseded, so a citation of a node stays true
-  of what it said. A tag is added to a node only when that tag's removal test holds; until then it is a **tag
-  candidate**, labelled H.
+**The records: source trees and their projection.** A canvas set keeps two kinds of why-tree.
+- **Source trees.** One per segment, `<canvas set>/<segment>/why-tree.md`: the segment's own decomposition, derived
+  independently (Adding a segment, below), and its provenance. Header `judged: <outcome> (source <sha256>)`, the
+  sha256 of every line after the header (`tail -n +2 why-tree.md | sha256sum`); a file cannot name the commit that
+  adds it, so a tree carries a digest of itself instead. Then one node per line, children indented two spaces beneath
+  their parent: `<id> [<outcome>; <H|E>] <statement>`, its ids local to the segment and never reused; a join
+  `→ <id>`; beneath a root cause `removal test [<H|E>]: …`, counting only the segment's symptoms. Several top-level
+  symptoms are allowed, the most prevalent first.
+- **The projection.** One per canvas set, `<canvas set>/why-tree.md`, rebuilt from the source trees and never edited
+  by hand. Its purpose is screening: when a new problem comes up, it is traversed against the **whole** projection, so
+  a problem a segment already explains is caught as a red herring instead of being decomposed again. **Segments are
+  tags** on every node, and different segments share nodes. Every line names its sources:
+  `N<id> [<tag>: <outcome>, <tag>: <outcome>; <H|E>] <statement> ⟵ <segment>:<id>, …`; a join
+  `→ N<id> [<tag>, …] ⟵ <segment>:<id>, …`, naming the source nodes whose join it carries; a removal test
+  `removal test [<tag>, <H|E>]: … ⟵ <segment>:<id>`. Its header
+  `judged: <outcome> (tree <sha256>; <tag> <sha256>, …; source <segment> <sha256>, …)` holds the projection's digest,
+  each tag's (`tail -n +2 why-tree.md | grep -F '<tag>' | sha256sum`) and each source tree's, as projected.
+- **Append-only.** In a source tree a node is never edited or deleted, only superseded (`supersedes <id>`), and an id
+  is never reused, so a citation stays true of what it said. In the projection a line is rebuilt, never edited by
+  hand; a projected id is never reused, and a source node that maps to an existing projected node adds its tag and its
+  source to that line — the node's tag list and source list grow, its statement never changes.
 
-**Lookup.** A new problem is matched by meaning against every node, whatever its tags, and the match states the node's
-id and its path. A match is **known**: the problem is not new, and if it was raised as new it is named a **red
-herring**. It takes the node's outcome for the claim's segment, with its label (an H node validates a claim as H, never
-as fact). A known symptom raised again with new information is placed as a new symptom node joined to its known parent,
-with its source, and is not decomposed again. A match from a segment the node is not tagged with is a tag candidate.
-A claim that matches no node is **new**: it is placed in the tree first, diverging from its nearest parent, and never
-judged off it. Only a tree judged `ready`, whose lines still match the digest the lookup depends on (the tree digest
-for screening, the tag's digest for a segment's selection), answers; otherwise the lookup says so and returns no
-outcome. **Selection** for a segment counts only the nodes tagged with it and their joins.
+**Adding or refreshing a segment.** The projection is updated only through a source tree, in four steps.
+1. **Derive** the segment's source tree independently: from its own anchor, through the lenses, by Steps 1–5 above,
+   **without reading the projection or another segment's source tree**. The deriving party is briefed with the
+   segment, its anchor, this section's Steps and the gate, and the brief is kept with the change, so what it was not
+   given can be checked. Reading the projection first fits a new segment onto the segments already there.
+2. **Project.** Each source node, in source order, is looked up in the projection (Lookup, below):
+   - **known:** it maps to that projected node, which gains the segment's tag, its outcome for the segment, and the
+     source; a source edge to a parent the projection places elsewhere becomes a projected join;
+   - **new:** it is placed under the projected node its source parent maps to, with the next free `N` id.
 
-**Refresh.** The tree is re-derived, not merely looked up, at two moments: when evidence from a real reader of the
-segment arrives, and before a pitch grounded in it goes to publication. Between those moments a lookup answers.
+   A projected node keeps neutral wording: the first source's words, or, when sources differ, a wording true of each,
+   while each segment's own words stay in its source tree. The mapping is the `⟵` list on every line, so the
+   projection is a function of the source trees and their mappings, and each pair can be disputed.
+3. **Judge** the source tree, then the projection, by `collateral-why-tree`. A changed source makes the projection
+   `stale` until it is projected again.
+4. **Use.** The segment's canvas cites its source ids. Screening reads the projection, and a red herring is named by
+   the projected node and its sources.
+
+**Lookup.** A new problem is matched by meaning against every projected node, whatever its tags, and the match states
+the node's id, its path and its sources. A match is **known**: the problem is not new, and if it was raised as new it is
+named a **red herring**. It takes the node's outcome for the claim's segment, with its label (an H node validates a claim
+as H, never as fact). A known symptom raised again with new information goes into the segment's source tree as a new
+symptom node joined to its known parent, with its source, and is projected; it is not decomposed again. A match from a
+segment the node is not tagged with is a **tag candidate**, labelled H, until that segment's source tree holds the node
+and its removal test. A claim that matches no node is **new**: it is placed in a source tree first and projected, never
+judged off the tree. Only a tree judged `ready`, whose lines still match the digest the lookup depends on (the
+projection's for screening, the source tree's for a segment's selection), answers; otherwise the lookup says so and
+returns no outcome.
+
+**Refresh.** A source tree is re-derived, not merely looked up, at two moments: when evidence from a real reader of the
+segment arrives, and before a pitch grounded in it goes to publication. Between those moments a lookup answers. The
+projection is rebuilt after every change to a source tree.

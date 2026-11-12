@@ -63,8 +63,19 @@ The rule as written is plan #668 revision 2's survivor.
 | 54 | **Segments can share nodes** (#684, the Operator's claim). | **Survives, scoped** | A shared node keeps neutral wording (S2) and an outcome per tag (S1, which replaced splitting); each tag needs its own removal test (S3, `untested-tag`) and is added only when that test holds (S5); a shared edit re-judges every tagged segment (S4); selection counts a segment's own tags (S6). |
 **Verdict:** the claim **survives**, scoped: the records decide what a piece needs; whether a reader is moved stays
 inference, read by the Operator at publication.
+| 55 | **One authored tree anchors a new segment on the old ones** (#685; the Operator's catch: "is current N0-root also the most prevalent for regulated-engineering?"). | **Confirmed** | A regulated-engineering draft looked up the tree first and hung its most prevalent problem off platform-ops' N0 and anchor branch. Survivor: each segment derives its own **source tree** without reading the projection or another source (§6, Adding a segment, step 1). |
+| 56 | **Sources plus a projection keep provenance** (#685 P1): two copies of a node drift apart. | **Survives, scoped** | The projection is never edited by hand; its header names each source's digest, so a changed source makes it `stale` until projected again. |
+| 57 | **The second file is not worth it** (P2): every node is now written twice. | **Survives, scoped** | Sources are small and append-only; the projection is rebuilt from them and the mapping. Provenance was the Operator's ask. |
+| 58 | **The projection is not reproducible** (P3): "known" by meaning is inference. | **Survives, scoped** | The mapping is written on every line (`⟵`); given the mapping, the rebuild is mechanical and each pair can be disputed. The match stays inference, stated. |
+| 59 | **Screening reads a lagging projection** (P4). | **Survives** | A projection whose source digests differ is `stale` and answers no lookup until projected again. |
+| 60 | **#684's purpose is lost** (P5): one tree was built so screening is holistic. | **Refuted** | Screening still reads one tree, the projection; only authorship moved to the sources. |
+| 61 | **Independence cannot be shown** (I1): the deriving party may have seen the tree. | **Survives, scoped** | A fresh party briefed without the projection or another source, its brief kept with the change, so what it was not given can be checked. The anchor is shared by design; independence is of the decomposition. |
+| 62 | **"A node is never edited" contradicts "a tag is added to a node"** (#685, revision 1). | **Confirmed** | Adding a tag edited a line. Survivor: in a source tree a node is never edited; in the projection a line is rebuilt, and a known source adds its tag and source to it, its statement never changing. |
+| 63 | **A ranking needs no record** (#685, the Operator's "re-run ranking per `dmc`"). | **Confirmed** | Three rows had ranked the segments three ways by unrecorded readings, and #672's own wording ranked platform-ops first or third depending on which key came first. Survivor: `collateral-segment-rank`, its keys in a stated order. |
+| 64 | **A rank becomes a target.** | **Refuted** | Its `ranked` consequence orders the work and says the go-to-market still picks; `collateral-segment-significance` keeps its own sentence. |
+| 65 | **Nodes added cannot be known before the tree is derived.** | **Survives, scoped** | It is labelled hypothesis until the source tree is projected, and only breaks a tie left by the first two keys. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685.

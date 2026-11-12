@@ -1,0 +1,58 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-segment-rank",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-segment-rank",
+  "name": "Segment rank",
+  "description": "The order in which the significant segments of a canvas set are worked, by stated keys, so that the next segment is chosen by a record rather than a reading; it never targets a segment.",
+  "dyad:decides": "In what order are the segments on the map worked?",
+  "dyad:inputs": [
+    "the segments collateral-segment-significance put on the map, each with its readings",
+    "harm per week: the cost of an unchecked error (3 a regulator, contract or safety; 2 an outage, a breach or money; 1 reputation or time) times its recurrence (3 daily; 2 weekly; 1 rarely within the week), each labelled hypothesis or evidence",
+    "served: 2 served today, shown by evidence; 1 in part; 0 not yet, or only hypothesised",
+    "nodes added: how many nodes the segment's source tree is expected to add to the projection, labelled hypothesis until the tree is projected"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unscored",
+      "name": "unscored",
+      "dyad:when": "a segment's score on a key cannot be read from the record, even as a hypothesis",
+      "dyad:then": "put the score to the Operator; the segment is not ranked until it has one"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tied",
+      "name": "tied",
+      "dyad:when": "two or more segments are equal on all three keys",
+      "dyad:then": "put the tie to the Operator, listing the tied segments and their scores"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ranked",
+      "name": "ranked",
+      "dyad:when": "every segment is scored and the keys, in order, separate them",
+      "dyad:then": "record the order and every score with its label in the canvas set's index; the next segment worked is the first not yet worked; the go-to-market still picks which to target"
+    }
+  ],
+  "dyad:precedence": "in the order listed; keys compared in order: harm per week, then served, then nodes added",
+  "dyad:default": "a score that cannot be decided is labelled hypothesis and put to the Operator, never assumed",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
