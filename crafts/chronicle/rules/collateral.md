@@ -117,8 +117,9 @@ map) · **unspanned** (judged over the map: a problem class's sufferers include 
 source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is an
 **observable failure mode** — what the user sees, and when (the session moment: new, during or resumed; after one prompt
 or a series) — over the root causes beneath it, by id, one root serving several classes; each class lists the segments
-that suffer it. Its plain statement, what the surfaces and pitches show, is judged by `collateral-problem-plainness`
-for a cursory user of an out-of-the-box AI agent, its outcomes in order: **jargon** · **tool-bound** ·
+that suffer it. Each class carries the **proficiency with agents** at which it shows — cursory (out of the box), intermediate (one
+session shaped by technique) or advanced (standing rules, agents that act, several sessions). Its plain statement, what
+the surfaces and pitches show, is judged by `collateral-problem-plainness` against the reader at that proficiency, its outcomes in order: **jargon** · **tool-bound** ·
 **mechanism-framed** · **unobservable** (a cause the user cannot see: restate it as what they see) · **no-moment** ·
 **unrooted** (a class over no root) · **plain**. A canvas set may keep a **reference tree**, a symptom every reader
 knows decomposed by §6's Steps (this instance: AI hallucination), whose roots are mapped to classes and which the

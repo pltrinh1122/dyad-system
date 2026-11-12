@@ -102,8 +102,16 @@ inference, read by the Operator at publication.
 | 91 | **Doing less is a different failure from doing more** (M1–M5). | **Survives, scoped** | One root holds both: nothing compares what was done with what was agreed. "Less" also happens to an agent that only answers. The class splits only where a target meets one side alone. |
 | 92 | **The when axes are distinct** (W1–W3): a long session and a resumed one blur. | **Survives, scoped** | Resumed means the user's own context was interrupted, whatever the tool keeps. The marks say where a class typically shows. |
 | 93 | **Context lost at session boundaries is the approval-trail root** (W4). | **Survives, scoped** | It also covers what was *given*, so it is held as a candidate widening and judged when a target's tree is reviewed. |
+| 94 | **"Did what I said, not what I meant" is "something other than asked"** (#696 P5). | **Survives, scoped** | They are two observations: "that's not what I said" against "that's what I said, not what I meant". They merge only where every target meets both together. |
+| 95 | **Round after round of questions is no failure** (P6): asking is how an agent avoids the wrong target. | **Survives, scoped** | The failure is the round that never converges. Its root is the same as the wrong target's: nothing settles what you need before the work starts. |
+| 96 | **A class can stand before a tree holds its roots** (P7). | **Confirmed** | Losing track across sessions and rules followed only sometimes have no root in any tree. They are held as `unrooted` classes, shown but not accepted, until a target's tree holds their roots. |
+| 97 | **Proficiency is a segment** (P8). | **Refuted** | It is an attribute of a class: the way of use in which a failure shows. Segments may correlate with it, and segmentation may test it as an axis once two trees differ by it. |
+| 98 | **One plainness record serves readers of different proficiency** (P9). | **Survives, scoped** | It judges against the reader at the class's proficiency, so an advanced class is not failed for a word a cursory reader lacks. |
+| 99 | **The question rounds are cursory** (#696 L1). | **Refuted** | They run longest where the user asked for them: the intermediate modality. Cursory users meet them only when an assistant asks unprompted. |
+| 100 | **Proficiency levels are distinct** (L2): one user moves between them in a day. | **Survives** | A level is a modality of use, not a kind of person. A class is marked by the modality in which it shows. |
+| 101 | **The intermediate remedy for the wrong target trades it for the question rounds** (L3). | **Survives, scoped** | They share a root, so a remedy that settles the need once removes both. This is a hypothesis until an intermediate target's tree holds both. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–93, ledger #696.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–101, ledger #696.
