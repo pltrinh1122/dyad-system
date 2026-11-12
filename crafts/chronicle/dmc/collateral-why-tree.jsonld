@@ -12,13 +12,13 @@
   ],
   "identifier": "collateral-why-tree",
   "name": "Why-tree",
-  "description": "Whether a segment's why-tree is complete and current enough to select root causes from and to answer lookups.",
+  "description": "Whether a canvas set's single why-tree, its segments as tags on every node, is complete and current enough to screen new problems and to select a segment's root causes.",
   "dyad:decides": "Is this why-tree ready to select root causes from and to answer lookups?",
   "dyad:inputs": [
-    "the why-tree file: its header's digest of the node lines and every node",
-    "each node's collateral-problem-depth outcome",
-    "the sha256 of the node lines as committed",
-    "evidence about the segment that arrived after the tree was judged"
+    "the why-tree file: its header's tree digest and per-tag digests, and every node with its tags and per-tag outcomes",
+    "each node's collateral-problem-depth outcome per tag",
+    "the sha256 of the node lines, whole and per tag, as committed",
+    "evidence about a segment that arrived after the tree was judged"
   ],
   "hasDefinedTerm": [
     {
@@ -58,9 +58,23 @@
     },
     {
       "@type": "DefinedTerm",
+      "termCode": "untagged",
+      "name": "untagged",
+      "dyad:when": "a node carries no segment tag",
+      "dyad:then": "tag it with the segments it holds for, or supersede it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "untested-tag",
+      "name": "untested-tag",
+      "dyad:when": "a tag's outcome on a node is root-cause and that tag has no removal-test line of its own",
+      "dyad:then": "write the tag's removal test, counting only that segment's symptoms"
+    },
+    {
+      "@type": "DefinedTerm",
       "termCode": "stale",
       "name": "stale",
-      "dyad:when": "the node lines no longer match the header's digest, or evidence about the segment arrived after the tree was judged",
+      "dyad:when": "the lines no longer match the digest a lookup depends on (the tree digest for screening, the tag's digest for a segment's selection), or evidence about a segment arrived after the tree was judged",
       "dyad:then": "place the new evidence, re-derive where it bears, and judge the tree again"
     },
     {
@@ -68,7 +82,7 @@
       "termCode": "ready",
       "name": "ready",
       "dyad:when": "every test above holds",
-      "dyad:then": "record the outcome and the node lines' sha256 in the header; select root causes, ranked first by whether the anchor branch exits through them, then by how many branches join them; the tree answers lookups until it changes"
+      "dyad:then": "record the outcome, the tree digest and each tag's digest in the header; select a segment's root causes from the nodes tagged with it, ranked first by whether its anchor branch exits through them, then by how many of its branches join them; the tree screens new problems until it changes"
     }
   ],
   "dyad:precedence": "in the order listed; the first test that fails gives the outcome",
