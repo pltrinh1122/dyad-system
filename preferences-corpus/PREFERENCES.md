@@ -30,6 +30,8 @@ defines what each value means.
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
 | coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
+| hardening-mandate | on | `off` \| `on` | Rule-3 (Scope and Ledger: a standing mandate that opens a backlog row of hardening work with no intent or plan question; `dyad/dmc/hardening-work.jsonld`, `dyad/dmc/hardening-due.jsonld`), Rule-2 (Binding: a mandate preference) |
+| hardening-ceiling | 1 | a positive integer (hardening rows in flight under the mandate at once) | Rule-3 (the mandate's capacity: `dyad dwork state --mandate-preference`; default `dyad/dmc/hardening-due.jsonld`) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -224,6 +226,15 @@ defines what each value means.
 - `coming` — whether the closing line ends with its `Coming:` part, read only under `awaiting-you: on` (Rule-3 Batch
   disposition; d-work #665; the template's description). dyad-system: `on`, the Operator's prompt of 2026-11-10:
   "making "Coming:" a preferences setting with default of "on"". Seeded here with it, the value an absent key reads.
+- `hardening-mandate` — the standing disposition over hardening work (Rule-3 Scope; Rule-2 Binding; d-work #692; the
+  template's description): `on` opens a due `backlog` row of hardening work with no intent or plan question, its Done
+  always asked. dyad-system: `on`.
+  granted: d-work #692 entry 1
+  The grant is the Operator's prompt of 2026-11-12 recorded there: "i prefer (preference) to provide a standing
+  disposition to work on hardening work once it meets aligned conditions established by an aligned `dmc`" (d-work #695,
+  plan revision 2, which drafted this PR).
+- `hardening-ceiling` — how many rows may be in flight under `hardening-mandate` at once (a tunable; default
+  `dyad/dmc/hardening-due.jsonld`). dyad-system: `1`, the default, plan #692's proposal.
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
