@@ -818,7 +818,7 @@ CHECK_INPUTS: dict[str, tuple[str, ...]] = {
     "agent/sessions": (LEDGER,), "agent/traces": (LEDGER,), "agent/vocabulary": (CODE,), "craft/crafts": (CODE,),
     "infra/bundle": (CODE,), "infra/containment": (CODE,), "infra/manifest": (CODE,), "preferences/preferences": (CODE,),
     # craft guards (ignored while their craft is absent, Q3)
-    "cabinet/seats": (CODE, LEDGER), "chronicle/episodes": (CODE, LEDGER), "sysadmin/changelog": (CODE,),
+    "cabinet/seats": (CODE, LEDGER), "channels/posts": (WORLD,), "chronicle/episodes": (CODE, LEDGER), "sysadmin/changelog": (CODE,),
     "sysadmin/events": (EVENTS,), "sysadmin/ops_scripts": (CODE,), "sysadmin/runbooks": (CODE,), "sysarch/registry": (CODE,),
     "syseng/invariants": (CODE,), "syseng/naming": (CODE,), "syseng/tests": (CODE,),
     # the sweep's parts (scripts/automaton.py, scripts/hygiene.py)
