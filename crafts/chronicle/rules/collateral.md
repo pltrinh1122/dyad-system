@@ -4,11 +4,12 @@ A form section of the chronicle core (`chronicle.md` §7). It narrows the core a
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
-`../dmc/collateral-segment-significance.jsonld`, `../dmc/collateral-segment-rank.jsonld`,
+`../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-segment-significance.jsonld`,
+`../dmc/collateral-segment-rank.jsonld`,
 `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
 d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684; source
-trees, their projection and the segment rank, d-work #685.
+trees, their projection and the segment rank, d-work #685; segmentation and the two perspectives, d-work #693.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -98,6 +99,27 @@ alternatives; `uncountered` ← existing alternatives and unfair advantage.
 1. **the reader's moment** — no section holds a concrete scene from the reader's day, which `abstract` asks for;
 2. **objections** — the canvas lists alternatives, not the objections a skeptical reader raises;
 3. **the stakes** — the problem section states the problem, not what leaving it unsolved costs the reader.
+
+**Segmentation.** A segment is a **cell**, or a named group of cells, on stated axes, never a job title alone. The axes
+are an input to the record, never fixed by it; for this instance they are **who holds me to it** (myself · team or
+employer · client · regulator or auditor · customers and users), **whose agent** (mine · people I answer for) and **what
+it acts on** (code · hosts · content · data). A cell holds segments, never people, and one person may sit in several.
+`collateral-segmentation` decides whether a candidate is a segment of the map, and which, before significance and rank,
+its outcomes in order: **off-axis** (defined by something other than the axes: restate it as cells) · **idle-axis** (an
+axis value that changes no anchor branch: merge across it) · **overlapping** (it shares a cell, or the same problem
+classes and anchor branch, with a segment on the map: merge, or name what separates them) · **too-broad** (its readers'
+anchor branches differ: split) · **off-class** (it suffers no problem class: its source tree is owed, or it leaves the
+map) · **unspanned** (judged over the map: a problem class's sufferers include a cell no segment holds: add one) ·
+**cut** (distinct: judge its significance).
+
+**Two perspectives, for corroboration.** The map is read from both ends. **(a) Segment → problem classes**: a segment's
+source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is a root
+cause of the projection, or a named group of roots, the grouping written down; each class lists the segments that suffer
+it. Both are projections of one **segment × class table** in the canvas set's index, each cell labelled from a source
+tree or as a hypothesis, rendered as two surfaces, `<canvas set>/by-segment.md` (a) and `<canvas set>/by-problem.md`
+(b), never edited by hand. Where they disagree the record acts (`off-class`, `overlapping`, `unspanned`); where they
+agree for every segment and class the map is **corroborated**, which is internal consistency, labelled hypothesis until
+a reader's evidence refreshes the trees. The order is segmentation → significance → rank.
 
 **The segment map.** A canvas set may map many segments, one folder each, and lists only those whose problem is
 significant. `collateral-segment-significance` decides it, its conditions in order: **not-accountable** (the segment

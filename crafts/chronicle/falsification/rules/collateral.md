@@ -74,8 +74,21 @@ inference, read by the Operator at publication.
 | 63 | **A ranking needs no record** (#685, the Operator's "re-run ranking per `dmc`"). | **Confirmed** | Three rows had ranked the segments three ways by unrecorded readings, and #672's own wording ranked platform-ops first or third depending on which key came first. Survivor: `collateral-segment-rank`, its keys in a stated order. |
 | 64 | **A rank becomes a target.** | **Refuted** | Its `ranked` consequence orders the work and says the go-to-market still picks; `collateral-segment-significance` keeps its own sentence. |
 | 65 | **Nodes added cannot be known before the tree is derived.** | **Survives, scoped** | It is labelled hypothesis until the source tree is projected, and only breaks a tie left by the first two keys. |
+| 66 | **Two axes suffice to cut the map** (#693 S1): who holds me to it × what the agent acts on. | **Confirmed** | Leads, maintainers and auditors answer for agents others ran and shared cells with those who run their own. Survivor: a third axis, **whose agent**. |
+| 67 | **Acts-on is code, hosts or content** (S2). | **Confirmed** | Researchers act on data and analyses. Survivor: four values, data added. |
+| 68 | **Cells make the population orthogonal** (S4). | **Survives, scoped** | One person sits in several cells; the segments are orthogonal, not the people, and a pitch names one cell. |
+| 69 | **Forty cells cannot be judged** (S5). | **Survives, scoped** | `unspanned` is judged by groups and split to cells only where a test needs it; significance prunes the rest. |
+| 70 | **`too-broad` needs trees that do not exist** (S6). | **Survives, scoped** | Where trees exist the anchor branch decides; elsewhere it is inference, labelled hypothesis, re-judged when the tree is derived. |
+| 71 | **A wrong axis is invisible to the record** (S7). | **Survives, scoped** | `idle-axis`: a value that changes no anchor branch is merged across; an axis no tree tests stays a hypothesis. |
+| 72 | **Re-cutting breaks cited segments** (S8). | **Refuted** | Segment ids and folders stay; each is mapped to its cells. |
+| 73 | **Consultants are agencies** (S10). | **Confirmed** | A solo consultant runs their own agent; an agency's partner answers for staff's. Survivor: two cells on the whose-agent axis. |
+| 74 | **The problem-first perspective finds what the segment-first one missed** (C1). | **Survives, scoped** | It finds missed sufferers of known classes, never missed classes, which only a source tree derives; segment-first stays first. |
+| 75 | **Agreement of the two perspectives is fit** (C2). | **Survives, scoped** | Both are this agent's readings: agreement is internal consistency, labelled hypothesis, until a reader's evidence refreshes the trees. |
+| 76 | **A problem class is one root** (C3). | **Survives, scoped** | Two roots can be one class worded twice; a class is a root or a named group of roots, the grouping written and disputable. |
+| 77 | **Two surfaces hold the same facts twice** (R1). | **Survives** | Each answers a different question, and gaps show differently: thin segment cards, empty class rows. |
+| 78 | **Generated surfaces need a generator** (R2). | **Survives, scoped** | Both are projections of one table, diffed against it in the evidence; a generator is recurrence's to propose. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693.
