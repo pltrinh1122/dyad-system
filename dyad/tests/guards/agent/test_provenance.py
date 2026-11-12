@@ -257,6 +257,19 @@ class TransactionTests(unittest.TestCase):
         self.git("commit", "--amend", "-qam", "with the prompt")
         self.assertEqual(self.tx(self.git("rev-parse", "HEAD").strip(), base=base), [])
 
+    def test_backlog_opened_under_a_mandate_preference_needs_no_prompt(self):
+        """#692: the grant's words, noted `mandate preference <key>, <date>`, stand in for the prompt; a disposition
+        under any other note, or a row whose entry names no mandate preference, still needs one."""
+        self.write(f"{self.ROWS}/8.md", self.row(8, "backlog", "2026-09-14 Y backlog")); self.write(f"{self.REC}/8.md", self.rec(8, ("disposition", "Y")))
+        base = self.commit()
+        grant = "\n## 2 disposition 2026-09-15 mandate preference hardening-mandate, 2026-09-12\n```\nstanding words\n```\n"
+        self.write(f"{self.ROWS}/8.md", self.row(8, "open", "2026-09-14 Y backlog; 2026-09-15 Y plan (mandate preference hardening-mandate)"))
+        self.write(f"{self.REC}/8.md", self.rec(8, ("disposition", "Y")) + grant)
+        self.assertEqual(self.tx(self.commit(), base=base), [])
+        self.write(f"{self.REC}/8.md", self.rec(8, ("disposition", "Y")) + grant.replace("mandate preference hardening-mandate", "mandate #3"))
+        self.git("commit", "--amend", "-qam", "another note")
+        self.one(self.tx(self.git("rev-parse", "HEAD").strip(), base=base), "opens backlog row #8")
+
     def test_disposition_without_its_words_fails(self):
         self.write(f"{self.ROWS}/7.md", ROW.replace("Y plan", "Y plan; 2026-09-14 Y done").replace("planned", "done"))
         self.one(self.tx(self.commit()), "gains 1 disposed entry and its record gains 0")

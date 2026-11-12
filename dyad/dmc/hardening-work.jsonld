@@ -1,0 +1,73 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/hardening-work",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "hardening-work",
+  "name": "Hardening work",
+  "description": "Whether a backlog row is hardening work, the class the preference hardening-mandate lets open with no intent or plan question of its own. All three conditions must hold; a row failing any one is ordinary backlog, promoted and asked as any other.",
+  "dyad:decides": "Is this backlog row hardening work, which a standing hardening mandate may open?",
+  "dyad:inputs": [
+    "the row's disposed entries and refs",
+    "the plan files of the rows its first entry or its refs name, for the play-book they run (dyad/playbooks/incident-hardening.md or dyad/playbooks/audit.md)",
+    "the fix the row names, against the Rule, decision record, check or test that already states the behaviour (dmc/blocker-home.jsonld's restore test)",
+    "what the fix adds: a dyadlib.CLI row, a dyad/surface.md row, Rule or preference text, or an act Rule-2 never lets a Y carry"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W1",
+      "name": "source",
+      "dyad:when": "the row was carried by a hardening run (its first entry Y backlog (mandate #N), plan N running the incident-hardening play-book), or its refs name a row whose plan ran the incident-hardening or the audit play-book",
+      "dyad:then": "the row's source is hardening; read mechanically by dwork state --mandate-preference, which refuses a row that fails it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W2",
+      "name": "restore",
+      "dyad:when": "its fix restores what a Rule, record, check or test already states, and changes nothing one of them decides",
+      "dyad:then": "the row restores; a fix that changes what one decides is not hardening work under the mandate and is asked"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "W3",
+      "name": "inside the mandate",
+      "dyad:when": "the fix adds no public surface (a dyadlib.CLI row, a dyad/surface.md row, Rule or preference text) and holds no act Rule-2 never lets a Y carry (a destructive host action, a release, an intake, a preference value)",
+      "dyad:then": "the row is inside the mandate"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hardening",
+      "name": "hardening work",
+      "dyad:when": "W1, W2 and W3 all hold",
+      "dyad:then": "the row may be opened under the mandate when dmc/hardening-due.jsonld says it is due; its Done is always asked"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ordinary",
+      "name": "ordinary backlog",
+      "dyad:when": "any of W1, W2 or W3 fails",
+      "dyad:then": "ordinary backlog: promoted by dmc/promotion.jsonld and asked as any other row"
+    }
+  ],
+  "dyad:precedence": "W1 first, since only it is read mechanically and a row failing it is refused before anything else is judged; then W2 and W3; all three make the row hardening work, any one failing makes it ordinary.",
+  "dyad:default": "ordinary",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "scripts/package.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:alsoIn": [
+    "dmc/hardening-due.jsonld",
+    "dmc/promotion.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

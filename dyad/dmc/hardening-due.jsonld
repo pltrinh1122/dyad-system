@@ -1,0 +1,79 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/hardening-due",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "hardening-due",
+  "name": "Hardening due",
+  "description": "When a row of hardening work (dmc/hardening-work.jsonld) is opened under the preference hardening-mandate, with no intent or plan question of its own. It changes no outcome of dmc/promotion.jsonld; a row this record finds not due waits for ordinary promotion.",
+  "dyad:decides": "Is a hardening row due to be opened under the mandate now, and within what capacity?",
+  "dyad:inputs": [
+    "the incident log's rows and the refusals the automaton sweep reports, each with its failure mode, and the date the hardening row was filed",
+    "an audit's re-test of shipped fences (the incident-hardening play-book's verify phase), with the incidents of each mode in the window",
+    "the hardening rows of one run still backlog, and whether the audit is due (the audit trigger of d-work #691; until it lands, an operator prompt for an audit)",
+    "the rows already open or planned under the mandate (their entry Y plan (mandate preference hardening-mandate)), against the tunable hardening-ceiling",
+    "the files each in-flight row's plan touches, and whether the unit that owns the row's files by charter is idle"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "H1",
+      "name": "recurred",
+      "dyad:when": "a new incident row, or a refusal the sweep reports, shows the failure mode the row names, after the row was filed",
+      "dyad:then": "due now, within capacity; the home opens it under the mandate and tells the operator in one notice line naming the recurrence",
+      "dyad:effect": "skips"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "H2",
+      "name": "re-tested open",
+      "dyad:when": "an audit's re-test finds the fence the row names still unbuilt while its mode has incidents in the window",
+      "dyad:then": "due at that audit's Done, within capacity, named in the audit's report",
+      "dyad:effect": "skips"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "H3",
+      "name": "batch",
+      "dyad:when": "five or more hardening rows of one run are still backlog when the next audit is due",
+      "dyad:then": "due, oldest first, within capacity",
+      "dyad:effect": "skips"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-due",
+      "name": "not due",
+      "dyad:when": "none of H1, H2 or H3 holds, or capacity is full; a row whose mode has no incident in the window is never due by this record",
+      "dyad:then": "the row waits for ordinary promotion (dmc/promotion.jsonld)",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "Capacity bounds every due outcome: at most hardening-ceiling rows open or planned under the mandate at once, never two of them touching one file, and only while the unit that owns the row's files by charter is idle; past it, not due. Within capacity H1 first, then H2, then H3; otherwise not due.",
+  "dyad:default": "not-due",
+  "dyad:tunables": [
+    {
+      "dyad:preference": "hardening-ceiling",
+      "dyad:defaultValue": "1",
+      "dyad:allowed": "a positive integer (hardening rows in flight under the mandate at once)",
+      "dyad:readBy": "scripts/package.py"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/incident-hardening.md",
+  "dyad:alsoIn": [
+    "dmc/hardening-work.jsonld",
+    "dmc/promotion.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

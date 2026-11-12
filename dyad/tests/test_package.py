@@ -3319,3 +3319,90 @@ class CleanlinessTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MandatePreferenceTests(unittest.TestCase):
+    """d-work #692: `dwork state <id> open --mandate-preference hardening-mandate`, in process over a scratch repo whose
+    own preferences and instance the verb reads (`REPO` patched): a backlog row of hardening work (dmc:hardening-work W1)
+    opens under the standing mandate, its entry `Y plan (mandate preference …)` and its record's entry the grant's
+    words; every refusal precedes a write; the provenance guard accepts the open, and the plan gate reads the entry."""
+    GRANT = "i prefer (preference) to provide a standing disposition to work on hardening work"
+    def setUp(self):
+        self.pkg = load_package()
+        self.d = scratch_repo(["README.md"])
+        inst = self.d / "inst" / "d-work"
+        self.rows, self.rec, plans = inst / "rows", inst / "provenance", inst / "plans"
+        for p in (self.rows, self.rec, plans):
+            p.mkdir(parents=True)
+        w = lambda rid, state, disposed, refs="": self.rows.joinpath(f"{rid}.md").write_text(
+            f"id: {rid}\ntitle: row {rid}\nopened: d\nstate: {state}\ndisposed: {disposed}\nrefs: {refs}\n")
+        w(1, "done", "2026-11-10 Y plan; 2026-11-10 Y done")                 # a hardening run
+        plans.joinpath("1.md").write_text("# Plan #1\nThe incident-hardening play-book runs on the delta.\n")
+        w(2, "backlog", "2026-11-10 Y backlog (mandate #1)", "parent #1")    # a fence row it carried
+        w(3, "backlog", "2026-11-10 Y backlog (done #9)", "1")             # refs name the run
+        w(4, "backlog", "2026-11-10 Y backlog", "PR #1")                    # PR #1 is no row: ordinary backlog
+        w(5, "done", "2026-11-10 Y plan; 2026-11-10 Y done")                # the grant's row
+        self.rec.joinpath("5.md").write_text(f"# Provenance #5\n\n## 1 prompt 2026-11-12\n\n```\n{self.GRANT}\n```\n")
+        self.prefs("on", granted=True)
+        for k, v in {"DYAD_INSTANCE": str(self.d / "inst")}.items():
+            e = unittest.mock.patch.dict(os.environ, {k: v}); e.start(); self.addCleanup(e.stop)
+        r = unittest.mock.patch.object(self.pkg, "REPO", self.d); r.start(); self.addCleanup(r.stop)
+    def prefs(self, value, granted=True, ceiling=None):
+        p = self.d / "preferences-corpus" / "PREFERENCES.md"; p.parent.mkdir(exist_ok=True)
+        rows = f"| hardening-mandate | {value} | `off` \\| `on` | Rule-3 |\n" + (
+            f"| hardening-ceiling | {ceiling} | a positive integer | Rule-3 |\n" if ceiling is not None else "")
+        p.write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + rows + "\n- `hardening-mandate` — the mandate."
+                     + (" dyad-system: `on`, granted: d-work #5 entry 1.\n" if granted else "\n"))
+    def run_(self, *a):
+        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()) as out:
+            try:
+                rc = self.pkg.cmd_dwork(["state", *a])
+            except SystemExit as x:
+                return 1, str(x.code)
+        return rc, out.getvalue()
+    def snapshot(self):
+        return {p.relative_to(self.d).as_posix(): p.read_text() for p in (self.d / "inst").rglob("*.md")}
+    def test_opens_a_carried_fence_row_on_the_grants_words(self):
+        pv = dyadlib.load_guard("agent", "provenance")
+        rc, out = self.run_("2", "open", "--mandate-preference", "hardening-mandate")
+        self.assertEqual(rc, 0, out)
+        row = dyadlib.parse_row_file(self.rows.joinpath("2.md").read_text())
+        self.assertEqual(row.state, "open")
+        self.assertRegex(row.disposed, r"; \d{4}-\d{2}-\d{2} Y plan \(mandate preference hardening-mandate\)$")
+        e = pv.parse(self.rec.joinpath("2.md").read_text())
+        self.assertEqual([(x["kind"], x["text"], x["note"]) for x in e],
+                         [("disposition", self.GRANT, "mandate preference hardening-mandate, 2026-11-12")])
+        self.assertTrue(dyadlib.load_guard("agent", "prs").has_plan_y(row.disposed))       # the plan gate reads it
+        before = dyadlib.parse_row_file("id: 2\ntitle: row 2\nopened: d\nstate: backlog\ndisposed: 2026-11-10 Y backlog (mandate #1)\nrefs: parent #1\n")
+        self.assertTrue(pv._mandate_preference_open(before, row, e))                       # in place of a prompt
+        self.assertFalse(pv._mandate_preference_open(before, row, [dict(e[0], note="mandate #1, 2026-11-12")]))
+    def test_refs_naming_a_hardening_run_are_its_source(self):
+        self.assertEqual(self.run_("3", "open", "--mandate-preference", "hardening-mandate")[0], 0)
+    def test_refuses_before_any_write(self):
+        before = self.snapshot()
+        cases = [(("4", "open", "--mandate-preference", "hardening-mandate"), "not hardening work by its source"),
+                 (("2", "open", "--mandate-preference", "accretion"), "is no mandate preference"),
+                 (("1", "open", "--mandate-preference", "hardening-mandate"), "opens a backlog row"),
+                 (("2", "archived", "--mandate-preference", "hardening-mandate"), "opens a backlog row"),
+                 (("2", "open", "--mandate-preference", "hardening-mandate", "--prompt", "p"), "takes no -d"),
+                 (("2", "open", "--mandate-preference", "hardening-mandate", "-d", "Y plan", "--said", "Y"), "takes no -d")]
+        for args, msg in cases:
+            with self.subTest(args=args):
+                rc, err = self.run_(*args)
+                self.assertEqual(rc, 1); self.assertIn(msg, err)
+        for value, granted, msg in (("off", True, "is 'off'"), ("on", False, "names no grant")):
+            with self.subTest(value=value, granted=granted):
+                self.prefs(value, granted=granted)
+                rc, err = self.run_("2", "open", "--mandate-preference", "hardening-mandate")
+                self.assertEqual(rc, 1); self.assertIn(msg, err)
+        self.assertEqual(self.snapshot(), before, "nothing written")
+    def test_absent_preference_reads_off(self):
+        (self.d / "preferences-corpus" / "PREFERENCES.md").unlink()
+        rc, err = self.run_("2", "open", "--mandate-preference", "hardening-mandate")
+        self.assertEqual(rc, 1); self.assertIn("is 'off'", err)
+    def test_the_ceiling_bounds_rows_in_flight(self):
+        self.assertEqual(self.run_("2", "open", "--mandate-preference", "hardening-mandate")[0], 0)
+        rc, err = self.run_("3", "open", "--mandate-preference", "hardening-mandate")      # default ceiling 1
+        self.assertEqual(rc, 1); self.assertIn("at its ceiling hardening-ceiling = 1", err)
+        self.prefs("on", ceiling=2)
+        self.assertEqual(self.run_("3", "open", "--mandate-preference", "hardening-mandate")[0], 0)

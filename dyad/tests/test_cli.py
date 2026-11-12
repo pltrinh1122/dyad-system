@@ -323,7 +323,8 @@ class ModuleFlagTests(unittest.TestCase):
         self.assertEqual(set(pkg.DWORK_VERB_FLAGS) | {"land", "batch", "trace", "intent"}, {v for n, v in dyadlib.CLI if n == "dwork"})
         self.assertEqual(set(pkg.DWORK_VALUE_FLAGS),
                          {"-d", "-r", "--prompt", "--prompt-file", "--said", "--said-file", "--said-ref", "--relayed-via",
-                          "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m", "--slug", "--decisions"})   # as before the table, + #622, #644
+                          "--state", "--craft", "--mandate", "--retired-by", "--mirror", "-m", "--slug", "--decisions",
+                          "--mandate-preference"})   # as before the table, + #622, #644, #692
 
     def test_package_main_reads_only_the_tables_check_and_install_flags(self):
         src = PACKAGE.read_text()

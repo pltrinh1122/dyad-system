@@ -46,6 +46,14 @@ the rows since the last exercise and test each shipped mitigation against its in
 mode closes only by `dmc:mode-exit`; the exit-2 row is carried under the plan-`Y` that runs the exercise (Rule-3
 Plan, #574).
 
+## Standing mandate
+Under the preference `hardening-mandate: on` a carried row is worked without its own intent and plan questions when it
+is hardening work by `dmc:hardening-work` and due by `dmc:hardening-due`: the home opens it with `dyad dwork state <id>
+open --mandate-preference hardening-mandate`, which refuses a row whose source is not a hardening or audit run, and one
+past the ceiling, before any write, and tells the operator in one notice line. Its Done is always asked, batched with
+others ready (Rule-3 Batch disposition), naming the incident that made it due. Under `off`, or for a row either record
+does not admit, the row waits for promotion and is asked as any other.
+
 ## Question
 Each child's plan question and the parent's Done, as Rule-3 asks them. The exercise proposes the mode set, each
 survivor and each closure; it never adopts a candidate on its own judgment or closes a mode by asserting it.

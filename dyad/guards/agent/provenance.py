@@ -243,6 +243,16 @@ def _grows(before: list[dict[str, str]], after: list[dict[str, str]]) -> bool:
     key = lambda e: (e["kind"], e["date"], e["text"])
     return [key(e) for e in after[:len(before)]] == [key(e) for e in before]
 
+MANDATE_PREFERENCE = re.compile(r"\bY plan \(mandate preference ([a-z0-9-]+)\)")
+
+def _mandate_preference_open(before, after, added: list[dict[str, str]]) -> bool:
+    """#692: a backlog row opened under a mandate preference brings, in place of a prompt, the grant's words as a
+    disposition noted `mandate preference <key>, <date>` (Rule-7 property 4), its row gaining that entry."""
+    gained = dispositions(after.disposed)[len(dispositions(before.disposed)):]
+    keys = {m.group(1) for e in gained if (m := MANDATE_PREFERENCE.search(e))}
+    return any(e["kind"] == "disposition" and any(e["note"].startswith(f"mandate preference {k}, ") for k in keys)
+               for e in added)
+
 def check_commit(root: Path, sha: str, rows_rel: str, rec_rel: str) -> list[str]:
     """One non-merge commit against its first parent (nothing, for a root commit)."""
     parent = (_git(root, "rev-parse", "--verify", "-q", f"{sha}^") or "").strip() or None
@@ -273,7 +283,8 @@ def check_commit(root: Path, sha: str, rows_rel: str, rec_rel: str) -> list[str]
             if after.state == "backlog" and "disposition" not in added:
                 fails.append(f"FAIL [provenance]: {label} adds row #{rid} as backlog, which only a disposition opens (Rule-3), "
                              f"and its record gains no disposition entry")
-        elif before.state == "backlog" and after.state == "open" and "prompt" not in added:
+        elif before.state == "backlog" and after.state == "open" and "prompt" not in added \
+                and not _mandate_preference_open(before, after, ea[len(eb):]):
             fails.append(f"FAIL [provenance]: {label} opens backlog row #{rid}, which the Operator's prompt does (Rule-3), "
                          f"and its record gains no prompt entry (`dwork state {rid} open --prompt-file`)")
         k = len(dispositions(after.disposed)) - len(dispositions(before.disposed if before else ""))
