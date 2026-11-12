@@ -1779,3 +1779,24 @@ Incidents gains the one sentence that reads the play-book.
 The other pairs are as amendment #676 left them. Coherent, orthogonal.
 
 Disposition: see ledger #690.
+
+## Amendment — d-work #691 (2026-11-12: the audit's due state in the Coming part)
+
+**Claim (the operator, provenance #691 entry 1: "yes, propose automated sweep based on trigger conditions (not
+time)"; plan revision 3):** the closing line's Coming part counts, beside the pending queue, the conditions of the
+audit's due state that `dmc:audit-trigger` records on the home's cross-row board entry, as `audit-due <n>`.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| A1 | Coming counts the agent's own queue; an audit's due state is not a queued question. | **Survives, scoped** | Coming already counts what the operator will be asked and has not been; an audit due is such a matter, shown unasked. It authorizes nothing, as the line's form never does (#646). |
+| A2 | The count could drift from the readings. | **Refuted** | `dmc:audit-trigger` records the conditions on `_cos.md` (`audit-due`), and `dyad board` derives the part from that field, as the rest of the line is derived; no unit writes it by hand. |
+| A3 | Under `coming: off` the operator loses the signal. | **Survives** | That is what the preference says: Coming is the operator's to hide (#665), and the board entry still holds the state. |
+| A4 | It overlaps Awaiting you. | **Refuted** | Awaiting counts questions asked and not answered; `audit-due` is no question until the home asks one, at which point it is counted there instead. |
+
+**Verdict:** the claim survives.
+- **Rules:** Batch disposition's Coming sentence names `audit-due`; Provenance gains its line.
+- **Vocabulary:** the `awaiting you` row names the part.
+
+**Pairwise (Rule-5).** 3–16: the field is the board store's, `audit-due` on the cross-row file (`board.COS_FIELDS`), shape-checked by its guard; no other pair changes. The other pairs are as amendment #690 left them. Coherent, orthogonal.
+
+Disposition: see ledger #691.
