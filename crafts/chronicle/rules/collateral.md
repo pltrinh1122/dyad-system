@@ -4,7 +4,8 @@ A form section of the chronicle core (`chronicle.md` §7). It narrows the core a
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
-`../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-segment-significance.jsonld`,
+`../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-problem-plainness.jsonld`,
+`../dmc/collateral-segment-significance.jsonld`,
 `../dmc/collateral-segment-rank.jsonld`,
 `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
@@ -113,9 +114,13 @@ map) · **unspanned** (judged over the map: a problem class's sufferers include 
 **cut** (distinct: judge its significance).
 
 **Two perspectives, for corroboration.** The map is read from both ends. **(a) Segment → problem classes**: a segment's
-source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is a root
-cause of the projection, or a named group of roots, the grouping written down; each class lists the segments that suffer
-it. Both are projections of one **segment × class table** in the canvas set's index, each cell labelled from a source
+source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is an
+**observable failure mode** — what the user sees, and when (the session moment: new, during or resumed; after one prompt
+or a series) — over the root causes beneath it, by id, one root serving several classes; each class lists the segments
+that suffer it. Its plain statement, what the surfaces and pitches show, is judged by `collateral-problem-plainness`
+for a cursory user of an out-of-the-box AI agent. A canvas set may keep a **reference tree**, a symptom every reader
+knows decomposed by §6's Steps (this instance: AI hallucination), whose roots are mapped to classes and which the
+plainness record reads; it is no segment and is not projected. Both are projections of one **segment × class table** in the canvas set's index, each cell labelled from a source
 tree or as a hypothesis, rendered as two surfaces, `<canvas set>/by-segment.md` (a) and `<canvas set>/by-problem.md`
 (b), never edited by hand. Where they disagree the record acts (`off-class`, `overlapping`, `unspanned`); where they
 agree for every segment and class the map is **corroborated**, which is internal consistency, labelled hypothesis until

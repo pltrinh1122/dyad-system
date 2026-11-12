@@ -93,8 +93,17 @@ inference, read by the Operator at publication.
 | 82 | **Knobs make the play-book tunable** (K1): a knob no run records is a default no one revisits. | **Survives, scoped** | Every run record states the knobs as set, so a tuning can cite the runs that set them. |
 | 83 | **The run record belongs in the craft** (K3). | **Confirmed** | It is the operator's decisions on one canvas set, so it is instance data. Survivor: `<canvas set>/reviews/<row>.md`; the craft keeps only its form. |
 | 84 | **A run can tune the play-book it runs** (K4). | **Survives, scoped** | A run proposes tunings in its record. A later prompt applies them, so the run that proposes never changes its own steps. |
+| 85 | **A plain statement keeps the class** (#696 U1): plain words slide into symptoms. | **Confirmed, then superseded** | Revision 4 made classes observable failure modes by design. The survivor is two layers: the observable statement, judged by `collateral-problem-plainness` (`unobservable`, `unrooted`), over its root nodes by id. |
+| 86 | **One reader fits every segment** (U2). | **Survives, scoped** | The class statement is for the cursory reader; each segment's own words stay in its symptom nodes. |
+| 87 | **Hallucination is one problem** (R1). | **Confirmed** | It is a symptom with two roots: nothing checks the output against what is true or wanted before you rely on it, and nothing shows where an answer came from or how sure it is. |
+| 88 | **A reference tree is a segment** (R4). | **Refuted** | It is a symptom every reader knows, kept beside the map and not projected; its roots are mapped to classes. |
+| 89 | **Classes by observable mode lose the cause** (V1). | **Survives, scoped** | Each class carries its roots by id; a pitch names the observable failure first and the root it removes second. |
+| 90 | **Observable modes overlap** (V2): a misread request also yields a false answer. | **Survives, scoped** | A class is a kind of observation, not an event; one event may show several. |
+| 91 | **Doing less is a different failure from doing more** (M1–M5). | **Survives, scoped** | One root holds both: nothing compares what was done with what was agreed. "Less" also happens to an agent that only answers. The class splits only where a target meets one side alone. |
+| 92 | **The when axes are distinct** (W1–W3): a long session and a resumed one blur. | **Survives, scoped** | Resumed means the user's own context was interrupted, whatever the tool keeps. The marks say where a class typically shows. |
+| 93 | **Context lost at session boundaries is the approval-trail root** (W4). | **Survives, scoped** | It also covers what was *given*, so it is held as a candidate widening and judged when a target's tree is reviewed. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–84, ledger #696.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–93, ledger #696.

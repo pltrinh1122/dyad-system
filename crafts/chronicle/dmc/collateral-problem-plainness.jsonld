@@ -1,0 +1,87 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-problem-plainness",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-problem-plainness",
+  "name": "Problem plainness",
+  "description": "Whether a problem class, stated as an observable failure mode, is one a cursory user of an out-of-the-box AI agent would recognize as their own: in their words, from their own use, at a moment they could name, and still traced to the root causes beneath it.",
+  "dyad:decides": "Would a cursory user of an out-of-the-box AI agent recognize this problem class as their own?",
+  "dyad:inputs": [
+    "the class's plain statement, what the user sees",
+    "the reader: someone who uses an AI assistant out of the box — chats with it, asks it to write, change or do things, sometimes lets it act — with no repository, pipeline or change control",
+    "the reference symptom the reader already knows (in this instance, AI hallucination) and its tree, whose roots are mapped to classes",
+    "the when axes: the session moment (new, during, resumed after a respite or a context switch) × the prompt depth (after one prompt, after a series)",
+    "the class's root nodes, by id"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "jargon",
+      "name": "jargon",
+      "dyad:when": "the statement uses a word the reader does not use, such as record, provenance, version, intent, risk class, evidence or pipeline",
+      "dyad:then": "say it in everyday words"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "tool-bound",
+      "name": "tool-bound",
+      "dyad:when": "it assumes a setup the reader lacks: a repository, CI, a change board",
+      "dyad:then": "say it for a chat with an assistant, or mark the class segment-specific"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "mechanism-framed",
+      "name": "mechanism-framed",
+      "dyad:when": "it names how a fix would work rather than what goes wrong for the reader",
+      "dyad:then": "say what goes wrong for them"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unobservable",
+      "name": "unobservable",
+      "dyad:when": "it names something the reader cannot see, such as a cause inside the model or the tool",
+      "dyad:then": "restate it as what the reader sees and when; the cause stays beneath it as a root node"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "no-moment",
+      "name": "no-moment",
+      "dyad:when": "it names no cell of the when axes in which the reader would see it, and the reference symptom does not reach it",
+      "dyad:then": "give the moment: the session moment and the prompt depth at which it shows"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unrooted",
+      "name": "unrooted",
+      "dyad:when": "the observable class maps to no root node of any tree",
+      "dyad:then": "place it in a tree first (§6) and map it; never kept as a class with no cause"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "plain",
+      "name": "plain",
+      "dyad:when": "every test above holds",
+      "dyad:then": "the class's plain statement is what the surfaces and pitches show; its roots, by id, are what the trees keep"
+    }
+  ],
+  "dyad:precedence": "in the order listed; the first test that fails gives the outcome",
+  "dyad:default": "a test that cannot be decided is labelled hypothesis and put to the Operator; a cursory reader's own words, when heard, refresh it",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
