@@ -123,6 +123,7 @@ INVARIANTS = [   # crafts/syseng/rules/invariants.md
     ("cabinet-form", lambda: all(CABINET.fullmatch(v) for v in (SOLO, "program-bob"))
                              and not any(CABINET.fullmatch(v) for v in ("someone", "program-", "Program"))),
     ("cabinet-is-a-field-of-entries-only", lambda: "cabinet" in FIELDS and "cabinet" not in COS_FIELDS),
+    ("re-present-outcomes-distinct", lambda: len(set(RE_PRESENT)) == 4),
     ("cos-names-its-cabinet", lambda: [cos_cabinet(n) for n in (COS, COS + "-bob", COS + "-bob-cccccccc", "_cosx", "5")]
                                       == [SOLO, "program-bob", None, None, None]
                               and cos_name(cos_cabinet(COS + "-bob")) == COS + "-bob" and cos_name(SOLO) == COS),
@@ -958,6 +959,91 @@ def last_acts(root: Path, seats: list[str]) -> dict[str, str]:
     return out
 
 
+# ---- #694: when an asked question is presented again (dyad/dmc/re-present.jsonld), read from the records alone
+RE_PRESENT = ("void", "full", "remind", "pending")      # the record's outcomes, highest first
+_Q_HEAD = re.compile(r"PR #(\d+) at ([0-9a-f]{7,40})")
+_REC_HEAD = re.compile(r"\bpr: (\d+) at ([0-9a-f]{7,40})")
+_Q_ROW = re.compile(r"#(\d+)\b")
+_CITED = re.compile(r"`([A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*-]+)+)`")
+
+
+def cited_paths(root: Path, n: str) -> list[str]:
+    """What question `n`'s decision rests on, as repo paths: its plan file, each backticked repo path the plan cites
+    that exists, and the row files its row's `refs` name (#694, dmc:re-present `full`)."""
+    plan = dyadlib.instance(root) / "d-work" / "plans" / f"{n}.md"
+    if not plan.is_file() or not plan.is_relative_to(root):
+        return []
+    text = plan.read_text(errors="ignore")
+    cited = [c for c in dict.fromkeys(_CITED.findall(text)) if "*" not in c and (root / c).exists()]
+    rows_dir = dyadlib.instance(root) / "d-work" / "rows"
+    row, refs = rows_dir / f"{n}.md", []
+    if row.is_file():
+        m = re.search(r"(?m)^refs: *(.*)$", row.read_text(errors="ignore"))
+        refs = [r for r in dict.fromkeys(re.findall(r"\b(\d+)\b", m.group(1) if m else "")) if r != n]
+    ref_paths = [(rows_dir / f"{r}.md").relative_to(root).as_posix() for r in refs if (rows_dir / f"{r}.md").is_file()]
+    return [plan.relative_to(root).as_posix()] + cited + ref_paths
+
+
+def _git_out(root: Path, *args: str) -> str | None:
+    try:
+        r = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, env=dyadlib.git_env(), timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def _changed_after(root: Path, since: str, paths: list[str]) -> list[str]:
+    """The paths among `paths` that differ between HEAD and the commit HEAD stood at when `since` (an ISO time) began,
+    in the given order: two git calls, a first-parent walk back to `since` and one tree diff limited to `paths`, so
+    `board resume` stays within its stall ceiling however old a question is (#694). A path that existed then and was
+    changed and changed back reads unchanged, which is what a question's premise cares about."""
+    if not since or not paths:
+        return []
+    base = _git_out(root, "rev-list", "-1", "--first-parent", f"--before={since}", "HEAD")
+    if base is None:
+        return []
+    if not base:
+        return list(paths)                                  # the history begins after the question was asked
+    out = _git_out(root, "diff", "--name-only", "--no-renames", base, "HEAD", "--", *paths)
+    hit = set((out or "").splitlines())
+    return [p for p in paths if p in hit]
+
+
+def re_present(root: Path, n: str, f: dict[str, str], owed: list[tuple[str, dict[str, str]]], cos: dict[str, str],
+               states: dict[int, str], now: datetime.datetime | None = None) -> tuple[str, str]:
+    """dmc:re-present's (outcome, reason) for the question entry `n` records as asked and not answered: `void` (a row
+    it names is terminal, or a PR head it names is not the one the entry records), `full` (its plan file, a path that
+    plan cites, or a row its plan's refs name changed on HEAD after the question's `since`), `remind` (it is not the
+    cabinet's last question asked while another owed question is newer, or it is older than `inflight-question-hours`),
+    else `pending`. Mechanical: whether a `full` change bears on the decision is the home's (in doubt, `full`)."""
+    q, since = f.get("question") or "", f.get("since") or ""
+    dead = sorted({int(i) for i in _Q_ROW.findall(q) if states.get(int(i)) in dyadlib.TERMINAL_STATES})
+    if dead:
+        return "void", "row " + ", ".join(f"#{i}" for i in dead) + " is terminal"
+    recorded = {pr: h for v in f.values() for pr, h in _REC_HEAD.findall(v or "")}
+    moved = [f"PR #{pr}" for pr, h in _Q_HEAD.findall(q) if pr in recorded and not recorded[pr].startswith(h)
+             and not h.startswith(recorded[pr])]
+    if moved:
+        return "void", ", ".join(moved) + " moved from the head the question names"
+    changed = _changed_after(root, since, cited_paths(root, n))
+    if changed:
+        return "full", "changed since it was asked: " + ", ".join(changed[:5]) + (" …" if len(changed) > 5 else "")
+    last = (cos.get("question") or "").strip() == q.strip() and bool(q.strip())
+    if not last:
+        newer = [m for m, g in owed if m != n and (g.get("since") or "") > since]
+        if newer:
+            return "remind", "displaced by " + ", ".join(f"#{m}" for m in newer)
+        try:
+            t = datetime.datetime.strptime(since, "%Y-%m-%dT%H:%MZ").replace(tzinfo=datetime.timezone.utc)
+        except ValueError:
+            t = None
+        hours = dyadlib.tunable("inflight-question-hours", root)
+        now = now or datetime.datetime.now(datetime.timezone.utc)
+        if t is not None and (now - t).total_seconds() > hours * 3600:
+            return "remind", f"older than inflight-question-hours ({hours})"
+    return "pending", "nothing it cites changed, and it is not displaced"
+
+
 def resume_lines(root: Path) -> list[str]:
     v = resume_view(root)
     cos = v["cos"]
@@ -980,9 +1066,12 @@ def resume_lines(root: Path) -> list[str]:
     for n, f in v["stale"]:
         out.append(f"{L(n)}: stale — row #{n} is {v['states'].get(int(n), 'not a row')}; nothing here is owed "
                    f"(`dyad board set {n} --drop`, #547)")
-    out.append(f"owed to the Operator ({len(v['owed'])}): re-present each question verbatim, or report it pending")
-    for n, f in v["owed"]:
-        out.append(f"  {L(n)} since {f.get('since', '?')}:")
+    judged = [(n, f, *re_present(root, n, f, v["owed"], cos, v["states"])) for n, f in v["owed"]]
+    judged.sort(key=lambda x: RE_PRESENT.index(x[2]))   # #694: dmc:re-present's precedence, highest first
+    out.append(f"owed to the Operator ({len(v['owed'])}), each by dmc:re-present (one Y/N per reply: the highest, "
+               f"or one batch of one kind):")
+    for n, f, outcome, why in judged:
+        out.append(f"  {L(n)} since {f.get('since', '?')}: {outcome} — {why}")
         out += [f"    {line}" for line in (f.get("question") or "(no question recorded)").split("\n")]
     out.append(f"external gates ({len(v['gates'])}): " + ("; ".join(f"{L(n)} {w}" for n, w in v["gates"]) or "none"))
     out.append(f"announce to ({len(v['seats'])}): {', '.join(v['seats']) or 'none'}" + (f"; seat table: {' / '.join(cos['seats'].splitlines())}" if cos.get("seats") else ""))

@@ -162,7 +162,7 @@ class GuardTests(unittest.TestCase):
         self.assertTrue(any(l.startswith("warn: board/5.md was last written by h1, not this session (h2)") for l in lines), lines)
         text = "\n".join(res)
         self.assertIn("owed to the Operator (1)", text)
-        self.assertIn("  #7 since 2026-11-02T10:00Z:\n" + "\n".join("    " + l for l in QUESTION.split("\n")), text)
+        self.assertIn("  #7 since 2026-11-02T10:00Z: remind — older than inflight-question-hours (24)\n" + "\n".join("    " + l for l in QUESTION.split("\n")), text)
         self.assertIn("external gates (1): #5 external run 41331223332", text)
         self.assertIn("announce to (1): engineer-1537d8fb; seat table: counsel=session_015q", text)
 
@@ -360,8 +360,8 @@ PRE_594_RESUME = [
     '    # not a comment: part of the words',
     '    Y/N: release v1.2.0?',
     '  writer: h1',
-    'owed to the Operator (1): re-present each question verbatim, or report it pending',
-    '  #5 since 2026-11-02T10:00Z:',
+    'owed to the Operator (1), each by dmc:re-present (one Y/N per reply: the highest, or one batch of one kind):',   # #694
+    '  #5 since 2026-11-02T10:00Z: remind — older than inflight-question-hours (24)',
     '    Release run 41331223332 is waiting.',
     '    ',
     '    # not a comment: part of the words',
@@ -2313,3 +2313,66 @@ class DraftTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RePresentTests(unittest.TestCase):
+    """#694: dmc:re-present over a scratch repo and instance, read from the records alone: `void` (a named row terminal,
+    a named PR head moved), `full` (the plan, a path it cites, or a row its refs name changed after `since`), `remind`
+    (displaced by a newer owed question while not the last asked, or older than inflight-question-hours), `pending`."""
+    SINCE = "2026-11-12T10:00Z"
+    def setUp(self):
+        import tempfile, shutil
+        self.d = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.d, True)
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": "inst"}); e.start(); self.addCleanup(e.stop)
+        self.git("init", "-q", "-b", "main")
+        self.plans = self.d / "inst" / "d-work" / "plans"; self.rows = self.d / "inst" / "d-work" / "rows"
+        self.plans.mkdir(parents=True); self.rows.mkdir(parents=True)
+        (self.d / "dyad").mkdir(); (self.d / "dyad" / "cited.md").write_text("a\n")
+        self.plans.joinpath("5.md").write_text("# Plan #5\nIt touches `dyad/cited.md`.\n")
+        self.rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: planned\ndisposed: \nrefs: 7\n")
+        self.rows.joinpath("7.md").write_text("id: 7\ntitle: seven\nopened: d\nstate: open\ndisposed: \nrefs: \n")
+        self.commit("base", "2026-11-09T09:00:00Z")
+        self.now = datetime.datetime(2026, 11, 12, 12, 0, tzinfo=datetime.timezone.utc)
+    def git(self, *a, date=None):
+        env = dict(os.environ, GIT_AUTHOR_DATE=date or "", GIT_COMMITTER_DATE=date or "") if date else None
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(self.d), *a], check=True,
+                              capture_output=True, text=True, env=env).stdout.strip()
+    def commit(self, msg, date):
+        self.git("add", "-A"); self.git("commit", "-qm", msg, "--allow-empty", date=date)
+    def judge(self, f, owed=None, cos=None, states=None):
+        f = {"since": self.SINCE, "question": "Y/N: proceed with #5 as planned?", **f}
+        return bd.re_present(self.d, "5", f, owed if owed is not None else [("5", f)], cos if cos is not None else
+                             {"question": f["question"]}, states or {5: "planned", 7: "open"}, now=self.now)
+    def test_pending_when_nothing_moved(self):
+        self.assertEqual(self.judge({})[0], "pending")
+    def test_void_on_a_terminal_row_or_a_moved_head(self):
+        self.assertEqual(self.judge({}, states={5: "archived", 7: "open"})[0], "void")
+        f = {"question": "Y/N: Done with #5 five (merges PR #12 at abc1234)?", "phase": "done-asked\n  pr: 12 at def5678"}
+        out, why = self.judge(f)
+        self.assertEqual(out, "void"); self.assertIn("PR #12", why)
+        f["phase"] = "done-asked\n  pr: 12 at abc1234deadbeef"
+        self.assertEqual(self.judge(f)[0], "pending")                                       # the same head, longer
+    def test_full_when_the_plan_a_cited_path_or_a_ref_row_changed(self):
+        for path, text in (("inst/d-work/plans/5.md", "# Plan #5 revised\nIt touches `dyad/cited.md`.\n"),
+                           ("dyad/cited.md", "b\n"), ("inst/d-work/rows/7.md", "id: 7\ntitle: seven\nopened: d\nstate: done\ndisposed: \nrefs: \n")):
+            with self.subTest(path=path):
+                (self.d / path).write_text(text); self.commit(path, "2026-11-12T11:00:00Z")
+                out, why = self.judge({})
+                self.assertEqual(out, "full"); self.assertIn(path, why)
+    def test_a_change_before_since_is_not_full(self):
+        (self.d / "dyad" / "cited.md").write_text("c\n"); self.commit("early", "2026-11-12T09:30:00Z")
+        self.assertEqual(self.judge({})[0], "pending")
+    def test_remind_when_displaced_or_old(self):
+        mine = {"since": self.SINCE, "question": "Y/N: proceed with #5 as planned?"}
+        other = {"since": "2026-11-12T11:00Z", "question": "Y/N: proceed with #9 as planned?"}
+        out, why = self.judge({}, owed=[("5", mine), ("9", other)], cos={"question": other["question"]})
+        self.assertEqual(out, "remind"); self.assertIn("#9", why)
+        self.assertEqual(self.judge({}, owed=[("5", mine), ("9", other)])[0], "pending")   # it is the last asked
+        out, why = self.judge({"since": "2026-11-10T10:00Z"}, cos={})
+        self.assertEqual(out, "remind"); self.assertIn("inflight-question-hours", why)
+    def test_the_record_names_the_outcomes_in_order(self):
+        import json
+        rec = json.loads((dyadlib.PKG / "dmc" / "re-present.jsonld").read_text())
+        self.assertEqual([t["termCode"] for t in rec["hasDefinedTerm"]], list(bd.RE_PRESENT))
+        self.assertEqual(rec["dyad:judgedBy"]["dyad:implementation"], "guards/agent/board.py")
+        self.assertIn("dmc:re-present", (dyadlib.PKG / "playbooks" / "d-work.md").read_text())
