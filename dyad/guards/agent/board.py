@@ -31,8 +31,10 @@ that holds the mode), `owner` (the seat doing the work, and its session id), `wa
 | `external <ref>`), `next` (the next act), `since`, `question` (verbatim, when the Operator owes one), `promised`
 (follow-ups named to the Operator), and `writer`, which `board set` writes and nobody types — the harness session
 that wrote the file last (`sessions.writer`, Rule-16's writer pattern, #350). `_cos.md` takes `queue` and `seats` in
-place of `owner` and `waiting-on`, and `release-plan` (#625: the backlog grooming play-book's release plan, which
-the `promotion` criterion reads). Unlike a row the store is overwritten freely; its history is git's.
+place of `owner` and `waiting-on`, `release-plan` (#625: the backlog grooming play-book's release plan, which
+the `promotion` criterion reads) and `audit-due` (#691: the conditions of the audit's due state by `dmc:audit-trigger`,
+written by the home when it reads the sweep's notice, `none` or absent when not due, and counted in the closing line's
+Coming part as `audit-due <n>`). Unlike a row the store is overwritten freely; its history is git's.
 
   dyad board                         render the board from the working tree: one line per entry, oldest wait first
   dyad board set <id>|_cos[-<operator>] key=value… [--drop]
@@ -93,7 +95,8 @@ NAME, OWNER = "board entry", "Rule-3"
 BOARD_REL = "d-work/board"
 COS = "_cos"
 FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
-COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "writer")   # #625: release-plan
+COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "audit-due",
+              "writer")   # #625: release-plan; #691: audit-due
 REQUIRED = ("holder",)
 CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
                                                      # so an operator segment of eight hex is no cabinet (sessions.name_problems)
@@ -887,7 +890,17 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
         filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
         q = {"intent-ready": [i for i in intent_ready(root, got) if cabinet is None or filed.get(i, SOLO) == cabinet], **q}
     coming = [f"{len(v)} {k}" for k, v in q.items() if v]
+    if (n := audit_due_count(got, cabinet)):
+        coming.append(f"audit-due {n}")   # #691: the audit's due state, seen unasked (dmc:audit-trigger)
     return line + (f" Coming: {', '.join(coming)}." if coming else "")
+
+
+def audit_due_count(got: list[tuple[str, dict[str, str]]], cabinet: str | None = None) -> int:
+    """#691: how many conditions the cabinet's cross-row file names under `audit-due` (`A1, A3`, comma-separated);
+    0 when the key is absent, empty or `none`. With no cabinet named, `program`'s."""
+    want = cos_name(cabinet or SOLO)
+    v = next((f.get("audit-due", "") for n, f in got if n == want), "").strip()
+    return 0 if v in ("", "none") else len([c for c in v.split(",") if c.strip()])
 
 
 def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:

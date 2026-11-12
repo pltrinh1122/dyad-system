@@ -1397,6 +1397,24 @@ class AwaitingTests(unittest.TestCase):
         self.assertEqual(bd.answered_in(HOME, desk, self.root), HOME)               # the home is always a dyad unit
         self.assertIsNone(bd.answered_in(HOME, "program-bbbbbbbb", self.root))       # a hop: the new home reads the old one's
 
+    def test_coming_counts_the_audit_due_conditions(self):
+        """#691: the home's cross-row file's `audit-due` names the audit's due conditions (dmc:audit-trigger); the Coming
+        part counts them as `audit-due <n>`, never asks them; absent, empty or `none` shows nothing."""
+        cos = self.d / "board" / "_cos.md"
+        before = cos.read_text() if cos.is_file() else "holder: program-aaaaaaaa\n"
+        base = bd.awaiting_line(self.root)
+        self.assertNotIn("audit-due", base)
+        cos.write_text(before.rstrip("\n") + "\naudit-due: A1, A3\n")
+        line = bd.awaiting_line(self.root)
+        self.assertIn("audit-due 2", line.split(" Coming: ", 1)[1])
+        self.assertEqual(line.split(" Coming: ", 1)[0], base.split(" Coming: ", 1)[0])   # the Awaiting part unchanged
+        self.assertEqual(bd.audit_due_count([("_cos", {"audit-due": "none"})]), 0)
+        self.assertEqual(bd.audit_due_count([("_cos", {"audit-due": "A2"})]), 1)
+        self.assertEqual(bd.audit_due_count([("_cos-bob", {"audit-due": "A2"})], "program-bob"), 1)
+        self.assertEqual(bd.audit_due_count([("_cos-bob", {"audit-due": "A2"})]), 0)    # another cabinet's
+        self.assertEqual(bd.parse_set(["_cos", "audit-due=A1, A3"]), ("_cos", {"audit-due": "A1, A3"}, False))
+        cos.write_text(before)
+
     def test_coming_keeps_or_drops_the_coming_part(self):
         """#665: `coming: off` ends the line after its Awaiting part; absent, `on` or an unknown value keep today's
         line; under `awaiting-you: off` the key is not read; the board and resume views carry the same line."""

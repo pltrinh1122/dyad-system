@@ -1,0 +1,100 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/audit-trigger",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "audit-trigger",
+  "name": "Audit trigger",
+  "description": "Whether the audit is due, and how its due state reaches the operator, each condition weighed by what its delay risks. Read from the full sweep's own lines after each landed merge, and by the home when it lands a release; no clock starts it. Only the operator's Y opens the audit row.",
+  "dyad:decides": "Is the audit due, and is its due state presented now, ridden on a question already asked, counted, or not due?",
+  "dyad:inputs": [
+    "the audit watermark reading of the full sweep (the code tree, Python and git against the newest audit record)",
+    "the incident log's rows dated after the newest audit record, against the fixed count of ten",
+    "the drift finding: dyad/rules/ changed after the newest Rule-5 sweep record",
+    "a release tag published since the newest audit record, read by the home when it lands the Y release line",
+    "the first-parent merges on main since the commit that added the newest audit record, against the fixed count of twenty",
+    "whether an audit question is already asked and unanswered"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "A1",
+      "name": "code moved",
+      "dyad:when": "the watermark reading says changed, or names no audit record (a first exercise)",
+      "dyad:then": "low: never presented alone; presented once twenty merges have landed since the newest audit record, or with any higher condition"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "A2",
+      "name": "incidents unhardened",
+      "dyad:when": "ten or more incident rows are dated after the newest audit record; ten is this record's fixed count, not a preference",
+      "dyad:then": "medium: presented at the next backlog grooming (dmc/groom-trigger.jsonld)"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "A3",
+      "name": "rules unswept",
+      "dyad:when": "dyad/rules/ changed after the newest Rule-5 sweep record, so two Rules may now instruct differently",
+      "dyad:then": "high: presented at the operator's next prompt as one question"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "A4",
+      "name": "release published",
+      "dyad:when": "a release tag was published since the newest audit record",
+      "dyad:then": "medium: read by the home when it lands the Y release line, from the newest sweep report plus that tag, and presented in the reply that reports the release published, never in the release's Done, which comes before the tag exists"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "present-now",
+      "name": "present now",
+      "dyad:when": "A3 holds, or A1 holds and twenty or more merges have landed since the newest audit record",
+      "dyad:then": "one question at the operator's next prompt, past dmc/promotion.jsonld's hold, naming every condition that holds",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "ride",
+      "name": "ride",
+      "dyad:when": "A2 or A4 holds and present-now does not",
+      "dyad:then": "presented in the question or report it rides: A2 at the next grooming, A4 in the reply that reports the release published",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "count",
+      "name": "count",
+      "dyad:when": "A1 alone holds, with fewer than twenty merges since the newest audit record",
+      "dyad:then": "never presented; the closing line's Coming part shows audit-due from the board, so the operator sees the state unasked",
+      "dyad:effect": "settles"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-due",
+      "name": "not due",
+      "dyad:when": "no condition holds",
+      "dyad:then": "nothing",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "At most one audit question is outstanding: a due state found while one is asked joins it and is never a second question. Otherwise present-now first, then ride, then count; otherwise not-due. The sweep reads A1, A2 and A3; the home reads A4 at the release.",
+  "dyad:default": "not-due",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/audits.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/audit.md",
+  "dyad:alsoIn": [
+    "dmc/message-overhead.jsonld",
+    "dmc/groom-trigger.jsonld"
+  ],
+  "dyad:owner": "Rule-12"
+}
