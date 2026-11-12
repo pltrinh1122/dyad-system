@@ -11,13 +11,21 @@ none pushes:
   `<git common dir of this checkout>/dyad-channels/<unit>.json`, never in either tree;
 - `post <channel> <kind> <id> <body-file> [key=value …]`: build the record, run the guard's checks on it (shape and
   the fence, `posts.check_text`), print it whole, write it on a branch `post/<id>` of the clone with one commit, and
-  print the push and the pull request to open; it pushes nothing;
+  print the push and the pull request to open; it pushes nothing. A body file that is already a whole message (its
+  first line `format: dyad-channels/1`) is written byte for byte, so an approved sha256 survives, once its `id`,
+  `channel` and `kind` equal the arguments and its `from` system is this system's; any other body is wrapped in a
+  header (d-work #688);
 - `breach [<system>]`: run the guard's checks over the messages received (all, or one sender system's) and print each
   finding with the line an incident row needs; it detects and records nothing itself (K1–K4: safety on the receiver,
   never retaliation).
+Two read-only checks serve as the run-book's postconditions (the runner runs a postcondition as a command, #688):
+- `subscribed <url>`: exit 0 when the clone path is a git work tree whose `origin` is `<url>`, a trailing `.git` or `/`
+  ignored;
+- `posted <channel> <id>`: exit 0 when branch `post/<id>` of the clone holds `channels/<channel>/<system>/<id>.md`.
 The sender is `<system>:<unit>`: the system the same file's `system:` names, else this checkout's directory name;
 the unit `DYAD_SESSION`. Exit 0 ok, 1 refused or a guard failure, 2 a usage error.
   channels.py subscribe <url> | read | post <channel> <kind> <id> <body-file> [k=v …] | breach [<system>]
+  channels.py subscribed <url> | posted <channel> <id>
 """
 import sys
 if sys.version_info < (3, 12):
@@ -119,6 +127,18 @@ def record(root: Path, channel: str, kind: str, mid: str, body: str, extra: dict
             "sent": at.strftime("%Y-%m-%dT%H:%M:%SZ"), **extra}
     return "".join(f"{k}: {v}\n" for k, v in head.items()) + "\n" + body.rstrip() + "\n"
 
+def whole_message(raw: bytes) -> bool:
+    """Whether a body file is already a whole message: its first line is `format: dyad-channels/1`."""
+    return raw.startswith(f"format: {posts.FORMAT}\n".encode())
+
+def whole_problems(head: dict[str, str], channel: str, kind: str, mid: str, system: str) -> list[str]:
+    """A whole message is posted only as what the step names, and only under this system's name (G8)."""
+    msgs = [f"the message's {k} {head.get(k)!r} is not the step's {v!r}" for k, v in
+            (("id", mid), ("channel", channel), ("kind", kind)) if head.get(k) != v]
+    if head.get("from", "").split(":")[0] != system:
+        msgs.append(f"the message's from {head.get('from')!r} is not this system's ({system})")
+    return msgs
+
 def cmd_post(root: Path, a: list[str], at: dt.datetime | None = None) -> int:
     if len(a) < 4 or any("=" not in x for x in a[4:]):
         print("usage: channels.py post <channel> <kind> <id> <body-file> [key=value …]", file=sys.stderr); return 2
@@ -126,11 +146,20 @@ def cmd_post(root: Path, a: list[str], at: dt.datetime | None = None) -> int:
     extra = dict(x.split("=", 1) for x in a[4:])
     if (base := checkout(root)) is None or not base.is_dir():
         print(f"channels: no channels checkout; run the subscribe step first", file=sys.stderr); return 2
-    text = record(root, channel, kind, mid, Path(body_file).read_text(), extra, at or now())
+    raw = Path(body_file).read_bytes()
     system = sender(root).split(":")[0]
+    msgs = []
+    if whole_message(raw):                # kept byte for byte, so the sha256 a posting Y names survives (#688)
+        data, text = raw, raw.decode()
+        msgs += whole_problems(posts.parse(text)[0], channel, kind, mid, system)
+        if extra:
+            msgs.append("key=value fields go into a bare body's header; a whole message carries its own")
+    else:
+        text = record(root, channel, kind, mid, raw.decode(), extra, at or now())
+        data = text.encode()
     path = base / posts.STORE / channel / system / f"{mid}.md"
     ids = {p.stem for p in posts.messages(base)}
-    msgs = posts.check_message(base, path, text, posts.channels(base), posts.members(base), ids | {mid})
+    msgs += posts.check_message(base, path, text, posts.channels(base), posts.members(base), ids | {mid})
     msgs += posts.check_text(text, root, path.relative_to(base).as_posix())
     if path.exists():
         msgs.append(f"{path.relative_to(base).as_posix()}: exists; a message is never edited (append-only)")
@@ -143,7 +172,7 @@ def cmd_post(root: Path, a: list[str], at: dt.datetime | None = None) -> int:
     if git(base, "switch", "--quiet", "-c", branch, check=False).returncode:
         print(f"refused: branch {branch} exists in the clone; nothing written"); return 1
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_bytes(data)
     git(base, "add", "--", str(path))
     git(base, "commit", "--quiet", "-m", f"{channel}: {kind} {mid} from {sender(root)}")
     print(f"ok   written on branch {branch} of {base}; nothing pushed")
@@ -165,11 +194,36 @@ def cmd_breach(root: Path, a: list[str]) -> int:
           "and no reply, block or reversal is made from here (never retaliate)")
     return 0
 
-STEPS = {"subscribe": cmd_subscribe, "read": cmd_read, "post": cmd_post, "breach": cmd_breach}
+def same_remote(a: str, b: str) -> bool:
+    norm = lambda u: u.strip().rstrip("/").removesuffix(".git").rstrip("/")
+    return norm(a) == norm(b)
+
+def cmd_subscribed(root: Path, a: list[str]) -> int:
+    """The subscribe step's postcondition: the clone exists and its `origin` is `<url>`."""
+    if len(a) != 1:
+        print("usage: channels.py subscribed <url>", file=sys.stderr); return 2
+    base = posts.store(root)
+    if base is None or not base.is_dir():
+        return 1
+    r = git(base, "remote", "get-url", "origin", check=False)
+    return 0 if r.returncode == 0 and same_remote(r.stdout, a[0]) else 1
+
+def cmd_posted(root: Path, a: list[str]) -> int:
+    """The post step's postcondition: branch `post/<id>` of the clone holds the message's path."""
+    if len(a) != 2:
+        print("usage: channels.py posted <channel> <id>", file=sys.stderr); return 2
+    base = posts.store(root)
+    if base is None or not base.is_dir():
+        return 1
+    rel = f"{posts.STORE}/{a[0]}/{sender(root).split(':')[0]}/{a[1]}.md"
+    return 0 if git(base, "cat-file", "-e", f"post/{a[1]}:{rel}", check=False).returncode == 0 else 1
+
+STEPS = {"subscribe": cmd_subscribe, "read": cmd_read, "post": cmd_post, "breach": cmd_breach,
+         "subscribed": cmd_subscribed, "posted": cmd_posted}
 
 def main(a: list[str]) -> int:
     if not a or a[0] not in STEPS:
-        print(__doc__.rsplit("\n", 2)[-2].strip(), file=sys.stderr); return 2
+        print("\n".join(l.strip() for l in __doc__.rstrip().splitlines()[-2:]), file=sys.stderr); return 2
     return STEPS[a[0]](dyadlib.repo_root(), a[1:])
 
 if __name__ == "__main__":

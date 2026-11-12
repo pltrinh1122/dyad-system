@@ -2,8 +2,10 @@
 interval due once it passes, doubling after an empty read up to its ceiling and resetting on news), `read` printing
 only what is new and keeping its marker under the git common dir, `post` refusing a draft the guard fails and writing
 a passing one on its own branch of the clone without pushing, an existing id refused, `breach` naming only other
-systems' findings, and the usage errors."""
-import datetime as dt, io, json, os, shutil, subprocess, sys, tempfile, unittest
+systems' findings, and the usage errors; a whole message posted byte for byte (the v1.3.0 bytes, sha256 cf30bcb7),
+refused when it names another id or system or carries extra fields, a bare body still wrapped, and the two
+postconditions as commands (d-work #688)."""
+import datetime as dt, hashlib, io, json, os, shutil, subprocess, sys, tempfile, unittest
 from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 from unittest import mock
@@ -110,6 +112,68 @@ class Post(Fixture):
         self.put(message(mid="v4"), mid="v4")
         rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v4", self.body("x")], at=AT)
         self.assertEqual(rc, 1); self.assertIn("never edited", out)
+
+V130 = CRAFT / "tests" / "data" / "v1.3.0.md"     # the v1.3.0 post as approved: sha256 cf30bcb7 (d-work #688)
+V130_SHA = "cf30bcb7256e13c7f6fb15b322d179863a1e2c017717bf31b9a77b2da09d1ae6"
+
+class WholeMessage(Fixture):
+    def setUp(self):
+        super().setUp()
+        (self.base / "registry" / "members" / "dyad-system.md").write_text(MEMBER.format(s="dyad-system"))
+        self.local.write_text(f"clone: {self.base}\nsystem: dyad-system\n")
+        subprocess.run(["git", "-C", str(self.base), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(self.base), "commit", "-q", "-m", "member"], check=True)
+
+    def test_whole_message_is_kept_byte_for_byte(self):
+        self.assertEqual(hashlib.sha256(V130.read_bytes()).hexdigest(), V130_SHA)
+        rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v1.3.0", str(V130)], at=AT)
+        self.assertEqual(rc, 0, out)
+        written = (self.base / "channels" / "release" / "dyad-system" / "v1.3.0.md").read_bytes()
+        self.assertEqual(hashlib.sha256(written).hexdigest(), V130_SHA)
+        self.assertEqual(written.count(b"format: dyad-channels/1"), 1)   # one header, never two
+        self.assertEqual(ch.cmd_posted(self.root, ["release", "v1.3.0"]), 0)
+
+    def test_whole_message_naming_another_id_is_refused(self):
+        rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v9", str(V130)], at=AT)
+        self.assertEqual(rc, 1); self.assertIn("the message's id 'v1.3.0' is not the step's 'v9'", out)
+        self.assertFalse((self.base / "channels" / "release" / "dyad-system" / "v9.md").exists())
+
+    def test_whole_message_under_another_system_is_refused(self):
+        self.local.write_text(f"clone: {self.base}\nsystem: up\n")
+        rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v1.3.0", str(V130)], at=AT)
+        self.assertEqual(rc, 1); self.assertIn("is not this system's (up)", out)
+
+    def test_whole_message_refuses_extra_fields(self):
+        rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v1.3.0", str(V130), "refs=x"], at=AT)
+        self.assertEqual(rc, 1); self.assertIn("a whole message carries its own", out)
+
+    def test_bare_body_is_still_wrapped(self):
+        p = self.tmp / "bare.txt"; p.write_text("Tag v2 is out.\n")
+        rc, out = run(ch.cmd_post, self.root, ["release", "fact", "v2", str(p)], at=AT)
+        self.assertEqual(rc, 0, out)
+        text = (self.base / "channels" / "release" / "dyad-system" / "v2.md").read_text()
+        self.assertTrue(text.startswith("format: dyad-channels/1\nid: v2\n")); self.assertIn("\n\nTag v2 is out.\n", text)
+
+class Postconditions(Fixture):
+    def test_subscribed_passes_on_a_clone_of_the_url(self):
+        url = "https://example.invalid/channels.git"
+        subprocess.run(["git", "-C", str(self.base), "remote", "add", "origin", url], check=True)
+        self.assertEqual(ch.cmd_subscribed(self.root, [url]), 0)
+        self.assertEqual(ch.cmd_subscribed(self.root, ["https://example.invalid/channels/"]), 0)   # .git and / ignored
+        self.assertEqual(ch.cmd_subscribed(self.root, ["https://example.invalid/other"]), 1)
+
+    def test_subscribed_fails_without_a_clone_or_origin(self):
+        self.assertEqual(ch.cmd_subscribed(self.root, ["https://example.invalid/channels"]), 1)   # no origin
+        self.local.write_text(f"clone: {self.tmp / 'none'}\n")
+        self.assertEqual(ch.cmd_subscribed(self.root, ["https://example.invalid/channels"]), 1)
+
+    def test_posted_fails_before_the_post(self):
+        self.assertEqual(ch.cmd_posted(self.root, ["release", "v1"]), 1)
+
+    def test_runbook_postconditions_are_commands(self):
+        rb = (CRAFT / "runbooks" / "channels.md").read_text()
+        self.assertIn('postcondition: dyad/bin/dyad-python crafts/channels/scripts/channels.py subscribed "$URL"', rb)
+        self.assertIn('postcondition: dyad/bin/dyad-python crafts/channels/scripts/channels.py posted "$CHANNEL" "$ID"', rb)
 
 class Breach(Fixture):
     def test_breach_names_other_systems_only(self):
