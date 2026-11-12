@@ -1,0 +1,88 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-segmentation",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-segmentation",
+  "name": "Segmentation",
+  "description": "Whether a candidate is a segment of a canvas set's map, and which, as a cell or a named group of cells on stated axes, read from both ends — segment to problem classes, and problem class to segments — so that the map is cut by a record, its segments do not overlap, and no problem class's sufferers are left without a segment.",
+  "dyad:decides": "Is this candidate a segment of the map, and which?",
+  "dyad:inputs": [
+    "the axes and their values: an input, never fixed by this record",
+    "the candidate, as its readers would describe themselves, never a person or a named organization",
+    "the segments already on the map, each with its cells",
+    "the projection's problem classes: its root causes, or named groups of them, the grouping written down",
+    "the segment × class table, each cell labelled from a source tree or as a hypothesis",
+    "the source trees' anchor branches, where trees exist"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "off-axis",
+      "name": "off-axis",
+      "dyad:when": "the candidate is defined by something other than the axes, such as a job title or a function alone",
+      "dyad:then": "restate it as the cells its readers sit in, and judge it again"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "idle-axis",
+      "name": "idle-axis",
+      "dyad:when": "two cells that differ only in one axis value have source trees whose anchor branches are the same",
+      "dyad:then": "merge across that value; an axis no tree yet tests is kept and labelled hypothesis"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "overlapping",
+      "name": "overlapping",
+      "dyad:when": "the candidate shares a cell with a segment on the map, or suffers the same problem classes with the same anchor branch",
+      "dyad:then": "merge them, or name what separates them; a separator that is not an axis is a candidate axis, labelled hypothesis"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "too-broad",
+      "name": "too-broad",
+      "dyad:when": "the candidate's readers have anchor branches that differ",
+      "dyad:then": "split it along the axis value where they differ"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "off-class",
+      "name": "off-class",
+      "dyad:when": "read from the problem classes, the candidate suffers none of them",
+      "dyad:then": "its source tree is owed before it is ranked, or it leaves the map; never removed silently"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unspanned",
+      "name": "unspanned",
+      "dyad:when": "judged over the whole map: a problem class's sufferers include a cell no segment holds",
+      "dyad:then": "add a segment for that cell and judge it with this record"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cut",
+      "name": "cut",
+      "dyad:when": "every test above holds for the candidate",
+      "dyad:then": "it is a segment of the map: judge its significance (collateral-segment-significance), then rank the map (collateral-segment-rank); the map is corroborated when both perspectives agree for every segment and class"
+    }
+  ],
+  "dyad:precedence": "in the order listed, per candidate; unspanned is judged once over the map after every candidate",
+  "dyad:default": "a test that cannot be decided from the record is labelled hypothesis and put to the Operator, never assumed",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}
