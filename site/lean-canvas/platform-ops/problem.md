@@ -1,6 +1,6 @@
 # Problem — `platform-ops`
 
-Root causes selected from `why-tree.md` (`crafts/chronicle/rules/collateral.md` §6), ranked: first those the anchor
+Root causes selected from the canvas set's why-tree, `../why-tree.md`, by the nodes tagged `platform-ops` (`crafts/chronicle/rules/collateral.md` §6), ranked: first those the anchor
 branch exits through (N7.1), then by the branches that join them. Each entry and each symptom cites its node.
 
 1. **H** (top) Nothing ties what the agent did to what I approved, and why. — N5.1.1
