@@ -12,13 +12,13 @@
   ],
   "identifier": "collateral-problem-depth",
   "name": "Problem depth",
-  "description": "Whether a node of a segment's why-tree is a symptom, a cause, a root cause or the anchor, the per-node test of problem discovery.",
+  "description": "Whether a node of a segment's source why-tree is a symptom, a cause, a root cause or the anchor, the per-node test of problem discovery; and, when a new problem is screened, whether it is already known in the projection.",
   "dyad:decides": "Is this claim or node of the why-tree known, a symptom, a cause, a root cause or the anchor, for the segment asked about?",
   "dyad:inputs": [
-    "the canvas set's whole why-tree, read first: a claim matching any node, whatever its tags, is known and takes that node's outcome for the claim's segment, with its label",
+    "when screening a new claim, the canvas set's projection, read first: a claim matching any projected node, whatever its tags, is known and takes that node's outcome for the claim's segment, with its label and its sources; never read while a segment's source tree is derived",
     "the node's statement",
-    "its children and joins",
-    "its ancestors in its branch",
+    "its children and joins, in its source tree",
+    "its ancestors in its branch, in its source tree",
     "the root anchor written for the segment",
     "the segment (tag) the claim is asked for"
   ],
@@ -27,8 +27,8 @@
       "@type": "DefinedTerm",
       "termCode": "known",
       "name": "known",
-      "dyad:when": "the claim matches by meaning a node already in the whole tree",
-      "dyad:then": "take that node's outcome for the claim's segment, with its label, and its path; a claim raised as a new problem is named a red herring; new information is placed as a new symptom node joined to the known parent; a segment the node is not tagged with becomes a tag candidate"
+      "dyad:when": "when screening, the claim matches by meaning a node already in the projection",
+      "dyad:then": "take that node's outcome for the claim's segment, with its label, its path and its sources; a claim raised as a new problem is named a red herring; new information goes into the segment's source tree as a new symptom node joined to the known parent, and is projected; a segment the node is not tagged with makes it a tag candidate"
     },
     {
       "@type": "DefinedTerm",
@@ -66,8 +66,8 @@
       "dyad:then": "restate it as what the segment suffers, then judge it again"
     }
   ],
-  "dyad:precedence": "known first; then the first outcome whose condition holds, read for the claim's segment; a statement that is both a symptom and solution-shaped is restated first",
-  "dyad:default": "when the removal test cannot be decided, the node is held as a cause and put to the Operator; a claim matching no node is placed in the tree first",
+  "dyad:precedence": "known first when screening, and never while a source tree is derived; then the first outcome whose condition holds, read for the claim's segment; a statement that is both a symptom and solution-shaped is restated first",
+  "dyad:default": "when the removal test cannot be decided, the node is held as a cause and put to the Operator; a claim matching no projected node is placed in a source tree first and projected",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
     "dyad:implementation": null
