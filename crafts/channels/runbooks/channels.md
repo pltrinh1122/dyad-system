@@ -21,7 +21,7 @@ name: subscribe
 class: reversible
 role: any
 undo: remove the clone at the `clone:` path
-postcondition: the `clone:` path is a git clone of $URL
+postcondition: dyad/bin/dyad-python crafts/channels/scripts/channels.py subscribed "$URL"
 scope: the `clone:` path (write); nothing in this checkout
 
 dyad/bin/dyad-python crafts/channels/scripts/channels.py subscribe "$URL"
@@ -48,7 +48,7 @@ name: post
 class: reversible
 role: any
 undo: delete branch post/$ID in the clone
-postcondition: branch post/$ID of the clone holds the one message
+postcondition: dyad/bin/dyad-python crafts/channels/scripts/channels.py posted "$CHANNEL" "$ID"
 scope: <clone>/channels/$CHANNEL/<system>/$ID.md (write, on a new branch)
 
 dyad/bin/dyad-python crafts/channels/scripts/channels.py post "$CHANNEL" "$KIND" "$ID" "$BODY"
