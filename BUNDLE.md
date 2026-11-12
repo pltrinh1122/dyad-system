@@ -52,11 +52,11 @@ version: 1.3.0
 
 | component | version |
 |-----------|---------|
-| dyad-operator | 1.3.0 |
-| sysarch | 0.4.0 |
+| dyad-operator | 1.3.1 |
+| sysarch | 0.4.1 |
 | syseng | 0.8.0 |
 | sysadmin | 0.3.3 |
-| cabinet | 0.7.0 |
+| cabinet | 0.8.0 |
 | chronicle | 0.4.0 |
 
 `disclosure` is in the tree and deliberately absent from the table: the Operator disposed that it is
