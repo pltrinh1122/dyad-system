@@ -1,5 +1,5 @@
 session: communicate-marketing-a674840e
-seen: 2026-11-12T21:55:33+00:00
+seen: 2026-11-12T22:25:27+00:00
 root: /home/user/dyad-system
 rows: 696
 files: crafts/chronicle/falsification/rules/collateral.md crafts/chronicle/playbooks/alignment-review.md crafts/chronicle/rules/collateral.md site/lean-canvas/by-problem.md site/lean-canvas/by-segment.md site/lean-canvas/index.md site/lean-canvas/reviews/696.md site/lean-canvas/why-tree.md
