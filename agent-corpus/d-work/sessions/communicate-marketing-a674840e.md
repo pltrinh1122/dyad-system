@@ -1,5 +1,5 @@
 session: communicate-marketing-a674840e
-seen: 2026-11-12T18:27:07+00:00
+seen: 2026-11-12T18:56:25+00:00
 root: /home/user/dyad-system
 rows: 693
 files: crafts/chronicle/dmc/collateral-segmentation.jsonld crafts/chronicle/falsification/rules/collateral.md crafts/chronicle/rules/collateral.md site/lean-canvas/by-problem.md site/lean-canvas/by-segment.md site/lean-canvas/index.md
