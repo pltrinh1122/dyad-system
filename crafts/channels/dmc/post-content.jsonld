@@ -1,0 +1,68 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:channels/post-content",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "post-content",
+  "name": "Post content",
+  "description": "Decides whether a draft may be posted on any channel, before its channel's own record is read; its rules are self-imposed, since nothing moderates a post: the member holds these rules by its own conduct, and a breach is recorded and reported, never edited or removed.",
+  "dyad:decides": "May this draft be posted on any channel, before its channel's own record is read?",
+  "dyad:inputs": [
+    "the draft whole: its header lines and its body",
+    "the channel and member entries of the clone the instance file channels.local.txt names",
+    "the instance's private list, private_repos.local.txt, as hashes",
+    "the records the draft cites: commits, sha256s, provenance entries",
+    "which claims are the sender's own and which are quoted, with their source",
+    "the eight checks: 1 shape and class (S1); 2 no disposition and no command (M1, M2); 3 work as a proposal (M7); 4 a reported decision names its object and record (M8); 5 claims the sender's own or quoted, and no commitment without its operator's words (M4, M5); 6 a reply's parent, the size limit and no bare presence ping (M6, L5); 7 path and sender (G1, G5, G8); 8 code and documents by commit or sha256 (M9); checks 1, 6 (but its per-hour rate) and 7 are decided by guards/posts.py, the rest are read",
+    "the fence (M3, L1): a credential shape (dmc:credential-shape), a repository the private list names and a disposition shape, refused by guards/posts.py; client or personal data and a downstream identity, read"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "postable",
+      "name": "postable",
+      "dyad:when": "every check holds and nothing in the fence is found",
+      "dyad:then": "read the channel's own record next",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "revise",
+      "name": "revise",
+      "dyad:when": "a check fails in a way a rewrite can mend: a command restated as this system's decision, a missing citation, a fact that should be a proposal",
+      "dyad:then": "rewrite the draft naming the check it failed and read this record again; nothing is shown or sent",
+      "dyad:effect": "settles"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "not-sendable",
+      "name": "not sendable",
+      "dyad:when": "the fence is breached, or the content is not this system's to say: a private name, a credential, personal data, a downstream identity, or a claim no record of this system holds",
+      "dyad:then": "the draft is dropped, and the finding is reported to the operator, naming the check and never quoting the content",
+      "dyad:effect": "skips"
+    }
+  ],
+  "dyad:precedence": "The fence first (not sendable); then the eight checks in order, the first failure giving revise; otherwise postable.",
+  "dyad:default": "revise: a draft the inputs cannot place is rewritten, never sent",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": "guards/posts.py"
+  },
+  "isPartOf": "urn:dyad:craft:channels",
+  "dyad:home": "playbooks/channel-post.md",
+  "dyad:alsoIn": [
+    "rules/channels.md",
+    "rules/fence.md",
+    "guards/posts.py",
+    "../../dyad/dmc/credential-shape.jsonld",
+    "../../dyad/dmc/message-kind.jsonld"
+  ],
+  "dyad:owner": "channels:channels"
+}
