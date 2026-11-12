@@ -954,20 +954,46 @@ _Q_ROW = re.compile(r"#(\d+)\b")
 _CITED = re.compile(r"`([A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*-]+)+)`")
 
 
+def cited_paths(root: Path, n: str) -> list[str]:
+    """What question `n`'s decision rests on, as repo paths: its plan file, each backticked repo path the plan cites
+    that exists, and the row files its row's `refs` name (#694, dmc:re-present `full`)."""
+    plan = dyadlib.instance(root) / "d-work" / "plans" / f"{n}.md"
+    if not plan.is_file() or not plan.is_relative_to(root):
+        return []
+    text = plan.read_text(errors="ignore")
+    cited = [c for c in dict.fromkeys(_CITED.findall(text)) if "*" not in c and (root / c).exists()]
+    rows_dir = dyadlib.instance(root) / "d-work" / "rows"
+    row, refs = rows_dir / f"{n}.md", []
+    if row.is_file():
+        m = re.search(r"(?m)^refs: *(.*)$", row.read_text(errors="ignore"))
+        refs = [r for r in dict.fromkeys(re.findall(r"\b(\d+)\b", m.group(1) if m else "")) if r != n]
+    ref_paths = [(rows_dir / f"{r}.md").relative_to(root).as_posix() for r in refs if (rows_dir / f"{r}.md").is_file()]
+    return [plan.relative_to(root).as_posix()] + cited + ref_paths
+
+
+def _git_out(root: Path, *args: str) -> str | None:
+    try:
+        r = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, env=dyadlib.git_env(), timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def _changed_after(root: Path, since: str, paths: list[str]) -> list[str]:
-    """The paths among `paths` a commit on HEAD changed after `since` (an ISO time), in the given order."""
+    """The paths among `paths` that differ between HEAD and the commit HEAD stood at when `since` (an ISO time) began,
+    in the given order: two git calls, a first-parent walk back to `since` and one tree diff limited to `paths`, so
+    `board resume` stays within its stall ceiling however old a question is (#694). A path that existed then and was
+    changed and changed back reads unchanged, which is what a question's premise cares about."""
     if not since or not paths:
         return []
-    out = []
-    for path in paths:
-        try:
-            r = subprocess.run(["git", "log", "-1", "--format=%H", f"--since={since}", "--", path], cwd=root,
-                               capture_output=True, text=True, env=dyadlib.git_env(), timeout=60)
-        except (OSError, subprocess.SubprocessError):
-            continue
-        if r.returncode == 0 and r.stdout.strip():
-            out.append(path)
-    return out
+    base = _git_out(root, "rev-list", "-1", "--first-parent", f"--before={since}", "HEAD")
+    if base is None:
+        return []
+    if not base:
+        return list(paths)                                  # the history begins after the question was asked
+    out = _git_out(root, "diff", "--name-only", "--no-renames", base, "HEAD", "--", *paths)
+    hit = set((out or "").splitlines())
+    return [p for p in paths if p in hit]
 
 
 def re_present(root: Path, n: str, f: dict[str, str], owed: list[tuple[str, dict[str, str]]], cos: dict[str, str],
@@ -986,20 +1012,7 @@ def re_present(root: Path, n: str, f: dict[str, str], owed: list[tuple[str, dict
              and not h.startswith(recorded[pr])]
     if moved:
         return "void", ", ".join(moved) + " moved from the head the question names"
-    plan = dyadlib.instance(root) / "d-work" / "plans" / f"{n}.md"
-    rel = plan.relative_to(root).as_posix() if plan.is_relative_to(root) else str(plan)
-    cited, refs = [], []
-    if plan.is_file():
-        text = plan.read_text(errors="ignore")
-        cited = [c for c in dict.fromkeys(_CITED.findall(text)) if "*" not in c and (root / c).exists()]
-        row = dyadlib.instance(root) / "d-work" / "rows" / f"{n}.md"
-        if row.is_file():
-            m = re.search(r"(?m)^refs: *(.*)$", row.read_text(errors="ignore"))
-            refs = [r for r in dict.fromkeys(re.findall(r"\b(\d+)\b", m.group(1) if m else "")) if r != n]
-    rows_dir = dyadlib.instance(root) / "d-work" / "rows"
-    ref_paths = [(rows_dir / f"{r}.md").relative_to(root).as_posix() for r in refs
-                 if (rows_dir / f"{r}.md").is_file() and (rows_dir / f"{r}.md").is_relative_to(root)]
-    changed = _changed_after(root, since, ([rel] if plan.is_file() else []) + cited + ref_paths)
+    changed = _changed_after(root, since, cited_paths(root, n))
     if changed:
         return "full", "changed since it was asked: " + ", ".join(changed[:5]) + (" …" if len(changed) > 5 else "")
     last = (cos.get("question") or "").strip() == q.strip() and bool(q.strip())
