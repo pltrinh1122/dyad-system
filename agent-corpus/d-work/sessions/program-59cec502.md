@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-12T17:53:22+00:00
+seen: 2026-11-12T17:55:39+00:00
 root: /home/user/dyad-system
 rows: 691 692
 files: dyad/dmc/audit-trigger.jsonld dyad/dmc/hardening-due.jsonld dyad/dmc/hardening-work.jsonld dyad/dmc/message-overhead.jsonld dyad/falsification/rules/rule-3-d-work.md dyad/guards/agent/board.py dyad/guards/agent/provenance.py dyad/playbooks/audit.md dyad/rules/RULE-2-no-self-ratify.md dyad/rules/RULE-3-d-work.md dyad/rules/RULE-7-provenance.md dyad/scripts/ dyad/scripts/audits.py dyad/scripts/automaton.py dyad/scripts/dyadlib.py dyad/scripts/package.py dyad/surface.md dyad/templates/PREFERENCES.md dyad/tests/guards/agent/test_board.py dyad/tests/guards/agent/test_provenance.py dyad/tests/guards/agent/test_prs.py dyad/tests/test_audits.py dyad/tests/test_package.py preferences-corpus/PREFERENCES.md
