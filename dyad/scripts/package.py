@@ -145,6 +145,14 @@ means `dyad/bin/dyad` from the git root (or python3.12 dyad/scripts/package.py).
                                 #<parent>, <its date>` (Rule-7 property 4). Refuses -d, --said, --prompt
                                 and --relayed-via, a row neither `refs: parent #<parent>` nor born `Y plan
                                 (mandate #<parent>)`, and a mandate whose row or record holds no `Y done`
+  dyad dwork state <id> open --mandate-preference hardening-mandate
+                                open a backlog row of hardening work under the standing mandate the preference
+                                sets (d-work #692; dmc:hardening-work, dmc:hardening-due): the row's entry
+                                `<date> Y plan (mandate preference hardening-mandate)`, its record's entry the
+                                grant's words the preference description names (`granted: d-work #<id> entry
+                                <n>`), noted `mandate preference hardening-mandate, <its date>`. Refuses the
+                                preference not `on`, a row whose source is no hardening or audit run (W1), and a
+                                row past `hardening-ceiling` in flight; its Done is always asked
   dyad dwork new|state … --land [--mirror <branch>]
                                 the verb, committed and pushed in one call (scripts/land.py; #447, child C1
                                 of plan #443): run in the tool-owned worktree `<git common dir>/dyad-land`,
@@ -2088,6 +2096,90 @@ def append_provenance(rid, entries, today, fresh=False):
     path.write_text(body, encoding="utf-8")
     return path
 
+# #692: a standing hardening mandate, an authority preference (Rule-2 Binding: a mandate). The row it opens takes the
+# entry `<date> Y plan (mandate preference <key>)`, which the plan gate reads as a plan-`Y`, and its record's entry the
+# words that grant the mandate, copied from the record the instance's preference description names
+# (`granted: d-work #<id> entry <n>`), noted `mandate preference <key>, <the grant's date>` (Rule-7 property 4).
+MANDATE_PREFERENCES = {"hardening-mandate": "hardening-ceiling"}   # the key, and the tunable that bounds its rows in flight
+GRANTED = re.compile(r"granted: d-work #(\d+) entry (\d+)")
+HARDENING_RUN = re.compile(r"incident-hardening")                  # a plan that runs the incident-hardening play-book
+AUDIT_RUN = re.compile(r"playbooks/audit\.md|audit play-book")      # a plan that runs the audit play-book
+MANDATE_BACKLOG = re.compile(r"\bY backlog \(mandate #(\d+)\)")
+
+
+def mandate_preference_entry(key: str) -> str:
+    """The `disposed` entry a row opened under the mandate preference `key` takes (without its date)."""
+    return f"Y plan (mandate preference {key})"
+
+
+def preference_grant(key: str, root: Path):
+    """(id, words, date) of the entry the preference description names as the grant of mandate preference `key`;
+    exits with a refusal when the description names none, or names an entry that is no disposition or prompt."""
+    import dyadlib
+    pf = root / dyadlib.PREFERENCES_REL
+    text = pf.read_text(encoding="utf-8") if pf.is_file() else ""
+    block = re.search(rf"^- `{re.escape(key)}`.*?(?=^- `|\Z)", text, re.M | re.S)
+    m = GRANTED.search(block.group(0)) if block else None
+    if not m:
+        sys.exit(f"refused: the description of preference {key!r} names no grant (`granted: d-work #<id> entry <n>`), "
+                 f"so there are no words to copy into the row's record (Rule-7 property 4, #692)")
+    gid, n = int(m.group(1)), m.group(2)
+    pv = dyadlib.load_guard("agent", "provenance")
+    rec = pv.store(root) / f"{gid}.md"
+    got = [e for e in pv.parse(rec.read_text(encoding="utf-8") if rec.is_file() else "") if e["n"] == n]
+    if not got or got[0]["kind"] not in ("prompt", "disposition") or not got[0]["text"].strip():
+        sys.exit(f"refused: preference {key!r} names its grant as d-work #{gid} entry {n}, which the record does not hold (#692)")
+    return gid, got[0]["text"], got[0]["date"]
+
+
+def hardening_source(rows, r, root: Path) -> bool:
+    """dmc:hardening-work W1, read mechanically: the row was carried by a hardening run (`Y backlog (mandate #N)`, plan N
+    running the incident-hardening play-book), or its refs name a row whose plan ran the incident-hardening or the audit
+    play-book."""
+    import dyadlib
+    plans = dyadlib.instance(root) / "d-work" / "plans"
+    def plan(i, pattern):
+        f = plans / f"{i}.md"
+        return f.is_file() and bool(pattern.search(f.read_text(encoding="utf-8", errors="ignore")))
+    first = (r.disposed or "").split(";")[0]
+    if (m := MANDATE_BACKLOG.search(first)) and plan(int(m.group(1)), HARDENING_RUN):
+        return True
+    words, refs = (r.refs or "").split(), set()
+    for i, w in enumerate(words):   # `PR #9` names a pull request, never a row
+        if (m := re.fullmatch(r"#?(\d+)", w)) and not (i and words[i - 1] == "PR") and int(m.group(1)) in rows:
+            refs.add(int(m.group(1)))
+    refs.discard(r.id)
+    return any(plan(i, HARDENING_RUN) or plan(i, AUDIT_RUN) for i in sorted(refs))
+
+
+def mandate_preference_open(rows, r, state: str, key: str, root: Path):
+    """(entry, provenance entries) for opening backlog row `r` under the mandate preference `key` (#692), or exit with
+    the refusal: the key, the transition, the value `on`, dmc:hardening-work W1 and the ceiling, in that order, each
+    before any write. `root` holds the preferences and the instance."""
+    import dyadlib
+    rid = r.id
+    if key not in MANDATE_PREFERENCES:
+        sys.exit(f"refused: --mandate-preference {key!r} is no mandate preference ({', '.join(MANDATE_PREFERENCES)})")
+    if r.state != "backlog" or state != "open":
+        sys.exit(f"refused: --mandate-preference opens a backlog row (backlog -> open); #{rid} is {r.state}, asked {state}")
+    value = (dyadlib.preference(key, root) or "off").strip()
+    if value != "on":
+        sys.exit(f"refused: preference {key} is {value!r}; the mandate stands only while it is `on` (#692)")
+    if not hardening_source(rows, r, root):
+        sys.exit(f"refused: #{rid} is not hardening work by its source (dmc:hardening-work W1): its first entry names no "
+                 f"hardening run, and its refs no row whose plan ran the incident-hardening or the audit play-book")
+    ceiling = dyadlib.tunable(MANDATE_PREFERENCES[key], root)
+    tag = f"({mandate_preference_entry(key).split(' (', 1)[1]}"
+    inflight = sorted(x.id for x in rows.values() if x.id != rid and x.state in ("open", "planned", "blocked")
+                      and tag in (x.disposed or ""))
+    if len(inflight) >= ceiling:
+        sys.exit(f"refused: {len(inflight)} row(s) already in flight under {key} "
+                 f"({', '.join(f'#{i}' for i in inflight)}), at its ceiling {MANDATE_PREFERENCES[key]} = {ceiling} (#692)")
+    gid, gwords, gdate = preference_grant(key, root)
+    fence_for("disposition", gwords)
+    return mandate_preference_entry(key), [("disposition", gwords, f"mandate preference {key}, {gdate}")]
+
+
 RETIRES = re.compile(r"\bretires (#\d+(?:, #\d+)*)")   # #574 revision 3: `Y done (accreted #c, retires #r, #s, merges …)`
 
 FULL_HEAD = re.compile(r"[0-9a-f]{40}")   # #661: a written head is full (merge.FULL_SHA); rows.HEAD_AT reads 7-40 (history)
@@ -2368,7 +2460,15 @@ def cmd_dwork(a):
             fence_for("disposition", dwords)
             d = f"Y archive (done #{did})"
             entries = [("disposition", dwords, f"done #{did}, {ddate}")]
-        if r.state == "backlog" and state == "open" and prompt is None:
+        if "--mandate-preference" in vals:
+            # #692: a backlog row of hardening work opened under the standing mandate the operator set as a preference
+            # (Rule-2 Binding, Rule-3 Scope): no intent or plan question of its own, its Done always asked. Every refusal
+            # precedes the first write: the key, the transition, the value `on`, W1 (dmc:hardening-work) and the ceiling.
+            if any(x in vals for x in ("--mandate", "--retired-by", "--relayed-via")) or d is not None or prompt is not None:
+                sys.exit("refused: --mandate-preference carries the mandate's own words (Rule-7 property 4); "
+                         "it takes no -d, --said, --prompt, --relayed-via, --mandate or --retired-by")
+            d, entries = mandate_preference_open(rows, r, state, vals["--mandate-preference"], REPO)
+        if r.state == "backlog" and state == "open" and prompt is None and "--mandate-preference" not in vals:
             sys.exit(f"refused: a backlog row opens on the Operator's prompt (Rule-3); give its words with --prompt[-file] (Rule-7)")
         # #202: the Done state follows the merge. Every refusal here precedes the first write (Rule-7 p3),
         # and each is the fence's own clause said earlier, where it costs a line instead of a push.

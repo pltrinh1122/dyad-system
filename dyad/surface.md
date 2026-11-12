@@ -50,7 +50,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad craft diff <craft>` | `--against <src>`, `--patch` | frozen |
 | `dyad ledger` | — | frozen |
 | `dyad dwork new <title> [<refs>]` | `--backlog`, `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--relayed-via`, `--mandate` (refuses past the plan's stated ceiling, #592), `--slug` (refused without it under `dwork-slug: on`, #622), `--land`, `--mirror` | frozen |
-| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--slug` (once, on a row that holds none and is not terminal, #622), `--decisions` (the decision log, with a `Y done` or a `Y precedent (…)`, #644), `--check`, `--land`, `--mirror` (`planned` prints the plan check, #592) | frozen |
+| `dyad dwork state <id> <state>` | `-d`, `-r`, `--prompt`, `--prompt-file`, `--said`, `--said-file`, `--said-ref`, `--relayed-via`, `--mandate`, `--retired-by` (#574), `--slug` (once, on a row that holds none and is not terminal, #622), `--decisions` (the decision log, with a `Y done` or a `Y precedent (…)`, #644), `--mandate-preference` (`backlog` → `open` under a mandate preference, #692), `--check`, `--land`, `--mirror` (`planned` prints the plan check, #592) | frozen |
 | `dyad dwork retire <id>...` | `-d`, `--said`, `--said-file` | frozen |
 | `dyad dwork intent <id>` | — (read-only: the rows of any state and the surface items nearest the row's prompts, ten each, no threshold, #615) | frozen |
 | `dyad playbook profile <name>` | — (read-only: a play-book's steps with their words, `dmc:` citations and commands, its cited records' words and kind, the run total, and the median trace seconds of rows whose plan names it, #642) | frozen |
@@ -155,6 +155,8 @@ the operator's. The key names and allowed values are the surface.
 | sweep-ci-hours | frozen |
 | promotion-ceiling | frozen |
 | promotion-adjacency-min | frozen |
+| hardening-mandate | frozen |
+| hardening-ceiling | frozen |
 
 ## S4 Rules
 
@@ -234,7 +236,9 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | evidence-fold | frozen |
 | failure-mode-primary | frozen |
 | groom-trigger | frozen |
+| hardening-due | frozen |
 | hardening-survey | frozen |
+| hardening-work | frozen |
 | held-pr | frozen |
 | hook-failure | frozen |
 | host-action-class | frozen |

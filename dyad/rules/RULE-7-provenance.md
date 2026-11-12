@@ -65,7 +65,11 @@ built on.
    operator. The note is what discloses that the words predate the row they open; the agent's own
    account of why the row exists stays in the mandate's plan file (#290). The same holds of the
    entry that closes it, the mandate's done-`Y` words under the same note (#422), and of a carried
-   `backlog` row's entry 1 (Rule-3, Ledger), the words of the plan-`Y` whose play-book prescribed it (#574). A row a done-`Y` archives under `retires` (Rule-3,
+   `backlog` row's entry 1 (Rule-3, Ledger), the words of the plan-`Y` whose play-book prescribed it (#574). A row a mandate preference opens from `backlog`
+   (Rule-3, Scope: `hardening-mandate`) gains, as the entry for that transition, the operator's words that granted the
+   preference — the entry the instance's description of the key names as `granted: d-work #<id> entry <n>` — copied
+   verbatim and noted `mandate preference <key>, <the grant's date>`, the date the grant's, for the reason an accreted
+   row's note carries its mandate's date (#692). A row a done-`Y` archives under `retires` (Rule-3,
    Completion counter-prompt) gains that `Y`'s words the same way, noted `done #<id>, <date>`, so each retired row's
    record holds the disposition its `disposed` gains (#585). A disposition the operator gives
    on the hosting rather than in words — the approval of a publishing run under Rule-11's release gate — has no
@@ -86,7 +90,8 @@ Rule-11's runner as `agent/provenance`). Its two checks are split by what a fail
 - **Transaction**, each non-merge commit being pushed (the range's own history, merge base to head)
   against its parent, as property 3 binds a commit: a row the commit adds brings at least one new
   entry in its record — a `disposition` when it is born `backlog`, which only a disposition opens,
-  or a plan-`Y` it carries (Rule-3); a row going `backlog` → `open` brings a `prompt` (Rule-3: the operator prompts for it); a
+  or a plan-`Y` it carries (Rule-3); a row going `backlog` → `open` brings a `prompt` (Rule-3: the operator prompts for it), or the noted entry of a
+  mandate preference (property 4, #692); a
   row whose `disposed` gains k entries gains k `disposition` entries; and a record only grows — its
   earlier entries stay word for word and the file is never deleted, a merge commit's records judged
   against each of its parents. This check blocks only the push
@@ -146,6 +151,7 @@ same record, amendment #574. Property 4 gains the retired row's copied entry 202
 d-work trace writes of a transcript, 2026-11-05 (d-work #606, stating #592); see `../falsification/rules/rule-3-d-work.md`,
 amendment #606. Enforcement's alarm comes at the next ledger push's
 stores check, in the automaton sweep, in place of a twice-daily scheduled sweep 2026-11-06 (d-work #617); see
-`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617.
+`../falsification/rules/rule-14-system-infrastructure.md`, amendment #617. Property 4 and Enforcement gain the mandate preference's entry 2026-11-12 (d-work #692): a row opened from
+`backlog` under `hardening-mandate` has no prompt of its own; see `../falsification/rules/rule-3-d-work.md`, amendment #692.
 
 Set: System Requirements.

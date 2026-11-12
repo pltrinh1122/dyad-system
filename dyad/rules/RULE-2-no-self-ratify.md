@@ -88,6 +88,12 @@ not edited when they are added (G5).
   own PR), and any mutation the plan did not describe, which Rule-3 already calls a new plan. The
   preference `accretion` (`preferences-corpus/PREFERENCES.md`) selects between the two: under
   `explicit` a plan-`Y` authorizes the mutation alone and every accreted row is asked for.
+- A third authority preference is a mandate for one class of row: under `hardening-mandate: on`
+  (`preferences-corpus/PREFERENCES.md`) a `backlog` row of hardening work (`dmc:hardening-work`) is opened when it is due
+  (`dmc:hardening-due`; Rule-3 Scope), its `disposed` entry `<date> Y plan (mandate preference hardening-mandate)` and its
+  plan-`Y` the operator's grant of the preference, so it binds no wider than that class and the ceiling
+  `hardening-ceiling`. It carries none of the never-accretable acts above, which the record's W3 excludes, and the row's
+  done-`Y` is always asked, so every merge it ratifies stays the operator's answer (#692).
 
 ## Enforcement
 Three mechanical checks read the record; the binding itself stays inference.
@@ -147,6 +153,7 @@ revision 3): a delivered row's report retires rows the operator had been asked a
 admission refused every case of a record when any of its consequences held a ratifying word, so a release class that
 only sets the number a release question shows, and a new plan that only asks one, were refused with the outcomes that
 skip a question; the line is drawn by what a wrong match costs, declared per outcome; see the same record, amendment
-#649.
+#649. Binding names the third authority preference, `hardening-mandate`, 2026-11-12 (d-work #692); see
+`../falsification/rules/rule-3-d-work.md`, amendment #692.
 
 Set: System Requirements.

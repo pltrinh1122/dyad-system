@@ -44,6 +44,8 @@ defines what each value means.
 | sweep-ci-hours | 24 | a positive integer (hours) | Rule-14 (the stall findings of the home's read, `dyad board resume`: `dyad/scripts/automaton.py`; default `dyad/dmc/sweep-findings.jsonld`) |
 | promotion-ceiling | 2 | a positive integer (rows proposed at once, never more than the idle units) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
 | promotion-adjacency-min | 3 | a positive integer (the adjacency score that alone makes a candidate adjacent) | Rule-3 (backlog promotion, judged by the home: `dyad/playbooks/d-work.md`; default `dyad/dmc/promotion.jsonld`) |
+| hardening-mandate | off | `off` \| `on` | Rule-3 (Scope and Ledger: a standing mandate that opens a backlog row of hardening work with no intent or plan question; `dyad/dmc/hardening-work.jsonld`, `dyad/dmc/hardening-due.jsonld`), Rule-2 (Binding: a mandate) |
+| hardening-ceiling | 1 | a positive integer (hardening rows in flight under the mandate at once) | Rule-3 (the mandate's capacity: `dyad dwork state --mandate-preference`; default `dyad/dmc/hardening-due.jsonld`) |
 
 - `merge-disposition`
   - `separate` — every PR merge is its own counter-prompt (`Y/N: merge #N?`) before the
@@ -238,3 +240,19 @@ defines what each value means.
   that does not parse or is outside the `allowed` cell, reads as the default. The `promotion-*` keys are read by the
   play-book (`dyad/playbooks/d-work.md`, Promotion), by the home's judgment, not by code. `attendance-window`, above,
   is the same kind (its record `dyad/dmc/attendance-check.jsonld`).
+- `hardening-mandate` — a standing disposition over hardening work (d-work #692): an **authority preference**, a
+  mandate (Rule-2 Binding), where most keys above are form preferences that authorize nothing.
+  - `off` — the value this template ships: every backlog row is opened by the operator's prompt and asked its intent and
+    plan questions, as Rule-3 says of any row.
+  - `on` — a backlog row that is hardening work (`dyad/dmc/hardening-work.jsonld`: its source a hardening or audit run,
+    a fix that only restores what is already stated, no public surface and no act Rule-2 never lets a `Y` carry) is
+    opened when it is due (`dyad/dmc/hardening-due.jsonld`: its failure mode recurred, an audit re-tested its fence
+    open, or a run's rows wait as a batch), by `dyad dwork state <id> open --mandate-preference hardening-mandate`,
+    with no intent or plan question of its own. Its Done is always asked; the merge stays the operator's.
+  - The grant: the description of this key in the instance's file names the operator's words that set it, as
+    `granted: d-work #<id> entry <n>`, and the verb copies them into each row it opens, noted `mandate preference
+    hardening-mandate, <date>` (Rule-7 property 4); with no such line the verb refuses.
+  - Setting it is a preferences-zone PR the operator disposes, never a value a `Y` carries (Rule-2).
+- `hardening-ceiling` — how many rows may be open, planned or blocked under `hardening-mandate` at once, a tunable
+  (d-work #590's kind; its default the `dyad:defaultValue` of `dyad/dmc/hardening-due.jsonld`), read by the verb when it
+  runs; a value absent or outside `allowed` reads as `1`.

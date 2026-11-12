@@ -1090,7 +1090,7 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("dwork", "state"):         CliForm("<id> <state>", (_SAID[0], ("-r", "<refs>"), ("--prompt", "<words>"), ("--prompt-file", "<file>"),
                                                          *_SAID[1:], ("--said-ref", "<ref>"), ("--relayed-via", "<seat>"),
                                                          ("--mandate", "<id>"), ("--retired-by", "<id>"), ("--slug", "<slug>"),
-                                                         ("--decisions", "<file>")) + LAND_FLAGS,
+                                                         ("--decisions", "<file>"), ("--mandate-preference", "<key>")) + LAND_FLAGS,
                                         ("--check", LAND_FLAG)),
     ("dwork", "retire"):        CliForm("<id>...", _SAID),
     ("dwork", "list"):          CliForm("", (("--state", "<state>"), ("--craft", "<craft>"))),
