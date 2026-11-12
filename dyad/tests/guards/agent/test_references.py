@@ -535,5 +535,26 @@ class LiveTests(unittest.TestCase):
         self.assertRegex(r.stdout.strip().splitlines()[-1], r"^ok   \[rule-20\] \d+ references, \d+ kinds resolve$")
         self.assertIn("warn [rule-20] row.disposed->pr", r.stdout)
 
+class CraftRunbookEventTests(unittest.TestCase):
+    """d-work #688: an event of a craft run-book records its instance as `<craft>-<name>` (`runbook.event_instance`,
+    #640), while the corpus keys the run-book `<craft>:<name>`; `command_exists` resolves the one through the other."""
+    def corpus(self, **runbooks):
+        from types import SimpleNamespace
+        cmd = lambda n: SimpleNamespace(name=n)
+        return SimpleNamespace(runbooks={k: [cmd(n) for n in v] for k, v in runbooks.items()})
+
+    def test_craft_runbook_event_resolves(self):
+        c = self.corpus(**{"channels:channels": ["subscribe", "post"]})
+        self.assertTrue(refint.command_exists(c, "channels-channels/post"))
+        self.assertFalse(refint.command_exists(c, "channels-channels/launch"))   # the command must still exist
+
+    def test_bare_instance_still_resolves_directly(self):
+        self.assertTrue(refint.command_exists(self.corpus(x=["start"]), "x/start"))
+
+    def test_unknown_instance_fails(self):
+        c = self.corpus(**{"channels:channels": ["post"]})
+        self.assertFalse(refint.command_exists(c, "channels-other/post"))
+        self.assertFalse(refint.command_exists(c, "nowhere/post"))
+
 if __name__ == "__main__":
     unittest.main()
