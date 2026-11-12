@@ -6,3 +6,4 @@
 LEDGER.md
 __pycache__/
 projections/
+agent-corpus/channels.local.txt
