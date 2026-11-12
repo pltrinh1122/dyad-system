@@ -147,12 +147,14 @@ and different segments share nodes: a shared node keeps neutral wording, while e
 symptom nodes that join to it.
 - **Header:** `judged: <collateral-why-tree outcome> (tree <sha256>; <tag> <sha256>, …)`. The tree digest is the
   sha256 of every node line, every line after the header as committed (`tail -n +2 why-tree.md | sha256sum`). Each
-  tag's digest is the sha256 of the lines that carry that tag (`tail -n +2 why-tree.md | grep -F '<tag>:' | sha256sum`).
+  tag's digest is the sha256 of the lines that carry that tag (`tail -n +2 why-tree.md | grep -F '<tag>' | sha256sum`):
+  its nodes, their joins and their removal tests, since each of those lines names its tag.
   A file cannot name the commit that adds it, so the tree carries digests of itself instead.
 - **Nodes:** one per line, children indented beneath their parent:
   `N<id> [<tag>: <outcome>, <tag>: <outcome>; <H|E>] <statement>`. Ids are global and never reused. A node carries
   **an outcome per tag**, because the same statement can be a root cause for one segment and only a cause for another.
-  A join is written `→ N<id>`, and a node that replaces another adds `supersedes N<id>`.
+  A join is written `→ N<id> [<tag>, …]`, naming the tags it holds for, and a node that replaces another adds
+  `supersedes N<id>`.
 - **Removal tests:** one line per tag beneath a root, `removal test [<tag>, <H|E>]: …`, counting only that segment's
   symptoms. A tag's `root-cause` outcome needs its own line.
 - The tree is **append-only**: a node is never edited or deleted, only superseded, so a citation of a node stays true
