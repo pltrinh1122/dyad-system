@@ -180,6 +180,35 @@ class CliTests(World):
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-59cec502"}):
             self.assertEqual(ib.check_package(self.clones["program-59cec502"]), [])
 
+    def test_ring_line_follows_the_landed_line_and_only_then(self):
+        """K-21 (#652): a landed actionable post prints `ring:` after `landed <sha> on main`; a notice, a self-addressed
+        unit, a refused post and an unlanded one ring nobody."""
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--cc", "counsel-0032b4c0",
+                                    "--cc", "engineer-1537d8fb", "--row", "5", "--kind", "report", "PR up")
+        self.assertEqual(rc, 0, err)
+        lines = out.splitlines()
+        landed = next(i for i, l in enumerate(lines) if l.startswith("landed ") and l.endswith(" on main"))
+        ring = [i for i, l in enumerate(lines) if l.startswith("ring: ")]
+        self.assertEqual(len(ring), 1, out); self.assertGreater(ring[0], landed)
+        self.assertTrue(lines[ring[0]].startswith("ring: program-59cec502, counsel-0032b4c0 ("), lines[ring[0]])
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "notice", "fyi")
+        self.assertEqual(rc, 0, err); self.assertIn("landed ", out); self.assertNotIn("ring:", out)
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "9", "--kind", "report", "x")
+        self.assertEqual(rc, 1); self.assertNotIn("ring:", out + err)                     # refused
+        before = git(self.origin, "rev-parse", "main")
+        hook = Path(self.clones["engineer-1537d8fb"]).parent / "hooks" / "pre-push"
+        saved = hook.read_text()
+        hook.write_text("#!/bin/sh\ncat >/dev/null\nexit 1\n"); self.addCleanup(hook.write_text, saved)
+        rc, out, err = self.as_seat("engineer-1537d8fb", "post", "program-59cec502", "--row", "5", "--kind", "report", "y")
+        self.assertEqual(rc, 1); self.assertNotIn("ring:", out + err)                     # the push failed: unlanded
+        self.assertEqual(git(self.origin, "rev-parse", "main"), before)
+
+    def test_post_ring_rule(self):
+        self.assertEqual(ib.post_ring("a", "report", ("b", "a", "c"), "c"), ["a", "b"])
+        self.assertEqual(ib.post_ring("a", "relay", (), "z"), ["a"])
+        self.assertEqual(ib.post_ring("a", "notice", ("b",), "z"), [])
+        self.assertEqual(ib.post_ring("z", "ack", (), "z"), [])
+
     def test_post_refuses_before_anything_lands(self):
         before = git(self.origin, "rev-parse", "main")
         for argv, says in ((["post", "program-59cec502", "--row", "5", "--kind", "report", "2026-11-02 Y plan"], "disposition-shaped"),
