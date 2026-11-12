@@ -99,6 +99,37 @@ def last_grooming(root: Path) -> str:
     return f"{ev.get('id', '?')} at {ev.get('ts', '?')}" if ev else "none"
 
 
+GROOM_HYGIENE_COUNT = 5   # dmc:groom-trigger G4's fixed count, never a preference
+
+
+def groom_due(root: Path, hygiene: int | None = None) -> list[str]:
+    """The mechanical half of `dmc:groom-trigger` (#695): `G2` when a release tag was created after the last grooming
+    event (every tag when there is none), and `G4` when `hygiene` — the hygiene lines `dyad board resume` printed, when
+    the caller counted them — reaches the fixed count of five. G1 (a prompt) and G3 (promotion found nothing) are the
+    home's, and so is the floor (nothing changed since the last grooming)."""
+    rb = dyadlib.load_module(dyadlib.PKG / "scripts" / "runbook.py", "runbook")
+    ev = rb.last_event(rb.events_path(root, RUNBOOK), STEP)
+    since = (ev or {}).get("ts") or ""
+    out = []
+    tags = git(root, "for-each-ref", "--format=%(creatordate:iso-strict) %(refname:short)", "refs/tags").splitlines()
+    try:
+        t0 = datetime.datetime.fromisoformat(since.replace("Z", "+00:00")) if since else None
+    except ValueError:
+        t0 = None
+    for line in tags:
+        when, _, name = line.partition(" ")
+        try:
+            t = datetime.datetime.fromisoformat(when)
+        except ValueError:
+            continue
+        if re.fullmatch(r"(?:[a-z][a-z0-9-]*-)?v\d+\.\d+\.\d+", name) and (t0 is None or t > t0):
+            out.append("G2")
+            break
+    if hygiene is not None and hygiene >= GROOM_HYGIENE_COUNT:
+        out.append("G4")
+    return out
+
+
 def age(opened: str, today: datetime.date) -> str:
     try:
         return f"{(today - datetime.date.fromisoformat(opened)).days}d"

@@ -96,7 +96,7 @@ BOARD_REL = "d-work/board"
 COS = "_cos"
 FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "audit-due",
-              "writer")   # #625: release-plan; #691: audit-due
+              "recommended", "writer")   # #625: release-plan; #691: audit-due; #695: recommended
 REQUIRED = ("holder",)
 CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
                                                      # so an operator segment of eight hex is no cabinet (sessions.name_problems)
@@ -756,6 +756,10 @@ def queue_line(q: dict[str, list[int]]) -> str:
 # ---- the closing line (d-work #646): the questions the operator owes, read from the questions the board records
 CLOSING_KEY, CLOSING_VALUES, CLOSING_DEFAULT = "awaiting-you", ("on", "off"), "on"   # plan #646 revision 2
 COMING_KEY, COMING_VALUES, COMING_DEFAULT = "coming", ("on", "off"), "on"            # #665: the closing line's Coming part
+RECOMMENDED_KEY, RECOMMENDED_VALUES, RECOMMENDED_DEFAULT = "recommended-next", ("on", "off"), "on"   # #695: its third part
+RECOMMENDED_KINDS = ("re-present", "audit", "groom", "hardening", "promote")   # dmc:recommended-next's kinds, in order
+INFERRED_KINDS = ("hardening", "promote")               # the home records these; the rest are computed
+RECOMMENDED_LINE = re.compile(r"^(?P<kind>[a-z-]+) #(?P<id>\d+): (?P<outcome>\S+)(?: \((?P<reason>.*)\))? @(?P<at>\S+)$")
 # dmc:disposition-request (#646 revision 3): what kind of request for the operator's disposition a recorded question is,
 # the phase over the form, `none` the default; the outcome names and groups are the record's
 REQUEST_PHASES = {"intent-asked": "intent", "plan-asked": "plan", "done-asked": "done"}
@@ -850,7 +854,7 @@ def answered_in(holder: str, reader: str | None, root: Path) -> str | None:
 
 
 def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None,
-                  coming: bool = True, reader: str | None = None) -> str:
+                  coming: bool = True, reader: str | None = None, hygiene: int | None = None) -> str:
     """`Awaiting you: d-work <n> <kind> (#id…), …; merge <n> (PR #…), <n> release (#id…), ….` — the questions asked and
     not answered by dmc:disposition-request's groups, d-work first, each group and kind only when non-zero, a kind named
     after its count unless it is the group's own name, a merge counted by the PR numbers its questions name — or
@@ -884,16 +888,23 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
         if items:
             groups.append(f"{group} " + ", ".join(items))
     line = "Awaiting you: " + ("; ".join(groups) if groups else "nothing") + "."
-    if not coming:
-        return line
+    asked = {i for qs in by.values() for _, ids, _ in qs for i in ids}
     q = derived_queue(root, got, cabinet)
     if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
         filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
         q = {"intent-ready": [i for i in intent_ready(root, got) if cabinet is None or filed.get(i, SOLO) == cabinet], **q}
-    coming = [f"{len(v)} {k}" for k, v in q.items() if v]
-    if (n := audit_due_count(got, cabinet)):
-        coming.append(f"audit-due {n}")   # #691: the audit's due state, seen unasked (dmc:audit-trigger)
-    return line + (f" Coming: {', '.join(coming)}." if coming else "")
+    tail = ""
+    if coming:
+        parts = [f"{len(v)} {k}" for k, v in q.items() if v]
+        if (n := audit_due_count(got, cabinet)):
+            parts.append(f"audit-due {n}")   # #691: the audit's due state, seen unasked (dmc:audit-trigger)
+        tail += f" Coming: {', '.join(parts)}." if parts else ""
+    if (dyadlib.preference(RECOMMENDED_KEY, root) or RECOMMENDED_DEFAULT).strip() != "off":
+        items, _ = recommended(root, got, cabinet, hygiene=hygiene, excluded=asked | {i for v in q.values() for i in v},
+                               audit_in_coming=coming)
+        if (rec := recommended_part(items, L)):
+            tail += f" Recommended for next: {rec}."
+    return line + tail
 
 
 def audit_due_count(got: list[tuple[str, dict[str, str]]], cabinet: str | None = None) -> int:
@@ -904,7 +915,99 @@ def audit_due_count(got: list[tuple[str, dict[str, str]]], cabinet: str | None =
     return 0 if v in ("", "none") else len([c for c in v.split(",") if c.strip()])
 
 
-def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None) -> str:
+def _row_changed_at(root: Path, rid: int) -> datetime.datetime | None:
+    """The committer time of the newest commit that changed row `rid`'s file, or None when git cannot say."""
+    row = dyadlib.instance(root) / "d-work" / "rows" / f"{rid}.md"
+    try:
+        r = subprocess.run(["git", "log", "-1", "--format=%cI", "--", str(row)], cwd=root, capture_output=True,
+                           text=True, env=dyadlib.git_env(), timeout=60)
+        return datetime.datetime.fromisoformat(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else None
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+
+
+def recommended(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None,
+                hygiene: int | None = None, excluded: set[int] | None = None,
+                audit_in_coming: bool = True) -> tuple[dict[str, list[int | None]], list[str]]:
+    """#695, dmc:recommended-next: ({kind: [row ids, or None for a kind with no row]}, warnings) — what a trigger record
+    says is due and nobody has started, from the records alone. Computed: `re-present` (each owed question
+    `dmc:re-present` reads `full` or `remind`), `audit` (the cabinet's `audit-due` key, left out while the Coming part
+    already shows it), `groom` (`groom.groom_due`: G2, and G4 when `hygiene` counts the resume's hygiene lines).
+    Inferred, from the cross-row file's `recommended:` lines the home writes (`<kind> #<id>: <outcome> (<reason>)
+    @<ISO time>`): `hardening` and `promote`, each dropped with a warning when its row is no longer `backlog` or changed
+    after the line was written; `promote` capped at `promotion-ceiling`; a `hardening` row reads `starting` under
+    `hardening-mandate: on`. A row already counted in Awaiting you or Coming (`excluded`) is left out of the inferred
+    kinds. It authorizes nothing."""
+    got = load(root) if got is None else got
+    excluded = excluded or set()
+    out: dict[str, list[int | None]] = {k: [] for k in RECOMMENDED_KINDS}
+    warns: list[str] = []
+    cos = next((f for n, f in got if n == cos_name(cabinet or SOLO)), {})
+    try:
+        rows = {r.id: r for r in dyadlib.read_rows(root)}
+    except (OSError, ValueError, KeyError):
+        rows = {}
+    states = {i: r.state for i, r in rows.items()}
+    live = [(n, f) for n, f in got if n.isdigit() and states.get(int(n)) not in (None, *dyadlib.TERMINAL_STATES)
+            and (cabinet is None or entry_cabinet(f) == cabinet)]
+    owed = [(n, f) for n, f in live if f.get("waiting-on") == "operator"]
+    for n, f in owed:
+        if re_present(root, n, f, owed, cos, states)[0] in ("full", "remind"):
+            out["re-present"].append(int(n))
+    if audit_due_count(got, cabinet) and not audit_in_coming:
+        out["audit"].append(None)
+    try:
+        if dyadlib.load_module(dyadlib.PKG / "scripts" / "groom.py", "dyad_groom").groom_due(root, hygiene):
+            out["groom"].append(None)
+    except Exception as e:                               # a read for the home: unreadable is a warning, never a crash
+        warns.append(f"recommended: groom not read ({type(e).__name__})")
+    mandate = (dyadlib.preference("hardening-mandate", root) or "off").strip() == "on"
+    for line in filter(None, (l.strip() for l in (cos.get("recommended") or "").splitlines())):
+        m = RECOMMENDED_LINE.match(line)
+        if not m or m["kind"] not in INFERRED_KINDS:
+            warns.append(f"recommended: unread line {line!r} (`<kind> #<id>: <outcome> (<reason>) @<ISO time>`, kind "
+                         f"{' or '.join(INFERRED_KINDS)})")
+            continue
+        rid = int(m["id"])
+        if states.get(rid) != "backlog":
+            warns.append(f"recommended: dropped {m['kind']} #{rid}: the row is {states.get(rid, 'no row')}, not backlog")
+            continue
+        try:
+            at = datetime.datetime.fromisoformat(m["at"].replace("Z", "+00:00"))
+        except ValueError:
+            warns.append(f"recommended: dropped {m['kind']} #{rid}: its time {m['at']!r} does not parse")
+            continue
+        changed = _row_changed_at(root, rid)
+        if changed is not None and at.tzinfo is not None and changed > at:
+            warns.append(f"recommended: dropped {m['kind']} #{rid}: the row changed after the line was written; re-record it")
+            continue
+        if rid in excluded or rid in out[m["kind"]]:
+            continue
+        if m["kind"] == "hardening" and mandate:
+            warns.append(f"recommended: hardening #{rid} reads starting: hardening-mandate is on, so it opens unasked")
+            continue
+        out[m["kind"]].append(rid)
+    cap = int(dyadlib.tunable("promotion-ceiling", root))
+    if len(out["promote"]) > cap:
+        warns.append(f"recommended: promote capped at promotion-ceiling {cap}; left out "
+                     + ", ".join(f"#{i}" for i in out["promote"][cap:]))
+        out["promote"] = out["promote"][:cap]
+    return out, warns
+
+
+def recommended_part(items: dict[str, list[int | None]], label=lambda i: f"#{i}") -> str:
+    """`<n> <kind> (<refs>), …` in RECOMMENDED_KINDS order, each kind only when non-zero, refs only for row kinds."""
+    parts = []
+    for kind in RECOMMENDED_KINDS:
+        got = items.get(kind) or []
+        if got:
+            refs = " ".join(label(i) for i in got if i is not None)
+            parts.append(f"{len(got)} {kind}" + (f" ({refs})" if refs else ""))
+    return ", ".join(parts)
+
+
+def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None, cabinet: str | None = None,
+                 hygiene: int | None = None) -> str:
     """The board's last count line: `awaiting_line` under the preference `awaiting-you: on`, which an absent key reads,
     and the derived queue's line under `off` (plan #646 revision 2). Under `on` the preference `coming` (#665) keeps or
     drops its Coming part: `off` drops it, and an absent key or any other value keeps it, the guard warning on a value
@@ -912,7 +1015,8 @@ def closing_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = None
     v = (dyadlib.preference(CLOSING_KEY, root) or CLOSING_DEFAULT).strip()
     if v == "off":
         return queue_line(derived_queue(root, got, cabinet))
-    return awaiting_line(root, got, cabinet, coming=(dyadlib.preference(COMING_KEY, root) or COMING_DEFAULT).strip() != "off")
+    return awaiting_line(root, got, cabinet, coming=(dyadlib.preference(COMING_KEY, root) or COMING_DEFAULT).strip() != "off",
+                         hygiene=hygiene)
 
 
 def owners(f: dict[str, str]) -> list[str]:
@@ -1058,7 +1162,10 @@ def resume_lines(root: Path) -> list[str]:
             if f.get(k):
                 first, *rest = f[k].split("\n")
                 out.append(f"  {k}: {first}"); out.extend(f"    {r}" for r in rest)
-    out.append(closing_line(root, None, v["cabinet"]))
+    stalls = stall_block(root, v["cabinet"])   # #695: read first, so the closing line's groom item can count its hygiene
+    hy = sum(1 for l in stalls if l.lstrip().startswith("hygiene "))
+    out.append(closing_line(root, None, v["cabinet"], hygiene=hy))
+    out += [f"  {w}" for w in recommended(root, None, v["cabinet"], hygiene=hy)[1]]
     if cos:
         block(f"{cos_name(v['cabinet'])}:", cos, COS_FIELDS)
     for n, f in v["live"]:
@@ -1079,7 +1186,7 @@ def resume_lines(root: Path) -> list[str]:
         now = datetime.datetime.now(datetime.timezone.utc)
         out.append("last ledger act (presence `seen`, information only, #567): " + ", ".join(
             f"{s} {age(v['last_act'][s], now) if v['last_act'].get(s) else 'none'}" for s in v["seats"]))
-    out += stall_block(root, v["cabinet"])
+    out += stalls
     out.append("then: `dyad board set _cos holder=<this seat>` before any other act (write-ahead)")
     return out
 
@@ -2381,6 +2488,8 @@ INVARIANTS += [   # #646: the closing line reads the questions recorded, never t
                                                     and disposition_request(None, None) == "none"),
     ("closing-default-is-a-value", lambda: CLOSING_DEFAULT in CLOSING_VALUES and set(REQUEST_PHASES.values()) <= set(AWAITING_KINDS)
                                            and {k for _, k in REQUEST_FORMS} <= set(AWAITING_KINDS)),
+    ("recommended-default-is-a-value", lambda: RECOMMENDED_DEFAULT in RECOMMENDED_VALUES
+                                              and set(INFERRED_KINDS) <= set(RECOMMENDED_KINDS)),   # #695
     ("coming-default-is-a-value", lambda: COMING_DEFAULT in COMING_VALUES and COMING_KEY != CLOSING_KEY),   # #665
 ]
 TREE_INVARIANTS = [   # loads inbox and automaton, so never at import (crafts/syseng/rules/invariants.md)

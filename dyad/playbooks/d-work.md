@@ -102,6 +102,8 @@ property 1).
 12. **A question asked again** — `dyad board resume`'s owed list judges each question asked and not answered by
     `dmc:re-present`, printing its outcome and the reason beside it; the home presents it again as the record says,
     one `Y/N` per reply, a revised plan recorded before it is asked again.
+    What a trigger says is due and nobody has started is shown, not asked, in the closing line's third part by
+    `dmc:recommended-next`, the home recording each inferred item first (`dyad board set _cos recommended=…`).
 13. **Orchestration** — between the plan-`Y` and the Done the row stays still and its board entry's phase moves
     (Rule-16 Store): `dyad board phases` prints `dyadlib.ORCH_EVENTS`, and `dyad board advance <id>… <event> --expect
     <phase>` is the one writer, one ledger-only commit per transition, printing the doorbells owed (#587).
