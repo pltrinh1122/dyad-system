@@ -4,8 +4,9 @@ The run of `crafts/chronicle/rules/collateral.md` §6 for this segment. Every li
 of the segment confirms it. Source: the run in PR #757's description (d-work #674), re-checked against §6 as it
 landed. Added: the statement under *other* (cost of adoption). Struck: none.
 
-Since d-work #683 its steps 3 onward are kept in the canvas set's single why-tree, `../why-tree.md` (tag `platform-ops`; one tree since d-work #684) (§6 as revised by #678): that file, not §3–§6
-below, is the reference a claim is looked up in. The sections below stay as the first run's record.
+Since d-work #683 its steps 3 onward are kept as a why-tree. Since d-work #685 that tree is this segment's source tree,
+`why-tree.md` beside this file, projected into the canvas set's `../why-tree.md` (§6). The source tree, not §3–§6 below,
+is what this segment's claims are checked against. The sections below stay as the first run's record.
 
 ## 1. Anchor
 - **H** When I let an agent run commands on hosts I am paged for, I want to trust it enough to answer for the result, so that no outage is one I cannot explain.
