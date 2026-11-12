@@ -34,7 +34,7 @@
       "termCode": "duplicate",
       "name": "duplicate",
       "dyad:when": "a live row, or a capability on main, already holds the whole portion: overlap that is complete",
-      "dyad:then": "no row is opened for it; the work rides the holding row, which the reading names, or nothing is done"
+      "dyad:then": "no row is opened for it; the work rides the holding row, which the reading names, or nothing is done. When the row under reading is the one the prompt already opened, the reading recommends the bare N, which archives it (Rule-3 Answer grammar), and names the holding row"
     },
     {
       "@type": "DefinedTerm",

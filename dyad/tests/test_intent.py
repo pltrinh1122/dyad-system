@@ -87,5 +87,17 @@ class MainTests(unittest.TestCase):
 
 
 
+class DuplicateOpenRowTests(unittest.TestCase):
+    """d-work #689: the duplicate outcome of dmc:intent-reading says what a duplicate means for a row the prompt already
+    opened: the reading recommends the bare N, which archives it, and names the holding row (#687)."""
+    def test_duplicate_names_the_bare_n_for_a_row_already_open(self):
+        import json
+        d = json.loads((dyadlib.PKG / "dmc" / "intent-reading.jsonld").read_text())
+        dup = next(t for t in d["hasDefinedTerm"] if t["termCode"] == "duplicate")
+        self.assertIn("no row is opened for it", dup["dyad:then"])                   # the earlier case stands
+        self.assertIn("the one the prompt already opened", dup["dyad:then"])
+        self.assertIn("recommends the bare N, which archives it", dup["dyad:then"])
+        self.assertIn("names the holding row", dup["dyad:then"])
+
 if __name__ == "__main__":
     unittest.main()
