@@ -4,7 +4,7 @@ The run of `crafts/chronicle/rules/collateral.md` §6 for this segment. Every li
 of the segment confirms it. Source: the run in PR #757's description (d-work #674), re-checked against §6 as it
 landed. Added: the statement under *other* (cost of adoption). Struck: none.
 
-Since d-work #683 its steps 3 onward are kept as a tree, `why-tree.md` (§6 as revised by #678): that file, not §3–§6
+Since d-work #683 its steps 3 onward are kept in the canvas set's single why-tree, `../why-tree.md` (tag `platform-ops`; one tree since d-work #684) (§6 as revised by #678): that file, not §3–§6
 below, is the reference a claim is looked up in. The sections below stay as the first run's record.
 
 ## 1. Anchor
