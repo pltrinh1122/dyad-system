@@ -77,6 +77,7 @@ _RECORD_SESSION = re.compile(r"^session:\s*(\S+)\s*$", re.M)
 _MANDATE_NOTE, _RELAYED_NOTE = "mandate #", "relayed via"
 _DONE_NOTE = "done #"   # #574 G6: a Done's words copied onto a row it retires, given on that row, never in this seat
 _BY_REFERENCE_NOTE = "by reference"   # #545: a hosting approval (provenance.BY_REFERENCE), given in no seat
+_MANDATE_PREFERENCE_NOTE = "mandate preference"   # #692: the grant's words copied onto a row a mandate preference opens
 # Reconcile (d-work #434, child C1 of #431): the live presence files against the harness's own session list
 # (`hostadapter.harness_sessions`), one line per mismatch — the operate seat's run-book health command, advisory, never
 # a guard failure. A title in the seat form begins with the prefix `dyad session name` prints, `<seat>: <kernel> (<system>)`,
@@ -351,9 +352,10 @@ def own_disposition(note: str) -> bool:
     Anywhere, not only at the start (#422): the accreted rows closed before `dwork state <id> done --mandate <id>`
     existed carry the note `Y done (mandate #<id>, <date>)`, and they read silent without rewriting a record
     (Rule-7 property 4: a record only grows). Nor `by reference` (#545): a hosting approval recorded by reference was
-    given on the hosting, in no seat."""
+    given on the hosting, in no seat. Nor `mandate preference` (#692): the words that granted a standing mandate,
+    copied onto each row it opens, were given where the grant was."""
     n = note.strip()
-    return _MANDATE_NOTE not in n and _RELAYED_NOTE not in n and _BY_REFERENCE_NOTE not in n and _DONE_NOTE not in n
+    return all(m not in n for m in (_MANDATE_NOTE, _RELAYED_NOTE, _BY_REFERENCE_NOTE, _DONE_NOTE, _MANDATE_PREFERENCE_NOTE))
 
 def attendance_index(root: Path | None = None, now: datetime.date | None = None) -> dict[str, str]:
     """{seat: latest date} over every provenance record whose `session:` line names a seat: the latest own disposition
