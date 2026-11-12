@@ -6,7 +6,7 @@ collateral is a piece, its record layer cited as §1 says, published only on the
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
 `../dmc/collateral-segment-significance.jsonld`, `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
-d-work #673; problem discovery, d-work #674; the why-tree, d-work #678.
+d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -127,29 +127,47 @@ deriving the whys again.
    reverse question, "why do I feel I must do this at all?", the **anchor branch**, which shows what the symptom
    protects. A branch stops at a root cause, at the anchor, at a join, or at five whys: five is a ceiling, never a
    quota.
-4. **Test.** Each node by `collateral-problem-depth` — **symptom** · **cause** · **root-cause** (removing it removes
+4. **Test.** Each node by `collateral-problem-depth`, per tag — **known** (the claim maps to a node already in the
+   tree: take that node's outcome) · **symptom** · **cause** · **root-cause** (removing it removes
    most of the symptoms whose branches reach it, the next why reaches the anchor, and it does not reword an ancestor in
    its branch) · **anchor** (the answer is the root anchor itself) · **solution-shaped** (it names a missing feature).
    Then the whole tree by `collateral-why-tree`, in order — **open-branch** (a leaf that is neither a root cause, the
    anchor nor a join) · **circular** (a root cause rewords an ancestor in its branch) · **too-deep** (a branch passes
    five whys) · **no-anchor-branch** (no branch reaches the anchor) · **untested** (a root cause has not passed the
-   removal test) · **stale** (the node lines no longer match the header's digest, or evidence arrived after the tree was judged) · **ready**.
+   removal test) · **untagged** (a node carries no tag) · **untested-tag** (a tag's outcome is root-cause and that tag has no removal-test
+   line) · **stale** (the lines no longer match the digest the lookup depends on, or evidence arrived after the tree was
+   judged) · **ready**.
 5. **Select** one to three root causes from a ready tree, ranked first by whether the anchor branch exits through
    them, then by how many branches join them. Each canvas problem entry and each symptom beneath it cites its node id.
 
-**The record.** One tree per segment, `<canvas set>/<segment>/why-tree.md`. Its header line is
-`judged: <collateral-why-tree outcome> (nodes <sha256>)`, the sha256 of the file's node lines, every line after the
-header as committed (`tail -n +2 why-tree.md | sha256sum`). A file cannot name the commit that adds it, so the tree
-carries a digest of itself instead. Then one node per line, children indented beneath their parent:
-`N<id> [<outcome>, <H|E>] <statement>`, a join as `→ N<id>`, and a node that replaces another adds `supersedes N<id>`.
-The tree is **append-only**: a node is never edited or deleted, only superseded, and an id is never reused, so a
-citation of a node stays true of what it said.
+**The record.** One tree per canvas set, `<canvas set>/why-tree.md`, holding every segment. Its purpose is
+screening: when a new problem comes up, it is traversed against the **whole** tree, so a problem the tree already
+explains is caught as a red herring instead of being decomposed again. **Segments are tags** on every node, not roots,
+and different segments share nodes: a shared node keeps neutral wording, while each segment's own words live in the
+symptom nodes that join to it.
+- **Header:** `judged: <collateral-why-tree outcome> (tree <sha256>; <tag> <sha256>, …)`. The tree digest is the
+  sha256 of every node line, every line after the header as committed (`tail -n +2 why-tree.md | sha256sum`). Each
+  tag's digest is the sha256 of the lines that carry that tag (`tail -n +2 why-tree.md | grep -F '<tag>:' | sha256sum`).
+  A file cannot name the commit that adds it, so the tree carries digests of itself instead.
+- **Nodes:** one per line, children indented beneath their parent:
+  `N<id> [<tag>: <outcome>, <tag>: <outcome>; <H|E>] <statement>`. Ids are global and never reused. A node carries
+  **an outcome per tag**, because the same statement can be a root cause for one segment and only a cause for another.
+  A join is written `→ N<id>`, and a node that replaces another adds `supersedes N<id>`.
+- **Removal tests:** one line per tag beneath a root, `removal test [<tag>, <H|E>]: …`, counting only that segment's
+  symptoms. A tag's `root-cause` outcome needs its own line.
+- The tree is **append-only**: a node is never edited or deleted, only superseded, so a citation of a node stays true
+  of what it said. A tag is added to a node only when that tag's removal test holds; until then it is a **tag
+  candidate**, labelled H.
 
-**Lookup.** A claim that a problem is a symptom or a root cause is answered from the tree. Lookup matches by meaning,
-states the node's id and its path to the symptom, and returns the node's outcome **with its label**: a node labelled H
-validates a claim as H, never as fact. Only a tree judged `ready`, whose node lines still match its digest,
-answers; otherwise the lookup says so and returns no outcome. A claim that matches no node is placed in the tree first,
-never judged off it.
+**Lookup.** A new problem is matched by meaning against every node, whatever its tags, and the match states the node's
+id and its path. A match is **known**: the problem is not new, and if it was raised as new it is named a **red
+herring**. It takes the node's outcome for the claim's segment, with its label (an H node validates a claim as H, never
+as fact). A known symptom raised again with new information is placed as a new symptom node joined to its known parent,
+with its source, and is not decomposed again. A match from a segment the node is not tagged with is a tag candidate.
+A claim that matches no node is **new**: it is placed in the tree first, diverging from its nearest parent, and never
+judged off it. Only a tree judged `ready`, whose lines still match the digest the lookup depends on (the tree digest
+for screening, the tag's digest for a segment's selection), answers; otherwise the lookup says so and returns no
+outcome. **Selection** for a segment counts only the nodes tagged with it and their joins.
 
 **Refresh.** The tree is re-derived, not merely looked up, at two moments: when evidence from a real reader of the
 segment arrives, and before a pitch grounded in it goes to publication. Between those moments a lookup answers.
