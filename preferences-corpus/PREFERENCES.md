@@ -30,6 +30,7 @@ defines what each value means.
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
 | coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
+| recommended-next | on | `on` \| `off` | Rule-3 (Batch disposition: the Recommended part of the closing line) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the sweep's `hygiene I…` and `candidate:` lines; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -224,6 +225,10 @@ defines what each value means.
 - `coming` — whether the closing line ends with its `Coming:` part, read only under `awaiting-you: on` (Rule-3 Batch
   disposition; d-work #665; the template's description). dyad-system: `on`, the Operator's prompt of 2026-11-10:
   "making "Coming:" a preferences setting with default of "on"". Seeded here with it, the value an absent key reads.
+- `recommended-next` — whether the closing line shows its third part, `Recommended for next:`, what the trigger records
+  say is due and nobody has started (Rule-3 Batch disposition; d-work #695; the template's description). dyad-system:
+  `on`, the Operator's prompt of 2026-11-12: "make "Recommended for next:" as a preference that's default to "on"".
+  Seeded here at the value an absent key reads (d-work #695, plan revision 2).
 - The tunables (d-work #590) — `hygiene-stale-days`, `hygiene-similar`, `hygiene-top`, the seven `inflight-*` keys (`inflight-done-ready-hours` added by d-work #587, at its default),
   the three `sweep-*` keys, `promotion-ceiling` and `promotion-adjacency-min`: the numbers whose change alters what
   reaches the Operator, or when. Each default is the `dyad:defaultValue` of the decision criterion that claims the key
