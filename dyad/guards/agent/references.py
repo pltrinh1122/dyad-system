@@ -396,9 +396,15 @@ def changelog_row_exists(c: Corpus, t: str) -> bool:
     return any(len(r) > max(d, a) and r[d].strip() == n and re.match(rf"{hk}\b", r[a].strip()) for r in rows)
 
 def command_exists(c: Corpus, t: str) -> bool:
-    """`<instance>/<name>`: the run-book of that instance holds a command of that name."""
+    """`<instance>/<name>`: the run-book of that instance holds a command of that name. An event records a craft
+    run-book's `<craft>:<name>` key as `<craft>-<name>` (`runbook.event_instance`, #640), so an instance no key
+    names directly resolves through the one live key whose event instance it is; an unknown instance still fails
+    (d-work #688)."""
     inst, _, name = t.partition("/")
-    return any(cmd.name == name for cmd in c.runbooks.get(inst, []))
+    cmds = c.runbooks.get(inst)
+    if cmds is None:
+        cmds = next((v for k, v in c.runbooks.items() if runbook_core.event_instance(k) == inst), [])
+    return any(cmd.name == name for cmd in cmds)
 
 def event_exists(c: Corpus, t: str) -> bool:
     return any(e.get("id") == t for evs in c.events.values() for e in evs)
