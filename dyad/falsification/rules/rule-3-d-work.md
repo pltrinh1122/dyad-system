@@ -1831,3 +1831,28 @@ hardening work once it meets aligned conditions established by an aligned `dmc`"
 The other pairs are as amendment #690 left them. Coherent, orthogonal.
 
 Disposition: see ledger #692.
+
+## Amendment — d-work #695 (2026-11-12: Recommended for next, the closing line's third part)
+
+**Claim (the operator, provenance #695 entries 1 and 2):** the closing line gains a third part, `Recommended for next:`,
+for the outcomes of triggers — mechanically generated where it can be, the rest by the agent's judgement — under a
+preference `recommended-next`, `on` by default.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| N1 | The part is generated from records alone, yet some outcomes need judgement. | **Survives, scoped** | The judgement is the home's, recorded first as `recommended:` lines on its cross-row board entry (write-ahead); `dyad board` generates the part from those lines and the outcomes it computes, so a reply cannot claim what no record holds (the line written by hand on 2026-11-10). |
+| N2 | An inferred entry stays true after it is written. | **Survives, scoped** | An entry naming a row no longer `backlog`, or written before that row's last change, is dropped with a warning until re-recorded; staleness of any other input is the home's to re-record. |
+| N3 | A recommendation authorizes work. | **Refuted** | The part is a form preference's and authorizes nothing; an item becomes work only by its trigger's own question or an operator prompt, and a hardening row a mandate opens unasked reads `starting`. |
+| N4 | It duplicates Coming or Awaiting you. | **Refuted** | Awaiting counts questions asked, Coming rows ready for a question the agent will ask and the audit's due state; this counts what is due and nobody has started, and leaves out every row counted in either and the audit while Coming shows `audit-due`. |
+
+**Verdict:** the claim survives.
+- **Rules:** Batch disposition's closing line names the third part, its preference and its kinds; Provenance gains its line.
+- **Vocabulary:** the `awaiting you` row names the part.
+
+**Pairwise (Rule-5).**
+- **3–2**: the part authorizes nothing and binds no `Y`; Binding is unchanged.
+- **3–16**: the key `recommended` is the board store's, on the cross-row file (`board.COS_FIELDS`), shape-checked by its guard, written write-ahead as every board entry is.
+
+The other pairs are as amendment #690 left them. Coherent, orthogonal.
+
+Disposition: see ledger #695.

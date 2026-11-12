@@ -29,6 +29,7 @@ defines what each value means.
 | dwork-slug | on | `on` \| `off` | Rule-3 (What a `Y` binds and Ledger: a row's slug and how a row id is presented) |
 | awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
 | coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
+| recommended-next | on | `on` \| `off` | Rule-3 (Batch disposition: the Recommended part of the closing line) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -256,3 +257,12 @@ defines what each value means.
 - `hardening-ceiling` — how many rows may be open, planned or blocked under `hardening-mandate` at once, a tunable
   (d-work #590's kind; its default the `dyad:defaultValue` of `dyad/dmc/hardening-due.jsonld`), read by the verb when it
   runs; a value absent or outside `allowed` reads as `1`.
+- `recommended-next` — whether the closing line shows its third part, `Recommended for next: <n> <kind> (<refs>), …`
+  (Rule-3 Batch disposition; d-work #695): what a trigger record says is due and nobody has started — a question to
+  present again, an audit, a grooming, a hardening row, a row to promote — by `dyad/dmc/recommended-next.jsonld`,
+  generated from records only, the inferred items recorded by the home first. A form preference: it authorizes
+  nothing, and a recommendation becomes work only by its trigger's own question or the operator's prompt.
+  - `on` — the value this template ships, and the reading of an absent key; a value outside `on|off` reads as `on`.
+  - `off` — the closing line has no third part.
+  - Why: the authoring operator's prompts, "i think it's appropriate for us to implement a "Recommended for next:"
+    with that are the outcomes of triggers" and "make "Recommended for next:" as a preference that's default to "on"".

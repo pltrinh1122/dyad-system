@@ -1,0 +1,91 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/recommended-next",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "recommended-next",
+  "name": "Recommended for next",
+  "description": "What enters the closing line's third part, Recommended for next: an item a trigger record says is due, not yet asked or started, generated from records alone, the inferred outcomes recorded by the home first. It authorizes nothing: a recommendation becomes work only by the question its own trigger asks, or by the operator's prompt.",
+  "dyad:decides": "Which due items does the closing line's Recommended part show?",
+  "dyad:inputs": [
+    "each owed question's outcome by dmc/re-present.jsonld",
+    "the cabinet's audit-due key (dmc/audit-trigger.jsonld), and whether the Coming part already shows it",
+    "the mechanical half of dmc/groom-trigger.jsonld: a release tag since the last grooming event (G2), five or more hygiene lines (G4)",
+    "the cross-row file's recommended lines the home writes for the inferred outcomes, each `<kind> #<id>: <outcome> (<reason>) @<ISO time>`: hardening (dmc/hardening-due.jsonld) and promote (dmc/promotion.jsonld)",
+    "the row states and each named row's last change; the rows Awaiting you and Coming already count",
+    "the tunable promotion-ceiling and the preference hardening-mandate"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "re-present",
+      "name": "re-present",
+      "dyad:when": "an owed question reads full or remind",
+      "dyad:then": "listed as `re-present #id`",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "audit",
+      "name": "audit",
+      "dyad:when": "the cabinet's audit-due key names a condition and the Coming part does not already show it",
+      "dyad:then": "listed as `audit`",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "groom",
+      "name": "groom",
+      "dyad:when": "G2 or G4 of the groom trigger holds",
+      "dyad:then": "listed as `groom`",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hardening",
+      "name": "hardening",
+      "dyad:when": "a recorded line names a backlog row due by the hardening record, the row unchanged since, and hardening-mandate is not on",
+      "dyad:then": "listed as `hardening #id`; under hardening-mandate: on it reads starting and is left out, since the mandate opens it unasked",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "promote",
+      "name": "promote",
+      "dyad:when": "a recorded line names a backlog row promotion would propose, the row unchanged since",
+      "dyad:then": "listed as `promote #id`, at most promotion-ceiling of them",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "left-out",
+      "name": "left out",
+      "dyad:when": "the item is already counted in Awaiting you or Coming, or its recorded line is stale (the row no longer backlog, or changed after the line was written), or no trigger says it is due",
+      "dyad:then": "not listed; a stale recorded line is warned until the home re-records it",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "Kinds in the order re-present, audit, groom, hardening, promote; a stale recorded line is left out first; then an item already counted in Awaiting you or Coming; promote is capped at promotion-ceiling.",
+  "dyad:default": "left-out",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/board.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "dmc/re-present.jsonld",
+    "dmc/audit-trigger.jsonld",
+    "dmc/groom-trigger.jsonld",
+    "dmc/hardening-due.jsonld",
+    "dmc/promotion.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

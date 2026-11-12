@@ -117,6 +117,28 @@ class GroomTests(unittest.TestCase):
                                   "name": "report"}) + "\n")
         self.assertEqual(self.report()[-1], "last grooming: backlog-groom-20261107T230000Z-report at 2026-11-07T23:00:00Z")
 
+    def grooming_at(self, ts):
+        ev = self.d / "workstation-corpus" / "runbooks" / "events" / "backlog-groom.jsonl"
+        ev.parent.mkdir(parents=True, exist_ok=True)
+        ev.write_text(json.dumps({"id": "backlog-groom-report", "ts": ts, "name": "report"}) + "\n")
+
+    def test_groom_due_g2_on_a_tag_after_the_last_grooming(self):
+        self.assertEqual(groom.groom_due(self.d), [])                        # no tag, no event: nothing due
+        git(self.d, "tag", "dyad-operator-v1.2.0")
+        self.assertEqual(groom.groom_due(self.d), ["G2"])                    # a tag and no grooming yet
+        self.grooming_at("2099-01-01T00:00:00Z")
+        self.assertEqual(groom.groom_due(self.d), [])                        # the tag predates the last grooming
+        self.grooming_at("2020-01-01T00:00:00Z")
+        self.assertEqual(groom.groom_due(self.d), ["G2"])                    # the tag is newer than it
+        git(self.d, "tag", "not-a-release")
+        self.grooming_at("2099-01-01T00:00:00Z")
+        self.assertEqual(groom.groom_due(self.d), [])                        # a tag of no release form never counts
+
+    def test_groom_due_g4_at_five_hygiene_lines(self):
+        self.assertEqual(groom.groom_due(self.d, hygiene=4), [])
+        self.assertEqual(groom.groom_due(self.d, hygiene=5), ["G4"])
+        self.assertEqual(groom.groom_due(self.d, hygiene=None), [])
+
     def test_labels_under_dwork_slug_on(self):
         self.row(50, "the anchor row", state="planned", slug="the-anchor")
         self.row(51, "a backlog row naming the anchor row", refs="#50", slug="named-row")

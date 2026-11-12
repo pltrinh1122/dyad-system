@@ -257,7 +257,14 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   <unit>)` — so the operator knows where to answer it; a solo's question, relayed through the home, names no unit, and
   the counts are unchanged (#670). **Coming** counts the pending queue and, as `audit-due <n>`, the conditions of
   the audit's due state that `dmc:audit-trigger` records on the home's cross-row board entry, so the operator sees an
-  audit falling due without being asked (#691). Under `off` it reports the queue's
+  audit falling due without being asked (#691). **Recommended for next**, shown after Coming under the preference
+  `recommended-next` (absent, `on`), counts what a trigger says is due and nobody has asked or started, by the kinds of
+  `dmc:recommended-next` — `re-present #id`, `audit`, `groom`, `hardening #id`, `promote #id` (at most
+  `promotion-ceiling`) — and leaves out a row already counted in Awaiting you or Coming, and the audit while Coming
+  shows `audit-due`. Its mechanical outcomes `dyad board` computes; its inferred ones the home records first, as
+  `recommended:` lines on its cross-row board entry (write-ahead), and an entry the board has moved past is dropped
+  with a warning. A hardening row that `hardening-mandate` opens unasked reads `starting`, never recommended. It
+  authorizes nothing: an item becomes work only by its own trigger's question or an operator prompt (#695). Under `off` it reports the queue's
   counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
   records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
   Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
@@ -485,6 +492,9 @@ nothing to say how; see `../falsification/rules/rule-3-d-work.md`, amendment #69
 fell due by readings the sweep already made, and nothing showed it until the operator asked; see
 `../falsification/rules/rule-3-d-work.md`, amendment #691. Scope, Plan and Ledger name the mandate preference `hardening-mandate` 2026-11-12 (d-work #692): the operator
 asked for a standing disposition over hardening work, and a `backlog` row opened only on a prompt; see
-`../falsification/rules/rule-3-d-work.md`, amendment #692.
+`../falsification/rules/rule-3-d-work.md`, amendment #692. Batch disposition's closing line gains its third part,
+`Recommended for next`, under the preference `recommended-next` 2026-11-12 (d-work #695): neither part showed what a
+trigger says is due and nobody has started, and a line written from expectation had claimed what no record held; see
+`../falsification/rules/rule-3-d-work.md`, amendment #695.
 
 Set: System Requirements.

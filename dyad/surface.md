@@ -95,7 +95,7 @@ are each guard's own constant, the source the test reads.
 | board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | frozen |
 | board `cabinet` value | — | `program`, `program-<operator>`; an operator ending in eight hex reads as a seat's hp and is no cabinet | `board.CABINET` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
-| board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `release-plan`, `audit-due`, `writer`; `release-plan` the backlog grooming play-book's (#625); `audit-due` the audit's due conditions by the audit trigger, counted in the Coming part (#691); `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
+| board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `release-plan`, `audit-due`, `recommended`, `writer`; `release-plan` the backlog grooming play-book's (#625); `audit-due` the audit's due conditions by the audit trigger, counted in the Coming part (#691); `recommended` the home's inferred items for the Recommended part (#695); `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
 | plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | frozen |
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
@@ -140,6 +140,7 @@ the operator's. The key names and allowed values are the surface.
 | dwork-slug | frozen |
 | awaiting-you | frozen |
 | coming | frozen |
+| recommended-next | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
@@ -280,6 +281,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | ratification-event | frozen |
 | re-present | frozen |
 | read-only-answer | frozen |
+| recommended-next | frozen |
 | recurrence | frozen |
 | reference-severity | frozen |
 | reference-vs-prose | frozen |

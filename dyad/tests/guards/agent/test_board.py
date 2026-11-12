@@ -86,6 +86,7 @@ class FormTests(unittest.TestCase):
 
 class GuardTests(unittest.TestCase):
     def setUp(self):
+        r = unittest.mock.patch.object(bd, "RECOMMENDED_DEFAULT", "off"); r.start(); self.addCleanup(r.stop)   # #695: the exact lines predate the third part
         e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
         self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
         rows = self.root / INST / "d-work" / "rows"; rows.mkdir(parents=True)
@@ -387,6 +388,7 @@ PRE_594_BOARD = [
 
 class CabinetFormTests(unittest.TestCase):
     def setUp(self):
+        r = unittest.mock.patch.object(bd, "RECOMMENDED_DEFAULT", "off"); r.start(); self.addCleanup(r.stop)   # #695: the exact lines predate the third part
         e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST}); e.start(); self.addCleanup(e.stop)
         self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
 
@@ -1292,6 +1294,7 @@ class AwaitingTests(unittest.TestCase):
     and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line.
     The reader is the home, where every fixture question is held (#670: a question held there names no unit)."""
     def setUp(self):
+        r = unittest.mock.patch.object(bd, "RECOMMENDED_DEFAULT", "off"); r.start(); self.addCleanup(r.stop)   # #695: the exact lines predate the third part
         e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "DYAD_SESSION": HOME}); e.start(); self.addCleanup(e.stop)
         self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
         d = self.root / INST / "d-work"
@@ -2376,3 +2379,83 @@ class RePresentTests(unittest.TestCase):
         self.assertEqual([t["termCode"] for t in rec["hasDefinedTerm"]], list(bd.RE_PRESENT))
         self.assertEqual(rec["dyad:judgedBy"]["dyad:implementation"], "guards/agent/board.py")
         self.assertIn("dmc:re-present", (dyadlib.PKG / "playbooks" / "d-work.md").read_text())
+
+
+class RecommendedTests(unittest.TestCase):
+    """#695, dmc:recommended-next: the closing line's third part, from records alone — re-present items from owed
+    questions, the audit while Coming does not show it, groom G2 and G4, and the home's recorded hardening and promote
+    lines, each dropped when stale, promote capped, hardening `starting` under the mandate; `off` hides the part."""
+    def setUp(self):
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "DYAD_SESSION": HOME}); e.start(); self.addCleanup(e.stop)
+        os.environ.pop("DYAD_RUNBOOKS", None)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+        self.d = self.root / INST / "d-work"
+        for sub in ("rows", "plans", "board", "provenance"):
+            (self.d / sub).mkdir(parents=True)
+        for rid in (20, 21, 22, 23):
+            (self.d / "rows" / f"{rid}.md").write_text(ROW.format(id=rid, state="backlog"))
+        (self.d / "rows" / "24.md").write_text(ROW.format(id=24, state="planned"))
+        self.git("init", "-q", "-b", "main"); self.git("add", "-A"); self.git("commit", "-qm", "rows", date="2026-11-12T10:00:00Z")
+        self.cos({})
+    def git(self, *a, date=None):
+        env = dict(os.environ, **({"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date} if date else {}))
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(self.root), *a], check=True,
+                              capture_output=True, text=True, env=env).stdout.strip()
+    def cos(self, kv):
+        (self.d / "board" / "_cos.md").write_text(f"holder: {HOME}\n" + "".join(f"{k}: {v}\n" for k, v in kv.items()))
+    def prefs(self, **kv):
+        p = self.root / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + "".join(f"| {k} | {v} | x | y |\n" for k, v in kv.items()))
+    def items(self, **kw):
+        return bd.recommended(self.root, **kw)
+    def test_recorded_lines_enter_and_stale_ones_are_dropped(self):
+        self.cos({"recommended": "promote #20: P1 (a live defect) @2026-11-12T11:00:00Z\n"
+                                 "  hardening #21: H1 (K-21 recurred) @2026-11-12T11:00:00Z\n"
+                                 "  promote #24: P2 (planned now) @2026-11-12T11:00:00Z\n"
+                                 "  promote #22: P1 (written before its row changed) @2026-11-12T09:00:00Z\n"
+                                 "  nonsense line"})
+        got, warns = self.items()
+        self.assertEqual((got["promote"], got["hardening"]), ([20], [21]))
+        self.assertTrue(any("#24" in w and "planned, not backlog" in w for w in warns))
+        self.assertTrue(any("#22" in w and "changed after" in w for w in warns))
+        self.assertTrue(any("unread line" in w for w in warns))
+    def test_promote_is_capped_and_an_asked_row_left_out(self):
+        self.cos({"recommended": "\n".join(f"  promote #{i}: P1 (x) @2026-11-12T11:00:00Z" for i in (20, 21, 22, 23))})
+        got, warns = self.items()
+        self.assertEqual(got["promote"], [20, 21])                                      # promotion-ceiling 2
+        self.assertTrue(any("capped at promotion-ceiling 2" in w for w in warns))
+        self.assertEqual(self.items(excluded={20})[0]["promote"], [21, 22])             # counted in Awaiting or Coming
+    def test_hardening_reads_starting_under_the_mandate(self):
+        self.cos({"recommended": "hardening #21: H1 (x) @2026-11-12T11:00:00Z"})
+        self.prefs(**{"hardening-mandate": "on"})
+        got, warns = self.items()
+        self.assertEqual(got["hardening"], []); self.assertTrue(any("starting" in w for w in warns))
+    def test_audit_and_groom_are_computed(self):
+        self.cos({"audit-due": "A1, A3"})
+        self.assertEqual(self.items(audit_in_coming=False)[0]["audit"], [None])
+        self.assertEqual(self.items(audit_in_coming=True)[0]["audit"], [])            # Coming already shows it
+        self.assertEqual(self.items()[0]["groom"], [])
+        self.assertEqual(self.items(hygiene=5)[0]["groom"], [None])                    # G4
+        self.git("tag", "dyad-operator-v1.0.0")                                         # G2: a release, no grooming yet
+        self.assertEqual(self.items()[0]["groom"], [None])
+    def test_re_present_items_come_from_owed_questions(self):
+        (self.d / "board" / "24.md").write_text(f"holder: {HOME}\nwaiting-on: operator\nsince: 2026-11-01T10:00Z\n"
+                                                "question: Y/N: proceed with #24 as planned?\n")
+        self.assertEqual(self.items()[0]["re-present"], [24])                           # older than 24 h: remind
+    def test_the_line_shows_the_part_and_off_hides_it(self):
+        self.cos({"recommended": "promote #20: P1 (x) @2026-11-12T11:00:00Z", "audit-due": "A1"})
+        line = bd.closing_line(self.root)
+        self.assertIn(" Recommended for next: 1 promote (#20).", line)                 # audit is in Coming
+        self.prefs(**{"recommended-next": "off"})
+        self.assertNotIn("Recommended", bd.closing_line(self.root))
+        self.prefs(**{"recommended-next": "maybe"})                                     # read as on
+        self.assertIn("Recommended for next", bd.closing_line(self.root))
+        self.prefs(**{"coming": "off"})                                                 # no Coming: the audit enters
+        self.assertIn("Recommended for next: 1 audit, 1 promote (#20).", bd.closing_line(self.root))
+    def test_the_record_and_the_template(self):
+        import json
+        rec = json.loads((dyadlib.PKG / "dmc" / "recommended-next.jsonld").read_text())
+        self.assertEqual([t["termCode"] for t in rec["hasDefinedTerm"]][:5], list(bd.RECOMMENDED_KINDS))
+        self.assertIn("dmc:recommended-next", (dyadlib.PKG / "playbooks" / "d-work.md").read_text())
+        t = {r[0].strip(): r for r in dyadlib.table_rows((dyadlib.PKG / "templates" / "PREFERENCES.md").read_text()) if r}
+        self.assertEqual(t["recommended-next"][1].strip(), "on")
