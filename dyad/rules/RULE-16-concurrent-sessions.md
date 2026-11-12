@@ -154,8 +154,9 @@ files and almost never merge.
   the live units this is a mode — every unit dyad, only the home, or some — which `dyad session list` prints with the
   paired set and each unit's kind and route, since a counter-prompt is asked in a dyad unit's own chat and relayed
   through the home otherwise (#253 R29; #388; #553). The check is the records': a unit holds an own disposition when a
-  provenance record whose `session:` line names it holds a disposition given there — its note holding neither
-  `mandate #<id>` nor `relayed via`, anywhere — within the `attendance-window` preference (default 7 days); a live
+  provenance record whose `session:` line names it holds a disposition given there — its note holding none of
+  `mandate #<id>`, `mandate preference` or `relayed via`, anywhere (a mandate preference's entry copies a grant given
+  elsewhere, Rule-7 property 4, #692) — within the `attendance-window` preference (default 7 days); a live
   unit holding one that is neither the home nor paired prints `undeclared`, a paired unit holding none prints `warn` —
   a reading of the board, not a Rule-3 incident: the act is the operator's, and the home alone reports it. The
   constraint the preference bounds is the operator's span — how many units the operator pairs — never how many units
@@ -261,6 +262,8 @@ intent question had no exit but a Done; see the same record, amendment #615. Sto
 Enforcement its write-once fence 2026-11-07 (d-work #622): the row slug Rule-3 presents needs a home on the row; see
 `../falsification/rules/rule-3-d-work.md`, amendment #622. Store gains the decision log 2026-11-08 (d-work #644): the rulings a
 Done named were stored nowhere, so no precedent could be admitted or audited; see `../falsification/rules/rule-3-d-work.md`,
-amendment #644.
+amendment #644. Presence's own-disposition clause excludes a `mandate preference` note 2026-11-12 (d-work #692, plan
+revision 2): a row opened under `hardening-mandate` copies the grant's words into the unit that ran the verb, which the
+reading took for a disposition given there; see `../falsification/rules/rule-3-d-work.md`, amendment #692.
 
 Set: System Requirements.

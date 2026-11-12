@@ -1794,17 +1794,19 @@ hardening work once it meets aligned conditions established by an aligned `dmc`"
 | M3 | The mandate could carry a never-accretable act. | **Refuted** | `dmc:hardening-work` W3 excludes public surface and every act on Rule-2's list, and W2 admits only a restore. A row that fails either is ordinary backlog and is asked. |
 | M4 | The row has no prompt, so Rule-7's transaction check refuses the `backlog → open` commit. | **Survives, the Rule extended** | Property 4 gains the mandate preference's entry: the grant's words, copied verbatim and noted `mandate preference <key>, <the grant's date>`, and Enforcement accepts it in place of the prompt. |
 | M5 | The note names an instance row id in the core. | **Refuted** | The core names the form, `granted: d-work #<id> entry <n>`, read from the instance's description of the key; no row id of this instance is written in the core (the engineer's departure from the plan's "provenance #692 entry 1", reported in the completion evidence). |
-| M6 | Rule-16's attendance reading counts a note holding `mandate preference` as an own disposition of the unit that ran the verb. | **Confirmed, not fixed here** | The reading excludes `mandate #` and `relayed via` only; a mandate-preference entry is no more given in that unit than a mandate's is. The fix is a Rule-16 sentence and its code, outside this plan's files: reported to the home for a plan revision. |
+| M6 | Rule-16's attendance reading counts a note holding `mandate preference` as an own disposition of the unit that ran the verb. | **Confirmed; the Rule extended (plan revision 2)** | The reading excluded `mandate #` and `relayed via` only; a mandate-preference entry is no more given in that unit than a mandate's is. Revision 2 adds `mandate preference` to Rule-16 Presence's exclusions, and `sessions.own_disposition` with its test. |
 
-**Verdict:** the claim survives, with M6 open.
+**Verdict:** the claim survives; M6 is closed by plan revision 2.
 - **Rules:** Scope gains the mandate preference; Plan its exception; Ledger's `backlog` bullet names it. Rule-2's Binding names the third authority preference. Rule-7 property 4 and Enforcement gain its entry.
 - **Vocabulary:** the `mandate` row names `hardening-mandate: on`.
+- **Rule-16** (revision 2): Presence's own-disposition clause excludes a `mandate preference` note.
 
 **Pairwise (Rule-5).**
 - **3–2**: the mandate's reach is one class and one ceiling, and the never-accretable list is unchanged; Binding names it, Rule-3 says when it opens a row.
 - **3–7**: property 4 holds the grant's words, and property 5's count is exact, since the row gains one `disposed` entry and one `disposition` entry.
-- **3–16**: no store changes; the attendance reading's gap is M6.
+- **3–16**: no store changes; the attendance reading names the new note beside `mandate #` and `relayed via`, so a row
+  opened under the mandate reads as no unit's own disposition (M6).
 
-The other pairs are as amendment #690 left them. Coherent, orthogonal but for M6.
+The other pairs are as amendment #690 left them. Coherent, orthogonal.
 
 Disposition: see ledger #692.
