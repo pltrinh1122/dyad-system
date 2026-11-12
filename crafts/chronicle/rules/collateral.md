@@ -9,7 +9,7 @@ its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../d
 `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
 d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684; source
-trees, their projection and the segment rank, d-work #685; segmentation and the two perspectives, d-work #693.
+trees, their projection and the segment rank, d-work #685; segmentation and the two perspectives, d-work #693; the alignment review, d-work #696.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -119,7 +119,9 @@ it. Both are projections of one **segment × class table** in the canvas set's i
 tree or as a hypothesis, rendered as two surfaces, `<canvas set>/by-segment.md` (a) and `<canvas set>/by-problem.md`
 (b), never edited by hand. Where they disagree the record acts (`off-class`, `overlapping`, `unspanned`); where they
 agree for every segment and class the map is **corroborated**, which is internal consistency, labelled hypothesis until
-a reader's evidence refreshes the trees. The order is segmentation → significance → rank.
+a reader's evidence refreshes the trees. The order is segmentation → significance → rank. Which segments are targets, and which problems each target's pitch
+answers, is agreed by the play-book `../playbooks/alignment-review.md`, its knobs tuned over runs; the pick is the
+Operator's alone.
 
 **The segment map.** A canvas set may map many segments, one folder each, and lists only those whose problem is
 significant. `collateral-segment-significance` decides it, its conditions in order: **not-accountable** (the segment

@@ -87,8 +87,14 @@ inference, read by the Operator at publication.
 | 76 | **A problem class is one root** (C3). | **Survives, scoped** | Two roots can be one class worded twice; a class is a root or a named group of roots, the grouping written and disputable. |
 | 77 | **Two surfaces hold the same facts twice** (R1). | **Survives** | Each answers a different question, and gaps show differently: thin segment cards, empty class rows. |
 | 78 | **Generated surfaces need a generator** (R2). | **Survives, scoped** | Both are projections of one table, diffed against it in the evidence; a generator is recurrence's to propose. |
+| 79 | **Top-down review saves the operator's effort** (#696 P1): targets are picked on unchecked hypotheses. | **Survives, scoped** | Phase 1 checks the classes first, which is cheap, and phase 3 may drop a target whose problems do not hold. The pick is revisable until the done-`Y`. |
+| 80 | **A phase's answer ratifies** (P2): "accept" reads like a `Y`. | **Refuted** | It is entered as a `prompt`; the only ratification is the row's done-`Y`, and the play-book says so at every phase. |
+| 81 | **A target can be reviewed without its own tree** (P3). | **Confirmed** | Without a tree a target has only readings. Survivor: the knob `tree-first`, default `always`, derives its tree independently before phase 3. |
+| 82 | **Knobs make the play-book tunable** (K1): a knob no run records is a default no one revisits. | **Survives, scoped** | Every run record states the knobs as set, so a tuning can cite the runs that set them. |
+| 83 | **The run record belongs in the craft** (K3). | **Confirmed** | It is the operator's decisions on one canvas set, so it is instance data. Survivor: `<canvas set>/reviews/<row>.md`; the craft keeps only its form. |
+| 84 | **A run can tune the play-book it runs** (K4). | **Survives, scoped** | A run proposes tunings in its record. A later prompt applies them, so the run that proposes never changes its own steps. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–84, ledger #696.
