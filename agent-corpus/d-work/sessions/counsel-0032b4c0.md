@@ -1,5 +1,5 @@
 session: counsel-0032b4c0
-seen: 2026-11-12T00:03:01+00:00
+seen: 2026-11-12T18:36:10+00:00
 root: /home/user/wt/669l
 rows: 
 files: 
