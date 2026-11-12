@@ -1,5 +1,5 @@
 session: engineer-1537d8fb
-seen: 2026-11-12T03:14:59+00:00
+seen: 2026-11-12T03:15:06+00:00
 root: /home/user/dyad-system
 rows: 688
 files: crafts/channels/runbooks/channels.md crafts/channels/scripts/channels.py crafts/channels/tests/test_channels.py workstation-corpus/runbooks/events/channels-channels.jsonl
