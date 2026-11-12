@@ -273,6 +273,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | provenance-entry | frozen |
 | provenance-legacy | frozen |
 | ratification-event | frozen |
+| re-present | frozen |
 | read-only-answer | frozen |
 | recurrence | frozen |
 | reference-severity | frozen |

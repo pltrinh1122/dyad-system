@@ -99,7 +99,10 @@ property 1).
     release plan of `dyad/playbooks/backlog-groom.md` read within a class; ask the promotion question.
 11. **Messages** — a message reaches the operator's chat only as `dmc:message-overhead` says; every other goes to the
     inbox, the automaton or the orchestrating solo.
-12. **Orchestration** — between the plan-`Y` and the Done the row stays still and its board entry's phase moves
+12. **A question asked again** — `dyad board resume`'s owed list judges each question asked and not answered by
+    `dmc:re-present`, printing its outcome and the reason beside it; the home presents it again as the record says,
+    one `Y/N` per reply, a revised plan recorded before it is asked again.
+13. **Orchestration** — between the plan-`Y` and the Done the row stays still and its board entry's phase moves
     (Rule-16 Store): `dyad board phases` prints `dyadlib.ORCH_EVENTS`, and `dyad board advance <id>… <event> --expect
     <phase>` is the one writer, one ledger-only commit per transition, printing the doorbells owed (#587).
 

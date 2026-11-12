@@ -1,0 +1,70 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/re-present",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "re-present",
+  "name": "Re-present a question",
+  "description": "How a question the board records as asked and not answered is presented again while the matter moves: taken back, presented in full, reminded once, or left to the closing line's count.",
+  "dyad:decides": "A recorded question is owed to the operator: is it void, presented again in full, reminded, or left pending?",
+  "dyad:inputs": [
+    "the question's text and its since, as the board entry records them",
+    "the row states of the rows the question names, and the PR heads the entry records against those the question names",
+    "the commits on main after the question's since: to the plan file it binds, to each backticked repo path that plan cites, and to the row files its refs name",
+    "the cabinet's last question asked (the cross-row file's question) and the other owed questions' since",
+    "the tunable inflight-question-hours"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "void",
+      "name": "void",
+      "dyad:when": "a row the question names is terminal, or a PR head it names is not the head the entry records",
+      "dyad:then": "the question is taken back and a new one asked on the new state",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "full",
+      "name": "full",
+      "dyad:when": "the question still binds, but the plan file it binds, a path that plan cites or a row its refs name changed on main after it was asked",
+      "dyad:then": "presented again in full, the change named first, after the plan revision is recorded; whether the change bears on the decision is the home's inference, and in doubt it is full",
+      "dyad:effect": "asks"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "remind",
+      "name": "remind",
+      "dyad:when": "nothing it cites changed, and it is not the cabinet's last question asked while another owed question is newer, or it is older than inflight-question-hours",
+      "dyad:then": "presented again once, verbatim with one line of what it decides, as the last line of the next reply that has no question of its own, or batched with its kind; once it is the last question asked it reads pending",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "pending",
+      "name": "pending",
+      "dyad:when": "none of the above holds",
+      "dyad:then": "it stays in the closing line's count alone",
+      "dyad:effect": "settles"
+    }
+  ],
+  "dyad:precedence": "void first, then full, then remind, then pending. One Y/N per reply (Rule-10): a reply that owes several asks the highest, or one batch of one kind, and the rest stay counted.",
+  "dyad:default": "pending",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/board.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "dmc/work-in-flight.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}
