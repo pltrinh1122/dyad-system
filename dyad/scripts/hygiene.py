@@ -117,16 +117,29 @@ def git(repo: Path, *a: str) -> str:
     return r.stdout if r.returncode == 0 else ""
 
 
+MEANINGFUL = re.compile(r"^[-+](?:state|disposed):")   # #697: a row edit that moves it, never a slug or a format write
+
 def last_touched(repo: Path, base: str, inst: str) -> dict[int, int]:
-    """{row id: unix time of the newest commit on `base` touching its row, plan or provenance file}, in one git call."""
-    out, when = {}, 0
+    """{row id: unix time of the newest commit on `base` that meaningfully touched the row}: one changing its `state` or
+    `disposed` line (its birth included), or touching its plan or provenance file. A bulk write that changes only a
+    row's `slug` or format — the slug backfill 5dce3019 — no longer resets I1 (#697). Two git calls."""
+    out, when, rid = {}, 0, None
+    for line in git(repo, "log", "--format=@%ct", "-p", "--unified=0", "--no-renames", base, "--",
+                    f"{inst}/d-work/rows").splitlines():
+        if line.startswith("@") and line[1:].isdigit():
+            when, rid = int(line[1:]), None; continue
+        if line.startswith("diff --git "):
+            m = re.search(r"/rows/(\d+)\.md$", line); rid = int(m.group(1)) if m else None; continue
+        if rid is not None and MEANINGFUL.match(line):
+            out.setdefault(rid, when)                      # log is newest first: the first time seen is the newest
+    when = 0
     for line in git(repo, "log", "--format=@%ct", "--name-only", base, "--",
-                    f"{inst}/d-work/rows", f"{inst}/d-work/plans", f"{inst}/d-work/provenance").splitlines():
+                    f"{inst}/d-work/plans", f"{inst}/d-work/provenance").splitlines():
         if line.startswith("@"):
             when = int(line[1:]); continue
         m = re.search(r"/(\d+)\.md$", line)
         if m:
-            out.setdefault(int(m.group(1)), when)          # log is newest first: the first time seen is the newest
+            out[int(m.group(1))] = max(out.get(int(m.group(1)), 0), when)
     return out
 
 

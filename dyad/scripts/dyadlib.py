@@ -627,7 +627,7 @@ STATES = frozenset({"open", "planned", "blocked", "backlog", "done", "archived"}
 NEW_STATES = frozenset({"open", "backlog"})          # states a row may be created in
 TRANSITIONS: dict[str, frozenset[str]] = {
     "open": frozenset({"planned", "blocked", "done", "archived"}),   # #615: archived on the bare intent-N, before any plan
-    "planned": frozenset({"open", "blocked", "done"}),
+    "planned": frozenset({"open", "blocked", "done", "archived"}),   # #697: archived by the retirement form's Y naming it
     "blocked": frozenset({"open"}),
     "backlog": frozenset({"open", "archived"}),   # #290: the board had no exit from where 75 of its 280 rows sit (`archived`, 0 uses)
     "done": frozenset({"archived"}),   # done never reopens; archived is one further step the same way (#37)
@@ -649,10 +649,11 @@ INPUTS: dict[tuple[str | None, str], tuple[str, frozenset[str]]] = {
     (None, "backlog"):       ("an Operator disposition opening it (Y backlog)", frozenset({"disposition"})),
     ("open", "planned"):     ("the plan-Y", frozenset({"disposition"})),
     ("open", "blocked"):     ("a deferral naming the blocking d-work", frozenset({"disposition"})),
-    ("open", "archived"):    ("the bare N to the intent question (N intent) on a row holding no Y plan (#615)", frozenset({"disposition"})),
+    ("open", "archived"):    ("the bare N to the intent question (N intent) on a row holding no Y plan (#615); or the retirement Y naming the stale row (Y archive (sweep …), #697)", frozenset({"disposition"})),
     ("open", "done"):        ("the Done-Y, recorded when it is given; the state follows once the merges it named have landed (#202)", frozenset({"disposition"})),
     ("planned", "open"):     ("re-planning: main moved past a touched file (Rule-15 phase 2), or the Operator's amend of the plan", frozenset({"clerical", "disposition"})),
     ("planned", "blocked"):  ("a deferral naming the blocking d-work", frozenset({"disposition"})),
+    ("planned", "archived"): ("the retirement Y naming the stale row (Y archive (sweep …), #697)", frozenset({"disposition"})),
     ("planned", "done"):     ("the Done-Y, recorded when it is given; the state follows once the merges it named have landed (#202)", frozenset({"disposition"})),
     ("blocked", "open"):     ("the blocking d-work reaching done", frozenset({"clerical"})),
     ("backlog", "open"):     ("an Operator prompt for it", frozenset({"prompt"})),

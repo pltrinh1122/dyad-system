@@ -2220,6 +2220,24 @@ def mandate_words(rows, raw, kind="Y plan"):
                  f"words to copy, and Rule-7 property 3 forbids writing them now")
     return mid, cands[-1]["text"], cands[-1]["date"]
 
+def open_pr_on_board(repo: Path, rid: int):
+    """(pr, head) of the first `  pr: <n> at <sha>` line of row `rid`'s board entry whose head is not an ancestor of
+    the main this checkout knows, or None (#697: a stale row is archived only once its PR is closed)."""
+    p = dyadlib.instance(repo) / "d-work" / "board" / f"{rid}.md"   # the instance the rows are read from (DYAD_INSTANCE)
+    try:
+        text = p.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    base = "origin/main" if subprocess.run(["git", "rev-parse", "-q", "--verify", "origin/main"], cwd=repo,
+                                           capture_output=True, env=dyadlib.git_env()).returncode == 0 else "HEAD"
+    for m in re.finditer(r"(?m)^\s+pr:\s*#?(\d+)\s+at\s+([0-9a-f]{7,40})\b", text):
+        landed = subprocess.run(["git", "merge-base", "--is-ancestor", m.group(2), base], cwd=repo,
+                                capture_output=True, env=dyadlib.git_env()).returncode == 0
+        if not landed:
+            return m.group(1), m.group(2)
+    return None
+
+
 def landing_refusal(rg, done_entries):
     """The closing act's landing test (#202), the fence's `rows.landing_problems` said earlier: every head the
     operative (last) `Y done` entry names must be an ancestor of `origin/main`, `main` or `HEAD`, whichever
@@ -2506,13 +2524,15 @@ def cmd_dwork(a):
             refusal = landing_refusal(rg, done_entries)
             if refusal:
                 sys.exit(refusal)
-        if r.state == "open" and state == "archived":
-            # #615: open is archived only by the bare N to the intent question, on a row no plan-`Y` authorized — the
-            # fence's own clause (`rows.intent_close_problems`), said where it costs a line
-            if d is None or not rg.INTENT_N.match(f"{today} {d}") or said is None \
+        if r.state in ("open", "planned") and state == "archived":
+            # #615: open is archived here only by the bare N to the intent question, on a row no plan-`Y` authorized — the
+            # fence's own clause (`rows.intent_close_problems`), said where it costs a line; #697: stale open or planned
+            # work is archived by the retirement form's `Y`, through `dwork retire`, which writes `Y archive (sweep …)`
+            if r.state == "planned" or d is None or not rg.INTENT_N.match(f"{today} {d}") or said is None \
                     or any(rg.PLAN_Y.match(e) for e in rg.entries(disposed)):
-                sys.exit(f"refused: #{rid} is open; it is archived only by the bare N to the intent question, on a row "
-                         f"holding no `Y plan` — -d 'N intent' with its words (--said[-file]) (Rule-3 Ledger, #615)")
+                sys.exit(f"refused: #{rid} is {r.state}; it is archived only by the bare N to the intent question, on an "
+                         f"open row holding no `Y plan` — -d 'N intent' with its words (--said[-file]) (Rule-3 Ledger, "
+                         f"#615) — or by the retirement form's `Y`: `dwork retire {rid} -d 'Y archive' --said[-file]` (#697)")
         if state == "planned" and r.state != "planned":
             # #592 R-c: the plan check runs at the transition, before the first write (not on a Done record of a planned row) — warnings, never a refusal (counsel's, hand-off)
             for m in dyadlib.load_guard("agent", "plans").check_dwork(rid, REPO):
@@ -2580,14 +2600,26 @@ def cmd_dwork(a):
             if rid not in rows:
                 sys.exit(f"refused: no row {rid}")
             src = rows[rid].state
-            if "archived" not in dyadlib.TRANSITIONS.get(src, frozenset()) or src == "open":   # #615: open → archived is the intent-N's alone
+            if "archived" not in dyadlib.TRANSITIONS.get(src, frozenset()):
                 # the table decides what may be archived (Rule-16), read as data so adding a source state needs
                 # no edit here. Membership, not `require_transition`: that allows a same-state edit, and an
                 # already-`archived` row must not collect a second retirement entry.
                 sys.exit(f"refused: #{rid} is {src}; dwork retire archives a row from "
-                         f"{' or '.join(sorted(s for s, t in dyadlib.TRANSITIONS.items() if 'archived' in t and s != 'open'))} (Rule-16)")
+                         f"{' or '.join(sorted(s for s, t in dyadlib.TRANSITIONS.items() if 'archived' in t))} (Rule-16)")
+            if src in ("open", "planned") and (pr := open_pr_on_board(REPO, rid)):
+                # #697: the home closes the PR on the same `Y`, as clerical execution, and drops the board entry; the
+                # row is archived after, so no branch is left claiming a terminal row
+                sys.exit(f"refused: #{rid} is {src} and its board entry records PR #{pr[0]} at {pr[1][:12]}, not on main: "
+                         f"close that PR and drop the entry (`dyad board set {rid} --drop`) first (#697)")
             targets.append(rows[rid])
-        note = d if len(targets) == 1 else f"{d} (batch {','.join(f'#{t.id}' for t in targets)})"
+        stale = [t for t in targets if t.state in ("open", "planned")]
+        if stale and d != "Y archive":
+            sys.exit("refused: a stale open or planned row is archived on the retirement form's entry; give -d 'Y archive', "
+                     "and dwork retire writes `Y archive (sweep #a,#b,…)` (#697)")
+        if stale:
+            note = f"Y archive (sweep {','.join(f'#{t.id}' for t in targets)})"   # the fence's one admitted form (rows.SWEEP_Y)
+        else:
+            note = d if len(targets) == 1 else f"{d} (batch {','.join(f'#{t.id}' for t in targets)})"
         fence_for("disposition", said)
         for t in targets:
             new = dataclasses.replace(t, state="archived",
