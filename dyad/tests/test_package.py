@@ -3204,6 +3204,25 @@ class SuiteParallelTests(unittest.TestCase):
         self.assertEqual(len(kept), 1, out.getvalue())                             # the failing child's, not the passing one's
         self.assertTrue(Path(kept[0]).is_dir()); shutil.rmtree(kept[0])
 
+    def test_a_livecase_runs_in_suite_live_never_in_the_code_suite(self):
+        """#658 (K-35): a `livetest.LiveCase` test reads the stores; the code suite (the push gate's and the evidence's)
+        leaves it out, and `suite:live`'s listing keeps exactly it."""
+        pkg = load_package()
+        live = ("import unittest, livetest\nclass L(livetest.LiveCase):\n    def test_live(self): pass\n")
+        plain = "import unittest\nclass P(unittest.TestCase):\n    def test_a(self): pass\n    def test_b(self): pass\n"
+        root = self.root({"test_live.py": live, "test_plain.py": plain})
+        units = pkg.suite_units(root)
+        self.assertEqual(units, [["test_plain.P.test_a", "test_plain.P.test_b"]])          # absent from the code suite
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc, summary, err = pkg.run_suite(root)
+        self.assertEqual((rc, summary), (0, ["Ran 2 tests", "OK"]), err)
+        am = dyadlib.load_module(PKG / "scripts" / "automaton.py", "automaton_658")
+        r, kept = pkg.suite_child(["-c", am.LIVE_LIST_CHILD, str(root), str(PKG / "scripts")])
+        self.assertEqual(r.stdout.split(), ["test_live.L.test_live"])                        # present in suite:live
+        only_live = self.root({"test_live.py": live})
+        self.assertEqual(pkg.suite_units(only_live), [])
+        self.assertEqual(pkg.run_suite(only_live)[:2], (0, ["Ran 0 tests", "OK"]))
+
     def test_a_module_that_fails_to_import_runs_the_root_as_one_discover_child(self):
         pkg = load_package()
         root = self.root({"test_a.py": "import no_such_module_475\n",
