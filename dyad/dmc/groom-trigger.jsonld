@@ -19,7 +19,8 @@
     "the release tags published since the last grooming event (the newest event of the run-book backlog-groom)",
     "whether the promotion criterion reached no proposal while a unit is idle and the backlog is not empty",
     "the count of hygiene lines dyad board resume prints, against the fixed count of five",
-    "whether the backlog's rows and the board are unchanged since the last grooming event"
+    "whether the backlog's rows and the board are unchanged since the last grooming event",
+    "the backlog rows older than 90 days by opened whose last reading (the home's read lines) is absent or older than 90 days"
   ],
   "hasDefinedTerm": [
     {
@@ -52,13 +53,20 @@
     },
     {
       "@type": "DefinedTerm",
+      "termCode": "G5",
+      "name": "reading coverage",
+      "dyad:when": "a backlog row older than 90 days by opened has no reading younger than 90 days",
+      "dyad:then": "due; ninety days is this record's fixed number, not a preference (groom.uncovered, #697)"
+    },
+    {
+      "@type": "DefinedTerm",
       "termCode": "not-due",
       "name": "not due",
       "dyad:when": "none of the above holds, or the floor holds and the moment is not an operator prompt",
       "dyad:then": "no run"
     }
   ],
-  "dyad:precedence": "G1 first, and only G1 passes the floor; then the floor: no run while the backlog's rows and the board are unchanged since the last grooming event, which stops G3 firing again on a run that promoted nothing; then G2, G3 and G4, any one making a run due; otherwise not due.",
+  "dyad:precedence": "G1 first, and only G1 passes the floor; then the floor: no run while the backlog's rows and the board are unchanged since the last grooming event, which stops G3 firing again on a run that promoted nothing; then G2, G3, G4 and G5, any one making a run due; otherwise not due.",
   "dyad:default": "not due",
   "dyad:judgedBy": {
     "dyad:kind": "inference",
@@ -68,7 +76,8 @@
   "dyad:home": "playbooks/backlog-groom.md",
   "dyad:alsoIn": [
     "dmc/promotion.jsonld",
-    "dmc/backlog-hygiene.jsonld"
+    "dmc/backlog-hygiene.jsonld",
+    "dmc/backlog-staleness.jsonld"
   ],
   "dyad:owner": "Rule-3"
 }

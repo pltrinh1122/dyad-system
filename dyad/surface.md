@@ -91,11 +91,11 @@ are each guard's own constant, the source the test reads.
 | store | path | keys | source | status |
 |---|---|---|---|---|
 | row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`, `slug` (#622); every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
-| row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions (open → archived on the bare intent-N, #615) | `dyadlib.TRANSITIONS` | frozen |
+| row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions (open → archived on the bare intent-N, #615; open or planned → archived on the retirement form's sweep entry, #697) | `dyadlib.TRANSITIONS` | frozen |
 | board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | frozen |
 | board `cabinet` value | — | `program`, `program-<operator>`; an operator ending in eight hex reads as a seat's hp and is no cabinet | `board.CABINET` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
-| board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `release-plan`, `audit-due`, `recommended`, `writer`; `release-plan` the backlog grooming play-book's (#625); `audit-due` the audit's due conditions by the audit trigger, counted in the Coming part (#691); `recommended` the home's inferred items for the Recommended part (#695); `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
+| board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `release-plan`, `audit-due`, `recommended`, `read`, `writer`; `release-plan` the backlog grooming play-book's (#625); `audit-due` the audit's due conditions by the audit trigger, counted in the Coming part (#691); `recommended` the home's inferred items for the Recommended part (#695); `read` the home's grooming readings, one line per row, its id, date, outcome and ground (#697); `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
 | plan `parts:` line | `d-work/plans/<id>.md` | `parts: <unit>: <part>; …`, matched by unit name or function | `automaton.PARTS` | frozen |
 | inbox message | `d-work/inbox/<unit>/<stamp>-<from>-<n>.md` | `from`, `to`, `row`, `kind`, `sent`, `body`, `writer` | `inbox.FIELDS` | frozen |
 | inbox marker | the message's name + `.read` | `read`, `reader`, `writer` | `inbox.MARK_FIELDS` | frozen |
@@ -202,6 +202,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | audit-trigger | frozen |
 | audit-watermark | frozen |
 | backlog-hygiene | frozen |
+| backlog-staleness | frozen |
 | batch-engagement | frozen |
 | blocker-home | frozen |
 | board-lines | frozen |

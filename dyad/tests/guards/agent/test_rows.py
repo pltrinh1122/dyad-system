@@ -865,6 +865,20 @@ class IntentCloseTests(unittest.TestCase):
     def test_other_edges_are_not_judged(self):
         self.assertEqual(m.intent_close_problems(self.R, self.R_("backlog", ""), self.R_("archived", "2026-11-06 Y archive"), "c"), [])
         self.assertEqual(m.intent_close_problems(self.R, self.R_("open", ""), self.R_("open", "2026-11-06 Y intent"), "c"), [])
+    def test_the_sweep_entry_naming_the_row_archives_open_or_planned_work(self):
+        """#697: the retirement form's `Y` over stale work; the entry must be new, last, and name this row."""
+        for src in ("open", "planned"):
+            with self.subTest(src=src):
+                self.assertEqual(m.intent_close_problems(self.R, self.R_(src, "2026-11-01 Y plan"),
+                                 self.R_("archived", "2026-11-01 Y plan; 2026-11-13 Y archive (sweep #4,#1)"), "c"), [])
+                for disposed in ("2026-11-01 Y plan; 2026-11-13 Y archive (sweep #2)", "2026-11-01 Y plan; 2026-11-13 Y archive",
+                                 "2026-11-01 Y plan; 2026-11-13 Y archive (batch #1)"):
+                    got = m.intent_close_problems(self.R, self.R_(src, "2026-11-01 Y plan"), self.R_("archived", disposed), "c")
+                    self.assertEqual(len(got), 1, disposed); self.assertIn("sweep", got[0])
+        got = m.intent_close_problems(self.R, self.R_("planned", "2026-11-01 Y plan"),
+                                      self.R_("archived", "2026-11-01 Y plan; 2026-11-13 N intent"), "c")
+        self.assertEqual(len(got), 1)                                       # the intent-N is open's alone
+
     def test_the_fence_runs_it_on_a_direct_commit(self):
         r = Repo(); r.write(self.R, row(1, "one")); base = r.commit("root")
         r.write(self.R, row(1, "one", "archived", "2026-11-06 Y archive")); h = r.commit()

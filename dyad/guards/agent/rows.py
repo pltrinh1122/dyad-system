@@ -155,16 +155,30 @@ def disposed_problems(path: str, before: str, after: str, label: str) -> list[st
 # ---- the intent-N archives (d-work #615)
 INTENT_N = re.compile(r"\d{4}-\d{2}-\d{2} N intent(?:$| \()")   # the bare N to the intent question, one parsed entry
 
+SWEEP_Y = re.compile(r"\d{4}-\d{2}-\d{2} Y archive \(sweep (#\d+(?:,#\d+)*)\)$")   # #697: the retirement form's entry
+
+def sweep_names(entry: str, rid: int) -> bool:
+    """True when `entry` is the retirement form's `<date> Y archive (sweep #a,#b,…)` and names row `rid` (#697)."""
+    m = SWEEP_Y.match(entry)
+    return bool(m) and rid in {int(x) for x in re.findall(r"\d+", m.group(1))}
+
 def intent_close_problems(path: str, before, after, label: str) -> list[str]:
-    """Rule-16's `open → archived` (#615): admitted only on a row whose last entry is the `N intent` that archives it
-    and that holds no `Y plan` — nothing was authorized, so nothing is abandoned (F8: only the operator closes)."""
-    if before.state != "open" or after.state != "archived":
+    """Rule-16's `open → archived` and `planned → archived`. `open → archived` is admitted on a row whose new last entry
+    is the bare `N intent` that archives it and that holds no `Y plan` — nothing was authorized, so nothing is abandoned
+    (F8: only the operator closes, #615); and either edge on a new last entry `Y archive (sweep #a,#b,…)` naming the
+    row, the retirement form's `Y` over stale open or planned work (#697)."""
+    if before.state not in ("open", "planned") or after.state != "archived":
         return []
     es = entries(after.disposed)
-    if es and INTENT_N.match(es[-1]) and es[-1] not in entries(before.disposed) and not any(PLAN_Y.match(e) for e in es):
+    new = es[-1] if es and es[-1] not in entries(before.disposed) else None
+    if new and sweep_names(new, after.id):
         return []
-    return [f"FAIL [main-fence]: {label} row file {path} goes open→archived without a new last entry `N intent` on a row "
-            f"holding no `Y plan` (Rule-3 Ledger: open is archived only by the bare intent-N, #615)"]
+    if before.state == "open" and new and INTENT_N.match(new) and not any(PLAN_Y.match(e) for e in es):
+        return []
+    return [f"FAIL [main-fence]: {label} row file {path} goes {before.state}→archived without a new last entry "
+            + ("`N intent` on a row holding no `Y plan`, or " if before.state == "open" else "")
+            + f"`Y archive (sweep …)` naming #{after.id} (Rule-3 Ledger: open is archived only by the bare intent-N, #615, "
+            f"or with planned by the retirement form's Y, #697)"]
 
 # ---- the Done state follows the merge (d-work #202)
 def parent_askable(children: list[tuple[str, bool]]) -> str:

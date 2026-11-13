@@ -1347,6 +1347,30 @@ class PackageTests(livetest.LiveCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         got = dyadlib.parse_row_file(rows.joinpath("3.md").read_text())
         self.assertEqual(got.state, "archived"); self.assertNotIn("(batch", got.disposed)       # one row is no batch
+    def test_dwork_retire_archives_stale_open_and_planned_work_on_the_sweep_entry(self):
+        """#697: the retirement form's `Y` archives a stale open or planned row; the entry is `Y archive (sweep #…)`, the
+        one form the fence admits, and a row whose board entry records an unlanded PR is refused until it is closed."""
+        sys.path.insert(0, str(PKG / "scripts")); import dyadlib
+        rg = dyadlib.load_guard("agent", "rows")
+        d, rows = self.dwork_repo()
+        r = self.dwork_new(d, "a second open row", "--prompt", "open it"); self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "3", "planned", "-d", "Y plan", "--said", "Y"); self.assertEqual(r.returncode, 0, r.stderr)
+        board = rows.parent / "board"; board.mkdir(exist_ok=True)
+        board.joinpath("3.md").write_text("holder: program-1\nphase: building\n  unit: engineer-1\n  pr: 9 at " + "a" * 40 + "\n")
+        r = self.dwork_retire(d, "1", "3", "-d", "Y archive", "--said", "Y, retire the stale work")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("records PR #9 at aaaaaaaaaaaa", r.stderr)
+        self.assertEqual(dyadlib.parse_row_file(rows.joinpath("1.md").read_text()).state, "open")   # nothing written
+        board.joinpath("3.md").unlink()
+        r = self.dwork_retire(d, "1", "3", "-d", "Y archive", "--said", "Y, retire the stale work")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for rid in (1, 3):
+            got = dyadlib.parse_row_file(rows.joinpath(f"{rid}.md").read_text())
+            self.assertEqual(got.state, "archived")
+            self.assertTrue(rg.sweep_names(got.disposed.split("; ")[-1], rid), got.disposed)
+        r = self.dwork_new(d, "a third open row", "--prompt", "open it"); self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.dwork_state(d, "4", "archived", "-d", "Y archive", "--said", "Y")
+        self.assertNotEqual(r.returncode, 0); self.assertIn("dwork retire 4", r.stderr)          # dwork state is not the route
+
     def test_dwork_retire_refuses_before_it_writes(self):
         d, rows = self.dwork_repo(); before = {p.name: p.read_text() for p in rows.glob("*.md")}
         rows.joinpath("5.md").write_text("id: 5\ntitle: five\nopened: d\nstate: backlog\ndisposed: 2026-10-01 Y backlog\nrefs: \n")
@@ -1358,8 +1382,8 @@ class PackageTests(livetest.LiveCase):
                  (("5", "x", "-d", "Y archive", "--said", "Y"), "is not a number"),
                  (("5", "9", "-d", "Y archive", "--said", "Y"), "no row 9"),
                  (("5", "5", "-d", "Y archive", "--said", "Y"), "named twice"),
-                 (("1", "-d", "Y archive", "--said", "Y"), "#1 is open; dwork retire archives a row from backlog or done"),
-                 (("5", "1", "-d", "Y archive", "--said", "Y"), "#1 is open"),                  # the whole set is judged first
+                 (("1", "-d", "Y archive, stale", "--said", "Y"), "give -d 'Y archive'"),         # #697: the sweep entry only
+                 (("5", "1", "-d", "Y archive, stale", "--said", "Y"), "give -d 'Y archive'"),    # the whole set is judged first
                  (("5", "-d", "Y archive; and more", "--said", "Y"), "contains ';'"),
                  (("5", "--prompt", "the words"), "does not take --prompt")]
         for args, msg in cases:

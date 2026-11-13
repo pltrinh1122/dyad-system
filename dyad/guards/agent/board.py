@@ -96,7 +96,7 @@ BOARD_REL = "d-work/board"
 COS = "_cos"
 FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "audit-due",
-              "recommended", "writer")   # #625: release-plan; #691: audit-due; #695: recommended
+              "recommended", "read", "writer")   # #625: release-plan; #691: audit-due; #695: recommended; #697: read
 REQUIRED = ("holder",)
 CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
                                                      # so an operator segment of eight hex is no cabinet (sessions.name_problems)
