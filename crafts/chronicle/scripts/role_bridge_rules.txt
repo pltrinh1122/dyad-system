@@ -1,0 +1,12 @@
+# Data of role_bridge.py (beside it; record collateral-role-bridge, rules/collateral.md §5). One entry per line;
+# blank lines and # comments ignored. Judged by inference once, here; the script applies it to every occupation.
+#   way: <id> = <verb>|<verb>|...     a way of working with agents and the task verbs that state its work
+#   object: <word>|<word>|...         objects of information work: a task matches only when one occurs (B2)
+#   threshold: <name> = <number>      the record's numeric cuts
+way: intent-specification = specify|define|formulate|design|draft|outline|plan|write specifications|determine requirements
+way: decision-framing = decide|approve|authorize|recommend|prioritize|select|determine whether|resolve
+way: evaluation = review|evaluate|assess|inspect|verify|check|test|audit|proofread|examine|validate|analyze
+way: oversight = monitor|supervise|oversee|direct|control|track|observe
+way: orchestration = coordinate|schedule|assign|delegate|organize|integrate|manage projects|allocate
+object: report|document|data|record|plan|program|code|software|design|proposal|specification|analysis|budget|content|text|copy|manuscript|draft|policy|procedure|schedule|project|request|application|information|research|model|estimate|forecast|contract|statement|presentation|curriculum|website|database|system|claim|case|order|transaction|requirement|work
+threshold: handed-over = 0.1

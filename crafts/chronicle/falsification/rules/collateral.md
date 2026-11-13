@@ -110,8 +110,22 @@ inference, read by the Operator at publication.
 | 99 | **The question rounds are cursory** (#696 L1). | **Refuted** | They run longest where the user asked for them: the intermediate modality. Cursory users meet them only when an assistant asks unprompted. |
 | 100 | **Proficiency levels are distinct** (L2): one user moves between them in a day. | **Survives** | A level is a modality of use, not a kind of person. A class is marked by the modality in which it shows. |
 | 101 | **The intermediate remedy for the wrong target trades it for the question rounds** (L3). | **Survives, scoped** | They share a root, so a remedy that settles the need once removes both. This is a hypothesis until an intermediate target's tree holds both. |
+| 102 | **Published job descriptions can source segments** (J1: they name employers, which a public piece may not cite). | **Confirmed** | Segments cite public occupational taxonomies built from them, by occupation code; postings are read only in aggregate. |
+| 103 | **A taxonomy keeps pace with roles** (J2). | **Survives, scoped** | Each occupation carries the taxonomy's version and the lag is stated; the blurring is why the target axis leads and the title follows. |
+| 104 | **A sourced position is a job title again** (J4). | **Refuted** | It is placed by its listed responsibilities; two titles with the same responsibilities are one segment. |
+| 105 | **Ways of working with agents can be sourced today** (K1: no published position names them yet). | **Confirmed** | The target axis is a hypothesis by design; sourcing binds today's occupations, which the role bridge links to it. |
+| 106 | **A way of working is proficiency again** (K2). | **Refuted** | Proficiency is depth, the way is kind: an advanced user may only evaluate, and a cursory one already evaluates. |
+| 107 | **A way of working is a responsibility** (K3). | **Refuted** | A responsibility is the job's; a way of working is how the agent is worked with inside it, and one responsibility demands several. |
+| 108 | **The five ways of working are disjoint** (K4). | **Survives, scoped** | Two classes sit in two ways each (O7, O6), each pair observing a different moment; the overlap is stated, not merged. |
+| 109 | **Handed-over work can be read for each occupation** (B1: it is guesswork). | **Confirmed** | It is read from a published exposure index, cited and labelled hypothesis, and moves only the rank within an outcome. |
+| 110 | **A task verb states a way's work** (B2: a verb matches by accident). | **Survives, scoped** | A match needs an object of information work, listed as data beside the script; the lists are inference, made once. |
+| 111 | **Mandatory augmentation makes every occupation future reach** (B4). | **Refuted** | An occupation an agent can do none of stays absent; one whose checking costs more than it saves is net-cost. |
+| 112 | **A future-anchored target has a buyer today** (F1). | **Confirmed** | The operator's decision (d-work #696 entry 32) accepts the gap; the professions map shows each target's counts, so it is visible. |
+| 113 | **Every current role gains from working well with agents** (P1, P2: some have nothing an agent can do; some lose attention by it). | **Confirmed** | The premise opens the map as a hypothesis with its refuters, the absent and net-cost counts. |
+| 114 | **Judging every occupation is a reading** (L1). | **Refuted** | About a thousand occupations make it a recurring task (the core's Rule-13): the record is code, tested. |
+| 115 | **A task share rewards occupations with many small tasks** (L2). | **Survives, scoped** | Shares are weighted by the taxonomy's importance rating. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–101, ledger #696.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–115, ledger #696.

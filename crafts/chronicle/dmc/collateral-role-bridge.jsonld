@@ -1,0 +1,81 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-role-bridge",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-role-bridge",
+  "name": "Role bridge",
+  "description": "How one of today's occupations stands to one way of working with agents, and where it ranks from greatest beneficiary to least, so that a map of future work, anchored on a hypothesis of how people will work with agents, shows its applicability to today's roles and responsibilities without the hypothesis being gated by them.",
+  "dyad:decides": "How does this occupation stand to this way of working with agents, and where does it rank?",
+  "dyad:inputs": [
+    "the occupation, from a public occupational taxonomy at a stated version, built from published job descriptions and naming no employer",
+    "the way of working with agents, from the canvas set's map of future work, with the task verbs that state its work (data beside the implementation)",
+    "stated: the occupation's task statements whose verb is the way's and whose object is information work, weighted by each task's importance where the taxonomy gives one: evidence",
+    "handed over: a published per-occupation exposure index, the share of the work an agent can do, its source cited: hypothesis",
+    "net attention: the exposure less the checking it costs, read from the taxonomy's consequence of error: hypothesis",
+    "trend: the tasks of the way's kind the occupation gained or lost between two taxonomy versions: evidence, where two versions exist"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unsourced",
+      "name": "unsourced",
+      "dyad:when": "the occupation has no task statements in the taxonomy",
+      "dyad:then": "listed last, unranked within; never judged by reading the title"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "demanded",
+      "name": "demanded",
+      "dyad:when": "some of its task statements already state the way's work",
+      "dyad:then": "reach today, the share cited; ranked first, by share times net attention"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "net-cost",
+      "name": "net-cost",
+      "dyad:when": "not stated; an agent can do part of its work, but checking it costs more attention than it saves (consequence of error above exposure)",
+      "dyad:then": "judged before emerging and ranked below it: a market for the problem, never proof of the benefit"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "emerging",
+      "name": "emerging",
+      "dyad:when": "not stated; an agent can do enough of its work that the way is what remains for the person",
+      "dyad:then": "future reach, hypothesis; ranked after demanded, by net attention"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "drifting",
+      "name": "drifting",
+      "dyad:when": "not stated; the trend shows tasks of the way's kind being added",
+      "dyad:then": "the change evidenced; unreachable from one version, which the map says"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "absent",
+      "name": "absent",
+      "dyad:when": "none of the above",
+      "dyad:then": "no reach for this way; counted, so the map's premise can be refuted where it is used"
+    }
+  ],
+  "dyad:precedence": "judged in the order listed; ranked demanded, emerging, drifting, net-cost, absent, unsourced, then by score; ties share a rank and are never broken by hand; an occupation's overall rank is its best over the ways, naming the way",
+  "dyad:default": "a missing exposure or consequence reads as none, and the map states how many occupations lacked it",
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "scripts/role_bridge.py"
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

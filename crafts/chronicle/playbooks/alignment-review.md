@@ -27,9 +27,11 @@ answer is entered verbatim as a `prompt` entry of the row (Rule-7), so nothing i
 1. **Problem classes.** View: each class, with its wording, the roots grouped into it, the segments that suffer it,
    and the shared anchor. Question: "accept the classes, or amend?" An amendment changes the grouping, the wording
    or both, and the segment × class table and both surfaces follow.
-2. **Targets.** View: the segment cards in rank order, each with its phase-1 classes, and any rank tie or untested
-   axis the map carries. Question: "which segments are targets?" The pick is the operator's alone (the rank orders,
-   never targets). A tie or an axis is settled only where it touches a pick.
+2. **Targets.** View: one card per value of the target axis the map is anchored on (`../rules/collateral.md` §5; for
+   a canvas set without one, the segment cards in rank order), each with its phase-1 classes and their cost, and
+   beside it its applicability to today, the counts of `collateral-role-bridge`'s outcomes over the professions map;
+   and any rank tie or untested axis the map carries. Question: "which are targets?" The pick is the operator's alone
+   (the rank orders, never targets). A tie or an axis is settled only where it touches a pick.
 3. **Problems per target.** Under `tree-first: always`, a target with no source tree first gets one, derived by a fresh
    drafter briefed with the segment, the anchor, §6's Steps and the gate, and given no other tree, then projected.
    View: one page per target, its source tree sliced to its selected roots, the branches that reach them, the anchor

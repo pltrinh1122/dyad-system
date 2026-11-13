@@ -16,7 +16,8 @@
   "dyad:decides": "Is this candidate a segment of the map, and which?",
   "dyad:inputs": [
     "the axes and their values: an input, never fixed by this record",
-    "the candidate, as its readers would describe themselves, never a person or a named organization",
+    "the target axis, for this instance a way of working with agents (the map of future work), with today's occupations bridged to it by collateral-role-bridge",
+    "the candidate, as its readers would describe themselves, placed by the responsibilities a published job description or occupational taxonomy lists, never by a job title, a person or a named organization",
     "the segments already on the map, each with its cells",
     "the projection's problem classes: its root causes, or named groups of them, the grouping written down",
     "the segment × class table, each cell labelled from a source tree or as a hypothesis",
@@ -25,9 +26,16 @@
   "hasDefinedTerm": [
     {
       "@type": "DefinedTerm",
+      "termCode": "unsourced",
+      "name": "unsourced",
+      "dyad:when": "the candidate's responsibilities come from no published job description or occupational taxonomy",
+      "dyad:then": "source it, or leave it off the map; a title is never a source"
+    },
+    {
+      "@type": "DefinedTerm",
       "termCode": "off-axis",
       "name": "off-axis",
-      "dyad:when": "the candidate is defined by something other than the axes, such as a job title or a function alone",
+      "dyad:when": "the candidate is defined by something other than the axes and its sourced responsibilities, such as a job title or a function alone",
       "dyad:then": "restate it as the cells its readers sit in, and judge it again"
     },
     {
