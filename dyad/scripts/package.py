@@ -823,9 +823,11 @@ def suite_env(tmp: str | None = None) -> dict[str, str]:
 SUITE_JOBS = os.cpu_count() or 1
 _SUITE_SLOTS = threading.BoundedSemaphore(SUITE_JOBS)   # every child of every root, listings included
 SUITE_STATUS_KEYS = ("failures", "errors", "skipped", "expected failures", "unexpected successes")   # unittest's order
-# the listing child: discover the root exactly as `unittest discover -s <root>` does, print one test id per line
-SUITE_LIST_CHILD = ("import sys, unittest\nsys.path.insert(0, sys.argv[1])\n"
-                    "def ids(s):\n    for t in s:\n        yield from ids(t) if isinstance(t, unittest.TestSuite) else [t.id()]\n"
+# the listing child: discover the root exactly as `unittest discover -s <root>` does, print one test id per line, a
+# `livetest.LiveCase` test's prefixed `live ` (#658, K-35: those read the stores and run in `suite:live`, never here)
+SUITE_LIST_CHILD = ("import sys, unittest\nsys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])\nimport livetest\n"
+                    "def ids(s):\n    for t in s:\n        yield from ids(t) if isinstance(t, unittest.TestSuite) else "
+                    "[('live ' if isinstance(t, livetest.LiveCase) else '') + t.id()]\n"
                     "print(*ids(unittest.defaultTestLoader.discover(sys.argv[1])), sep='\\n')")
 # one unit's child: the root on sys.path as discover puts it there, then those ids by name
 SUITE_UNIT_CHILD = ("import sys, unittest; sys.path.insert(0, sys.argv[1]); "
@@ -866,15 +868,17 @@ def suite_units(suite):
     """The root's test ids grouped by class, largest class first (ties in discovery order), or None when the
     listing cannot be trusted to name every test: the listing failed, found nothing, or a module failed to import
     (unittest names it `unittest.loader._FailedTest`) — the caller then runs the root as one discover child, so
-    the failure is reported exactly as before."""
-    r, kept = suite_child(["-c", SUITE_LIST_CHILD, str(suite)])
+    the failure is reported exactly as before. A `livetest.LiveCase` test is left out: it reads the instance's stores
+    and runs in `suite:live`, after each ledger push (#618 H4), never in the code suite of the push gate and the
+    evidence (#658, K-35: a wall-clock live test failed pushes under the full suite's load)."""
+    r, kept = suite_child(["-c", SUITE_LIST_CHILD, str(suite), str(Path(__file__).resolve().parent)])
     if kept:
         shutil.rmtree(kept, ignore_errors=True)   # a listing's root holds nothing worth reading
-    ids = r.stdout.split()
-    if r.returncode or not ids or any(i.startswith("unittest.loader.") for i in ids):
+    lines = [l for l in r.stdout.splitlines() if l.strip()]
+    if r.returncode or not lines or any(l.removeprefix("live ").startswith("unittest.loader.") for l in lines):
         return None
     groups = {}
-    for i in ids:
+    for i in (l for l in lines if not l.startswith("live ")):   # #658: a LiveCase is `suite:live`'s, not the code suite's
         groups.setdefault(i.rsplit(".", 1)[0], []).append(i)
     return sorted(groups.values(), key=len, reverse=True)
 
@@ -920,6 +924,8 @@ def run_suite(suite, target=None):
             print(f"     [Rule-12] temp root kept for reading: {kept}")
         summary = [re.sub(r" in [\d.]+s$", "", l) for l in r.stderr.strip().splitlines() if l.startswith(("Ran ", "OK", "FAILED"))]
         return r.returncode, summary, r.stderr
+    if not units:   # #658: every test of the root is a LiveCase, run in `suite:live`; the code suite ran none
+        return 0, ["Ran 0 tests", "OK"], "OK"
     with ThreadPoolExecutor(min(SUITE_JOBS, len(units))) as pool:
         done = list(pool.map(lambda ids: suite_child(["-c", SUITE_UNIT_CHILD, str(suite), *ids]), units))
     failed = [(r, kept) for r, kept in done if r.returncode]
@@ -1681,7 +1687,7 @@ def evidence_baseline_compute(sha):
     r = evidence_in_worktree(sha, lambda wt: subprocess.run(   # a lambda: the spawn fence reads the enclosing function
         [sys.executable, str(wt / "dyad" / "scripts" / "package.py"), "check"], cwd=wt, env=baseline_env(),
         capture_output=True, text=True, timeout=600))
-    lines = r.stdout.splitlines()
+    lines = [l for l in r.stdout.splitlines() if l.strip()]
     n = evidence_counts(lines)
     if not n["ok"] + n["warn"] + n["skip"] + n["fail"]:
         raise RuntimeError(f"check printed no check line (exit {r.returncode}): "
