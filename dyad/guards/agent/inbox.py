@@ -337,11 +337,32 @@ def parse_post(a: list[str]) -> tuple[str, int, str, str, tuple[str, ...]]:
     return to, int(vals["--row"]), vals["--kind"], body, tuple(cc)
 
 
+def post_ring(to: str, kind: str, cc=(), sender: str = "") -> list[str]:
+    """K-21 (#652): the units an `inbox post` rings — the box and each `--cc` box, in order and once each — unless the
+    post is a notice (an information-only copy rings nobody) or the unit is the sender (a self-addressed post rings
+    nobody); the rule `land.ring_list` applies to a batch's posts (Rule-3 Batch disposition, `dmc:message-route`)."""
+    if kind == "notice":
+        return []
+    out = []
+    for u in (to, *cc):
+        if u != sender and u not in out:
+            out.append(u)
+    return out
+
+
 def post(repo: Path, to: str, row: int, kind: str, body: str, cc=()) -> int:
+    """Land the message; only then, after `land` has printed its `landed <sha> on main` line, print the `ring:` line
+    naming the units the session now rings. A refused or unlanded post raises before it, so it rings nobody (K-21,
+    #652: the doorbell follows the post that has landed, never one that has not)."""
     inst = dyadlib.instance_rel(repo)
     if inst is None:
         raise Refused("the instance (DYAD_INSTANCE) lies outside this work tree")
-    return land().land(repo, inst, None, post_builder(to, row, kind, body, this_seat(), inst, tuple(cc)), "inbox post")
+    sender = this_seat()
+    rc = land().land(repo, inst, None, post_builder(to, row, kind, body, sender, inst, tuple(cc)), "inbox post")
+    ring = post_ring(to, kind, cc, sender)
+    if rc == 0 and ring:
+        print(f"ring: {', '.join(ring)} (a doorbell is the session's act, #586 X4)")
+    return rc
 
 
 def render_message(p: Path, f: dict[str, str], read: bool) -> list[str]:
