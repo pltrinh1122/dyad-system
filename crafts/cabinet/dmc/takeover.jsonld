@@ -1,0 +1,67 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:cabinet/takeover",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "takeover",
+  "name": "Take over or wait",
+  "description": "For an act a unit has claimed, choose whether the home waits, nudges the unit, takes the act over, or leaves it. The home takes over only from a solo, and only announced first (dyad-system #698).",
+  "dyad:decides": "For an act a unit has claimed (its board entry's owner, or its presence rows), does the home wait for a retry, nudge the unit, take the act over itself, or leave it with the unit?",
+  "dyad:inputs": [
+    "the board entry: owner, phase, since",
+    "the claiming unit's presence: seen, and whether its harness session is live",
+    "the claiming unit's kind, dyad unit or solo, from dyad session list's kind column (the home, or a unit paired-units names, is a dyad unit)",
+    "what stalls the act: an outside-service error (a hosting 5xx, a refused connection, a timeout), a wait on the unit, or nothing",
+    "the act's kind: one of the home's reserved acts (recording a Y, asking a question) or the unit's",
+    "the operator's words"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "wait-retry",
+      "name": "Wait and retry",
+      "dyad:when": "the act is stalled by an outside service (a hosting 5xx, a refused connection, a timeout) and the claiming unit is live, whatever its kind; or the act is the home's own (a ledger push) and the service fails it",
+      "dyad:then": "the home does not start the unit's act; the unit retries with backoff (four tries, doubling), and the home re-reads at the next prompt; the home's own act is retried the same way by the home and never handed off"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "nudge",
+      "name": "Nudge the unit",
+      "dyad:when": "the claiming unit is live and the act waits on it (a relay unread past inflight-unread-hours, a doorbell not rung); or the claiming unit is a dyad unit whose act has stalled for any other reason",
+      "dyad:then": "one doorbell to that unit, re-rung once; never taken over. A dyad unit's stall past that is the operator's to see, at that desk or in the aggregate desk (#700), never the home's to resume"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "take-over",
+      "name": "Take the act over",
+      "dyad:when": "the claiming unit is a solo, and it is gone (its session archived, or stale past the presence window with no wake armed), or the operator asks, or the act is one of the home's reserved acts (recording a Y, asking a question)",
+      "dyad:then": "the home announces it first on the board (owner moved to the home, the old owner told by notice), and only then does it, in a fork or a worktree unless the act is a ledger-only push (Guide §2 Availability); never two writers on one file. A take-over without the owner change is an incident"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "hand-on",
+      "name": "Leave it with the unit",
+      "dyad:when": "none of the above",
+      "dyad:then": "the act stays with its unit"
+    }
+  ],
+  "dyad:precedence": "wait-retry, then nudge, then take-over (a solo only), then hand-on; a dyad unit's claimed act is never taken over, whatever else holds",
+  "dyad:default": "hand-on",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:cabinet",
+  "dyad:home": "docs/operating-guide.md",
+  "dyad:alsoIn": [
+    "rules/organization.md"
+  ],
+  "dyad:owner": "cabinet:organization"
+}

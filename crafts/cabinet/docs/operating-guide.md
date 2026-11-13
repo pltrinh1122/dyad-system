@@ -71,6 +71,18 @@ fork, #425). **Availability:** the cos's checkout runs nothing longer than a led
 suite runs in a unit or in a worktree. The price when it did not: the cos was away from you for ten to twenty
 minutes at a time while a hook or an evidence run held its one checkout (#432).
 
+**Take over or wait (dyad-system #698).** A unit's claimed act stays with that unit: its board entry's owner, or a row
+in its presence `rows`. The criterion is `dmc:takeover` (`dmc/takeover.jsonld`), with four outcomes, first match wins:
+wait and retry, nudge the unit, take the act over, and leave it with the unit (the default). Under an outside-service outage (a
+hosting 5xx, a refused connection, a timeout) the home starts none of a live unit's claimed acts: the unit retries its
+own with backoff, and the home retries its own ledger pushes and never hands them off. When the act waits on a live
+unit, the home rings it once and once more. The home takes a claimed act over only from a **solo**, and only when
+that solo is gone, or you ask, or the act is one of the home's reserved acts (recording a `Y`, asking a question). It
+announces the take-over first: the board's owner moves to the home and the old owner is told by notice. Only then
+does it do the act, in a fork or a worktree unless it is a ledger-only push (Availability, above). A **dyad unit** is
+never taken over: you are at that desk, so its stall is yours to see there or in the aggregate desk (#700), and the
+home nudges and leaves it. A take-over without the owner change is an incident.
+
 ### Three layers, and which unit runs each (dyad-system #556)
 The d-work play-book (`dyad/playbooks/d-work.md`, Layers) splits every d-work into three layers, one per unit kind:
 - **Interaction — the home.** Reading your intent, presenting the plan's and the Done's questions at your altitude,
@@ -363,6 +375,8 @@ Choose by what is actually holding the work back. Add a solo when that is the nu
 have to land. Add subagents inside a solo when it is drafting, verifying or searching inside one solo's charter. When
 the hold-up is the dependency order or a decision waiting on you, neither helps. The criterion is data in
 `dmc/scale-out.jsonld`.
+When a solo is not slow but gone, adding units is the wrong answer; whether the home takes its claimed act over is
+`dmc:takeover` (§2, Take over or wait).
 
 **Step 0: find what is holding the work up.** The board's `waiting-on` field and its age already show this (§2).
 Concurrency only helps with the last of these four:
