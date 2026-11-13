@@ -70,6 +70,7 @@ unit dyad/tests/test_precedent.py                           # temp files and the
 unit dyad/tests/test_backfill.py                            # temp files only, in process: the structured backfill (#644)
 integration dyad/tests/test_playbook_profile.py                   # temp files and the live tree (the d-work play-book), #642
 integration dyad/tests/test_groom.py                       # scratch repos and git, the backlog grooming report (#625)
+integration dyad/tests/test_attention.py                   # scratch repos and git, the attention ledger and the aggregate desk (#700)
 unit dyad/tests/test_intent.py                          # a temp instance and the live surface, in process (#615)
 unit dyad/tests/test_judgement_trace.py                 # the record, play-book and run-book read in process (#690)
 unit dyad/tests/test_hardening_mandate.py                # the two hardening records, their home and the template rows (#692)

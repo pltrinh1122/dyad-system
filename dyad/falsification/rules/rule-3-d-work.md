@@ -1884,3 +1884,36 @@ the operator's `Y` in the grooming's retirement form, by a new edge `open|planne
 The other pairs are as amendment #690 left them. Coherent, orthogonal.
 
 Disposition: see ledger #697.
+
+## Amendment — d-work #700 (2026-11-13: the closing line counts the attention ledger)
+
+**Claim (the operator, provenance #700 entries 1 and 4):** one operator-scoped attention ledger, keyed to the operator
+and not to a unit, read the same from the home and every paired unit in any system, host or account, that "shouldn't
+duplicate content and should reference other records"; every dyad unit's closing line counts it.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| L1 | A store outside the repo makes authority live in two places. | **Refuted** | The central repository holds references and kinds only, never a `Y`; every disposition is still recorded in its own system's ledger and read from there (Rule-2, Binding). The closing line counts; its form authorizes nothing (#646). |
+| L2 | The ledger is keyed to the physical operator, and the dyad cannot know who that is. | **Survives, scoped** | The key is the repository: whoever can push to it is taken as the operator, declared and never proven, as attendance is declared by `paired-units` and checked by the records (Rule-16 Presence). The sentence states it. |
+| L3 | A public Rule naming the store leaks a private repository. | **Refuted** | The Rule names the mechanism only; the repository is named per checkout (`git config`), never in a tracked file, and the verbs print system names, never its URL. A bare name pasted into prose is inference, as the private-cite fence (#518) states. |
+| L4 | Two units print different lines, so the operator cannot trust either. | **Survives, scoped** | At the same fetch and with the same checkouts the text is the same; the line prints its fetch's age, and an entry a reader cannot resolve prints as its reference, so counts agree and only resolved detail differs. |
+| L5 | A question asked in another system is counted twice, there and here. | **Refuted** | The open set is keyed by (system, row, kind); a reader's own system's questions come from its own board as today, and the ledger adds only what other systems record. |
+| L6 | An outage of the central repository loses an entry. | **Refuted** | The board store is the source; `sync` derives every entry from it and keeps an unpushed commit for the next run, so an outage delays an entry and never loses one. |
+
+**Rule-14 (weighed, as plan #700 asks):** no new manifest row. The central repository is reached by Git, a kernel row,
+through whatever remote the operator names; GitHub, where it is hosted here, is already a library row. The feature is
+optional per checkout: with no repository named the line is today's, so no Rule's enforcement depends on it (Rule-14
+property 3). A row would also have to name the repository, which a public manifest may not.
+
+**Verdict:** the claim survives.
+- **Rules:** Batch disposition's closing line counts the attention ledger's open set when a checkout names one, its limits in one sentence; Provenance gains its line.
+- **Vocabulary:** `attention ledger`, owner Rule-3.
+
+**Pairwise (Rule-5).**
+- **3–2**: the ledger holds no `Y`; Binding is unchanged.
+- **3–14**: no manifest row; Git is kernel, the hosting a library row already; the kernel-only path never reads the ledger.
+- **3–16**: the board store stays the source of every entry; Presence's attendance reading is unchanged.
+
+The other pairs are as amendment #690 left them. Coherent, orthogonal.
+
+Disposition: see ledger #700.

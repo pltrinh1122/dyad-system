@@ -867,28 +867,35 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
     on = dyadlib.slugs_on(root)
     L = lambda i: dyadlib.row_label(i, rows, on)
     reader = os.environ.get("DYAD_SESSION") if reader is None else reader
-    by: dict[str, list[tuple[str, list[int], str | None]]] = {}
+    by: dict[str, list[tuple[str, list[int], str | None, str | None]]] = {}
     for kind, q, ids, holder in awaiting(root, got, cabinet):
-        by.setdefault(kind, []).append((q, ids, answered_in(holder, reader, root)))
+        by.setdefault(kind, []).append((q, ids, answered_in(holder, reader, root), None))
+    foreign = attention_open(root)   # #700: the attention ledger's open set of the operator's other systems
+    for f in foreign:
+        if f.get("kind") == "asked" and f.get("what") in AWAITING_KINDS:
+            by.setdefault(f["what"], []).append(("", [], f"{f.get('system', '')}/{f.get('unit', '')}",
+                                                 f"#{f.get('row', '')}"))
     groups = []
     for group, kinds in REQUEST_GROUPS:
         items = []
         for kind in kinds:
             if not (qs := by.get(kind)):
                 continue
-            places = sorted({w for _, _, w in qs}, key=lambda w: (w is not None, w or ""))   # here first (#670)
+            places = sorted({w for _, _, w, _ in qs}, key=lambda w: (w is not None, w or ""))   # here first (#670)
             parts = []
             for w in places:
-                here = [(q, ids) for q, ids, x in qs if x == w]
+                here = [(q, ids) for q, ids, x, _ in qs if x == w]
+                labels = [lab for _, _, x, lab in qs if x == w and lab]   # #700: another system's rows, as referenced
                 prs = sorted({int(p) for q, _ in here for p in PR_REF.findall(q)}) if kind == "merge" else []
-                part = " ".join(f"PR #{p}" for p in prs) if prs else " ".join(L(i) for i in sorted({i for _, ids in here for i in ids}))
+                part = " ".join(f"PR #{p}" for p in prs) if prs else " ".join(
+                    [L(i) for i in sorted({i for _, ids in here for i in ids})] + labels)
                 parts.append(part + (f" in {w}" if w else ""))
             refs = "; ".join(parts)
             items.append(f"{len(qs)}{'' if kind == group else ' ' + kind} ({refs})")
         if items:
             groups.append(f"{group} " + ", ".join(items))
     line = "Awaiting you: " + ("; ".join(groups) if groups else "nothing") + "."
-    asked = {i for qs in by.values() for _, ids, _ in qs for i in ids}
+    asked = {i for qs in by.values() for _, ids, _, _ in qs for i in ids}
     q = derived_queue(root, got, cabinet)
     if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
         filed = {int(n): entry_cabinet(f) for n, f in got if n.isdigit()}
@@ -898,6 +905,8 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
         parts = [f"{len(v)} {k}" for k, v in q.items() if v]
         if (n := audit_due_count(got, cabinet)):
             parts.append(f"audit-due {n}")   # #691: the audit's due state, seen unasked (dmc:audit-trigger)
+        if (n := sum(1 for f in foreign if f.get("kind") == "in-flight")):
+            parts.append(f"in-flight {n}")   # #700: matters in flight in the operator's other systems
         tail += f" Coming: {', '.join(parts)}." if parts else ""
     if (dyadlib.preference(RECOMMENDED_KEY, root) or RECOMMENDED_DEFAULT).strip() != "off":
         items, _ = recommended(root, got, cabinet, hygiene=hygiene, excluded=asked | {i for v in q.values() for i in v},
@@ -905,6 +914,17 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
         if (rec := recommended_part(items, L)):
             tail += f" Recommended for next: {rec}."
     return line + tail
+
+
+def attention_open(root: Path) -> list[dict[str, str]]:
+    """#700: the attention ledger's open entries of every other system, when this checkout names a central repository
+    (`git config dyad.attention.clone`); [] when it names none, or the ledger cannot be read — the line is then
+    today's, and a failure here never fails a reply's closing line."""
+    try:
+        return dyadlib.load_module(Path(__file__).resolve().parents[2] / "scripts" / "attention.py",
+                                   "dyad_attention").foreign_open(root)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
 
 
 def audit_due_count(got: list[tuple[str, dict[str, str]]], cabinet: str | None = None) -> int:

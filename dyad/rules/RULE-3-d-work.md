@@ -264,7 +264,14 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   shows `audit-due`. Its mechanical outcomes `dyad board` computes; its inferred ones the home records first, as
   `recommended:` lines on its cross-row board entry (write-ahead), and an entry the board has moved past is dropped
   with a warning. A hardening row that `hardening-mandate` opens unasked reads `starting`, never recommended. It
-  authorizes nothing: an item becomes work only by its own trigger's question or an operator prompt (#695). Under `off` it reports the queue's
+  authorizes nothing: an item becomes work only by its own trigger's question or an operator prompt (#695). When the
+  checkout names a central repository (per checkout, never in a tracked file), the line also counts the **attention
+  ledger**'s open set — the questions asked and the matters in flight that the operator's other attended units and
+  systems record there — a question in `Awaiting you` labelled `in <system>/<unit>`, a matter in flight in `Coming` as
+  `in-flight <n>`; with none named the line is unchanged. Its limits, stated: it is as fresh as the last fetch, whose
+  age it prints; it reaches only units with access to that repository; it holds references, never copies, and an
+  entry the reader cannot resolve prints as its reference, unresolved; the operator is whoever can push to it, declared
+  and never proven; and it holds no `Y`, every disposition staying in its own system's ledger (#700). Under `off` it reports the queue's
   counts while any is non-empty. Either way `dyad board` generates the line from the questions the board
   records and the agent copies it. A question is recorded on its row's entry before it is asked: an intent, plan or
   Done question by its phase, any other as the entry's `question` (write-ahead, below). So a question asked unrecorded
@@ -501,6 +508,9 @@ asked for a standing disposition over hardening work, and a `backlog` row opened
 trigger says is due and nobody has started, and a line written from expectation had claimed what no record held; see
 `../falsification/rules/rule-3-d-work.md`, amendment #695. Ledger's `archived` bullet admits stale open or planned
 work retired in the grooming's retirement form 2026-11-13 (d-work #697): such a row was reported and never closed, and
-no edge led from `planned` to `archived`; see `../falsification/rules/rule-3-d-work.md`, amendment #697.
+no edge led from `planned` to `archived`; see `../falsification/rules/rule-3-d-work.md`, amendment #697. Batch
+disposition's closing line counts the attention ledger's open set 2026-11-13 (d-work #700): an operator attending several
+units, in several systems, read what waited on it only at the home, and carried the rest in mind; see
+`../falsification/rules/rule-3-d-work.md`, amendment #700.
 
 Set: System Requirements.
