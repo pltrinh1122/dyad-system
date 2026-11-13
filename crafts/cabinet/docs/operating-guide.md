@@ -268,6 +268,28 @@ where. What never changes with the mode: who disposes (you), what a unit may do 
 §4), and what is never accretable (§5). What changes is only the chat a question reaches you in — and the
 units never guess it: the route follows the set you declared, the same set the mode is read from.
 
+**The aggregate desk: one attention ledger across every desk you attend (dyad-system #700).** You sit at several
+desks at once — the home and every paired unit, in this system and in others, on any host or account. The home does
+not move with you, and no unit becomes the home. What waits on you at the desks you are not looking at is the
+**attention ledger**, kept in one central repository of your own. A unit names it per checkout, never in a tracked
+file, because this repository may be public and yours is not: `git config dyad.attention.clone <path of a local clone>`,
+`git config dyad.attention.system <this system's name>` (default `origin`'s owner/repo), and one
+`git config --add dyad.attention.checkout "<system> <path>"` per other system it can read. Each desk writes its own
+entries there whenever its board moves (`dyad board set`, `board advance` and `session touch` call
+`dyad attention sync`, one try). An entry is a reference, never a copy: the system, the unit, the row, the board
+entry's path at a commit, and what kind of question or matter it is. `dyad attention` at any desk prints the aggregate
+desk, folded to seven lines (`--full` for the rest), and every dyad unit's closing line counts the other systems'
+questions (`in <system>/<unit>`) and matters in flight (`Coming: in-flight <n>`). Its limits:
+- it is as fresh as the clone's last fetch, whose age it prints;
+- a unit needs access to the central repository: attached to a cloud session, or granted by you to another account;
+- an outage delays an entry and never loses one, because the board is the source and the next sync derives it again;
+- whoever can push to the repository is taken as you, declared and never proven;
+- an entry a desk cannot read (no checkout of that system, or a commit it lacks) prints as its reference, `unresolved`;
+- it holds no `Y`: every disposition stays in its own system's ledger, answered where the route table says;
+- a question asked without being recorded on its board is invisible here too, an incident as before;
+- nothing from the central repository is copied into a public store.
+With no clone named, every desk reads as before.
+
 ## 9. Opening a host desk (dyad-system #531)
 You work on more than one machine — a Linux workstation, a MacBook — and your cos is a cloud session bound to
 neither: you reach it from either one through the Claude app. What is bound to a machine is a host action (Rule-8),
