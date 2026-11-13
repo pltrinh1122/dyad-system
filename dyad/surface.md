@@ -73,6 +73,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
+| `dyad attention` / `attention sync` | `--full` (#700: the aggregate desk, read-only; `sync` appends this system's events to the central repository, one try) | frozen |
 | `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` | `--drop`; advance: `--expect`, `--said-file`, `--decisions` (the Done answer's candidate rulings, #648), `--mirror`; draft: `--out <file>`, `--decisions-out <file>` (the row's candidate rulings as a decisions input file, #648) | frozen |
 | `dyad inbox post <unit> [<body>...]` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file` | frozen |
 | `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | frozen |
@@ -109,6 +110,7 @@ are each guard's own constant, the source the test reads.
 | private repos | `private_repos.local.txt` | one sha256 hex of a lowercased `owner/repo` per line: the repositories whose quoted text never leaves for a public remote (#518) | `privatecite.PRIVATE` | frozen |
 | event | `<runbooks>/events/<instance>.jsonl`, a craft run-book's `<craft>-<name>.jsonl` (#640) | `id`, `ts`, `role`, `instance`, `name`, `cmd`, `class`, `scope`, `exit`, `duration_ms`, `postcondition`, `output_sha256`, `output_tail`, `commit`, `runbook_sha256` | `runbook.EVENT_FIELDS` | frozen |
 | run-book command header | `<runbooks>/<instance>.md` | `name`, `class`, `role`, `undo`, `postcondition`, `scope` | `runbook.FIELDS` | frozen |
+| attention entry | outside this repository: `attention/<system>/<unit>/<stamp>-<n>.md` in the central repository the checkout names by git config (`dyad.attention.clone`, `.system`, `.checkout`, per checkout, never tracked), never a tracked path here (#700) | `kind` (`asked`, `answered`, `in-flight`, `landed`), `system`, `unit`, `row`, `ref` (`<path>@<commit>`), `what`, `writer`; references only, no question, evidence or disposition text | `attention.FIELDS`, `attention.KINDS` | frozen |
 | evidence block | stdout of `check --evidence` | `head=`, `tree=`, `dirty=`, `code=`, `counts:`, `baseline:`, `stored:`, `evidence-sha256=` | `package.py` | frozen |
 
 ## S3 Preference keys

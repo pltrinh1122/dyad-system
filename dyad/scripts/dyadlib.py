@@ -1118,6 +1118,8 @@ CLI: dict[tuple[str, str | None], CliForm] = {
     ("release", None):          CliForm("", (), ("--scan",)),
     ("release", "ready"):       CliForm("<row> <tag>", (("--at", "<cut>"), ("--archive", "<sha256>"))),
     ("merge", None):            CliForm("<pr>", (("--head", "<sha>"),)),
+    ("attention", None):        CliForm(bare=("--full",)),   # #700: the aggregate desk, read-only
+    ("attention", "sync"):      CliForm(),                   # #700: append this system's events, one try
     ("board", None):            CliForm(),
     ("board", "set"):           CliForm("<id>|_cos[-<operator>] key=value...", (), ("--drop",)),
     ("board", "resume"):        CliForm(),

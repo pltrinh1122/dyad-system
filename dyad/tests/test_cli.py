@@ -66,6 +66,8 @@ EXAMPLES = {   # one argv per form, each S1 row's own example; every one passes 
     ("release", None): ["release", "--scan"],
     ("release", "ready"): ["release", "ready", "570", "v1.0.0", "--at", SHA, "--archive", "0" * 64],
     ("merge", None): ["merge", "7", "--head", SHA],
+    ("attention", None): ["attention", "--full"],
+    ("attention", "sync"): ["attention", "sync"],
     ("board", None): ["board"],
     ("board", "set"): ["board", "set", "1", "next=a"],
     ("board", "resume"): ["board", "resume"],

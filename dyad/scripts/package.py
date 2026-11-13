@@ -2713,8 +2713,23 @@ def cmd_board(a):
     if a and a[0] == "groom":     # #625: read-only, the backlog grooming report (scripts/groom.py)
         return dyadlib.load_module(PKG / "scripts" / "groom.py", "dyad_groom").main(a[1:], REPO)
     if a and a[0] == "advance":   # #587: the composed `state` lines are read by this runner's own readers
-        return dyadlib.load_guard("agent", "board").cmd_advance(a[1:], REPO, DWORK_VALUE_FLAGS, dwork_args, words)
-    return dyadlib.load_guard("agent", "board").cli(a, REPO)
+        return attention_after(a, dyadlib.load_guard("agent", "board").cmd_advance(a[1:], REPO, DWORK_VALUE_FLAGS,
+                                                                                   dwork_args, words))
+    return attention_after(a, dyadlib.load_guard("agent", "board").cli(a, REPO))
+
+def attention_after(a, rc):
+    """#700: after a board write lands (`board set`, `board advance`) or a `session touch`, write it through to the
+    attention ledger: one inline try (`attention.sync`), the rest left to the next write; a failure prints one line and
+    never changes the caller's exit code. A no-op when this checkout names no central repository."""
+    if rc != 0 or not a or a[0] not in ("set", "advance", "touch") or "-h" in a or "--help" in a:
+        return rc
+    try:
+        att = dyadlib.load_module(PKG / "scripts" / "attention.py", "dyad_attention")
+        if att.config(REPO)["clone"] is not None:
+            att.sync(REPO)
+    except (OSError, subprocess.SubprocessError, ValueError) as e:
+        print(f"attention: sync failed ({e.__class__.__name__}); the next write retries")
+    return rc
 
 def cmd_inbox(a):
     """The inbox's CLI lives at guards/agent/inbox.py (it is also the guard); this is dispatch only (S4, d-work #536)."""
@@ -2738,7 +2753,7 @@ def cmd_session(a):
     """Rule-16: the session-presence CLI lives at guards/agent/sessions.py (it is also the
     guard); this is dispatch only (S4, d-work #185)."""
     sys.path.insert(0, str(PKG / "scripts")); import dyadlib
-    return dyadlib.load_guard("agent", "sessions").main(a)
+    return attention_after(a, dyadlib.load_guard("agent", "sessions").main(a))
 
 dyadlib.enforce(INVARIANTS, __name__)   # Rule-12 p1: the fail-loud check, at import, after the list's last binding (#203)
 
@@ -2770,6 +2785,8 @@ if __name__ == "__main__":
         sys.exit(dyadlib.load_module(PKG / "scripts" / "playbook_profile.py", "dyad_playbook_profile").main(a[2:], REPO))
     if a and a[0] == "precedent":   # #645: read-only, the blind two-reader labelling (scripts/precedent.py)
         sys.exit(dyadlib.load_module(PKG / "scripts" / "precedent.py", "dyad_precedent").main(a[1:], REPO))
+    if a and a[0] == "attention":   # #700: the attention ledger, the aggregate desk (scripts/attention.py)
+        sys.exit(dyadlib.load_module(PKG / "scripts" / "attention.py", "dyad_attention").main(a[1:], REPO))
     if a and a[0] == "board":
         sys.exit(cmd_board(a[1:]))
     if a and a[0] == "inbox":
