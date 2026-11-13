@@ -1,0 +1,87 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:chronicle/collateral-symptom-canon",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "collateral-symptom-canon",
+  "name": "Symptom canon",
+  "description": "Whether a symptom of working with AI agents enters a canvas set's canon of user symptoms, and as what, so that pieces engage a reader with what the reader has seen, the canon grows only by observation, and each symptom the system does not serve yet is visible as a candidate for the roadmap.",
+  "dyad:decides": "Does this symptom enter the canon, and as what?",
+  "dyad:inputs": [
+    "the candidate symptom, in the words of whoever observed it or of the tree node it comes from",
+    "its sources: the operator's own words by provenance entry, a reader's report through an interview or a channel (cited by a reference that names no one, quoted only with consent), or a tree node, which roots it but observes nothing",
+    "the problem classes and the trees of the canvas set",
+    "the canon so far, its candidates and its exclusions",
+    "what the system serves today: the rule or code that addresses the symptom, cited"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "cause",
+      "name": "cause",
+      "dyad:when": "it names why something happens, not what the reader sees",
+      "dyad:then": "excluded; it stays a node of its tree"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unrooted",
+      "name": "unrooted",
+      "dyad:when": "it reaches no problem class",
+      "dyad:then": "excluded until a tree or a class holds it"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unsourced",
+      "name": "unsourced",
+      "dyad:when": "no observation and no tree holds it",
+      "dyad:then": "excluded; never entered from a reading"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unobserved",
+      "name": "unobserved",
+      "dyad:when": "a tree holds it and no one has reported seeing it",
+      "dyad:then": "a candidate, listed with its tree node, promoted when an observation arrives"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "restated",
+      "name": "restated",
+      "dyad:when": "it rewords a node already beneath another entry",
+      "dyad:then": "excluded; that entry keeps the node as its root"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "duplicate",
+      "name": "duplicate",
+      "dyad:when": "it is an entry's symptom in other words",
+      "dyad:then": "it joins the entry, adding its source, so the entry's count of observers grows"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "canon",
+      "name": "canon",
+      "dyad:when": "it is observed, distinct, rooted and plain at its proficiency (collateral-problem-plainness)",
+      "dyad:then": "it enters with an id never reused, its class, proficiency, way of working, when, sources, and served: served or partly citing what serves it, or not yet, a candidate for the roadmap and never a row of work by itself"
+    }
+  ],
+  "dyad:precedence": "in the order listed; the canon is append-only, an entry superseded and never edited",
+  "dyad:default": "a test that cannot be decided is put to the Operator, never assumed",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:chronicle",
+  "dyad:home": "rules/collateral.md",
+  "dyad:alsoIn": [
+    "rules/chronicle.md"
+  ],
+  "dyad:owner": "chronicle:collateral"
+}

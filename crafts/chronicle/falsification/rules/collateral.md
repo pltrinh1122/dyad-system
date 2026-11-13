@@ -124,8 +124,19 @@ inference, read by the Operator at publication.
 | 113 | **Every current role gains from working well with agents** (P1, P2: some have nothing an agent can do; some lose attention by it). | **Confirmed** | The premise opens the map as a hypothesis with its refuters, the absent and net-cost counts. |
 | 114 | **Judging every occupation is a reading** (L1). | **Refuted** | About a thousand occupations make it a recurring task (the core's Rule-13): the record is code, tested. |
 | 115 | **A task share rewards occupations with many small tasks** (L2). | **Survives, scoped** | Shares are weighted by the taxonomy's importance rating. |
+| 116 | **One canon serves every reader** (#699 C1). | **Survives, scoped** | Each entry carries its proficiency, way of working and when; a reader is met by the subset at their proficiency. |
+| 117 | **A canonical list is fixed** (#699 C2). | **Confirmed** | It changes as evidence arrives: append-only, an entry superseded and never edited, its id never reused, entry and exit by the record. |
+| 118 | **Symptoms engage better than problems** (#699 C3). | **Survives (H)** | A reader recognises what they see, not a root cause; a hypothesis until readers are tested. |
+| 119 | **The symptoms are the problem classes** (#699 C4). | **Refuted** | A class groups failures; a symptom is the reader's own sentence, several per class. |
+| 120 | **A hand-kept canon drifts from the trees** (#699 C5, R1). | **Confirmed** | The wording is judged once and stored; coverage is code, so no tree symptom is missing or silently dropped. |
+| 121 | **An empathy list invites emotional overclaim** (#699 C6). | **Survives, scoped** | §3 binds it: each entry is labelled by its sources, and a pitch cites the entry's id. |
+| 122 | **"Served" is self-praise** (#699 R2). | **Survives, scoped** | `served` and `partly` must cite the rule or code, and the check fails an uncited one. |
+| 123 | **A symptom not served yet is a row of work** (#699 R3). | **Refuted** | It is a candidate shown to the Operator; a row opens only on the Operator's prompt or disposition. |
+| 124 | **The operator's observations are one person's** (#699 O1). | **Confirmed** | They are the seed, labelled by source; each entry shows its observers, so one reads as one. |
+| 125 | **Interview and channel reports bring in people** (#699 O2). | **Confirmed** | A report is cited by a reference that names no one and quoted only with consent. |
+| 126 | **Holding tree symptoms back loses what derivation found** (#699 O3). | **Refuted** | They stay as candidates with their nodes, and coverage keeps every one in view. |
 
 **Limits.** No pitch has yet been judged by these records in production; the worked judgement in d-work #668's PR body is
 the first. The family's later records are named, not written.
 
-Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–115, ledger #696.
+Disposition: see ledger #668; rows 10–25, ledger #671; rows 26–29, ledger #673; rows 30–35, ledger #674; rows 36–45, ledger #678; row 46, ledger #683; rows 47–54, ledger #684; rows 55–65, ledger #685; rows 66–78, ledger #693; rows 79–115, ledger #696; rows 116–126, ledger #699.
