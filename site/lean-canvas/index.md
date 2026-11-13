@@ -4,6 +4,25 @@ The foundation every pitch of the Dyad System traces to (`crafts/chronicle/rules
 pitch. Each entry is one line, labelled **H** (hypothesis: a guess, claiming nothing as fact) or **E** (evidence: what
 the repository shows, with its path or count). Accepted by the operator on the done-`Y` of d-work #672.
 
+## Targets (d-work #696, the alignment review)
+Agreed by the play-book `crafts/chronicle/playbooks/alignment-review.md`, run record `reviews/696.md`.
+- **The anchor is the future**, in the Operator's words: "we anchor on the future hypothesis as that's what we're
+  building for is the future - then we'll provide a map of the future work (primarily focused on how we work with
+  agents) and the applicability to today's roles and responsibilities." (#696, entry 32)
+- **The target axis** is the way of working with agents: the map of future work, `future-work.md` (layer a), and its
+  applicability to every O*NET occupation, ranked, `professions.md` (layer b).
+- **The targets**, the Operator's pick: "evaluation and intent specification" (#696, entry 36).
+
+| target | classes | selected root causes | anchor branch | source tree |
+|---|---|---|---|---|
+| **evaluation**: judging what an agent produced before relying on it | O1, O13; cost: time | V0.2.1 it gives conclusions without their grounds · V0.3.2.1 what the result is for is never settled before it starts · V0.3.1 it sounds as sure when wrong as when right | V0 → V0.1 → V0.1.1 "I answer for the result", exiting through V0.2.1 | `evaluation/why-tree.md` |
+| **intent specification**: saying what you want at the right level of detail | O4, O10, O9 | I0.1.1.1 I can't see what the agent doesn't know · I0.2.1 I see how it read my request only in the finished result · I2.1.1 neither of us knows which decisions are mine | I0 → I0.4 → I0.4.1 "I answer for the result" | `intent-specification/why-tree.md` |
+
+Today's reach: evaluation is `demanded` by 702 occupations and the best way for 352; intent specification by 606 and
+339 (`professions.md`). The two trees share a gap from two sides, the purpose of the work not settled before it starts
+(V0.3.2.1; I0.1.1.1 with I2.1.1), kept apart in the projection, which joins I0.2.1 to N1.1.1.2.1
+(nothing captures the work's intent before anything runs) and both anchors to N7.1.1.
+
 ## Segmentation (`collateral-segmentation`, d-work #693)
 A segment is a cell, or a named group of cells, on three axes (`crafts/chronicle/rules/collateral.md` §5). The axes are
 the record's input, and each is **H** until two source trees that differ only in it show different anchor branches:
@@ -33,7 +52,10 @@ is **H** unless it cites a tree.
 
 No candidate is **off-class**: every segment suffers at least one problem class.
 
-## Problem classes (the projection's roots, grouped)
+## Root groups (the projection's roots, grouped; d-work #693)
+Since #696 the problem classes are observable failure modes, in `future-work.md`; these root groups stay as the
+segment × class table's columns.
+
 | class | roots | grouped because |
 |---|---|---|
 | **K1** the record does not travel with the change: who approved it, and what was checked | N5.1.1, N10.2.1.1 | both are something kept apart from the change |
@@ -109,6 +131,7 @@ does not hold up rank 3.
 Judged in the d-work #672 completion reply; this file records the canvas, not its verdict.
 
 ## Sections
-Shared: `solution.md`, `cost-structure.md`, `unfair-advantage.md`. Per segment: `platform-ops/`, `regulated-engineering/`,
-each with its own source `why-tree.md`. The canvas set's `why-tree.md` is their projection (§6), read for screening.
+Shared: `solution.md`, `cost-structure.md`, `unfair-advantage.md`. Per segment: `platform-ops/`, `regulated-engineering/`;
+per target: `evaluation/`, `intent-specification/`; each with its own source `why-tree.md`. Reference trees:
+`reference/`. The target axis: `future-work.md` and `professions.md`. The canvas set's `why-tree.md` is their projection (§6), read for screening.
 The two perspectives on the segment × class table: `by-segment.md` (a) and `by-problem.md` (b).
