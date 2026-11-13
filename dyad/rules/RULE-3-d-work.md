@@ -310,12 +310,16 @@ slug is presentation: a question binds the rows it names by their numbers, and e
     preference `hardening-mandate` (Scope), `archived` when retired.
   - `done` — the operator answered `Y` to the Done question *and* every merge it named has landed; between the two the
     row keeps its state, `disposed` carries the `Y`, and the state guard warns once per row (Mechanisms).
-  - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`, or reached from `open` by the
-    operator's bare `N` to the row's intent question while it holds no `Y plan` (#615); terminal, nothing moves, and a new
-    row refs it, never reopens it. The question is the Done question of a delivered row whose report retires it, or, for
-    rows no Done covers, the **retirement form** `Y/N: archive #a, #b, … #k?`, each row listed before it with what it
-    holds and why; a `Y` archives exactly the named rows, and every answer short of `Y` archives none. The agent
-    archives on an operator `Y` alone; `dyad dwork state <id> archived` is clerical execution, a ledger-only commit.
+  - `archived` — retired by an operator `Y` naming the row, from `done` or `backlog`, or from `open` or `planned` as
+    stale open work the grooming read (`dmc:backlog-staleness`, #697), or reached from `open` by the operator's bare `N`
+    to the row's intent question while it holds no `Y plan` (#615); terminal, nothing moves, and a new row refs it, never
+    reopens it. The question is the Done question of a delivered row whose report retires it, or, for rows no Done
+    covers, the **retirement form** `Y/N: archive #a, #b, … #k?`, each row listed before it with what it holds and why
+    — a stale `open` or `planned` row in its own group, with its ground and any open PR it names; a `Y` archives exactly
+    the named rows, its entry `<date> Y archive (sweep #a,#b,…)`, and every answer short of `Y` archives none. The agent
+    archives on an operator `Y` alone; `dyad dwork state <id> archived` — for a stale `open` or `planned` row
+    `dyad dwork retire` — is clerical execution, a ledger-only commit, and a PR a retired row's board entry records is
+    closed by the home on the same `Y`, before the row is archived.
 - A d-work may be decomposed into child rows (`refs: parent #N`). The parent's question is asked only when every child
   is terminal (`done` or `archived`), `blocked`, `backlog`, or holding its own recorded done-`Y` and awaiting its merge
   — a child the operator never asked for is not work the parent owes, and a stricter gate could leave the parent
@@ -495,6 +499,8 @@ asked for a standing disposition over hardening work, and a `backlog` row opened
 `../falsification/rules/rule-3-d-work.md`, amendment #692. Batch disposition's closing line gains its third part,
 `Recommended for next`, under the preference `recommended-next` 2026-11-12 (d-work #695): neither part showed what a
 trigger says is due and nobody has started, and a line written from expectation had claimed what no record held; see
-`../falsification/rules/rule-3-d-work.md`, amendment #695.
+`../falsification/rules/rule-3-d-work.md`, amendment #695. Ledger's `archived` bullet admits stale open or planned
+work retired in the grooming's retirement form 2026-11-13 (d-work #697): such a row was reported and never closed, and
+no edge led from `planned` to `archived`; see `../falsification/rules/rule-3-d-work.md`, amendment #697.
 
 Set: System Requirements.

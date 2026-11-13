@@ -28,7 +28,7 @@ files and almost never merge.
   (id, title, opened, state, disposed, refs). `LEDGER.md` is a rendered view
   (`package.py ledger`), untracked. The pattern this instantiates: `crafts/sysarch/rules/stores.md`.
 - State never regresses. Transitions are exactly: open → planned, blocked, done, archived;
-  planned → open, blocked, done; blocked → open; backlog → open, archived; done → archived;
+  planned → open, blocked, done, archived; blocked → open; backlog → open, archived; done → archived;
   archived → none (`dyadlib.TRANSITIONS`; a new row starts `open` or `backlog`,
   `dyadlib.NEW_STATES`). The fence refuses any other transition on `main`,
   `package.py dwork state` locally; a done d-work is never reopened — a new row refs it;
@@ -37,7 +37,13 @@ files and almost never merge.
   names it — the retirement form, or the done-`Y` of a delivered row whose Done question names it under `retires`
   (Rule-3, #585) — instead of being worked to `done` first (#290). `open → archived` is the intent question's: the fence
   admits it only on a row whose last `disposed` entry is a bare `N intent` and that holds no `Y plan`, so a row the
-  operator declined before any plan leaves the board, and no other `open` row can (Rule-3 Answer grammar, #615).
+  operator declined before any plan leaves the board (Rule-3 Answer grammar, #615). `open → archived` and
+  `planned → archived` are otherwise the grooming's, for stale open work: the fence admits either only on a row whose
+  last `disposed` entry is `Y archive (sweep #a,#b,…)` naming it, the operator's `Y` to the grooming's retirement form,
+  which listed the row with its ground (`dmc:backlog-staleness`), so no other `open` or `planned` row can leave the
+  board. `dwork retire` writes that entry and the state together, and refuses a row whose board entry records a PR not
+  yet landed until the home has closed that PR, as clerical execution of the same `Y`; `dwork state` refuses
+  `planned → archived` and names `dwork retire` (Rule-3 Ledger, #697).
 - A row may carry two optional fields beside those six. `mode`, `explicit` or `implicit` (Rule-3,
   Scope): optional means absent is `explicit`, so every row written before the field existed reads
   correctly and nothing is migrated; a row that carries it never loses it. `slug`, the row slug (Rule-3): 2 to 4
@@ -264,6 +270,9 @@ Enforcement its write-once fence 2026-11-07 (d-work #622): the row slug Rule-3 p
 Done named were stored nowhere, so no precedent could be admitted or audited; see `../falsification/rules/rule-3-d-work.md`,
 amendment #644. Presence's own-disposition clause excludes a `mandate preference` note 2026-11-12 (d-work #692, plan
 revision 2): a row opened under `hardening-mandate` copies the grant's words into the unit that ran the verb, which the
-reading took for a disposition given there; see `../falsification/rules/rule-3-d-work.md`, amendment #692.
+reading took for a disposition given there; see `../falsification/rules/rule-3-d-work.md`, amendment #692. Store gains
+`planned → archived`, and `open → archived` a second condition, 2026-11-13 (d-work #697): stale open or planned work was
+reported by the work-in-flight lines and nothing could retire it; see `../falsification/rules/rule-3-d-work.md`,
+amendment #697.
 
 Set: System Requirements.
