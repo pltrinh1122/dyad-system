@@ -2286,6 +2286,8 @@ class SpawnSiteTests(unittest.TestCase):
                 "evidence store's common dir (#476), under dyadlib.git_env() so a hook's GIT_VARS never redirect "
                 "them; no write (#162)",
         "cmd_evidence_at": "rev-parse of the head asked for, under dyadlib.git_env(); no write (#448)",
+        "open_pr_on_board": "rev-parse of origin/main and merge-base of a PR head the board records, in the operator's "
+                            "own repo, under dyadlib.git_env(); no write (#697: a stale row's PR closed first)",
         "corroborate_git": "init, add and commit of `check --corroborate`'s own scratch repo under a temp dir, under "
                            "corroborate_env(); never the repo judged (#564)",
         "checkout_snapshot": "status of the live checkout before and after the suite, under dyadlib.git_env(); no write "

@@ -106,7 +106,7 @@ def last_grooming(root: Path) -> str:
 GROOM_HYGIENE_COUNT = 5   # dmc:groom-trigger G4's fixed count, never a preference
 
 
-def groom_due(root: Path, hygiene: int | None = None) -> list[str]:
+def groom_due(root: Path, hygiene: int | None = None, rows=None, cos: dict | None = None) -> list[str]:
     """The mechanical half of `dmc:groom-trigger` (#695): `G2` when a release tag was created after the last grooming
     event (every tag when there is none), and `G4` when `hygiene` — the hygiene lines `dyad board resume` printed, when
     the caller counted them — reaches the fixed count of five, and `G5` when an old backlog row has gone 90 days unread
@@ -132,20 +132,21 @@ def groom_due(root: Path, hygiene: int | None = None) -> list[str]:
             break
     if hygiene is not None and hygiene >= GROOM_HYGIENE_COUNT:
         out.append("G4")
-    if uncovered(root):
+    if uncovered(root, rows=rows, cos=cos):   # the caller's rows and `_cos` fields when it holds them (board resume)
         out.append("G5")
     return out
 
 
-def uncovered(root: Path, base: str = "HEAD") -> list[int]:
+def uncovered(root: Path, base: str = "HEAD", rows=None, cos: dict | None = None) -> list[int]:
     """`dmc:groom-trigger` G5 (#697 G3): the backlog rows older than GROOM_COVERAGE_DAYS by `opened` whose last reading is
     absent or older than that, so a backlog the reading has not covered in 90 days makes a run due."""
     bd = dyadlib.load_guard("agent", "board")
     inst = dyadlib.instance_rel(root) or "agent-corpus"
     try:   # no row store or board on `base` yet (a fresh instance, a fixture): nothing to cover
-        rows = dyadlib.read_rows(root, at=base)
-        cos_rel = f"{inst}/d-work/board/_cos.md"
-        cos = bd.parse(dyadlib.show_many(root, base, [cos_rel]).get(cos_rel, ""))[0]
+        rows = dyadlib.read_rows(root, at=base) if rows is None else rows
+        if cos is None:
+            cos_rel = f"{inst}/d-work/board/_cos.md"
+            cos = bd.parse(dyadlib.show_many(root, base, [cos_rel]).get(cos_rel, ""))[0]
     except (OSError, ValueError, subprocess.CalledProcessError):
         return []
     read = readings(cos.get("read", ""))

@@ -957,7 +957,7 @@ def recommended(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
     if audit_due_count(got, cabinet) and not audit_in_coming:
         out["audit"].append(None)
     try:
-        if dyadlib.load_module(dyadlib.PKG / "scripts" / "groom.py", "dyad_groom").groom_due(root, hygiene):
+        if dyadlib.load_module(dyadlib.PKG / "scripts" / "groom.py", "dyad_groom").groom_due(root, hygiene, rows=list(rows.values()), cos=cos):
             out["groom"].append(None)
     except Exception as e:                               # a read for the home: unreadable is a warning, never a crash
         warns.append(f"recommended: groom not read ({type(e).__name__})")
