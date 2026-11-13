@@ -1,0 +1,95 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/backlog-staleness",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "backlog-staleness",
+  "name": "Backlog staleness",
+  "description": "Judges one row a grooming run reads for staleness: an old backlog row, or open or planned work the work-in-flight lines report as quiet. It reads the row from its opened date, never its last touch, and gives each outcome a ground, so an old row is judged rather than left. The run reads the oldest K backlog rows that hold no reading younger than hygiene-stale-days, K five or a tenth of the backlog, whichever is more; each reading is recorded as a read line on the home's cross-row board file.",
+  "dyad:decides": "Does this old or quiet row still stand, and if not, on what ground is it proposed?",
+  "dyad:inputs": [
+    "the row's opened date, title, refs and plan file",
+    "what has landed on main since it opened, and the rows done since",
+    "its last reading and, for holds, the date its unbroken run of holds began (the groom report's read line)",
+    "for an open or planned row, its work-in-flight W2 or W3 line and its board entry's holder, wait and next act"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "overtaken",
+      "name": "overtaken",
+      "dyad:when": "a row done since it opened delivered its work, or a fence on main now holds what it asks",
+      "dyad:then": "proposed in the retirement form's grounded group, as retirement-candidate carried or fenced, naming that row or path"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "premise-gone",
+      "name": "premise gone",
+      "dyad:when": "a path, term, Rule or mechanism its title or plan names no longer exists on main, or was replaced",
+      "dyad:then": "proposed in the grounded group, as retirement-candidate dead, naming what changed"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "unwanted-candidate",
+      "name": "still wanted?",
+      "dyad:when": "the row read holds at two readings hygiene-stale-days or more apart, never promoted between them (the groom report marks it)",
+      "dyad:then": "listed in the form's still-wanted group, its ground the two readings; a keep is recorded as a new holds reading and restarts the run"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "undecided",
+      "name": "undecided",
+      "dyad:when": "the reading cannot tell whether the row stands",
+      "dyad:then": "listed in the form's undecided group in the run that reads it, with what the reading could not settle and the home's lean, keep or archive, with its reason; never retired by default"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "holds",
+      "name": "holds",
+      "dyad:when": "the row's premise and its work still stand",
+      "dyad:then": "kept, its reading recorded as a read line (date, holds, a one-line ground), so the next run does not read it again before hygiene-stale-days more days"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "resume",
+      "name": "resume",
+      "dyad:when": "an open or planned row whose unit and next act are known and still hold",
+      "dyad:then": "named in the grooming reply, and the unit rung"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "block",
+      "name": "block",
+      "dyad:when": "an open or planned row that waits on another row",
+      "dyad:then": "proposed blocked, its refs naming that row, as a deferral the operator gives"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "retire",
+      "name": "retire",
+      "dyad:when": "an open or planned row whose work is overtaken or no longer wanted",
+      "dyad:then": "listed in the form's stale-open group with its ground; the retirement Y archives it on the entry Y archive (sweep #a,#b,…), after the home has closed any PR its board entry records"
+    }
+  ],
+  "dyad:precedence": "For a backlog row: overtaken, then premise-gone, then unwanted-candidate, then undecided, then holds; for a stale open or planned row: resume, then block, then retire, then undecided. Every outcome names its ground by row id, path or the missing input. The run's one question stays the retirement form, its rows in four headed groups (grounded, still wanted, undecided, stale open work); a Y archives every listed row, a bare N none, and an N with text naming rows to keep is an amend, the form asked again without them in the same run.",
+  "dyad:default": "undecided",
+  "dyad:judgedBy": {
+    "dyad:kind": "inference",
+    "dyad:implementation": null
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/backlog-groom.md",
+  "dyad:alsoIn": [
+    "dmc/retirement-candidate.jsonld",
+    "dmc/work-in-flight.jsonld",
+    "dmc/groom-trigger.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}

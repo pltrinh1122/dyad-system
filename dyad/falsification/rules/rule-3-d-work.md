@@ -1856,3 +1856,31 @@ preference `recommended-next`, `on` by default.
 The other pairs are as amendment #690 left them. Coherent, orthogonal.
 
 Disposition: see ledger #695.
+
+## Amendment — d-work #697 (2026-11-13: stale open or planned work retired in the grooming's form)
+
+**Claim (the operator, provenance #697 entry 4: "yes, incorporate G4 for staleness as well"):** the grooming reads stale
+`open` and `planned` rows as well as the oldest `backlog` rows, and one it judges overtaken or unwanted is retired by
+the operator's `Y` in the grooming's retirement form, by a new edge `open|planned → archived`.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| G1 | State never regresses (Rule-16); archiving planned work undoes its plan-`Y`. | **Refuted** | `archived` is terminal, not a regression to an earlier state; the plan-`Y` authorized a mutation and binds no one to carry it out, and nothing on `main` is undone, since a stale row's unmerged work never landed. |
+| G2 | The edge lets an agent drop work it finds hard. | **Refuted** | The fence admits the edge only on a last entry `Y archive (sweep …)` naming the row, the operator's `Y` to the form; the agent archives on that `Y` alone (Ledger), as `backlog → archived` already is. |
+| G3 | A retired planned row may name an open PR, whose branch then claims a terminal row the plan gate refuses. | **Survives, scoped** | The form lists the PR with the row; the home closes it on the same `Y`, as clerical execution, before `dwork retire` archives the row, which refuses a row whose board entry records a PR not yet landed until then. |
+| G4 | The new edge collides with the intent question's `open → archived` (#615). | **Survives, scoped** | The two conditions are disjoint by their last entry: a bare `N intent` on a row holding no `Y plan`, or `Y archive (sweep …)` naming the row. Each is a distinct operator answer; neither admits the other's case. |
+| G5 | A stale row could be on its way to a Done the operator still wants. | **Survives, scoped** | Its group in the form gives its ground (`dmc:backlog-staleness` `retire`), and a row the reading finds `resume` or `block` is never listed; an `N` with text naming it keeps it (Answer grammar, amend). |
+
+**Verdict:** the claim survives.
+- **Rules:** Rule-16 Store's transition sentence gains `planned → archived` and the second condition of `open → archived`; Rule-3 Ledger's `archived` bullet names stale open work, its form's group, its entry and the PR closed first. Provenance lines in both.
+- **Vocabulary:** the `archived` row names the new route.
+- **Code (engineer):** `dyadlib.TRANSITIONS` and `INPUTS`, the fence (`rows.py`), `dwork state`'s route and the d-work play-book's machine table.
+
+**Pairwise (Rule-5).**
+- **3–16**: Rule-16 owns the edge and its fence condition; Rule-3 owns when the question is asked and what its `Y` archives. Each cites the other for the part it does not own.
+- **3–2**: the retirement form is already a ratification event (Rule-3 Ratification events); closing the PR is clerical execution of that `Y`, not a merge, and no act Rule-2 never lets a `Y` carry is added.
+- **3–7**: the `Y`'s words are copied into every named row's record as any disposition is; property 5's count stays exact.
+
+The other pairs are as amendment #690 left them. Coherent, orthogonal.
+
+Disposition: see ledger #697.

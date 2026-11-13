@@ -48,6 +48,22 @@ class HygieneTests(unittest.TestCase):
     def run_it(self):
         return hy.hygiene(self.d, "HEAD", time.time())
 
+    def test_i1_reads_only_a_meaningful_touch(self):
+        """#697: a commit changing only a row's slug, as the slug backfill did, never resets I1; one moving its state
+        or `disposed`, or touching its plan, does."""
+        self.row(2, "an old backlog row about widgets", date=OLD)
+        self.row(3, "another old backlog row about gadgets", date=OLD)
+        rows = self.d / INST / "d-work" / "rows"
+        for rid in (2, 3):
+            p = rows / f"{rid}.md"; p.write_text(p.read_text() + "slug: some-slug\n")
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", "ledger: slugs")            # today, slug lines only
+        p = rows / "3.md"; p.write_text(p.read_text().replace("disposed: 2026-09-01 Y backlog",
+                                                              "disposed: 2026-09-01 Y backlog; 2026-11-13 Y plan"))
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", "ledger: #3 disposed")
+        findings, _ = self.run_it()
+        self.assertTrue(any(f.startswith("hygiene I1 untouched: backlog row #2 ") for f in findings), findings)
+        self.assertFalse(any("I1 untouched: backlog row #3 " in f for f in findings), findings)
+
     def test_structural_findings(self):
         self.row(1, "a parent long done", state="done")
         self.row(2, "an old backlog row about widgets", date=OLD)

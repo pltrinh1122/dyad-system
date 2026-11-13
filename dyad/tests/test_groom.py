@@ -139,6 +139,48 @@ class GroomTests(unittest.TestCase):
         self.assertEqual(groom.groom_due(self.d, hygiene=5), ["G4"])
         self.assertEqual(groom.groom_due(self.d, hygiene=None), [])
 
+    def cos_read(self, *lines, date=None):
+        self.put("board/_cos.md", "holder: program-1\nread: " + "\n  ".join(lines) + "\n")
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", "ledger: board read", date=date)
+
+    def test_read_lines_order_and_the_run_count(self):
+        """#697: each block carries its last reading or `never`; rows read freshly sort after the unread ones, which
+        come oldest by `opened` first; the head says how many this run reads (five, or a tenth)."""
+        self.row(40, "an old backlog row"); self.row(41, "a newer backlog row"); self.row(42, "a third backlog row")
+        for rid, opened in ((40, "2026-08-01"), (41, "2026-10-01"), (42, "2026-07-01")):
+            p = self.d / INST / "d-work" / "rows" / f"{rid}.md"; p.write_text(p.read_text().replace("2026-09-01", opened, 1))
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", "ledger: opened")
+        self.cos_read(f"#42 {dyadlib.utc_date()} holds — its premise stands")
+        lines = self.report()
+        self.assertEqual(lines[1], "read this run: 2 of 2 unread or stale (five, or a tenth of the backlog; oldest by "
+                                   "opened first, as the blocks below)")
+        heads = [l.split()[0] for l in lines if l.startswith("#4")]
+        self.assertEqual(heads, ["#40", "#41", "#42"])                          # unread, oldest first; the fresh one last
+        self.assertIn("  read: never", self.block(lines, 40))
+        self.assertIn(f"  read: {dyadlib.utc_date()} holds — its premise stands", self.block(lines, 42))
+        self.assertIn("stale work: none", lines)
+        self.assertEqual([groom.read_count(n) for n in (0, 49, 50, 51, 70)], [5, 5, 5, 6, 7])
+
+    def test_holds_twice_far_apart_is_an_unwanted_candidate(self):
+        """#697 G1: `holds` at two readings `hygiene-stale-days` apart is marked mechanically; a break resets the run."""
+        self.row(43, "a backlog row still true")
+        self.cos_read("#43 2026-09-10 holds — still true")
+        self.cos_read("#43 2026-10-20 holds — still true")
+        line = next(l for l in self.block(self.report(), 43) if l.startswith("  read: "))
+        self.assertEqual(line, "  read: 2026-10-20 holds — still true (holds since 2026-09-10: unwanted-candidate)")
+        self.cos_read("#43 2026-10-21 undecided — the release it waits on is unnamed")
+        self.cos_read("#43 2026-10-25 holds — the operator kept it")
+        line = next(l for l in self.block(self.report(), 43) if l.startswith("  read: "))
+        self.assertEqual(line, "  read: 2026-10-25 holds — the operator kept it")      # a keep restarts the run
+
+    def test_groom_due_g5_when_an_old_row_goes_ninety_days_unread(self):
+        self.row(44, "a backlog row from long ago")
+        p = self.d / INST / "d-work" / "rows" / "44.md"; p.write_text(p.read_text().replace("2026-09-01", "2026-01-01", 1))
+        git(self.d, "add", "-A"); git(self.d, "commit", "-qm", "ledger: old")
+        self.assertIn("G5", groom.groom_due(self.d))
+        self.cos_read(f"#44 {dyadlib.utc_date()} holds — read today")
+        self.assertNotIn("G5", groom.groom_due(self.d))
+
     def test_labels_under_dwork_slug_on(self):
         self.row(50, "the anchor row", state="planned", slug="the-anchor")
         self.row(51, "a backlog row naming the anchor row", refs="#50", slug="named-row")

@@ -325,7 +325,7 @@ class ReleasePlaybookTests(unittest.TestCase):
 GROOM_PLAYBOOK = PKG / "playbooks" / "backlog-groom.md"
 GROOM_RUNBOOK = PKG / "runbooks" / "backlog-groom.md"
 GROOM_CRITERIA = ("groom-trigger", "backlog-hygiene", "retirement-candidate", "retirement-sweep", "altitude", "promotion",
-                  "release-plan", "release-class", "release-number")
+                  "release-plan", "release-class", "release-number", "backlog-staleness")   # #697: step 2a
 
 class BacklogGroomPlaybookTests(unittest.TestCase):
     """The backlog-grooming play-book and its run-book (#625): headings, every criterion it cites exists and is named, none
@@ -345,7 +345,7 @@ class BacklogGroomPlaybookTests(unittest.TestCase):
     def test_records_homed_here_are_cited_masters(self):          # #626 C9: the record is the master, cited by id
         import json
         text = GROOM_PLAYBOOK.read_text()
-        for c in ("groom-trigger", "release-plan"):
+        for c in ("groom-trigger", "release-plan", "backlog-staleness"):
             rec = json.loads((PKG / "dmc" / f"{c}.jsonld").read_text())
             self.assertEqual(rec["dyad:home"], "playbooks/backlog-groom.md", c)
             self.assertIn(f"dmc:{c}", text, c)

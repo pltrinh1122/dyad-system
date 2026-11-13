@@ -96,7 +96,7 @@ BOARD_REL = "d-work/board"
 COS = "_cos"
 FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "audit-due",
-              "recommended", "writer")   # #625: release-plan; #691: audit-due; #695: recommended
+              "recommended", "read", "writer")   # #625: release-plan; #691: audit-due; #695: recommended; #697: read
 REQUIRED = ("holder",)
 CABINET = re.compile(r"program(?:-[a-z0-9]+)*")      # #594: `program` or `program-<operator>`; never a seat's `-<hp>`,
                                                      # so an operator segment of eight hex is no cabinet (sessions.name_problems)
@@ -957,7 +957,7 @@ def recommended(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
     if audit_due_count(got, cabinet) and not audit_in_coming:
         out["audit"].append(None)
     try:
-        if dyadlib.load_module(dyadlib.PKG / "scripts" / "groom.py", "dyad_groom").groom_due(root, hygiene):
+        if dyadlib.load_module(dyadlib.PKG / "scripts" / "groom.py", "dyad_groom").groom_due(root, hygiene, rows=list(rows.values()), cos=cos):
             out["groom"].append(None)
     except Exception as e:                               # a read for the home: unreadable is a warning, never a crash
         warns.append(f"recommended: groom not read ({type(e).__name__})")

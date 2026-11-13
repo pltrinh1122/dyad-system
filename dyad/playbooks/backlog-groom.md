@@ -31,6 +31,13 @@ In order, each citing its criterion:
    never recomputed (`dyad/dmc/backlog-hygiene.jsonld`); then `releases:`, per craft its last tag and live `VERSION`,
    and the bundle's; and last `last grooming:`, the newest event of this run-book's step. It prints facts, never a
    judgement: the class each step below assigns is the home's.
+2a. **read the oldest** — `dmc:backlog-staleness` per row read, before `retire` (#697). The rows read are the oldest
+   backlog rows by `opened` that hold no reading younger than `hygiene-stale-days` — as many as the report's
+   `read this run:` line says, five or a tenth of the backlog, whichever is more, in the order of its blocks — and
+   every stale open or planned row its `stale work:` block names. Each reading is classed and recorded as one line of
+   the home's cross-row `read` value (`dyad board set _cos read=…`, `#<id> <YYYY-MM-DD> <outcome> — <ground>`), so the
+   next run reads facts, not memory; a row marked `unwanted-candidate` on its `read:` line enters the still-wanted
+   group. A `resume` row's unit is rung; a `block` row is proposed for the operator's deferral.
 2. **retire** — `dyad/dmc/retirement-candidate.jsonld` per row, then `dyad/dmc/retirement-sweep.jsonld` over the set.
    A row with a retirement ground is listed in the retirement form, the one question a run may ask.
 3. **size** — `dyad/dmc/altitude.jsonld` per remaining row: one definition of done, or split. The split is a row of
@@ -55,11 +62,18 @@ closes a row.
 
 ## Question
 At most one per run: the retirement form, `Y/N: archive #a, #b, … #k?`, each row listed before it with what it holds
-and its ground (Rule-3 Ledger). A `Y` archives exactly the named rows; any other answer archives none, and the rows
-stay groomed. Nothing else in a run is asked.
+and its ground (Rule-3 Ledger), in four headed groups, in this order: **grounded** (a retirement-candidate ground, or
+`overtaken` or `premise-gone`), **still wanted?** (`unwanted-candidate`, its ground the two readings), **undecided**
+(what the reading could not settle, and the home's lean, keep or archive, with its reason) and **stale open work**
+(`retire`, its ground; any PR its board entry records closed by the home on the same `Y`, as clerical execution, before
+`dwork retire` archives the row on the entry `Y archive (sweep #a,#b,…)`). A `Y` archives exactly the named rows; a
+bare `N` archives none, and the rows stay groomed; an `N` with text naming rows to keep is an amend: the form is asked
+again without them, in the same run, and each kept row is recorded as read `holds`, its ground the operator's keep. A
+run with no row in any group asks nothing. Nothing else in a run is asked.
 
 ## Evidence
-The grooming reply cites the run-book event's id and the `release-plan` line as written, then each step's result: the
+The grooming reply cites the run-book event's id and the `release-plan` line as written, then each step's result: each
+reading of step 2a with its outcome and ground, and the `read` lines as written; the
 retirement ground per row, the size per row, the promotion ranking, and the plan per craft with its projected number.
 A first run on a backlog whose `release-plan` key the board guard does not yet admit cites the plan as the reply states
 it, and the line is written once the key is admitted.

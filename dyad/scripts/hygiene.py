@@ -117,16 +117,28 @@ def git(repo: Path, *a: str) -> str:
     return r.stdout if r.returncode == 0 else ""
 
 
+MEANINGFUL = r"^(state|disposed):"   # #697: a row edit that moves it (git's -G), never a slug or a format write
+
 def last_touched(repo: Path, base: str, inst: str) -> dict[int, int]:
-    """{row id: unix time of the newest commit on `base` touching its row, plan or provenance file}, in one git call."""
-    out, when = {}, 0
-    for line in git(repo, "log", "--format=@%ct", "--name-only", base, "--",
-                    f"{inst}/d-work/rows", f"{inst}/d-work/plans", f"{inst}/d-work/provenance").splitlines():
-        if line.startswith("@"):
-            when = int(line[1:]); continue
-        m = re.search(r"/(\d+)\.md$", line)
-        if m:
-            out.setdefault(int(m.group(1)), when)          # log is newest first: the first time seen is the newest
+    """{row id: unix time of the newest commit on `base` that meaningfully touched the row}: one changing a row file's
+    `state` or `disposed` line (its birth included), or touching its plan or provenance file. A bulk write that changes
+    only rows' `slug` or format — the slug backfill 5dce3019 — no longer resets I1 (#697). Two git calls, run at once,
+    so `dyad board resume` pays one call's time; a commit moving one row's state and another's slug together counts
+    for both, which only makes a row look fresher, never staler."""
+    from concurrent.futures import ThreadPoolExecutor
+    calls = (["log", "--format=@%ct", "--name-only", f"-G{MEANINGFUL}", base, "--", f"{inst}/d-work/rows"],
+             ["log", "--format=@%ct", "--name-only", base, "--", f"{inst}/d-work/plans", f"{inst}/d-work/provenance"])
+    with ThreadPoolExecutor(2) as pool:
+        logs = list(pool.map(lambda a: git(repo, *a), calls))
+    out = {}
+    for text in logs:
+        when = 0
+        for line in text.splitlines():
+            if line.startswith("@"):
+                when = int(line[1:]); continue
+            m = re.search(r"/(\d+)\.md$", line)
+            if m:
+                out[int(m.group(1))] = max(out.get(int(m.group(1)), 0), when)   # newest first per log: max is the newest
     return out
 
 
