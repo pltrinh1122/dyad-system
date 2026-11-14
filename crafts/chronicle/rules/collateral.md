@@ -6,7 +6,7 @@ collateral is a piece, its record layer cited as §1 says, published only on the
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
 `../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-problem-plainness.jsonld`,
 `../dmc/collateral-segment-significance.jsonld`,
-`../dmc/collateral-segment-rank.jsonld`, `../dmc/collateral-role-bridge.jsonld`,
+`../dmc/collateral-segment-rank.jsonld`, `../dmc/collateral-role-bridge.jsonld`, `../dmc/collateral-symptom-canon.jsonld`,
 `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
 d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684; source
@@ -163,6 +163,19 @@ hypothesised) · **nodes added** (how many nodes the segment's source tree is ex
 the projection exists to screen). Every score is labelled hypothesis or evidence. Its outcomes: **unscored** (a score cannot be read, even as a
 hypothesis: put to the Operator) · **tied** (equal on all three keys: put to the Operator) · **ranked** (the order is
 recorded in the canvas set's index). It orders the map and targets nothing: the go-to-market picks.
+
+**The symptom canon.** A canvas set keeps one canon of user symptoms of working with AI agents, `<canvas
+set>/symptoms.md`: what readers see, in their words, the first thing a piece shows them. It grows by observation: the
+Operator's own, cited by provenance entry, then interviews and readers' feedback through the channels, cited by a
+reference that names no one and quoted only with consent. A tree's symptom roots an entry but observes nothing; one no
+one has reported waits as a candidate. `collateral-symptom-canon` decides each candidate, its outcomes in order:
+**cause** · **unrooted** · **unsourced** · **unobserved** (a candidate, promoted on an observation) · **restated** ·
+**duplicate** (joins an entry, adding its source) · **canon**. Each entry carries its class, proficiency, way of
+working, when, sources and **served** (`served` or `partly`, citing the rule or code that serves it, or `not yet`), so
+the canon is read two ways: by reader, to engage, and by `not yet`, as candidates for the roadmap, never rows of work
+by themselves. It is append-only. Its wording and outcomes are inference, judged once; its coverage is code
+(`../scripts/symptom_canon.py`): every tree symptom is an entry, a candidate or an exclusion, every entry has an
+observation, every `served` cites what exists.
 
 ## 6. Problem discovery: diverge by lens, decompose as a tree
 A problem entry names a **root cause**: what the segment would remove, not what it observes. It is found by a
