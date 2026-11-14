@@ -875,18 +875,30 @@ class AttendanceTests(unittest.TestCase):
 
 class ListCLITests(unittest.TestCase):
     def test_list_runs(self):
-        # `sessions.py`'s repo root comes from the script's own location (dyadlib.repo_root),
-        # not from cwd, so this always reads the real workstation repo's own sessions/ — just
-        # confirm the CLI runs cleanly and prints a recognisable shape either way.
-        import subprocess
-        env = dict(os.environ); env.pop("DYAD_SESSION", None)
-        r = subprocess.run([sys.executable, str(Path(__file__).resolve().parents[3] / "guards" / "agent" / "sessions.py"), "list"],
-                            capture_output=True, text=True, env=env)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertTrue("no session presence files" in r.stdout or "live" in r.stdout or "stale" in r.stdout)
-        if "no session presence files" not in r.stdout:
-            self.assertRegex(r.stdout, r"^mode: (M3|M4|hybrid) — \d+ of \d+ live unit\(s\) dyad, the rest solo; paired: ")   # #393, #414, #553
-            self.assertNotRegex(r.stdout, r"(?m) (attended|relayed)(=\S+)?$")   # the unit kind is printed as dyad or solo (#553)
+        """#704: the CLI against fixture stores, never the live one (#658, K-35): a store holding one fresh unit prints the
+        mode line and the unit live and solo; an all-stale store prints `no live seat` and no mode line; an empty store
+        prints `no session presence files`. `paired-units` is read from the code tree's preferences file, so only the
+        line's form is asserted, never its names."""
+        import datetime, shutil, subprocess
+        cli = Path(__file__).resolve().parents[3] / "guards" / "agent" / "sessions.py"
+        def run(seen: str | None) -> str:
+            inst = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, inst, True)
+            (inst / "d-work" / "sessions").mkdir(parents=True)
+            if seen:
+                (inst / "d-work" / "sessions" / "engineer-aaaaaaaa.md").write_text(
+                    f"session: engineer-aaaaaaaa\nseen: {seen}\nroot: /x\nrows: \nfiles: \n")
+            env = dict(os.environ, DYAD_INSTANCE=str(inst)); env.pop("DYAD_SESSION", None)
+            r = subprocess.run([sys.executable, str(cli), "list"], capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            return r.stdout
+        fresh = run(datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"))
+        self.assertRegex(fresh, r"^mode: (M3|M4|hybrid) — \d+ of \d+ live unit\(s\) dyad, the rest solo; paired: ")   # #393, #414, #553
+        self.assertRegex(fresh, r"(?m)^engineer-aaaaaaaa\s+live\b.* solo$")
+        self.assertNotRegex(fresh, r"(?m) (attended|relayed)(=\S+)?$")   # the unit kind is printed as dyad or solo (#553)
+        stale = run("2020-01-01T00:00:00+00:00")
+        self.assertIn("no live seat", stale)
+        self.assertNotIn("mode:", stale)
+        self.assertIn("no session presence files", run(None))
 
 if __name__ == "__main__":
     unittest.main()
