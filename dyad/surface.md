@@ -73,8 +73,8 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad release` | `--scan` | frozen |
 | `dyad release ready <row> <tag>` | `--at <cut>`, `--archive <sha256>` | frozen |
 | `dyad merge <pr>` | `--head <sha>` | frozen |
-| `dyad attention` / `attention sync` | `--full` (#700: the aggregate desk, read-only; `sync` appends this system's events to the central repository, one try); `sync --since <commit>` (#703: the commit a first registration and its replay start from) | frozen |
-| `dyad attention pair` | `<system>/<unit> --ref <path>@<commit> [--drop]` (#703: a pairing no one system's `paired-units` can hold, `what: declared`; refused unless the ref resolves in a checkout the reader holds, and for a system whose checkout keeps that preference) | frozen |
+| `dyad attention` / `attention sync` | `--full` (#700: the aggregate desk, read-only; `sync` appends this system's events to the central repository, one try); `--since <commit>` (#703, `sync` only: the commit a first registration and its replay start from) | frozen |
+| `dyad attention pair` | `--ref <path>@<commit>`, `--drop` (#703: positional `<system>/<unit>`; a pairing no one system's `paired-units` can hold, `what: declared`; refused unless the ref resolves in a checkout the reader holds, and for a system whose checkout keeps that preference) | frozen |
 | `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` | `--drop`; advance: `--expect`, `--said-file`, `--decisions` (the Done answer's candidate rulings, #648), `--mirror`; draft: `--out <file>`, `--decisions-out <file>` (the row's candidate rulings as a decisions input file, #648) | frozen |
 | `dyad inbox post <unit> [<body>...]` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file` | frozen |
 | `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | frozen |
