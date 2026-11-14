@@ -108,6 +108,14 @@ property 1).
 13. **Orchestration** — between the plan-`Y` and the Done the row stays still and its board entry's phase moves
     (Rule-16 Store): `dyad board phases` prints `dyadlib.ORCH_EVENTS`, and `dyad board advance <id>… <event> --expect
     <phase>` is the one writer, one ledger-only commit per transition, printing the doorbells owed (#587).
+14. **Presenting** — every question is recorded with its card fields when it is asked (`what`, `why`, `how`,
+    `counter`, `reconcile`, written write-ahead with `question` by `dyad board set` or `board advance … asked`); the home
+    records a gating predecessor in `gates` and an input code cannot see as `present: solo` with its reason, and never
+    infers either. It runs `dyad board cards` and asks next as `dmc:next-best-disposition` says: a gated question is held
+    back, a solo one asked alone, the rest in batches of their kind, and past `open-kinds-max` deferred, never refused.
+    Under `question-page: on` it re-renders `dyad board cards --html <file>` outside every repository after each recorded
+    ask or answer and publishes it as one private page, updated in place; otherwise the closing line points to
+    `details: dyad board cards`. The page is a cache of the board and holds no `Y`: every answer is given in chat (#706).
 
 Branches: an accreted row skips 2–4 and its Done rides the mandate's; a `backlog` row enters at 1 on a later prompt or
 leaves by a Done's `retires` or the retirement form; a terminal row is never reopened, a new row refs it. Run each step
