@@ -1,5 +1,5 @@
 session: program-59cec502
-seen: 2026-11-14T00:29:12+00:00
+seen: 2026-11-14T16:21:55+00:00
 root: /home/user/dyad-system
 rows: 
 files: 
