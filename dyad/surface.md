@@ -75,7 +75,7 @@ next word whole, whatever it spells; a word not shaped like a flag (`-`, `- item
 | `dyad merge <pr>` | `--head <sha>` | frozen |
 | `dyad attention` / `attention sync` | `--full` (#700: the aggregate desk, read-only; `sync` appends this system's events to the central repository, one try); `--since <commit>` (#703, `sync` only: the commit a first registration and its replay start from) | frozen |
 | `dyad attention pair` | `--ref <path>@<commit>`, `--drop` (#703: positional `<system>/<unit>`; a pairing no one system's `paired-units` can hold, `what: declared`; refused unless the ref resolves in a checkout the reader holds, and for a system whose checkout keeps that preference) | frozen |
-| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` | `--drop`; advance: `--expect`, `--said-file`, `--decisions` (the Done answer's candidate rulings, #648), `--mirror`; draft: `--out <file>`, `--decisions-out <file>` (the row's candidate rulings as a decisions input file, #648) | frozen |
+| `dyad board` / `board set <id>\|_cos[-<operator>] key=value...` / `board resume` / `board advance <id>... <event>` / `board phases` / `board draft <id>` / `board groom` / `board cards` | `--drop`; advance: `--expect`, `--said-file`, `--decisions` (the Done answer's candidate rulings, #648), `--mirror`; draft: `--out <file>`, `--decisions-out <file>` (the row's candidate rulings as a decisions input file, #648); cards: `--full`, `--html <file>` (#706: one card per outstanding question, read-only; the page written outside every repository) | frozen |
 | `dyad inbox post <unit> [<body>...]` / `list [<unit>]` | `--row`, `--kind report\|relay\|ack\|notice`, `--body-file` | frozen |
 | `dyad inbox read [<message>...]` | — (no name prints the unread messages and writes nothing; names mark exactly those read in one land and fire the machine's `read`, which changes no board entry; the flag --all removed, #587 S10) | frozen |
 | `dyad inbox post … --cc <unit>` | — | frozen |
@@ -94,7 +94,7 @@ are each guard's own constant, the source the test reads.
 |---|---|---|---|---|
 | row | `d-work/rows/<id>.md` | `id`, `title`, `opened`, `state`, `disposed`, `refs`; optional `mode`, `slug` (#622); every date UTC from dyad-operator 1.0.0 on, earlier entries as written (#592) | `dyadlib.FIELDS`, `OPTIONAL_FIELDS` | frozen |
 | row states | — | `open`, `planned`, `blocked`, `backlog`, `done`, `archived` and Rule-16's transitions (open → archived on the bare intent-N, #615; open or planned → archived on the retirement form's sweep entry, #697) | `dyadlib.TRANSITIONS` | frozen |
-| board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `writer`; optional `cabinet`, absent meaning program | `board.FIELDS` | frozen |
+| board entry | `d-work/board/<id>.md` | `holder`, `phase`, `owner`, `waiting-on`, `next`, `since`, `question`, `promised`, `note`, `what`, `why`, `how`, `counter`, `reconcile`, `present`, `gates`, `writer`; optional `cabinet`, absent meaning program; the seven card keys optional (#706) | `board.FIELDS` | frozen |
 | board `cabinet` value | — | `program`, `program-<operator>`; an operator ending in eight hex reads as a seat's hp and is no cabinet | `board.CABINET` | frozen |
 | board `waiting-on` value | — | `operator`, `unit <name>`, `external <ref>` | `board.WAITING` | frozen |
 | board cross-row | `d-work/board/_cos.md` \| `_cos-<operator>.md`, one per cabinet | `holder`, `queue`, `seats`, `next`, `since`, `question`, `promised`, `release-plan`, `audit-due`, `recommended`, `read`, `writer`; `release-plan` the backlog grooming play-book's (#625); `audit-due` the audit's due conditions by the audit trigger, counted in the Coming part (#691); `recommended` the home's inferred items for the Recommended part (#695); `read` the home's grooming readings, one line per row, its id, date, outcome and ground (#697); `queue` derived at read from #572 (K4) and `seats` a seat-era name | `board.COS_FIELDS` | frozen |
@@ -144,6 +144,9 @@ the operator's. The key names and allowed values are the surface.
 | awaiting-you | frozen |
 | coming | frozen |
 | recommended-next | frozen |
+| question-page | frozen |
+| open-kinds-max | frozen |
+| solo-binding-min | frozen |
 | hygiene-stale-days | frozen |
 | hygiene-similar | frozen |
 | hygiene-top | frozen |
@@ -266,6 +269,7 @@ Every `@id` is `urn:dyad:dmc:dyad-operator/<name>`; `context.jsonld` is the shar
 | mitigation-status | frozen |
 | mode-edge | frozen |
 | mode-exit | frozen |
+| next-best-disposition | frozen |
 | ops-outcome | frozen |
 | ops-script-needed | frozen |
 | parent-askable | frozen |

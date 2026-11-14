@@ -158,7 +158,7 @@ class GuardTests(unittest.TestCase):
         self.assertTrue(lines[3].startswith("#5 planned  waiting-on external run 41331223332 for 2h"), lines)
         self.assertIn("    question: Y/N: release v1.2.0?", lines)
         self.assertIn("_cos queue: plan 0, done 1", lines)
-        self.assertIn("Awaiting you: merge 1 release (#7).", lines)       # #646: the closing line, `awaiting-you: on` by default
+        self.assertIn("Awaiting you: merge 1 release (#7). details: dyad board cards", lines)   # #706: no page       # #646: the closing line, `awaiting-you: on` by default
         self.assertIn("0 open, planned or blocked row(s) carry no board entry", lines)
         self.assertTrue(any(l.startswith("warn: board/5.md was last written by h1, not this session (h2)") for l in lines), lines)
         text = "\n".join(res)
@@ -539,6 +539,8 @@ class CabinetFormTests(unittest.TestCase):
         prefs(self.root)
         m4 = self.views("program-59cec502")[:2]
         flat, m4 = ((without_stalls(flat[0]), flat[1]), (without_stalls(m4[0]), m4[1]))   # #617's block, its own test
+        nod = lambda ls: [l.removesuffix(" details: dyad board cards") for l in ls]       # #706's pointer, its own test
+        flat, m4 = (nod(flat[0]), nod(flat[1])), (nod(m4[0]), nod(m4[1]))
         self.assertEqual(flat, (PRE_594_RESUME, PRE_594_BOARD))                        # before #594 and after it
         self.assertEqual(m4, (PRE_594_RESUME, PRE_594_BOARD))
         self.assertEqual(sum(l.startswith("warn: board/") for l in m4[1]), 3)          # the writer warnings (h1, not h9)
@@ -1292,6 +1294,151 @@ class PhasedQueueTests(unittest.TestCase):
         self.assertEqual(bd.derived_queue(self.root), {"plan-ready": [5, 8], "done-ready": [7]})
 
 
+class NextBestTests(unittest.TestCase):
+    """#706, PR 1: dmc:next-best-disposition — rules filter (gating edges), judgement orders (solo, batch, defer); the
+    cards from the board alone; Coming's `gated`/`deferred`; the `details:` pointer while no question page is on."""
+    def setUp(self):
+        r = unittest.mock.patch.object(bd, "RECOMMENDED_DEFAULT", "off"); r.start(); self.addCleanup(r.stop)
+        a = unittest.mock.patch.object(bd, "attention_open", lambda root: []); a.start(); self.addCleanup(a.stop)
+        e = unittest.mock.patch.dict(os.environ, {"DYAD_INSTANCE": INST, "DYAD_SESSION": HOME}); e.start(); self.addCleanup(e.stop)
+        self.root = Path(tempfile.mkdtemp()); self.addCleanup(shutil.rmtree, self.root, True)
+        self.d = self.root / INST / "d-work"
+        for sub in ("rows", "plans", "board", "provenance"):
+            (self.d / sub).mkdir(parents=True)
+
+    def row(self, rid, state="planned", disposed="2026-11-01 Y plan", refs=""):
+        (self.d / "rows" / f"{rid}.md").write_text(ROW.format(id=rid, state=state).replace(
+            "disposed: 2026-11-01 Y plan", f"disposed: {disposed}").replace("refs: \n", f"refs: {refs}\n"))
+
+    def ask(self, rid, q, extra=""):
+        """An asked question as the board records it: a plan or Done question by its phase, any other by its form."""
+        since = f"2026-11-04T10:0{rid % 10}Z"
+        phase = "plan-asked" if q.startswith("Y/N: proceed") else "done-asked" if q.startswith("Y/N: Done") else None
+        self.row(rid, **({"state": "open", "disposed": "2026-11-01 Y open"} if phase == "plan-asked" else {}))
+        text = (phased(rid, phase, {"unit": [ENG]} if phase == "done-asked" else {}, question=q, since=since) if phase else
+                f"holder: {HOME}\nwaiting-on: operator\nsince: {since}\nquestion: {q}\n")
+        (self.d / "board" / f"{rid}.md").write_text(text + extra)
+
+    def ready_plan(self, rid, plan="# Plan\n", refs=""):
+        self.row(rid, state="open", disposed="2026-11-01 Y open", refs=refs)
+        (self.d / "plans" / f"{rid}.md").write_text(plan)
+
+    def prefs(self, **kv):
+        p = self.root / dyadlib.PREFERENCES_REL; p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("| key | value | allowed | read by |\n|---|---|---|---|\n" + "".join(f"| {k} | {v} | x | y |\n" for k, v in kv.items()))
+
+    def outcomes(self):
+        return {tuple(t["ids"]): (t["kind"], t["outcome"]) for t in bd.presentation(self.root)}
+
+    def test_a_card_per_question_with_its_exact_line_and_no_card_for_a_terminal_row(self):
+        self.ask(2, "Y/N: proceed with #2 as planned?", "what: the matter\nwhy: it matters\nhow: one path\n")
+        self.ask(3, "Y/N: Done with #3 three?")
+        self.row(3, state="done")                                       # the board moved past it: no card
+        text = "\n".join(bd.cards(self.root, full=True))
+        self.assertIn("  Y/N: proceed with #2 as planned?", text)
+        self.assertIn("  what: the matter", text)
+        self.assertIn(f"  counter: (see plan) {INST}/d-work/plans/2.md", text)   # a missing field: never invented
+        self.assertNotIn("Done with #3", text)
+
+    def test_a_card_holds_the_evidence_sha_never_the_block_and_another_system_by_reference(self):
+        sha = "a" * 64
+        self.ask(2, "Y/N: proceed with #2 as planned?", f"promised: evidence {sha}\n  counts: ok=152 warn=190 fail=0\n")
+        with unittest.mock.patch.object(bd, "attention_open", lambda root: [
+                {"kind": "asked", "what": "plan", "system": "o/beta", "unit": "program-2", "row": "4"}]):
+            text = "\n".join(bd.cards(self.root, full=True))
+        self.assertIn(f"evidence {sha}", text)
+        self.assertNotIn("counts: ok=", text)
+        self.assertIn("[ref] plan o/beta/program-2 #4", text)
+
+    def test_destructive_and_release_are_solo_under_any_setting(self):
+        self.prefs(**{"open-kinds-max": "9", "solo-binding-min": "99"})
+        self.ask(6, "Y/N: release v1.2.0?")
+        self.ask(7, "Y/N: run docker volume rm x?")
+        got = self.outcomes()
+        self.assertEqual(got[(6,)], ("release", "solo"))
+        self.assertEqual(got[(7,)], ("destructive", "solo"))
+
+    def test_two_plans_batch_and_a_third_kind_waits_at_the_bound(self):
+        self.ask(2, "Y/N: proceed with #2 as planned?")
+        self.ask(3, "Y/N: archive #8?")
+        self.ready_plan(4)
+        self.ready_plan(5)
+        self.row(9, state="planned")                                     # a Done ready to ask: a third kind
+        (self.d / "board" / "9.md").write_text(f"holder: {HOME}\nquestion: Y/N: Done with #9 nine?\n")
+        got = self.outcomes()
+        self.assertEqual(got[(4,)], ("plan", "batch"))
+        self.assertEqual(got[(5,)], ("plan", "batch"))
+        self.prefs(**{"open-kinds-max": "1"})
+        self.assertEqual(self.outcomes()[(4,)], ("plan", "batch"))     # its kind is outstanding: batched with it
+        self.ask(2, "Y/N: archive #9?")                                   # now plan is not outstanding
+        self.assertEqual(self.outcomes()[(4,)], ("plan", "defer"))
+        self.assertIn("deferred 3", bd.awaiting_line(self.root))       # both plans and the Done
+
+    def test_a_done_at_solo_binding_min_is_solo_and_present_solo_is_honoured(self):
+        self.ask(4, "Y/N: Done with #4 four (merges PR #1, #2, #3)?")
+        self.ask(5, "Y/N: Done with #5 five (merges PR #7)?")
+        self.ask(6, "Y/N: proceed with #6 as planned?", "present: solo it spends money\n")
+        got = self.outcomes()
+        self.assertEqual(got[(4,)], ("done", "solo"))
+        self.assertEqual(got[(5,)], ("done", "batch"))
+        self.assertEqual(got[(6,)], ("plan", "solo"))
+        self.ready_plan(8)
+        self.assertEqual(self.outcomes()[(8,)], ("plan", "defer"))     # nothing else is asked while a solo waits
+
+    def test_a_gated_question_is_held_back_and_counted_and_plain_refs_never_gate(self):
+        self.ask(2, "Y/N: proceed with #2 as planned?")
+        self.ask(3, "Y/N: proceed with #3 as planned?", "gates: #2:plan\n")
+        self.ready_plan(4, refs="#2")                                    # plain refs: untyped, never gates
+        self.ready_plan(5, plan="# Plan\n\norder: required\n- step: after #2's PR lands\n")   # merges-after: never gates
+        self.ready_plan(6, plan="# Plan\n\norder: required\n- step: ask after #2's plan\n")
+        got = self.outcomes()
+        self.assertEqual(got[(3,)], ("plan", "gated"))
+        self.assertEqual(got[(4,)], ("plan", "batch"))
+        self.assertEqual(got[(5,)], ("plan", "batch"))
+        self.assertEqual(got[(6,)], ("plan", "gated"))
+        self.assertIn("gated 2", bd.awaiting_line(self.root))
+        self.assertIn("  gated by: #2 plan", "\n".join(bd.cards(self.root, full=True)))
+        self.row(2, disposed="2026-11-01 Y plan")                        # the predecessor answered: eligible
+        (self.d / "board" / "2.md").unlink()
+        self.assertEqual(self.outcomes()[(3,)], ("plan", "batch"))
+
+    def test_the_parent_done_waits_on_an_open_child(self):
+        self.ask(4, "Y/N: Done with #4 four?")
+        self.row(5, state="open", refs="parent #4")
+        self.assertEqual(self.outcomes()[(4,)], ("done", "gated"))
+        self.row(5, state="done", refs="parent #4")
+        self.assertEqual(self.outcomes()[(4,)], ("done", "batch"))
+
+    def test_the_details_pointer_shows_while_no_page_is_on(self):
+        self.ask(2, "Y/N: proceed with #2 as planned?")
+        self.assertTrue(bd.awaiting_line(self.root).endswith(" details: dyad board cards"))
+        self.prefs(**{"question-page": "on"})
+        self.assertNotIn("details:", bd.awaiting_line(self.root))
+        (self.d / "board" / "2.md").unlink()
+        self.prefs()
+        self.assertNotIn("details:", bd.awaiting_line(self.root))          # nothing outstanding: no pointer
+
+    def test_the_guard_reads_present_and_gates(self):
+        self.row(2)
+        states = {2: "planned"}
+        self.assertEqual(bd.card_problems({"present": "solo because"}, states), [])
+        self.assertEqual(len(bd.card_problems({"present": "batch"}, states)), 1)
+        self.assertEqual(bd.card_problems({"gates": "#2:plan #2"}, states), [])
+        self.assertEqual(len(bd.card_problems({"gates": "#9 2 #2:nope"}, states)), 3)
+
+    def test_the_page_is_written_outside_every_repository(self):
+        self.ask(2, "Y/N: proceed with #2 as planned?")
+        repo = self.root / "repo"; repo.mkdir(); git(repo, "init", "-q")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(bd.cmd_cards(["--html", str(repo / "page.html")], self.root), 1)
+        self.assertIn("outside every repository", err.getvalue())
+        out = Path(tempfile.mkdtemp()) / "page.html"; self.addCleanup(shutil.rmtree, out.parent, True)
+        with unittest.mock.patch.object(bd, "inside_repo", lambda p: False), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(bd.cmd_cards(["--html", str(out)], self.root), 0)
+        self.assertIn("Y/N: proceed with #2 as planned?", out.read_text())
+
+
 class AwaitingTests(unittest.TestCase):
     """#646: `Awaiting you` counts the questions the board records as asked and not answered, by kind and a batch once,
     and never a wait without a question (#503); `awaiting-you: on` (an absent key too) prints it, `off` the queue line.
@@ -1336,9 +1483,10 @@ class AwaitingTests(unittest.TestCase):
                                                           ("precedent", [5]), ("merge", [13]), ("release", [6]), ("destructive", [7])])
         self.assertEqual(bd.awaiting_line(self.root), "Awaiting you: d-work 1 intent (#1), 1 plan (#2 #3), 1 done (#4), "
                          "1 retirement (#11), 1 precedent (#5); merge 1 (PR #723), 1 release (#6), 1 destructive (#7). "
-                         "Coming: 1 plan-ready.")
+                         "Coming: 1 plan-ready, deferred 1. details: dyad board cards")   # #706: a solo is outstanding
         self.prefs(**{"intent-reading": "on"})
-        self.assertTrue(bd.awaiting_line(self.root).endswith(" Coming: 1 intent-ready, 1 plan-ready."))
+        self.assertTrue(bd.awaiting_line(self.root).endswith(" Coming: 1 intent-ready, 1 plan-ready, deferred 2. "
+                                                             "details: dyad board cards"))
 
     def test_dmc_disposition_request_each_outcome_precedence_and_default(self):
         import json
@@ -1432,13 +1580,14 @@ class AwaitingTests(unittest.TestCase):
         self.prefs(coming="maybe")                                                  # read as on; the guard warns
         self.assertEqual(bd.closing_line(self.root), full)
         self.prefs(coming="off")
-        self.assertEqual(bd.closing_line(self.root), awaiting)
+        awaiting_off = f"{awaiting} {bd.DETAILS}"                                   # #706: the pointer stays without Coming
+        self.assertEqual(bd.closing_line(self.root), awaiting_off)
         self.assertTrue(awaiting.endswith(".") and "Coming" not in awaiting)
-        self.assertEqual(bd.awaiting_line(self.root, coming=False), awaiting)
+        self.assertEqual(bd.awaiting_line(self.root, coming=False), awaiting_off)
         self.assertEqual(bd.awaiting_line(self.root), full)                          # the default keeps today's line
         with unittest.mock.patch.dict(os.environ, {"DYAD_SESSION": "program-bbbbbbbb", "CLAUDE_CODE_SESSION_ID": "h2"}):
-            self.assertIn(awaiting, bd.board_lines(self.root))
-            self.assertIn(awaiting, bd.resume_lines(self.root))
+            self.assertIn(awaiting_off, bd.board_lines(self.root))
+            self.assertIn(awaiting_off, bd.resume_lines(self.root))
         self.prefs(**{"awaiting-you": "off", "coming": "off"})                       # inert under awaiting-you: off
         self.assertTrue(bd.closing_line(self.root).startswith("queue (derived, #572): "))
         self.prefs(**{"awaiting-you": "on", "coming": "off"})

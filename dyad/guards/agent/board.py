@@ -94,7 +94,9 @@ ENTITY, CORPUS, TRANSACTION = "board", "agent", False
 NAME, OWNER = "board entry", "Rule-3"
 BOARD_REL = "d-work/board"
 COS = "_cos"
-FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note", "writer")   # #587: phase, note
+CARD_KEYS = ("what", "why", "how", "counter", "reconcile", "present", "gates")   # #706: a card's text and presentation
+FIELDS = ("holder", "cabinet", "phase", "owner", "waiting-on", "next", "since", "question", "promised", "note",
+          *CARD_KEYS, "writer")   # #587: phase, note; #706: the card keys, all optional
 COS_FIELDS = ("holder", "queue", "seats", "next", "since", "question", "promised", "release-plan", "audit-due",
               "recommended", "read", "writer")   # #625: release-plan; #691: audit-due; #695: recommended; #697: read
 REQUIRED = ("holder",)
@@ -111,6 +113,7 @@ DROP, = CLI_FLAGS["set"].bare
 OUT, DECISIONS_OUT = CLI_FLAGS["draft"].value_flags   # #587 X7: the skeleton's file, never under the work tree; #648
 PROSE_SLOT = "TODO plan-departure: facts | outcome"   # #648: the draft's fixed slot for a prose ruling
 USAGE = ("usage: dyad board | dyad board set <id>|_cos[-<operator>] key=value… [--drop] | dyad board resume | dyad board phases | "
+         "dyad board cards [--full] [--html <file>] | "
          "dyad board advance <id> [<id>…] <event> --expect <phase>|none [key=value…] [--said-file <path>] [--mirror <branch>] | "
          "dyad board draft <id> [--out <file>] | dyad board groom")
 
@@ -350,7 +353,29 @@ def check_entry(name: str, text: str, states: dict[int, str], rows: dict | None 
                         f"so Awaiting you counts nothing for it (#646)")
     if "phase" in fields and not is_cos(name):
         msgs += check_phased(name, fields, rows)
+    msgs += [f"{where}: {m}" for m in card_problems(fields, states)]
     return msgs
+
+
+PRESENT = re.compile(r"solo(?: \S.*)?")                 # #706: `present: solo [<reason>]`, the home's one value
+GATE = re.compile(r"#(\d+)(?::([a-z]+))?")               # #706: `gates: #<id>[:<kind>] …`
+
+
+def card_problems(fields: dict[str, str], states: dict[int, str]) -> list[str]:
+    """#706: the card keys' shape: `present` is `solo` with an optional reason; `gates` is a space list of
+    `#<id>[:<kind>]`, each id an existing row and each kind one dmc:disposition-request names."""
+    out = []
+    if "present" in fields and not PRESENT.fullmatch(fields["present"]):
+        out.append(f"'present' is not `solo [<reason>]` ({fields['present']!r}, #706)")
+    for tok in (fields.get("gates") or "").split():
+        m = GATE.fullmatch(tok)
+        if not m:
+            out.append(f"'gates' item {tok!r} is not `#<id>[:<kind>]` (#706)")
+        elif int(m.group(1)) not in states:
+            out.append(f"'gates' names #{m.group(1)}, which is no row (Rule-20: an unresolved reference, #706)")
+        elif m.group(2) and m.group(2) not in AWAITING_KINDS:
+            out.append(f"'gates' kind {m.group(2)!r} is none of {', '.join(AWAITING_KINDS)} (#706)")
+    return out
 
 
 def check_phased(name: str, f: dict[str, str], rows: dict | None) -> list[str]:
@@ -907,13 +932,242 @@ def awaiting_line(root: Path, got: list[tuple[str, dict[str, str]]] | None = Non
             parts.append(f"audit-due {n}")   # #691: the audit's due state, seen unasked (dmc:audit-trigger)
         if (n := sum(1 for f in foreign if f.get("kind") == "in-flight")):
             parts.append(f"in-flight {n}")   # #700: matters in flight in the operator's other systems
+        pres = presentation(root, got, cabinet)   # #706: held back by a gating edge, or by the bound
+        for o in ("gated", "deferred"):
+            if (n := sum(1 for t in pres if t["outcome"] == ("defer" if o == "deferred" else o))):
+                parts.append(f"{o} {n}")
         tail += f" Coming: {', '.join(parts)}." if parts else ""
     if (dyadlib.preference(RECOMMENDED_KEY, root) or RECOMMENDED_DEFAULT).strip() != "off":
         items, _ = recommended(root, got, cabinet, hygiene=hygiene, excluded=asked | {i for v in q.values() for i in v},
                                audit_in_coming=coming)
         if (rec := recommended_part(items, L)):
             tail += f" Recommended for next: {rec}."
+    if groups and (dyadlib.preference(QUESTION_PAGE_KEY, root) or QUESTION_PAGE_DEFAULT).strip() != "on":
+        tail += f" {DETAILS}"   # #706: no page published, so the cards are read on request
     return line + tail
+
+
+# ---- the next-best disposition, PR 1 (d-work #706; dyad/dmc/next-best-disposition.jsonld): rules filter, judgement
+# orders. A question is eligible only when every predecessor on a gating edge is answered; each eligible one is asked
+# alone, in a batch of its kind, or later. It orders and times questions and authorizes nothing (Rule-2).
+NBD_OUTCOMES = ("solo", "batch", "defer", "gated")       # the order cards are listed in; re-present is dmc:re-present's
+NBD_FLOOR = ("destructive", "release")                   # the core floor: always solo, whatever a setting says
+READY_KIND = {"intent-ready": "intent", "plan-ready": "plan", "done-ready": "done"}
+QUESTION_PAGE_KEY, QUESTION_PAGE_DEFAULT = "question-page", "off"   # a form preference; the template ships `off`
+DETAILS = "details: dyad board cards"
+STEP_GATE = re.compile(r"#(\d+)'s (intent|plan|done)\b")  # a `step:` naming another row's question; "PR lands" never gates
+EVIDENCE_SHA = re.compile(r"\b[0-9a-f]{64}\b")
+
+
+def gate_edges(rid: int, f: dict[str, str], rows: dict, plans: Path) -> list[tuple[int, str | None]]:
+    """The gating predecessors of row `rid`'s questions, from records alone: its entry's `gates`, and its plan's
+    `order: required` `step:` lines naming another row's question (`#<id>'s plan`). A row's plain `refs` and a
+    landing order ("after #<id>'s PR lands") never gate (dmc:next-best-disposition, C5)."""
+    out = [(int(m.group(1)), m.group(2)) for t in (f.get("gates") or "").split() if (m := GATE.fullmatch(t))]
+    pf = plans / f"{rid}.md"
+    if pf.is_file():
+        text = pf.read_text(errors="ignore")
+        if re.search(r"(?m)^\s*(?:order:|Order:)\s*`?order: required|^\s*order: required", text):
+            for line in text.splitlines():
+                if re.match(r"\s*-?\s*step:", line):
+                    out += [(int(i), k) for i, k in STEP_GATE.findall(line) if int(i) != rid]
+    return out
+
+
+def answered(pred: int, kind: str | None, rows: dict, entries: dict) -> bool:
+    """Whether the predecessor's question is answered: a terminal row always; for `intent`, `plan` or `done` its row
+    holding that `Y`; otherwise its entry asking no question (of `kind`, when one is named)."""
+    r = rows.get(pred)
+    if r is None or r.state in dyadlib.TERMINAL_STATES:
+        return True
+    if kind in ("intent", "plan", "done"):
+        return re.search(rf"\bY {kind}\b", r.disposed or "") is not None
+    k = asked_kind(entries.get(pred, {}))
+    return k is None or (kind is not None and k != kind)
+
+
+def parent_gate(rid: int, rows: dict) -> list[int]:
+    """The parent-Done gate (Rule-3 Ledger; dmc:parent-askable): the children of `rid` that hold its Done back."""
+    kids = [r for r in rows.values() if re.search(rf"\bparent #{rid}\b", r.refs or "")]
+    rg = rows_guard()
+    if rg.parent_askable([(k.state, bool(re.search(r"\bY done\b", k.disposed or ""))) for k in kids]) == "askable":
+        return []
+    return [k.id for k in kids if k.state in ("open", "planned") and not re.search(r"\bY done\b", k.disposed or "")]
+
+
+def binding_size(kind: str, q: str, ids: list[int], entries: dict, rows: dict) -> int:
+    """A Done's binding size: the PRs it merges plus the rows it accretes or retires (solo-binding-min's measure)."""
+    if kind != "done":
+        return 0
+    if q:
+        return (len(set(merges_of(q))) + len(accreted_in(q))
+                + sum(len(re.findall(r"#\d+", m)) for m in re.findall(r"retires ([^,)]*(?:, #[^,)]*)*)", q)))
+    return sum(len(pr_list(sub_of(entries, i))) + len(accreted_of(i, rows)) + len(retires_of(sub_of(entries, i)))
+               for i in ids)
+
+
+def presentation(root: Path, got: list[tuple[str, dict[str, str]]] | None = None,
+                 cabinet: str | None = None) -> list[dict]:
+    """dmc:next-best-disposition, PR 1: every question asked and not answered, and every one ready to ask, with its
+    outcome — `gated` (a gating predecessor unanswered: held back, recorded, never refused), `solo` (the floor
+    destructive and release, a Done at `solo-binding-min`, an entry marked `present: solo`), `batch`, or `defer` (a
+    ready question while a solo is outstanding or ready, or whose kind would pass `open-kinds-max`). Each item:
+    {outcome, kind, ids, question, holder, asked, gates, reason}. Within an outcome, asked first in the order asked
+    (oldest `since` first), then ready by row id; the weighted order is PR 2's."""
+    got = load(root) if got is None else got
+    rows = {r.id: r for r in dyadlib.read_rows(root)}
+    entries = {int(n): f for n, f in got if n.isdigit()}
+    plans = dyadlib.instance(root) / "d-work" / "plans"
+    bound = int(dyadlib.tunable("open-kinds-max", root))
+    solo_min = int(dyadlib.tunable("solo-binding-min", root))
+    items = []
+    for kind, q, ids, holder in awaiting(root, got, cabinet):
+        since = min((entries.get(i, {}).get("since", "") for i in ids), default="")
+        items.append({"kind": kind, "ids": ids, "question": q, "holder": holder, "asked": True, "since": since})
+    asked_ids = {i for it in items for i in it["ids"]}
+    q = derived_queue(root, got, cabinet)
+    if (dyadlib.preference("intent-reading", root) or "").strip() == "on":
+        q = {"intent-ready": intent_ready(root, got), **q}
+    for name, ids in q.items():
+        for i in ids:
+            if i not in asked_ids:
+                items.append({"kind": READY_KIND[name], "ids": [i], "question": "", "holder": "", "asked": False,
+                              "since": ""})
+    for it in items:
+        gates = []
+        for i in it["ids"]:
+            gates += [(p, k) for p, k in gate_edges(i, entries.get(i, {}), rows, plans) if not answered(p, k, rows, entries)]
+            if it["kind"] == "done":
+                gates += [(c, None) for c in parent_gate(i, rows)]
+        it["gates"] = gates
+        present = next((entries.get(i, {}).get("present", "") for i in it["ids"] if entries.get(i, {}).get("present")), "")
+        if gates:
+            it["outcome"], it["reason"] = "gated", "waits on " + ", ".join(f"#{p}" + (f" {k}" if k else "") for p, k in gates)
+        elif it["kind"] in NBD_FLOOR:
+            it["outcome"], it["reason"] = "solo", f"{it['kind']} is always asked alone (the core floor)"
+        elif it["kind"] == "done" and binding_size("done", it["question"], it["ids"], entries, rows) >= solo_min:
+            it["outcome"], it["reason"] = "solo", f"binds at least solo-binding-min ({solo_min})"
+        elif present:
+            it["outcome"], it["reason"] = "solo", present.partition(" ")[2] or "marked present: solo"
+        else:
+            it["outcome"], it["reason"] = "batch", ""
+    asked = sorted((it for it in items if it["asked"]), key=lambda t: (t["since"] or "~", t["ids"][0]))
+    ready = sorted((it for it in items if not it["asked"]), key=lambda t: t["ids"][0])
+    any_solo = any(it["outcome"] == "solo" for it in items)
+    kinds = {it["kind"] for it in asked if it["outcome"] != "gated"}
+    for it in ready:
+        if it["outcome"] in ("gated", "solo"):
+            continue
+        if any_solo:
+            it["outcome"], it["reason"] = "defer", "a solo question is outstanding"
+        elif it["kind"] in kinds:
+            continue
+        elif len(kinds) < bound:
+            kinds.add(it["kind"])
+        else:
+            it["outcome"], it["reason"] = "defer", f"{len(kinds)} kinds outstanding (open-kinds-max {bound})"
+    out = asked + ready
+    return sorted(out, key=lambda t: NBD_OUTCOMES.index(t["outcome"]))
+
+
+def card_lines(root: Path, it: dict, rows: dict, entries: dict, reader: str | None, full: bool) -> list[str]:
+    """One card, from the board alone: the exact `Y/N` line, the unit whose chat holds it, WHAT, WHY and HOW, the counter
+    and reconciliation, and pointers (row, plan, PR and head, evidence sha256). A missing field prints `(see plan)` with
+    the path, never invented text; no card holds full evidence."""
+    on = dyadlib.slugs_on(root)
+    labels = " ".join(dyadlib.row_label(i, rows, on) for i in it["ids"])
+    where = answered_in(it["holder"], reader, root) if it["asked"] else None
+    head = f"[{it['outcome']}] {it['kind']} {labels}" + (f" — in {where}" if where else "") + \
+        (f" — {it['reason']}" if it.get("reason") else "")
+    yn = (it["question"].strip().splitlines() or [""])[-1] if it["question"] else "(not yet asked)"
+    if not full:
+        return [head, f"  {yn}"]
+    inst = dyadlib.instance(root).relative_to(root).as_posix() if dyadlib.instance(root).is_relative_to(root) else "agent-corpus"
+    rid = it["ids"][0]
+    f = entries.get(rid, {})
+    plan = f"{inst}/d-work/plans/{rid}.md"
+    miss = f"(see plan) {plan}"
+    out = [head, f"  {yn}"]
+    for k in ("what", "why", "how", "counter", "reconcile"):
+        out.append(f"  {k}: {f.get(k) or miss}")
+    if it["gates"]:
+        out.append("  gated by: " + ", ".join(f"#{p}" + (f" {k}" if k else "") for p, k in it["gates"]))
+    sub = sub_of(entries, rid)
+    prs = ", ".join(f"PR #{n} at {h[:12]}" for n, h in pr_list(sub))
+    ev = first(sub, "evidence") if sub.get("evidence") else next(iter(EVIDENCE_SHA.findall(f.get("promised", ""))), "")
+    out.append(f"  pointers: {inst}/d-work/rows/{rid}.md, {plan}" + (f", {prs}" if prs else "")
+               + (f", evidence {ev}" if ev else ""))
+    return out
+
+
+def cards(root: Path, full: bool = False, reader: str | None = None) -> list[str]:
+    """`dyad board cards [--full]`: one card per outstanding or ready question, in the presentation's order (solo, batch,
+    deferred, gated), headed by the board commit it was rendered from and its time; other systems' questions from the
+    attention ledger (#700) listed by reference only. Read-only."""
+    got = load(root)
+    rows = {r.id: r for r in dyadlib.read_rows(root)}
+    entries = {int(n): f for n, f in got if n.isdigit()}
+    reader = os.environ.get("DYAD_SESSION") if reader is None else reader
+    bdir = (dyadlib.instance(root) / "d-work" / "board")
+    at = _git_out(root, "log", "-1", "--format=%h %cI", "--", str(bdir)) or "uncommitted"
+    items = presentation(root, got, viewer_cabinet(root))
+    counts = ", ".join(f"{n} {o}" for o in NBD_OUTCOMES if (n := sum(1 for t in items if t["outcome"] == o)))
+    out = [f"cards: {len(items)} question(s){' — ' + counts if counts else ''}; board at {at.strip()}"]
+    for it in items:
+        out += card_lines(root, it, rows, entries, reader, full)
+    for f in attention_open(root):
+        if f.get("kind") == "asked":
+            out.append(f"[ref] {f.get('what', '')} {f.get('system', '')}/{f.get('unit', '')} #{f.get('row', '')}"
+                       f" (another system's; read it there)")
+    return out
+
+
+def cards_html(lines: list[str]) -> str:
+    """The question page: the cards as one self-contained page (the home publishes it, under `question-page: on`)."""
+    import html as _html
+    body, card = [], []
+    for l in lines[1:]:
+        if not l.startswith(" ") and card:
+            body.append("<section><pre>" + _html.escape("\n".join(card)) + "</pre></section>"); card = []
+        card.append(l)
+    if card:
+        body.append("<section><pre>" + _html.escape("\n".join(card)) + "</pre></section>")
+    return ("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">"
+            "<title>Outstanding questions</title><style>:root{--bg:#fff;--fg:#111;--line:#ccc}"
+            "@media (prefers-color-scheme: dark){:root{--bg:#111;--fg:#eee;--line:#444}}"
+            "body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui;margin:0 auto;max-width:60rem;padding:16px}"
+            "pre{white-space:pre-wrap;word-break:break-word}section{border-top:1px solid var(--line)}</style></head><body>"
+            f"<h1>Outstanding questions</h1><p>{_html.escape(lines[0])}</p>" + "".join(body) + "</body></html>\n")
+
+
+def inside_repo(path: Path) -> bool:
+    """Whether `path`'s directory lies inside any git work tree (the page is written outside every repository)."""
+    d = path.resolve().parent
+    while not d.exists():
+        d = d.parent
+    r = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=d, capture_output=True, text=True,
+                       env=dyadlib.git_env())
+    return r.returncode == 0 and r.stdout.strip() == "true"
+
+
+def cmd_cards(a: list[str], repo: Path) -> int:
+    full, html_out, rest = "--full" in a, None, [x for x in a if x != "--full"]
+    if rest[:1] == ["--html"] and len(rest) == 2:
+        html_out = Path(rest[1])
+    elif rest:
+        print(dyadlib.cli_usage(("board", "cards")), file=sys.stderr)
+        return 1
+    if html_out is not None and inside_repo(html_out):
+        print(f"refused: {html_out} lies inside a git work tree; the question page is written outside every repository "
+              f"(#706 V5)", file=sys.stderr)
+        return 1
+    lines = cards(repo, full=full or html_out is not None)
+    if html_out is not None:
+        html_out.write_text(cards_html(lines))
+        print(f"wrote {html_out} ({len(lines)} lines)")
+        return 0
+    print("\n".join(lines))
+    return 0
 
 
 def attention_open(root: Path) -> list[dict[str, str]]:
@@ -2466,6 +2720,8 @@ def cli(a: list[str], repo: Path | None = None) -> int:
         print(__doc__); return 0
     if a and a[0] == "set":
         return cmd_set(a[1:], repo)
+    if a and a[0] == "cards":
+        return cmd_cards(a[1:], repo)
     if a and a[0] == "resume" and len(a) == 1:
         print("\n".join(resume_lines(repo))); return 0
     if a == ["phases"]:
