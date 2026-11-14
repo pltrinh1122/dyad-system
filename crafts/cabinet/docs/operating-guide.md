@@ -289,6 +289,14 @@ questions (`in <system>/<unit>`) and matters in flight (`Coming: in-flight <n>`)
 - a question asked without being recorded on its board is invisible here too, an incident as before;
 - nothing from the central repository is copied into a public store.
 With no clone named, every desk reads as before.
+The view also shows where you sit (dyad-system #703). Each system's `paired-units` preference is a desk, synced as a
+reference to that preference at a commit; a pairing no one system can hold — a unit of a system that keeps no preference
+of its own — is recorded by `dyad attention pair <system>/<unit> --ref <path>@<commit>` (`--drop` to remove it), the ref
+the record of your words, and refused for a system that keeps the preference, since that preference is the authority.
+The header counts the desks, and a `drift:` line names any system whose preference and ledger disagree, saying the
+preference stands. Routing never reads the ledger: a question is still asked where the route table says. Each checkout
+registers once at its first sync, and every sync replays the board since its last one, so a question asked and answered
+between two syncs is still logged; the home's `session touch` and `board resume` say so when its checkout names no clone.
 
 ## 9. Opening a host desk (dyad-system #531)
 You work on more than one machine — a Linux workstation, a MacBook — and your cos is a cloud session bound to
