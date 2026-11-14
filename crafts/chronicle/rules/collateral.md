@@ -4,12 +4,13 @@ A form section of the chronicle core (`chronicle.md` §7). It narrows the core a
 collateral is a piece, its record layer cited as §1 says, published only on the Operator's approval (§6). Records:
 `../dmc/collateral-review.jsonld`, `../dmc/collateral-pitch.jsonld`, `../dmc/collateral-lean-canvas.jsonld` and
 its nine section records `../dmc/collateral-lean-canvas-<section>.jsonld`, `../dmc/collateral-problem-depth.jsonld`,
-`../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-segment-significance.jsonld`,
-`../dmc/collateral-segment-rank.jsonld`,
+`../dmc/collateral-segmentation.jsonld`, `../dmc/collateral-problem-plainness.jsonld`,
+`../dmc/collateral-segment-significance.jsonld`,
+`../dmc/collateral-segment-rank.jsonld`, `../dmc/collateral-role-bridge.jsonld`,
 `../dmc/collateral-why-tree.jsonld`; falsification:
 `../falsification/rules/collateral.md`. Source: dyad-system d-work #668; the lean canvas, d-work #671; segment significance,
 d-work #673; problem discovery, d-work #674; the why-tree, d-work #678; one tree per canvas set, d-work #684; source
-trees, their projection and the segment rank, d-work #685; segmentation and the two perspectives, d-work #693.
+trees, their projection and the segment rank, d-work #685; segmentation and the two perspectives, d-work #693; the alignment review, d-work #696.
 
 ## 1. What collateral is
 **Collateral** is a piece whose job is to present a product to a reader: a pitch (a README opening, a site's front
@@ -100,12 +101,15 @@ alternatives; `uncountered` ← existing alternatives and unfair advantage.
 2. **objections** — the canvas lists alternatives, not the objections a skeptical reader raises;
 3. **the stakes** — the problem section states the problem, not what leaving it unsolved costs the reader.
 
-**Segmentation.** A segment is a **cell**, or a named group of cells, on stated axes, never a job title alone. The axes
-are an input to the record, never fixed by it; for this instance they are **who holds me to it** (myself · team or
+**Segmentation.** A segment is a **cell**, or a named group of cells, on stated axes, never a job title alone: its
+readers are placed by the responsibilities a published job description or occupational taxonomy lists, and a candidate
+with no such source is **unsourced**. The axes are an input to the record, never fixed by it. A canvas set may anchor
+its targets on a **target axis** that names the future rather than today's roles — for this instance, the **ways of
+working with agents** — and bridge today's occupations to it (The professions map, below). Its other axes, for this instance, are **who holds me to it** (myself · team or
 employer · client · regulator or auditor · customers and users), **whose agent** (mine · people I answer for) and **what
 it acts on** (code · hosts · content · data). A cell holds segments, never people, and one person may sit in several.
 `collateral-segmentation` decides whether a candidate is a segment of the map, and which, before significance and rank,
-its outcomes in order: **off-axis** (defined by something other than the axes: restate it as cells) · **idle-axis** (an
+its outcomes in order: **unsourced** (no published source for its responsibilities: source it or leave it off) · **off-axis** (defined by something other than the axes: restate it as cells) · **idle-axis** (an
 axis value that changes no anchor branch: merge across it) · **overlapping** (it shares a cell, or the same problem
 classes and anchor branch, with a segment on the map: merge, or name what separates them) · **too-broad** (its readers'
 anchor branches differ: split) · **off-class** (it suffers no problem class: its source tree is owed, or it leaves the
@@ -113,13 +117,35 @@ map) · **unspanned** (judged over the map: a problem class's sufferers include 
 **cut** (distinct: judge its significance).
 
 **Two perspectives, for corroboration.** The map is read from both ends. **(a) Segment → problem classes**: a segment's
-source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is a root
-cause of the projection, or a named group of roots, the grouping written down; each class lists the segments that suffer
-it. Both are projections of one **segment × class table** in the canvas set's index, each cell labelled from a source
+source tree (§6) gives the problem classes it suffers. **(b) Problem class → segments**: a **problem class** is an
+**observable failure mode** — what the user sees, and when (the session moment: new, during or resumed; after one prompt
+or a series) — over the root causes beneath it, by id, one root serving several classes; each class lists the segments
+that suffer it. Each class carries the **human-attention cost** it imposes — **time** (to check) and **effort** (cognitive overload) — and the **proficiency with agents** at which it shows — cursory (out of the box), intermediate (one
+session shaped by technique) or advanced (standing rules, agents that act, several sessions). Its plain statement, what
+the surfaces and pitches show, is judged by `collateral-problem-plainness` against the reader at that proficiency, its outcomes in order: **jargon** · **tool-bound** ·
+**mechanism-framed** · **unobservable** (a cause the user cannot see: restate it as what they see) · **no-moment** ·
+**unrooted** (a class over no root) · **plain**. A canvas set may keep a **reference tree**, a symptom every reader
+knows decomposed by §6's Steps (this instance: AI hallucination), whose roots are mapped to classes and which the
+plainness record reads; it is no segment and is not projected. Both are projections of one **segment × class table** in the canvas set's index, each cell labelled from a source
 tree or as a hypothesis, rendered as two surfaces, `<canvas set>/by-segment.md` (a) and `<canvas set>/by-problem.md`
 (b), never edited by hand. Where they disagree the record acts (`off-class`, `overlapping`, `unspanned`); where they
 agree for every segment and class the map is **corroborated**, which is internal consistency, labelled hypothesis until
-a reader's evidence refreshes the trees. The order is segmentation → significance → rank.
+a reader's evidence refreshes the trees. The order is segmentation → significance → rank. Which segments are targets, and which problems each target's pitch
+answers, is agreed by the play-book `../playbooks/alignment-review.md`, its knobs tuned over runs; the pick is the
+Operator's alone.
+
+**The map of future work and the professions map.** A canvas set that anchors on a target axis keeps two layers, each
+labelled hypothesis or evidence: **(a)** `<canvas set>/future-work.md`, each way of working with agents mapped to the
+problem classes it meets and their cost, opened by the premise it rests on and what would refute it; and **(b)**
+`<canvas set>/professions.md`, every occupation of a public taxonomy, at a stated version and cited by its code, judged
+against each way by `collateral-role-bridge` and ranked from greatest beneficiary to least, one rank per way and one
+overall. Its outcomes, judged in order: **unsourced** · **demanded** (its task statements already state the way's work:
+reach today) · **net-cost** (an agent can do part of the work, but checking costs more attention than it saves) ·
+**emerging** (what remains for the person once an agent does the rest: future reach) · **drifting** (the taxonomy adds
+such tasks between versions) · **absent**. They rank demanded, emerging, drifting, net-cost, absent, unsourced, then by
+score; ties share a rank. The record is code (`../scripts/role_bridge.py`, its verbs and thresholds data beside it): the
+inference is made once, in that data, and never per occupation. Layer (b) shows the hypothesis's applicability to today
+and never gates a target.
 
 **The segment map.** A canvas set may map many segments, one folder each, and lists only those whose problem is
 significant. `collateral-segment-significance` decides it, its conditions in order: **not-accountable** (the segment
