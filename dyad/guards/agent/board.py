@@ -1176,6 +1176,8 @@ def resume_lines(root: Path) -> list[str]:
     out = [f"resume: this session {seat} (writer {me}); the board's holder {cos.get('holder') or '?'}, "
            f"last written by {cos.get('writer') or '?'}",
            f"inbox {seat}: {v['unread']} unread — `dyad inbox read` before any other act"]
+    if (w := sessions().attention_warning(root, os.environ.get("DYAD_SESSION"))):   # #703: the home owes the log
+        out.append(w)
     def block(title, f, keys):
         out.append(title)
         for k in keys:

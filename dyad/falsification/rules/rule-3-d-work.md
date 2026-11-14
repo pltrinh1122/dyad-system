@@ -1917,3 +1917,35 @@ property 3). A row would also have to name the repository, which a public manife
 The other pairs are as amendment #690 left them. Coherent, orthogonal.
 
 Disposition: see ledger #700.
+
+## Amendment — d-work #703 (2026-11-14: the attention ledger's paired and registered kinds and its replay)
+
+**Claim (plan #703 revisions 1 and 2; provenance #703 entries 1, 2 and 4):** the attention ledger (#700) also references
+where the operator sits — each system's `paired-units`, or a provenance entry for a pairing no system holds — and says
+when the two disagree. Every checkout that names the central repository registers once, and `sync` replays the board's
+history, so no question asked between two syncs is lost.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| P1 | A ledger pairing becomes authority. | **Survives, scoped** | `attention pair` refuses a `--ref` that does not resolve to a record, and a system that holds its own `paired-units`. Routing (Rule-16 Presence) never reads the ledger. |
+| P2 | The preference stays the authority. | **Survives** | The drift line names the preference as the one that stands, and the next sync rewrites the ledger from it. |
+| P3 | The operator's identity is not proven. | **Survives, scoped** | As in #700 (L2), whoever can push to the central repository is taken as the operator; the entry names the record that declares the pairing. |
+| P4 | A unit name copies preference content. | **Survives, scoped** | A unit name is an identifier, as a row id is (#700); the entry holds no other text, and its `ref` points at the preference file at a commit. |
+| P5 | Drift lines fit the seven-line bound. | **Survives** | At most one line per system, then one overflow line; `--full` lists them all. |
+| P6 | A system with no preference has nowhere to hold a pairing. | **Refuted** | That is the case `attention pair` exists for, its ref the system's provenance entry. |
+| R1 | Replay recovers what deriving the present alone lost. | **Survives, scoped** | The board is written write-ahead (#535), so every recorded ask is in some commit's tree. One asked only in chat is invisible here as everywhere: an incident. |
+| R2 | The replay stays cheap. | **Survives, scoped** | It walks only commits touching the board, the rows or the preferences since the watermark, reading changed files by `git show`; the first backfill, from `--since <commit>`, is the one long run, and its time is printed. |
+| R3 | Replay resurrects closed matters. | **Refuted** | Events are appended in commit order up to `HEAD`, and a closer refs the commit it closed at, so every item that closed gets its closer in the same run. |
+| R4 | `registered` duplicates presence. | **Survives, scoped** | It names the presence file at a commit, copies none of its lines, and routing never reads it. |
+| R5 | The home's warning can block the home. | **Survives** | It reads the checkout's config only, never the network, and never refuses. |
+
+**Verdict:** the claim survives.
+- **Vocabulary:** the `attention ledger` row names the kinds `paired`, `unpaired` and `registered`, that the ledger references pairings and never makes one, and the replay.
+
+**Pairwise (Rule-5).**
+- **3–2**: the ledger writes are no ratification event (Rule-2 Not ratification, amendment #703 of its record); Rule-3's questions are unchanged.
+- **3–16**: `paired-units` stays Presence's declaration; the board stays the source of every entry the replay derives.
+
+The other pairs are as amendment #700 left them. Coherent, orthogonal.
+
+Disposition: see ledger #703.

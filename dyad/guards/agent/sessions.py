@@ -420,6 +420,18 @@ def is_leader(seat: str, form: re.Pattern | None = None, functions: list[str] | 
     parsed = parse_seat(seat, form)
     return parsed is not None and seat_kind(parsed, functions) == "leader"
 
+ATTENTION_UNNAMED = ("attention: this home's checkout names no central repository (git config dyad.attention.clone "
+                     "<path>); the operator's desks are not logged")
+
+def attention_warning(root: Path, seat: str | None) -> str | None:
+    """#703: the one line the home prints when its checkout names no central repository; None for any other unit, or
+    when one is named. It reads this checkout's git config alone, never the network, and never refuses."""
+    if not seat or not is_leader(seat):
+        return None
+    r = subprocess.run(["git", "config", "--get", "dyad.attention.clone"], cwd=root, capture_output=True, text=True,
+                       env=dyadlib.git_env())
+    return None if r.returncode == 0 and r.stdout.strip() else ATTENTION_UNNAMED
+
 def attendance(root: Path | None = None, now: datetime.date | None = None) -> dict:
     """The mode read over the live seats (plan #388 child 2, declared by #412): {mode, attended: {seat: date or ""},
     relayed: [seat], leaders: [seat], declared: [entry], undeclared: [(seat, date)], warnings: [entry], window_days}.
@@ -787,6 +799,8 @@ def main(a: list[str]) -> int:
         print("fetched origin" if reason is None else f"warn [session] fetch skipped: {reason}")
         if n := behind_origin(root):   # #482 P4: the session-start report states its base; nothing when 0
             print(f"behind origin/main by {n}")
+        if (w := attention_warning(root, p.stem)):   # #703: the home owes the log
+            print(w)
         same = same_root(root, exclude=p.stem)   # F4, d-work #32: the id `touch()` actually wrote, not a fresh call
         if same:
             print(f"warning: same working tree as: {', '.join(same)} — a raw git command from either "

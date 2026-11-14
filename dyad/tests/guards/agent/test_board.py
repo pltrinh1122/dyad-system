@@ -547,9 +547,12 @@ class CabinetFormTests(unittest.TestCase):
 
 
 def without_stalls(lines: list[str]) -> list[str]:
-    """`resume_lines` without #617's stall block (its title line `stalls…` and the indented lines under it)."""
+    """`resume_lines` without #617's stall block (its title line `stalls…` and the indented lines under it), and without
+    #703's line for a home whose checkout names no central repository (its own test, in test_attention)."""
     out, inside = [], False
     for l in lines:
+        if l.startswith("attention: this home's checkout names no central repository"):
+            continue
         if l.startswith("stalls"):
             inside = True; continue
         if inside and l.startswith("  "):

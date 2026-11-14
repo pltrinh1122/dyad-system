@@ -269,3 +269,27 @@ Binding now uses it.
 The other pairs are as amendment #585 left them. Coherent, orthogonal.
 
 Disposition: see ledger #649.
+
+## Amendment — d-work #703 (2026-11-14: the attention-ledger write asks no disposition)
+
+**Claim (the operator, provenance #703 entry 3):** "each attention logging doesn't require operator disposition because
+the registration action is the disposition that is carried forward ... falsify."
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| B1 | An attention-ledger write is a ratification event. | **Refuted** | It records references to what the records already hold and decides nothing: the Not-ratification test, as a ledger-only commit records and never decides. |
+| B2 | The registration is a disposition carried forward. | **Refuted** | A standing authorization is a plan-`Y` with a mandate scope, or an authority preference (Binding). A registration is neither: it is a unit's setup act, which #700's plan named as setup. No disposition is needed because a write decides nothing, not because one was carried. |
+| B3 | Registration implies compliance. | **Survives as an obligation, not an authority** | A registered checkout owes the log, which the home's warning (`session touch`, `board resume`) and the registered count make checkable. |
+| B4 | No write ever needs a disposition. | **Survives, scoped** | True while each kind holds references only. A kind that adds content enters only by a plan-`Y`'d change, as every kind does, and the bullet says so. |
+
+**Verdict:** the conclusion survives, on B1's ground; entry 3's reasoning, B2, is refuted.
+- **Rules:** Not ratification gains the attention-ledger write; Provenance gains its line.
+
+**Pairwise (Rule-5).**
+- **2–3**: a write is no ratification event, so Rule-3's questions and Batch disposition are unchanged; the closing line still reads this system's own questions from its board.
+- **2–7**: a write holds no operator words, so no provenance entry is owed; a declared pairing's `--ref` points at an existing entry and copies none of it.
+- **2–16**: `paired-units` stays Presence's declaration and the records' check; the ledger reflects it and routes nothing, and the board stays the source of every entry.
+
+The other pairs are as amendment #649 left them. Coherent, orthogonal.
+
+Disposition: see ledger #703.
