@@ -40,6 +40,11 @@ not edited when they are added (G5).
 - Events-only commits to `main` (touching nothing outside `<runbooks>/events/`, the run-book
   store Rule-19 names, `DYAD_RUNBOOKS`): they record what a read-only run-book command observed, never
   a decision (Rule-3; #438).
+- Attention-ledger writes (`dyad attention sync`; Rule-3 Batch disposition): each entry references a record the
+  system already holds, under a kind the code defines, and decides nothing, so no disposition is asked for it. A
+  kind that would add content enters only by a plan-`Y`'d change, as every kind does. Registering a checkout with
+  the operator's central repository is the unit's setup, which owes the log; it is not a disposition and carries
+  none forward (#703).
 - Writing proposals, falsification attacks, and proposed survivors.
 - Reading `preferences-corpus/`. Changing a value there is a preferences-zone PR the
   operator disposes; the agent acts on the value on `main`.
@@ -154,6 +159,8 @@ admission refused every case of a record when any of its consequences held a rat
 only sets the number a release question shows, and a new plan that only asks one, were refused with the outcomes that
 skip a question; the line is drawn by what a wrong match costs, declared per outcome; see the same record, amendment
 #649. Binding names the third authority preference, `hardening-mandate`, 2026-11-12 (d-work #692); see
-`../falsification/rules/rule-3-d-work.md`, amendment #692.
+`../falsification/rules/rule-3-d-work.md`, amendment #692. Not ratification gains the attention-ledger write 2026-11-14
+(d-work #703): the operator asked whether logging to the ledger needs a disposition, reading the registration as one
+carried forward; a write records and never decides, and a registration is setup; see the same record, amendment #703.
 
 Set: System Requirements.
