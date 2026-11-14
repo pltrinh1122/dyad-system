@@ -1949,3 +1949,37 @@ history, so no question asked between two syncs is lost.
 The other pairs are as amendment #700 left them. Coherent, orthogonal.
 
 Disposition: see ledger #703.
+
+## Amendment — d-work #706 (2026-11-14: the next-best disposition and the question page)
+
+**Claim (the operator, provenance #706 entries 1–5):** the home presents outstanding dispositions so the operator need
+not scroll for them or hold several kinds at once; "`next-best-disposition` is determined by both judgement (`dmc`) and
+rules (DAG dependency)". This amendment states PR 1: the page, the eligibility filter and the outcomes. The weighted
+order is PR 2's, after #705.
+
+| # | Attack | Result | Survivor |
+|---|--------|--------|----------|
+| N1 | Rules alone order the questions. | **Refuted** | The dependency graph is a partial order and says nothing between independent questions; judgement orders those (plan #706, C1). |
+| N2 | Judgement alone orders them. | **Refuted** | It can put a dependent before its prerequisite, a re-ask. Rules filter and judgement orders: a question is presented only when every gating predecessor is answered, and judgement never overrides an edge (C2, C3). |
+| N3 | Every edge in the records gates asking. | **Refuted** | "Merges after" orders landing, not asking, and a plain `refs` is untyped; only `gates`, the parent-Done gate and `order: required` steps gate (C5). The sentence names them. |
+| N4 | Code can find every edge. | **Refuted** | An edge found in flight is in no record; judgement flags it on the card and the home records it in `gates` or asks, never applying it silently (C6). |
+| N5 | Deferring a question can lose it. | **Refuted** | A deferred or gated question stays recorded on the board, is counted in Coming and shown on its card; deferral governs only asking, never starting work (plan #706 V3, U9). |
+| N6 | A setting can make a destructive or release question batchable. | **Refuted** | The core floor holds whatever `open-kinds-max`, `solo-binding-min` or `present` says; Rule-8 and Rule-11 keep those questions single, and the sentence restates their outcome, not their ownership. |
+| N7 | The page becomes a second place where answers are given. | **Refuted** | The page is a cache of the board, rendered after the board is written; it holds no `Y` and every answer is given in chat, read from the row and its record (Rule-2, Rule-7). |
+| N8 | The page leaks what a public repository may not hold. | **Refuted** | `dyad board cards --html` writes outside every repository, the page is private, and a test fails a card holding full evidence or the central repository's name (V5). |
+| N9 | The card's WHAT, WHY and HOW are invented by code. | **Survives, scoped** | The asker writes them once, when it asks, with the question; code renders what is recorded and prints `(see plan)` with the path for a missing field (V2). |
+
+**Verdict:** the claim survives for PR 1.
+- **Rules:** Batch disposition gains one bullet: the next-best disposition, its gating edges, the outcomes, the counts in Coming, the question page under `question-page` and the `details:` pointer; Provenance gains its line.
+- **Vocabulary:** `next-best disposition` and `question page`, owner Rule-3; the `awaiting you` row names `gated`, `deferred` and `details:`.
+
+**Pairwise (Rule-5).**
+- **3–2**: the record authorizes nothing; Binding is unchanged, and every `Y` binds only what its own question names.
+- **3–8**: a destructive question is still asked singly under Rule-8; the record only restates that outcome.
+- **3–11**: a release question keeps Rule-11's own forms and the release gate; the record restates its solo outcome.
+- **3–16**: the board store stays the source; the new keys are optional, so no stored entry migrates, and the page is no store.
+- **3–7**: no provenance entry is written by presenting, and every answer is still entered verbatim from chat.
+
+The other pairs are as amendment #700 left them. Coherent, orthogonal.
+
+Disposition: see ledger #706.

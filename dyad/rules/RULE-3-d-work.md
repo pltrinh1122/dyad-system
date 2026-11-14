@@ -289,6 +289,17 @@ slug is presentation: a question binds the rows it names by their numbers, and e
   asked, the others are asked on their own. The precedent question is its own kind too, never folded into a Done
   question: candidates wait and are asked as one batch at the next backlog grooming or once at least five are pending,
   whichever is first (#644).
+- Which questions are presented, and how, is the **next-best disposition** (`dyad/dmc/next-best-disposition.jsonld`):
+  rules filter, judgement orders. A question is presented only when every predecessor on a gating edge is answered —
+  the entry's `gates`, the parent-Done gate (Ledger, below) and a plan's `order: required` steps; a row's plain `refs`
+  and a merge order never gate, and a dependency judgement suspects is recorded or asked, never applied. A destructive
+  or release question is always asked alone, as is a Done past the record's binding size or one the home marks
+  `present: solo`; the rest are asked in batches of their kind, at most `open-kinds-max` kinds outstanding. A question
+  held back by a gate or the bound is recorded and never refused, and Coming counts it as `gated <n>` or
+  `deferred <n>`. Under the preference `question-page: on` (absent, `off`) the home publishes the outstanding
+  questions, one card each from `dyad board cards`, as one private **question page**; otherwise the closing line ends
+  with `details: dyad board cards` while any is outstanding. The page is a cache of the board: it holds no `Y`, and
+  every answer is given in chat. The record orders and times questions and authorizes nothing (#706).
 - The queue is recorded: its counts and the last question asked live in the **board store** (Rule-16 Store), beside each
   open row's orchestration in flight — holder, wait, next act, the question owed verbatim, promises — so a **hop** of
   the session holding the board (the home, under `organization: m4`) loses none of it and asks the operator nothing
@@ -511,6 +522,9 @@ work retired in the grooming's retirement form 2026-11-13 (d-work #697): such a 
 no edge led from `planned` to `archived`; see `../falsification/rules/rule-3-d-work.md`, amendment #697. Batch
 disposition's closing line counts the attention ledger's open set 2026-11-13 (d-work #700): an operator attending several
 units, in several systems, read what waited on it only at the home, and carried the rest in mind; see
-`../falsification/rules/rule-3-d-work.md`, amendment #700.
+`../falsification/rules/rule-3-d-work.md`, amendment #700. Batch disposition gains the next-best disposition and the
+question page 2026-11-14 (d-work #706): the operator scrolled for the text of questions asked in earlier replies, and
+answered several kinds at once with nothing to say which could wait or which waited on another's answer; see
+`../falsification/rules/rule-3-d-work.md`, amendment #706.
 
 Set: System Requirements.

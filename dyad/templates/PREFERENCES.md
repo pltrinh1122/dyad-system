@@ -30,6 +30,9 @@ defines what each value means.
 | awaiting-you | on | `on` \| `off` | Rule-3 (Batch disposition: the closing line every reply ends with) |
 | coming | on | `on` \| `off` | Rule-3 (Batch disposition: the Coming part of the closing line) |
 | recommended-next | on | `on` \| `off` | Rule-3 (Batch disposition: the Recommended part of the closing line) |
+| question-page | off | `on` \| `off` | Rule-3 (Batch disposition: the question page of the next-best disposition; `dyad/dmc/next-best-disposition.jsonld`) |
+| open-kinds-max | 2 | a positive integer (kinds of question outstanding at once; a solo counts as the only one) | Rule-3 (Batch disposition: the next-best disposition's bound; default `dyad/dmc/next-best-disposition.jsonld`) |
+| solo-binding-min | 3 | a positive integer (the binding size, PRs merged plus rows accreted or retired, at which a done question is asked alone) | Rule-3 (Batch disposition: the next-best disposition's solo threshold; default `dyad/dmc/next-best-disposition.jsonld`) |
 | hygiene-stale-days | 30 | a positive integer (days) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-similar | 0.35 | a number between 0 and 1 | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
 | hygiene-top | 10 | a positive integer (pairs) | Rule-3 (backlog hygiene, the `hygiene I…` and `candidate:` lines of the home's read (`dyad board resume`): `dyad/scripts/hygiene.py`; default `dyad/dmc/backlog-hygiene.jsonld`) |
@@ -266,3 +269,17 @@ defines what each value means.
   - `off` — the closing line has no third part.
   - Why: the authoring operator's prompts, "i think it's appropriate for us to implement a "Recommended for next:"
     with that are the outcomes of triggers" and "make "Recommended for next:" as a preference that's default to "on"".
+- `question-page` — whether the home publishes the outstanding questions as one private page (Rule-3 Batch disposition;
+  d-work #706): one card per question from `dyad board cards`, re-rendered after each recorded ask or answer, board first
+  and page second. The page is a cache of the board: it holds no `Y` and no full evidence, and every answer is given in
+  chat. A form preference: it authorizes nothing.
+  - `off` — the value this template ships, and the reading of an absent key: the closing line ends with
+    `details: dyad board cards` while any question is outstanding.
+  - `on` — the home publishes the page where its harness can make one, and gives its URL once in the closing line.
+- `open-kinds-max` — how many kinds of question may be outstanding at once (`dyad/dmc/next-best-disposition.jsonld`; a
+  tunable, d-work #590's kind): a ready question of a further kind is deferred, recorded and never refused, and counted
+  as `deferred <n>` in Coming; a solo question outstanding counts as the only kind. A value absent or outside `allowed`
+  reads as `2`.
+- `solo-binding-min` — the binding size (PRs a Done merges plus the rows it accretes or retires) at which a Done is
+  asked alone (`dyad/dmc/next-best-disposition.jsonld`; a tunable). Destructive and release questions are always asked
+  alone, whatever this is. A value absent or outside `allowed` reads as `3`.

@@ -1,0 +1,103 @@
+{
+  "@context": [
+    "https://schema.org",
+    {
+      "dyad": "urn:dyad:term:"
+    }
+  ],
+  "@id": "urn:dyad:dmc:dyad-operator/next-best-disposition",
+  "@type": [
+    "DefinedTermSet",
+    "dyad:DecisionCriterion"
+  ],
+  "identifier": "next-best-disposition",
+  "name": "Next-best disposition",
+  "description": "How the home presents the questions it owes the operator: rules filter, judgement orders. A question is eligible only when every predecessor on a gating edge is answered; each eligible question is then asked alone, in a batch of its kind, or later. It authorizes nothing: it orders and times questions, and every Y still binds only what its own question names (Rule-2).",
+  "dyad:decides": "Of the questions asked and not answered, and those ready to ask, which may be presented now, and is each asked alone, with others of its kind, or later?",
+  "dyad:inputs": [
+    "the board store: every entry's question, phase and kind (dmc/disposition-request.jsonld), and the optional keys what, why, how, counter, reconcile, present and gates",
+    "the gating edges, from records alone: an entry's gates list (#<id>[:<kind>], recorded by the home or the operator, never inferred by code); the parent-Done gate (Rule-3 Ledger: a parent's Done is not asked while a child is not terminal, blocked, backlog or holding its own recorded done-Y); a plan's order: required step lines naming another row's question",
+    "edges that never gate: a row's plain refs, which is untyped, and merges after, which orders landing and not asking",
+    "criticality, the inputs code reads: irreversibility (a destructive host action, a release, a publish) and binding size (the PRs a done-Y merges plus the rows it accretes or retires); the inputs only judgement sees, recorded by the home as present: solo with a one-line reason: reaches the world, money or credentials, verification against an output, novelty (the first question of its record or one with no precedent), and coupling (a Y that would change another question queued)",
+    "the questions outstanding: their kinds, and whether one of them is solo",
+    "the tunables open-kinds-max and solo-binding-min"
+  ],
+  "hasDefinedTerm": [
+    {
+      "@type": "DefinedTerm",
+      "termCode": "gated",
+      "name": "gated",
+      "dyad:when": "a predecessor on a gating edge of the question is unanswered",
+      "dyad:then": "held back, recorded on the board and never refused; counted as `gated <n>` in Coming, its predecessor named on its card; it becomes eligible when the predecessor is answered",
+      "dyad:effect": "skips"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "solo",
+      "name": "solo",
+      "dyad:when": "the question is eligible and is of kind destructive or release (the core floor, Rule-8 and Rule-11), or is a done whose binding size is at least solo-binding-min, or its entry carries present: solo",
+      "dyad:then": "asked alone, nothing else asked until it is answered",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "batch",
+      "name": "batch",
+      "dyad:when": "the question is eligible, none of solo holds, and its kind is outstanding or adding it keeps the kinds outstanding within open-kinds-max",
+      "dyad:then": "asked with the eligible questions of its kind, in Rule-3's batch form",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "defer",
+      "name": "defer",
+      "dyad:when": "the question is eligible and ready, and a solo question is outstanding, or asking it would make more kinds outstanding than open-kinds-max",
+      "dyad:then": "kept in the pending queue, recorded and never refused; counted as `deferred <n>` in Coming; asked when the bound allows",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "re-present",
+      "name": "re-present",
+      "dyad:when": "an outstanding question whose matter moved",
+      "dyad:then": "handed to dmc/re-present.jsonld, whose outcome this record consumes and does not restate",
+      "dyad:effect": "shapes"
+    },
+    {
+      "@type": "DefinedTerm",
+      "termCode": "suspected-edge",
+      "name": "suspected edge",
+      "dyad:when": "judgement suspects a dependency no record holds",
+      "dyad:then": "flagged on the card, never applied: the home records it in gates, or puts it to the operator",
+      "dyad:effect": "asks"
+    }
+  ],
+  "dyad:precedence": "Gated first: a question with an unanswered gating predecessor is held back whatever else holds. Then the core floor: destructive and release are solo whatever a setting or a present key says, and no setting makes them batch. Then solo, then defer, then batch. A solo outstanding counts as the only kind. Inside each outcome the order is the order asked, oldest first, until the weighted order of #706's PR 2 (the operator's attention strategy of #705, then criticality, then age) fills it. A re-present outcome is the re-present record's.",
+  "dyad:default": "batch",
+  "dyad:tunables": [
+    {
+      "dyad:preference": "open-kinds-max",
+      "dyad:defaultValue": "2",
+      "dyad:allowed": "a positive integer (kinds of question outstanding at once; a solo counts as the only one)",
+      "dyad:readBy": "guards/agent/board.py"
+    },
+    {
+      "dyad:preference": "solo-binding-min",
+      "dyad:defaultValue": "3",
+      "dyad:allowed": "a positive integer (the binding size, PRs merged plus rows accreted or retired, at which a done question is asked alone)",
+      "dyad:readBy": "guards/agent/board.py"
+    }
+  ],
+  "dyad:judgedBy": {
+    "dyad:kind": "mechanical",
+    "dyad:implementation": "guards/agent/board.py"
+  },
+  "isPartOf": "urn:dyad:craft:dyad-operator",
+  "dyad:home": "playbooks/d-work.md",
+  "dyad:alsoIn": [
+    "dmc/re-present.jsonld",
+    "dmc/disposition-request.jsonld",
+    "dmc/parent-askable.jsonld"
+  ],
+  "dyad:owner": "Rule-3"
+}
